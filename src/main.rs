@@ -2,13 +2,12 @@ mod executors;
 mod instructions;
 mod registers;
 
-use std::env::args;
+use instructions::NullInstructionData;
 
-use crate::executors::Executor;
+use crate::executors::{cpu_halt_sr_bit, Executor};
 use crate::instructions::{
-    decode_instruction, encode_instruction, fetch_instruction, instruction_size,
-    AddInstructionData, Instruction, IsLessThanInstructionData, JumpIfInstructionData,
-    SetInstructionData,
+    decode_instruction, encode_instruction, fetch_instruction, AddInstructionData, Instruction,
+    IsLessThanInstructionData, JumpIfInstructionData, SetInstructionData,
 };
 use crate::registers::{new_registers, Registers};
 
@@ -19,32 +18,15 @@ pub enum Error {
 }
 
 fn step(registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> Result<Registers, Error> {
-    use Instruction::*;
-
     let maybe_instruction = fetch_instruction(rom, registers.pc);
     match maybe_instruction {
         Some(raw_instruction) => {
             let instruction = decode_instruction(raw_instruction);
+            instruction.execute(registers, rom, ram);
 
-            match instruction {
-                HaltInstruction() => return Err(Error::ProcessorHalted(registers.to_owned())),
-                // TODO: There has to be a better way to dispatch these
-                SetInstruction(data) => data.execute(registers, rom, ram),
-                CopyInstruction(data) => data.execute(registers, rom, ram),
-                AddInstruction(data) => data.execute(registers, rom, ram),
-                SubtractInstruction(data) => data.execute(registers, rom, ram),
-                MultiplyInstruction(data) => data.execute(registers, rom, ram),
-                DivideInstruction(data) => data.execute(registers, rom, ram),
-                IsEqualInstruction(data) => data.execute(registers, rom, ram),
-                IsNotEqualInstruction(data) => data.execute(registers, rom, ram),
-                IsLessThanInstruction(data) => data.execute(registers, rom, ram),
-                IsGreaterThanInstruction(data) => data.execute(registers, rom, ram),
-                IsLessOrEqualThanInstruction(data) => data.execute(registers, rom, ram),
-                IsGreaterOrEqualThanInstruction(data) => data.execute(registers, rom, ram),
-                JumpInstruction(data) => data.execute(registers, rom, ram),
-                JumpIfInstruction(data) => data.execute(registers, rom, ram),
-                JumpIfNotInstruction(data) => data.execute(registers, rom, ram),
-            };
+            if (registers.sr & cpu_halt_sr_bit) == cpu_halt_sr_bit {
+                return Err(Error::ProcessorHalted(registers.to_owned()));
+            }
             return Ok(registers.to_owned());
         }
         None => return Err(Error::InvalidInstruction(registers.to_owned())),
@@ -85,7 +67,7 @@ fn main() -> Result<(), Error> {
             dest_register: 2,
         }),
         Instruction::JumpIfInstruction(JumpIfInstructionData { new_pc: 3 }),
-        Instruction::HaltInstruction(),
+        Instruction::HaltInstruction(NullInstructionData {}),
     ]
     .iter()
     .map(encode_instruction)

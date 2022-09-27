@@ -1,7 +1,10 @@
+use enum_dispatch::enum_dispatch;
+
 use crate::instructions::*;
 use crate::registers::*;
 
-const last_comparison_sr_bit: u16 = 0x01;
+pub const last_comparison_sr_bit: u16 = 0x01;
+pub const cpu_halt_sr_bit: u16 = 0x02;
 
 fn set_comparison_result(sr: &mut u16, result: bool) -> () {
     if result {
@@ -11,8 +14,17 @@ fn set_comparison_result(sr: &mut u16, result: bool) -> () {
     }
 }
 
+#[enum_dispatch]
 pub trait Executor {
     fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> ();
+}
+
+// Special
+
+impl Executor for NullInstructionData {
+    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> () {
+        registers.sr |= cpu_halt_sr_bit;
+    }
 }
 
 // Register Transfer

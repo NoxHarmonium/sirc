@@ -6,8 +6,17 @@
 // 8 bit target register
 // 8 bit reserved
 
+use crate::executors::Executor;
+use crate::registers::Registers;
+use enum_dispatch::enum_dispatch;
+
 // 32 bits = 2x 16 bit
 pub const instruction_size: u16 = 2;
+
+// Special
+
+#[derive(Debug)]
+pub struct NullInstructionData {}
 
 // Register Transfer
 #[derive(Debug)]
@@ -104,9 +113,10 @@ pub struct JumpIfNotInstructionData {
 }
 
 #[derive(Debug)]
+#[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
-    HaltInstruction(),
+    HaltInstruction(NullInstructionData),
     // Register Transfer
     SetInstruction(SetInstructionData),
     CopyInstruction(CopyInstructionData),
@@ -135,7 +145,7 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
     let [b2, b3] = u16::to_le_bytes(lower);
 
     match instruction_id {
-        0x0 => Instruction::HaltInstruction(),
+        0x0 => Instruction::HaltInstruction(NullInstructionData {}),
         0x1 => Instruction::SetInstruction(SetInstructionData {
             register: b1,
             value: u16::from_le_bytes([b2, b3]),
@@ -161,7 +171,7 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
 
 pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
     match instruction {
-        Instruction::HaltInstruction() => [0x00, 0x00],
+        Instruction::HaltInstruction(_) => [0x00, 0x00],
         Instruction::SetInstruction(data) => [u16::from_le_bytes([0x1, data.register]), data.value],
         Instruction::CopyInstruction(data) => [
             u16::from_le_bytes([0x2, data.src_register]),
