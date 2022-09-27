@@ -13,7 +13,7 @@ fn set_comparison_result(registers: &mut Registers, result: bool) {
 
 #[enum_dispatch]
 pub trait Executor {
-    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> ();
+    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]);
 }
 
 // Special

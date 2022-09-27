@@ -1,10 +1,21 @@
 // Instruction (32 bit)
+// Every instruction starts with:
 // 8 bit instruction identifier (max 256 instructions)
-// 8 bit target register
 //
-// 16 bit value OR
-// 8 bit target register
-// 8 bit reserved
+// Instruction formats:
+//
+// Register Value: (e.g. SET)
+// 8 bit register identifier
+// 16 bit value
+//
+// Dual Register: (e.g. COPY)
+// 8 bit register identifier
+// 8 bit register identifier
+// 8 bit padding
+//
+// Single Value: (e.g. JUMP)
+// 16 bit value
+// 8 bit padding
 
 use crate::executors::Executor;
 use crate::registers::Registers;
@@ -138,54 +149,103 @@ pub enum Instruction {
     JumpIfNot(JumpIfNotInstructionData),
 }
 
+// Decode
+
+pub fn decode_reg_val_instruction(raw_instruction: [u16; 2]) -> (u8, u16) {
+    let [_, r1] = u16::to_le_bytes(raw_instruction[0]);
+    (r1, raw_instruction[1])
+}
+
+pub fn decode_reg_reg_instruction(raw_instruction: [u16; 2]) -> (u8, u8) {
+    let [_, r1] = u16::to_le_bytes(raw_instruction[0]);
+    let [r2, _] = u16::to_le_bytes(raw_instruction[1]);
+    (r1, r2)
+}
+
+pub fn decode_val_instruction(raw_instruction: [u16; 2]) -> u16 {
+    let [_, b1] = u16::to_le_bytes(raw_instruction[0]);
+    let [b2, _] = u16::to_le_bytes(raw_instruction[1]);
+    u16::from_le_bytes([b1, b2])
+}
+
 // Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
 pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
-    let [upper, lower] = raw_instruction;
-    let [instruction_id, b1] = u16::to_le_bytes(upper);
-    let [b2, b3] = u16::to_le_bytes(lower);
+    let [instruction_id, _] = u16::to_le_bytes(raw_instruction[0]);
 
     match instruction_id {
         0x0 => Instruction::Halt(NullInstructionData {}),
-        0x1 => Instruction::Set(SetInstructionData {
-            register: b1,
-            value: u16::from_le_bytes([b2, b3]),
-        }),
-        0x2 => Instruction::Copy(CopyInstructionData {
-            src_register: b1,
-            dest_register: b2,
-        }),
-        0x3 => Instruction::Add(AddInstructionData {
-            src_register: b1,
-            dest_register: b2,
-        }),
-        0x9 => Instruction::IsLessThan(IsLessThanInstructionData {
-            src_register: b1,
-            dest_register: b2,
-        }),
-        0xD => Instruction::JumpIf(JumpIfInstructionData {
-            new_pc: u16::from_le_bytes([b2, b3]),
-        }),
+        0x1 => {
+            let (register, value) = decode_reg_val_instruction(raw_instruction);
+            Instruction::Set(SetInstructionData { register, value })
+        }
+        0x2 => {
+            let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
+            Instruction::Copy(CopyInstructionData {
+                src_register,
+                dest_register,
+            })
+        }
+        0x3 => {
+            let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
+            Instruction::Add(AddInstructionData {
+                src_register,
+                dest_register,
+            })
+        }
+        0x9 => {
+            let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
+            Instruction::IsLessThan(IsLessThanInstructionData {
+                src_register,
+                dest_register,
+            })
+        }
+        0xD => {
+            let new_pc = decode_val_instruction(raw_instruction);
+            Instruction::JumpIf(JumpIfInstructionData { new_pc })
+        }
         _ => panic!("Fatal: Invalid instruction ID: {}", instruction_id),
     }
+}
+
+// Encode
+
+pub fn encode_reg_val_instruction(instruction_id: u8, register: u8, value: u16) -> [u16; 2] {
+    [u16::from_le_bytes([instruction_id, register]), value]
+}
+
+pub fn encode_reg_reg_instruction(
+    instruction_id: u8,
+    src_register: u8,
+    dest_register: u8,
+) -> [u16; 2] {
+    [
+        u16::from_le_bytes([instruction_id, src_register]),
+        u16::from_le_bytes([dest_register, 0x0]),
+    ]
+}
+
+pub fn encode_val_instruction(instruction_id: u8, value: u16) -> [u16; 2] {
+    let [b1, b2] = u16::to_le_bytes(value);
+    [
+        u16::from_le_bytes([instruction_id, b1]),
+        u16::from_le_bytes([b2, 0x0]),
+    ]
 }
 
 pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
     match instruction {
         Instruction::Halt(_) => [0x00, 0x00],
-        Instruction::Set(data) => [u16::from_le_bytes([0x1, data.register]), data.value],
-        Instruction::Copy(data) => [
-            u16::from_le_bytes([0x2, data.src_register]),
-            u16::from_le_bytes([data.dest_register, 0x0]),
-        ],
-        Instruction::Add(data) => [
-            u16::from_le_bytes([0x3, data.src_register]),
-            u16::from_le_bytes([data.dest_register, 0x0]),
-        ],
-        Instruction::IsLessThan(data) => [
-            u16::from_le_bytes([0x9, data.src_register]),
-            u16::from_le_bytes([data.dest_register, 0x0]),
-        ],
-        Instruction::JumpIf(data) => [u16::from_le_bytes([0xD, 0x0]), data.new_pc],
+        Instruction::Set(data) => encode_reg_val_instruction(0x1, data.register, data.value),
+        Instruction::Copy(data) => {
+            encode_reg_reg_instruction(0x2, data.src_register, data.dest_register)
+        }
+        Instruction::Add(data) => {
+            encode_reg_reg_instruction(0x3, data.src_register, data.dest_register)
+        }
+        Instruction::IsLessThan(data) => {
+            encode_reg_reg_instruction(0x9, data.src_register, data.dest_register)
+        }
+        Instruction::JumpIf(data) => encode_val_instruction(0xD, data.new_pc),
         _ => panic!("Fatal: Invalid instruction: {:#?}", instruction),
     }
 }
