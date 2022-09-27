@@ -3,6 +3,11 @@ pub trait RegisterIndexing {
     fn set_at_index(&mut self, index: u8, value: u16);
 }
 
+pub enum StatusRegisterFields {
+    LastComparisonResult = 0x01,
+    CpuHalted = 0x2,
+}
+
 #[derive(Debug, Clone)]
 pub struct Registers {
     pub x1: u16,
@@ -72,7 +77,7 @@ impl RegisterIndexing for Registers {
 }
 
 pub fn new_registers() -> Registers {
-    return Registers {
+    Registers {
         x1: 0x0000,
         x2: 0x0000,
         x3: 0x0000,
@@ -88,5 +93,5 @@ pub fn new_registers() -> Registers {
         pc: 0x0000,
         sp: 0x0000,
         sr: 0x0000,
-    };
+    }
 }

@@ -3,8 +3,9 @@ mod instructions;
 mod registers;
 
 use instructions::NullInstructionData;
+use registers::StatusRegisterFields;
 
-use crate::executors::{cpu_halt_sr_bit, Executor};
+use crate::executors::Executor;
 use crate::instructions::{
     decode_instruction, encode_instruction, fetch_instruction, AddInstructionData, Instruction,
     IsLessThanInstructionData, JumpIfInstructionData, SetInstructionData,
@@ -24,12 +25,14 @@ fn step(registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> Result<Regis
             let instruction = decode_instruction(raw_instruction);
             instruction.execute(registers, rom, ram);
 
-            if (registers.sr & cpu_halt_sr_bit) == cpu_halt_sr_bit {
+            if (registers.sr & StatusRegisterFields::CpuHalted as u16)
+                == StatusRegisterFields::CpuHalted as u16
+            {
                 return Err(Error::ProcessorHalted(registers.to_owned()));
             }
-            return Ok(registers.to_owned());
+            Ok(registers.to_owned())
         }
-        None => return Err(Error::InvalidInstruction(registers.to_owned())),
+        None => Err(Error::InvalidInstruction(registers.to_owned())),
     }
 }
 
@@ -46,44 +49,43 @@ fn main() -> Result<(), Error> {
     let ram: &mut [u16] = ram_vector.as_mut_slice();
 
     let test_instructions = vec![
-        Instruction::SetInstruction(SetInstructionData {
+        Instruction::Set(SetInstructionData {
             register: 0,
             value: 5,
         }),
-        Instruction::SetInstruction(SetInstructionData {
+        Instruction::Set(SetInstructionData {
             register: 1,
             value: 3,
         }),
-        Instruction::SetInstruction(SetInstructionData {
+        Instruction::Set(SetInstructionData {
             register: 2,
             value: 64,
         }),
-        Instruction::AddInstruction(AddInstructionData {
+        Instruction::Add(AddInstructionData {
             src_register: 0,
             dest_register: 1,
         }),
-        Instruction::IsLessThanInstruction(IsLessThanInstructionData {
+        Instruction::IsLessThan(IsLessThanInstructionData {
             src_register: 1,
             dest_register: 2,
         }),
-        Instruction::JumpIfInstruction(JumpIfInstructionData { new_pc: 3 }),
-        Instruction::HaltInstruction(NullInstructionData {}),
+        Instruction::JumpIf(JumpIfInstructionData { new_pc: 3 }),
+        Instruction::Halt(NullInstructionData {}),
     ]
     .iter()
-    .map(encode_instruction)
-    .flatten()
+    .flat_map(encode_instruction)
     .collect::<Vec<_>>();
     let rom: &[u16] = test_instructions.as_slice();
 
     loop {
         let original_pc = registers.pc;
-        match step(&mut registers, &rom, ram) {
+        match step(&mut registers, rom, ram) {
             Err(error) => {
                 println!("Execution stopped:\n{:#?}", error);
                 return Err(error);
             }
-            Ok(registers) => {
-                // println!("Step:\n{:#?}", registers);
+            Ok(_registers) => {
+                // Debug statements for each execution step can go here
             }
         }
         if original_pc == registers.pc {
