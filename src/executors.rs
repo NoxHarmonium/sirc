@@ -3,24 +3,24 @@ use enum_dispatch::enum_dispatch;
 use crate::instructions::*;
 use crate::registers::*;
 
-fn set_comparison_result(sr: &mut u16, result: bool) {
+fn set_comparison_result(registers: &mut Registers, result: bool) {
     if result {
-        *sr |= StatusRegisterFields::LastComparisonResult as u16
+        set_sr_bit(StatusRegisterFields::LastComparisonResult, registers);
     } else {
-        *sr &= !(StatusRegisterFields::LastComparisonResult as u16)
+        clear_sr_bit(StatusRegisterFields::LastComparisonResult, registers);
     }
 }
 
 #[enum_dispatch]
 pub trait Executor {
-    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]);
+    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> ();
 }
 
 // Special
 
 impl Executor for NullInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
-        registers.sr |= StatusRegisterFields::CpuHalted as u16;
+        set_sr_bit(StatusRegisterFields::CpuHalted, registers)
     }
 }
 
@@ -83,7 +83,7 @@ impl Executor for IsEqualInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 == val_2)
+        set_comparison_result(registers, val_1 == val_2)
     }
 }
 
@@ -91,7 +91,7 @@ impl Executor for IsNotEqualInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 != val_2)
+        set_comparison_result(registers, val_1 != val_2)
     }
 }
 
@@ -99,7 +99,7 @@ impl Executor for IsLessThanInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 < val_2)
+        set_comparison_result(registers, val_1 < val_2)
     }
 }
 
@@ -107,7 +107,7 @@ impl Executor for IsGreaterThanInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 > val_2)
+        set_comparison_result(registers, val_1 > val_2)
     }
 }
 
@@ -115,7 +115,7 @@ impl Executor for IsLessOrEqualThanInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 <= val_2)
+        set_comparison_result(registers, val_1 <= val_2)
     }
 }
 
@@ -123,7 +123,7 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
         let val_1 = registers.get_at_index(self.src_register);
         let val_2 = registers.get_at_index(self.dest_register);
-        set_comparison_result(&mut registers.sr, val_1 >= val_2)
+        set_comparison_result(registers, val_1 >= val_2)
     }
 }
 
@@ -137,9 +137,7 @@ impl Executor for JumpInstructionData {
 
 impl Executor for JumpIfInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
-        let last_comparison_result =
-            registers.sr & StatusRegisterFields::LastComparisonResult as u16;
-        if last_comparison_result == StatusRegisterFields::LastComparisonResult as u16 {
+        if sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
             registers.pc = self.new_pc;
         }
     }
@@ -147,9 +145,7 @@ impl Executor for JumpIfInstructionData {
 
 impl Executor for JumpIfNotInstructionData {
     fn execute(&self, registers: &mut Registers, _rom: &[u16], _ram: &mut [u16]) {
-        let last_comparison_result =
-            registers.sr & StatusRegisterFields::LastComparisonResult as u16;
-        if last_comparison_result != StatusRegisterFields::LastComparisonResult as u16 {
+        if !sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
             registers.pc = self.new_pc;
         }
     }

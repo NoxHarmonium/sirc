@@ -10,7 +10,7 @@ use crate::instructions::{
     decode_instruction, encode_instruction, fetch_instruction, AddInstructionData, Instruction,
     IsLessThanInstructionData, JumpIfInstructionData, SetInstructionData,
 };
-use crate::registers::{new_registers, Registers};
+use crate::registers::{new_registers, sr_bit_is_set, Registers};
 
 #[derive(Debug)]
 pub enum Error {
@@ -18,29 +18,27 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
-fn step(registers: &mut Registers, rom: &[u16], ram: &mut [u16]) -> Result<Registers, Error> {
+fn step<'a>(
+    registers: &'a mut Registers,
+    rom: &[u16],
+    ram: &mut [u16],
+) -> Result<&'a Registers, Error> {
     let maybe_instruction = fetch_instruction(rom, registers.pc);
     match maybe_instruction {
         Some(raw_instruction) => {
             let instruction = decode_instruction(raw_instruction);
             instruction.execute(registers, rom, ram);
 
-            if (registers.sr & StatusRegisterFields::CpuHalted as u16)
-                == StatusRegisterFields::CpuHalted as u16
-            {
+            if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
                 return Err(Error::ProcessorHalted(registers.to_owned()));
             }
-            Ok(registers.to_owned())
+            Ok(registers)
         }
         None => Err(Error::InvalidInstruction(registers.to_owned())),
     }
 }
 
 fn main() -> Result<(), Error> {
-    // let a = args();
-    // let arg_vec: Vec<_> = a.collect();
-    // println!("Hello, world! {:?}", &arg_vec);
-
     let mut registers = new_registers();
 
     // TODO: How to allocate array of zeros (e.g. calloc)

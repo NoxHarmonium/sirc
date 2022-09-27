@@ -95,3 +95,18 @@ pub fn new_registers() -> Registers {
         sr: 0x0000,
     }
 }
+
+pub fn sr_bit_is_set(bit: StatusRegisterFields, registers: &Registers) -> bool {
+    let bit_mask = bit as u16;
+    registers.sr & bit_mask == bit_mask
+}
+
+pub fn set_sr_bit(bit: StatusRegisterFields, registers: &mut Registers) {
+    let bit_mask = bit as u16;
+    registers.sr |= bit_mask
+}
+
+pub fn clear_sr_bit(bit: StatusRegisterFields, registers: &mut Registers) {
+    let bit_mask = bit as u16;
+    registers.sr &= !bit_mask
+}
