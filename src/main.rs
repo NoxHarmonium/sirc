@@ -27,11 +27,21 @@ fn step<'a>(
     match maybe_instruction {
         Some(raw_instruction) => {
             let instruction = decode_instruction(raw_instruction);
+            let original_pc = registers.pc;
+
             instruction.execute(registers, rom, ram);
 
             if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
                 return Err(Error::ProcessorHalted(registers.to_owned()));
             }
+
+            if original_pc == registers.pc {
+                // If the PC hasn't been modified by the instruction than assume that it isn't
+                // a flow control instruction like a jump and just increment it.
+                // TODO: Is there a more reliable/elegant way to do this?
+                registers.pc += 1;
+            }
+
             Ok(registers)
         }
         None => Err(Error::InvalidInstruction(registers.to_owned())),
@@ -76,7 +86,6 @@ fn main() -> Result<(), Error> {
     let rom: &[u16] = test_instructions.as_slice();
 
     loop {
-        let original_pc = registers.pc;
         match step(&mut registers, rom, ram) {
             Err(error) => {
                 println!("Execution stopped:\n{:#?}", error);
@@ -85,12 +94,6 @@ fn main() -> Result<(), Error> {
             Ok(_registers) => {
                 // Debug statements for each execution step can go here
             }
-        }
-        if original_pc == registers.pc {
-            // If the PC hasn't been modified by the instruction than assume that it isn't
-            // a flow control instruction like a jump and just increment it.
-            // TODO: Is there a more reliable/elegant way to do this?
-            registers.pc += 1;
         }
     }
 }
