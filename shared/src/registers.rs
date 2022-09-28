@@ -110,3 +110,24 @@ pub fn clear_sr_bit(bit: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = bit as u16;
     registers.sr &= !bit_mask
 }
+
+pub fn register_name_to_index(name: &str) -> u8 {
+    match name {
+        "x1" => 0,
+        "x2" => 1,
+        "x3" => 2,
+        "y1" => 3,
+        "y2" => 4,
+        "y3" => 5,
+        "z1" => 6,
+        "z2" => 7,
+        "z3" => 8,
+        "a1" => 9,
+        "a2" => 10,
+        "a3" => 11,
+        "pc" => 12,
+        "sp" => 13,
+        "sr" => 14,
+        _ => panic!("Fatal: No register mapping for name [{}]", name),
+    }
+}

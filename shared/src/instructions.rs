@@ -204,6 +204,10 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
 
 // Encode
 
+pub fn encode_null_instruction(instruction_id: u8) -> [u16; 2] {
+    [u16::from_le_bytes([instruction_id, 0x0]), 0x00]
+}
+
 pub fn encode_reg_val_instruction(instruction_id: u8, register: u8, value: u16) -> [u16; 2] {
     [u16::from_le_bytes([instruction_id, register]), value]
 }
@@ -229,7 +233,7 @@ pub fn encode_val_instruction(instruction_id: u8, value: u16) -> [u16; 2] {
 
 pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
     match instruction {
-        Instruction::Halt(_) => [0x00, 0x00],
+        Instruction::Halt(_) => encode_null_instruction(0x0),
         Instruction::Set(data) => encode_reg_val_instruction(0x1, data.register, data.value),
         Instruction::Copy(data) => {
             encode_reg_reg_instruction(0x2, data.src_register, data.dest_register)
