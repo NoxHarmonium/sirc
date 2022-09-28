@@ -1,7 +1,9 @@
-use enum_dispatch::enum_dispatch;
+use shared::instructions::*;
+use shared::registers::*;
 
-use crate::instructions::*;
-use crate::registers::*;
+pub trait Executor {
+    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]);
+}
 
 fn set_comparison_result(registers: &mut Registers, result: bool) {
     if result {
@@ -9,11 +11,6 @@ fn set_comparison_result(registers: &mut Registers, result: bool) {
     } else {
         clear_sr_bit(StatusRegisterFields::LastComparisonResult, registers);
     }
-}
-
-#[enum_dispatch]
-pub trait Executor {
-    fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]);
 }
 
 // Special

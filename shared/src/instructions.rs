@@ -17,10 +17,6 @@
 // 16 bit value
 // 8 bit padding
 
-use crate::executors::Executor;
-use crate::registers::Registers;
-use enum_dispatch::enum_dispatch;
-
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE: u16 = 2;
 
@@ -124,7 +120,6 @@ pub struct JumpIfNotInstructionData {
 }
 
 #[derive(Debug)]
-#[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
     Halt(NullInstructionData),

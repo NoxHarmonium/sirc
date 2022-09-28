@@ -1,0 +1,9 @@
+[package]
+name = "sbrc-vm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nannou = "0.18.1"
+nannou_audio = "0.18.0"
+shared = { path = "../shared" }
