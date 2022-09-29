@@ -1,5 +1,5 @@
-use shared::instructions::*;
-use shared::registers::*;
+use crate::instructions::*;
+use crate::registers::*;
 
 pub trait Executor {
     fn execute(&self, registers: &mut Registers, rom: &[u16], ram: &mut [u16]);

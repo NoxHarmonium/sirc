@@ -102,7 +102,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "nom",
- "shared",
+ "peripheral_cpu",
 ]
 
 [[package]]
@@ -1881,6 +1881,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
+name = "peripheral_cpu"
+version = "0.1.0"
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2202,12 +2206,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "sbrc-vm"
+name = "sbrc_vm"
 version = "0.1.0"
 dependencies = [
  "nannou",
  "nannou_audio",
- "shared",
+ "peripheral_cpu",
 ]
 
 [[package]]
@@ -2258,10 +2262,6 @@ dependencies = [
  "ryu",
  "serde",
 ]
-
-[[package]]
-name = "shared"
-version = "0.1.0"
 
 [[package]]
 name = "shlex"

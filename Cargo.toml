@@ -2,4 +2,4 @@
 
 resolver = "2"
 
-members = ["shared", "vm", "assembler"]
+members = ["peripheral-cpu", "assembler", "sbrc-vm"]

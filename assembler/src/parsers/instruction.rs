@@ -6,11 +6,11 @@ use nom::combinator::{eof, map};
 use nom::multi::many1;
 use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
-use shared::instructions::{
+use peripheral_cpu::instructions::{
     encode_null_instruction, encode_reg_reg_instruction, encode_reg_val_instruction,
     encode_val_instruction,
 };
-use shared::registers::register_name_to_index;
+use peripheral_cpu::registers::register_name_to_index;
 
 use super::shared::{lexeme, parse_comma_sep, parse_number};
 

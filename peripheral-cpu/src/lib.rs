@@ -1,11 +1,13 @@
 mod executors;
+pub mod instructions;
+pub mod registers;
 
 use crate::executors::Executor;
-use shared::instructions::{
+use crate::instructions::{
     decode_instruction, encode_instruction, fetch_instruction, AddInstructionData, Instruction,
     IsLessThanInstructionData, JumpIfInstructionData, NullInstructionData, SetInstructionData,
 };
-use shared::registers::{new_registers, sr_bit_is_set, Registers, StatusRegisterFields};
+use crate::registers::{new_registers, sr_bit_is_set, Registers, StatusRegisterFields};
 
 #[derive(Debug)]
 pub enum Error {
@@ -18,7 +20,7 @@ fn step<'a>(
     rom: &[u16],
     ram: &mut [u16],
 ) -> Result<&'a Registers, Error> {
-    use shared::instructions::Instruction::*;
+    use crate::instructions::Instruction::*;
 
     let maybe_instruction = fetch_instruction(rom, registers.pc);
     match maybe_instruction {
@@ -66,7 +68,7 @@ fn step<'a>(
     }
 }
 
-fn main() -> Result<(), Error> {
+pub fn run_cpu() -> Result<(), Error> {
     let mut registers = new_registers();
 
     // TODO: How to allocate array of zeros (e.g. calloc)
@@ -113,5 +115,14 @@ fn main() -> Result<(), Error> {
                 // Debug statements for each execution step can go here
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        let result = 2 + 2;
+        assert_eq!(result, 4);
     }
 }
