@@ -1883,6 +1883,13 @@ checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 [[package]]
 name = "peripheral_cpu"
 version = "0.1.0"
+dependencies = [
+ "peripheral_mem",
+]
+
+[[package]]
+name = "peripheral_mem"
+version = "0.1.0"
 
 [[package]]
 name = "pin-project-lite"
@@ -2209,9 +2216,11 @@ dependencies = [
 name = "sbrc_vm"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "nannou",
  "nannou_audio",
  "peripheral_cpu",
+ "peripheral_mem",
 ]
 
 [[package]]

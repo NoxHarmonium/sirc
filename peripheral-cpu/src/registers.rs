@@ -76,7 +76,9 @@ impl RegisterIndexing for Registers {
     }
 }
 
-pub fn new_registers() -> Registers {
+// TODO: Is there some macro or something to enable any number of values
+// to be specified, but default to zero if not specified?
+pub fn new_registers(pc: Option<u16>) -> Registers {
     Registers {
         x1: 0x0000,
         x2: 0x0000,
@@ -90,7 +92,7 @@ pub fn new_registers() -> Registers {
         a1: 0x0000,
         a2: 0x0000,
         a3: 0x0000,
-        pc: 0x0000,
+        pc: pc.unwrap_or(0x0000),
         sp: 0x0000,
         sr: 0x0000,
     }

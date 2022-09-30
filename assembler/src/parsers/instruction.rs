@@ -19,22 +19,22 @@ use super::shared::{lexeme, parse_comma_sep, parse_number};
 // TODO: use a function to build this up
 pub fn parse_instruction_tag(i: &str) -> IResult<&str, u8> {
     alt((
-        map(terminated(tag("HALT"), space0), |_| 0),
-        map(terminated(tag("SET"), space1), |_| 1),
-        map(terminated(tag("COPY"), space1), |_| 2),
-        map(terminated(tag("ADD"), space1), |_| 3),
-        map(terminated(tag("SUBTRACT"), space1), |_| 4),
-        map(terminated(tag("MULTIPLY"), space1), |_| 5),
-        map(terminated(tag("DIVIDE"), space1), |_| 6),
-        map(terminated(tag("CEQ"), space1), |_| 7),
-        map(terminated(tag("CNEQ"), space1), |_| 8),
-        map(terminated(tag("CLT"), space1), |_| 9),
-        map(terminated(tag("CGT"), space1), |_| 10),
-        map(terminated(tag("CLTE"), space1), |_| 11),
-        map(terminated(tag("CGTE"), space1), |_| 12),
-        map(terminated(tag("JUMP"), space1), |_| 13),
-        map(terminated(tag("JUMPIF"), space1), |_| 14),
-        map(terminated(tag("JUMPIFNOT"), space1), |_| 15),
+        map(terminated(tag("HALT"), space0), |_| 0x00),
+        map(terminated(tag("SET"), space1), |_| 0x01),
+        map(terminated(tag("COPY"), space1), |_| 0x02),
+        map(terminated(tag("ADD"), space1), |_| 0x03),
+        map(terminated(tag("SUBTRACT"), space1), |_| 0x04),
+        map(terminated(tag("MULTIPLY"), space1), |_| 0x05),
+        map(terminated(tag("DIVIDE"), space1), |_| 0x06),
+        map(terminated(tag("CEQ"), space1), |_| 0x07),
+        map(terminated(tag("CNEQ"), space1), |_| 0x08),
+        map(terminated(tag("CLT"), space1), |_| 0x09),
+        map(terminated(tag("CGT"), space1), |_| 0x0A),
+        map(terminated(tag("CLTE"), space1), |_| 0x0B),
+        map(terminated(tag("CGTE"), space1), |_| 0x0C),
+        map(terminated(tag("JUMP"), space1), |_| 0x0D),
+        map(terminated(tag("JUMPIF"), space1), |_| 0x0E),
+        map(terminated(tag("JUMPIFNOT"), space1), |_| 0x0F),
     ))(i)
 }
 

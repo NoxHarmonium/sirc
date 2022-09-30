@@ -17,6 +17,8 @@
 // 16 bit value
 // 8 bit padding
 
+use peripheral_mem::MemoryPeripheral;
+
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE: u16 = 2;
 
@@ -194,11 +196,11 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
                 dest_register,
             })
         }
-        0xD => {
+        0xE => {
             let new_pc = decode_val_instruction(raw_instruction);
             Instruction::JumpIf(JumpIfInstructionData { new_pc })
         }
-        _ => panic!("Fatal: Invalid instruction ID: {}", instruction_id),
+        _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
     }
 }
 
@@ -233,27 +235,29 @@ pub fn encode_val_instruction(instruction_id: u8, value: u16) -> [u16; 2] {
 
 pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
     match instruction {
-        Instruction::Halt(_) => encode_null_instruction(0x0),
-        Instruction::Set(data) => encode_reg_val_instruction(0x1, data.register, data.value),
+        Instruction::Halt(_) => encode_null_instruction(0x00),
+        Instruction::Set(data) => encode_reg_val_instruction(0x01, data.register, data.value),
         Instruction::Copy(data) => {
-            encode_reg_reg_instruction(0x2, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x02, data.src_register, data.dest_register)
         }
         Instruction::Add(data) => {
-            encode_reg_reg_instruction(0x3, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x03, data.src_register, data.dest_register)
         }
         Instruction::IsLessThan(data) => {
-            encode_reg_reg_instruction(0x9, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x09, data.src_register, data.dest_register)
         }
-        Instruction::JumpIf(data) => encode_val_instruction(0xD, data.new_pc),
-        _ => panic!("Fatal: Invalid instruction: {:#?}", instruction),
+        Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.new_pc),
+        _ => panic!(
+            "Fatal: Instruction decoder not implemented for: {:#?}",
+            instruction
+        ),
     }
 }
 
-pub fn fetch_instruction(rom: &[u16], pc: u16) -> Option<[u16; 2]> {
-    let address = (pc * INSTRUCTION_SIZE) as usize;
+pub fn fetch_instruction(mem: &MemoryPeripheral, pc: u16) -> [u16; 2] {
     // TODO: Alignment check?
     // TODO: Do we need to copy here?
-    let upper = rom.get(address)?.to_owned();
-    let lower = rom.get(address + 1)?.to_owned();
-    Some([upper, lower])
+    let upper = mem.read_address(pc).to_owned();
+    let lower = mem.read_address(pc + 1).to_owned();
+    [upper, lower]
 }
