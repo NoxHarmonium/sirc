@@ -20,7 +20,8 @@
 use peripheral_mem::MemoryPeripheral;
 
 // 32 bits = 2x 16 bit
-pub const INSTRUCTION_SIZE: u16 = 2;
+pub const INSTRUCTION_SIZE_WORDS: u16 = 2;
+pub const INSTRUCTION_SIZE_BYTES: u16 = INSTRUCTION_SIZE_WORDS * 2;
 
 // Special
 
@@ -196,6 +197,13 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
                 dest_register,
             })
         }
+        0xA => {
+            let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
+            Instruction::IsGreaterThan(IsGreaterThanInstructionData {
+                src_register,
+                dest_register,
+            })
+        }
         0xE => {
             let new_pc = decode_val_instruction(raw_instruction);
             Instruction::JumpIf(JumpIfInstructionData { new_pc })
@@ -245,6 +253,9 @@ pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
         }
         Instruction::IsLessThan(data) => {
             encode_reg_reg_instruction(0x09, data.src_register, data.dest_register)
+        }
+        Instruction::IsGreaterThan(data) => {
+            encode_reg_reg_instruction(0x0A, data.src_register, data.dest_register)
         }
         Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.new_pc),
         _ => panic!(

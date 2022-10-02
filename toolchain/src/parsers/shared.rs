@@ -1,6 +1,6 @@
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, tag};
-use nom::character::complete::{multispace0, space0};
+use nom::character::complete::{alphanumeric1, multispace0, space0};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, terminated};
 use nom::Err;
@@ -49,6 +49,16 @@ fn parse_comma_sep_(i: &str) -> IResult<&str, ()> {
     Ok((i, ()))
 }
 
+pub fn parse_label_(i: &str) -> IResult<&str, &str> {
+    let (i, _) = tag(":")(i)?;
+    alphanumeric1(i)
+}
+
+pub fn parse_symbol_reference_(i: &str) -> IResult<&str, &str> {
+    let (i, _) = tag("@")(i)?;
+    alphanumeric1(i)
+}
+
 pub fn parse_hex(i: &str) -> IResult<&str, u16> {
     lexeme(parse_hex_)(i)
 }
@@ -63,4 +73,12 @@ pub fn parse_number(i: &str) -> IResult<&str, u16> {
 
 pub fn parse_comma_sep(i: &str) -> IResult<&str, ()> {
     lexeme(parse_comma_sep_)(i)
+}
+
+pub fn parse_label(i: &str) -> IResult<&str, &str> {
+    lexeme(parse_label_)(i)
+}
+
+pub fn parse_symbol_reference(i: &str) -> IResult<&str, &str> {
+    lexeme(parse_symbol_reference_)(i)
 }

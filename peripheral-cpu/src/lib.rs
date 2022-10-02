@@ -5,7 +5,7 @@ pub mod registers;
 use peripheral_mem::MemoryPeripheral;
 
 use crate::executors::Executor;
-use crate::instructions::{decode_instruction, fetch_instruction, INSTRUCTION_SIZE};
+use crate::instructions::{decode_instruction, fetch_instruction, INSTRUCTION_SIZE_WORDS};
 use crate::registers::{new_registers, sr_bit_is_set, Registers, StatusRegisterFields};
 
 #[derive(Debug)]
@@ -79,7 +79,7 @@ fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a 
         // If the PC hasn't been modified by the instruction than assume that it isn't
         // a flow control instruction like a jump and just increment it.
         // TODO: Is there a more reliable/elegant way to do this?
-        registers.pc += INSTRUCTION_SIZE;
+        registers.pc += INSTRUCTION_SIZE_WORDS;
     }
 
     Ok(registers)
