@@ -10,11 +10,3 @@ nom = "7.1.1"
 itertools = "0.10.5"
 postcard = { version = "1.0.2", features = ["alloc"] }
 serde = "1.0.145"
-
-[[bin]]
-name = "assembler"
-path = "src/assembler.rs"
-
-[[bin]]
-name = "linker"
-path = "src/linker.rs"

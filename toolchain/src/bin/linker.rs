@@ -1,5 +1,3 @@
-mod types;
-
 use clap::Parser;
 use peripheral_cpu::instructions::INSTRUCTION_SIZE_WORDS;
 
@@ -7,7 +5,7 @@ use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use crate::types::object::ObjectDefinition;
+use toolchain::types::object::ObjectDefinition;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

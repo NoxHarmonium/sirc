@@ -1,10 +1,7 @@
-mod parsers;
-mod types;
-
 use clap::Parser;
-use parsers::instruction::{parse_tokens, Token};
 use peripheral_cpu::instructions::{encode_instruction, INSTRUCTION_SIZE_BYTES};
-use types::object::{ObjectDefinition, SymbolDefinition};
+use toolchain::parsers::instruction::{parse_tokens, Token};
+use toolchain::types::object::{ObjectDefinition, SymbolDefinition};
 
 use std::fs::{read_to_string, write};
 use std::io;
