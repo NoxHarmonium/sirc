@@ -10,3 +10,6 @@ boring.bin: boring.o
 
 run: boring.bin
 	cargo run --bin sbrc_vm -- --program-file ./boring.bin
+
+clean:
+	rm -f boring.bin boring.o
