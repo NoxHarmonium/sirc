@@ -27,14 +27,14 @@ impl Executor for NullInstructionData {
 
 impl Executor for SetInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        registers.set_at_index(self.register, self.value);
+        registers.set_at_index(self.data.register, self.data.value);
     }
 }
 
 impl Executor for CopyInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let src_value = registers.get_at_index(self.src_register);
-        registers.set_at_index(self.dest_register, src_value)
+        let src_value = registers.get_at_index(self.data.src_register);
+        registers.set_at_index(self.data.dest_register, src_value)
     }
 }
 
@@ -43,36 +43,36 @@ impl Executor for CopyInstructionData {
 impl Executor for AddInstructionData {
     // TODO: Set status bits for overflow/carry etc.
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
-        registers.set_at_index(self.dest_register, val_1 + val_2)
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
+        registers.set_at_index(self.data.dest_register, val_1 + val_2)
     }
 }
 
 impl Executor for SubtractInstructionData {
     // TODO: Set status bits for overflow/carry etc.
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
-        registers.set_at_index(self.dest_register, val_2 - val_1)
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
+        registers.set_at_index(self.data.dest_register, val_2 - val_1)
     }
 }
 
 impl Executor for MultiplyInstructionData {
     // TODO: Set status bits for overflow/carry etc.
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
-        registers.set_at_index(self.dest_register, val_2 * val_1)
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
+        registers.set_at_index(self.data.dest_register, val_2 * val_1)
     }
 }
 
 impl Executor for DivideInstructionData {
     // TODO: Set status bits for overflow/carry etc.
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
-        registers.set_at_index(self.dest_register, val_2 / val_1)
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
+        registers.set_at_index(self.data.dest_register, val_2 / val_1)
     }
 }
 
@@ -80,48 +80,48 @@ impl Executor for DivideInstructionData {
 
 impl Executor for IsEqualInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 == val_2)
     }
 }
 
 impl Executor for IsNotEqualInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 != val_2)
     }
 }
 
 impl Executor for IsLessThanInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 < val_2)
     }
 }
 
 impl Executor for IsGreaterThanInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 > val_2)
     }
 }
 
 impl Executor for IsLessOrEqualThanInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 <= val_2)
     }
 }
 
 impl Executor for IsGreaterOrEqualThanInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.src_register);
-        let val_2 = registers.get_at_index(self.dest_register);
+        let val_1 = registers.get_at_index(self.data.src_register);
+        let val_2 = registers.get_at_index(self.data.dest_register);
         set_comparison_result(registers, val_1 >= val_2)
     }
 }
@@ -130,14 +130,14 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
 
 impl Executor for JumpInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        registers.pc = self.address;
+        registers.pc = self.data.address;
     }
 }
 
 impl Executor for JumpIfInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         if sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            registers.pc = self.address;
+            registers.pc = self.data.address;
         }
     }
 }
@@ -145,7 +145,7 @@ impl Executor for JumpIfInstructionData {
 impl Executor for JumpIfNotInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         if !sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            registers.pc = self.address;
+            registers.pc = self.data.address;
         }
     }
 }

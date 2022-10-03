@@ -23,6 +23,25 @@ use peripheral_mem::MemoryPeripheral;
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
 pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
+// Instruction Types
+
+#[derive(Debug)]
+pub struct ImmediateInstructionData {
+    pub register: u8,
+    pub value: u16,
+}
+
+#[derive(Debug)]
+pub struct RegisterInstructionData {
+    pub src_register: u8,
+    pub dest_register: u8,
+}
+
+#[derive(Debug)]
+pub struct AddressInstructionData {
+    pub address: u32,
+}
+
 // Special
 
 #[derive(Debug)]
@@ -31,95 +50,83 @@ pub struct NullInstructionData {}
 // Register Transfer
 #[derive(Debug)]
 pub struct SetInstructionData {
-    pub register: u8,
-    pub value: u16,
+    pub data: ImmediateInstructionData,
 }
 
 #[derive(Debug)]
 pub struct CopyInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 // Arithmetic
 
 #[derive(Debug)]
 pub struct AddInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct SubtractInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct MultiplyInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct DivideInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 // Comparison
 
 #[derive(Debug)]
 pub struct IsEqualInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct IsNotEqualInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct IsLessThanInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct IsGreaterThanInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct IsLessOrEqualThanInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 #[derive(Debug)]
 pub struct IsGreaterOrEqualThanInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub data: RegisterInstructionData,
 }
 
 // Flow Control
 
 #[derive(Debug)]
 pub struct JumpInstructionData {
-    pub address: u32,
+    pub data: AddressInstructionData,
 }
 
 #[derive(Debug)]
 pub struct JumpIfInstructionData {
-    pub address: u32,
+    pub data: AddressInstructionData,
 }
 
 #[derive(Debug)]
 pub struct JumpIfNotInstructionData {
-    pub address: u32,
+    pub data: AddressInstructionData,
 }
 
 #[derive(Debug)]
@@ -172,96 +179,126 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> Instruction {
         0x00 => Instruction::Halt(NullInstructionData {}),
         0x01 => {
             let (register, value) = decode_reg_val_instruction(raw_instruction);
-            Instruction::Set(SetInstructionData { register, value })
+            Instruction::Set(SetInstructionData {
+                data: ImmediateInstructionData { register, value },
+            })
         }
         0x02 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::Copy(CopyInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x03 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::Add(AddInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x04 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::Subtract(SubtractInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x05 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::Multiply(MultiplyInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x06 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::Divide(DivideInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x07 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsEqual(IsEqualInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x08 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsNotEqual(IsNotEqualInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x09 => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsLessThan(IsLessThanInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x0A => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsGreaterThan(IsGreaterThanInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x0B => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsLessOrEqualThan(IsLessOrEqualThanInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x0C => {
             let (src_register, dest_register) = decode_reg_reg_instruction(raw_instruction);
             Instruction::IsGreaterOrEqualThan(IsGreaterOrEqualThanInstructionData {
-                src_register,
-                dest_register,
+                data: RegisterInstructionData {
+                    src_register,
+                    dest_register,
+                },
             })
         }
         0x0D => {
             let address = decode_val_instruction(raw_instruction);
-            Instruction::Jump(JumpInstructionData { address })
+            Instruction::Jump(JumpInstructionData {
+                data: AddressInstructionData { address },
+            })
         }
         0x0E => {
             let address = decode_val_instruction(raw_instruction);
-            Instruction::JumpIf(JumpIfInstructionData { address })
+            Instruction::JumpIf(JumpIfInstructionData {
+                data: AddressInstructionData { address },
+            })
         }
         0x0F => {
             let address = decode_val_instruction(raw_instruction);
-            Instruction::JumpIfNot(JumpIfNotInstructionData { address })
+            Instruction::JumpIfNot(JumpIfNotInstructionData {
+                data: AddressInstructionData { address },
+            })
         }
         _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
     }
@@ -295,43 +332,45 @@ pub fn encode_val_instruction(instruction_id: u8, value: u32) -> [u8; 4] {
 pub fn encode_instruction(instruction: &Instruction) -> [u8; 4] {
     match instruction {
         Instruction::Halt(_) => encode_null_instruction(0x00),
-        Instruction::Set(data) => encode_reg_val_instruction(0x01, data.register, data.value),
+        Instruction::Set(data) => {
+            encode_reg_val_instruction(0x01, data.data.register, data.data.value)
+        }
         Instruction::Copy(data) => {
-            encode_reg_reg_instruction(0x02, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x02, data.data.src_register, data.data.dest_register)
         }
         Instruction::Add(data) => {
-            encode_reg_reg_instruction(0x03, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x03, data.data.src_register, data.data.dest_register)
         }
         Instruction::Subtract(data) => {
-            encode_reg_reg_instruction(0x04, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x04, data.data.src_register, data.data.dest_register)
         }
         Instruction::Multiply(data) => {
-            encode_reg_reg_instruction(0x05, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x05, data.data.src_register, data.data.dest_register)
         }
         Instruction::Divide(data) => {
-            encode_reg_reg_instruction(0x06, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x06, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsEqual(data) => {
-            encode_reg_reg_instruction(0x07, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x07, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsNotEqual(data) => {
-            encode_reg_reg_instruction(0x08, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x08, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsLessThan(data) => {
-            encode_reg_reg_instruction(0x09, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x09, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsGreaterThan(data) => {
-            encode_reg_reg_instruction(0x0A, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x0A, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsLessOrEqualThan(data) => {
-            encode_reg_reg_instruction(0x0B, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x0B, data.data.src_register, data.data.dest_register)
         }
         Instruction::IsGreaterOrEqualThan(data) => {
-            encode_reg_reg_instruction(0x0C, data.src_register, data.dest_register)
+            encode_reg_reg_instruction(0x0C, data.data.src_register, data.data.dest_register)
         }
-        Instruction::Jump(data) => encode_val_instruction(0x0D, data.address),
-        Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.address),
-        Instruction::JumpIfNot(data) => encode_val_instruction(0x0F, data.address),
+        Instruction::Jump(data) => encode_val_instruction(0x0D, data.data.address),
+        Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.data.address),
+        Instruction::JumpIfNot(data) => encode_val_instruction(0x0F, data.data.address),
     }
 }
 

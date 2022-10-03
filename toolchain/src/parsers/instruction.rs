@@ -7,11 +7,12 @@ use nom::multi::many1;
 use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
 use peripheral_cpu::instructions::{
-    AddInstructionData, CopyInstructionData, DivideInstructionData, Instruction,
-    IsEqualInstructionData, IsGreaterOrEqualThanInstructionData, IsGreaterThanInstructionData,
+    AddInstructionData, AddressInstructionData, CopyInstructionData, DivideInstructionData,
+    ImmediateInstructionData, Instruction, IsEqualInstructionData,
+    IsGreaterOrEqualThanInstructionData, IsGreaterThanInstructionData,
     IsLessOrEqualThanInstructionData, IsLessThanInstructionData, IsNotEqualInstructionData,
     JumpIfInstructionData, JumpIfNotInstructionData, JumpInstructionData, MultiplyInstructionData,
-    NullInstructionData, SetInstructionData, SubtractInstructionData,
+    NullInstructionData, RegisterInstructionData, SetInstructionData, SubtractInstructionData,
 };
 use peripheral_cpu::registers::register_name_to_index;
 
@@ -122,7 +123,9 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
         parse_halt_instruction,
         map(parse_rv_instruction("SET"), |(register, value)| {
             InstructionToken {
-                instruction: Instruction::Set(SetInstructionData { register, value }),
+                instruction: Instruction::Set(SetInstructionData {
+                    data: ImmediateInstructionData { register, value },
+                }),
                 symbol_ref: None,
             }
         }),
@@ -130,8 +133,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("COPY"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::Copy(CopyInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -140,8 +145,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("ADD"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::Add(AddInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -150,8 +157,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("SUB"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::Subtract(SubtractInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -160,8 +169,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("MUL"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::Multiply(MultiplyInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -170,8 +181,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("DIV"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::Divide(DivideInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -180,8 +193,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("CEQ"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsEqual(IsEqualInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -190,8 +205,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("CNEQ"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsNotEqual(IsNotEqualInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -200,8 +217,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("CLT"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsLessThan(IsLessThanInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -210,8 +229,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("CGT"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsGreaterThan(IsGreaterThanInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -220,8 +241,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             parse_rr_instruction("CLTE"),
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsLessOrEqualThan(IsLessOrEqualThanInstructionData {
-                    src_register,
-                    dest_register,
+                    data: RegisterInstructionData {
+                        src_register,
+                        dest_register,
+                    },
                 }),
                 symbol_ref: None,
             },
@@ -231,8 +254,10 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             |(src_register, dest_register)| InstructionToken {
                 instruction: Instruction::IsGreaterOrEqualThan(
                     IsGreaterOrEqualThanInstructionData {
-                        src_register,
-                        dest_register,
+                        data: RegisterInstructionData {
+                            src_register,
+                            dest_register,
+                        },
                     },
                 ),
                 symbol_ref: None,
@@ -242,21 +267,27 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
         map(parse_address_instruction("JUMP"), |address_enum| {
             let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::Jump(JumpInstructionData { address }),
+                instruction: Instruction::Jump(JumpInstructionData {
+                    data: AddressInstructionData { address },
+                }),
                 symbol_ref,
             }
         }),
         map(parse_address_instruction("JUMPIF"), |address_enum| {
             let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::JumpIf(JumpIfInstructionData { address }),
+                instruction: Instruction::JumpIf(JumpIfInstructionData {
+                    data: AddressInstructionData { address },
+                }),
                 symbol_ref,
             }
         }),
         map(parse_address_instruction("JUMPIFNOT"), |address_enum| {
             let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::JumpIfNot(JumpIfNotInstructionData { address }),
+                instruction: Instruction::JumpIfNot(JumpIfNotInstructionData {
+                    data: AddressInstructionData { address },
+                }),
                 symbol_ref,
             }
         }),
