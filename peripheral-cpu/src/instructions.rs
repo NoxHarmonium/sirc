@@ -163,7 +163,7 @@ pub fn decode_reg_reg_instruction(raw_instruction: [u16; 2]) -> (u8, u8) {
 pub fn decode_val_instruction(raw_instruction: [u16; 2]) -> u16 {
     let [_, b1] = u16::to_le_bytes(raw_instruction[0]);
     let [b2, _] = u16::to_le_bytes(raw_instruction[1]);
-    u16::from_le_bytes([b1, b2])
+    u16::from_be_bytes([b1, b2])
 }
 
 // Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
@@ -234,7 +234,7 @@ pub fn encode_reg_reg_instruction(
 }
 
 pub fn encode_val_instruction(instruction_id: u8, value: u16) -> [u16; 2] {
-    let [b1, b2] = u16::to_le_bytes(value);
+    let [b1, b2] = u16::to_be_bytes(value);
     [
         u16::from_le_bytes([instruction_id, b1]),
         u16::from_le_bytes([b2, 0x0]),

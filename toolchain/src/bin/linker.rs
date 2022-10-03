@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
             .unwrap();
         // TODO: Clear up confusion between byte addressing and instruction addressing
         let target_offset = (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
-        let target_offset_bytes = u16::to_le_bytes(target_offset);
+        let target_offset_bytes = u16::to_be_bytes(target_offset);
 
         // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
         let program_offset = symbol_ref.offset as usize;
