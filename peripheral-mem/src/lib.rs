@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 pub struct Segment {
     pub label: String,
-    pub address: u16,
-    pub size: u16,
+    pub address: u32,
+    pub size: u32,
     pub writable: bool,
 }
 
@@ -29,7 +29,7 @@ impl MemoryPeripheral {
             .map(|s| s.to_owned())
     }
 
-    pub fn get_segment_for_address(&self, address: u16) -> Option<&Segment> {
+    pub fn get_segment_for_address(&self, address: u32) -> Option<&Segment> {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
             .iter()
@@ -37,7 +37,7 @@ impl MemoryPeripheral {
             .map(|s| s.to_owned())
     }
 
-    pub fn map_segment(&mut self, label: &str, address: u16, size: u16, writable: bool) {
+    pub fn map_segment(&mut self, label: &str, address: u32, size: u32, writable: bool) {
         self.segments.push(Segment {
             label: String::from(label),
             address,
@@ -89,13 +89,13 @@ impl MemoryPeripheral {
         }
     }
 
-    pub fn read_address(&self, address: u16) -> u16 {
+    pub fn read_address(&self, address: u32) -> u16 {
         // Range check?
         let mem = self.mem_cell.borrow();
         mem.get(address as usize).unwrap().to_owned()
     }
 
-    pub fn write_address(&self, address: u16, value: u16) -> () {
+    pub fn write_address(&self, address: u32, value: u16) {
         let maybe_segment = self.get_segment_for_address(address);
         match maybe_segment {
             Some(segment) => {

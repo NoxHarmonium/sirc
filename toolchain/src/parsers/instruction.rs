@@ -29,7 +29,7 @@ pub struct InstructionToken {
 }
 
 pub enum Address {
-    Value(u16),
+    Value(u32),
     SymbolRef(String),
 }
 
@@ -38,7 +38,7 @@ pub enum Token {
     Instruction(InstructionToken),
 }
 
-pub fn extract_address_arguments(address: Address) -> (u16, Option<SymbolDefinition>) {
+pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinition>) {
     match address {
         Address::SymbolRef(name) => (
             0x0,
@@ -56,7 +56,7 @@ pub fn extract_address_arguments(address: Address) -> (u16, Option<SymbolDefinit
 
 pub fn parse_address_argument(i: &str) -> IResult<&str, Address> {
     alt((
-        map(parse_number, |number| Address::Value(number)),
+        map(parse_number, Address::Value),
         map(parse_symbol_reference, |symbol_name| {
             Address::SymbolRef(String::from(symbol_name))
         }),
@@ -71,7 +71,9 @@ fn parse_rv_instruction(
         let (i, (register_name, value)) =
             separated_pair(parse_register, parse_comma_sep, parse_number)(i)?;
         let register = register_name_to_index(register_name);
-        Ok((i, (register, value)))
+        // TODO: Does this truncate or what? Maybe we need to do a fallible convert and throw
+        // if the value doesn't fit into u16 (values can only be u16, unlike addresses)
+        Ok((i, (register, value as u16)))
     }
 }
 
@@ -237,24 +239,24 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             },
         ),
         //extract_address_arguments
-        map(parse_address_instruction("JUMP"), |address| {
-            let (new_pc, symbol_ref) = extract_address_arguments(address);
+        map(parse_address_instruction("JUMP"), |address_enum| {
+            let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::Jump(JumpInstructionData { new_pc }),
+                instruction: Instruction::Jump(JumpInstructionData { address }),
                 symbol_ref,
             }
         }),
-        map(parse_address_instruction("JUMPIF"), |address| {
-            let (new_pc, symbol_ref) = extract_address_arguments(address);
+        map(parse_address_instruction("JUMPIF"), |address_enum| {
+            let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::JumpIf(JumpIfInstructionData { new_pc }),
+                instruction: Instruction::JumpIf(JumpIfInstructionData { address }),
                 symbol_ref,
             }
         }),
-        map(parse_address_instruction("JUMPIFNOT"), |address| {
-            let (new_pc, symbol_ref) = extract_address_arguments(address);
+        map(parse_address_instruction("JUMPIFNOT"), |address_enum| {
+            let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
-                instruction: Instruction::JumpIfNot(JumpIfNotInstructionData { new_pc }),
+                instruction: Instruction::JumpIfNot(JumpIfNotInstructionData { address }),
                 symbol_ref,
             }
         }),

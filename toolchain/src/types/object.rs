@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SymbolDefinition {
     pub name: String,
-    pub offset: u16,
+    pub offset: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -15,10 +15,12 @@ where
     terminated(inner, multispace0)
 }
 
-fn parse_hex_(i: &str) -> IResult<&str, u16> {
+// TODO: Should we have separate parsers for addresses (24 bit)
+// and 16 bit (immediate values)?
+fn parse_hex_(i: &str) -> IResult<&str, u32> {
     let (i, _) = tag("0x")(i)?;
     let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
-    let hex_parse_result = u16::from_str_radix(raw_digits, 16);
+    let hex_parse_result = u32::from_str_radix(raw_digits, 16);
     match hex_parse_result {
         Ok(hex_value) => Ok((i, hex_value)),
         Err(_) => Err(Err::Error(nom::error::Error {
@@ -28,9 +30,9 @@ fn parse_hex_(i: &str) -> IResult<&str, u16> {
     }
 }
 
-fn parse_dec_(i: &str) -> IResult<&str, u16> {
+fn parse_dec_(i: &str) -> IResult<&str, u32> {
     let (i, raw_digits) = is_a(&b"0123456789"[..])(i)?;
-    let dec_parse_result = u16::from_str_radix(raw_digits, 10);
+    let dec_parse_result = raw_digits.parse::<u32>();
     match dec_parse_result {
         Ok(dec_value) => Ok((i, dec_value)),
         Err(_) => Err(Err::Error(nom::error::Error {
@@ -40,7 +42,7 @@ fn parse_dec_(i: &str) -> IResult<&str, u16> {
     }
 }
 
-fn parse_number_(i: &str) -> IResult<&str, u16> {
+fn parse_number_(i: &str) -> IResult<&str, u32> {
     alt((parse_hex, parse_dec))(i)
 }
 
@@ -59,15 +61,15 @@ pub fn parse_symbol_reference_(i: &str) -> IResult<&str, &str> {
     alphanumeric1(i)
 }
 
-pub fn parse_hex(i: &str) -> IResult<&str, u16> {
+pub fn parse_hex(i: &str) -> IResult<&str, u32> {
     lexeme(parse_hex_)(i)
 }
 
-pub fn parse_dec(i: &str) -> IResult<&str, u16> {
+pub fn parse_dec(i: &str) -> IResult<&str, u32> {
     lexeme(parse_dec_)(i)
 }
 
-pub fn parse_number(i: &str) -> IResult<&str, u16> {
+pub fn parse_number(i: &str) -> IResult<&str, u32> {
     lexeme(parse_number_)(i)
 }
 

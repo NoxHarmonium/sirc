@@ -130,14 +130,14 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
 
 impl Executor for JumpInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        registers.pc = self.new_pc;
+        registers.pc = self.address;
     }
 }
 
 impl Executor for JumpIfInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         if sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            registers.pc = self.new_pc;
+            registers.pc = self.address;
         }
     }
 }
@@ -145,7 +145,7 @@ impl Executor for JumpIfInstructionData {
 impl Executor for JumpIfNotInstructionData {
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         if !sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            registers.pc = self.new_pc;
+            registers.pc = self.address;
         }
     }
 }

@@ -20,8 +20,8 @@
 use peripheral_mem::MemoryPeripheral;
 
 // 32 bits = 2x 16 bit
-pub const INSTRUCTION_SIZE_WORDS: u16 = 2;
-pub const INSTRUCTION_SIZE_BYTES: u16 = INSTRUCTION_SIZE_WORDS * 2;
+pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
+pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
 // Special
 
@@ -109,17 +109,17 @@ pub struct IsGreaterOrEqualThanInstructionData {
 
 #[derive(Debug)]
 pub struct JumpInstructionData {
-    pub new_pc: u16,
+    pub address: u32,
 }
 
 #[derive(Debug)]
 pub struct JumpIfInstructionData {
-    pub new_pc: u16,
+    pub address: u32,
 }
 
 #[derive(Debug)]
 pub struct JumpIfNotInstructionData {
-    pub new_pc: u16,
+    pub address: u32,
 }
 
 #[derive(Debug)]
@@ -149,26 +149,24 @@ pub enum Instruction {
 
 // Decode
 
-pub fn decode_reg_val_instruction(raw_instruction: [u16; 2]) -> (u8, u16) {
-    let [_, r1] = u16::to_le_bytes(raw_instruction[0]);
-    (r1, raw_instruction[1])
+pub fn decode_reg_val_instruction(raw_instruction: [u8; 4]) -> (u8, u16) {
+    let [_, r1, v1, v2] = raw_instruction;
+    (r1, u16::from_be_bytes([v1, v2]))
 }
 
-pub fn decode_reg_reg_instruction(raw_instruction: [u16; 2]) -> (u8, u8) {
-    let [_, r1] = u16::to_le_bytes(raw_instruction[0]);
-    let [r2, _] = u16::to_le_bytes(raw_instruction[1]);
+pub fn decode_reg_reg_instruction(raw_instruction: [u8; 4]) -> (u8, u8) {
+    let [_, r1, r2, _] = raw_instruction;
     (r1, r2)
 }
 
-pub fn decode_val_instruction(raw_instruction: [u16; 2]) -> u16 {
-    let [_, b1] = u16::to_le_bytes(raw_instruction[0]);
-    let [b2, _] = u16::to_le_bytes(raw_instruction[1]);
-    u16::from_be_bytes([b1, b2])
+pub fn decode_val_instruction(raw_instruction: [u8; 4]) -> u32 {
+    let [_, b1, b2, b3] = raw_instruction;
+    u32::from_be_bytes([0x00, b1, b2, b3])
 }
 
 // Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
-pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
-    let [instruction_id, _] = u16::to_le_bytes(raw_instruction[0]);
+pub fn decode_instruction(raw_instruction: [u8; 4]) -> Instruction {
+    let instruction_id = raw_instruction[0];
 
     match instruction_id {
         0x0 => Instruction::Halt(NullInstructionData {}),
@@ -205,8 +203,8 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
             })
         }
         0xE => {
-            let new_pc = decode_val_instruction(raw_instruction);
-            Instruction::JumpIf(JumpIfInstructionData { new_pc })
+            let address = decode_val_instruction(raw_instruction);
+            Instruction::JumpIf(JumpIfInstructionData { address })
         }
         _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
     }
@@ -214,34 +212,30 @@ pub fn decode_instruction(raw_instruction: [u16; 2]) -> Instruction {
 
 // Encode
 
-pub fn encode_null_instruction(instruction_id: u8) -> [u16; 2] {
-    [u16::from_le_bytes([instruction_id, 0x0]), 0x00]
+pub fn encode_null_instruction(instruction_id: u8) -> [u8; 4] {
+    [instruction_id, 0x0, 0x0, 0x0]
 }
 
-pub fn encode_reg_val_instruction(instruction_id: u8, register: u8, value: u16) -> [u16; 2] {
-    [u16::from_le_bytes([instruction_id, register]), value]
+pub fn encode_reg_val_instruction(instruction_id: u8, register: u8, value: u16) -> [u8; 4] {
+    let [b3, b4] = u16::to_be_bytes(value);
+
+    [instruction_id, register, b3, b4]
 }
 
 pub fn encode_reg_reg_instruction(
     instruction_id: u8,
     src_register: u8,
     dest_register: u8,
-) -> [u16; 2] {
-    [
-        u16::from_le_bytes([instruction_id, src_register]),
-        u16::from_le_bytes([dest_register, 0x0]),
-    ]
+) -> [u8; 4] {
+    [instruction_id, src_register, dest_register, 0x0]
 }
 
-pub fn encode_val_instruction(instruction_id: u8, value: u16) -> [u16; 2] {
-    let [b1, b2] = u16::to_be_bytes(value);
-    [
-        u16::from_le_bytes([instruction_id, b1]),
-        u16::from_le_bytes([b2, 0x0]),
-    ]
+pub fn encode_val_instruction(instruction_id: u8, value: u32) -> [u8; 4] {
+    let [_, b1, b2, b3] = u32::to_be_bytes(value);
+    [instruction_id, b1, b2, b3]
 }
 
-pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
+pub fn encode_instruction(instruction: &Instruction) -> [u8; 4] {
     match instruction {
         Instruction::Halt(_) => encode_null_instruction(0x00),
         Instruction::Set(data) => encode_reg_val_instruction(0x01, data.register, data.value),
@@ -257,7 +251,7 @@ pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
         Instruction::IsGreaterThan(data) => {
             encode_reg_reg_instruction(0x0A, data.src_register, data.dest_register)
         }
-        Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.new_pc),
+        Instruction::JumpIf(data) => encode_val_instruction(0x0E, data.address),
         _ => panic!(
             "Fatal: Instruction decoder not implemented for: {:#?}",
             instruction
@@ -265,10 +259,10 @@ pub fn encode_instruction(instruction: &Instruction) -> [u16; 2] {
     }
 }
 
-pub fn fetch_instruction(mem: &MemoryPeripheral, pc: u16) -> [u16; 2] {
+pub fn fetch_instruction(mem: &MemoryPeripheral, pc: u32) -> [u8; 4] {
     // TODO: Alignment check?
     // TODO: Do we need to copy here?
-    let upper = mem.read_address(pc).to_owned();
-    let lower = mem.read_address(pc + 1).to_owned();
-    [upper, lower]
+    let [b1, b2] = u16::to_be_bytes(mem.read_address(pc).to_owned());
+    let [b3, b4] = u16::to_be_bytes(mem.read_address(pc + 1).to_owned());
+    [b2, b1, b4, b3]
 }

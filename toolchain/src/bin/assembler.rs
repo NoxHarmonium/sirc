@@ -19,8 +19,8 @@ struct Args {
 fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut symbol_refs: Vec<SymbolDefinition> = vec![];
-    let mut offset: u16 = 0x0;
-    let mut program: Vec<[u16; 2]> = vec![];
+    let mut offset: u32 = 0x0;
+    let mut program: Vec<[u8; 4]> = vec![];
 
     for token in tokens {
         match token {
@@ -38,16 +38,12 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
             }
             Token::Label(data) => symbols.push(SymbolDefinition {
                 name: data.name,
-                offset: offset,
+                offset,
             }),
         }
     }
 
-    let bytes: Vec<u8> = program
-        .iter()
-        .flat_map(|[b1, b2]| [u16::to_le_bytes(*b1), u16::to_le_bytes(*b2)])
-        .flatten()
-        .collect();
+    let bytes: Vec<u8> = program.iter().flat_map(|b| b.to_owned()).collect();
 
     ObjectDefinition {
         symbols,

@@ -19,10 +19,11 @@ pub struct Registers {
     pub z1: u16,
     pub z2: u16,
     pub z3: u16,
-    pub a1: u16,
-    pub a2: u16,
-    pub a3: u16,
-    pub pc: u16,
+    pub ah: u16,
+    pub al: u16,
+    // This register is allowed to be >
+    // Actually 24 bit but no built in rust datatype that I can find
+    pub pc: u32,
     pub sp: u16,
     // Status Register
     // 0 - Last comparison result (e.g. 1 was success)
@@ -45,12 +46,11 @@ impl RegisterIndexing for Registers {
             6 => self.z1,
             7 => self.z2,
             8 => self.z3,
-            9 => self.a1,
-            10 => self.a2,
-            11 => self.a3,
-            12 => self.pc,
-            13 => self.sp,
-            14 => self.sr,
+            9 => self.ah,
+            10 => self.al,
+            11 => panic!("Cannot set PC directly except with special instructions"),
+            12 => self.sp,
+            13 => self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
     }
@@ -65,12 +65,11 @@ impl RegisterIndexing for Registers {
             6 => self.z1 = value,
             7 => self.z2 = value,
             8 => self.z3 = value,
-            9 => self.a1 = value,
-            10 => self.a2 = value,
-            11 => self.a3 = value,
-            12 => self.pc = value,
-            13 => self.sp = value,
-            14 => self.sr = value,
+            9 => self.ah = value,
+            10 => self.al = value,
+            11 => panic!("Cannot set PC directly except with special instructions"),
+            12 => self.sp = value,
+            13 => self.sr = value,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
     }
@@ -78,7 +77,7 @@ impl RegisterIndexing for Registers {
 
 // TODO: Is there some macro or something to enable any number of values
 // to be specified, but default to zero if not specified?
-pub fn new_registers(pc: Option<u16>) -> Registers {
+pub fn new_registers(pc: Option<u32>) -> Registers {
     Registers {
         x1: 0x0000,
         x2: 0x0000,
@@ -89,9 +88,8 @@ pub fn new_registers(pc: Option<u16>) -> Registers {
         z1: 0x0000,
         z2: 0x0000,
         z3: 0x0000,
-        a1: 0x0000,
-        a2: 0x0000,
-        a3: 0x0000,
+        ah: 0x0000,
+        al: 0x0000,
         pc: pc.unwrap_or(0x0000),
         sp: 0x0000,
         sr: 0x0000,
@@ -124,12 +122,12 @@ pub fn register_name_to_index(name: &str) -> u8 {
         "z1" => 6,
         "z2" => 7,
         "z3" => 8,
-        "a1" => 9,
-        "a2" => 10,
-        "a3" => 11,
-        "pc" => 12,
-        "sp" => 13,
-        "sr" => 14,
+        // [ah, al]
+        "ah" => 9,  // Address high
+        "al" => 10, // Address low
+        "pc" => 11,
+        "sp" => 12,
+        "sr" => 13,
         _ => panic!("Fatal: No register mapping for name [{}]", name),
     }
 }
