@@ -31,7 +31,8 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 if let Some(symbol_ref) = data.symbol_ref {
                     symbol_refs.push(SymbolDefinition {
                         name: symbol_ref.name,
-                        offset: offset + symbol_ref.offset,
+                        // TODO We can't use this offset anymore because instructions aren't aligned to bytes: offset + symbol_ref.offset,
+                        offset,
                     })
                 }
 

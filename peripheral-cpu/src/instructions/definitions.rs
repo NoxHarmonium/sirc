@@ -1,20 +1,24 @@
 // Instruction (32 bit)
-// Every instruction starts with:
-// 8 bit instruction identifier (max 256 instructions)
 //
 // Instruction formats:
 //
 // Immediate: (e.g. SET)
-// 8 bit register identifier
+// 6 bit instruction identifier (max 64 instructions)
+// 4 bit register identifier
 // 16 bit value
+// 6 bit arguments (if any)
 //
 // Register: (e.g. COPY)
-// 8 bit register identifier
-// 8 bit register identifier
-// 8 bit padding
+// 6 bit instruction identifier (max 64 instructions)
+// 4 bit register identifier
+// 4 bit register identifier
+// 4 bit register identifier (if any)
+// 14 bit arguments (if any)
 //
 // Address: (e.g. JUMP)
+// 6 bit instruction identifier (max 64 instructions)
 // 24 bit value
+// 2 bit arguments (if any)
 
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;

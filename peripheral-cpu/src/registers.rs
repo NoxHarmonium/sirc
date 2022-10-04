@@ -1,3 +1,4 @@
+use std::mem::size_of;
 pub trait RegisterIndexing {
     fn get_at_index(&mut self, index: u8) -> u16;
     fn set_at_index(&mut self, index: u8, value: u16);
@@ -6,6 +7,30 @@ pub trait RegisterIndexing {
 pub enum StatusRegisterFields {
     LastComparisonResult = 0x01,
     CpuHalted = 0x2,
+}
+
+pub trait SegmentedAddress {
+    fn to_full_address(self) -> u32;
+}
+
+pub trait FullAddress {
+    fn to_segmented_address(self) -> (u16, u16);
+}
+
+impl SegmentedAddress for (u16, u16) {
+    fn to_full_address(self) -> u32 {
+        let (high, low) = self;
+        let high_shifted = (high as u32) << (size_of::<u16>() * 8);
+        high_shifted | low as u32
+    }
+}
+
+impl FullAddress for u32 {
+    fn to_segmented_address(self) -> (u16, u16) {
+        let high = (self >> size_of::<u16>() * 8) as u16;
+        let low = self as u16;
+        return (high, low);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -19,12 +44,15 @@ pub struct Registers {
     pub z1: u16,
     pub z2: u16,
     pub z3: u16,
-    pub ah: u16,
+    // Address Register
+    pub ah: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub al: u16,
-    // This register is allowed to be >
-    // Actually 24 bit but no built in rust datatype that I can find
-    pub pc: u32,
-    pub sp: u16,
+    // Program Counter
+    pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
+    pub pl: u16,
+    // Stack Pointer
+    pub sh: u16, // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
+    pub sl: u16,
     // Status Register
     // 0 - Last comparison result (e.g. 1 was success)
     // 1 - Carry bit
@@ -48,9 +76,11 @@ impl RegisterIndexing for Registers {
             8 => self.z3,
             9 => self.ah,
             10 => self.al,
-            11 => panic!("Cannot set PC directly except with special instructions"),
-            12 => self.sp,
-            13 => self.sr,
+            11 => self.ph,
+            12 => self.pl,
+            13 => self.sh,
+            14 => self.sl,
+            15 => self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
     }
@@ -67,9 +97,11 @@ impl RegisterIndexing for Registers {
             8 => self.z3 = value,
             9 => self.ah = value,
             10 => self.al = value,
-            11 => panic!("Cannot set PC directly except with special instructions"),
-            12 => self.sp = value,
-            13 => self.sr = value,
+            11 => self.ph = value,
+            12 => self.pl = value,
+            13 => self.sh = value,
+            14 => self.sl = value,
+            15 => self.sr = value,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
     }
@@ -77,7 +109,12 @@ impl RegisterIndexing for Registers {
 
 // TODO: Is there some macro or something to enable any number of values
 // to be specified, but default to zero if not specified?
-pub fn new_registers(pc: Option<u32>) -> Registers {
+pub fn new_registers(maybe_pc: Option<u32>) -> Registers {
+    let (ph, pl) = if let Some(pc) = maybe_pc {
+        pc.to_segmented_address()
+    } else {
+        (0x0000, 0x0000)
+    };
     Registers {
         x1: 0x0000,
         x2: 0x0000,
@@ -90,8 +127,10 @@ pub fn new_registers(pc: Option<u32>) -> Registers {
         z3: 0x0000,
         ah: 0x0000,
         al: 0x0000,
-        pc: pc.unwrap_or(0x0000),
-        sp: 0x0000,
+        ph,
+        pl,
+        sh: 0x0000,
+        sl: 0x0000,
         sr: 0x0000,
     }
 }
@@ -125,9 +164,13 @@ pub fn register_name_to_index(name: &str) -> u8 {
         // [ah, al]
         "ah" => 9,  // Address high
         "al" => 10, // Address low
-        "pc" => 11,
-        "sp" => 12,
-        "sr" => 13,
+        // [ph, pl]
+        "ph" => 11, // Program counter high
+        "pl" => 12, // Program counter low
+        // [sh, sl]
+        "sh" => 13, // Program counter high
+        "sl" => 14, // Program counter low
+        "sr" => 15,
         _ => panic!("Fatal: No register mapping for name [{}]", name),
     }
 }
