@@ -6,7 +6,7 @@ use nom::combinator::{eof, map};
 use nom::multi::many1;
 use nom::sequence::{separated_pair, terminated};
 use nom::IResult;
-use peripheral_cpu::instructions::{
+use peripheral_cpu::instructions::definitions::{
     AddInstructionData, AddressInstructionData, CopyInstructionData, DivideInstructionData,
     ImmediateInstructionData, Instruction, IsEqualInstructionData,
     IsGreaterOrEqualThanInstructionData, IsGreaterThanInstructionData,
@@ -307,9 +307,8 @@ fn parse_register_(i: &str) -> IResult<&str, &str> {
         tag("x3"),
         tag("y3"),
         tag("z3"),
-        tag("a1"),
-        tag("a2"),
-        tag("a3"),
+        tag("ah"),
+        tag("al"),
         tag("pc"),
         tag("sr"),
         tag("sp"),

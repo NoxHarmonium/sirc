@@ -1,6 +1,6 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::instructions::*;
+use crate::instructions::definitions::*;
 use crate::registers::*;
 
 pub trait Executor {

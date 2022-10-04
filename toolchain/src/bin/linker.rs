@@ -1,5 +1,5 @@
 use clap::Parser;
-use peripheral_cpu::instructions::INSTRUCTION_SIZE_WORDS;
+use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 
 use std::fs::{read, write};
 use std::io;

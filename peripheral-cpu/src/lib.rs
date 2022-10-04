@@ -5,7 +5,9 @@ pub mod registers;
 use peripheral_mem::MemoryPeripheral;
 
 use crate::executors::Executor;
-use crate::instructions::{decode_instruction, fetch_instruction, INSTRUCTION_SIZE_WORDS};
+use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
+use crate::instructions::encoding::decode_instruction;
+use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{new_registers, sr_bit_is_set, Registers, StatusRegisterFields};
 
 #[derive(Debug)]
@@ -42,7 +44,7 @@ pub fn new_cpu_peripheral<'a>(
 }
 
 fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a Registers, Error> {
-    use crate::instructions::Instruction::*;
+    use crate::instructions::definitions::Instruction::*;
 
     let raw_instruction = fetch_instruction(mem, registers.pc);
     let instruction = decode_instruction(raw_instruction);

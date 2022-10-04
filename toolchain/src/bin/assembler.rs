@@ -1,5 +1,6 @@
 use clap::Parser;
-use peripheral_cpu::instructions::{encode_instruction, INSTRUCTION_SIZE_BYTES};
+use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_BYTES;
+use peripheral_cpu::instructions::encoding::encode_instruction;
 use toolchain::parsers::instruction::{parse_tokens, Token};
 use toolchain::types::object::{ObjectDefinition, SymbolDefinition};
 
