@@ -1,5 +1,7 @@
 use std::mem::size_of;
 
+use crate::instructions::encoding::ADDRESS_MASK;
+
 pub enum StatusRegisterFields {
     LastComparisonResult = 0x01,
     CpuHalted = 0x2,
@@ -114,17 +116,52 @@ impl SegmentedRegisterAccess for Registers {
 }
 
 impl SegmentedAddress for (u16, u16) {
+    ///
+    /// Converts a segmented address (the high/low component of a 24 bit address split
+    /// into two 16 bit registers) into the combined 24 bit address.
+    ///
+    /// You will most likely need this when converting from the internal CPU registers
+    /// to the address representation exposed by the virtual address pins of the CPU
+    /// for something like peripheral_mem.
+    ///
+    /// ```
+    /// use peripheral_cpu::registers::SegmentedAddress;
+    ///
+    /// let segmented_address = (0xCAFE, 0xCAFE);
+    /// assert_eq!(segmented_address.to_full_address(), 0x00FECAFE);
+    /// ```
+    ///
     fn to_full_address(self) -> u32 {
         let (high, low) = self;
         let high_shifted = (high as u32) << (size_of::<u16>() * u8::BITS as usize);
-        high_shifted | low as u32
+        // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
+        // This CPU only supports 24 bit addressing
+        (high_shifted | low as u32) & ADDRESS_MASK
     }
 }
 
+///
+/// Converts a 24 bit address to a segmented address (the high/low component of
+/// a 24 bit address split into two 16 bit registers).
+///
+/// You will most likely need this when converting address exposed
+/// by the virtual address pins of the CPU for something like peripheral_mem
+/// to the representation in the internal CPU registers.
+///
+/// ```
+/// use peripheral_cpu::registers::FullAddress;
+///
+/// let full_address = 0xCAFECAFE;
+/// assert_eq!(full_address.to_segmented_address(), (0x00FE, 0xCAFE));
+/// ```
+///
 impl FullAddress for u32 {
     fn to_segmented_address(self) -> (u16, u16) {
-        let high = (self >> (size_of::<u16>() * u8::BITS as usize)) as u16;
-        let low = self as u16;
+        // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
+        // This CPU only supports 24 bit addressing
+        let masked = self & ADDRESS_MASK;
+        let high = (masked >> (size_of::<u16>() * u8::BITS as usize)) as u16;
+        let low = masked as u16;
         (high, low)
     }
 }
