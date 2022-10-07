@@ -1,36 +1,28 @@
 use std::mem::size_of;
-pub trait RegisterIndexing {
-    fn get_at_index(&mut self, index: u8) -> u16;
-    fn set_at_index(&mut self, index: u8, value: u16);
-}
 
 pub enum StatusRegisterFields {
     LastComparisonResult = 0x01,
     CpuHalted = 0x2,
 }
 
+// Traits
+
+pub trait RegisterIndexing {
+    fn get_at_index(&mut self, index: u8) -> u16;
+    fn set_at_index(&mut self, index: u8, value: u16);
+}
+
+pub trait SegmentedRegisterAccess {
+    fn get_segmented_pc(&self) -> (u16, u16);
+    fn get_segmented_address(&self) -> (u16, u16);
+    fn get_segmented_sp(&self) -> (u16, u16);
+}
 pub trait SegmentedAddress {
     fn to_full_address(self) -> u32;
 }
 
 pub trait FullAddress {
     fn to_segmented_address(self) -> (u16, u16);
-}
-
-impl SegmentedAddress for (u16, u16) {
-    fn to_full_address(self) -> u32 {
-        let (high, low) = self;
-        let high_shifted = (high as u32) << (size_of::<u16>() * 8);
-        high_shifted | low as u32
-    }
-}
-
-impl FullAddress for u32 {
-    fn to_segmented_address(self) -> (u16, u16) {
-        let high = (self >> size_of::<u16>() * 8) as u16;
-        let low = self as u16;
-        return (high, low);
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +96,36 @@ impl RegisterIndexing for Registers {
             15 => self.sr = value,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
+    }
+}
+
+impl SegmentedRegisterAccess for Registers {
+    fn get_segmented_pc(&self) -> (u16, u16) {
+        (self.ph, self.pl)
+    }
+
+    fn get_segmented_address(&self) -> (u16, u16) {
+        (self.ah, self.al)
+    }
+
+    fn get_segmented_sp(&self) -> (u16, u16) {
+        (self.sh, self.sl)
+    }
+}
+
+impl SegmentedAddress for (u16, u16) {
+    fn to_full_address(self) -> u32 {
+        let (high, low) = self;
+        let high_shifted = (high as u32) << (size_of::<u16>() * u8::BITS as usize);
+        high_shifted | low as u32
+    }
+}
+
+impl FullAddress for u32 {
+    fn to_segmented_address(self) -> (u16, u16) {
+        let high = (self >> (size_of::<u16>() * u8::BITS as usize)) as u16;
+        let low = self as u16;
+        (high, low)
     }
 }
 

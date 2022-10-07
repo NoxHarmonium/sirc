@@ -104,10 +104,9 @@ pub fn decode_register_instruction(raw_instruction: [u8; 4]) -> (u8, u8, u8) {
 pub fn decode_address_instruction(raw_instruction: [u8; 4]) -> u32 {
     let combined = u32::from_be_bytes(raw_instruction);
     let initial_offset = INSTRUCTION_ID_LENGTH;
-    let address = combined.rotate_left(initial_offset + ADDRESS_LENGTH) & ADDRESS_MASK;
     // No args are used at this point (reserved for more complex instructions)
 
-    address
+    combined.rotate_left(initial_offset + ADDRESS_LENGTH) & ADDRESS_MASK
 }
 
 // Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
@@ -259,7 +258,7 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> Instruction {
 /// ```
 pub fn encode_null_instruction(instruction_id: u8) -> [u8; 4] {
     [
-        instruction_id << size_of::<u8>() * 8 - INSTRUCTION_ID_LENGTH as usize,
+        instruction_id << (size_of::<u8>() * u8::BITS as usize - (INSTRUCTION_ID_LENGTH as usize)),
         0x0,
         0x0,
         0x0,

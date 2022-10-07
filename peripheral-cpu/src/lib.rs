@@ -11,7 +11,7 @@ use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::encoding::decode_instruction;
 use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{
-    new_registers, sr_bit_is_set, Registers, SegmentedAddress, StatusRegisterFields,
+    new_registers, sr_bit_is_set, Registers, SegmentedRegisterAccess, StatusRegisterFields,
 };
 
 #[derive(Debug)]
@@ -50,13 +50,10 @@ pub fn new_cpu_peripheral<'a>(
 fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a Registers, Error> {
     use crate::instructions::definitions::Instruction::*;
 
-    // Only the CPU knows that the address is split into two 16 bit registers
-    // Outside the CPU is only the 24 address lines
-    let full_address: u32 = (registers.ph, registers.pl).to_full_address();
-    let raw_instruction = fetch_instruction(mem, full_address);
+    let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
     let instruction = decode_instruction(raw_instruction);
 
-    let original_pc = (registers.ph, registers.pl);
+    let original_pc = registers.get_segmented_pc();
 
     match instruction {
         // TODO: There has to be a better way to dispatch these
@@ -85,11 +82,11 @@ fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a 
         return Err(Error::ProcessorHalted(registers.to_owned()));
     }
 
-    if original_pc == (registers.ph, registers.pl) {
+    if original_pc == registers.get_segmented_pc() {
         // If the PC hasn't been modified by the instruction than assume that it isn't
         // a flow control instruction like a jump and just increment it.
         // TODO: Is there a more reliable/elegant way to do this?
-        // TODO TODO: Need to handle pl overflow into ph
+        // TODO TODO: Need to handle pl overflow into ph (maybe segment overflow should be an exception?)
         registers.pl += INSTRUCTION_SIZE_WORDS as u16;
     }
 
