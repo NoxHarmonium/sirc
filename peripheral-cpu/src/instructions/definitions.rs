@@ -20,6 +20,11 @@
 // 24 bit value
 // 2 bit arguments (if any)
 
+use crate::executors::Executor;
+use crate::registers::Registers;
+use enum_dispatch::enum_dispatch;
+use peripheral_mem::MemoryPeripheral;
+
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
 pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
@@ -131,6 +136,7 @@ pub struct JumpIfNotInstructionData {
 }
 
 #[derive(Debug)]
+#[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
     Halt(NullInstructionData),

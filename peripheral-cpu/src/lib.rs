@@ -48,35 +48,11 @@ pub fn new_cpu_peripheral<'a>(
 }
 
 fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a Registers, Error> {
-    use crate::instructions::definitions::Instruction::*;
-
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
     let instruction = decode_instruction(raw_instruction);
 
     let original_pc = registers.get_segmented_pc();
-
-    match instruction {
-        // TODO: There has to be a better way to dispatch these
-        // https://gitlab.com/antonok/enum_dispatch worked before the crates were split up
-        // but doesn't work now because the shared crate would need to have the executor
-        // implementations in scope which would create a circular dependency
-        Halt(_) => return Err(Error::ProcessorHalted(registers.to_owned())),
-        Set(data) => data.execute(registers, mem),
-        Copy(data) => data.execute(registers, mem),
-        Add(data) => data.execute(registers, mem),
-        Subtract(data) => data.execute(registers, mem),
-        Multiply(data) => data.execute(registers, mem),
-        Divide(data) => data.execute(registers, mem),
-        IsEqual(data) => data.execute(registers, mem),
-        IsNotEqual(data) => data.execute(registers, mem),
-        IsLessThan(data) => data.execute(registers, mem),
-        IsGreaterThan(data) => data.execute(registers, mem),
-        IsLessOrEqualThan(data) => data.execute(registers, mem),
-        IsGreaterOrEqualThan(data) => data.execute(registers, mem),
-        Jump(data) => data.execute(registers, mem),
-        JumpIf(data) => data.execute(registers, mem),
-        JumpIfNot(data) => data.execute(registers, mem),
-    };
+    instruction.execute(registers, mem);
 
     if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
         return Err(Error::ProcessorHalted(registers.to_owned()));

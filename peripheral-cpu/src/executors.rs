@@ -1,8 +1,10 @@
+use enum_dispatch::enum_dispatch;
 use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::definitions::*;
 use crate::registers::*;
 
+#[enum_dispatch]
 pub trait Executor {
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral);
 }
