@@ -4,7 +4,7 @@ use crate::instructions::encoding::ADDRESS_MASK;
 
 pub enum StatusRegisterFields {
     LastComparisonResult = 0x01,
-    CpuHalted = 0x2,
+    CpuHalted = 0x02,
 }
 
 // Traits

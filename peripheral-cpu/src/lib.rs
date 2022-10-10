@@ -74,7 +74,7 @@ impl CpuPeripheral<'_> {
         loop {
             match step(&mut self.registers, self.memory_peripheral) {
                 Err(error) => {
-                    println!("Execution stopped:\n{:#?}", error);
+                    println!("Execution stopped:\n{:08x?}", error);
                     return Err(error);
                 }
                 Ok(_registers) => {

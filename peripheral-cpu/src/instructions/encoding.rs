@@ -122,120 +122,161 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> Instruction {
             })
         }
         0x02 => {
-            let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::Copy(CopyInstructionData {
-                data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
-                },
+            let address = decode_address_instruction(raw_instruction);
+            Instruction::SetAddress(SetAddressInstructionData {
+                data: AddressInstructionData { address },
             })
         }
         0x03 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::Add(AddInstructionData {
+            Instruction::Copy(CopyInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x04 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::Subtract(SubtractInstructionData {
+            Instruction::Add(AddInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x05 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::Multiply(MultiplyInstructionData {
+            Instruction::Subtract(SubtractInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x06 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::Divide(DivideInstructionData {
+            Instruction::Multiply(MultiplyInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x07 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsEqual(IsEqualInstructionData {
+            Instruction::Divide(DivideInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x08 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsNotEqual(IsNotEqualInstructionData {
+            Instruction::IsEqual(IsEqualInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x09 => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsLessThan(IsLessThanInstructionData {
+            Instruction::IsNotEqual(IsNotEqualInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x0A => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsGreaterThan(IsGreaterThanInstructionData {
+            Instruction::IsLessThan(IsLessThanInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x0B => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsLessOrEqualThan(IsLessOrEqualThanInstructionData {
+            Instruction::IsGreaterThan(IsGreaterThanInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x0C => {
             let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
-            Instruction::IsGreaterOrEqualThan(IsGreaterOrEqualThanInstructionData {
+            Instruction::IsLessOrEqualThan(IsLessOrEqualThanInstructionData {
                 data: RegisterInstructionData {
-                    src_register,
-                    dest_register,
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
                 },
             })
         }
         0x0D => {
+            let (src_register, dest_register, _) = decode_register_instruction(raw_instruction);
+            Instruction::IsGreaterOrEqualThan(IsGreaterOrEqualThanInstructionData {
+                data: RegisterInstructionData {
+                    r1: src_register,
+                    r2: dest_register,
+                    r3: 0x0000,
+                },
+            })
+        }
+        0x0E => {
             let address = decode_address_instruction(raw_instruction);
             Instruction::Jump(JumpInstructionData {
                 data: AddressInstructionData { address },
             })
         }
-        0x0E => {
+        0x0F => {
             let address = decode_address_instruction(raw_instruction);
             Instruction::JumpIf(JumpIfInstructionData {
                 data: AddressInstructionData { address },
             })
         }
-        0x0F => {
+        0x10 => {
             let address = decode_address_instruction(raw_instruction);
             Instruction::JumpIfNot(JumpIfNotInstructionData {
                 data: AddressInstructionData { address },
+            })
+        }
+        0x11 => {
+            let (r1, r2, _) = decode_register_instruction(raw_instruction);
+            Instruction::LoadOffsetRegister(LoadOffsetRegisterData {
+                data: RegisterInstructionData { r1, r2, r3: 0x0000 },
+            })
+        }
+        0x12 => {
+            let (r1, r2, _) = decode_register_instruction(raw_instruction);
+            Instruction::StoreOffsetRegister(StoreOffsetRegisterData {
+                data: RegisterInstructionData { r1, r2, r3: 0x0000 },
+            })
+        }
+        0x13 => {
+            let (register, value) = decode_immediate_instruction(raw_instruction);
+            Instruction::LoadOffsetImmediate(LoadOffsetImmediateData {
+                data: ImmediateInstructionData { register, value },
+            })
+        }
+        0x14 => {
+            let (register, value) = decode_immediate_instruction(raw_instruction);
+            Instruction::StoreOffsetImmediate(StoreOffsetImmediateData {
+                data: ImmediateInstructionData { register, value },
             })
         }
         _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
@@ -340,41 +381,54 @@ pub fn encode_instruction(instruction: &Instruction) -> [u8; 4] {
         Instruction::Set(data) => {
             encode_immediate_instruction(0x01, data.data.register, data.data.value)
         }
+        Instruction::SetAddress(data) => encode_address_instruction(0x02, data.data.address),
         Instruction::Copy(data) => {
-            encode_register_instruction(0x02, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x03, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::Add(data) => {
-            encode_register_instruction(0x03, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x04, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::Subtract(data) => {
-            encode_register_instruction(0x04, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x05, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::Multiply(data) => {
-            encode_register_instruction(0x05, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x06, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::Divide(data) => {
-            encode_register_instruction(0x06, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x07, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsEqual(data) => {
-            encode_register_instruction(0x07, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x08, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsNotEqual(data) => {
-            encode_register_instruction(0x08, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x09, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsLessThan(data) => {
-            encode_register_instruction(0x09, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x0A, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsGreaterThan(data) => {
-            encode_register_instruction(0x0A, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x0B, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsLessOrEqualThan(data) => {
-            encode_register_instruction(0x0B, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x0C, data.data.r1, data.data.r2, 0x0)
         }
         Instruction::IsGreaterOrEqualThan(data) => {
-            encode_register_instruction(0x0C, data.data.src_register, data.data.dest_register, 0x0)
+            encode_register_instruction(0x0D, data.data.r1, data.data.r2, 0x0)
         }
-        Instruction::Jump(data) => encode_address_instruction(0x0D, data.data.address),
-        Instruction::JumpIf(data) => encode_address_instruction(0x0E, data.data.address),
-        Instruction::JumpIfNot(data) => encode_address_instruction(0x0F, data.data.address),
+        Instruction::Jump(data) => encode_address_instruction(0x0E, data.data.address),
+        Instruction::JumpIf(data) => encode_address_instruction(0x0F, data.data.address),
+        Instruction::JumpIfNot(data) => encode_address_instruction(0x10, data.data.address),
+        Instruction::LoadOffsetRegister(data) => {
+            encode_register_instruction(0x11, data.data.r1, data.data.r2, 0x0)
+        }
+        Instruction::StoreOffsetRegister(data) => {
+            encode_register_instruction(0x12, data.data.r1, data.data.r2, 0x0)
+        }
+        Instruction::LoadOffsetImmediate(data) => {
+            encode_immediate_instruction(0x13, data.data.register, data.data.value)
+        }
+        Instruction::StoreOffsetImmediate(data) => {
+            encode_immediate_instruction(0x14, data.data.register, data.data.value)
+        }
     }
 }

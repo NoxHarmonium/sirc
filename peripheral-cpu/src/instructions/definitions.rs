@@ -39,8 +39,9 @@ pub struct ImmediateInstructionData {
 
 #[derive(Debug)]
 pub struct RegisterInstructionData {
-    pub src_register: u8,
-    pub dest_register: u8,
+    pub r1: u8,
+    pub r2: u8,
+    pub r3: u8,
 }
 
 #[derive(Debug)]
@@ -57,6 +58,11 @@ pub struct NullInstructionData {}
 #[derive(Debug)]
 pub struct SetInstructionData {
     pub data: ImmediateInstructionData,
+}
+
+#[derive(Debug)]
+pub struct SetAddressInstructionData {
+    pub data: AddressInstructionData,
 }
 
 #[derive(Debug)]
@@ -136,12 +142,33 @@ pub struct JumpIfNotInstructionData {
 }
 
 #[derive(Debug)]
+pub struct LoadOffsetRegisterData {
+    pub data: RegisterInstructionData,
+}
+
+#[derive(Debug)]
+pub struct StoreOffsetRegisterData {
+    pub data: RegisterInstructionData,
+}
+
+#[derive(Debug)]
+pub struct LoadOffsetImmediateData {
+    pub data: ImmediateInstructionData,
+}
+
+#[derive(Debug)]
+pub struct StoreOffsetImmediateData {
+    pub data: ImmediateInstructionData,
+}
+
+#[derive(Debug)]
 #[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
     Halt(NullInstructionData),
     // Register Transfer
     Set(SetInstructionData),
+    SetAddress(SetAddressInstructionData),
     Copy(CopyInstructionData),
     // Arithmetic
     Add(AddInstructionData),
@@ -159,4 +186,9 @@ pub enum Instruction {
     Jump(JumpInstructionData),
     JumpIf(JumpIfInstructionData),
     JumpIfNot(JumpIfNotInstructionData),
+    // Data Access
+    LoadOffsetRegister(LoadOffsetRegisterData),
+    StoreOffsetRegister(StoreOffsetRegisterData),
+    LoadOffsetImmediate(LoadOffsetImmediateData),
+    StoreOffsetImmediate(StoreOffsetImmediateData),
 }
