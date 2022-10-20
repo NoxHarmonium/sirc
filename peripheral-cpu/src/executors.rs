@@ -68,20 +68,163 @@ impl Executor for CopyInstructionData {
 // Arithmetic
 
 impl Executor for AddInstructionData {
-    // TODO: Set status bits for overflow/carry etc.
+    ///
+    /// Executes an addition operation on two registers, storing the result in
+    /// the second operand.
+    ///
+    /// If an unsigned overflow occurs, the carry status flag will be set.
+    /// If a signed overflow occurs, the overflow status flag will be set.
+    ///
+    /// ```
+    /// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, AddInstructionData};
+    /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
+    /// use peripheral_cpu::executors::Executor;
+    /// use peripheral_mem::new_memory_peripheral;
+    ///
+    /// // Thanks: https://stackoverflow.com/a/69125543/1153203
+    ///
+    /// let mut mem = new_memory_peripheral();
+    ///
+    /// let mut registers = Registers::default();
+    ///
+    /// let instructionData = AddInstructionData {
+    ///     data: RegisterInstructionData {
+    ///         r1: 0x00, // x1
+    ///         r2: 0x01, // x2
+    ///         r3: 0x00, // unused
+    ///     }
+    /// };
+    ///
+    /// // Unsigned Overflow
+    /// registers.x1 = 0xFFFF;
+    /// registers.x2 = 0x0001;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0x0000);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+    ///
+    /// // Signed Overflow
+    /// registers.x1 = 0x7FFF;
+    /// registers.x2 = 0x2000;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0x9FFF);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
+    ///
+    /// // Both Overflow
+    /// registers.x1 = 0x9FFF;
+    /// registers.x2 = 0x9000;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0x2FFF);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
+    /// ```
+    ///
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        registers.set_at_index(self.data.r2, val_1 + val_2)
+        let (result, carry) = val_2.overflowing_add(val_1);
+        let (_, overflow) = (val_2 as i16).overflowing_add(val_1 as i16);
+        if carry {
+            set_sr_bit(StatusRegisterFields::Carry, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Carry, registers);
+        }
+        if overflow {
+            set_sr_bit(StatusRegisterFields::Overflow, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Overflow, registers);
+        }
+
+        registers.set_at_index(self.data.r2, result)
     }
 }
 
 impl Executor for SubtractInstructionData {
-    // TODO: Set status bits for overflow/carry etc.
+    ///
+    /// Executes an subtraction operation on two registers, storing the result in
+    /// the second operand.
+    ///
+    /// The first operand is subtracted from the second operand.
+    ///
+    /// If an unsigned overflow occurs, the carry status flag will be set.
+    /// If a signed overflow occurs, the overflow status flag will be set.
+    ///
+    /// ```
+    /// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, SubtractInstructionData};
+    /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
+    /// use peripheral_cpu::executors::Executor;
+    /// use peripheral_mem::new_memory_peripheral;
+    ///
+    /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+    ///
+    /// let mut mem = new_memory_peripheral();
+    ///
+    /// let mut registers = Registers::default();
+    ///
+    /// let instructionData = SubtractInstructionData {
+    ///     data: RegisterInstructionData {
+    ///         r1: 0x00, // x1
+    ///         r2: 0x01, // x2
+    ///         r3: 0x00, // unused
+    ///     }
+    /// };
+    ///
+    /// // Unsigned Overflow
+    /// registers.x1 = 0xFFFF;
+    /// registers.x2 = 0x5FFF;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0x6000);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+    ///
+    /// // Signed Overflow
+    /// registers.x1 = 0x7FFF;
+    /// registers.x2 = 0xDFFF;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0x6000);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
+    ///
+    /// // Both Overflow
+    /// registers.x1 = 0xBFFF;
+    /// registers.x2 = 0x5FFF;
+    ///
+    /// instructionData.execute(&mut registers, &mem);
+    ///
+    /// assert_eq!(registers.x2, 0xA000);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+    /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
+    /// ```
+    ///
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        registers.set_at_index(self.data.r2, val_2 - val_1)
+
+        let (result, carry) = val_2.overflowing_sub(val_1);
+        let (_, overflow) = (val_2 as i16).overflowing_sub(val_1 as i16);
+        if carry {
+            set_sr_bit(StatusRegisterFields::Carry, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Carry, registers);
+        }
+        if overflow {
+            set_sr_bit(StatusRegisterFields::Overflow, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Overflow, registers);
+        }
+
+        registers.set_at_index(self.data.r2, result)
     }
 }
 
