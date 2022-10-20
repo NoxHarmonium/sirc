@@ -294,7 +294,7 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
                 symbol_ref,
             }
         }),
-        map(parse_address_instruction("JPEQ"), |address_enum| {
+        map(parse_address_instruction("JPOC"), |address_enum| {
             let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
                 instruction: Instruction::JumpIf(JumpIfInstructionData {
@@ -303,7 +303,7 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
                 symbol_ref,
             }
         }),
-        map(parse_address_instruction("JPNE"), |address_enum| {
+        map(parse_address_instruction("JPNC"), |address_enum| {
             let (address, symbol_ref) = extract_address_arguments(address_enum);
             InstructionToken {
                 instruction: Instruction::JumpIfNot(JumpIfNotInstructionData {

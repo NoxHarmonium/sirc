@@ -15,9 +15,9 @@ pub trait Executor {
 ///
 /// ```
 /// use peripheral_cpu::executors::set_comparison_result;
-/// use peripheral_cpu::registers::{new_registers, StatusRegisterFields};
+/// use peripheral_cpu::registers::{Registers, StatusRegisterFields};
 ///
-/// let mut registers = new_registers(None);
+/// let mut registers = Registers::default();
 ///
 /// set_comparison_result(&mut registers, true);
 /// assert_eq!(registers.sr & StatusRegisterFields::LastComparisonResult as u16, StatusRegisterFields::LastComparisonResult as u16);
@@ -163,7 +163,7 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
 ///
 /// ```
 /// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpInstructionData};
-/// use peripheral_cpu::registers::new_registers;
+/// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
@@ -173,7 +173,7 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
 ///     address: 0x00CAFECA
 ///   }
 /// };
-/// let mut registers = new_registers(None);
+/// let mut registers = Registers::default();
 /// let mem = new_memory_peripheral();
 /// jumpInstruction.execute(&mut registers, &mem);
 ///
@@ -196,7 +196,7 @@ impl Executor for JumpInstructionData {
 ///
 /// ```
 /// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpIfInstructionData};
-/// use peripheral_cpu::registers::new_registers;
+/// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::{Executor, set_comparison_result};
 /// use peripheral_mem::new_memory_peripheral;
 ///
@@ -206,7 +206,7 @@ impl Executor for JumpInstructionData {
 ///     address: 0x00CAFECA
 ///   }
 /// };
-/// let mut registers = new_registers(None);
+/// let mut registers = Registers::default();
 /// let mem = new_memory_peripheral();
 ///
 /// set_comparison_result(&mut registers, false);
@@ -238,7 +238,7 @@ impl Executor for JumpIfInstructionData {
 ///
 /// ```
 /// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpIfNotInstructionData};
-/// use peripheral_cpu::registers::new_registers;
+/// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::{Executor, set_comparison_result};
 /// use peripheral_mem::new_memory_peripheral;
 ///
@@ -248,7 +248,7 @@ impl Executor for JumpIfInstructionData {
 ///     address: 0x00CAFECA
 ///   }
 /// };
-/// let mut registers = new_registers(None);
+/// let mut registers = Registers::default();
 /// let mem = new_memory_peripheral();
 ///
 /// set_comparison_result(&mut registers, true);
@@ -273,6 +273,39 @@ impl Executor for JumpIfNotInstructionData {
 
 // Data Access
 
+///
+/// Loads a 16 bit value out of a memory address into a register.
+///
+/// The base address value is specified by the address registers (ah/al)
+/// the first operand is the destination register and the second register
+/// is an offset to add to the base address value.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let loadOffsetRegisterInstruction = LoadOffsetRegisterData {
+///   data: RegisterInstructionData {
+///     r1: 0x00, // x1
+///     r2: 0x03, // y1
+///     r3: 0x00, // unused
+///   }
+/// };
+/// let mut registers = Registers { ah: 0x1011, al: 0x1110, y1: 0x0001, ..Registers::default() };
+///
+/// let mut mem = new_memory_peripheral();
+/// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
+/// mem.write_address(0x00111111, 0xCAFE);
+///
+/// loadOffsetRegisterInstruction.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0xCAFE);
+///
+/// ```
+///
 impl Executor for LoadOffsetRegisterData {
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         let (segment, address) = registers.get_segmented_address();

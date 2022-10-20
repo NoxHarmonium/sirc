@@ -5,14 +5,13 @@ pub mod instructions;
 pub mod registers;
 
 use peripheral_mem::MemoryPeripheral;
+use registers::FullAddress;
 
 use crate::executors::Executor;
 use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::encoding::decode_instruction;
 use crate::instructions::fetch::fetch_instruction;
-use crate::registers::{
-    new_registers, sr_bit_is_set, Registers, SegmentedRegisterAccess, StatusRegisterFields,
-};
+use crate::registers::{sr_bit_is_set, Registers, SegmentedRegisterAccess, StatusRegisterFields};
 
 #[derive(Debug)]
 pub enum Error {
@@ -31,8 +30,8 @@ pub fn new_cpu_peripheral<'a>(
     program_segment_label: &str,
 ) -> CpuPeripheral<'a> {
     let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);
-    let initial_pc = match program_segment {
-        Some(s) => s.address,
+    let (ph, pl) = match program_segment {
+        Some(s) => s.address.to_segmented_address(),
         None => {
             panic!(
                 "Could not find '{}' segment in memory peripheral",
@@ -43,7 +42,11 @@ pub fn new_cpu_peripheral<'a>(
 
     CpuPeripheral {
         memory_peripheral,
-        registers: new_registers(Some(initial_pc)),
+        registers: Registers {
+            ph,
+            pl,
+            ..Registers::default()
+        },
     }
 }
 

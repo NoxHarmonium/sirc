@@ -7,18 +7,18 @@ pub struct Segment {
     pub address: u32,
     pub size: u32,
     pub writable: bool,
+    // At the moment, all segments get the maximum allowable of memory allocated
+    // for a single segment (16 bit address). This is wasteful but not a huge issue
+    // at the moment running on a machine with GBs of memory
+    mem_cell: RefCell<[u16; 65536]>,
 }
 
 pub struct MemoryPeripheral {
-    mem_cell: RefCell<[u16; 65536]>,
     segments: Vec<Segment>,
 }
 
 pub fn new_memory_peripheral() -> MemoryPeripheral {
-    MemoryPeripheral {
-        mem_cell: RefCell::new([0; 65536]),
-        segments: vec![],
-    }
+    MemoryPeripheral { segments: vec![] }
 }
 
 impl MemoryPeripheral {
@@ -33,24 +33,33 @@ impl MemoryPeripheral {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
             .iter()
-            .find(|s| s.address >= address && address < s.address + s.size)
+            .find(|s| address >= s.address && address <= s.address + s.size)
             .map(|s| s.to_owned())
     }
 
     pub fn map_segment(&mut self, label: &str, address: u32, size: u32, writable: bool) {
+        println!(
+            "Map segment {} from 0x{:08x} to 0x{:08x}",
+            label,
+            address,
+            address + size
+        );
+
         self.segments.push(Segment {
             label: String::from(label),
             address,
             size,
             writable,
+            mem_cell: RefCell::new([0; 65536]),
         })
     }
 
     pub fn load_binary_data_into_segment(&self, label: &str, path: PathBuf) {
         let maybe_segment = self.get_segment_for_label(label);
-        let (segment_address, segment_size) = match maybe_segment {
+
+        let (segment_size, mem_cell) = match maybe_segment {
             // TODO: Make this nicer. Borrow checker was complaining if matchers are nested
-            Some(segment) => (segment.address, segment.size),
+            Some(segment) => (segment.size, &segment.mem_cell),
             None => {
                 panic!("Could not find segment with name: {}", label)
             }
@@ -68,9 +77,9 @@ impl MemoryPeripheral {
                     );
                 }
                 // Convert bytes to words
-                let mut mem = self.mem_cell.borrow_mut();
+                let mut mem = mem_cell.borrow_mut();
                 for i in 0..binary_data.len() / 2 {
-                    let destination_address = segment_address as usize + i;
+                    let destination_address = i;
                     let source_address = i * 2;
                     let data = u16::from_le_bytes([
                         binary_data[source_address],
@@ -90,25 +99,38 @@ impl MemoryPeripheral {
     }
 
     pub fn read_address(&self, address: u32) -> u16 {
-        // Range check?
-        let mem = self.mem_cell.borrow();
-        mem.get(address as usize).unwrap().to_owned()
+        if let Some(segment) = self.get_segment_for_address(address) {
+            // Range check?
+            let mem = segment.mem_cell.borrow();
+            mem.get(address as usize - segment.address as usize)
+                .unwrap()
+                .to_owned()
+        } else {
+            println!(
+                "Warning: No segment mapped to address 0x{:08x}. Value will always be 0x0000",
+                address
+            );
+            // If a segment isn't mapped, the address just maps to nothing
+            0x0000
+        }
     }
 
     pub fn write_address(&self, address: u32, value: u16) {
-        let maybe_segment = self.get_segment_for_address(address);
-        match maybe_segment {
-            Some(segment) => {
-                if !segment.writable {
-                    panic!(
-                        "Segment {} is read-only and cannot be written to",
-                        segment.label
-                    )
-                }
+        if let Some(segment) = self.get_segment_for_address(address) {
+            if !segment.writable {
+                panic!(
+                    "Segment {} is read-only and cannot be written to",
+                    segment.label
+                )
             }
-            None => {}
+            let mut mem = segment.mem_cell.borrow_mut();
+            mem[address as usize - segment.address as usize] = value;
+        } else {
+            // If a segment isn't mapped, the value just goes into a black hole
+            println!(
+                "Warning: No segment mapped to address 0x{:08x}. Value will be ignored (not written)",
+                address
+            );
         }
-        let mut mem = self.mem_cell.borrow_mut();
-        mem[address as usize] = value;
     }
 }
