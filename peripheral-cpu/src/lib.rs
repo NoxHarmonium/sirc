@@ -2,16 +2,18 @@
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod executors;
 pub mod instructions;
+pub mod interrupts;
 pub mod registers;
 
+use instructions::definitions::get_clocks_for_instruction;
 use peripheral_mem::MemoryPeripheral;
-use registers::FullAddress;
+use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
 
 use crate::executors::Executor;
 use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::encoding::decode_instruction;
 use crate::instructions::fetch::fetch_instruction;
-use crate::registers::{sr_bit_is_set, Registers, SegmentedRegisterAccess, StatusRegisterFields};
+use crate::registers::{Registers, SegmentedRegisterAccess};
 
 #[derive(Debug)]
 pub enum Error {
@@ -21,7 +23,6 @@ pub enum Error {
 
 pub struct CpuPeripheral<'a> {
     pub memory_peripheral: &'a MemoryPeripheral,
-
     pub registers: Registers,
 }
 
@@ -50,16 +51,16 @@ pub fn new_cpu_peripheral<'a>(
     }
 }
 
-fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a Registers, Error> {
+fn step<'a>(
+    registers: &'a mut Registers,
+    mem: &MemoryPeripheral,
+) -> Result<(&'a Registers, u32), Error> {
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
     let instruction = decode_instruction(raw_instruction);
 
     let original_pc = registers.get_segmented_pc();
-    instruction.execute(registers, mem);
 
-    if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-        return Err(Error::ProcessorHalted(registers.to_owned()));
-    }
+    instruction.execute(registers, mem);
 
     if original_pc == registers.get_segmented_pc() {
         // If the PC hasn't been modified by the instruction than assume that it isn't
@@ -69,19 +70,31 @@ fn step<'a>(registers: &'a mut Registers, mem: &MemoryPeripheral) -> Result<&'a 
         registers.pl += INSTRUCTION_SIZE_WORDS as u16;
     }
 
-    Ok(registers)
+    let clocks = get_clocks_for_instruction(&instruction);
+
+    if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
+        return Err(Error::ProcessorHalted(registers.to_owned()));
+    }
+
+    Ok((registers, clocks))
 }
 
 impl CpuPeripheral<'_> {
-    pub fn run_cpu(&mut self) -> Result<(), Error> {
+    pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
+        let mut clocks: u32 = 0;
         loop {
             match step(&mut self.registers, self.memory_peripheral) {
                 Err(error) => {
                     println!("Execution stopped:\n{:08x?}", error);
                     return Err(error);
                 }
-                Ok(_registers) => {
-                    // Debug statements for each execution step can go here
+                Ok((_registers, instruction_clocks)) => {
+                    clocks += instruction_clocks;
+
+                    if clocks >= clock_quota {
+                        // Exit if quota is reached to allow other devices to run
+                        return Ok(clocks);
+                    }
                 }
             }
         }

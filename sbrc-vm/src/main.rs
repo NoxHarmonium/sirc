@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
 use peripheral_mem::new_memory_peripheral;
 
@@ -17,6 +18,11 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    let clock_peripheral = ClockPeripheral {
+        master_clock_freq: 25_000_000,
+        cpu_divider: 6,
+        hsync_divider: 1600,
+    };
     let mut memory_peripheral = new_memory_peripheral();
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
@@ -25,12 +31,14 @@ fn main() {
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
-    match cpu_peripheral.run_cpu() {
-        Ok(()) => {
-            println!("CPU Done");
+    let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
+        Ok(actual_clocks_executed) => {
+            println!("actual_clocks_executed: {}", actual_clocks_executed);
         }
         Err(error) => {
             panic!("CPU Error: {:08x?}", error);
         }
-    }
+    };
+
+    clock_peripheral.start_loop(execute)
 }

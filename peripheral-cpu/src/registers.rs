@@ -4,10 +4,20 @@ use std::ops::{Index, IndexMut};
 use crate::instructions::encoding::ADDRESS_MASK;
 
 pub enum StatusRegisterFields {
-    LastComparisonResult = 0x01,
-    CpuHalted = 0x02,
-    Carry = 0x04,
-    Overflow = 0x08,
+    // Byte 1
+    LastComparisonResult = 0x0001,
+    CpuHalted = 0x0002,
+    Carry = 0x0004,
+    Overflow = 0x0008,
+    // Byte 2
+    SystemMode = 0x0010,
+    InterruptMaskLow = 0x0020,
+    InterruptMaskMed = 0x0040,
+    InterruptMaskHigh = 0x0080,
+    // Byte 3
+    // TODO: Is this the best place for this flag? No program will be able to read it
+    //       maybe move to internal register?
+    WaitingForInterrupt = 0x0100,
 }
 
 // Traits
@@ -21,9 +31,17 @@ pub trait SegmentedRegisterAccess {
     fn get_segmented_pc(&self) -> (u16, u16);
     fn get_segmented_address(&self) -> (u16, u16);
     fn get_segmented_sp(&self) -> (u16, u16);
+
+    fn set_segmented_sp(&mut self, segmented_sp: (u16, u16));
 }
 pub trait SegmentedAddress {
     fn to_full_address(self) -> u32;
+}
+
+pub trait FullAddressRegisterAccess {
+    fn get_full_pc_address(&self) -> u32;
+    fn get_full_address_address(&self) -> u32;
+    fn get_full_sp_address(&self) -> u32;
 }
 
 pub trait FullAddress {
@@ -47,15 +65,21 @@ pub struct Registers {
     // Program Counter
     pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
     pub pl: u16,
-    // Stack Pointer
-    pub sh: u16, // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
-    pub sl: u16,
+    // Stack Pointer (user, system) - depending on system status bit
+    pub sh: (u16, u16), // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
+    pub sl: (u16, u16),
     // Status Register
     // 0 - Last comparison result (e.g. 1 was success)
     // 1 - CPU is halted
     // 2 - Carry bit
     // 3 - Overflow bit
     pub sr: u16,
+
+    // CPU Internal Registers (not directly accessible to programs)
+    // No need to segment these registers into 16 bit registers because instructions don't address them
+
+    // System RAM access is offset from here (e.g. interrupt vectors)
+    pub system_ram_offset: u32,
 }
 
 impl Index<u8> for Registers {
@@ -76,8 +100,20 @@ impl Index<u8> for Registers {
             10 => &self.al,
             11 => &self.ph,
             12 => &self.pl,
-            13 => &self.sh,
-            14 => &self.sl,
+            13 => {
+                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+                    &self.sh.1
+                } else {
+                    &self.sh.0
+                }
+            }
+            14 => {
+                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+                    &self.sl.1
+                } else {
+                    &self.sl.0
+                }
+            }
             15 => &self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
@@ -100,8 +136,20 @@ impl IndexMut<u8> for Registers {
             10 => &mut self.al,
             11 => &mut self.ph,
             12 => &mut self.pl,
-            13 => &mut self.sh,
-            14 => &mut self.sl,
+            13 => {
+                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+                    &mut self.sh.1
+                } else {
+                    &mut self.sh.0
+                }
+            }
+            14 => {
+                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+                    &mut self.sl.1
+                } else {
+                    &mut self.sl.0
+                }
+            }
             15 => &mut self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
@@ -128,7 +176,19 @@ impl SegmentedRegisterAccess for Registers {
     }
 
     fn get_segmented_sp(&self) -> (u16, u16) {
-        (self.sh, self.sl)
+        if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+            (self.sh.1, self.sl.1)
+        } else {
+            (self.sh.0, self.sl.0)
+        }
+    }
+
+    fn set_segmented_sp(&mut self, segmented_sp: (u16, u16)) {
+        if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
+            (self.sh.1, self.sl.1) = segmented_sp;
+        } else {
+            (self.sh.0, self.sl.0) = segmented_sp;
+        }
     }
 }
 
@@ -154,6 +214,20 @@ impl SegmentedAddress for (u16, u16) {
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
         // This CPU only supports 24 bit addressing
         (high_shifted | low as u32) & ADDRESS_MASK
+    }
+}
+
+impl FullAddressRegisterAccess for Registers {
+    fn get_full_pc_address(&self) -> u32 {
+        self.get_segmented_pc().to_full_address()
+    }
+
+    fn get_full_address_address(&self) -> u32 {
+        self.get_segmented_address().to_full_address()
+    }
+
+    fn get_full_sp_address(&self) -> u32 {
+        self.get_segmented_sp().to_full_address()
     }
 }
 
@@ -243,6 +317,78 @@ pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = field as u16;
     registers.sr &= !bit_mask
+}
+
+///
+/// Returns the value of the interrupt mask in the status register as a 4-bit integer.
+///
+/// ```
+/// use peripheral_cpu::registers::{get_interrupt_mask, Registers};
+///
+/// let mut registers = Registers::default();
+///
+/// registers.sr = 0b0000_1010;
+/// assert_eq!(0, get_interrupt_mask(&registers));
+/// registers.sr = 0b0010_1010;
+/// assert_eq!(1, get_interrupt_mask(&registers));
+/// registers.sr = 0b0100_1010;
+/// assert_eq!(2, get_interrupt_mask(&registers));
+/// registers.sr = 0b0110_1010;
+/// assert_eq!(3, get_interrupt_mask(&registers));
+/// registers.sr = 0b1000_1010;
+/// assert_eq!(4, get_interrupt_mask(&registers));
+/// registers.sr = 0b1010_1010;
+/// assert_eq!(5, get_interrupt_mask(&registers));
+/// registers.sr = 0b1100_1010;
+/// assert_eq!(6, get_interrupt_mask(&registers));
+/// registers.sr = 0b1110_1010;
+/// assert_eq!(7, get_interrupt_mask(&registers));
+/// ```
+pub fn get_interrupt_mask(registers: &Registers) -> u8 {
+    let bit_mask = StatusRegisterFields::InterruptMaskHigh as u16
+        | StatusRegisterFields::InterruptMaskMed as u16
+        | StatusRegisterFields::InterruptMaskLow as u16;
+    let masked_bits = registers.sr & bit_mask;
+    // TODO: Can we work out this shift based on the fields position?
+    (masked_bits >> 5) as u8
+}
+
+///
+/// Sets the value of the interrupt mask in the status register as a 4-bit integer.
+///
+/// ```
+/// use peripheral_cpu::registers::{set_interrupt_mask, Registers};
+///
+/// let mut registers = Registers::default();
+/// registers.sr = 0b0000_1010;
+///
+/// set_interrupt_mask(&mut registers, 0);
+/// assert_eq!(0b0000_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 1);
+/// assert_eq!(0b0010_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 2);
+/// assert_eq!(0b0100_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 3);
+/// assert_eq!(0b0110_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 4);
+/// assert_eq!(0b1000_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 5);
+/// assert_eq!(0b1010_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 6);
+/// assert_eq!(0b1100_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 7);
+/// assert_eq!(0b1110_1010, registers.sr);
+/// set_interrupt_mask(&mut registers, 8);
+/// assert_eq!(0b1110_1010, registers.sr);
+/// ```
+pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
+    // TODO: Can we work out this shift based on the fields position?
+    let shifted_value = (interrupt_mask as u16) << 5;
+    let bit_mask = !(StatusRegisterFields::InterruptMaskHigh as u16
+        | StatusRegisterFields::InterruptMaskMed as u16
+        | StatusRegisterFields::InterruptMaskLow as u16);
+
+    registers.sr = (registers.sr & bit_mask) | shifted_value;
 }
 
 ///

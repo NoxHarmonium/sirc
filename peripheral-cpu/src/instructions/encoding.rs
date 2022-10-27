@@ -430,5 +430,13 @@ pub fn encode_instruction(instruction: &Instruction) -> [u8; 4] {
         Instruction::StoreOffsetImmediate(data) => {
             encode_immediate_instruction(0x14, data.data.register, data.data.value)
         }
+        // TODO: Redorder these and implement
+        Instruction::WaitForInterrupt(_) => todo!(),
+        Instruction::ReturnFromInterrupt(_) => todo!(),
+        Instruction::TriggerSoftwareInterrupt(_) => todo!(),
+        Instruction::DisableInterrupts(_) => todo!(),
+        Instruction::EnableInterrupts(_) => todo!(),
+        Instruction::JumpToSubroutine(_) => todo!(),
+        Instruction::ReturnFromSubroutine(_) => todo!(),
     }
 }

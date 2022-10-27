@@ -20,6 +20,14 @@
 // 24 bit value
 // 2 bit arguments (if any)
 
+// Segment 0x00 is reserved by the CPU for parameters.
+// The other segments are flexible because they are defined in this hardcoded segment.
+//
+// 0x00 0000 : DW Initial PC
+// 0x00 0002 : DW System SP
+// 0x00 0004 : DW Base System RAM (for storing in interrupt vectors etc.)
+// ...
+
 use crate::executors::Executor;
 use crate::registers::Registers;
 use enum_dispatch::enum_dispatch;
@@ -162,6 +170,41 @@ pub struct StoreOffsetImmediateData {
 }
 
 #[derive(Debug)]
+pub struct WaitForInterruptInstructionData {
+    pub data: NullInstructionData,
+}
+
+#[derive(Debug)]
+pub struct ReturnFromInterruptData {
+    pub data: NullInstructionData,
+}
+
+#[derive(Debug)]
+pub struct TriggerSoftwareInterruptData {
+    pub data: ImmediateInstructionData,
+}
+
+#[derive(Debug)]
+pub struct DisableInterruptsData {
+    pub data: NullInstructionData,
+}
+
+#[derive(Debug)]
+pub struct EnableInterruptsData {
+    pub data: NullInstructionData,
+}
+
+#[derive(Debug)]
+pub struct JumpToSubroutineData {
+    pub data: AddressInstructionData,
+}
+
+#[derive(Debug)]
+pub struct ReturnFromSubroutineData {
+    pub data: NullInstructionData,
+}
+
+#[derive(Debug)]
 #[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
@@ -191,4 +234,62 @@ pub enum Instruction {
     StoreOffsetRegister(StoreOffsetRegisterData),
     LoadOffsetImmediate(LoadOffsetImmediateData),
     StoreOffsetImmediate(StoreOffsetImmediateData),
+    // Interrupts
+    WaitForInterrupt(WaitForInterruptInstructionData),
+    ReturnFromInterrupt(ReturnFromInterruptData),
+    TriggerSoftwareInterrupt(TriggerSoftwareInterruptData),
+    DisableInterrupts(DisableInterruptsData),
+    EnableInterrupts(EnableInterruptsData),
+    // Subroutines
+    JumpToSubroutine(JumpToSubroutineData),
+    ReturnFromSubroutine(ReturnFromSubroutineData),
 }
+
+pub fn get_clocks_for_instruction(instruction: &Instruction) -> u32 {
+    // Educated guess based on 6502 instruction set
+    // (https://www.masswerk.at/6502/6502_instruction_set.html)
+    // Hardware doesn't exist yet so subject to change
+    match instruction {
+        Instruction::Halt(_) => 2,
+        Instruction::Set(_) => 2,
+        Instruction::SetAddress(_) => 2,
+        Instruction::Copy(_) => 2,
+        Instruction::Add(_) => 2,
+        Instruction::Subtract(_) => 2,
+        // 70 is worst case for the 68k - maybe in the future it could be dynamic based on input
+        // See: https://retrocomputing.stackexchange.com/a/7670
+        Instruction::Multiply(_) => 70,
+        // Worst case: Signed 156 / Unsigned 136
+        // See: https://www.atari-forum.com/viewtopic.php?t=6484
+        Instruction::Divide(_) => 156,
+        Instruction::IsEqual(_) => 2,
+        Instruction::IsNotEqual(_) => 2,
+        Instruction::IsLessThan(_) => 2,
+        Instruction::IsGreaterThan(_) => 2,
+        Instruction::IsLessOrEqualThan(_) => 2,
+        Instruction::IsGreaterOrEqualThan(_) => 2,
+        Instruction::Jump(_) => 3,
+        Instruction::JumpIf(_) => 4,
+        Instruction::JumpIfNot(_) => 4,
+        Instruction::LoadOffsetRegister(_) => 4,
+        Instruction::StoreOffsetRegister(_) => 4,
+        Instruction::LoadOffsetImmediate(_) => 4,
+        Instruction::StoreOffsetImmediate(_) => 4,
+        Instruction::WaitForInterrupt(_) => 1,
+        Instruction::ReturnFromInterrupt(_) => 12,
+        Instruction::TriggerSoftwareInterrupt(_) => 1,
+        Instruction::DisableInterrupts(_) => 2,
+        Instruction::EnableInterrupts(_) => 2,
+        Instruction::JumpToSubroutine(_) => 12,
+        Instruction::ReturnFromSubroutine(_) => 12,
+    }
+}
+
+// Pending Instructions
+// RNGS - Seed a register with an RNG seed (or just a random value but is slow)
+// SHFL/SHFR - Bit Shift
+// ROTL/ROTR - Bit Rotate
+// NOP?
+// Clear specific carry/overflow flags? (do that automatically at next ALU operation?)
+// Jumping based on carry/overflow? How that work?
+// Reset interrupt
