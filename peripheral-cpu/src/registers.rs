@@ -1,12 +1,13 @@
 use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 
+use crate::instructions::alu::sign;
 use crate::instructions::encoding::ADDRESS_MASK;
 
 pub enum StatusRegisterFields {
     // Byte 1
-    LastComparisonResult = 0x0001,
-    CpuHalted = 0x0002,
+    Zero = 0x0001,
+    Negative = 0x0002,
     Carry = 0x0004,
     Overflow = 0x0008,
     // Byte 2
@@ -18,6 +19,35 @@ pub enum StatusRegisterFields {
     // TODO: Is this the best place for this flag? No program will be able to read it
     //       maybe move to internal register?
     WaitingForInterrupt = 0x0100,
+    CpuHalted = 0x0200,
+}
+
+/// Should map 1:1 with the Registers struct
+/// TODO: Can we enforce that the two data structures line up?
+#[derive(FromPrimitive, ToPrimitive, Debug)]
+pub enum RegisterName {
+    X1 = 0,
+    X2,
+    X3,
+    Y1,
+    Y2,
+    Y3,
+    Z1,
+    Z2,
+    Z3,
+    Ah,
+    Al,
+    Ph,
+    Pl,
+    Sh,
+    Sl,
+    Sr,
+}
+
+impl RegisterName {
+    pub fn to_register_index(&self) -> u8 {
+        num::ToPrimitive::to_u8(self).expect("Could not convert enum to u8")
+    }
 }
 
 // Traits
@@ -42,6 +72,8 @@ pub trait FullAddressRegisterAccess {
     fn get_full_pc_address(&self) -> u32;
     fn get_full_address_address(&self) -> u32;
     fn get_full_sp_address(&self) -> u32;
+
+    fn set_full_address_address(&mut self, address: u32);
 }
 
 pub trait FullAddress {
@@ -229,6 +261,10 @@ impl FullAddressRegisterAccess for Registers {
     fn get_full_sp_address(&self) -> u32 {
         self.get_segmented_sp().to_full_address()
     }
+
+    fn set_full_address_address(&mut self, address: u32) {
+        (self.ah, self.al) = address.to_segmented_address();
+    }
 }
 
 ///
@@ -296,6 +332,34 @@ pub fn sr_bit_is_set(field: StatusRegisterFields, registers: &Registers) -> bool
 pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = field as u16;
     registers.sr |= bit_mask
+}
+
+pub fn set_alu_bits(
+    registers: &mut Registers,
+    value: u16,
+    carry: bool,
+    inputs_and_result: Option<(u16, u16, u16)>,
+) {
+    if value == 0 {
+        set_sr_bit(StatusRegisterFields::Zero, registers);
+    }
+    if (value as i16) < 0 {
+        set_sr_bit(StatusRegisterFields::Negative, registers);
+    }
+    if carry {
+        set_sr_bit(StatusRegisterFields::Carry, registers);
+    } else {
+        clear_sr_bit(StatusRegisterFields::Carry, registers);
+    }
+    // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
+    // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
+    if let Some((i1, i2, result)) = inputs_and_result {
+        if sign(i1) == sign(i2) && sign(result) != sign(i1) {
+            set_sr_bit(StatusRegisterFields::Overflow, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Overflow, registers);
+        }
+    }
 }
 
 ///

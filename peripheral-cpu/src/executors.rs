@@ -1,4 +1,5 @@
 use enum_dispatch::enum_dispatch;
+
 use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::definitions::*;
@@ -8,33 +9,6 @@ use crate::registers::*;
 #[enum_dispatch]
 pub trait Executor {
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral);
-}
-
-///
-/// Sets or clears the LastComparisonResult bit of the status register
-/// based on the given boolean value.
-///
-/// ```
-/// use peripheral_cpu::executors::set_comparison_result;
-/// use peripheral_cpu::registers::{Registers, StatusRegisterFields};
-///
-/// let mut registers = Registers::default();
-///
-/// set_comparison_result(&mut registers, true);
-/// assert_eq!(registers.sr & StatusRegisterFields::LastComparisonResult as u16, StatusRegisterFields::LastComparisonResult as u16);
-///
-/// set_comparison_result(&mut registers, false);
-/// assert_eq!(registers.sr & StatusRegisterFields::LastComparisonResult as u16, 0x00);
-/// ```
-///
-/// TODO: Don't really want this public but it is exposed for tests
-/// Maybe we need a test utility module or something, should look into it
-pub fn set_comparison_result(registers: &mut Registers, result: bool) {
-    if result {
-        set_sr_bit(StatusRegisterFields::LastComparisonResult, registers);
-    } else {
-        clear_sr_bit(StatusRegisterFields::LastComparisonResult, registers);
-    }
 }
 
 pub fn push_address_to_stack(registers: &mut Registers, mem: &MemoryPeripheral, address: u32) {
@@ -122,34 +96,16 @@ pub fn return_from_interrupt(registers: &mut Registers, mem: &MemoryPeripheral) 
 /// If you want to wait for an event, another instruction should be used such as
 /// the WAIT instruction.
 ///
-impl Executor for NullInstructionData {
+impl Executor for HaltInstructionData {
+    // ID: 0x00
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         set_sr_bit(StatusRegisterFields::CpuHalted, registers);
     }
 }
 
-// Register Transfer
-
-impl Executor for SetInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        registers.set_at_index(self.data.register, self.data.value);
-    }
-}
-
-impl Executor for SetAddressInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        (registers.ah, registers.al) = self.data.address.to_segmented_address();
-    }
-}
-
-impl Executor for CopyInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let src_value = registers.get_at_index(self.data.r1);
-        registers.set_at_index(self.data.r2, src_value);
-    }
-}
-
 // Arithmetic
+
+// TODO: Surely there is a way to extract common logic from all the ALU executors
 
 ///
 /// Executes an addition operation on two registers, storing the result in
@@ -210,23 +166,14 @@ impl Executor for CopyInstructionData {
 /// ```
 ///
 impl Executor for AddInstructionData {
+    // ID: 0x01
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        let (result, carry) = val_2.overflowing_add(val_1);
-        let (_, overflow) = (val_2 as i16).overflowing_add(val_1 as i16);
-        if carry {
-            set_sr_bit(StatusRegisterFields::Carry, registers);
-        } else {
-            clear_sr_bit(StatusRegisterFields::Carry, registers);
-        }
-        if overflow {
-            set_sr_bit(StatusRegisterFields::Overflow, registers);
-        } else {
-            clear_sr_bit(StatusRegisterFields::Overflow, registers);
-        }
+        let (result, carry) = val_1.overflowing_add(val_2);
+        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
 
-        registers.set_at_index(self.data.r2, result);
+        registers.set_at_index(self.data.r1, result);
     }
 }
 
@@ -291,116 +238,158 @@ impl Executor for AddInstructionData {
 /// ```
 ///
 impl Executor for SubtractInstructionData {
+    // ID: 0x02
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
 
-        let (result, carry) = val_2.overflowing_sub(val_1);
-        let (_, overflow) = (val_2 as i16).overflowing_sub(val_1 as i16);
-        if carry {
-            set_sr_bit(StatusRegisterFields::Carry, registers);
-        } else {
-            clear_sr_bit(StatusRegisterFields::Carry, registers);
-        }
-        if overflow {
-            set_sr_bit(StatusRegisterFields::Overflow, registers);
-        } else {
-            clear_sr_bit(StatusRegisterFields::Overflow, registers);
-        }
+        let (result, carry) = val_1.overflowing_sub(val_2);
+        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
 
-        registers.set_at_index(self.data.r2, result);
+        registers.set_at_index(self.data.r1, result);
     }
 }
 
 impl Executor for MultiplyInstructionData {
-    // TODO: Set status bits for overflow/carry etc.
+    // ID: 0x03
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        registers.set_at_index(self.data.r2, val_2 * val_1);
+
+        let (result, carry) = val_1.overflowing_mul(val_2);
+        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
+
+        registers.set_at_index(self.data.r1, result);
     }
 }
 
 impl Executor for DivideInstructionData {
-    // TODO: Set status bits for overflow/carry etc.
+    // ID: 0x04
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        registers.set_at_index(self.data.r2, val_2 / val_1);
+
+        let (result, carry) = val_1.overflowing_div(val_2);
+        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+// Logic
+
+impl Executor for AndInstructionData {
+    // ID: 0x05
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let result = val_1 & val_2;
+        set_alu_bits(registers, result, false, Some((val_1, val_2, result)));
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for OrInstructionData {
+    // ID: 0x06
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let result = val_1 | val_2;
+        set_alu_bits(registers, result, false, Some((val_1, val_2, result)));
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for XorInstructionData {
+    // ID: 0x07
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let result = val_1 ^ val_2;
+        set_alu_bits(registers, result, false, Some((val_1, val_2, result)));
+
+        registers.set_at_index(self.data.r1, result);
     }
 }
 
 // Comparison
 
-impl Executor for IsEqualInstructionData {
+impl Executor for CompareInstructionData {
+    // ID: 0x08
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        // TODO: Deduplicate this with the subtract executor
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 == val_2);
-    }
-}
 
-impl Executor for IsNotEqualInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.data.r1);
-        let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 != val_2);
-    }
-}
+        let (result, carry) = val_1.overflowing_sub(val_2);
+        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
 
-impl Executor for IsLessThanInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.data.r1);
-        let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 < val_2);
-    }
-}
-
-impl Executor for IsGreaterThanInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.data.r1);
-        let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 > val_2);
-    }
-}
-
-impl Executor for IsLessOrEqualThanInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.data.r1);
-        let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 <= val_2);
-    }
-}
-
-impl Executor for IsGreaterOrEqualThanInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        let val_1 = registers.get_at_index(self.data.r1);
-        let val_2 = registers.get_at_index(self.data.r2);
-        set_comparison_result(registers, val_1 >= val_2);
+        // Exactly the same as a subtraction but does not store the result (only the status bits)
     }
 }
 
 // Flow Control
 
 ///
-/// Moves the CPU program counter to the specified address.
+/// Transfer the lower word address register to the lower word of the program counter.
 ///
-/// Takes a 24-bit address as an immediate value which can be applied
-/// directly to the program counter without any transformation.
+/// Allows a jump to anywhere within a segment.
+///
+/// Not a privileged operation because it only allows the program to jump within its
+/// current segment.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpInstructionData};
+/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ShortJumpInstructionData};
 /// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
-/// let jumpInstruction = JumpInstructionData {
-///   data: AddressInstructionData {
-///     address: 0x00CAFECA
-///   }
+/// let jumpInstruction = ShortJumpInstructionData {
+///   data: ImpliedInstructionData {}
 /// };
 /// let mut registers = Registers::default();
+/// registers.set_full_address_address(0x00CAFECA);
+/// let mem = new_memory_peripheral();
+/// jumpInstruction.execute(&mut registers, &mem);
+///
+/// assert_eq!((registers.ph, registers.pl), (0x0000, 0xFECA));
+///
+/// ```
+///
+impl Executor for ShortJumpInstructionData {
+    // ID: 0x09
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        registers.pl = registers.al;
+    }
+}
+
+///
+/// Transfer the address registers to the program counter.
+///
+/// Allows a full 24-bit address to be loaded into the address registers
+/// and used to specify where execution starts.
+///
+/// This should be a privileged operation because it allows the program to jump
+/// anywhere it wants (escape its segment).
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, LongJumpInstructionData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::Executor;
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let jumpInstruction = LongJumpInstructionData {
+///   data: ImpliedInstructionData {}
+/// };
+/// let mut registers = Registers::default();
+/// registers.set_full_address_address(0x00CAFECA);
 /// let mem = new_memory_peripheral();
 /// jumpInstruction.execute(&mut registers, &mem);
 ///
@@ -408,97 +397,146 @@ impl Executor for IsGreaterOrEqualThanInstructionData {
 ///
 /// ```
 ///
-impl Executor for JumpInstructionData {
+impl Executor for LongJumpInstructionData {
+    // ID: 0x0A
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        (registers.ph, registers.pl) = self.data.address.to_segmented_address();
+        (registers.ph, registers.pl) = (registers.ah, registers.al);
     }
 }
 
 ///
-/// Moves the CPU program counter to the specified address IF the
-/// LastComparisonResult bit in the status register is set.
+/// Moves the CPU program counter by the specified offset, relative
+/// to the current program counter.
 ///
-/// Takes a 24-bit address as an immediate value which can be applied
-/// directly to the program counter without any transformation.
-///
-/// ```
-/// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpIfInstructionData};
-/// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
-/// use peripheral_mem::new_memory_peripheral;
+/// Useful for making position independent programs (and avoiding having to
+/// store in the address register)
 ///
 ///
-/// let jumpIfInstruction = JumpIfInstructionData {
-///   data: AddressInstructionData {
-///     address: 0x00CAFECA
-///   }
-/// };
-/// let mut registers = Registers::default();
-/// let mem = new_memory_peripheral();
-///
-/// set_comparison_result(&mut registers, false);
-/// jumpIfInstruction.execute(&mut registers, &mem);
-/// // No Jump
-/// assert_eq!((registers.ph, registers.pl), (0x0000, 0x0000));
-///
-/// set_comparison_result(&mut registers, true);
-/// jumpIfInstruction.execute(&mut registers, &mem);
-/// // Jump!
-/// assert_eq!((registers.ph, registers.pl), (0x00CA, 0xFECA));
-///
-/// ```
-///
-impl Executor for JumpIfInstructionData {
+impl Executor for BranchInstructionData {
+    // ID: 0x0B
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        if sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            (registers.ph, registers.pl) = self.data.address.to_segmented_address();
-        }
-    }
-}
-
-///
-/// Moves the CPU program counter to the specified address IF the
-/// LastComparisonResult bit in the status register is not set.
-///
-/// Takes a 24-bit address as an immediate value which can be applied
-/// directly to the program counter without any transformation.
-///
-/// ```
-/// use peripheral_cpu::instructions::definitions::{AddressInstructionData, JumpIfNotInstructionData};
-/// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
-/// use peripheral_mem::new_memory_peripheral;
-///
-///
-/// let jumpIfNotInstruction = JumpIfNotInstructionData {
-///   data: AddressInstructionData {
-///     address: 0x00CAFECA
-///   }
-/// };
-/// let mut registers = Registers::default();
-/// let mem = new_memory_peripheral();
-///
-/// set_comparison_result(&mut registers, true);
-/// jumpIfNotInstruction.execute(&mut registers, &mem);
-/// // No Jump
-/// assert_eq!((registers.ph, registers.pl), (0x0000, 0x0000));
-///
-/// set_comparison_result(&mut registers, false);
-/// jumpIfNotInstruction.execute(&mut registers, &mem);
-/// // Jump!
-/// assert_eq!((registers.ph, registers.pl), (0x00CA, 0xFECA));
-///
-/// ```
-///
-impl Executor for JumpIfNotInstructionData {
-    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
-        if !sr_bit_is_set(StatusRegisterFields::LastComparisonResult, registers) {
-            (registers.ph, registers.pl) = self.data.address.to_segmented_address();
-        }
+        // TODO: Segment overflow?
+        let effective_address = registers.pl + self.data.value;
+        registers.pl = effective_address;
     }
 }
 
 // Data Access
+
+///
+/// Loads an immediate 16 bit value encoded in an instruction into a register.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadRegisterFromImmediateData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::Executor;
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let loadRegisterFromImmediateInstruction = LoadRegisterFromImmediateData {
+///   data: ImmediateInstructionData {
+///     r1: 0x02, // x3
+///     value: 0xCAFE,
+///     condition_flag: 0x00, // always
+///   }
+/// };
+/// let mut registers = Registers::default()
+///
+/// let mut mem = new_memory_peripheral();
+///
+/// loadRegisterFromImmediateInstruction.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x3, 0xCAFE);
+///
+/// ```
+///
+impl Executor for LoadRegisterFromImmediateData {
+    // ID: 0x0C
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        registers.set_at_index(self.data.register, self.data.value);
+    }
+}
+
+///
+/// Loads a 16 bit value from a register into another register.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadRegisterFromRegisterData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::Executor;
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let loadRegisterFromRegisterData = LoadRegisterFromRegisterData {
+///   data: RegisterInstructionData {
+///     r1: 0x02, // x3
+///     r2: 0x01, // x1
+///     r3: 0x00,
+///     condition_flag: 0x00, // always
+///   }
+/// };
+/// let mut registers = { x1: 0xCAFE, ..Registers::default() }
+///
+/// let mut mem = new_memory_peripheral();
+///
+/// loadRegisterFromRegisterData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x3, 0xCAFE);
+///
+/// ```
+///
+impl Executor for LoadRegisterFromRegisterData {
+    // ID: 0x0D
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let source_value = registers.get_at_index(self.data.r2);
+        registers.set_at_index(self.data.r1, source_value)
+    }
+}
+
+///
+/// Loads a 16 bit value out of a memory address into a register.
+///
+/// The base address value is specified by the address registers (ah/al)
+/// the first operand is the destination register and the operand is an
+/// immediate offset to add to the base address value.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let loadRegisterFromIndirectImmediate = LoadRegisterFromIndirectImmediateData {
+///   data: ImmediateInstructionData {
+///     r1: 0x02, // x3
+///     value: 0x0001,
+///     condition_flag: 0x00, // always
+///   }
+/// };
+/// let mut registers = Registers { ah: 0x1011, al: 0x1110, ..Registers::default() };
+///
+/// let mut mem = new_memory_peripheral();
+/// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
+/// mem.write_address(0x00111111, 0xCAFE);
+///
+/// loadRegisterFromIndirectImmediate.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x3, 0xCAFE);
+///
+/// ```
+///
+impl Executor for LoadRegisterFromIndirectImmediateData {
+    // ID: 0x0E
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        let (segment, address) = registers.get_segmented_address();
+        // TODO: Segment overflow?
+        let offset_address = address + self.data.value;
+        let address_to_read = (segment, offset_address).to_full_address();
+        let read_value = mem.read_address(address_to_read);
+        registers.set_at_index(self.data.register, read_value);
+    }
+}
 
 ///
 /// Loads a 16 bit value out of a memory address into a register.
@@ -533,10 +571,12 @@ impl Executor for JumpIfNotInstructionData {
 ///
 /// ```
 ///
-impl Executor for LoadOffsetRegisterData {
+impl Executor for LoadRegisterFromIndirectRegisterData {
+    // ID: 0x0F
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         let (segment, address) = registers.get_segmented_address();
         // TODO: Segment overflow?
+        // TODO: Implement split load (double_register_target_type)
         let offset_address = address + registers.get_at_index(self.data.r2);
         let address_to_read = (segment, offset_address).to_full_address();
         let read_value = mem.read_address(address_to_read);
@@ -544,28 +584,41 @@ impl Executor for LoadOffsetRegisterData {
     }
 }
 
-impl Executor for StoreOffsetRegisterData {
-    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
-        let (segment, address) = registers.get_segmented_address();
-        // TODO: Segment overflow?
-        let offset_address = address + registers.get_at_index(self.data.r2);
-        let address_to_write = (segment, offset_address).to_full_address();
-        mem.write_address(address_to_write, registers.get_at_index(self.data.r1));
-    }
-}
-
-impl Executor for LoadOffsetImmediateData {
-    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
-        let (segment, address) = registers.get_segmented_address();
-        // TODO: Segment overflow?
-        let offset_address = address + self.data.value;
-        let address_to_read = (segment, offset_address).to_full_address();
-        let read_value = mem.read_address(address_to_read);
-        registers.set_at_index(self.data.register, read_value);
-    }
-}
-
-impl Executor for StoreOffsetImmediateData {
+///
+/// Stores a 16 bit value from a register into a memory address.
+///
+/// The base address value is specified by the address registers (ah/al)
+/// the first operand is the destination register and the operand is an
+/// immediate offset to add to the base address value.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let storeRegisterFromIndirectImmediate = StoreRegisterToIndirectImmediateData {
+///   data: ImmediateInstructionData {
+///     r1: 0x02, // x3
+///     value: 0x0001,
+///     condition_flag: 0x00, // always
+///   }
+/// };
+/// let mut registers = Registers { x3: 0xCAFE, ah: 0x1011, al: 0x1110, ..Registers::default() };
+///
+/// let mut mem = new_memory_peripheral();
+/// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
+///
+/// storeRegisterFromIndirectImmediate.execute(&mut registers, &mem);
+/// let stored_value = mem.read_address(0x00111111, 0xCAFE);
+///
+/// assert_eq!(stored_value, 0xCAFE);
+///
+/// ```
+///
+impl Executor for StoreRegisterToIndirectImmediateData {
+    // ID: 0x12
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         let (segment, address) = registers.get_segmented_address();
         // TODO: Segment overflow?
@@ -575,21 +628,68 @@ impl Executor for StoreOffsetImmediateData {
     }
 }
 
+///
+/// Stores a 16 bit value from a register into a memory address.
+///
+/// The base address value is specified by the address registers (ah/al)
+/// the first operand is the destination register and the second register
+/// is an offset to add to the base address value.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_mem::new_memory_peripheral;
+///
+///
+/// let storeRegisterToIndirectRegister = StoreRegisterToIndirectRegisterData {
+///   data: RegisterInstructionData {
+///     r1: 0x00, // x1
+///     r2: 0x03, // y1
+///     r3: 0x00, // unused
+///   }
+/// };
+/// let mut registers = Registers { ah: 0x1011, al: 0x1110, y1: 0x0001, ..Registers::default() };
+///
+/// let mut mem = new_memory_peripheral();
+/// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
+///
+/// storeRegisterToIndirectRegister.execute(&mut registers, &mem);
+/// let stored_value = mem.read_address(0x00111111, 0xCAFE);
+///
+/// assert_eq!(stored_value, 0xCAFE);
+/// ```
+///
+impl Executor for StoreRegisterToIndirectRegisterData {
+    // ID: 0x13
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        let (segment, address) = registers.get_segmented_address();
+        // TODO: Segment overflow?
+        // TODO: Implement split store (double_register_target_type)
+        let offset_address = address + registers.get_at_index(self.data.r2);
+        let address_to_write = (segment, offset_address).to_full_address();
+        mem.write_address(address_to_write, registers.get_at_index(self.data.r1));
+    }
+}
+
 // Interrupts
 
 impl Executor for WaitForInterruptInstructionData {
+    // ID: 0x16
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         set_sr_bit(StatusRegisterFields::WaitingForInterrupt, registers);
     }
 }
 
 impl Executor for ReturnFromInterruptData {
+    // ID: 0x17
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         return_from_interrupt(registers, mem);
     }
 }
 
 impl Executor for TriggerSoftwareInterruptData {
+    // ID: 0x18
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         // Instruction immediate operand is truncated to 7 bits and used as the vector offset
         // for the exception. In effect this means that 128 user exceptions can be defined
@@ -599,6 +699,7 @@ impl Executor for TriggerSoftwareInterruptData {
 }
 
 impl Executor for DisableInterruptsData {
+    // ID: 0x19
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         // No interrupt is associated seventh priority level so it effectively
         // masks all interrupts (except NMI)
@@ -607,6 +708,7 @@ impl Executor for DisableInterruptsData {
 }
 
 impl Executor for EnableInterruptsData {
+    // ID: 0x1A
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
         // There is no level zero interrupt, so if the mask is zero,
         // no interrupts are masked
@@ -616,16 +718,206 @@ impl Executor for EnableInterruptsData {
 
 // Subroutines
 
-impl Executor for JumpToSubroutineData {
+impl Executor for BranchToSubroutineData {
+    // ID: 0x1B
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
-        push_address_to_stack(registers, mem, self.data.address);
-        (registers.ph, registers.pl) = self.data.address.to_segmented_address();
+        // Even though it is only a short jump and we only need a partial address
+        // to return, we push the entire register to be consistent and avoid issues
+        // if the system mode bit is flipped during a subroutine
+        push_address_to_stack(registers, mem, registers.get_full_pc_address());
+        // TODO: Segment overflow?
+        let effective_address = registers.pl + self.data.value;
+        registers.pl = effective_address;
+    }
+}
+
+impl Executor for ShortJumpToSubroutineData {
+    // ID: 0x1C
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        // Even though it is only a short jump and we only need a partial address
+        // to return, we push the entire register to be consistent and avoid issues
+        // if the system mode bit is flipped during a subroutine
+        push_address_to_stack(registers, mem, registers.get_full_pc_address());
+        registers.pl = registers.al;
+    }
+}
+
+// Note: Privileged as stack could be overwritten to jump anywhere
+impl Executor for LongJumpToSubroutineData {
+    // ID: 0x1D
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        push_address_to_stack(registers, mem, registers.get_full_pc_address());
+        (registers.ph, registers.pl) = registers.get_segmented_address();
     }
 }
 
 impl Executor for ReturnFromSubroutineData {
+    // ID: 0x1E
     fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
         let return_address = pop_address_from_stack(registers, mem);
-        (registers.ph, registers.pl) = return_address.to_segmented_address();
+        if sr_bit_is_set(StatusRegisterFields::SystemMode, registers) {
+            (registers.ph, registers.pl) = return_address.to_segmented_address();
+        } else {
+            // Make sure that stack can't be used to do a unprivileged long jump
+            (_, registers.pl) = return_address.to_segmented_address();
+        }
+    }
+}
+
+// Shifts
+
+impl Executor for LogicalShiftLeftInstructionData {
+    // ID: 0x1F
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let (result, carry) = val_1.overflowing_shl(val_2 as u32);
+        set_alu_bits(registers, result, carry, None);
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for LogicalShiftRightInstructionData {
+    // ID: 0x20
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let (result, carry) = val_1.overflowing_shr(val_2 as u32);
+        set_alu_bits(registers, result, carry, None);
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for ArithmeticShiftLeftInstructionData {
+    // ID: 0x21
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+
+        let (result, carry) = val_1.overflowing_shl(val_2 as u32);
+
+        // There can never be an overflow bit set because the sign bit is preserved
+        set_alu_bits(registers, result, carry, None);
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for ArithmeticShiftRightInstructionData {
+    // ID: 0x22
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+        let sign_bit = val_1 & 0x8000;
+
+        // TODO: Check this - I think logical/arithmetic shift right are different
+        // but arithmetic right shift can be simulated with:
+        // - Copy sign bit into carry
+        // - Rotate right
+        // See: https://stackoverflow.com/a/59658066/1153203
+        // But better study the 68k because it has separate instructions
+        let (result, carry) = val_1.overflowing_shr(val_2 as u32);
+        let signed_result = result | sign_bit;
+
+        // There can never be an overflow bit set because the sign bit is preserved
+        set_alu_bits(registers, signed_result, carry, None);
+
+        registers.set_at_index(self.data.r1, signed_result);
+    }
+}
+
+impl Executor for RotateLeftInstructionData {
+    // ID: 0x23
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+        let result = val_1.rotate_left(val_2 as u32);
+        // Bit shifted out goes into carry (that's what the 68k does :shrug:)
+        // TODO: Extract bit checking to function
+        // TODO: Check the purpose of bit shifted out going to carry
+        let carry = result & 1 == 1;
+        set_alu_bits(registers, result, carry, None);
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+impl Executor for RotateRightInstructionData {
+    // ID: 0x24
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let val_1 = registers.get_at_index(self.data.r1);
+        let val_2 = registers.get_at_index(self.data.r2);
+        let result = val_1.rotate_right(val_2 as u32);
+        // Bit shifted out goes into carry (that's what the 68k does :shrug:)
+        // TODO: Extract bit checking to function
+        // TODO: Check the purpose of bit shifted out going to carry
+        let carry = (result >> 15) & 1 == 1;
+        set_alu_bits(registers, result, carry, None);
+
+        registers.set_at_index(self.data.r1, result);
+    }
+}
+
+// Misc
+
+impl Executor for NoOperationInstructionData {
+    // ID: 0x26
+    fn execute(&self, _registers: &mut Registers, _mem: &MemoryPeripheral) {}
+}
+
+impl Executor for ClearAluStatusInstructionData {
+    // ID: 0x27
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let mask: u16 = StatusRegisterFields::Carry as u16
+            | StatusRegisterFields::Negative as u16
+            | StatusRegisterFields::Overflow as u16
+            | StatusRegisterFields::Zero as u16;
+
+        registers.sr &= !mask;
+    }
+}
+
+// Byte Manipulation
+
+///
+/// Splits a 16 bit word stored in a register into two registers.
+///
+/// The first operand is the register for the upper byte,
+/// the second operand is the register for the lower byte,
+/// and the third operand is the source register.
+///
+/// The higher byte of each of the target registers is always zero
+///
+impl Executor for SplitWordInstructionData {
+    // ID: 0x27
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let combined = registers.get_at_index(self.data.r3);
+        let upper = (combined >> u8::BITS) & 0x00FF;
+        let lower = combined & 0x00FF;
+        registers.set_at_index(self.data.r1, upper);
+        registers.set_at_index(self.data.r2, lower);
+    }
+}
+
+///
+/// Joins two registers storing a byte each into a single 16 bit word.
+///
+/// The first operand is the register where the combined word will be stored,
+/// the second operand is the register for the upper byte,
+/// and the third operand is the register for the lower byte.
+///
+/// The upper bytes of the source registers are ignored.
+///
+impl Executor for JoinWordInstructionData {
+    // ID: 0x28
+    fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        let upper = registers.get_at_index(self.data.r1) & 0x00FF;
+        let lower = registers.get_at_index(self.data.r2) & 0x00FF;
+        let combined = upper << u8::BITS | lower;
+        registers.set_at_index(self.data.r3, combined);
     }
 }

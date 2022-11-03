@@ -1,3 +1,7 @@
+extern crate num;
+#[macro_use]
+extern crate num_derive;
+
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod executors;
@@ -60,6 +64,7 @@ fn step<'a>(
 
     let original_pc = registers.get_segmented_pc();
 
+    // TODO: Check condition fields and only execute if flags are correct
     instruction.execute(registers, mem);
 
     if original_pc == registers.get_segmented_pc() {

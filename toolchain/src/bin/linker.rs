@@ -22,6 +22,8 @@ struct Args {
     segment_offset: u32,
 }
 
+// TODO: Fix linker to do placeholder replacement based on instruction
+
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
