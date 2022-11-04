@@ -252,6 +252,8 @@ pub fn parse_instruction_token_(i: &str) -> IResult<&str, Token> {
             opcodes::clsr::clsr,
             opcodes::splt::splt,
             opcodes::join::join,
+            opcodes::push::push,
+            opcodes::popr::popr,
         )),
     ))(i)?;
 

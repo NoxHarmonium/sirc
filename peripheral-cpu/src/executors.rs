@@ -939,3 +939,31 @@ impl Executor for JoinWordInstructionData {
         registers.set_at_index(self.data.r3, combined);
     }
 }
+
+///
+/// Pushes a 16 bit word stored in a register into the stack.
+///
+/// The first operand is the register to push.
+/// The stack pointer is always determined by the s register (sh/sl).
+///
+impl Executor for PushInstructionData {
+    // ID: 0x29
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        let value = registers.get_at_index(self.data.r1);
+        push_value_to_stack(registers, mem, value);
+    }
+}
+
+///
+/// Pops a 16 bit word from the stack and places it in a register.
+///
+/// The first operand is the register to push.
+/// The stack pointer is always determined by the s register (sh/sl).
+///
+impl Executor for PopInstructionData {
+    // ID: 0x2A
+    fn execute(&self, registers: &mut Registers, mem: &MemoryPeripheral) {
+        let value = pop_value_from_stack(registers, mem);
+        registers.set_at_index(self.data.r1, value);
+    }
+}

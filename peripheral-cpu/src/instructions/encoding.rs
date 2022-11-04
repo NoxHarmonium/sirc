@@ -453,6 +453,30 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> Instruction {
                 },
             })
         }
+        0x29 => {
+            let (r1, _, _) = decode_register_instruction(raw_instruction);
+            Instruction::Push(PushInstructionData {
+                data: RegisterInstructionData {
+                    r1,
+                    r2: 0x0, // unused
+                    r3: 0x0, // unused
+                    condition_flag,
+                    additional_flags: 0x00,
+                },
+            })
+        }
+        0x2A => {
+            let (r1, _, _) = decode_register_instruction(raw_instruction);
+            Instruction::Pop(PopInstructionData {
+                data: RegisterInstructionData {
+                    r1,
+                    r2: 0x0, // unused
+                    r3: 0x0, // unused
+                    condition_flag,
+                    additional_flags: 0x00,
+                },
+            })
+        }
         _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
     }
 }
@@ -633,5 +657,7 @@ pub fn encode_instruction(instruction: &Instruction) -> [u8; 4] {
         Instruction::JoinWord(data) => {
             encode_register_instruction(0x28, data.data.r1, data.data.r2, data.data.r3)
         }
+        Instruction::Push(data) => encode_register_instruction(0x29, data.data.r1, 0x0, 0x0),
+        Instruction::Pop(data) => encode_register_instruction(0x2A, data.data.r1, 0x0, 0x0),
     }
 }

@@ -41,7 +41,7 @@ pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
 // Condition Flags
 
-#[derive(Debug, FromPrimitive, PartialEq)]
+#[derive(Debug, FromPrimitive, PartialEq, Eq)]
 pub enum ConditionFlags {
     Always = 0b000,
     Equal,
@@ -338,6 +338,18 @@ pub struct JoinWordInstructionData {
 }
 
 #[derive(Debug)]
+pub struct PushInstructionData {
+    // ID: 0x27
+    pub data: RegisterInstructionData,
+}
+
+#[derive(Debug)]
+pub struct PopInstructionData {
+    // ID: 0x28
+    pub data: RegisterInstructionData,
+}
+
+#[derive(Debug)]
 #[enum_dispatch(Executor)]
 pub enum Instruction {
     // Special
@@ -388,6 +400,9 @@ pub enum Instruction {
     // Byte Manipulation
     SplitWord(SplitWordInstructionData),
     JoinWord(JoinWordInstructionData),
+    // Stack Manipulation
+    Push(PushInstructionData),
+    Pop(PopInstructionData),
 }
 
 pub fn get_clocks_for_instruction(instruction: &Instruction) -> u32 {
@@ -444,6 +459,8 @@ pub fn get_clocks_for_instruction(instruction: &Instruction) -> u32 {
         Instruction::ArithmeticShiftRight(_) => 32,
         Instruction::SplitWord(_) => 2,
         Instruction::JoinWord(_) => 2,
+        Instruction::Push(_) => 6,
+        Instruction::Pop(_) => 6,
     }
 }
 

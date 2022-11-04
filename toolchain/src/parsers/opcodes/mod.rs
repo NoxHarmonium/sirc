@@ -20,6 +20,8 @@ pub mod lsrr;
 pub mod mulr;
 pub mod noop;
 pub mod orrr;
+pub mod popr;
+pub mod push;
 pub mod reti;
 pub mod rets;
 pub mod rotl;

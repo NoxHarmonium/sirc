@@ -74,7 +74,7 @@ Address register indirect with immediate displacement | (#n, a) | LOAD y1, (#-3,
 | CLSR | 0x26    |           |                 |
 | SPLT |         |           | 0x27            |
 | JOIN |         |           | 0x28            |
+| PUSH |         |           | 0x29            |
+| POPR |         |           | 0x2A            |
 
 Gaps between LOAD/STOR/WAIT are space to allow more addressing modes in future versions
-
-// TODO: DAMMIT NEED POP/PUSH
