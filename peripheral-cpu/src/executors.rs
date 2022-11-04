@@ -115,7 +115,7 @@ impl Executor for HaltInstructionData {
 /// If a signed overflow occurs, the overflow status flag will be set.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, AddInstructionData};
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, AddInstructionData, ConditionFlags};
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
@@ -131,6 +131,8 @@ impl Executor for HaltInstructionData {
 ///         r1: 0x00, // x1
 ///         r2: 0x01, // x2
 ///         r3: 0x00, // unused
+///         condition_flag: ConditionFlags::Always,
+///         additional_flags: 0x00,
 ///     }
 /// };
 ///
@@ -140,7 +142,7 @@ impl Executor for HaltInstructionData {
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0x0000);
+/// assert_eq!(registers.x1, 0x0000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
 ///
@@ -150,7 +152,7 @@ impl Executor for HaltInstructionData {
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0x9FFF);
+/// assert_eq!(registers.x1, 0x9FFF);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 ///
@@ -160,7 +162,7 @@ impl Executor for HaltInstructionData {
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0x2FFF);
+/// assert_eq!(registers.x1, 0x2FFF);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 /// ```
@@ -187,7 +189,7 @@ impl Executor for AddInstructionData {
 /// If a signed overflow occurs, the overflow status flag will be set.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, SubtractInstructionData};
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, SubtractInstructionData, ConditionFlags};
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
@@ -203,36 +205,38 @@ impl Executor for AddInstructionData {
 ///         r1: 0x00, // x1
 ///         r2: 0x01, // x2
 ///         r3: 0x00, // unused
+///         condition_flag: ConditionFlags::Always,
+///         additional_flags: 0x00,
 ///     }
 /// };
 ///
 /// // Unsigned Overflow
-/// registers.x1 = 0xFFFF;
-/// registers.x2 = 0x5FFF;
+/// registers.x1 = 0x5FFF;
+/// registers.x2 = 0xFFFF;
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0x6000);
+/// assert_eq!(registers.x1, 0x6000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
 ///
 /// // Signed Overflow
-/// registers.x1 = 0x7FFF;
-/// registers.x2 = 0xDFFF;
+/// registers.x1 = 0xDFFF;
+/// registers.x2 = 0x7FFF;
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0x6000);
+/// assert_eq!(registers.x1, 0x6000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 ///
 /// // Both Overflow
-/// registers.x1 = 0xBFFF;
-/// registers.x2 = 0x5FFF;
+/// registers.x1 = 0x5FFF;
+/// registers.x2 = 0xBFFF;
 ///
 /// instructionData.execute(&mut registers, &mem);
 ///
-/// assert_eq!(registers.x2, 0xA000);
+/// assert_eq!(registers.x1, 0xA000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 /// ```
@@ -244,7 +248,8 @@ impl Executor for SubtractInstructionData {
         let val_2 = registers.get_at_index(self.data.r2);
 
         let (result, carry) = val_1.overflowing_sub(val_2);
-        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
+        //The ones compliment of val_2 is used here for the overflow calculation because it is subtraction
+        set_alu_bits(registers, result, carry, Some((val_1, !val_2, result)));
 
         registers.set_at_index(self.data.r1, result);
     }
@@ -344,14 +349,16 @@ impl Executor for CompareInstructionData {
 /// current segment.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ShortJumpInstructionData};
-/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ShortJumpInstructionData, ConditionFlags};
+/// use peripheral_cpu::registers::{Registers, FullAddressRegisterAccess};
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
 /// let jumpInstruction = ShortJumpInstructionData {
-///   data: ImpliedInstructionData {}
+///   data: ImpliedInstructionData {
+///     condition_flag: ConditionFlags::Always,
+///   }
 /// };
 /// let mut registers = Registers::default();
 /// registers.set_full_address_address(0x00CAFECA);
@@ -379,14 +386,16 @@ impl Executor for ShortJumpInstructionData {
 /// anywhere it wants (escape its segment).
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, LongJumpInstructionData};
-/// use peripheral_cpu::registers::Registers;
+/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, LongJumpInstructionData, ConditionFlags};
+/// use peripheral_cpu::registers::{Registers, FullAddressRegisterAccess};
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
 /// let jumpInstruction = LongJumpInstructionData {
-///   data: ImpliedInstructionData {}
+///   data: ImpliedInstructionData {
+///     condition_flag: ConditionFlags::Always,
+///   }
 /// };
 /// let mut registers = Registers::default();
 /// registers.set_full_address_address(0x00CAFECA);
@@ -427,7 +436,7 @@ impl Executor for BranchInstructionData {
 /// Loads an immediate 16 bit value encoded in an instruction into a register.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadRegisterFromImmediateData};
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadRegisterFromImmediateData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
@@ -435,12 +444,14 @@ impl Executor for BranchInstructionData {
 ///
 /// let loadRegisterFromImmediateInstruction = LoadRegisterFromImmediateData {
 ///   data: ImmediateInstructionData {
-///     r1: 0x02, // x3
+///     register: 0x02, // x3
 ///     value: 0xCAFE,
-///     condition_flag: 0x00, // always
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
-/// let mut registers = Registers::default()
+///
+/// let mut registers = Registers::default();
 ///
 /// let mut mem = new_memory_peripheral();
 ///
@@ -461,7 +472,7 @@ impl Executor for LoadRegisterFromImmediateData {
 /// Loads a 16 bit value from a register into another register.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadRegisterFromRegisterData};
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadRegisterFromRegisterData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
 /// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
@@ -470,12 +481,13 @@ impl Executor for LoadRegisterFromImmediateData {
 /// let loadRegisterFromRegisterData = LoadRegisterFromRegisterData {
 ///   data: RegisterInstructionData {
 ///     r1: 0x02, // x3
-///     r2: 0x01, // x1
-///     r3: 0x00,
-///     condition_flag: 0x00, // always
+///     r2: 0x00, // x1
+///     r3: 0x00, // Unused
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
-/// let mut registers = { x1: 0xCAFE, ..Registers::default() }
+/// let mut registers = Registers { x1: 0xCAFE, ..Registers::default() };
 ///
 /// let mut mem = new_memory_peripheral();
 ///
@@ -501,17 +513,18 @@ impl Executor for LoadRegisterFromRegisterData {
 /// immediate offset to add to the base address value.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadRegisterFromIndirectImmediateData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
 /// let loadRegisterFromIndirectImmediate = LoadRegisterFromIndirectImmediateData {
 ///   data: ImmediateInstructionData {
-///     r1: 0x02, // x3
+///     register: 0x02, // x3
 ///     value: 0x0001,
-///     condition_flag: 0x00, // always
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
 /// let mut registers = Registers { ah: 0x1011, al: 0x1110, ..Registers::default() };
@@ -546,17 +559,19 @@ impl Executor for LoadRegisterFromIndirectImmediateData {
 /// is an offset to add to the base address value.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadRegisterFromIndirectRegisterData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
-/// let loadOffsetRegisterInstruction = LoadOffsetRegisterData {
+/// let loadOffsetRegisterInstruction = LoadRegisterFromIndirectRegisterData {
 ///   data: RegisterInstructionData {
 ///     r1: 0x00, // x1
 ///     r2: 0x03, // y1
 ///     r3: 0x00, // unused
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
 /// let mut registers = Registers { ah: 0x1011, al: 0x1110, y1: 0x0001, ..Registers::default() };
@@ -592,17 +607,18 @@ impl Executor for LoadRegisterFromIndirectRegisterData {
 /// immediate offset to add to the base address value.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, StoreRegisterToIndirectImmediateData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
 /// let storeRegisterFromIndirectImmediate = StoreRegisterToIndirectImmediateData {
 ///   data: ImmediateInstructionData {
-///     r1: 0x02, // x3
+///     register: 0x02, // x3
 ///     value: 0x0001,
-///     condition_flag: 0x00, // always
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
 /// let mut registers = Registers { x3: 0xCAFE, ah: 0x1011, al: 0x1110, ..Registers::default() };
@@ -611,7 +627,7 @@ impl Executor for LoadRegisterFromIndirectRegisterData {
 /// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
 ///
 /// storeRegisterFromIndirectImmediate.execute(&mut registers, &mem);
-/// let stored_value = mem.read_address(0x00111111, 0xCAFE);
+/// let stored_value = mem.read_address(0x00111111);
 ///
 /// assert_eq!(stored_value, 0xCAFE);
 ///
@@ -636,9 +652,9 @@ impl Executor for StoreRegisterToIndirectImmediateData {
 /// is an offset to add to the base address value.
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, LoadOffsetRegisterData};
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, StoreRegisterToIndirectRegisterData, ConditionFlags};
 /// use peripheral_cpu::registers::Registers;
-/// use peripheral_cpu::executors::{Executor, set_comparison_result};
+/// use peripheral_cpu::executors::Executor;
 /// use peripheral_mem::new_memory_peripheral;
 ///
 ///
@@ -647,15 +663,17 @@ impl Executor for StoreRegisterToIndirectImmediateData {
 ///     r1: 0x00, // x1
 ///     r2: 0x03, // y1
 ///     r3: 0x00, // unused
+///     condition_flag: ConditionFlags::Always,
+///     additional_flags: 0x00,
 ///   }
 /// };
-/// let mut registers = Registers { ah: 0x1011, al: 0x1110, y1: 0x0001, ..Registers::default() };
+/// let mut registers = Registers { ah: 0x1011, al: 0x1110, x1: 0xCAFE, y1: 0x0001, ..Registers::default() };
 ///
 /// let mut mem = new_memory_peripheral();
 /// mem.map_segment("TEST", 0x00110000, 0xFFFF, true);
 ///
 /// storeRegisterToIndirectRegister.execute(&mut registers, &mem);
-/// let stored_value = mem.read_address(0x00111111, 0xCAFE);
+/// let stored_value = mem.read_address(0x00111111);
 ///
 /// assert_eq!(stored_value, 0xCAFE);
 /// ```

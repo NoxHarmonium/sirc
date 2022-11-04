@@ -351,9 +351,18 @@ pub fn set_alu_bits(
     } else {
         clear_sr_bit(StatusRegisterFields::Carry, registers);
     }
+
     // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
     // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
     if let Some((i1, i2, result)) = inputs_and_result {
+        println!("i1: {}, i2: {}, result: {}", i1, i2, result);
+        println!(
+            "sign(i1): {:?}, sign(i2): {:?}, sign(result): {:?}",
+            sign(i1),
+            sign(i2),
+            sign(result)
+        );
+
         if sign(i1) == sign(i2) && sign(result) != sign(i1) {
             set_sr_bit(StatusRegisterFields::Overflow, registers);
         } else {
@@ -447,7 +456,7 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
 /// ```
 pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
     // TODO: Can we work out this shift based on the fields position?
-    let shifted_value = (interrupt_mask as u16) << 5;
+    let shifted_value = (interrupt_mask.clamp(0, 7) as u16) << 5;
     let bit_mask = !(StatusRegisterFields::InterruptMaskHigh as u16
         | StatusRegisterFields::InterruptMaskMed as u16
         | StatusRegisterFields::InterruptMaskLow as u16);

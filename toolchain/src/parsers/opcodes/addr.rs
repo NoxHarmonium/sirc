@@ -8,6 +8,25 @@ use peripheral_cpu::instructions::definitions::{
     AddInstructionData, Instruction, RegisterInstructionData,
 };
 
+///
+/// Parses the ADDR opcode
+///
+/// ```
+/// use toolchain::parsers::opcodes::addr;
+/// use toolchain::parsers::instruction::InstructionToken;
+/// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, AddInstructionData, RegisterInstructionData};
+///
+/// let (_, parsed_instruction) = addr::addr("ADDR|!= y2, z1").unwrap();
+/// let (r1, r2, condition_flag) = match parsed_instruction.instruction {
+///     Instruction::Add(inner) => (inner.data.r1, inner.data.r2, inner.data.condition_flag),
+///     _ => panic!("Incorrect instruction was parsed")
+/// };
+///
+/// // TODO: Make a helper function or something to make these asserts smaller
+/// assert_eq!(r1, 4);
+/// assert_eq!(r2, 6);
+/// assert_eq!(condition_flag, ConditionFlags::NotEqual);
+/// ```
 pub fn addr(i: &str) -> IResult<&str, InstructionToken> {
     map(
         tuple((parse_instruction_tag("ADDR"), parse_instruction_operands)),

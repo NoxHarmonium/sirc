@@ -14,20 +14,24 @@ use crate::types::object::SymbolDefinition;
 use super::opcodes;
 use super::shared::{lexeme, parse_comma_sep, parse_label, parse_number, parse_symbol_reference};
 
+#[derive(Debug)]
 pub struct LabelToken {
     pub name: String,
 }
 
+#[derive(Debug)]
 pub struct InstructionToken {
     pub instruction: Instruction,
     pub symbol_ref: Option<LabelToken>,
 }
 
+#[derive(Debug)]
 pub enum Address {
     Value(u32),
     SymbolRef(String),
 }
 
+#[derive(Debug)]
 pub enum Token {
     Label(LabelToken),
     Instruction(InstructionToken),

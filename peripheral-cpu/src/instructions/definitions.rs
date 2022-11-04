@@ -41,7 +41,7 @@ pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
 // Condition Flags
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, PartialEq)]
 pub enum ConditionFlags {
     Always = 0b000,
     Equal,

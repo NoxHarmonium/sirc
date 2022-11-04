@@ -1,3 +1,3 @@
 pub mod instruction;
-mod opcodes;
+pub mod opcodes;
 mod shared;
