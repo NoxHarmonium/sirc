@@ -59,3 +59,59 @@ pub mod vectors {
     pub const USER_EXCEPTION_VECTOR_START: u16 = 0xFF80;
     pub const USER_EXCEPTION_VECTOR_END: u16 = 0xFFFF;
 }
+
+use peripheral_mem::MemoryPeripheral;
+
+use crate::registers::{
+    set_interrupt_mask, set_sr_bit, FullAddress, FullAddressRegisterAccess, Registers,
+    StatusRegisterFields,
+};
+
+use super::stack::{
+    pop_address_from_stack, pop_value_from_stack, push_address_to_stack, push_value_to_stack,
+};
+
+pub fn jump_to_interrupt(vector_offset: u8, registers: &mut Registers, mem: &MemoryPeripheral) {
+    // Store the SR here because we need to flip to system mode to use the system stack
+    // which will affect the SR
+    let old_sr = registers.sr;
+    // Flip into system mode so we can use the system stack etc.
+    set_sr_bit(StatusRegisterFields::SystemMode, registers);
+
+    // Save important registers to restore after the ISR
+    push_address_to_stack(registers, mem, registers.get_full_pc_address());
+    push_value_to_stack(registers, mem, old_sr);
+
+    // Jump to ISR
+    let vector_address = registers.system_ram_offset + vector_offset as u32;
+    (registers.ph, registers.pl) = (
+        mem.read_address(vector_address),
+        mem.read_address(vector_address + 1),
+    )
+}
+
+pub fn return_from_interrupt(registers: &mut Registers, mem: &MemoryPeripheral) {
+    // Get the important register values before we switch out of system mode
+    // and can't access them anymore
+    registers.sr = pop_value_from_stack(registers, mem);
+    (registers.ph, registers.pl) = pop_address_from_stack(registers, mem).to_segmented_address();
+}
+
+pub fn trigger_hardware_interrupt(
+    interrupt_level: u8,
+    registers: &mut Registers,
+    mem: &MemoryPeripheral,
+) {
+    if interrupt_level == 0 || interrupt_level > 0b111 {
+        panic!("Interrupt level (0x{:08x}) must be greater than zero and fit in three bits (max 7 in decimal).", interrupt_level);
+    }
+
+    let vector_offset_start: u8 = vectors::LEVEL_ONE_INTERRUPT as u8 - 1;
+    let vector_offset = vector_offset_start + interrupt_level;
+
+    jump_to_interrupt(vector_offset, registers, mem);
+
+    // TODO: Does it matter that we do this after the jump?
+    // Make sure that interrupts of the same or lower priority don't interrupt this ISR
+    set_interrupt_mask(registers, interrupt_level);
+}

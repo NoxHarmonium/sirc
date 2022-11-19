@@ -35,46 +35,63 @@ Address registers a = a, p, s
 
 Implied | - | HALT
 Immediate | #n | LOAD x1, #123
-Register Direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
+Register direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
+Register range direct | rN->rM, | STMR (a), x1->z1
+Address register direct | a | LDEA a, (x1, a)
+Address register indirect | (a) | STOR (s), x1
 Address register indirect with register displacement | (r, a) | STOR (y1, a), x1
 Address register indirect with immediate displacement | (#n, a) | LOAD y1, (#-3, a)
 
-|      | Implied | Immediate | Register Direct | Indirect Immediate | Indirect Register |
-| ---- | ------- | --------- | --------------- | ------------------ | ----------------- |
-| HALT | 0x00    |           |                 |                    |                   |
-| ADDR |         |           | 0x01            |
-| SUBR |         |           | 0x02            |
-| MULR |         |           | 0x03            |
-| DIVR |         |           | 0x04            |
-| ANDR |         |           | 0x05            |
-| ORRR |         |           | 0x06            |
-| XORR |         |           | 0x07            |
-| COMP |         |           | 0x08            |
-| SJMP | 0x09    |           |                 |
-| LJMP | 0x0A    |           |                 |
-| BRAN |         | 0x0B      |                 |
-| LOAD |         | 0x0C      | 0x0D            | 0x0E               | 0x0F              |
-| STOR |         |           |                 | 0x12               | 0x13              |
-| WAIT | 0x16    |           |                 |
-| RETI | 0x17    |           |                 |
-| EXCP |         | 0x18      |                 |
-| INOF | 0x19    |           |                 |
-| INON | 0x1A    |           |                 |
-| BRSR |         | 0x1B      |                 |
-| SJSR | 0x1C    |           |                 |
-| LJSR | 0x1D    |           |                 |
-| RETS | 0x1E    |           |                 |
-| LSLR |         |           | 0x1F            |
-| LSRR |         |           | 0x20            |
-| ASLR |         |           | 0x21            |
-| ASRR |         |           | 0x22            |
-| ROTL |         |           | 0x23            |
-| ROTR |         |           | 0x24            |
-| NOOP | 0x25    |           |                 |
-| CLSR | 0x26    |           |                 |
-| SPLT |         |           | 0x27            |
-| JOIN |         |           | 0x28            |
-| PUSH |         |           | 0x29            |
-| POPR |         |           | 0x2A            |
+\* Address register indirect doesn't have dedicated opcodes because it is equivalent to (#0, a). The assembler will alias this automatically.
 
-Gaps between LOAD/STOR/WAIT are space to allow more addressing modes in future versions
+#### Valid Source Operands
+
+Source operands are on the right side of the arguments. Destination operands are always first.
+
+|      | Implied | Immediate | Register Direct | Address Direct | Indirect Immediate | Indirect Register | Register Range |
+| ---- | ------- | --------- | --------------- | -------------- | ------------------ | ----------------- | -------------- |
+| HALT | 0x00    |           |                 |                |                    |
+| NOOP | 0x01    |           |                 |
+| WAIT | 0x02    |           |                 |
+| RETI | 0x03    |           |                 |
+| RETS | 0x04    |           |                 |
+| ADDR |         |           | 0x05            |
+| ADDC |         |           | 0x06            |
+| SUBR |         |           | 0x07            |
+| SUBC |         |           | 0x08            |
+| MULR |         |           | 0x09            |
+| DIVR |         |           | 0x0A            |
+| ANDR |         |           | 0x0B            |
+| ORRR |         |           | 0x0C            |
+| XORR |         |           | 0x0D            |
+| LSLR |         |           | 0x0E            |
+| LSRR |         |           | 0x0F            |
+| ASLR |         |           | 0x10            |
+| ASRR |         |           | 0x11            |
+| ROTL |         |           | 0x12            |
+| ROTR |         |           | 0x13            |
+| COMP |         |           | 0x14            |
+| PUSH |         |           | 0x15            |
+| POPR |         |           | 0x16            |
+| EXCP |         | 0x17      |                 |
+| SJMP |         | 0x18      |                 |                |
+| SJSR |         | 0x19      |                 |                |
+| BRSR |         | 0x1A      |                 |
+| BRAN |         | 0x1B      |                 |
+| LJMP |         |           |                 | 0x1C           |
+| LJSR |         |           |                 | 0x1D           |
+| LDEA |         |           |                 |                | 0x1F               | 0x20              |
+| LDMR |         |           |                 |                | 0x21               |                   |                |
+| LOAD |         | 0x21      | 0x23            |                | 0x24               | 0x25              |
+| STOR |         |           |                 |                | 0x26               | 0x27              |
+| STMR |         |           |                 |                |                    |                   | 0x28           |
+
+42 Opcodes
+
+# TODO: Make sure privileged/ non priv SP bits are in separate bytes for easier checks
+
+# TODO: How to propagate carry (new instruction or just 6502 it and only provide ADD with carry)
+
+# TODO: address register can be target for lea only
+
+# TODO: Load/store single byte?

@@ -5,20 +5,20 @@ use nom::combinator::map;
 use nom::sequence::tuple;
 use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
-    AddInstructionData, Instruction, RegisterInstructionData,
+    AddWithCarryInstructionData, Instruction, RegisterInstructionData,
 };
 
 ///
-/// Parses the ADDR opcode
+/// Parses the ADDC opcode
 ///
 /// ```
-/// use toolchain::parsers::opcodes::addr;
+/// use toolchain::parsers::opcodes::addc;
 /// use toolchain::parsers::instruction::InstructionToken;
 /// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, AddInstructionData, RegisterInstructionData};
 ///
-/// let (_, parsed_instruction) = addr::addr("ADDR|!= y2, z1").unwrap();
+/// let (_, parsed_instruction) = addc::addc("ADDC|!= y2, z1").unwrap();
 /// let (r1, r2, condition_flag) = match parsed_instruction.instruction {
-///     Instruction::Add(inner) => (inner.data.r1, inner.data.r2, inner.data.condition_flag),
+///     Instruction::AddWithCarry(inner) => (inner.data.r1, inner.data.r2, inner.data.condition_flag),
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
@@ -27,13 +27,13 @@ use peripheral_cpu::instructions::definitions::{
 /// assert_eq!(r2, 2);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// ```
-pub fn addr(i: &str) -> IResult<&str, InstructionToken> {
+pub fn addc(i: &str) -> IResult<&str, InstructionToken> {
     map(
-        tuple((parse_instruction_tag("ADDR"), parse_instruction_operands)),
+        tuple((parse_instruction_tag("ADDC"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
             [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
                 InstructionToken {
-                    instruction: Instruction::Add(AddInstructionData {
+                    instruction: Instruction::AddWithCarry(AddWithCarryInstructionData {
                         data: RegisterInstructionData {
                             r1: dest_register.to_register_index(),
                             r2: src_register.to_register_index(),
@@ -46,7 +46,7 @@ pub fn addr(i: &str) -> IResult<&str, InstructionToken> {
                 }
             }
             _ => panic!(
-                "ADDR opcode only supports direct register addressing mode (e.g. ADDR y1, z3)"
+                "ADDC opcode only supports direct register addressing mode (e.g. ADDC y1, z3)"
             ),
         },
     )(i)

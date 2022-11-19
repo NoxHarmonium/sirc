@@ -6,7 +6,7 @@ extern crate num_derive;
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod executors;
 pub mod instructions;
-pub mod interrupts;
+pub mod microcode;
 pub mod registers;
 
 use instructions::definitions::get_clocks_for_instruction;
@@ -15,7 +15,7 @@ use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
 
 use crate::executors::Executor;
 use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
-use crate::instructions::encoding::decode_instruction;
+use crate::instructions::encoding::{decode_condition_flags, decode_instruction};
 use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{Registers, SegmentedRegisterAccess};
 
@@ -61,11 +61,14 @@ fn step<'a>(
 ) -> Result<(&'a Registers, u32), Error> {
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
     let instruction = decode_instruction(raw_instruction);
+    let condition_flags = decode_condition_flags(raw_instruction);
 
     let original_pc = registers.get_segmented_pc();
 
-    // TODO: Check condition fields and only execute if flags are correct
-    instruction.execute(registers, mem);
+    if condition_flags.should_execute(registers) {
+        // TODO: Check condition fields and only execute if flags are correct
+        instruction.execute(registers, mem);
+    }
 
     if original_pc == registers.get_segmented_pc() {
         // If the PC hasn't been modified by the instruction than assume that it isn't

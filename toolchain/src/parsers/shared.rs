@@ -1,11 +1,15 @@
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, tag};
 use nom::character::complete::{alphanumeric1, digit1, multispace0, one_of, space0};
-use nom::combinator::{map_res, opt, recognize};
+use nom::combinator::{map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, terminated, tuple};
 use nom::Err;
 use nom::IResult;
+
+use crate::types::object::RefType;
+
+use super::instruction::RefToken;
 
 pub fn lexeme<'a, F: 'a, O, E: ParseError<&'a str>>(
     inner: F,
@@ -52,14 +56,46 @@ fn parse_comma_sep_(i: &str) -> IResult<&str, ()> {
     Ok((i, ()))
 }
 
+fn parse_range_sep_(i: &str) -> IResult<&str, ()> {
+    let (i, (_, _)) = pair(tag("->"), space0)(i)?;
+    Ok((i, ()))
+}
+
 pub fn parse_label_(i: &str) -> IResult<&str, &str> {
     let (i, _) = tag(":")(i)?;
     alphanumeric1(i)
 }
 
-pub fn parse_symbol_reference_(i: &str) -> IResult<&str, &str> {
+pub fn parse_symbol_reference_postamble_(i: &str) -> IResult<&str, Option<RefType>> {
+    let (i, dot_parsed) = opt(tag("."))(i)?;
+
+    match dot_parsed {
+        Some(_) => map(
+            alt((tag(".r"), tag(".u"), tag(".l"))),
+            |parsed_value| match parsed_value {
+                ".r" => Some(RefType::Offset),
+                ".u" => Some(RefType::UpperByte),
+                ".l" => Some(RefType::LowerByte),
+                // TODO: Proper error handling again
+                _ => panic!("Unknown postamble {}", parsed_value),
+            },
+        )(i),
+        None => Ok((i, None)),
+    }
+}
+
+pub fn parse_symbol_reference_(i: &str) -> IResult<&str, RefToken> {
     let (i, _) = tag("@")(i)?;
-    alphanumeric1(i)
+    let (i, name) = alphanumeric1(i)?;
+    let (i, optional_preamble) = parse_symbol_reference_postamble_(i)?;
+
+    Ok((
+        i,
+        RefToken {
+            name: String::from(name),
+            ref_type: optional_preamble.unwrap_or(RefType::Implied),
+        },
+    ))
 }
 
 pub fn parse_hex(i: &str) -> IResult<&str, u16> {
@@ -78,10 +114,14 @@ pub fn parse_comma_sep(i: &str) -> IResult<&str, ()> {
     lexeme(parse_comma_sep_)(i)
 }
 
+pub fn parse_range_sep(i: &str) -> IResult<&str, ()> {
+    lexeme(parse_range_sep_)(i)
+}
+
 pub fn parse_label(i: &str) -> IResult<&str, &str> {
     lexeme(parse_label_)(i)
 }
 
-pub fn parse_symbol_reference(i: &str) -> IResult<&str, &str> {
+pub fn parse_symbol_reference(i: &str) -> IResult<&str, RefToken> {
     lexeme(parse_symbol_reference_)(i)
 }

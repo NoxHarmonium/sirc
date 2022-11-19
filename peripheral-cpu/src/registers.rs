@@ -6,20 +6,20 @@ use crate::instructions::encoding::ADDRESS_MASK;
 
 pub enum StatusRegisterFields {
     // Byte 1
-    Zero = 0x0001,
-    Negative = 0x0002,
-    Carry = 0x0004,
-    Overflow = 0x0008,
-    // Byte 2
-    SystemMode = 0x0010,
-    InterruptMaskLow = 0x0020,
-    InterruptMaskMed = 0x0040,
-    InterruptMaskHigh = 0x0080,
-    // Byte 3
+    Zero = 0b0000_0001,
+    Negative = 0b0000_0010,
+    Carry = 0b0000_0100,
+    Overflow = 0b0000_1000,
+
+    // Byte 3 (privileged)
+    SystemMode = 0b0000_0001 << u8::BITS,
+    InterruptMaskLow = 0b0000_0010 << u8::BITS,
+    InterruptMaskMed = 0b0000_0100 << u8::BITS,
+    InterruptMaskHigh = 0b0000_1000 << u8::BITS,
     // TODO: Is this the best place for this flag? No program will be able to read it
     //       maybe move to internal register?
-    WaitingForInterrupt = 0x0100,
-    CpuHalted = 0x0200,
+    WaitingForInterrupt = 0b0001_0000 << u8::BITS,
+    CpuHalted = 0b0010_0000 << u8::BITS,
 }
 
 /// Should map 1:1 with the Registers struct
@@ -27,20 +27,20 @@ pub enum StatusRegisterFields {
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum RegisterName {
     X1 = 0,
-    X2,
-    X3,
     Y1,
-    Y2,
-    Y3,
     Z1,
+    X2,
+    Y2,
     Z2,
+    X3,
+    Y3,
     Z3,
     Ah,
     Al,
-    Ph,
-    Pl,
     Sh,
     Sl,
+    Ph,
+    Pl,
     Sr,
 }
 
@@ -50,11 +50,37 @@ impl RegisterName {
     }
 }
 
+/// These three registers are special in that they can be used
+/// as combined 32-bit wide registers, but only for addressing.
+#[derive(FromPrimitive, ToPrimitive, Debug)]
+pub enum AddressRegisterName {
+    // a (ah, al)
+    Address,
+    // p (ph, pl)
+    ProgramCounter,
+    // s (sh, sl)
+    StackPointer,
+}
+
+impl AddressRegisterName {
+    pub fn to_register_index(&self) -> u8 {
+        num::ToPrimitive::to_u8(self).expect("Could not convert enum to u8")
+    }
+    pub fn from_register_index(index: u8) -> AddressRegisterName {
+        num::FromPrimitive::from_u8(index).expect("Could not convert u8 to enum")
+    }
+}
+
 // Traits
 
 pub trait RegisterIndexing {
-    fn get_at_index(&mut self, index: u8) -> u16;
+    fn get_at_index(&self, index: u8) -> u16;
     fn set_at_index(&mut self, index: u8, value: u16);
+}
+
+pub trait AddressRegisterIndexing {
+    fn get_address_register_at_index(&self, index: u8) -> u32;
+    fn set_address_register_at_index(&mut self, index: u8, value: u32);
 }
 
 pub trait SegmentedRegisterAccess {
@@ -73,7 +99,9 @@ pub trait FullAddressRegisterAccess {
     fn get_full_address_address(&self) -> u32;
     fn get_full_sp_address(&self) -> u32;
 
+    fn set_full_pc_address(&mut self, address: u32);
     fn set_full_address_address(&mut self, address: u32);
+    fn set_full_sp_address(&mut self, address: u32);
 }
 
 pub trait FullAddress {
@@ -83,28 +111,24 @@ pub trait FullAddress {
 #[derive(Debug, Clone, Default)]
 pub struct Registers {
     pub x1: u16,
-    pub x2: u16,
-    pub x3: u16,
     pub y1: u16,
-    pub y2: u16,
-    pub y3: u16,
     pub z1: u16,
+    pub x2: u16,
+    pub y2: u16,
     pub z2: u16,
+    pub x3: u16,
+    pub y3: u16,
     pub z3: u16,
     // Address Register
     pub ah: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub al: u16,
-    // Program Counter
-    pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
-    pub pl: u16,
     // Stack Pointer (user, system) - depending on system status bit
     pub sh: (u16, u16), // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
     pub sl: (u16, u16),
+    // Program Counter
+    pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
+    pub pl: u16,
     // Status Register
-    // 0 - Last comparison result (e.g. 1 was success)
-    // 1 - CPU is halted
-    // 2 - Carry bit
-    // 3 - Overflow bit
     pub sr: u16,
 
     // CPU Internal Registers (not directly accessible to programs)
@@ -120,32 +144,32 @@ impl Index<u8> for Registers {
     fn index(&self, index: u8) -> &Self::Output {
         match index {
             0 => &self.x1,
-            1 => &self.x2,
-            2 => &self.x3,
-            3 => &self.y1,
+            1 => &self.y1,
+            2 => &self.z1,
+            3 => &self.x2,
             4 => &self.y2,
-            5 => &self.y3,
-            6 => &self.z1,
-            7 => &self.z2,
+            5 => &self.z2,
+            6 => &self.x3,
+            7 => &self.y3,
             8 => &self.z3,
             9 => &self.ah,
             10 => &self.al,
-            11 => &self.ph,
-            12 => &self.pl,
-            13 => {
+            11 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &self.sh.1
                 } else {
                     &self.sh.0
                 }
             }
-            14 => {
+            12 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &self.sl.1
                 } else {
                     &self.sl.0
                 }
             }
+            13 => &self.ph,
+            14 => &self.pl,
             15 => &self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
@@ -156,32 +180,32 @@ impl IndexMut<u8> for Registers {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
             0 => &mut self.x1,
-            1 => &mut self.x2,
-            2 => &mut self.x3,
-            3 => &mut self.y1,
+            1 => &mut self.y1,
+            2 => &mut self.z1,
+            3 => &mut self.x2,
             4 => &mut self.y2,
-            5 => &mut self.y3,
-            6 => &mut self.z1,
-            7 => &mut self.z2,
+            5 => &mut self.z2,
+            6 => &mut self.x3,
+            7 => &mut self.y3,
             8 => &mut self.z3,
             9 => &mut self.ah,
             10 => &mut self.al,
-            11 => &mut self.ph,
-            12 => &mut self.pl,
-            13 => {
+            11 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &mut self.sh.1
                 } else {
                     &mut self.sh.0
                 }
             }
-            14 => {
+            12 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &mut self.sl.1
                 } else {
                     &mut self.sl.0
                 }
             }
+            13 => &mut self.ph,
+            14 => &mut self.pl,
             15 => &mut self.sr,
             _ => panic!("Fatal: No register mapping for index [{}]", index),
         }
@@ -190,11 +214,28 @@ impl IndexMut<u8> for Registers {
 
 // TODO: Deprecate and remove this in favour of just using the Index/IndexMut traits
 impl RegisterIndexing for Registers {
-    fn get_at_index(&mut self, index: u8) -> u16 {
+    fn get_at_index(&self, index: u8) -> u16 {
         self[index]
     }
     fn set_at_index(&mut self, index: u8, value: u16) {
         self[index] = value;
+    }
+}
+
+impl AddressRegisterIndexing for Registers {
+    fn get_address_register_at_index(&self, index: u8) -> u32 {
+        match AddressRegisterName::from_register_index(index) {
+            AddressRegisterName::Address => self.get_full_address_address(),
+            AddressRegisterName::ProgramCounter => self.get_full_pc_address(),
+            AddressRegisterName::StackPointer => self.get_full_sp_address(),
+        }
+    }
+    fn set_address_register_at_index(&mut self, index: u8, value: u32) {
+        match AddressRegisterName::from_register_index(index) {
+            AddressRegisterName::Address => self.set_full_address_address(value),
+            AddressRegisterName::ProgramCounter => self.set_full_pc_address(value),
+            AddressRegisterName::StackPointer => self.set_full_sp_address(value),
+        }
     }
 }
 
@@ -262,8 +303,16 @@ impl FullAddressRegisterAccess for Registers {
         self.get_segmented_sp().to_full_address()
     }
 
+    fn set_full_pc_address(&mut self, address: u32) {
+        (self.ph, self.pl) = address.to_segmented_address();
+    }
+
     fn set_full_address_address(&mut self, address: u32) {
         (self.ah, self.al) = address.to_segmented_address();
+    }
+
+    fn set_full_sp_address(&mut self, address: u32) {
+        self.set_segmented_sp(address.to_segmented_address());
     }
 }
 
@@ -355,14 +404,6 @@ pub fn set_alu_bits(
     // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
     // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
     if let Some((i1, i2, result)) = inputs_and_result {
-        println!("i1: {}, i2: {}, result: {}", i1, i2, result);
-        println!(
-            "sign(i1): {:?}, sign(i2): {:?}, sign(result): {:?}",
-            sign(i1),
-            sign(i2),
-            sign(result)
-        );
-
         if sign(i1) == sign(i2) && sign(result) != sign(i1) {
             set_sr_bit(StatusRegisterFields::Overflow, registers);
         } else {
@@ -400,21 +441,21 @@ pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 ///
 /// let mut registers = Registers::default();
 ///
-/// registers.sr = 0b0000_1010;
+/// registers.sr = 0b0000_0000 << u8::BITS;
 /// assert_eq!(0, get_interrupt_mask(&registers));
-/// registers.sr = 0b0010_1010;
+/// registers.sr = 0b0000_0010 << u8::BITS;
 /// assert_eq!(1, get_interrupt_mask(&registers));
-/// registers.sr = 0b0100_1010;
+/// registers.sr = 0b0000_0100 << u8::BITS;
 /// assert_eq!(2, get_interrupt_mask(&registers));
-/// registers.sr = 0b0110_1010;
+/// registers.sr = 0b0000_0110 << u8::BITS;
 /// assert_eq!(3, get_interrupt_mask(&registers));
-/// registers.sr = 0b1000_1010;
+/// registers.sr = 0b0000_1000 << u8::BITS;
 /// assert_eq!(4, get_interrupt_mask(&registers));
-/// registers.sr = 0b1010_1010;
+/// registers.sr = 0b0000_1010 << u8::BITS;
 /// assert_eq!(5, get_interrupt_mask(&registers));
-/// registers.sr = 0b1100_1010;
+/// registers.sr = 0b0000_1100 << u8::BITS;
 /// assert_eq!(6, get_interrupt_mask(&registers));
-/// registers.sr = 0b1110_1010;
+/// registers.sr = 0b0000_1110 << u8::BITS;
 /// assert_eq!(7, get_interrupt_mask(&registers));
 /// ```
 pub fn get_interrupt_mask(registers: &Registers) -> u8 {
@@ -423,7 +464,7 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
         | StatusRegisterFields::InterruptMaskLow as u16;
     let masked_bits = registers.sr & bit_mask;
     // TODO: Can we work out this shift based on the fields position?
-    (masked_bits >> 5) as u8
+    (masked_bits >> 9) as u8
 }
 
 ///
@@ -433,30 +474,30 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
 /// use peripheral_cpu::registers::{set_interrupt_mask, Registers};
 ///
 /// let mut registers = Registers::default();
-/// registers.sr = 0b0000_1010;
+/// registers.sr = 0b0001_0001 << u8::BITS;
 ///
 /// set_interrupt_mask(&mut registers, 0);
-/// assert_eq!(0b0000_1010, registers.sr);
+/// assert_eq!(0b0001_0001 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 1);
-/// assert_eq!(0b0010_1010, registers.sr);
+/// assert_eq!(0b0001_0011 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 2);
-/// assert_eq!(0b0100_1010, registers.sr);
+/// assert_eq!(0b0001_0101 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 3);
-/// assert_eq!(0b0110_1010, registers.sr);
+/// assert_eq!(0b0001_0111 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 4);
-/// assert_eq!(0b1000_1010, registers.sr);
+/// assert_eq!(0b0001_1001 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 5);
-/// assert_eq!(0b1010_1010, registers.sr);
+/// assert_eq!(0b0001_1011 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 6);
-/// assert_eq!(0b1100_1010, registers.sr);
+/// assert_eq!(0b0001_1101 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 7);
-/// assert_eq!(0b1110_1010, registers.sr);
+/// assert_eq!(0b0001_1111 << u8::BITS, registers.sr);
 /// set_interrupt_mask(&mut registers, 8);
-/// assert_eq!(0b1110_1010, registers.sr);
+/// assert_eq!(0b0001_1111 << u8::BITS, registers.sr);
 /// ```
 pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
     // TODO: Can we work out this shift based on the fields position?
-    let shifted_value = (interrupt_mask.clamp(0, 7) as u16) << 5;
+    let shifted_value = (interrupt_mask.clamp(0, 7) as u16) << 9;
     let bit_mask = !(StatusRegisterFields::InterruptMaskHigh as u16
         | StatusRegisterFields::InterruptMaskMed as u16
         | StatusRegisterFields::InterruptMaskLow as u16);
@@ -473,24 +514,44 @@ pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
 pub fn register_name_to_index(name: &str) -> u8 {
     match name {
         "x1" => 0,
-        "x2" => 1,
-        "x3" => 2,
-        "y1" => 3,
+        "y1" => 1,
+        "z1" => 2,
+        "x2" => 3,
         "y2" => 4,
-        "y3" => 5,
-        "z1" => 6,
-        "z2" => 7,
+        "z2" => 5,
+        "x3" => 6,
+        "y3" => 7,
         "z3" => 8,
         // [ah, al]
         "ah" => 9,  // Address high
         "al" => 10, // Address low
-        // [ph, pl]
-        "ph" => 11, // Program counter high
-        "pl" => 12, // Program counter low
         // [sh, sl]
-        "sh" => 13, // Program counter high
-        "sl" => 14, // Program counter low
+        "sh" => 11, // Stack pointer high
+        "sl" => 12, // Stack pointer low
+        // [ph, pl]
+        "ph" => 13, // Program counter high
+        "pl" => 14, // Program counter low
         "sr" => 15,
         _ => panic!("Fatal: No register mapping for name [{}]", name),
     }
+}
+
+///
+/// Returns true if start_index/end_index form a valid range of registers,
+/// otherwise false.
+///
+/// ```
+/// use peripheral_cpu::registers::is_valid_register_range;
+///
+/// assert!(is_valid_register_range(0, 15));
+/// assert!(is_valid_register_range(1, 4));
+/// assert!(!is_valid_register_range(0, 16));
+/// assert!(!is_valid_register_range(2, 1));
+/// assert!(!is_valid_register_range(0, 0));
+///
+/// ```
+pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
+    // TODO: Use std::mem::variant_count::<RegisterName>() when it stabilises https://stackoverflow.com/a/73543241/1153203
+    let register_count = 16;
+    start_index < register_count && end_index < register_count && end_index > start_index
 }

@@ -9,3 +9,7 @@ enum_dispatch = "0.3.8"
 num-traits = "0.2"
 num-derive = "0.3"
 num = "0.4"
+
+[dev-dependencies]
+quickcheck = "1"
+quickcheck_macros = "1"

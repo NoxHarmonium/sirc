@@ -1,6 +1,9 @@
-use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, AddressingMode, ImmediateType,
-    InstructionToken, LabelToken,
+use crate::{
+    parsers::instruction::{
+        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        AddressingMode, ImmediateType, InstructionToken,
+    },
+    types::object::RefType,
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
@@ -25,7 +28,7 @@ pub fn brsr(i: &str) -> IResult<&str, InstructionToken> {
                     }),
                     symbol_ref: None,
                 },
-                ImmediateType::SymbolRef(symbol_name) => InstructionToken {
+                ImmediateType::SymbolRef(ref_token) => InstructionToken {
                     instruction: Instruction::BranchToSubroutine(BranchToSubroutineData {
                         data: ImmediateInstructionData {
                             register: 0x0, // unused
@@ -34,9 +37,10 @@ pub fn brsr(i: &str) -> IResult<&str, InstructionToken> {
                             additional_flags: 0x0,
                         },
                     }),
-                    symbol_ref: Some(LabelToken {
-                        name: String::from(symbol_name),
-                    }),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::Offset,
+                    )),
                 },
             },
             _ => panic!("BRSR opcode only supports immediate addressing mode (e.g. BRSR #-3)"),

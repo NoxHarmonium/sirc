@@ -1,25 +1,53 @@
-use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, InstructionToken,
+use crate::{
+    parsers::instruction::{
+        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        AddressingMode, ImmediateType, InstructionToken,
+    },
+    types::object::RefType,
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
 use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
-    ImpliedInstructionData, Instruction, ShortJumpToSubroutineData,
+    ImmediateInstructionData, Instruction, ShortJumpToSubroutineWithImmediateData,
 };
 
 pub fn sjsr(i: &str) -> IResult<&str, InstructionToken> {
     map(
         tuple((parse_instruction_tag("SJSR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
-            [] => InstructionToken {
-                instruction: Instruction::ShortJumpToSubroutine(ShortJumpToSubroutineData {
-                    data: ImpliedInstructionData { condition_flag },
-                }),
-                symbol_ref: None,
+            [AddressingMode::Immediate(offset)] => match offset {
+                ImmediateType::Value(offset) => InstructionToken {
+                    instruction: Instruction::ShortJumpToSubroutineWithImmediate(
+                        ShortJumpToSubroutineWithImmediateData {
+                            data: ImmediateInstructionData {
+                                register: 0x0, // unused
+                                value: offset.to_owned(),
+                                condition_flag,
+                                additional_flags: 0x0,
+                            },
+                        },
+                    ),
+                    symbol_ref: None,
+                },
+                ImmediateType::SymbolRef(ref_token) => InstructionToken {
+                    instruction: Instruction::ShortJumpToSubroutineWithImmediate(
+                        ShortJumpToSubroutineWithImmediateData {
+                            data: ImmediateInstructionData {
+                                register: 0x0, // unused
+                                value: 0x0,    // placeholder
+                                condition_flag,
+                                additional_flags: 0x0,
+                            },
+                        },
+                    ),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerByte,
+                    )),
+                },
             },
-            // TODO: Replace all these panics with proper error handler via the parser
-            _ => panic!("SJSR opcode only supports implied addressing mode (e.g. INON)"),
+            _ => panic!("SJSR opcode only supports immediate addressing mode (e.g. SJMP #-3)"),
         },
     )(i)
 }

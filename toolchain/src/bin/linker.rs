@@ -1,12 +1,20 @@
 use clap::Parser;
-use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_WORDS;
-use peripheral_cpu::instructions::encoding::{decode_instruction_id, encode_address_instruction};
+use peripheral_cpu::instructions::definitions::{
+    BranchInstructionData, BranchToSubroutineData, ImmediateInstructionData, Instruction,
+    LoadEffectiveAddressFromIndirectImmediateData, LoadManyRegisterFromAddressRegisterData,
+    LoadRegisterFromImmediateData, LoadRegisterFromIndirectImmediateData, RegisterInstructionData,
+    ShortJumpToSubroutineWithImmediateData, ShortJumpWithImmediateData,
+    StoreManyRegisterFromAddressRegisterData, StoreRegisterToIndirectImmediateData,
+    INSTRUCTION_SIZE_WORDS,
+};
+use peripheral_cpu::instructions::encoding::{decode_instruction, encode_instruction};
 
+use core::panic;
 use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use toolchain::types::object::ObjectDefinition;
+use toolchain::types::object::{ObjectDefinition, RefType};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -47,25 +55,185 @@ fn main() -> io::Result<()> {
             .find(|symbol| symbol.name == symbol_ref.name)
             .unwrap();
         // TODO: Clear up confusion between byte addressing and instruction addressing
-        let target_offset = (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
-        let program_offset = symbol_ref.offset as usize;
+        let target_offset_words =
+            (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
+        let program_offset_bytes = symbol_ref.offset as usize;
+        let program_offset_words =
+            (program_offset_bytes as u32 / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
 
         // TODO: Surely there is a better way to do this 🤦‍♀️
-        let instruction_data: [u8; 4] = [
-            linked_program[program_offset],
-            linked_program[program_offset + 1],
-            linked_program[program_offset + 2],
-            linked_program[program_offset + 3],
+        let raw_instruction: [u8; 4] = [
+            linked_program[program_offset_bytes],
+            linked_program[program_offset_bytes + 1],
+            linked_program[program_offset_bytes + 2],
+            linked_program[program_offset_bytes + 3],
         ];
 
-        // TODO: This is a hack. Think of a better solution
-        // The linker might need to decode/rencode instructions I guess
-        let original_instruction_id = decode_instruction_id(instruction_data);
-        let patched_instruction =
-            encode_address_instruction(original_instruction_id, target_offset);
+        let full_offset = target_offset_words as i32 - program_offset_words as i32;
+
+        let calculate_8_bit_value = || match symbol_ref.ref_type {
+            RefType::SmallOffset => i8::try_from(full_offset).unwrap_or_else(|_| {
+                panic!(
+                    "Offset {} ({} - {}) does not fit into a 8 bit signed integer ({}-{})",
+                    full_offset,
+                    target_offset_words,
+                    program_offset_words,
+                    i8::MIN,
+                    i8::MAX
+                )
+            }) as u8,
+            RefType::Implied => {
+                panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
+            }
+            _ => panic!("Only SmallOffset RefType is supported by the LDMR/STMR instructions"),
+        };
+
+        let calculate_16_bit_value = || match symbol_ref.ref_type {
+            RefType::Offset => i16::try_from(full_offset).unwrap_or_else(|_| {
+                panic!(
+                    "Offset {} ({} - {}) does not fit into a 16 bit signed integer ({}-{})",
+                    full_offset,
+                    target_offset_words,
+                    program_offset_words,
+                    i16::MIN,
+                    i16::MAX
+                )
+            }) as u16,
+            RefType::SmallOffset => {
+                panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
+            }
+            RefType::LowerByte => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
+            RefType::UpperByte => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
+            RefType::Implied => {
+                panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
+            }
+        };
+
+        let instruction = decode_instruction(raw_instruction);
+        let patched_instruction = match instruction {
+            Instruction::ShortJumpWithImmediate(data) => {
+                Instruction::ShortJumpWithImmediate(ShortJumpWithImmediateData {
+                    data: ImmediateInstructionData {
+                        register: data.data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.data.condition_flag,
+                        additional_flags: data.data.additional_flags,
+                    },
+                })
+            }
+            Instruction::ShortJumpToSubroutineWithImmediate(data) => {
+                Instruction::ShortJumpToSubroutineWithImmediate(
+                    ShortJumpToSubroutineWithImmediateData {
+                        data: ImmediateInstructionData {
+                            register: data.data.register,
+                            value: calculate_16_bit_value(),
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: data.data.additional_flags,
+                        },
+                    },
+                )
+            }
+            Instruction::BranchToSubroutine(data) => {
+                Instruction::BranchToSubroutine(BranchToSubroutineData {
+                    data: ImmediateInstructionData {
+                        register: data.data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.data.condition_flag,
+                        additional_flags: data.data.additional_flags,
+                    },
+                })
+            }
+            Instruction::Branch(data) => Instruction::Branch(BranchInstructionData {
+                data: ImmediateInstructionData {
+                    register: data.data.register,
+                    value: calculate_16_bit_value(),
+                    condition_flag: data.data.condition_flag,
+                    additional_flags: data.data.additional_flags,
+                },
+            }),
+            Instruction::LoadEffectiveAddressIndirectImmediate(data) => {
+                Instruction::LoadEffectiveAddressIndirectImmediate(
+                    LoadEffectiveAddressFromIndirectImmediateData {
+                        data: ImmediateInstructionData {
+                            register: data.data.register,
+                            value: calculate_16_bit_value(),
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: data.data.additional_flags,
+                        },
+                    },
+                )
+            }
+            Instruction::LoadManyRegisterFromAddressRegister(data) => {
+                Instruction::LoadManyRegisterFromAddressRegister(
+                    LoadManyRegisterFromAddressRegisterData {
+                        data: RegisterInstructionData {
+                            r1: data.data.r1,
+                            r2: data.data.r2,
+                            r3: data.data.r3,
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: calculate_8_bit_value(),
+                        },
+                    },
+                )
+            }
+            Instruction::LoadRegisterFromImmediate(data) => {
+                Instruction::LoadRegisterFromImmediate(LoadRegisterFromImmediateData {
+                    data: ImmediateInstructionData {
+                        register: data.data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.data.condition_flag,
+                        additional_flags: data.data.additional_flags,
+                    },
+                })
+            }
+            Instruction::LoadRegisterFromIndirectImmediate(data) => {
+                Instruction::LoadRegisterFromIndirectImmediate(
+                    LoadRegisterFromIndirectImmediateData {
+                        data: ImmediateInstructionData {
+                            register: data.data.register,
+                            value: calculate_16_bit_value(),
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: data.data.additional_flags,
+                        },
+                    },
+                )
+            }
+            Instruction::StoreRegisterToIndirectImmediate(data) => {
+                Instruction::StoreRegisterToIndirectImmediate(
+                    StoreRegisterToIndirectImmediateData {
+                        data: ImmediateInstructionData {
+                            register: data.data.register,
+                            value: calculate_16_bit_value(),
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: data.data.additional_flags,
+                        },
+                    },
+                )
+            }
+            Instruction::StoreManyRegisterFromAddressRegister(data) => {
+                Instruction::StoreManyRegisterFromAddressRegister(
+                    StoreManyRegisterFromAddressRegisterData {
+                        data: RegisterInstructionData {
+                            r1: data.data.r1,
+                            r2: data.data.r2,
+                            r3: data.data.r3,
+                            condition_flag: data.data.condition_flag,
+                            additional_flags: calculate_8_bit_value(),
+                        },
+                    },
+                )
+            }
+            _ => panic!(
+                "Can't patch address/offset for instruction: {:?}",
+                instruction
+            ),
+        };
+
+        let raw_patched_instruction = encode_instruction(&patched_instruction);
 
         // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
-        linked_program[program_offset..=program_offset + 3].copy_from_slice(&patched_instruction);
+        linked_program[program_offset_bytes..=program_offset_bytes + 3]
+            .copy_from_slice(&raw_patched_instruction);
     }
 
     write(args.output_file, linked_program)?;

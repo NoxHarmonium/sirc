@@ -1,24 +1,49 @@
-use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, InstructionToken,
+use crate::{
+    parsers::instruction::{
+        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        AddressingMode, ImmediateType, InstructionToken,
+    },
+    types::object::RefType,
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
 use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
-    ImpliedInstructionData, Instruction, ShortJumpInstructionData,
+    ImmediateInstructionData, Instruction, ShortJumpWithImmediateData,
 };
 
 pub fn sjmp(i: &str) -> IResult<&str, InstructionToken> {
     map(
         tuple((parse_instruction_tag("SJMP"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
-            [] => InstructionToken {
-                instruction: Instruction::ShortJump(ShortJumpInstructionData {
-                    data: ImpliedInstructionData { condition_flag },
-                }),
-                symbol_ref: None,
+            [AddressingMode::Immediate(offset)] => match offset {
+                ImmediateType::Value(offset) => InstructionToken {
+                    instruction: Instruction::ShortJumpWithImmediate(ShortJumpWithImmediateData {
+                        data: ImmediateInstructionData {
+                            register: 0x0, // unused
+                            value: offset.to_owned(),
+                            condition_flag,
+                            additional_flags: 0x0,
+                        },
+                    }),
+                    symbol_ref: None,
+                },
+                ImmediateType::SymbolRef(ref_token) => InstructionToken {
+                    instruction: Instruction::ShortJumpWithImmediate(ShortJumpWithImmediateData {
+                        data: ImmediateInstructionData {
+                            register: 0x0, // unused
+                            value: 0x0,    // placeholder
+                            condition_flag,
+                            additional_flags: 0x0,
+                        },
+                    }),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerByte,
+                    )),
+                },
             },
-            _ => panic!("SJMP opcode only supports implied addressing mode (e.g. SJMP)"),
+            _ => panic!("SJMP opcode only supports immediate addressing mode (e.g. SJMP #-3)"),
         },
     )(i)
 }

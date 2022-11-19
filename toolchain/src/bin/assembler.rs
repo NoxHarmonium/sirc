@@ -2,7 +2,7 @@ use clap::Parser;
 use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_BYTES;
 use peripheral_cpu::instructions::encoding::encode_instruction;
 use toolchain::parsers::instruction::{parse_tokens, Token};
-use toolchain::types::object::{ObjectDefinition, SymbolDefinition};
+use toolchain::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 
 use std::fs::{read_to_string, write};
 use std::io;
@@ -19,7 +19,7 @@ struct Args {
 }
 fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
     let mut symbols: Vec<SymbolDefinition> = vec![];
-    let mut symbol_refs: Vec<SymbolDefinition> = vec![];
+    let mut symbol_refs: Vec<SymbolRef> = vec![];
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
 
@@ -29,10 +29,10 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 let encoded_instruction = encode_instruction(&data.instruction);
                 program.push(encoded_instruction);
                 if let Some(symbol_ref) = data.symbol_ref {
-                    symbol_refs.push(SymbolDefinition {
+                    symbol_refs.push(SymbolRef {
                         name: symbol_ref.name,
-                        // TODO We can't use this offset anymore because instructions aren't aligned to bytes: offset + symbol_ref.offset,
                         offset,
+                        ref_type: symbol_ref.ref_type,
                     })
                 }
 
@@ -42,6 +42,9 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 name: data.name,
                 offset,
             }),
+            Token::Comment => {
+                // Do nothing.
+            }
         }
     }
 

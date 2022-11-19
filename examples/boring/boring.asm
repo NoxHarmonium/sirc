@@ -5,6 +5,7 @@ LOAD    x3, 64
 
 :loop
 ADDR    x2, x1
-COMP    x2, x3
-BRAN|<= @loop
+; Remember that COMP has the same argument order as SUBR
+COMP    x3, x2
+BRAN|>= @loop
 HALT

@@ -5,20 +5,20 @@ use nom::combinator::map;
 use nom::sequence::tuple;
 use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
-    Instruction, JoinWordInstructionData, RegisterInstructionData,
+    Instruction, RegisterInstructionData, SubtractWithCarryInstructionData,
 };
 
-pub fn join(i: &str) -> IResult<&str, InstructionToken> {
+pub fn subc(i: &str) -> IResult<&str, InstructionToken> {
     map(
-        tuple((parse_instruction_tag("JOIN"), parse_instruction_operands)),
+        tuple((parse_instruction_tag("SUBC"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register_high), AddressingMode::DirectRegister(src_register_low)] => {
+            [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
                 InstructionToken {
-                    instruction: Instruction::JoinWord(JoinWordInstructionData {
+                    instruction: Instruction::SubtractWithCarry(SubtractWithCarryInstructionData {
                         data: RegisterInstructionData {
                             r1: dest_register.to_register_index(),
-                            r2: src_register_high.to_register_index(),
-                            r3: src_register_low.to_register_index(),
+                            r2: src_register.to_register_index(),
+                            r3: 0x00,
                             condition_flag,
                             additional_flags: 0x00,
                         },
@@ -27,7 +27,7 @@ pub fn join(i: &str) -> IResult<&str, InstructionToken> {
                 }
             }
             _ => panic!(
-                "JOIN opcode only supports direct register addressing mode (e.g. ADDR y1, z3)"
+                "SUBC opcode only supports direct register addressing mode (e.g. SUBC y1, z3)"
             ),
         },
     )(i)

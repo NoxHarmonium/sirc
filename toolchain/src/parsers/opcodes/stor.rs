@@ -1,6 +1,9 @@
-use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, AddressingMode, ImmediateType,
-    InstructionToken, LabelToken,
+use crate::{
+    parsers::instruction::{
+        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        AddressingMode, ImmediateType, InstructionToken,
+    },
+    types::object::RefType,
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
@@ -25,26 +28,27 @@ pub fn stor(i: &str) -> IResult<&str, InstructionToken> {
                                         register: dest_register.to_register_index(),
                                         value: offset.to_owned(),
                                         condition_flag,
-                                        additional_flags: *address_register as u8,
+                                        additional_flags: address_register.to_register_index(),
                                     },
                                 },
                             ),
                             symbol_ref: None,
                         },
-                        ImmediateType::SymbolRef(symbol_name) => InstructionToken {
+                        ImmediateType::SymbolRef(ref_token) => InstructionToken {
                             instruction: Instruction::StoreRegisterToIndirectImmediate(
                                 StoreRegisterToIndirectImmediateData {
                                     data: ImmediateInstructionData {
                                         register: dest_register.to_register_index(),
                                         value: 0x0, // placeholder
                                         condition_flag,
-                                        additional_flags: *address_register as u8,
+                                        additional_flags: address_register.to_register_index(),
                                     },
                                 },
                             ),
-                            symbol_ref: Some(LabelToken {
-                                name: String::from(symbol_name),
-                            }),
+                            symbol_ref: Some(override_ref_token_type_if_implied(
+                                ref_token,
+                                RefType::LowerByte,
+                            )),
                         },
                     }
                 }
@@ -57,9 +61,9 @@ pub fn stor(i: &str) -> IResult<&str, InstructionToken> {
                             data: RegisterInstructionData {
                                 r1: dest_register.to_register_index(),
                                 r2: displacement_register.to_register_index(),
-                                r3: 0x0,
+                                r3: address_register.to_register_index(),
                                 condition_flag,
-                                additional_flags: *address_register as u8,
+                                additional_flags: 0x0,
                             },
                         },
                     ),
