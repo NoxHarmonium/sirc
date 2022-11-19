@@ -88,7 +88,7 @@ Source operands are on the right side of the arguments. Destination operands are
 
 42 Opcodes
 
-# TODO: Make sure privileged/ non priv SP bits are in separate bytes for easier checks
+# TODO: Make sure privileged/ non privileged SP bits are in separate bytes for easier checks
 
 # TODO: How to propagate carry (new instruction or just 6502 it and only provide ADD with carry)
 
