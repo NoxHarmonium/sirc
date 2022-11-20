@@ -86,7 +86,7 @@ Source operands are on the right side of the arguments. Destination operands are
 | STOR |         |           |                 |                | 0x26               | 0x27              |
 | STMR |         |           |                 |                |                    |                   | 0x28           |
 
-42 Opcodes
+42 Total Opcodes
 
 # TODO: Make sure privileged/ non privileged SP bits are in separate bytes for easier checks
 
