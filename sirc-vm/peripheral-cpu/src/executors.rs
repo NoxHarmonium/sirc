@@ -94,7 +94,7 @@ impl Executor for ReturnFromInterruptData {
 
 ///
 /// Executes an addition operation on two registers, storing the result in
-/// the second operand.
+/// the first operand.
 ///
 /// If an unsigned overflow occurs, the carry status flag will be set.
 /// If a signed overflow occurs, the overflow status flag will be set.
@@ -166,7 +166,7 @@ impl Executor for AddInstructionData {
 
 ///
 /// Executes an addition operation on two registers, storing the result in
-/// the second operand.
+/// the first operand.
 ///
 /// If the carry flag is set, it will add one to the result. This
 /// allows addition operations to be "chained" over multiple registers.
@@ -241,9 +241,9 @@ impl Executor for AddWithCarryInstructionData {
 
 ///
 /// Executes an subtraction operation on two registers, storing the result in
-/// the second operand.
+/// the first operand.
 ///
-/// The first operand is subtracted from the second operand.
+/// The second operand is subtracted from the first operand.
 ///
 /// If an unsigned overflow occurs, the carry status flag will be set.
 /// If a signed overflow occurs, the overflow status flag will be set.
@@ -317,9 +317,9 @@ impl Executor for SubtractInstructionData {
 
 ///
 /// Executes an subtraction operation on two registers, storing the result in
-/// the second operand.
+/// the first operand.
 ///
-/// The first operand is subtracted from the second operand.
+/// The second operand is subtracted from the first operand.
 ///
 /// If the carry flag (which is really borrow flag in this context) is set,
 /// it will subtract one from the result. This allows subtraction operations to be "chained"
@@ -385,6 +385,68 @@ impl Executor for SubtractWithCarryInstructionData {
     }
 }
 
+///
+/// Executes an multiplication operation on two registers, storing the result in
+/// the first operand.
+///
+/// If the result is too big to fit in 16 bits, it will wrap around and the carry
+/// status flag will be set. However, this does not have the same meaning as
+/// a ADDR/SUBR carry, and you will have to be careful when using condition codes.
+/// (e.g. condition codes like >= will compare the negative and overflow flags which
+/// will not be set with with this instruction.)
+/// The zero flag will be set though so ==/!= will work as expected.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, MultiplyInstructionData, ConditionFlags};
+/// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
+/// use peripheral_cpu::executors::Executor;
+/// use peripheral_mem::new_memory_peripheral;
+///
+/// let mut mem = new_memory_peripheral();
+///
+/// let mut registers = Registers::default();
+///
+/// let instructionData = MultiplyInstructionData {
+///     data: RegisterInstructionData {
+///         r1: 0x00, // x1
+///         r2: 0x03, // x2
+///         r3: 0x00, // unused
+///         condition_flag: ConditionFlags::Always,
+///         additional_flags: 0x00,
+///     }
+/// };
+///
+/// // Unsigned Overflow
+/// registers.x1 = 0x8000;
+/// registers.x2 = 0x0002;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x0000);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+///
+/// // Unsigned Overflow Again
+/// registers.x1 = 0xFFFF;
+/// registers.x2 = 0xFFFF;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x0001);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+///
+/// // No Overflow
+/// registers.x1 = 0x1234;
+/// registers.x2 = 0x0005;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x5B04);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+/// ```
+///
 impl Executor for MultiplyInstructionData {
     // ID: 0x09
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
@@ -392,20 +454,89 @@ impl Executor for MultiplyInstructionData {
         let val_2 = registers.get_at_index(self.data.r2);
 
         let (result, carry) = val_1.overflowing_mul(val_2);
-        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
+        set_alu_bits(registers, result, carry, None);
 
         registers.set_at_index(self.data.r1, result);
     }
 }
 
+///
+/// Executes an division operation on two registers, storing the result in
+/// the first operand.
+///
+/// If there is a remainder the carry bit will be set. However, this does not have
+/// the same meaning as a ADDR/SUBR carry, and you will have to be careful when using
+/// condition codes. (e.g. condition codes like >= will compare the negative and overflow
+/// flags which will not be set with with this instruction.)
+/// The zero flag will be set though so ==/!= will work as expected.
+///
+/// There is not currently a way to get the value of the remainder if one exists
+/// it will currently have to be determined via a software routine. Future
+/// revisions may add another operand to store the remainder.
+///
+/// ```
+/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, DivideInstructionData, ConditionFlags};
+/// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
+/// use peripheral_cpu::executors::Executor;
+/// use peripheral_mem::new_memory_peripheral;
+///
+/// let mut mem = new_memory_peripheral();
+///
+/// let mut registers = Registers::default();
+///
+/// let instructionData = DivideInstructionData {
+///     data: RegisterInstructionData {
+///         r1: 0x00, // x1
+///         r2: 0x03, // x2
+///         r3: 0x00, // unused
+///         condition_flag: ConditionFlags::Always,
+///         additional_flags: 0x00,
+///     }
+/// };
+///
+/// // Remainder of 1
+/// registers.x1 = 0x1234;
+/// registers.x2 = 0x0003;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x0611);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+///
+/// // No remainder
+/// registers.x1 = 0xFFFF;
+/// registers.x2 = 0xFFFF;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x0001);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+///
+/// // No remainder
+/// registers.x1 = 0x8000;
+/// registers.x2 = 0x0002;
+///
+/// instructionData.execute(&mut registers, &mem);
+///
+/// assert_eq!(registers.x1, 0x4000);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
+/// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
+/// ```
+///
 impl Executor for DivideInstructionData {
     // ID: 0x0A
     fn execute(&self, registers: &mut Registers, _mem: &MemoryPeripheral) {
+        // TODO: We should probably store the remainder somewhere,
+        // although we would then need to have two destination registers
+        // We could also pack them into the same registers like the 68k does
+        // but that would only allow for 8 bit results
         let val_1 = registers.get_at_index(self.data.r1);
         let val_2 = registers.get_at_index(self.data.r2);
 
-        let (result, carry) = val_1.overflowing_div(val_2);
-        set_alu_bits(registers, result, carry, Some((val_1, val_2, result)));
+        let (result, carry) = (val_1 / val_2, (val_1 % val_2) != 0);
+        set_alu_bits(registers, result, carry, None);
 
         registers.set_at_index(self.data.r1, result);
     }
