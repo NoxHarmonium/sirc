@@ -1,6 +1,5 @@
 use nom::combinator::map;
 use nom::sequence::tuple;
-use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
     CompareInstructionData, Instruction, RegisterInstructionData,
 };

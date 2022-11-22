@@ -1,6 +1,6 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_a;
-use nom::character::complete::{alphanumeric1, digit1, multispace0, one_of, space0};
+use nom::character::complete::{digit1, multispace0, one_of, space0};
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, terminated, tuple};

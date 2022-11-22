@@ -1,6 +1,6 @@
 :init
-LOAD    x1, 5
-LOAD    x2, 3
+LOAD    x1, #5
+LOAD    x2, #3
 LOAD    x3, 64
 
 :loop

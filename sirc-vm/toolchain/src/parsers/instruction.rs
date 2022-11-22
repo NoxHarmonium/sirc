@@ -1,7 +1,7 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
 use nom::character::complete::{char, multispace0};
-use nom::combinator::{cut, eof, map, opt};
+use nom::combinator::{cut, map, opt};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, pair, separated_pair};
 use nom_supreme::tag::complete::tag;

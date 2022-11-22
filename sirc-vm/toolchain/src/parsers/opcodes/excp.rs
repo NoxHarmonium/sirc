@@ -4,7 +4,6 @@ use crate::parsers::instruction::{
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
-use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, TriggerSoftwareInterruptData,
 };

@@ -7,7 +7,6 @@ use crate::{
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
-use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, RegisterInstructionData,
     StoreRegisterToIndirectImmediateData, StoreRegisterToIndirectRegisterData,
