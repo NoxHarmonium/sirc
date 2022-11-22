@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, RegisterInstructionData, RotateRightInstructionData,
 };
 
-pub fn rotr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn rotr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("ROTR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

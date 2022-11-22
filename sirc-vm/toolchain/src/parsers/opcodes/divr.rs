@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     DivideInstructionData, Instruction, RegisterInstructionData,
 };
 
-pub fn divr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn divr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("DIVR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

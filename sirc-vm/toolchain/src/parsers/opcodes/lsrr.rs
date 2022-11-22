@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, LogicalShiftRightInstructionData, RegisterInstructionData,
 };
 
-pub fn lsrr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn lsrr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("LSRR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

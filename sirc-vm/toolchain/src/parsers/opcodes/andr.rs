@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     AndInstructionData, Instruction, RegisterInstructionData,
 };
 
-pub fn andr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn andr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("ANDR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

@@ -5,10 +5,11 @@ use peripheral_cpu::instructions::definitions::{
     CompareInstructionData, Instruction, RegisterInstructionData,
 };
 
+use super::super::shared::AsmResult;
 use crate::parsers::instruction::{
     parse_instruction_operands, parse_instruction_tag, AddressingMode, InstructionToken,
 };
-pub fn comp(i: &str) -> IResult<&str, InstructionToken> {
+pub fn comp(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("COMP"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

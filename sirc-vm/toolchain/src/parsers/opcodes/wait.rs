@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     ImpliedInstructionData, Instruction, WaitForInterruptInstructionData,
 };
 
-pub fn wait(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn wait(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("WAIT"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

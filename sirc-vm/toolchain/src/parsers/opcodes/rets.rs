@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     ImpliedInstructionData, Instruction, ReturnFromSubroutineData,
 };
 
-pub fn rets(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn rets(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("RETS"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

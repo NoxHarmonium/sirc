@@ -5,22 +5,25 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::combinator::map;
-use nom::sequence::tuple;
-use nom::IResult;
+use nom::error::{ErrorKind, FromExternalError};
+use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, LoadRegisterFromImmediateData,
     LoadRegisterFromIndirectImmediateData, LoadRegisterFromIndirectRegisterData,
     LoadRegisterFromRegisterData, RegisterInstructionData,
 };
 
-pub fn load(i: &str) -> IResult<&str, InstructionToken> {
-    map(
-        tuple((parse_instruction_tag("LOAD"), parse_instruction_operands)),
-        |(condition_flag, operands)| match operands.as_slice() {
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(offset)] => {
-                match offset {
-                    ImmediateType::Value(offset) => InstructionToken {
+use super::super::shared::AsmResult;
+pub fn load(i: &str) -> AsmResult<InstructionToken> {
+    let (i, condition_flag) = parse_instruction_tag("LOAD")(i)?;
+    let (i, operands) = parse_instruction_operands(i)?;
+
+    match operands.as_slice() {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(offset)] => {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
                         instruction: Instruction::LoadRegisterFromImmediate(
                             LoadRegisterFromImmediateData {
                                 data: ImmediateInstructionData {
@@ -33,7 +36,10 @@ pub fn load(i: &str) -> IResult<&str, InstructionToken> {
                         ),
                         symbol_ref: None,
                     },
-                    ImmediateType::SymbolRef(ref_token) => InstructionToken {
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
                         instruction: Instruction::LoadRegisterFromImmediate(
                             LoadRegisterFromImmediateData {
                                 data: ImmediateInstructionData {
@@ -49,9 +55,12 @@ pub fn load(i: &str) -> IResult<&str, InstructionToken> {
                             RefType::LowerByte,
                         )),
                     },
-                }
+                )),
             }
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
+            Ok((
+                i,
                 InstructionToken {
                     instruction: Instruction::LoadRegisterFromRegister(
                         LoadRegisterFromRegisterData {
@@ -65,12 +74,15 @@ pub fn load(i: &str) -> IResult<&str, InstructionToken> {
                         },
                     ),
                     symbol_ref: None,
-                }
-            }
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
-            {
-                match offset {
-                    ImmediateType::Value(offset) => InstructionToken {
+                },
+            ))
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
+        {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
                         instruction: Instruction::LoadRegisterFromIndirectImmediate(
                             LoadRegisterFromIndirectImmediateData {
                                 data: ImmediateInstructionData {
@@ -84,7 +96,10 @@ pub fn load(i: &str) -> IResult<&str, InstructionToken> {
                         ),
                         symbol_ref: None,
                     },
-                    ImmediateType::SymbolRef(ref_token) => InstructionToken {
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
                         instruction: Instruction::LoadRegisterFromIndirectImmediate(
                             LoadRegisterFromIndirectImmediateData {
                                 data: ImmediateInstructionData {
@@ -100,29 +115,40 @@ pub fn load(i: &str) -> IResult<&str, InstructionToken> {
                             RefType::LowerByte,
                         )),
                     },
-                }
+                )),
             }
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(
-                displacement_register,
-                address_register,
-            )] => InstructionToken {
-                instruction: Instruction::LoadRegisterFromIndirectRegister(
-                    LoadRegisterFromIndirectRegisterData {
-                        data: RegisterInstructionData {
-                            r1: dest_register.to_register_index(),
-                            r2: displacement_register.to_register_index(),
-                            r3: address_register.to_register_index(),
-                            condition_flag,
-                            // TODO: Clamp/validate additional_flags to 10 bits
-                            additional_flags: 0x0,
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] =>
+        {
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: Instruction::LoadRegisterFromIndirectRegister(
+                        LoadRegisterFromIndirectRegisterData {
+                            data: RegisterInstructionData {
+                                r1: dest_register.to_register_index(),
+                                r2: displacement_register.to_register_index(),
+                                r3: address_register.to_register_index(),
+                                condition_flag,
+                                // TODO: Clamp/validate additional_flags to 10 bits
+                                additional_flags: 0x0,
+                            },
                         },
-                    },
-                ),
-                symbol_ref: None,
-            },
+                    ),
+                    symbol_ref: None,
+                },
+            ))
+        }
 
-            // TODO: Better error message without being too verbose?
-            _ => panic!("Invalid addressing mode for LOAD"),
-        },
-    )(i)
+        modes => {
+            let error_string = format!("Invalid addressing mode for LOAD: ({:?})", modes);
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        }
+    }
 }
+
+//

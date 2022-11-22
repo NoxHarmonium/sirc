@@ -13,7 +13,8 @@ use peripheral_cpu::instructions::definitions::{
     StoreRegisterToIndirectImmediateData, StoreRegisterToIndirectRegisterData,
 };
 
-pub fn stor(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn stor(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("STOR"), parse_instruction_operands)),
         |(condition_flag, operands)| {
@@ -71,7 +72,7 @@ pub fn stor(i: &str) -> IResult<&str, InstructionToken> {
                 },
 
                 // TODO: Better error message without being too verbose?
-                _ => panic!("Invalid addressing mode for STOR"),
+                modes => panic!("Invalid addressing mode for STOR: ({:?})", modes),
             }
         },
     )(i)

@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, MultiplyInstructionData, RegisterInstructionData,
 };
 
-pub fn mulr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn mulr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("MULR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

@@ -6,6 +6,8 @@ use peripheral_mem::new_memory_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
+// TODO: Map this to a physical file (probs do it through a command line arg)
+static FILE_SEGMENT: &str = "FILE";
 
 use clap::Parser;
 #[derive(Parser, Debug)]
@@ -28,6 +30,7 @@ fn main() {
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
     memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, args.program_file);
     memory_peripheral.map_segment(SCRATCH_SEGMENT, 0xAAF0, 0x000F, true);
+    memory_peripheral.map_segment(FILE_SEGMENT, 0x00F0_0000, 0xFFFF, true);
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
@@ -42,3 +45,6 @@ fn main() {
 
     clock_peripheral.start_loop(execute)
 }
+
+// TODO: Infinite loop but at least it assembles?
+// Probs need to a step debugger

@@ -12,7 +12,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, LoadManyRegisterFromAddressRegisterData, RegisterInstructionData,
 };
 
-pub fn ldmr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn ldmr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("LDMR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

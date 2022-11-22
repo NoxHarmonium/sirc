@@ -12,7 +12,8 @@ use peripheral_cpu::instructions::definitions::{
     BranchToSubroutineData, ImmediateInstructionData, Instruction,
 };
 
-pub fn brsr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn brsr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("BRSR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

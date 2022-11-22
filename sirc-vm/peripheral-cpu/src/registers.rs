@@ -283,6 +283,9 @@ impl SegmentedAddress for (u16, u16) {
     ///
     fn to_full_address(self) -> u32 {
         let (high, low) = self;
+        if high > 0x00FF {
+            println!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.")
+        }
         let high_shifted = (high as u32) << (size_of::<u16>() * u8::BITS as usize);
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
         // This CPU only supports 24 bit addressing

@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, LongJumpToSubroutineWithAddressRegisterData, RegisterInstructionData,
 };
 
-pub fn ljsr(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("LJSR"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

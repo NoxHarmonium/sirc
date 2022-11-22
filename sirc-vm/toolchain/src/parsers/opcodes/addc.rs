@@ -27,7 +27,8 @@ use peripheral_cpu::instructions::definitions::{
 /// assert_eq!(r2, 2);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// ```
-pub fn addc(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn addc(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("ADDC"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

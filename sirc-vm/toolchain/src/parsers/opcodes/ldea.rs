@@ -7,13 +7,13 @@ use crate::{
 };
 use nom::combinator::map;
 use nom::sequence::tuple;
-use nom::IResult;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, LoadRegisterFromIndirectImmediateData,
     LoadRegisterFromIndirectRegisterData, RegisterInstructionData,
 };
 
-pub fn ldea(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("LDEA"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
@@ -72,7 +72,7 @@ pub fn ldea(i: &str) -> IResult<&str, InstructionToken> {
             },
 
             // TODO: Better error message without being too verbose?
-            _ => panic!("Invalid addressing mode for LDEA"),
+            modes => panic!("Invalid addressing mode for LDEA: ({:?})", modes),
         },
     )(i)
 }

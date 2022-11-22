@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, LongJumpWithAddressRegisterData, RegisterInstructionData,
 };
 
-pub fn ljmp(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("LJMP"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

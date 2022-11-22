@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     ImpliedInstructionData, Instruction, ReturnFromInterruptData,
 };
 
-pub fn reti(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn reti(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("RETI"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

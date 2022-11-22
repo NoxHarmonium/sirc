@@ -1,15 +1,20 @@
 use nom::branch::alt;
-use nom::bytes::complete::{is_a, tag};
+use nom::bytes::complete::is_a;
 use nom::character::complete::{alphanumeric1, digit1, multispace0, one_of, space0};
 use nom::combinator::{map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, terminated, tuple};
-use nom::Err;
-use nom::IResult;
+use nom::{AsChar, IResult};
+use nom::{Err, InputTakeAtPosition};
+use nom_supreme::error::ErrorTree;
+use nom_supreme::error::{BaseErrorKind, Expectation};
+use nom_supreme::tag::complete::tag;
 
 use crate::types::object::RefType;
 
 use super::instruction::RefToken;
+
+pub type AsmResult<'a, 'b, O> = IResult<&'a str, O, ErrorTree<&'b str>>;
 
 pub fn lexeme<'a, F: 'a, O, E: ParseError<&'a str>>(
     inner: F,
@@ -20,20 +25,27 @@ where
     terminated(inner, multispace0)
 }
 
-fn parse_hex_(i: &str) -> IResult<&str, u16> {
+fn parse_label_name_(i: &str) -> AsmResult<&str> {
+    i.split_at_position1_complete(
+        |item| !item.is_alphanum() && item != '_',
+        ErrorKind::AlphaNumeric,
+    )
+}
+
+fn parse_hex_(i: &str) -> AsmResult<u16> {
     let (i, _) = tag("0x")(i)?;
     let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
     let hex_parse_result = u16::from_str_radix(raw_digits, 16);
     match hex_parse_result {
         Ok(hex_value) => Ok((i, hex_value)),
-        Err(_) => Err(Err::Error(nom::error::Error {
-            input: i,
-            code: ErrorKind::Fail,
+        Err(_) => Err(Err::Error(ErrorTree::Base {
+            location: i,
+            kind: BaseErrorKind::Expected(Expectation::HexDigit),
         })),
     }
 }
 
-fn parse_dec_(i: &str) -> IResult<&str, u16> {
+fn parse_dec_(i: &str) -> AsmResult<u16> {
     map_res(
         tuple((opt(one_of("+-")), recognize(digit1))),
         |(sign, number_string)| {
@@ -47,26 +59,27 @@ fn parse_dec_(i: &str) -> IResult<&str, u16> {
     )(i)
 }
 
-fn parse_number_(i: &str) -> IResult<&str, u16> {
+fn parse_number_(i: &str) -> AsmResult<u16> {
+    let (i, _) = tag("#")(i)?;
     alt((parse_hex, parse_dec))(i)
 }
 
-fn parse_comma_sep_(i: &str) -> IResult<&str, ()> {
+fn parse_comma_sep_(i: &str) -> AsmResult<()> {
     let (i, (_, _)) = pair(tag(","), space0)(i)?;
     Ok((i, ()))
 }
 
-fn parse_range_sep_(i: &str) -> IResult<&str, ()> {
+fn parse_range_sep_(i: &str) -> AsmResult<()> {
     let (i, (_, _)) = pair(tag("->"), space0)(i)?;
     Ok((i, ()))
 }
 
-pub fn parse_label_(i: &str) -> IResult<&str, &str> {
+pub fn parse_label_(i: &str) -> AsmResult<&str> {
     let (i, _) = tag(":")(i)?;
-    alphanumeric1(i)
+    parse_label_name_(i)
 }
 
-pub fn parse_symbol_reference_postamble_(i: &str) -> IResult<&str, Option<RefType>> {
+pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> {
     let (i, dot_parsed) = opt(tag("."))(i)?;
 
     match dot_parsed {
@@ -84,9 +97,10 @@ pub fn parse_symbol_reference_postamble_(i: &str) -> IResult<&str, Option<RefTyp
     }
 }
 
-pub fn parse_symbol_reference_(i: &str) -> IResult<&str, RefToken> {
+pub fn parse_symbol_reference_(i: &str) -> AsmResult<RefToken> {
     let (i, _) = tag("@")(i)?;
-    let (i, name) = alphanumeric1(i)?;
+    // TODO: de
+    let (i, name) = parse_label_name_(i)?;
     let (i, optional_preamble) = parse_symbol_reference_postamble_(i)?;
 
     Ok((
@@ -98,30 +112,30 @@ pub fn parse_symbol_reference_(i: &str) -> IResult<&str, RefToken> {
     ))
 }
 
-pub fn parse_hex(i: &str) -> IResult<&str, u16> {
+pub fn parse_hex(i: &str) -> AsmResult<u16> {
     lexeme(parse_hex_)(i)
 }
 
-pub fn parse_dec(i: &str) -> IResult<&str, u16> {
+pub fn parse_dec(i: &str) -> AsmResult<u16> {
     lexeme(parse_dec_)(i)
 }
 
-pub fn parse_number(i: &str) -> IResult<&str, u16> {
+pub fn parse_number(i: &str) -> AsmResult<u16> {
     lexeme(parse_number_)(i)
 }
 
-pub fn parse_comma_sep(i: &str) -> IResult<&str, ()> {
+pub fn parse_comma_sep(i: &str) -> AsmResult<()> {
     lexeme(parse_comma_sep_)(i)
 }
 
-pub fn parse_range_sep(i: &str) -> IResult<&str, ()> {
+pub fn parse_range_sep(i: &str) -> AsmResult<()> {
     lexeme(parse_range_sep_)(i)
 }
 
-pub fn parse_label(i: &str) -> IResult<&str, &str> {
+pub fn parse_label(i: &str) -> AsmResult<&str> {
     lexeme(parse_label_)(i)
 }
 
-pub fn parse_symbol_reference(i: &str) -> IResult<&str, RefToken> {
+pub fn parse_symbol_reference(i: &str) -> AsmResult<RefToken> {
     lexeme(parse_symbol_reference_)(i)
 }

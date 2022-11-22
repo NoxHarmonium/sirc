@@ -12,7 +12,8 @@ use peripheral_cpu::instructions::definitions::{
     BranchInstructionData, ImmediateInstructionData, Instruction,
 };
 
-pub fn bran(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn bran(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("BRAN"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {

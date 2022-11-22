@@ -1,5 +1,10 @@
 use clap::Parser;
+
+use nom_supreme::error::ErrorTree;
+use nom_supreme::final_parser::{final_parser, Location};
+use nom_supreme::parser_ext::ParserExt;
 use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_BYTES;
+
 use peripheral_cpu::instructions::encoding::encode_instruction;
 use toolchain::parsers::instruction::{parse_tokens, Token};
 use toolchain::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
@@ -61,9 +66,12 @@ fn main() -> io::Result<()> {
     let args = Args::parse();
 
     let file_contents = read_to_string(args.input_file)?;
-    let (_, tokens) = match parse_tokens(file_contents.as_str()) {
+    let tokens = match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(
+        parse_tokens,
+    )(file_contents.as_str())
+    {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file: {}", error),
+        Err(error) => panic!("Error parsing file:\n{}", error),
     };
     let object_definition = build_object(tokens);
     let bytes_to_write = match postcard::to_allocvec(&object_definition) {

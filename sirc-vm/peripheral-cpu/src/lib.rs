@@ -9,7 +9,7 @@ pub mod instructions;
 pub mod microcode;
 pub mod registers;
 
-use instructions::definitions::get_clocks_for_instruction;
+use instructions::definitions::{get_clocks_for_instruction, Instruction};
 use peripheral_mem::MemoryPeripheral;
 use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
 
@@ -58,7 +58,7 @@ pub fn new_cpu_peripheral<'a>(
 fn step<'a>(
     registers: &'a mut Registers,
     mem: &MemoryPeripheral,
-) -> Result<(&'a Registers, u32), Error> {
+) -> Result<(&'a Registers, u32, Instruction), Error> {
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
     let instruction = decode_instruction(raw_instruction);
     let condition_flags = decode_condition_flags(raw_instruction);
@@ -84,7 +84,7 @@ fn step<'a>(
         return Err(Error::ProcessorHalted(registers.to_owned()));
     }
 
-    Ok((registers, clocks))
+    Ok((registers, clocks, instruction))
 }
 
 impl CpuPeripheral<'_> {
@@ -96,7 +96,8 @@ impl CpuPeripheral<'_> {
                     println!("Execution stopped:\n{:08x?}", error);
                     return Err(error);
                 }
-                Ok((_registers, instruction_clocks)) => {
+                Ok((_registers, instruction_clocks, _instruction)) => {
+                    // println!("{:?} {:?}", instruction, registers);
                     clocks += instruction_clocks;
 
                     if clocks >= clock_quota {

@@ -8,7 +8,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, RegisterInstructionData, SubtractWithCarryInstructionData,
 };
 
-pub fn subc(i: &str) -> IResult<&str, InstructionToken> {
+use super::super::shared::AsmResult;
+pub fn subc(i: &str) -> AsmResult<InstructionToken> {
     map(
         tuple((parse_instruction_tag("SUBC"), parse_instruction_operands)),
         |(condition_flag, operands)| match operands.as_slice() {
