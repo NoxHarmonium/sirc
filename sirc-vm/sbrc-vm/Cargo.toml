@@ -5,8 +5,6 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.22", features = ["derive"] }
-nannou = "0.18.1"
-nannou_audio = "0.18.0"
 peripheral_clock = { path = "../peripheral-clock" }
 peripheral_cpu = { path = "../peripheral-cpu" }
 peripheral_mem = { path = "../peripheral-mem" }
