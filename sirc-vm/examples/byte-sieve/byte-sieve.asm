@@ -3,24 +3,18 @@
 :START
 
 ; Reset working registers
-LOAD    x1, #0
-LOAD    x2, #0
-LOAD    x3, #0
+LOAD    r1, #0
+LOAD    r2, #0
+LOAD    r3, #0
 
 ; Current Prime
-LOAD    y1, #0
+LOAD    r4, #0
 ; K
-LOAD    y2, #0
+LOAD    r5, #0
 ; COUNT
-LOAD    y3, #0
+LOAD    r6, #0
 
-; Constants
-; - Zero
-LOAD    z1, #0
-; - One
-LOAD    z2, #1
-; - Size
-LOAD    z3, #8190
+LOAD    r7, #1
 
 ; File I/O segment
 LOAD    ah, #0x00F0
@@ -30,42 +24,44 @@ LOAD    al, #0x0000
 ; FOR I = 0 TO SIZE
 :SETUP
 ; FLAGS (I) = 1
-STOR    (x1, a), z2
-ADDR    x1, z2
+STOR    (r1, a), r7
+ADDI    r1, #1
+
+LOAD    r7, #0
+
 ; NEXT I
-COMP    z3, x1
-BRAN|>> @SETUP
+CMPI    r1,#8190
+BRAN|<= @SETUP
 
 ;FOR I = 0 TO SIZE
-LOAD    x1, #0
+LOAD    r1, #0
 :SIEVE
 ; IF FLAGS (I) = 0 THEN 18
-LOAD    x2, (x1, a)
-COMP    x2, z1
+LOAD    r2, (r1, a)
+CMPR    r2, r7
 BRAN|== @SIEVE
 ; PRIME = I+I+3
-LOAD    y1, x1
-ADDR    y1, y1
-LOAD    x3, #3
-ADDR    y1, x3
+LOAD    r4, r1
+ADDR    r4, r4
+LOAD    r3, #3
+ADDR    r4, r3
 ; K = I + PRIME
-LOAD    y2, x1
-ADDR    y2, y1
+LOAD    r5, r1
+ADDR    r5, r4
 
 :UPDATE_K
 ; IF K > SIZE THEN 17
-COMP    y2, z3
+CMPI    r5, #8190
 BRAN|>> @NEXT
 ; FLAGS (K) = 0
-STOR    (x1, a), z1
+STOR    (r1, a), r7
 ; K = K + PRIME
-ADDR    y2, y1
+ADDR    r5, r4
 BRAN    @UPDATE_K
 
 :NEXT
-ADDR    y3, z2
+ADDI    r6, #1
 BRAN    @SIEVE
 
 :DONE
-; Result is in COUNT (y3)
-
+; Result is in COUNT (r6)

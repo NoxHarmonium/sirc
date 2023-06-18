@@ -1,21 +1,20 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
 use nom::character::complete::{char, multispace0};
-use nom::combinator::{cut, map, opt};
+use nom::combinator::{map, opt};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, pair, separated_pair};
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
-use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction};
+use peripheral_cpu::instructions::definitions::{ConditionFlags, InstructionData};
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use crate::types::object::{RefType, SymbolDefinition};
 
 use super::opcodes;
 use super::shared::{
-    lexeme, parse_comma_sep, parse_label, parse_number, parse_range_sep, parse_symbol_reference,
-    AsmResult,
+    lexeme, parse_comma_sep, parse_label, parse_number, parse_symbol_reference, AsmResult,
 };
 
 #[derive(Debug)]
@@ -31,7 +30,7 @@ pub struct RefToken {
 
 #[derive(Debug)]
 pub struct InstructionToken {
-    pub instruction: Instruction,
+    pub instruction: InstructionData,
     pub symbol_ref: Option<RefToken>,
 }
 
@@ -99,13 +98,17 @@ pub enum AddressingMode {
     // Register Direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
     DirectRegister(RegisterName),
     // Register range direct | rN->rM, | STMR (a), x1->z1
-    DirectRegisterRange((RegisterName, RegisterName)),
+    // DirectRegisterRange((RegisterName, RegisterName)),
     // Address Register Direct | a, p, s | LJMP a
     DirectAddressRegister(AddressRegisterName),
     // Address register indirect with register displacement | (r, a) | STOR (y1, a), x1
     IndirectRegisterDisplacement(RegisterName, AddressRegisterName),
     // Address register indirect with immediate displacement | (#n, a) | LOAD y1, (#-3, a)
     IndirectImmediateDisplacement(ImmediateType, AddressRegisterName),
+    // Address register indirect with post increment | (a)+ | LOAD (s)+, x1
+    IndirectPostIncrement(AddressRegisterName),
+    // Address register indirect with pre decrement | -(a) | STOR x1, -(s)
+    IndirectPreDecrement(AddressRegisterName),
 }
 
 fn parse_value(i: &str) -> AsmResult<ImmediateType> {
@@ -122,11 +125,6 @@ fn parse_value(i: &str) -> AsmResult<ImmediateType> {
 // Immediate | #n | BRAN #12
 fn parse_immediate_addressing(i: &str) -> AsmResult<ImmediateType> {
     parse_value(i)
-}
-
-// Register range direct | rN->rM, | STMR (a), x1->z1
-fn parse_direct_register_range(i: &str) -> AsmResult<(RegisterName, RegisterName)> {
-    parse_register_range(i)
 }
 
 // Register Direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
@@ -153,24 +151,28 @@ fn parse_indirect_immediate_displacement(
     delimited(char('('), args, char(')'))(i)
 }
 
+// Address register indirect with post increment | (a)+ | LOAD (s)+, x1
+fn parse_indirect_post_increment(i: &str) -> AsmResult<AddressRegisterName> {
+    let (i, address_register) = delimited(char('('), parse_address_register, char(')'))(i)?;
+    let (i, _) = char('+')(i)?;
+    Ok((i, address_register))
+}
+
+// Address register indirect with pre decrement | -(a) | STOR x1, -(s)
+fn parse_indirect_pre_decrement(i: &str) -> AsmResult<AddressRegisterName> {
+    let (i, _) = char('-')(i)?;
+    let (i, address_register) = delimited(char('('), parse_address_register, char(')'))(i)?;
+    Ok((i, address_register))
+}
+
 fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
-    // TODO: parse the enum above
-    // TODO: Parse conditions (<instruction>[|<condition>] [<target_address>,] [<source_address>])
-    //
     // Immediate can have absolute label references (default lower 16 bit) (@label) or (@label.l explicit lower or @label.h higher (segment))
     // PC/SP relative can have relative label references (16 bit signed) (@label)
-    // Will have to store the above in the symbol table
-    // ALMOST THERE
 
-    alt((
+    let mut addressing_mode_parser = alt((
         map(parse_immediate_addressing, AddressingMode::Immediate)
             .context("immediate value (e.g. #3)"),
         map(parse_direct_register, AddressingMode::DirectRegister).context("register (e.g. x1)"),
-        map(
-            parse_direct_register_range,
-            AddressingMode::DirectRegisterRange,
-        )
-        .context("register range (e.g. x1->y1)"),
         map(
             parse_direct_address_register,
             AddressingMode::DirectAddressRegister,
@@ -184,11 +186,24 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
             AddressingMode::IndirectImmediateDisplacement(i, ar)
         })
         .context("indirect with immediate displacement (e.g. (#-1, a))"),
-    ))(i)
+        map(parse_indirect_post_increment, |ar| {
+            AddressingMode::IndirectPostIncrement(ar)
+        })
+        .context("indirect with post increment (e.g. (a)+)"),
+        map(parse_indirect_pre_decrement, |ar| {
+            AddressingMode::IndirectPreDecrement(ar)
+        })
+        .context("indirect with pre decrement (e.g. -(a))"),
+    ));
+
+    addressing_mode_parser(i)
 }
 
 pub fn parse_instruction_operands(i: &str) -> AsmResult<Vec<AddressingMode>> {
-    separated_list0(parse_comma_sep, cut(parse_addressing_mode))(i)
+    separated_list0(
+        parse_comma_sep,
+        parse_addressing_mode.context("addressing mode"),
+    )(i)
 }
 
 fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
@@ -235,10 +250,10 @@ fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
 
 pub fn parse_instruction_tag(
     instruction_tag: &str,
-) -> impl FnMut(&str) -> AsmResult<ConditionFlags> + '_ {
+) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + '_ {
     move |i: &str| {
         // TODO: Work out how to use the nom_supreme tag here (there are lifetime issues with the nested closures)
-        let (i, _) = nom::bytes::complete::tag(instruction_tag)(i)?;
+        let (i, tag) = nom::bytes::complete::tag(instruction_tag)(i)?;
         let (i, condition_code_specified) = opt(char('|'))(i)?;
         let (i, condition_code) = if condition_code_specified.is_some() {
             parse_condition_code(i)?
@@ -249,7 +264,7 @@ pub fn parse_instruction_tag(
         // TODO: Get lexeme working with this function to avoid this
         let (i, _) = multispace0(i)?;
 
-        Ok((i, condition_code))
+        Ok((i, (String::from(tag), condition_code)))
     }
 }
 
@@ -261,66 +276,28 @@ pub fn parse_instruction_tag(
 pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
     // Nested alts are to avoid hitting the maximum number of parsers that can be parsed in a single alt statement
     let (i, instruction_token) = alt((
-        alt((
-            opcodes::halt::halt.context("HALT instruction"),
-            opcodes::noop::noop.context("NOOP instruction"),
-            opcodes::wait::wait.context("WAIT instruction"),
-            opcodes::reti::reti.context("RETI instruction"),
-            opcodes::rets::rets.context("RETS instruction"),
-        )),
-        alt((
-            opcodes::addr::addr.context("ADDR instruction"),
-            opcodes::addc::addc.context("ADDC instruction"),
-            opcodes::subr::subr.context("SUBR instruction"),
-            opcodes::subc::subc.context("SUBC instruction"),
-            opcodes::mulr::mulr.context("MULR instruction"),
-            opcodes::divr::divr.context("DIVR instruction"),
-        )),
-        alt((
-            opcodes::andr::andr.context("ANDR instruction"),
-            opcodes::orrr::orrr.context("ORRR instruction"),
-            opcodes::xorr::xorr.context("XORR instruction"),
-        )),
-        alt((
-            opcodes::lslr::lslr.context("LSLR instruction"),
-            opcodes::lsrr::lsrr.context("LSRR instruction"),
-            opcodes::aslr::aslr.context("ASLR instruction"),
-            opcodes::asrr::asrr.context("ASRR instruction"),
-            opcodes::rotl::rotl.context("ROTL instruction"),
-            opcodes::rotr::rotr.context("ROTR instruction"),
-        )),
-        opcodes::comp::comp.context("COMP instruction"),
-        alt((
-            opcodes::push::push.context("PUSH instruction"),
-            opcodes::popr::popr.context("POPR instruction"),
-        )),
-        alt((
-            opcodes::excp::excp.context("EXCP instruction"),
-            opcodes::sjmp::sjmp.context("SJMP instruction"),
-            opcodes::sjsr::sjsr.context("SJSR instruction"),
-            opcodes::brsr::brsr.context("BRSR instruction"),
-            opcodes::bran::bran.context("BRAN instruction"),
-            opcodes::ljmp::ljmp.context("LJMP instruction"),
-            opcodes::ljsr::ljsr.context("LJSR instruction"),
-        )),
-        opcodes::ldea::ldea.context("LDEA instruction"),
-        opcodes::ldmr::ldmr.context("LDMR instruction"),
-        opcodes::load::load.context("LOAD instruction"),
-        opcodes::stor::stor.context("STOR instruction"),
-        opcodes::stmr::stmr.context("STMR instruction"),
+        opcodes::arithmetic_immediate::arithmetic_immediate,
+        opcodes::arithmetic_register::arithmetic_register,
+        opcodes::branching::branching,
+        opcodes::implied::implied,
+        opcodes::load::load,
+        opcodes::store::stor,
     ))(i)?;
 
     Ok((i, Token::Instruction(instruction_token)))
 }
 
 fn parse_address_register_(i: &str) -> AsmResult<AddressRegisterName> {
-    map(alt((tag("a"), tag("s"), tag("p"))), |tag| match tag {
-        "a" => AddressRegisterName::Address,
-        "p" => AddressRegisterName::ProgramCounter,
-        "s" => AddressRegisterName::StackPointer,
-        // There is only 2 bits of room anyway so may as well make the 4th bit just the address registers
-        _ => AddressRegisterName::Address,
-    })(i)
+    map(
+        alt((tag("a"), tag("s"), tag("p"), tag("l"))),
+        |tag| match tag {
+            "a" => AddressRegisterName::Address,
+            "p" => AddressRegisterName::ProgramCounter,
+            "s" => AddressRegisterName::StackPointer,
+            "l" => AddressRegisterName::LinkRegister,
+            _ => panic!("Tag mismatch between parser and handler ({})", tag),
+        },
+    )(i)
 }
 
 fn parse_address_register(i: &str) -> AsmResult<AddressRegisterName> {
@@ -329,15 +306,15 @@ fn parse_address_register(i: &str) -> AsmResult<AddressRegisterName> {
 
 fn parse_register_(i: &str) -> AsmResult<&str> {
     alt((
-        tag("x1"),
-        tag("y1"),
-        tag("z1"),
-        tag("x2"),
-        tag("y2"),
-        tag("z2"),
-        tag("x3"),
-        tag("y3"),
-        tag("z3"),
+        tag("r1"),
+        tag("r2"),
+        tag("r3"),
+        tag("r4"),
+        tag("r5"),
+        tag("r6"),
+        tag("r7"),
+        tag("lh"),
+        tag("ll"),
         tag("ah"),
         tag("al"),
         tag("ph"),
@@ -350,15 +327,15 @@ fn parse_register_(i: &str) -> AsmResult<&str> {
 
 fn parse_register(i: &str) -> AsmResult<RegisterName> {
     map(lexeme(parse_register_), |tag| match tag {
-        "x1" => RegisterName::X1,
-        "y1" => RegisterName::Y1,
-        "z1" => RegisterName::Z1,
-        "x2" => RegisterName::X2,
-        "y2" => RegisterName::Y2,
-        "z2" => RegisterName::Z2,
-        "x3" => RegisterName::X3,
-        "y3" => RegisterName::Y3,
-        "z3" => RegisterName::Z3,
+        "r1" => RegisterName::R1,
+        "r2" => RegisterName::R2,
+        "r3" => RegisterName::R3,
+        "r4" => RegisterName::R4,
+        "r5" => RegisterName::R5,
+        "r6" => RegisterName::R6,
+        "r7" => RegisterName::R7,
+        "lh" => RegisterName::Lh,
+        "ll" => RegisterName::Ll,
         "ah" => RegisterName::Ah,
         "al" => RegisterName::Al,
         "ph" => RegisterName::Ph,
@@ -368,14 +345,6 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
         "sr" => RegisterName::Sr,
         _ => panic!("Mismatch between parser and enum mapping"),
     })(i)
-}
-
-fn parse_register_range_(i: &str) -> AsmResult<(RegisterName, RegisterName)> {
-    separated_pair(parse_register, parse_range_sep, parse_register)(i)
-}
-
-fn parse_register_range(i: &str) -> AsmResult<(RegisterName, RegisterName)> {
-    lexeme(parse_register_range_)(i)
 }
 
 fn parse_comment_(i: &str) -> AsmResult<Token> {

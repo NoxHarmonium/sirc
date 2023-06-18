@@ -5,74 +5,78 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::combinator::map;
-use nom::sequence::tuple;
+use nom::error::{ErrorKind, FromExternalError};
+use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
-    ImmediateInstructionData, Instruction, LoadRegisterFromIndirectImmediateData,
-    LoadRegisterFromIndirectRegisterData, RegisterInstructionData,
+    ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
 };
 
 use super::super::shared::AsmResult;
-pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
-    map(
-        tuple((parse_instruction_tag("LDEA"), parse_instruction_operands)),
-        |(condition_flag, operands)| match operands.as_slice() {
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
-            {
-                match offset {
-                    ImmediateType::Value(offset) => InstructionToken {
-                        instruction: Instruction::LoadRegisterFromIndirectImmediate(
-                            LoadRegisterFromIndirectImmediateData {
-                                data: ImmediateInstructionData {
-                                    register: dest_register.to_register_index(),
-                                    value: offset.to_owned(),
-                                    condition_flag,
-                                    // TODO: Clamp/validate additional_flags to two bits
-                                    additional_flags: address_register.to_register_index(),
-                                },
-                            },
-                        ),
+pub fn load(i: &str) -> AsmResult<InstructionToken> {
+    let (i, (_, condition_flag)) = parse_instruction_tag("LDEA")(i)?;
+    let (i, operands) = parse_instruction_operands(i)?;
+
+    match operands.as_slice() {
+        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
+        {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                            register: dest_register.to_register_index(),
+                            value: offset.to_owned(),
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
                         symbol_ref: None,
                     },
-                    ImmediateType::SymbolRef(ref_token) => InstructionToken {
-                        instruction: Instruction::LoadRegisterFromIndirectImmediate(
-                            LoadRegisterFromIndirectImmediateData {
-                                data: ImmediateInstructionData {
-                                    register: dest_register.to_register_index(),
-                                    value: 0x0, // placeholder
-                                    condition_flag,
-                                    // TODO: Clamp/validate additional_flags to two bits
-                                    additional_flags: address_register.to_register_index(),
-                                },
-                            },
-                        ),
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                            register: dest_register.to_register_index(),
+                            value: 0x0, // Placeholder
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
                             ref_token,
                             RefType::LowerByte,
                         )),
                     },
-                }
+                )),
             }
-            [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(
-                displacement_register,
-                address_register,
-            )] => InstructionToken {
-                instruction: Instruction::LoadRegisterFromIndirectRegister(
-                    LoadRegisterFromIndirectRegisterData {
-                        data: RegisterInstructionData {
-                            r1: dest_register.to_register_index(),
-                            r2: displacement_register.to_register_index(),
-                            r3: address_register.to_register_index(),
-                            condition_flag,
-                            additional_flags: 0x0,
-                        },
-                    },
-                ),
-                symbol_ref: None,
-            },
-
-            // TODO: Better error message without being too verbose?
-            modes => panic!("Invalid addressing mode for LDEA: ({:?})", modes),
-        },
-    )(i)
+        }
+        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] =>
+        {
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
+                        r1: dest_register.to_register_index(),
+                        r2: displacement_register.to_register_index(),
+                        r3: 0x0, // Unused
+                        condition_flag,
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        modes => {
+            let error_string = format!("Invalid addressing mode for LOAD: ({:?})", modes);
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        }
+    }
 }
+
+//

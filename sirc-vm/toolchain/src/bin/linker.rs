@@ -1,11 +1,6 @@
 use clap::Parser;
 use peripheral_cpu::instructions::definitions::{
-    BranchInstructionData, BranchToSubroutineData, ImmediateInstructionData, Instruction,
-    LoadEffectiveAddressFromIndirectImmediateData, LoadManyRegisterFromAddressRegisterData,
-    LoadRegisterFromImmediateData, LoadRegisterFromIndirectImmediateData, RegisterInstructionData,
-    ShortJumpToSubroutineWithImmediateData, ShortJumpWithImmediateData,
-    StoreManyRegisterFromAddressRegisterData, StoreRegisterToIndirectImmediateData,
-    INSTRUCTION_SIZE_WORDS,
+    ImmediateInstructionData, Instruction, InstructionData, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::instructions::encoding::{decode_instruction, encode_instruction};
 
@@ -71,22 +66,22 @@ fn main() -> io::Result<()> {
 
         let full_offset = target_offset_words as i32 - program_offset_words as i32;
 
-        let calculate_8_bit_value = || match symbol_ref.ref_type {
-            RefType::SmallOffset => i8::try_from(full_offset).unwrap_or_else(|_| {
-                panic!(
-                    "Offset {} ({} - {}) does not fit into a 8 bit signed integer ({}-{})",
-                    full_offset,
-                    target_offset_words,
-                    program_offset_words,
-                    i8::MIN,
-                    i8::MAX
-                )
-            }) as u8,
-            RefType::Implied => {
-                panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
-            }
-            _ => panic!("Only SmallOffset RefType is supported by the LDMR/STMR instructions"),
-        };
+        // let calculate_8_bit_value = || match symbol_ref.ref_type {
+        //     RefType::SmallOffset => i8::try_from(full_offset).unwrap_or_else(|_| {
+        //         panic!(
+        //             "Offset {} ({} - {}) does not fit into a 8 bit signed integer ({}-{})",
+        //             full_offset,
+        //             target_offset_words,
+        //             program_offset_words,
+        //             i8::MIN,
+        //             i8::MAX
+        //         )
+        //     }) as u8,
+        //     RefType::Implied => {
+        //         panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
+        //     }
+        //     _ => panic!("Only SmallOffset RefType is supported by the LDMR/STMR instructions"),
+        // };
 
         let calculate_16_bit_value = || match symbol_ref.ref_type {
             RefType::Offset => i16::try_from(full_offset).unwrap_or_else(|_| {
@@ -111,118 +106,87 @@ fn main() -> io::Result<()> {
 
         let instruction = decode_instruction(raw_instruction);
         let patched_instruction = match instruction {
-            Instruction::ShortJumpWithImmediate(data) => {
-                Instruction::ShortJumpWithImmediate(ShortJumpWithImmediateData {
-                    data: ImmediateInstructionData {
-                        register: data.data.register,
+            InstructionData::Immediate(data) => match data.op_code {
+                Instruction::ShortJumpImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
                         value: calculate_16_bit_value(),
-                        condition_flag: data.data.condition_flag,
-                        additional_flags: data.data.additional_flags,
-                    },
-                })
-            }
-            Instruction::ShortJumpToSubroutineWithImmediate(data) => {
-                Instruction::ShortJumpToSubroutineWithImmediate(
-                    ShortJumpToSubroutineWithImmediateData {
-                        data: ImmediateInstructionData {
-                            register: data.data.register,
-                            value: calculate_16_bit_value(),
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: data.data.additional_flags,
-                        },
-                    },
-                )
-            }
-            Instruction::BranchToSubroutine(data) => {
-                Instruction::BranchToSubroutine(BranchToSubroutineData {
-                    data: ImmediateInstructionData {
-                        register: data.data.register,
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                Instruction::ShortJumpToSubroutineImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
                         value: calculate_16_bit_value(),
-                        condition_flag: data.data.condition_flag,
-                        additional_flags: data.data.additional_flags,
-                    },
-                })
-            }
-            Instruction::Branch(data) => Instruction::Branch(BranchInstructionData {
-                data: ImmediateInstructionData {
-                    register: data.data.register,
-                    value: calculate_16_bit_value(),
-                    condition_flag: data.data.condition_flag,
-                    additional_flags: data.data.additional_flags,
-                },
-            }),
-            Instruction::LoadEffectiveAddressIndirectImmediate(data) => {
-                Instruction::LoadEffectiveAddressIndirectImmediate(
-                    LoadEffectiveAddressFromIndirectImmediateData {
-                        data: ImmediateInstructionData {
-                            register: data.data.register,
-                            value: calculate_16_bit_value(),
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: data.data.additional_flags,
-                        },
-                    },
-                )
-            }
-            Instruction::LoadManyRegisterFromAddressRegister(data) => {
-                Instruction::LoadManyRegisterFromAddressRegister(
-                    LoadManyRegisterFromAddressRegisterData {
-                        data: RegisterInstructionData {
-                            r1: data.data.r1,
-                            r2: data.data.r2,
-                            r3: data.data.r3,
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: calculate_8_bit_value(),
-                        },
-                    },
-                )
-            }
-            Instruction::LoadRegisterFromImmediate(data) => {
-                Instruction::LoadRegisterFromImmediate(LoadRegisterFromImmediateData {
-                    data: ImmediateInstructionData {
-                        register: data.data.register,
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                Instruction::BranchToSubroutineImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
                         value: calculate_16_bit_value(),
-                        condition_flag: data.data.condition_flag,
-                        additional_flags: data.data.additional_flags,
-                    },
-                })
-            }
-            Instruction::LoadRegisterFromIndirectImmediate(data) => {
-                Instruction::LoadRegisterFromIndirectImmediate(
-                    LoadRegisterFromIndirectImmediateData {
-                        data: ImmediateInstructionData {
-                            register: data.data.register,
-                            value: calculate_16_bit_value(),
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: data.data.additional_flags,
-                        },
-                    },
-                )
-            }
-            Instruction::StoreRegisterToIndirectImmediate(data) => {
-                Instruction::StoreRegisterToIndirectImmediate(
-                    StoreRegisterToIndirectImmediateData {
-                        data: ImmediateInstructionData {
-                            register: data.data.register,
-                            value: calculate_16_bit_value(),
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: data.data.additional_flags,
-                        },
-                    },
-                )
-            }
-            Instruction::StoreManyRegisterFromAddressRegister(data) => {
-                Instruction::StoreManyRegisterFromAddressRegister(
-                    StoreManyRegisterFromAddressRegisterData {
-                        data: RegisterInstructionData {
-                            r1: data.data.r1,
-                            r2: data.data.r2,
-                            r3: data.data.r3,
-                            condition_flag: data.data.condition_flag,
-                            additional_flags: calculate_8_bit_value(),
-                        },
-                    },
-                )
-            }
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                Instruction::BranchImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                // Instruction::LoadEffectiveAddressIndirectImmediate(data) => {
+                //     Instruction::LoadEffectiveAddressIndirectImmediate(
+                //         LoadEffectiveAddressFromIndirectImmediateData {
+                //             data: ImmediateInstructionData {
+                //                 register: data.register,
+                //                 value: calculate_16_bit_value(),
+                //                 condition_flag: data.condition_flag,
+                //                 additional_flags: data.additional_flags,
+                //             },
+                //         },
+                //     )
+                // }
+                Instruction::LoadRegisterFromImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                Instruction::LoadRegisterFromIndirectImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                Instruction::StoreRegisterToIndirectImmediate => {
+                    InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: data.op_code,
+                        register: data.register,
+                        value: calculate_16_bit_value(),
+                        condition_flag: data.condition_flag,
+                        additional_flags: data.additional_flags,
+                    })
+                }
+                _ => panic!(
+                    "Can't patch address/offset for instruction: {:?}",
+                    data.op_code
+                ),
+            },
             _ => panic!(
                 "Can't patch address/offset for instruction: {:?}",
                 instruction

@@ -26,15 +26,15 @@ pub enum StatusRegisterFields {
 /// TODO: Can we enforce that the two data structures line up?
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum RegisterName {
-    X1 = 0,
-    Y1,
-    Z1,
-    X2,
-    Y2,
-    Z2,
-    X3,
-    Y3,
-    Z3,
+    R1 = 0,
+    R2,
+    R3,
+    R4,
+    R5,
+    R6,
+    R7,
+    Lh,
+    Ll,
     Ah,
     Al,
     Sh,
@@ -54,12 +54,14 @@ impl RegisterName {
 /// as combined 32-bit wide registers, but only for addressing.
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum AddressRegisterName {
+    // l (lh, ll)
+    LinkRegister,
     // a (ah, al)
     Address,
-    // p (ph, pl)
-    ProgramCounter,
     // s (sh, sl)
     StackPointer,
+    // p (ph, pl)
+    ProgramCounter,
 }
 
 impl AddressRegisterName {
@@ -84,6 +86,7 @@ pub trait AddressRegisterIndexing {
 }
 
 pub trait SegmentedRegisterAccess {
+    fn get_segmented_link(&self) -> (u16, u16);
     fn get_segmented_pc(&self) -> (u16, u16);
     fn get_segmented_address(&self) -> (u16, u16);
     fn get_segmented_sp(&self) -> (u16, u16);
@@ -95,10 +98,12 @@ pub trait SegmentedAddress {
 }
 
 pub trait FullAddressRegisterAccess {
+    fn get_full_link_address(&self) -> u32;
     fn get_full_pc_address(&self) -> u32;
     fn get_full_address_address(&self) -> u32;
     fn get_full_sp_address(&self) -> u32;
 
+    fn set_full_link_address(&mut self, address: u32);
     fn set_full_pc_address(&mut self, address: u32);
     fn set_full_address_address(&mut self, address: u32);
     fn set_full_sp_address(&mut self, address: u32);
@@ -110,15 +115,16 @@ pub trait FullAddress {
 
 #[derive(Debug, Clone, Default)]
 pub struct Registers {
-    pub x1: u16,
-    pub y1: u16,
-    pub z1: u16,
-    pub x2: u16,
-    pub y2: u16,
-    pub z2: u16,
-    pub x3: u16,
-    pub y3: u16,
-    pub z3: u16,
+    pub r1: u16,
+    pub r2: u16,
+    pub r3: u16,
+    pub r4: u16,
+    pub r5: u16,
+    pub r6: u16,
+    pub r7: u16,
+    // Link Register
+    pub lh: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
+    pub ll: u16,
     // Address Register
     pub ah: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub al: u16,
@@ -143,15 +149,15 @@ impl Index<u8> for Registers {
 
     fn index(&self, index: u8) -> &Self::Output {
         match index {
-            0 => &self.x1,
-            1 => &self.y1,
-            2 => &self.z1,
-            3 => &self.x2,
-            4 => &self.y2,
-            5 => &self.z2,
-            6 => &self.x3,
-            7 => &self.y3,
-            8 => &self.z3,
+            0 => &self.r1,
+            1 => &self.r2,
+            2 => &self.r3,
+            3 => &self.r4,
+            4 => &self.r5,
+            5 => &self.r6,
+            6 => &self.r7,
+            7 => &self.lh,
+            8 => &self.ll,
             9 => &self.ah,
             10 => &self.al,
             11 => {
@@ -179,15 +185,15 @@ impl Index<u8> for Registers {
 impl IndexMut<u8> for Registers {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
-            0 => &mut self.x1,
-            1 => &mut self.y1,
-            2 => &mut self.z1,
-            3 => &mut self.x2,
-            4 => &mut self.y2,
-            5 => &mut self.z2,
-            6 => &mut self.x3,
-            7 => &mut self.y3,
-            8 => &mut self.z3,
+            0 => &mut self.r1,
+            1 => &mut self.r2,
+            2 => &mut self.r3,
+            3 => &mut self.r4,
+            4 => &mut self.r5,
+            5 => &mut self.r6,
+            6 => &mut self.r7,
+            7 => &mut self.lh,
+            8 => &mut self.ll,
             9 => &mut self.ah,
             10 => &mut self.al,
             11 => {
@@ -225,6 +231,7 @@ impl RegisterIndexing for Registers {
 impl AddressRegisterIndexing for Registers {
     fn get_address_register_at_index(&self, index: u8) -> u32 {
         match AddressRegisterName::from_register_index(index) {
+            AddressRegisterName::LinkRegister => self.get_full_link_address(),
             AddressRegisterName::Address => self.get_full_address_address(),
             AddressRegisterName::ProgramCounter => self.get_full_pc_address(),
             AddressRegisterName::StackPointer => self.get_full_sp_address(),
@@ -232,6 +239,7 @@ impl AddressRegisterIndexing for Registers {
     }
     fn set_address_register_at_index(&mut self, index: u8, value: u32) {
         match AddressRegisterName::from_register_index(index) {
+            AddressRegisterName::LinkRegister => self.set_full_link_address(value),
             AddressRegisterName::Address => self.set_full_address_address(value),
             AddressRegisterName::ProgramCounter => self.set_full_pc_address(value),
             AddressRegisterName::StackPointer => self.set_full_sp_address(value),
@@ -240,6 +248,10 @@ impl AddressRegisterIndexing for Registers {
 }
 
 impl SegmentedRegisterAccess for Registers {
+    fn get_segmented_link(&self) -> (u16, u16) {
+        (self.lh, self.ll)
+    }
+
     fn get_segmented_pc(&self) -> (u16, u16) {
         (self.ph, self.pl)
     }
@@ -294,6 +306,10 @@ impl SegmentedAddress for (u16, u16) {
 }
 
 impl FullAddressRegisterAccess for Registers {
+    fn get_full_link_address(&self) -> u32 {
+        self.get_segmented_link().to_full_address()
+    }
+
     fn get_full_pc_address(&self) -> u32 {
         self.get_segmented_pc().to_full_address()
     }
@@ -304,6 +320,10 @@ impl FullAddressRegisterAccess for Registers {
 
     fn get_full_sp_address(&self) -> u32 {
         self.get_segmented_sp().to_full_address()
+    }
+
+    fn set_full_link_address(&mut self, address: u32) {
+        (self.lh, self.ll) = address.to_segmented_address();
     }
 
     fn set_full_pc_address(&mut self, address: u32) {

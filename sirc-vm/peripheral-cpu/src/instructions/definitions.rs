@@ -11,7 +11,7 @@
 // 6 bit instruction identifier (max 64 instructions)
 // 4 bit register identifier
 // 16 bit value
-// 2 bit reserved
+// 2 bit address register a, p or s (if any)
 // 4 bit conditions flags
 //
 // Register: (e.g. ADD r1, r2)
@@ -19,7 +19,8 @@
 // 4 bit register identifier
 // 4 bit register identifier
 // 4 bit register identifier (if any)
-// 8 bit args
+// 6 bit args
+// 2 bit address register a, p or s (if any)
 // 4 bit condition flags
 //
 // Segment 0x00 is reserved by the CPU for parameters.
@@ -30,10 +31,9 @@
 // 0x00 0004 : DW Base System RAM (for storing in interrupt vectors etc.)
 // ...
 
-use crate::executors::Executor;
+use std::ops::Range;
+
 use crate::registers::{sr_bit_is_set, Registers, StatusRegisterFields};
-use enum_dispatch::enum_dispatch;
-use peripheral_mem::MemoryPeripheral;
 
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
@@ -59,6 +59,260 @@ pub enum ConditionFlags {
     GreaterThan,
     LessThanOrEqual,
     Never = 0b1111,
+}
+
+#[derive(PartialOrd, Ord, PartialEq, Eq)]
+pub enum ExecutionStepInstructionType {
+    NoOp,
+    MemoryRefRegDisplacement,
+    MemoryRefImmDisplacement,
+    RegisterRegisterAlu,
+    RegisterImmediateAlu,
+    Branch,
+}
+
+#[derive(PartialOrd, Ord, PartialEq, Eq)]
+pub enum MemoryAccessInstructionType {
+    NoOp,
+    MemoryLoad,
+    MemoryStore,
+    BranchOrJump,
+}
+
+#[derive(PartialOrd, Ord, PartialEq, Eq)]
+pub enum WriteBackInstructionType {
+    NoOp,
+    MemoryLoad,
+    AluToRegister,
+    LoadEffectiveAddress,
+}
+
+pub fn decode_execution_step_instruction_type(
+    instruction: &Instruction,
+    decoded_instruction: &DecodedInstruction,
+) -> ExecutionStepInstructionType {
+    if !decoded_instruction.con_ {
+        return ExecutionStepInstructionType::NoOp;
+    }
+
+    match instruction {
+        // Arithmetic (Immediate)
+        Instruction::AddImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::AddImmediateWithCarry => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::SubtractImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::SubtractImmediateWithCarry => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        // Logic (Immediate)
+        Instruction::AndImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::OrImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::XorImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        // Shifts (Immediate)
+        Instruction::LogicalShiftLeftImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::LogicalShiftRightImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::ArithmeticShiftLeftImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::ArithmeticShiftRightImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::RotateLeftImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        Instruction::RotateRightImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        // Comparison (Immediate)
+        Instruction::CompareImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
+        // Flow Control (Immediate)
+        Instruction::ShortJumpImmediate => ExecutionStepInstructionType::Branch,
+        Instruction::ShortJumpToSubroutineImmediate => ExecutionStepInstructionType::Branch,
+
+        // Arithmetic (Register)
+        Instruction::AddRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::AddRegisterWithCarry => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::SubtractRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::SubtractRegisterWithCarry => ExecutionStepInstructionType::RegisterRegisterAlu,
+        // Logic (Register)
+        Instruction::AndRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::OrRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::XorRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        // Shifts (Register)
+        Instruction::LogicalShiftLeftRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::LogicalShiftRightRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::ArithmeticShiftLeftRegister => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+        Instruction::ArithmeticShiftRightRegister => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+        Instruction::RotateLeftRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::RotateRightRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        // Comparison (Register)
+        Instruction::CompareRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        // NOOP (Register)
+        Instruction::NoOperation => ExecutionStepInstructionType::NoOp,
+
+        // Flow Control (Immediate)
+        Instruction::BranchImmediate => ExecutionStepInstructionType::Branch,
+        Instruction::BranchToSubroutineImmediate => ExecutionStepInstructionType::Branch,
+        Instruction::WaitForException => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
+        Instruction::ReturnFromException => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
+        Instruction::Exception => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
+
+        // Data Access
+        Instruction::LoadRegisterFromImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::LoadRegisterFromRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::LoadRegisterFromIndirectImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::LoadRegisterFromIndirectRegister => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+        Instruction::StoreRegisterToIndirectImmediate => {
+            ExecutionStepInstructionType::RegisterImmediateAlu
+        }
+        Instruction::StoreRegisterToIndirectRegister => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+        Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
+            ExecutionStepInstructionType::RegisterRegisterAlu
+        }
+
+        Instruction::LongJumpWithImmediateDisplacement => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::ReturnFromSubroutine => ExecutionStepInstructionType::MemoryRefImmDisplacement, // Encoded as zero offset from link register
+        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+        Instruction::LoadEffectiveAddressFromIndirectRegister => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::LongJumpWithRegisterDisplacement => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+    }
+}
+
+pub fn decode_memory_access_step_instruction_type(
+    instruction: &Instruction,
+    decoded_instruction: &DecodedInstruction,
+) -> MemoryAccessInstructionType {
+    if !decoded_instruction.con_ {
+        return MemoryAccessInstructionType::NoOp;
+    }
+
+    match instruction {
+        // Flow Control (Immediate)
+        Instruction::ShortJumpImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::ShortJumpToSubroutineImmediate => MemoryAccessInstructionType::BranchOrJump,
+        // Flow Control (Immediate)
+        Instruction::BranchImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::BranchToSubroutineImmediate => MemoryAccessInstructionType::BranchOrJump,
+
+        // Data Access
+        Instruction::LoadRegisterFromImmediate => MemoryAccessInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromRegister => MemoryAccessInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectImmediate => MemoryAccessInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectRegister => MemoryAccessInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
+            MemoryAccessInstructionType::MemoryLoad
+        }
+        Instruction::StoreRegisterToIndirectImmediate => MemoryAccessInstructionType::MemoryStore,
+        Instruction::StoreRegisterToIndirectRegister => MemoryAccessInstructionType::MemoryStore,
+        Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
+            MemoryAccessInstructionType::MemoryStore
+        }
+
+        Instruction::LongJumpWithImmediateDisplacement => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
+            MemoryAccessInstructionType::BranchOrJump
+        }
+        Instruction::LongJumpWithRegisterDisplacement => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
+            MemoryAccessInstructionType::BranchOrJump
+        }
+
+        // Flow Control (Address Register Direct)
+        _ => MemoryAccessInstructionType::NoOp,
+    }
+}
+
+pub fn decode_write_back_step_instruction_type(
+    instruction: &Instruction,
+    decoded_instruction: &DecodedInstruction,
+) -> WriteBackInstructionType {
+    if !decoded_instruction.con_ {
+        return WriteBackInstructionType::NoOp;
+    }
+
+    match instruction {
+        // Arithmetic (Immediate)
+        Instruction::AddImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::AddImmediateWithCarry => WriteBackInstructionType::AluToRegister,
+        Instruction::SubtractImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::SubtractImmediateWithCarry => WriteBackInstructionType::AluToRegister,
+        // Logic (Immediate)
+        Instruction::AndImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::OrImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::XorImmediate => WriteBackInstructionType::AluToRegister,
+        // Shifts (Immediate)
+        Instruction::LogicalShiftLeftImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::LogicalShiftRightImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::ArithmeticShiftLeftImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::ArithmeticShiftRightImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::RotateLeftImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::RotateRightImmediate => WriteBackInstructionType::AluToRegister,
+        // Comparison (Immediate)
+        Instruction::CompareImmediate => WriteBackInstructionType::AluToRegister,
+        // Arithmetic (Register)
+        Instruction::AddRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::AddRegisterWithCarry => WriteBackInstructionType::AluToRegister,
+        Instruction::SubtractRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::SubtractRegisterWithCarry => WriteBackInstructionType::AluToRegister,
+        // Logic (Register)
+        Instruction::AndRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::OrRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::XorRegister => WriteBackInstructionType::AluToRegister,
+        // Shifts (Register)
+        Instruction::LogicalShiftLeftRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::LogicalShiftRightRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::ArithmeticShiftLeftRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::ArithmeticShiftRightRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::RotateLeftRegister => WriteBackInstructionType::AluToRegister,
+        Instruction::RotateRightRegister => WriteBackInstructionType::AluToRegister,
+        // Comparison (Register)
+        Instruction::CompareRegister => WriteBackInstructionType::AluToRegister,
+
+        // Data Access
+        Instruction::LoadRegisterFromImmediate => WriteBackInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromRegister => WriteBackInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectImmediate => WriteBackInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectRegister => WriteBackInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
+            WriteBackInstructionType::MemoryLoad
+        }
+
+        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
+            WriteBackInstructionType::LoadEffectiveAddress
+        }
+        Instruction::LoadEffectiveAddressFromIndirectRegister => {
+            WriteBackInstructionType::LoadEffectiveAddress
+        }
+        _ => WriteBackInstructionType::NoOp,
+    }
 }
 
 // TODO: Define trait and move somewhere else?
@@ -109,15 +363,123 @@ impl ConditionFlags {
     }
 }
 
+/**
+* The instruction mapped out into components.
+*
+* Simulates the temporary registers the CPU would have when an instruction
+* is being decoded.
+*
+* To avoid microcode/branching etc. all instructions are mapped out to the the
+* same set of registers, however, depending on the instruction, some of the
+* fields might be zero or full of garbage. You will need to make sure
+* you know what instruction you are using before interpreting these
+* registers.
+*
+* Future work: it might be a good idea in the future to type this so
+* only the relevant registers are available for each instruction type.
+
+*/
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct DecodedInstruction {
+    // Raw Instruction Decode
+    pub ins: u8,
+    pub des: u8,
+    pub sr_a: u8,
+    pub sr_b: u8,
+    pub con: u8,
+    pub imm: u16,
+    pub adr: u8,
+    // Inferred
+    pub ad_l: u8,
+    pub ad_h: u8,
+    pub addr_inc: i8,
+    pub des_ad_l: u8,
+    pub des_ad_h: u8,
+    // Dereferenced
+    pub des_: u16,
+    pub sr_a_: u16,
+    pub sr_b_: u16,
+    pub ad_l_: u16,
+    pub ad_h_: u16,
+    pub con_: bool,
+    pub sr: u16,
+}
+
+fn extract_range<T: TryFrom<u32>>(source: u32, range: Range<u8>) -> T {
+    let shifted = source >> range.start;
+    let masked = shifted & (u32::MAX >> (range.end - range.start));
+    match T::try_from(masked) {
+        Ok(val) => val,
+        Err(_) => panic!(
+            "Cannot fit u32 into [{}]. shifted:[{:#08x}] masked: [{:#08x}]",
+            std::any::type_name::<T>(),
+            shifted,
+            masked
+        ),
+    }
+}
+
+pub fn decode_register_fetch(
+    raw_instruction: [u8; 4],
+    registers: &Registers,
+) -> DecodedInstruction {
+    let combined = u32::from_be_bytes(raw_instruction);
+
+    let ins = extract_range(combined, 0..5);
+    let adr = extract_range(combined, 24..27);
+    let des = extract_range(combined, 6..9);
+    let sr_a = extract_range(combined, 10..13);
+    let sr_b = extract_range(combined, 14..17);
+    let ad_l = (adr * 2) + 8;
+    let ad_h = (adr * 2) + 7;
+    let des_ad_l = (des * 2) + 8;
+    let des_ad_h = (des * 2) + 7;
+    let con = extract_range(combined, 28..31);
+    let condition_flag: ConditionFlags =
+        num::FromPrimitive::from_u8(con).expect("Condition flag can only be 4 bits long");
+
+    let addr_inc: i8 = match ins {
+        0x34 => 1,  // TODO: Match LOAD (a)+
+        0x37 => -1, // TODO: Match STOR -(a)
+        _ => 0,
+    };
+
+    DecodedInstruction {
+        ins,
+        des,
+        sr_a,
+        sr_b,
+        con,
+        imm: extract_range(combined, 10..26),
+        adr,
+        ad_l,
+        ad_h,
+        des_ad_l,
+        des_ad_h,
+        addr_inc,
+        des_: registers[des],
+        sr_a_: registers[sr_a],
+        sr_b_: registers[sr_b],
+        ad_l_: registers[ad_l],
+        ad_h_: registers[ad_h],
+        con_: condition_flag.should_execute(registers),
+        sr: registers.sr,
+    }
+}
+
 // Instruction Types
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ImpliedInstructionData {
+    pub op_code: Instruction,
+    // TODO: Do we need anything more than DecodedInstruction
+    // for these *InstructionData structs?
     pub condition_flag: ConditionFlags,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ImmediateInstructionData {
+    pub op_code: Instruction,
     pub register: u8,
     pub value: u16,
     pub condition_flag: ConditionFlags,
@@ -127,6 +489,7 @@ pub struct ImmediateInstructionData {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RegisterInstructionData {
+    pub op_code: Instruction,
     pub r1: u8,
     pub r2: u8,
     pub r3: u8,
@@ -135,329 +498,86 @@ pub struct RegisterInstructionData {
     pub additional_flags: u8,
 }
 
-// Implied Argument Instructions
-
-#[derive(Debug)]
-pub struct HaltInstructionData {
-    // ID: 0x00
-    pub data: ImpliedInstructionData,
+#[derive(Debug, PartialEq, Eq)]
+pub enum InstructionData {
+    Implied(ImpliedInstructionData),
+    Immediate(ImmediateInstructionData),
+    Register(RegisterInstructionData),
 }
 
-#[derive(Debug)]
-pub struct NoOperationInstructionData {
-    // ID: 0x01
-    pub data: ImpliedInstructionData,
-}
-
-#[derive(Debug)]
-pub struct WaitForInterruptInstructionData {
-    // ID: 0x02
-    pub data: ImpliedInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ReturnFromInterruptData {
-    // ID: 0x03
-    pub data: ImpliedInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ReturnFromSubroutineData {
-    // ID: 0x04
-    pub data: ImpliedInstructionData,
-}
-
-// Arithmetic
-
-#[derive(Debug)]
-pub struct AddInstructionData {
-    // ID: 0x05
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct AddWithCarryInstructionData {
-    // ID: 0x06
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct SubtractInstructionData {
-    // ID: 0x07
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct SubtractWithCarryInstructionData {
-    // ID: 0x08
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct MultiplyInstructionData {
-    // ID: 0x09
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct DivideInstructionData {
-    // ID: 0x0A
-    pub data: RegisterInstructionData,
-}
-
-// Logic
-
-#[derive(Debug)]
-pub struct AndInstructionData {
-    // ID: 0x0B
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct OrInstructionData {
-    // ID: 0x0C
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct XorInstructionData {
-    // ID: 0x0D
-    pub data: RegisterInstructionData,
-}
-
-// Shifts
-
-#[derive(Debug)]
-pub struct LogicalShiftLeftInstructionData {
-    // ID: 0x0E
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LogicalShiftRightInstructionData {
-    // ID: 0x0F
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ArithmeticShiftLeftInstructionData {
-    // ID: 0x10
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ArithmeticShiftRightInstructionData {
-    // ID: 0x11
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct RotateLeftInstructionData {
-    // ID: 0x12
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct RotateRightInstructionData {
-    // ID: 0x13
-    pub data: RegisterInstructionData,
-}
-
-// Comparison
-
-#[derive(Debug)]
-pub struct CompareInstructionData {
-    // ID: 0x14
-    pub data: RegisterInstructionData,
-}
-
-// Stack Manipulation
-
-#[derive(Debug)]
-pub struct PushInstructionData {
-    // ID: 0x15
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct PopInstructionData {
-    // ID: 0x16
-    pub data: RegisterInstructionData,
-}
-
-// Flow Control
-
-#[derive(Debug)]
-pub struct TriggerSoftwareInterruptData {
-    // ID: 0x17
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ShortJumpWithImmediateData {
-    // ID: 0x18
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct ShortJumpToSubroutineWithImmediateData {
-    // ID: 0x19
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct BranchToSubroutineData {
-    // ID: 0x1A
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct BranchInstructionData {
-    // ID: 0x1B
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LongJumpWithAddressRegisterData {
-    // ID: 0x1C
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LongJumpToSubroutineWithAddressRegisterData {
-    // ID: 0x1D
-    pub data: RegisterInstructionData,
-}
-
-// Data Access
-
-// TODO: remove gap here (opcode 0x1E was LEA immediate which didn't make sense and was removed)
-// Haven't got around to rejigging the opcodes
-
-#[derive(Debug)]
-pub struct LoadEffectiveAddressFromIndirectImmediateData {
-    // ID: 0x1F
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadEffectiveAddressFromIndirectRegisterData {
-    // ID: 0x20
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadManyRegisterFromAddressRegisterData {
-    // ID: 0x21
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadRegisterFromImmediateData {
-    // ID: 0x22
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadRegisterFromRegisterData {
-    // ID: 0x23
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadRegisterFromIndirectImmediateData {
-    // ID: 0x24
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct LoadRegisterFromIndirectRegisterData {
-    // ID: 0x25
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct StoreRegisterToIndirectImmediateData {
-    // ID: 0x26
-    pub data: ImmediateInstructionData,
-}
-
-#[derive(Debug)]
-pub struct StoreRegisterToIndirectRegisterData {
-    // ID: 0x27
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-pub struct StoreManyRegisterFromAddressRegisterData {
-    // ID: 0x28
-    pub data: RegisterInstructionData,
-}
-
-#[derive(Debug)]
-#[enum_dispatch(Executor)]
+// TODO: Rename to OpCode or something?
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+// #[enum_dispatch(Executor)]
 pub enum Instruction {
-    // Implied Argument Instructions
-    Halt(HaltInstructionData),
-    NoOperation(NoOperationInstructionData),
-    WaitForInterrupt(WaitForInterruptInstructionData),
-    ReturnFromInterrupt(ReturnFromInterruptData),
-    ReturnFromSubroutine(ReturnFromSubroutineData),
-    // Arithmetic
-    Add(AddInstructionData),
-    AddWithCarry(AddWithCarryInstructionData),
-    Subtract(SubtractInstructionData),
-    SubtractWithCarry(SubtractWithCarryInstructionData),
-    Multiply(MultiplyInstructionData),
-    Divide(DivideInstructionData),
-    // Logic
-    And(AndInstructionData),
-    Or(OrInstructionData),
-    Xor(XorInstructionData),
-    // Shifts
-    LogicalShiftLeft(LogicalShiftLeftInstructionData),
-    LogicalShiftRight(LogicalShiftRightInstructionData),
-    ArithmeticShiftLeft(ArithmeticShiftLeftInstructionData),
-    ArithmeticShiftRight(ArithmeticShiftRightInstructionData),
-    RotateLeft(RotateLeftInstructionData),
-    RotateRight(RotateRightInstructionData),
-    // Comparison
-    Compare(CompareInstructionData),
-    // Stack Manipulation
-    Push(PushInstructionData),
-    Pop(PopInstructionData),
-    // Flow Control
-    TriggerSoftwareInterrupt(TriggerSoftwareInterruptData),
-    ShortJumpWithImmediate(ShortJumpWithImmediateData),
-    ShortJumpToSubroutineWithImmediate(ShortJumpToSubroutineWithImmediateData),
-    BranchToSubroutine(BranchToSubroutineData),
-    Branch(BranchInstructionData),
-    LongJumpWithAddressRegister(LongJumpWithAddressRegisterData),
-    LongJumpToSubroutineWithAddressRegister(LongJumpToSubroutineWithAddressRegisterData),
-    // Data Access
-    LoadEffectiveAddressIndirectImmediate(LoadEffectiveAddressFromIndirectImmediateData),
-    LoadEffectiveAddressIndirectRegister(LoadEffectiveAddressFromIndirectRegisterData),
-    LoadManyRegisterFromAddressRegister(LoadManyRegisterFromAddressRegisterData),
-    LoadRegisterFromImmediate(LoadRegisterFromImmediateData),
-    LoadRegisterFromRegister(LoadRegisterFromRegisterData),
-    LoadRegisterFromIndirectImmediate(LoadRegisterFromIndirectImmediateData),
-    LoadRegisterFromIndirectRegister(LoadRegisterFromIndirectRegisterData),
-    StoreRegisterToIndirectImmediate(StoreRegisterToIndirectImmediateData),
-    StoreRegisterToIndirectRegister(StoreRegisterToIndirectRegisterData),
-    StoreManyRegisterFromAddressRegister(StoreManyRegisterFromAddressRegisterData),
-}
+    // Arithmetic (Immediate)
+    AddImmediate = 0x00,
+    AddImmediateWithCarry = 0x01,
+    SubtractImmediate = 0x02,
+    SubtractImmediateWithCarry = 0x03,
+    // Logic (Immediate)
+    AndImmediate = 0x04,
+    OrImmediate = 0x05,
+    XorImmediate = 0x06,
+    // Shifts (Immediate)
+    LogicalShiftLeftImmediate = 0x07,
+    LogicalShiftRightImmediate = 0x08,
+    ArithmeticShiftLeftImmediate = 0x09,
+    ArithmeticShiftRightImmediate = 0x0A,
+    RotateLeftImmediate = 0x0B,
+    RotateRightImmediate = 0x0C,
+    // Comparison (Immediate)
+    CompareImmediate = 0x0D,
 
-pub fn get_clocks_for_instruction(_instruction: &Instruction) -> u32 {
-    // Important!: Does not include instruction fetch time (4 cycles)
-    //
-    // Educated guess based on 6502 instruction set
-    // (https://www.masswerk.at/6502/6502_instruction_set.html)
-    // Hardware doesn't exist yet so subject to change
-    // TODO: Move to executors where there is more context to calculate cycles?
-    // TODO: Double check all these!
-    0 // TODO
+    // Arithmetic (Register)
+    AddRegister = 0x10,
+    AddRegisterWithCarry = 0x11,
+    SubtractRegister = 0x12,
+    SubtractRegisterWithCarry = 0x13,
+    // Logic (Register)
+    AndRegister = 0x14,
+    OrRegister = 0x15,
+    XorRegister = 0x16,
+    // Shifts (Register)
+    LogicalShiftLeftRegister = 0x17,
+    LogicalShiftRightRegister = 0x18,
+    ArithmeticShiftLeftRegister = 0x19,
+    ArithmeticShiftRightRegister = 0x1A,
+    RotateLeftRegister = 0x1B,
+    RotateRightRegister = 0x1C,
+    // Comparison (Register)
+    CompareRegister = 0x1D,
+
+    // Flow Control
+    BranchImmediate = 0x20,
+    BranchToSubroutineImmediate = 0x21,
+    LoadEffectiveAddressFromIndirectImmediate = 0x22,
+    LoadEffectiveAddressFromIndirectRegister = 0x23,
+    ReturnFromSubroutine = 0x24,
+    LongJumpWithImmediateDisplacement = 0x25,
+    LongJumpWithRegisterDisplacement = 0x26,
+    LongJumpToSubroutineWithImmediateDisplacement = 0x28,
+    LongJumpToSubroutineWithRegisterDisplacement = 0x29,
+    ShortJumpImmediate = 0x2A,
+    ShortJumpToSubroutineImmediate = 0x2B,
+
+    // Data Access
+    LoadRegisterFromImmediate = 0x30,
+    LoadRegisterFromRegister = 0x31,
+    LoadRegisterFromIndirectImmediate = 0x32,
+    LoadRegisterFromIndirectRegister = 0x33,
+    LoadRegisterFromIndirectRegisterPostIncrement = 0x34,
+    StoreRegisterToIndirectImmediate = 0x35,
+    StoreRegisterToIndirectRegister = 0x36,
+    StoreRegisterToIndirectRegisterPreDecrement = 0x37,
+
+    // NOOP
+    NoOperation = 0x3C,
+
+    // Exception Handler
+    WaitForException = 0x3D,
+    Exception = 0x3E,
+    ReturnFromException = 0x3F,
 }
 
 // Pending Instructions
 // Throw privilege error if try to write to SR etc.
-// Immediate versions of ALU instructions? (and shifting/rotate)

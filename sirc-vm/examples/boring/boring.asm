@@ -1,11 +1,10 @@
 :init
-LOAD    x1, #5
-LOAD    x2, #3
-LOAD    x3, 64
+LOAD    r1, #5
+LOAD    r2, #3
+LOAD    r3, #64
 
 :loop
-ADDR    x2, x1
+ADDR    r2, r1
 ; Remember that COMP has the same argument order as SUBR
-COMP    x3, x2
+CMPR    r3, r2
 BRAN|>= @loop
-HALT

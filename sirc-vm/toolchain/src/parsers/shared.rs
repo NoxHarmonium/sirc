@@ -49,11 +49,15 @@ fn parse_dec_(i: &str) -> AsmResult<u16> {
     map_res(
         tuple((opt(one_of("+-")), recognize(digit1))),
         |(sign, number_string)| {
-            if sign.is_some() {
-                // Signed numbers represented in parser as unsigned for simplicity
-                str::parse::<i16>(number_string).map(|signed| signed as u16)
-            } else {
-                str::parse::<u16>(number_string)
+            match sign {
+                Some(sign_value) => {
+                    // TODO: Re-concatenating the original string seems bad
+                    // We should probably just get the original value or something
+                    let full_number = format!("{}{}", sign_value, number_string);
+                    // Signed numbers represented in parser as unsigned for simplicity
+                    str::parse::<i16>(full_number.as_str()).map(|signed| signed as u16)
+                }
+                None => str::parse::<u16>(number_string),
             }
         },
     )(i)
@@ -66,11 +70,6 @@ fn parse_number_(i: &str) -> AsmResult<u16> {
 
 fn parse_comma_sep_(i: &str) -> AsmResult<()> {
     let (i, (_, _)) = pair(tag(","), space0)(i)?;
-    Ok((i, ()))
-}
-
-fn parse_range_sep_(i: &str) -> AsmResult<()> {
-    let (i, (_, _)) = pair(tag("->"), space0)(i)?;
     Ok((i, ()))
 }
 
@@ -126,10 +125,6 @@ pub fn parse_number(i: &str) -> AsmResult<u16> {
 
 pub fn parse_comma_sep(i: &str) -> AsmResult<()> {
     lexeme(parse_comma_sep_)(i)
-}
-
-pub fn parse_range_sep(i: &str) -> AsmResult<()> {
-    lexeme(parse_range_sep_)(i)
 }
 
 pub fn parse_label(i: &str) -> AsmResult<&str> {
