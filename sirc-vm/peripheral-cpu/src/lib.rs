@@ -4,22 +4,20 @@ extern crate num_derive;
 
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
-pub mod executors;
+pub mod execution;
 pub mod instructions;
 pub mod microcode;
 pub mod registers;
 
-use executors::IntermediateRegisters;
-use instructions::alu::{perform_alu_operation, AluOp};
-use instructions::definitions::{
-    decode_and_register_fetch, decode_execution_step_instruction_type,
-    decode_memory_access_step_instruction_type, decode_write_back_step_instruction_type,
-    Instruction,
-};
-use microcode::address::sign_extend_small_offset;
+use instructions::definitions::Instruction;
 use peripheral_mem::MemoryPeripheral;
-use registers::{sr_bit_is_set, FullAddress, SegmentedAddress, StatusRegisterFields};
+use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
 
+use crate::execution::execution_effective_address::ExecutionEffectiveAddressExecutor;
+use crate::execution::fetch_and_decode::decode_and_register_fetch;
+use crate::execution::memory_access::MemoryAccessExecutor;
+use crate::execution::shared::{IntermediateRegisters, StageExecutor};
+use crate::execution::write_back::WriteBackExecutor;
 use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{Registers, SegmentedRegisterAccess};
@@ -69,9 +67,9 @@ fn step<'a>(
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
 
     // 3. Decode/Register Fetch (ID)
-    let decoded = decode_and_register_fetch(raw_instruction, registers);
+    let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
 
-    if decoded.ins == Instruction::Exception && decoded.imm == 0xFFFF {
+    if decoded_instruction.ins == Instruction::Exception && decoded_instruction.imm == 0xFFFF {
         // Special instruction just for debugging purposes. Probably won't be in hardware
         panic!("Execution was halted due to 0xFFFF exception");
     }
@@ -84,170 +82,33 @@ fn step<'a>(
         npc: registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16),
     };
 
-    // TODO: Replace unwrap with something better
-    let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
-    // TODO: Should this be unwrap? - clean this up
-    let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code).unwrap();
-
-    let execution_step_instruction_type =
-        decode_execution_step_instruction_type(&decoded.ins, &decoded);
-
-    // 4. ====== Execution (EX) ======
-    match execution_step_instruction_type {
-        // a. No Op
-        instructions::definitions::ExecutionStepInstructionType::NoOp => {}
-        // b. Memory Reference (reg displacement)
-
-        // if (addr_inc == -1)   ; Pre decrement
-        //     ALUoutput <- SrA' + AdL' + addr_inc
-        // else
-        //     ALUoutput <- SrA' + AdL'
-        instructions::definitions::ExecutionStepInstructionType::MemoryRefRegDisplacement => {
-            // Update SR?
-            // TODO: Overflow for adding SrA' with Adl'?
-            if decoded.addr_inc == -1 {
-                (intermediate_registers.alu_output, _) = (decoded.sr_a_ + decoded.ad_l_)
-                    .overflowing_add(sign_extend_small_offset(decoded.addr_inc as u8));
-            } else {
-                intermediate_registers.alu_output = decoded.sr_a_ + decoded.ad_l_;
-            }
-        }
-        // c. Memory Reference (imm displacement)
-
-        // if (addr_inc == -1)   ; Pre decrement
-        //     ALUoutput <- imm + AdL + addr_inc
-        // else
-        //     ALUoutput <- imm + AdL
-        instructions::definitions::ExecutionStepInstructionType::MemoryRefImmDisplacement => {
-            if decoded.addr_inc == -1 {
-                intermediate_registers.alu_output = (decoded.imm + decoded.ad_l_)
-                    .wrapping_add(sign_extend_small_offset(decoded.addr_inc as u8));
-            } else {
-                intermediate_registers.alu_output = decoded.imm + decoded.ad_l_;
-            }
-        }
-        // d. Register-Register ALU:
-
-        // ALUoutput <- SrA' op SrB'
-        // Regs[sr] <- status(SrA' op SrB', Sr)
-        instructions::definitions::ExecutionStepInstructionType::RegisterRegisterAlu => {
-            perform_alu_operation(
-                alu_op,
-                // TODO: Is this feasible in hardware?
-                if decoded.ins == Instruction::LoadRegisterFromImmediate {
-                    0x0
-                } else {
-                    decoded.sr_a_
-                },
-                decoded.sr_b_,
-                registers,
-                &mut intermediate_registers,
-            );
-        }
-        // e. Register-Immediate ALU operation:
-
-        // ALUoutput <- Des' op imm
-        // Regs[sr] <- status(Des' op imm, Sr)
-        instructions::definitions::ExecutionStepInstructionType::RegisterImmediateAlu => {
-            perform_alu_operation(
-                alu_op,
-                // TODO: Is this feasible in hardware?
-                if decoded.ins == Instruction::LoadRegisterFromImmediate {
-                    0x0
-                } else {
-                    decoded.des_
-                },
-                decoded.imm,
-                registers,
-                &mut intermediate_registers,
-            );
-        }
-
-        // f. Branch:
-
-        // ALUoutput <- PC + imm
-        instructions::definitions::ExecutionStepInstructionType::Branch => {
-            // Update SR?
-            // TODO: Overflow?
-            perform_alu_operation(
-                AluOp::Add,
-                registers.pl,
-                decoded.imm,
-                registers,
-                &mut intermediate_registers,
-            );
-        }
-    }
-
-    // 5. ====== Memory access/branch completion (MEM): ======
-
-    let memory_access_step_instruction_type =
-        decode_memory_access_step_instruction_type(&decoded.ins, &decoded);
-
-    // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
-    // but we might need to think about how this would work in FPGA
-    registers.pl = intermediate_registers.npc;
-
-    match memory_access_step_instruction_type {
-        // a. No Op
-        instructions::definitions::MemoryAccessInstructionType::NoOp => {}
-        // a. Memory load
-        // LMD <- Mem[AdrH | ALUOutput]
-        instructions::definitions::MemoryAccessInstructionType::MemoryLoad => {
-            intermediate_registers.lmd = mem
-                .read_address((decoded.ad_h_, intermediate_registers.alu_output).to_full_address())
-        }
-        // b. Memory store
-        // Mem[AdrH | ALUOutput] <- A?
-        instructions::definitions::MemoryAccessInstructionType::MemoryStore => {
-            // A or B?
-            mem.write_address(
-                (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                decoded.des_,
-            )
-        }
-        // c. Branch/Jump
-        // if (Cond') PC <- ALUoutput
-        // else      PC <- NPC
-        instructions::definitions::MemoryAccessInstructionType::BranchOrJump => {
-            // TODO: Long Jump
-            registers.pl = intermediate_registers.alu_output;
-        }
-    }
-
-    // ==== 6. Write-back cycle (WB): ====
-
-    let write_back_step_instruction_type =
-        decode_write_back_step_instruction_type(&decoded.ins, &decoded);
-
-    match write_back_step_instruction_type {
-        instructions::definitions::WriteBackInstructionType::NoOp => {}
-        // a. Memory load
-        // Regs[Des] <- LMD
-        instructions::definitions::WriteBackInstructionType::MemoryLoad => {
-            registers[decoded.des] = intermediate_registers.lmd;
-        }
-        //  b. Register-Register ALU or Register-Immediate ALU:
-        // Regs[Des] <- ALUoutput
-        instructions::definitions::WriteBackInstructionType::AluToRegister => {
-            registers[decoded.des] = intermediate_registers.alu_output;
-        }
-        //  c. Load Effective Address
-        // Regs[DesAdL] <- ALUOutput
-        // Regs[DesAdH] <- AdrH
-        instructions::definitions::WriteBackInstructionType::LoadEffectiveAddress => {
-            registers[decoded.des] = intermediate_registers.alu_output;
-        }
-    }
+    ExecutionEffectiveAddressExecutor::execute(
+        &decoded_instruction,
+        registers,
+        &mut intermediate_registers,
+        mem,
+    );
+    MemoryAccessExecutor::execute(
+        &decoded_instruction,
+        registers,
+        &mut intermediate_registers,
+        mem,
+    );
+    WriteBackExecutor::execute(
+        &decoded_instruction,
+        registers,
+        &mut intermediate_registers,
+        mem,
+    );
 
     if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
         return Err(Error::ProcessorHalted(registers.to_owned()));
     }
 
-    println!("step: {:X?} {:X?}", decoded.ins, registers);
+    println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
 
     // TODO: 6 -> constant ITS ALWAYS SIX BABY
-    Ok((registers, 6, decoded.ins))
+    Ok((registers, 6, decoded_instruction.ins))
 }
 
 impl CpuPeripheral<'_> {

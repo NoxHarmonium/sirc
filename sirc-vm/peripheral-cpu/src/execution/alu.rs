@@ -1,7 +1,5 @@
-use crate::{
-    executors::IntermediateRegisters,
-    registers::{set_alu_bits, sr_bit_is_set, Registers, StatusRegisterFields},
-};
+use super::shared::IntermediateRegisters;
+use crate::registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set, Registers, StatusRegisterFields};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Sign {
@@ -53,8 +51,8 @@ pub enum AluOp {
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
-/// use peripheral_cpu::executors::IntermediateRegisters;
-/// use peripheral_cpu::instructions::alu::perform_add;
+/// use peripheral_cpu::execution::shared::IntermediateRegisters;
+/// use peripheral_cpu::execution::alu::perform_add;
 ///
 /// // Thanks: https://stackoverflow.com/a/69125543/1153203
 ///
@@ -106,8 +104,8 @@ pub fn perform_add(
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
-/// use peripheral_cpu::executors::IntermediateRegisters;
-/// use peripheral_cpu::instructions::alu::perform_add_with_carry;
+/// use peripheral_cpu::execution::shared::IntermediateRegisters;
+/// use peripheral_cpu::execution::alu::perform_add_with_carry;
 ///
 /// // Thanks: https://stackoverflow.com/a/69125543/1153203
 ///
@@ -159,8 +157,8 @@ pub fn perform_add_with_carry(
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
-/// use peripheral_cpu::executors::IntermediateRegisters;
-/// use peripheral_cpu::instructions::alu::perform_subtract;
+/// use peripheral_cpu::execution::shared::IntermediateRegisters;
+/// use peripheral_cpu::execution::alu::perform_subtract;
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///
@@ -217,8 +215,8 @@ pub fn perform_subtract(
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields};
-/// use peripheral_cpu::executors::IntermediateRegisters;
-/// use peripheral_cpu::instructions::alu::perform_subtract_with_carry;
+/// use peripheral_cpu::execution::shared::IntermediateRegisters;
+/// use peripheral_cpu::execution::alu::perform_subtract_with_carry;
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///
@@ -418,5 +416,34 @@ pub fn perform_alu_operation(
         AluOp::Compare => perform_subtract(a, b, registers, intermediate_registers), // Same as subtract in ALU land - handled differently in the write back CPU phase
         AluOp::Reserved1 => todo!(),
         AluOp::Reserved2 => todo!(),
+    }
+}
+
+pub fn set_alu_bits(
+    registers: &mut Registers,
+    value: u16,
+    carry: bool,
+    inputs_and_result: Option<(u16, u16, u16)>,
+) {
+    if value == 0 {
+        set_sr_bit(StatusRegisterFields::Zero, registers);
+    }
+    if (value as i16) < 0 {
+        set_sr_bit(StatusRegisterFields::Negative, registers);
+    }
+    if carry {
+        set_sr_bit(StatusRegisterFields::Carry, registers);
+    } else {
+        clear_sr_bit(StatusRegisterFields::Carry, registers);
+    }
+
+    // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
+    // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
+    if let Some((i1, i2, result)) = inputs_and_result {
+        if sign(i1) == sign(i2) && sign(result) != sign(i1) {
+            set_sr_bit(StatusRegisterFields::Overflow, registers);
+        } else {
+            clear_sr_bit(StatusRegisterFields::Overflow, registers);
+        }
     }
 }

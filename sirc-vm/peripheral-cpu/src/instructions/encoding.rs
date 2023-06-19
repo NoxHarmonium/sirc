@@ -15,7 +15,6 @@ const IMMEDIATE_ARGS_MASK: u32 = 0x00000003;
 const CONDITION_FLAGS_MASK: u32 = 0x0000000F;
 const VALUE_LENGTH: u32 = 16;
 const VALUE_MASK: u32 = 0x0000FFFF;
-pub const ADDRESS_MASK: u32 = 0x00FFFFFF;
 
 ///
 /// Extracts the instruction ID from a full 32 bit instruction.

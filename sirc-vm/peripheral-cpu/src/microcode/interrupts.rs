@@ -62,25 +62,18 @@ pub mod vectors {
 
 use peripheral_mem::MemoryPeripheral;
 
-use crate::registers::{
-    set_interrupt_mask, set_sr_bit, FullAddress, FullAddressRegisterAccess, Registers,
-    StatusRegisterFields,
-};
-
-use super::stack::{
-    pop_address_from_stack, pop_value_from_stack, push_address_to_stack, push_value_to_stack,
-};
+use crate::registers::{set_interrupt_mask, set_sr_bit, Registers, StatusRegisterFields};
 
 pub fn jump_to_interrupt(vector_offset: u8, registers: &mut Registers, mem: &MemoryPeripheral) {
     // Store the SR here because we need to flip to system mode to use the system stack
     // which will affect the SR
-    let old_sr = registers.sr;
+    // let old_sr = registers.sr;
     // Flip into system mode so we can use the system stack etc.
     set_sr_bit(StatusRegisterFields::SystemMode, registers);
 
     // Save important registers to restore after the ISR
-    push_address_to_stack(registers, mem, registers.get_full_pc_address());
-    push_value_to_stack(registers, mem, old_sr);
+    // push_address_to_stack(registers, mem, registers.get_full_pc_address());
+    // push_value_to_stack(registers, mem, old_sr);
 
     // Jump to ISR
     let vector_address = registers.system_ram_offset + vector_offset as u32;
@@ -90,12 +83,12 @@ pub fn jump_to_interrupt(vector_offset: u8, registers: &mut Registers, mem: &Mem
     )
 }
 
-pub fn return_from_interrupt(registers: &mut Registers, mem: &MemoryPeripheral) {
-    // Get the important register values before we switch out of system mode
-    // and can't access them anymore
-    registers.sr = pop_value_from_stack(registers, mem);
-    (registers.ph, registers.pl) = pop_address_from_stack(registers, mem).to_segmented_address();
-}
+// pub fn return_from_interrupt(registers: &mut Registers, mem: &MemoryPeripheral) {
+// Get the important register values before we switch out of system mode
+// and can't access them anymore
+// registers.sr = pop_value_from_stack(registers, mem);
+// (registers.ph, registers.pl) = pop_address_from_stack(registers, mem).to_segmented_address();
+// }
 
 pub fn trigger_hardware_interrupt(
     interrupt_level: u8,

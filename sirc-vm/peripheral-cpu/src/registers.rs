@@ -1,8 +1,9 @@
 use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 
-use crate::instructions::alu::sign;
-use crate::instructions::encoding::ADDRESS_MASK;
+/// The bits of an address register pair that actually gets mapped to physical pins
+/// (Only 24 bit addressing)
+pub const ADDRESS_MASK: u32 = 0x00FFFFFF;
 
 pub enum StatusRegisterFields {
     // Byte 1
@@ -404,35 +405,6 @@ pub fn sr_bit_is_set(field: StatusRegisterFields, registers: &Registers) -> bool
 pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = field as u16;
     registers.sr |= bit_mask
-}
-
-pub fn set_alu_bits(
-    registers: &mut Registers,
-    value: u16,
-    carry: bool,
-    inputs_and_result: Option<(u16, u16, u16)>,
-) {
-    if value == 0 {
-        set_sr_bit(StatusRegisterFields::Zero, registers);
-    }
-    if (value as i16) < 0 {
-        set_sr_bit(StatusRegisterFields::Negative, registers);
-    }
-    if carry {
-        set_sr_bit(StatusRegisterFields::Carry, registers);
-    } else {
-        clear_sr_bit(StatusRegisterFields::Carry, registers);
-    }
-
-    // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
-    // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
-    if let Some((i1, i2, result)) = inputs_and_result {
-        if sign(i1) == sign(i2) && sign(result) != sign(i1) {
-            set_sr_bit(StatusRegisterFields::Overflow, registers);
-        } else {
-            clear_sr_bit(StatusRegisterFields::Overflow, registers);
-        }
-    }
 }
 
 ///
