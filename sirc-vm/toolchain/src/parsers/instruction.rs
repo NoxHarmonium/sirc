@@ -1,7 +1,7 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
 use nom::character::complete::{char, multispace0};
-use nom::combinator::{map, opt};
+use nom::combinator::{cut, map, opt};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, pair, separated_pair};
 use nom_supreme::tag::complete::tag;
@@ -199,10 +199,17 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     addressing_mode_parser(i)
 }
 
-pub fn parse_instruction_operands(i: &str) -> AsmResult<Vec<AddressingMode>> {
+pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
     separated_list0(
         parse_comma_sep,
         parse_addressing_mode.context("addressing mode"),
+    )(i)
+}
+
+pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {
+    separated_list0(
+        parse_comma_sep,
+        cut(parse_addressing_mode.context("addressing mode")),
     )(i)
 }
 
@@ -279,7 +286,11 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::arithmetic_immediate::arithmetic_immediate,
         opcodes::arithmetic_register::arithmetic_register,
         opcodes::branching::branching,
+        opcodes::excp::excp,
         opcodes::implied::implied,
+        opcodes::ldea::ldea,
+        opcodes::ljmp::ljmp,
+        opcodes::ljsr::ljsr,
         opcodes::load::load,
         opcodes::store::stor,
     ))(i)?;

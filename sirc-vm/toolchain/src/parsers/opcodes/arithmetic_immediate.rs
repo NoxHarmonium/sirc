@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, AddressingMode, ImmediateType,
+    parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
     InstructionToken,
 };
 use nom::error::{ErrorKind, FromExternalError};
@@ -77,7 +77,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     ));
 
     map_res(
-        tuple((instructions, parse_instruction_operands)),
+        tuple((instructions, parse_instruction_operands1)),
         |((tag, condition_flag), operands)| match operands.as_slice() {
             [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
                 match immediate_type {

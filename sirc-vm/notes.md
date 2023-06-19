@@ -34,8 +34,7 @@ Address registers a = a, p, s, l
 \* ah, sh, ph, lh, and sr are considered privileged, when system mode bit is not set, certain access patterns may trigger a privilege violation
 
 Immediate | #n | LOAD r1, #123
-Register direct | xN, yN, zN, aB, sB, pB, sr | LOAD r1, r5
-Register range direct | rN->rM, | STMR (a), r1->r7
+Register direct | rN, aB, sB, pB, lB, sr | LOAD r1, r5
 Address register direct | a | LDEA a, (r1, a)
 Address register indirect | (a) | STOR (s), r1
 Address register indirect with post increment | (a)+ | LOAD (s)+, r1
@@ -111,7 +110,7 @@ Source operands are on the right side of the arguments. Destination operands are
 
 Implied | | TATS
 Immediate | #123 | ADDI r1, #0x01
-Register direct | xN, yN, zN, aB, sB, pB, sr | LOAD r1, r5
+Register direct | rN, aB, sB, pB, lB, sr | LOAD r1, r5
 Address register indirect with immediate displacement | (#n, a) | LOAD r4, (#-3, a)
 Address register indirect with register displacement | (r, a) | STOR (r4, a), r1
 Address register indirect with post increment | (a)+ | LOAD (s)+, r1
@@ -333,7 +332,7 @@ e. Register-Immediate ALU operation:
 ALUoutput <- Des' op imm
 Regs[sr] <- status(Des' op imm, Sr)
 
-g. Branch:
+f. Branch:
 
 ALUoutput <- PC + imm
 

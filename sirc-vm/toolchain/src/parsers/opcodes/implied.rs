@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, InstructionToken,
+    parse_instruction_operands0, parse_instruction_tag, InstructionToken,
 };
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
@@ -54,7 +54,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     ));
 
     map_res(
-        tuple((instructions, parse_instruction_operands)),
+        tuple((instructions, parse_instruction_operands0)),
         |((tag, condition_flag), operands)| match operands.as_slice() {
             [] => match tag_to_instruction(tag) {
                 // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump

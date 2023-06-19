@@ -64,21 +64,21 @@ pub enum AluOp {
 /// // Unsigned Overflow
 /// perform_add(0xFFFF, 0x0001, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x0000);
+/// assert_eq!(intermediate_registers.alu_output, 0x0000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
 ///
 /// // Signed Overflow
 /// perform_add(0x7FFF, 0x2000, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x9FFF);
+/// assert_eq!(intermediate_registers.alu_output, 0x9FFF);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 ///
 /// // Both Overflow
 /// perform_add(0x9FFF, 0x9000, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x2FFF);
+/// assert_eq!(intermediate_registers.alu_output, 0x2FFF);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 /// ```
@@ -117,19 +117,19 @@ pub fn perform_add(
 /// // Operation that produces carry
 /// perform_add_with_carry(0xFFFF, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0xFFFE);
+/// assert_eq!(intermediate_registers.alu_output, 0xFFFE);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 ///
 /// // Do the same operation now that the carry bit is set
 /// perform_add_with_carry(0xFFFF, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0xFFFF);
+/// assert_eq!(intermediate_registers.alu_output, 0xFFFF);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 ///
 /// // Wrapping to zero
 /// perform_add_with_carry(0x0000, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x0000);
+/// assert_eq!(intermediate_registers.alu_output, 0x0000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// ```
 ///
@@ -170,21 +170,21 @@ pub fn perform_add_with_carry(
 /// // Unsigned Overflow
 /// perform_subtract(0x5FFF, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x6000);
+/// assert_eq!(intermediate_registers.alu_output, 0x6000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), false);
 ///
 /// // Signed Overflow
 /// perform_subtract(0xDFFF, 0x7FFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x6000);
+/// assert_eq!(intermediate_registers.alu_output, 0x6000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), false);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 ///
 /// // Both Overflow
 /// perform_subtract(0x5FFF, 0xBFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0xA000);
+/// assert_eq!(intermediate_registers.alu_output, 0xA000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Overflow, &registers), true);
 /// ```
@@ -228,13 +228,13 @@ pub fn perform_subtract(
 /// // Subtraction that causes borrow
 /// perform_subtract_with_carry(0x0000, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x0001);
+/// assert_eq!(intermediate_registers.alu_output, 0x0001);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 ///
 /// // Subtraction with borrow (carry) bit set
 ///  perform_subtract_with_carry(0x0000, 0xFFFF, &mut registers, &mut intermediate_registers);
 ///
-/// assert_eq!(intermediate_registers.AluOutput, 0x0000);
+/// assert_eq!(intermediate_registers.alu_output, 0x0000);
 /// assert_eq!(sr_bit_is_set(StatusRegisterFields::Carry, &registers), true);
 /// ```
 ///

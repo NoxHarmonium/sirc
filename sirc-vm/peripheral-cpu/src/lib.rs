@@ -12,8 +12,9 @@ pub mod registers;
 use executors::IntermediateRegisters;
 use instructions::alu::{perform_alu_operation, AluOp};
 use instructions::definitions::{
-    decode_execution_step_instruction_type, decode_memory_access_step_instruction_type,
-    decode_register_fetch, decode_write_back_step_instruction_type, Instruction,
+    decode_and_register_fetch, decode_execution_step_instruction_type,
+    decode_memory_access_step_instruction_type, decode_write_back_step_instruction_type,
+    Instruction,
 };
 use microcode::address::sign_extend_small_offset;
 use peripheral_mem::MemoryPeripheral;
@@ -68,9 +69,12 @@ fn step<'a>(
     let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
 
     // 3. Decode/Register Fetch (ID)
-    let decoded = decode_register_fetch(raw_instruction, registers);
-    // TODO: Handle exception case instead of unwrap
-    let instruction: Instruction = num::FromPrimitive::from_u8(decoded.ins).unwrap();
+    let decoded = decode_and_register_fetch(raw_instruction, registers);
+
+    if decoded.ins == Instruction::Exception && decoded.imm == 0xFFFF {
+        // Special instruction just for debugging purposes. Probably won't be in hardware
+        panic!("Execution was halted due to 0xFFFF exception");
+    }
 
     // TODO: On the real CPU these might have garbage in them?
     // maybe it should only be zeroed on first run and shared between invocations
@@ -80,12 +84,13 @@ fn step<'a>(
         npc: registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16),
     };
 
-    let alu_code = decoded.ins & 0xF;
+    // TODO: Replace unwrap with something better
+    let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
     // TODO: Should this be unwrap? - clean this up
     let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code).unwrap();
 
     let execution_step_instruction_type =
-        decode_execution_step_instruction_type(&instruction, &decoded);
+        decode_execution_step_instruction_type(&decoded.ins, &decoded);
 
     // 4. ====== Execution (EX) ======
     match execution_step_instruction_type {
@@ -128,7 +133,12 @@ fn step<'a>(
         instructions::definitions::ExecutionStepInstructionType::RegisterRegisterAlu => {
             perform_alu_operation(
                 alu_op,
-                decoded.sr_a_,
+                // TODO: Is this feasible in hardware?
+                if decoded.ins == Instruction::LoadRegisterFromImmediate {
+                    0x0
+                } else {
+                    decoded.sr_a_
+                },
                 decoded.sr_b_,
                 registers,
                 &mut intermediate_registers,
@@ -141,12 +151,18 @@ fn step<'a>(
         instructions::definitions::ExecutionStepInstructionType::RegisterImmediateAlu => {
             perform_alu_operation(
                 alu_op,
-                decoded.des_,
+                // TODO: Is this feasible in hardware?
+                if decoded.ins == Instruction::LoadRegisterFromImmediate {
+                    0x0
+                } else {
+                    decoded.des_
+                },
                 decoded.imm,
                 registers,
                 &mut intermediate_registers,
             );
         }
+
         // f. Branch:
 
         // ALUoutput <- PC + imm
@@ -166,7 +182,7 @@ fn step<'a>(
     // 5. ====== Memory access/branch completion (MEM): ======
 
     let memory_access_step_instruction_type =
-        decode_memory_access_step_instruction_type(&instruction, &decoded);
+        decode_memory_access_step_instruction_type(&decoded.ins, &decoded);
 
     // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
     // but we might need to think about how this would work in FPGA
@@ -187,7 +203,7 @@ fn step<'a>(
             // A or B?
             mem.write_address(
                 (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                decoded.sr_b_,
+                decoded.des_,
             )
         }
         // c. Branch/Jump
@@ -202,7 +218,7 @@ fn step<'a>(
     // ==== 6. Write-back cycle (WB): ====
 
     let write_back_step_instruction_type =
-        decode_write_back_step_instruction_type(&instruction, &decoded);
+        decode_write_back_step_instruction_type(&decoded.ins, &decoded);
 
     match write_back_step_instruction_type {
         instructions::definitions::WriteBackInstructionType::NoOp => {}
@@ -228,8 +244,10 @@ fn step<'a>(
         return Err(Error::ProcessorHalted(registers.to_owned()));
     }
 
+    println!("step: {:X?} {:X?}", decoded.ins, registers);
+
     // TODO: 6 -> constant ITS ALWAYS SIX BABY
-    Ok((registers, 6, instruction))
+    Ok((registers, 6, decoded.ins))
 }
 
 impl CpuPeripheral<'_> {

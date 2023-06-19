@@ -1,6 +1,6 @@
 use crate::{
     parsers::instruction::{
-        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
         AddressingMode, ImmediateType, InstructionToken,
     },
     types::object::RefType,
@@ -32,7 +32,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     ));
 
     map_res(
-        tuple((instructions, parse_instruction_operands)),
+        tuple((instructions, parse_instruction_operands1)),
         |((tag, condition_flag), operands)| match operands.as_slice() {
             [AddressingMode::Immediate(offset)] => match offset {
                 ImmediateType::Value(offset) => Ok(InstructionToken {

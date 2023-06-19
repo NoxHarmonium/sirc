@@ -31,9 +31,11 @@
 // 0x00 0004 : DW Base System RAM (for storing in interrupt vectors etc.)
 // ...
 
-use std::ops::Range;
-
 use crate::registers::{sr_bit_is_set, Registers, StatusRegisterFields};
+
+use super::encoding::{
+    decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
+};
 
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
@@ -41,9 +43,10 @@ pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
 // Condition Flags
 
-#[derive(Debug, FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy, Default)]
 pub enum ConditionFlags {
-    Always = 0b000,
+    #[default]
+    Always = 0b0000,
     Equal,
     NotEqual,
     CarrySet,
@@ -166,22 +169,22 @@ pub fn decode_execution_step_instruction_type(
         }
         Instruction::LoadRegisterFromRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
         Instruction::LoadRegisterFromIndirectImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
         }
         Instruction::LoadRegisterFromIndirectRegister => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
         Instruction::StoreRegisterToIndirectImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
         }
         Instruction::StoreRegisterToIndirectRegister => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
         Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
 
         Instruction::LongJumpWithImmediateDisplacement => {
@@ -223,8 +226,6 @@ pub fn decode_memory_access_step_instruction_type(
         Instruction::BranchToSubroutineImmediate => MemoryAccessInstructionType::BranchOrJump,
 
         // Data Access
-        Instruction::LoadRegisterFromImmediate => MemoryAccessInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromRegister => MemoryAccessInstructionType::MemoryLoad,
         Instruction::LoadRegisterFromIndirectImmediate => MemoryAccessInstructionType::MemoryLoad,
         Instruction::LoadRegisterFromIndirectRegister => MemoryAccessInstructionType::MemoryLoad,
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
@@ -275,8 +276,6 @@ pub fn decode_write_back_step_instruction_type(
         Instruction::ArithmeticShiftRightImmediate => WriteBackInstructionType::AluToRegister,
         Instruction::RotateLeftImmediate => WriteBackInstructionType::AluToRegister,
         Instruction::RotateRightImmediate => WriteBackInstructionType::AluToRegister,
-        // Comparison (Immediate)
-        Instruction::CompareImmediate => WriteBackInstructionType::AluToRegister,
         // Arithmetic (Register)
         Instruction::AddRegister => WriteBackInstructionType::AluToRegister,
         Instruction::AddRegisterWithCarry => WriteBackInstructionType::AluToRegister,
@@ -293,12 +292,10 @@ pub fn decode_write_back_step_instruction_type(
         Instruction::ArithmeticShiftRightRegister => WriteBackInstructionType::AluToRegister,
         Instruction::RotateLeftRegister => WriteBackInstructionType::AluToRegister,
         Instruction::RotateRightRegister => WriteBackInstructionType::AluToRegister,
-        // Comparison (Register)
-        Instruction::CompareRegister => WriteBackInstructionType::AluToRegister,
 
         // Data Access
-        Instruction::LoadRegisterFromImmediate => WriteBackInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromRegister => WriteBackInstructionType::MemoryLoad,
+        Instruction::LoadRegisterFromImmediate => WriteBackInstructionType::AluToRegister,
+        Instruction::LoadRegisterFromRegister => WriteBackInstructionType::AluToRegister,
         Instruction::LoadRegisterFromIndirectImmediate => WriteBackInstructionType::MemoryLoad,
         Instruction::LoadRegisterFromIndirectRegister => WriteBackInstructionType::MemoryLoad,
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
@@ -366,7 +363,7 @@ impl ConditionFlags {
 /**
 * The instruction mapped out into components.
 *
-* Simulates the temporary registers the CPU would have when an instruction
+* Simulates the temporary registe rs the CPU would have when an instruction
 * is being decoded.
 *
 * To avoid microcode/branching etc. all instructions are mapped out to the the
@@ -382,11 +379,11 @@ impl ConditionFlags {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct DecodedInstruction {
     // Raw Instruction Decode
-    pub ins: u8,
+    pub ins: Instruction,
     pub des: u8,
     pub sr_a: u8,
     pub sr_b: u8,
-    pub con: u8,
+    pub con: ConditionFlags,
     pub imm: u16,
     pub adr: u8,
     // Inferred
@@ -405,53 +402,98 @@ pub struct DecodedInstruction {
     pub sr: u16,
 }
 
-fn extract_range<T: TryFrom<u32>>(source: u32, range: Range<u8>) -> T {
-    let shifted = source >> range.start;
-    let masked = shifted & (u32::MAX >> (range.end - range.start));
-    match T::try_from(masked) {
-        Ok(val) => val,
-        Err(_) => panic!(
-            "Cannot fit u32 into [{}]. shifted:[{:#08x}] masked: [{:#08x}]",
-            std::any::type_name::<T>(),
-            shifted,
-            masked
-        ),
-    }
-}
-
-pub fn decode_register_fetch(
+///
+/// Decodes the instruction and fetches all the referenced registers into an intermediate set of registers
+///
+/// Once all the data has been extracted and put into a DecodedInstruction it should contain everything required
+/// for the following steps.
+///
+/// Should match the hardware as closely as possible.
+///
+/// ```
+/// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields, set_sr_bit};
+/// use peripheral_cpu::instructions::definitions::{Instruction, decode_and_register_fetch, ConditionFlags};
+///
+/// let mut registers = Registers::default();
+/// registers.r5 = 0xCE;
+/// registers.sl = (0xFA, 0xFA);
+/// registers.al = 0xCE;
+/// registers.ah = 0xBB;
+/// registers.sr = 0x00;
+///
+/// set_sr_bit(StatusRegisterFields::Negative, &mut registers);
+///
+/// let decoded = decode_and_register_fetch([0x81, 0x32, 0xBF, 0x9C], &registers);
+///
+/// assert_eq!(decoded.ins, Instruction::BranchImmediate);
+/// assert_eq!(decoded.des, 0x4);
+/// // Garbage
+/// assert_eq!(decoded.sr_a, 0xC);
+/// // Garbage
+/// assert_eq!(decoded.sr_b, 0xA);
+/// assert_eq!(decoded.con, ConditionFlags::LessThan);
+/// assert_eq!(decoded.imm, 0xCAFE);
+/// assert_eq!(decoded.adr, 1);
+/// assert_eq!(decoded.ad_l, 10);
+/// assert_eq!(decoded.ad_h, 9);
+/// // Garbage
+/// assert_eq!(decoded.des_ad_l, 0x10);
+/// // Garbage
+/// assert_eq!(decoded.des_ad_h, 0x0F);
+/// assert_eq!(decoded.addr_inc, 0x0000);
+///
+/// assert_eq!(decoded.des_, 0xCE);
+/// // Garbage
+/// assert_eq!(decoded.sr_a_, 0x00FA);
+/// // Garbage
+/// assert_eq!(decoded.sr_b_, 0x00CE);
+/// assert_eq!(decoded.ad_l_, 0x00CE);
+/// assert_eq!(decoded.ad_h_, 0x00BB);
+/// assert_eq!(decoded.con_, true);
+/// assert_eq!(decoded.sr, registers.sr);
+/// ```
+///
+pub fn decode_and_register_fetch(
     raw_instruction: [u8; 4],
     registers: &Registers,
 ) -> DecodedInstruction {
-    let combined = u32::from_be_bytes(raw_instruction);
+    // Why don't we just match of the type of instruction and set all the irrelevant registers to zero?
+    // Because we want to match the hardware as closely as possible. In the hardware representation,
+    // the instruction bits will be broken up and stored in the intermediate registers the same way
+    // regardless of the instruction type.
+    // This means that, for example, sr_a, and sr_b will be filled with garbage when an immediate instruction
+    // is being decoded, because the parts of the instruction that would normally be mapped there, are
+    // actually the 'value' rather than register indexes.
+    // If we filled these with zero, we might accidentally rely on the value being zero in our
+    // simulated version, and then on the hardware it might go wrong because there is actually garbage there.
+    let implied_representation = decode_implied_instruction(raw_instruction);
+    let immediate_representation = decode_immediate_instruction(raw_instruction);
+    let register_representation = decode_register_instruction(raw_instruction);
 
-    let ins = extract_range(combined, 0..5);
-    let adr = extract_range(combined, 24..27);
-    let des = extract_range(combined, 6..9);
-    let sr_a = extract_range(combined, 10..13);
-    let sr_b = extract_range(combined, 14..17);
-    let ad_l = (adr * 2) + 8;
-    let ad_h = (adr * 2) + 7;
-    let des_ad_l = (des * 2) + 8;
-    let des_ad_h = (des * 2) + 7;
-    let con = extract_range(combined, 28..31);
-    let condition_flag: ConditionFlags =
-        num::FromPrimitive::from_u8(con).expect("Condition flag can only be 4 bits long");
-
-    let addr_inc: i8 = match ins {
-        0x34 => 1,  // TODO: Match LOAD (a)+
-        0x37 => -1, // TODO: Match STOR -(a)
+    let addr_inc: i8 = match implied_representation.op_code {
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => 1, // TODO: Match LOAD (a)+
+        Instruction::StoreRegisterToIndirectRegisterPreDecrement => -1,  // TODO: Match STOR -(a)
         _ => 0,
     };
 
+    let des = immediate_representation.register;
+    let sr_a = register_representation.r2;
+    let sr_b = register_representation.r3;
+
+    let ad_l = (immediate_representation.additional_flags * 2) + 8;
+    let ad_h = (immediate_representation.additional_flags * 2) + 7;
+    let des_ad_l = (immediate_representation.register * 2) + 8;
+    let des_ad_h = (immediate_representation.register * 2) + 7;
+    let condition_flag = immediate_representation.condition_flag;
+
     DecodedInstruction {
-        ins,
+        ins: implied_representation.op_code,
         des,
         sr_a,
         sr_b,
-        con,
-        imm: extract_range(combined, 10..26),
-        adr,
+        con: condition_flag,
+        imm: immediate_representation.value,
+        adr: immediate_representation.additional_flags,
         ad_l,
         ad_h,
         des_ad_l,
@@ -506,7 +548,7 @@ pub enum InstructionData {
 }
 
 // TODO: Rename to OpCode or something?
-#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Default)]
 // #[enum_dispatch(Executor)]
 pub enum Instruction {
     // Arithmetic (Immediate)
@@ -571,6 +613,7 @@ pub enum Instruction {
     StoreRegisterToIndirectRegisterPreDecrement = 0x37,
 
     // NOOP
+    #[default]
     NoOperation = 0x3C,
 
     // Exception Handler

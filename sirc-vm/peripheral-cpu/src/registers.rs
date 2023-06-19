@@ -121,7 +121,7 @@ pub struct Registers {
     pub r4: u16,
     pub r5: u16,
     pub r6: u16,
-    pub r7: u16,
+    pub z: u16,
     // Link Register
     pub lh: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub ll: u16,
@@ -155,7 +155,7 @@ impl Index<u8> for Registers {
             3 => &self.r4,
             4 => &self.r5,
             5 => &self.r6,
-            6 => &self.r7,
+            6 => &self.z,
             7 => &self.lh,
             8 => &self.ll,
             9 => &self.ah,
@@ -191,7 +191,7 @@ impl IndexMut<u8> for Registers {
             3 => &mut self.r4,
             4 => &mut self.r5,
             5 => &mut self.r6,
-            6 => &mut self.r7,
+            6 => &mut self.z,
             7 => &mut self.lh,
             8 => &mut self.ll,
             9 => &mut self.ah,
@@ -536,15 +536,16 @@ pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
 ///
 pub fn register_name_to_index(name: &str) -> u8 {
     match name {
-        "x1" => 0,
-        "y1" => 1,
-        "z1" => 2,
-        "x2" => 3,
-        "y2" => 4,
-        "z2" => 5,
-        "x3" => 6,
-        "y3" => 7,
-        "z3" => 8,
+        "r1" => 0,
+        "r2" => 1,
+        "r3" => 2,
+        "r4" => 3,
+        "r5" => 4,
+        "r6" => 5,
+        "r7" => 6,
+        // [ah, al]
+        "lh" => 7, // Link high
+        "ll" => 8, // Link low
         // [ah, al]
         "ah" => 9,  // Address high
         "al" => 10, // Address low

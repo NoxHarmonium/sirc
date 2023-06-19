@@ -6,8 +6,10 @@ const INSTRUCTION_ID_LENGTH: u32 = 6; // bits
 const INSTRUCTION_ID_MASK: u32 = 0x0000003F;
 const REGISTER_ID_LENGTH: u32 = 4; // bits
 const REGISTER_ID_MASK: u32 = 0x0000000F;
-const REGISTER_ARGS_LENGTH: u32 = 8; // bits
-const REGISTER_ARGS_MASK: u32 = 0x000000FF;
+// TODO: These 6 bits here in between the registers and the address register reference might be useful for something
+const REGISTER_EXTRA_ARGS_LENGTH: u32 = 6; // bits
+const REGISTER_ARGS_LENGTH: u32 = 2; // bits
+const REGISTER_ARGS_MASK: u32 = 0x00000003;
 const IMMEDIATE_ARGS_LENGTH: u32 = 2; // bits
 const IMMEDIATE_ARGS_MASK: u32 = 0x00000003;
 const CONDITION_FLAGS_MASK: u32 = 0x0000000F;
@@ -154,9 +156,11 @@ pub fn decode_register_instruction(raw_instruction: [u8; 4]) -> RegisterInstruct
     let r1 = combined.rotate_left(initial_offset + REGISTER_ID_LENGTH) & REGISTER_ID_MASK;
     let r2 = combined.rotate_left(initial_offset + REGISTER_ID_LENGTH * 2) & REGISTER_ID_MASK;
     let r3 = combined.rotate_left(initial_offset + REGISTER_ID_LENGTH * 3) & REGISTER_ID_MASK;
-    let additional_flags = combined
-        .rotate_left((initial_offset + REGISTER_ID_LENGTH * 3) + REGISTER_ARGS_LENGTH)
-        & REGISTER_ARGS_MASK;
+    let additional_flags = combined.rotate_left(
+        (initial_offset + REGISTER_ID_LENGTH * 3)
+            + REGISTER_EXTRA_ARGS_LENGTH
+            + REGISTER_ARGS_LENGTH,
+    ) & REGISTER_ARGS_MASK;
     RegisterInstructionData {
         // TODO: Handle better than unwrap
         op_code: num::FromPrimitive::from_u8(op_code).unwrap(),
@@ -212,7 +216,6 @@ pub fn encode_condition_flags(condition_flags: &ConditionFlags) -> u32 {
 /// use peripheral_cpu::instructions::encoding::encode_implied_instruction;
 /// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
 ///
-///
 /// assert_eq!(encode_implied_instruction(&ImpliedInstructionData {
 ///   op_code: Instruction::NoOperation,
 ///   condition_flag: ConditionFlags::LessThan,
@@ -249,11 +252,11 @@ pub fn encode_implied_instruction(
 ///
 /// assert_eq!(encode_immediate_instruction(&ImmediateInstructionData {
 ///   op_code: Instruction::BranchImmediate,
-///   register: 0x01,
-///   value: 0x0002,
-///   condition_flag: ConditionFlags::Always,
-///   additional_flags: 0x00,
-/// }), [0x80, 0x40, 0x00, 0x80]);
+///   register: 0x4,
+///   value: 0xCAFE,
+///   condition_flag: ConditionFlags::LessThan,
+///   additional_flags: 0x1,
+/// }), [0x81, 0x32, 0xBF, 0x9C]);
 ///
 /// ```
 pub fn encode_immediate_instruction(
@@ -296,9 +299,9 @@ pub fn encode_immediate_instruction(
 ///     r1: 0x0C,
 ///     r2: 0x0C,
 ///     r3: 0x0C,
-///     condition_flag: ConditionFlags::Always,
-///     additional_flags: 0x00,
-/// }), [0x5B, 0x33, 0x00, 0x00]);
+///     condition_flag: ConditionFlags::UnsignedLowerOrSame,
+///     additional_flags: 0x11,
+/// }), [0x5B, 0x33, 0x01, 0x1A]);
 ///
 /// ```
 pub fn encode_register_instruction(
@@ -316,8 +319,9 @@ pub fn encode_register_instruction(
     let b = (*r1 as u32).rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH);
     let c = (*r2 as u32).rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 2);
     let d = (*r3 as u32).rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 3);
-    let e = (*additional_flags as u32)
-        .rotate_right((INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 4) + REGISTER_ARGS_LENGTH);
+    let e = (*additional_flags as u32).rotate_right(
+        (INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 4) + REGISTER_EXTRA_ARGS_LENGTH,
+    );
     let f = encode_condition_flags(condition_flag);
 
     u32::to_be_bytes(a | b | c | d | e | f)

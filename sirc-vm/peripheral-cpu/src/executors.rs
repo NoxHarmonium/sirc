@@ -57,10 +57,10 @@ pub enum ExecutionStage {
 //     ) {
 //         match stage {
 //             ExecutionStage::Execution(DecodedInstruction { imm, .. }) => {
-//                 intermediateRegisters.AluOutput = *imm;
+//                 intermediateRegisters.alu_output = *imm;
 //             }
 //             ExecutionStage::MemoryAccessAndBranchCompletion(_) => {
-//                 registers.pl = intermediateRegisters.AluOutput;
+//                 registers.pl = intermediateRegisters.alu_output;
 //             }
 //             _ => {}
 //         }
@@ -129,10 +129,10 @@ pub enum ExecutionStage {
 //                 let (_, pl) = calculate_effective_address_with_pc_offset(registers, *imm)
 //                     .to_segmented_address();
 
-//                 intermediateRegisters.AluOutput = pl;
+//                 intermediateRegisters.alu_output = pl;
 //             }
 //             ExecutionStage::MemoryAccessAndBranchCompletion(_) => {
-//                 registers.pl = intermediateRegisters.AluOutput;
+//                 registers.pl = intermediateRegisters.alu_output;
 //             }
 //             _ => {}
 //         }

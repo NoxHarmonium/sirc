@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands, parse_instruction_tag, AddressingMode, InstructionToken,
+    parse_instruction_operands1, parse_instruction_tag, AddressingMode, InstructionToken,
 };
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
@@ -87,7 +87,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
     ));
 
     map_res(
-        tuple((instructions, parse_instruction_operands)),
+        tuple((instructions, parse_instruction_operands1)),
         |((tag, condition_flag), operands)| {
             match operands.as_slice() {
                 // The CPU does not supportregister arithmetic instructions with two register operands

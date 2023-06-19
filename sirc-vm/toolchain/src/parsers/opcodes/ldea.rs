@@ -1,6 +1,6 @@
 use crate::{
     parsers::instruction::{
-        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
         AddressingMode, ImmediateType, InstructionToken,
     },
     types::object::RefType,
@@ -12,9 +12,9 @@ use peripheral_cpu::instructions::definitions::{
 };
 
 use super::super::shared::AsmResult;
-pub fn load(i: &str) -> AsmResult<InstructionToken> {
+pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let (i, (_, condition_flag)) = parse_instruction_tag("LDEA")(i)?;
-    let (i, operands) = parse_instruction_operands(i)?;
+    let (i, operands) = parse_instruction_operands1(i)?;
 
     match operands.as_slice() {
         [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>

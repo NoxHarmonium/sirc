@@ -8,3 +8,7 @@ ADDR    r2, r1
 ; Remember that COMP has the same argument order as SUBR
 CMPR    r3, r2
 BRAN|>= @loop
+
+NOOP
+
+EXCP    #0xFFFF

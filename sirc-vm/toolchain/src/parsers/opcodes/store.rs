@@ -1,6 +1,6 @@
 use crate::{
     parsers::instruction::{
-        override_ref_token_type_if_implied, parse_instruction_operands, parse_instruction_tag,
+        override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
         AddressingMode, ImmediateType, InstructionToken,
     },
     types::object::RefType,
@@ -15,11 +15,12 @@ use peripheral_cpu::instructions::definitions::{
 use super::super::shared::AsmResult;
 pub fn stor(i: &str) -> AsmResult<InstructionToken> {
     map_res(
-        tuple((parse_instruction_tag("STOR"), parse_instruction_operands)),
+        tuple((parse_instruction_tag("STOR"), parse_instruction_operands1)),
         |((_, condition_flag), operands)| {
             match operands.as_slice() {
                 [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(dest_register)] =>
                 {
+                    println!("I address_register: {:?}", address_register);
                     Ok(match offset {
                         ImmediateType::Value(offset) => InstructionToken {
                             instruction: InstructionData::Immediate(ImmediateInstructionData {
@@ -49,17 +50,21 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 [AddressingMode::IndirectRegisterDisplacement(
                     displacement_register,
                     address_register,
-                ), AddressingMode::DirectRegister(dest_register)] => Ok(InstructionToken {
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::StoreRegisterToIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: address_register.to_register_index(),
-                        condition_flag,
-                        additional_flags: 0x0,
-                    }),
-                    symbol_ref: None,
-                }),
+                ), AddressingMode::DirectRegister(dest_register)] => {
+                    println!("R address_register: {:?}", address_register);
+
+                    Ok(InstructionToken {
+                        instruction: InstructionData::Register(RegisterInstructionData {
+                            op_code: Instruction::StoreRegisterToIndirectRegister,
+                            r1: dest_register.to_register_index(),
+                            r2: displacement_register.to_register_index(),
+                            r3: 0x0, // unused
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: None,
+                    })
+                }
 
                 [AddressingMode::IndirectPreDecrement(address_register), AddressingMode::DirectRegister(dest_register)] =>
                 {
@@ -69,9 +74,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                                 op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,
                                 r1: dest_register.to_register_index(),
                                 r2: 0x0, //Unused
-                                r3: address_register.to_register_index(),
+                                r3: 0x0, //Unused
                                 condition_flag,
-                                additional_flags: 0x0,
+                                additional_flags: address_register.to_register_index(),
                             }),
                             symbol_ref: None,
                         }
