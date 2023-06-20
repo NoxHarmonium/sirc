@@ -19,7 +19,7 @@
 // 4 bit register identifier
 // 4 bit register identifier
 // 4 bit register identifier (if any)
-// 6 bit args
+// 8 bit args
 // 2 bit address register a, p or s (if any)
 // 4 bit condition flags
 //
@@ -31,6 +31,8 @@
 // 0x00 0004 : DW Base System RAM (for storing in interrupt vectors etc.)
 // ...
 
+
+
 use crate::registers::{sr_bit_is_set, Registers, StatusRegisterFields};
 
 // 32 bits = 2x 16 bit
@@ -40,6 +42,7 @@ pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 // Condition Flags
 
 #[derive(Debug, FromPrimitive, ToPrimitive, PartialEq, Eq, Clone, Copy, Default)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum ConditionFlags {
     #[default]
     Always = 0b0000,
@@ -110,7 +113,7 @@ impl ConditionFlags {
 
 // Instruction Types
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImpliedInstructionData {
     pub op_code: Instruction,
     // TODO: Do we need anything more than DecodedInstruction
@@ -118,7 +121,7 @@ pub struct ImpliedInstructionData {
     pub condition_flag: ConditionFlags,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImmediateInstructionData {
     pub op_code: Instruction,
     pub register: u8,
@@ -128,7 +131,7 @@ pub struct ImmediateInstructionData {
     pub additional_flags: u8,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RegisterInstructionData {
     pub op_code: Instruction,
     pub r1: u8,
@@ -139,7 +142,7 @@ pub struct RegisterInstructionData {
     pub additional_flags: u8,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstructionData {
     Implied(ImpliedInstructionData),
     Immediate(ImmediateInstructionData),
@@ -147,8 +150,8 @@ pub enum InstructionData {
 }
 
 // TODO: Rename to OpCode or something?
-#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Default)]
-// #[enum_dispatch(Executor)]
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Default, Clone, Hash)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum Instruction {
     // Arithmetic (Immediate)
     AddImmediate = 0x00,
@@ -223,3 +226,16 @@ pub enum Instruction {
 
 // Pending Instructions
 // Throw privilege error if try to write to SR etc.
+
+#[cfg(test)]
+use strum::IntoEnumIterator;
+
+#[cfg(test)]
+pub fn all_condition_flags() -> Vec<ConditionFlags> {
+    ConditionFlags::iter().collect()
+}
+
+#[cfg(test)]
+pub fn all_instructions() -> Vec<Instruction> {
+    Instruction::iter().collect()
+}

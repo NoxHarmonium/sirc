@@ -2,6 +2,12 @@ extern crate num;
 #[macro_use]
 extern crate num_derive;
 
+#[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod execution;
