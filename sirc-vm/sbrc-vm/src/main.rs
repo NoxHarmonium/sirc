@@ -28,7 +28,7 @@ fn main() {
     let mut memory_peripheral = new_memory_peripheral();
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
-    memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, args.program_file);
+    memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, args.program_file);
     memory_peripheral.map_segment(SCRATCH_SEGMENT, 0xAAF0, 0x000F, true);
     memory_peripheral.map_segment(FILE_SEGMENT, 0x00F0_0000, 0xFFFF, true);
 

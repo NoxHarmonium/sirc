@@ -16,6 +16,11 @@ https://www.crowdsupply.com/radiona/ulx3s#products
 ## 6502 Simulator
 
 http://visual6502.org
+https://www.masswerk.at/6502/
+
+## Reference Manuals
+
+http://wpage.unina.it/rcanonic/didattica/ce1/docs/68000.pdf
 
 ## Assembly Syntax
 

@@ -28,6 +28,9 @@ use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{Registers, SegmentedRegisterAccess};
 
+/// Its always six baby!
+pub const CYCLES_PER_INSTRUCTION: u32 = 6;
+
 #[derive(Debug)]
 pub enum Error {
     ProcessorHalted(Registers),
@@ -113,8 +116,7 @@ fn step<'a>(
 
     println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
 
-    // TODO: 6 -> constant ITS ALWAYS SIX BABY
-    Ok((registers, 6, decoded_instruction.ins))
+    Ok((registers, CYCLES_PER_INSTRUCTION, decoded_instruction.ins))
 }
 
 impl CpuPeripheral<'_> {

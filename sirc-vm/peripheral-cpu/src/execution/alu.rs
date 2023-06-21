@@ -1,5 +1,9 @@
+use std::ops::Shl;
+
 use super::shared::IntermediateRegisters;
 use crate::registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set, Registers, StatusRegisterFields};
+
+const MSB_MASK: u32 = 0x8000_0000;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Sign {
@@ -298,9 +302,17 @@ fn perform_logical_left_shift(
     registers: &mut Registers,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    // TODO: Validate and/or define what happens if val_2 is > 16
+    let extended_a = a as u32;
+    let clamped_b = b.clamp(0, u16::BITS as u16);
 
-    let (result, carry) = a.overflowing_shl(b as u32);
+    // There doesn't seem to be a built in method to shift left and get a flag
+    // when a bit goes off the end so we can calculate carry.
+    // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
+    // goes off the end. The hardware implementation will look different to this
+    let wide_result = extended_a.shl(clamped_b);
+    let result = wide_result as u16;
+    let carry = (wide_result.rotate_left(u16::BITS) & 0x1) == 0x1;
+
     set_alu_bits(registers, result, carry, None);
 
     intermediate_registers.alu_output = result;
@@ -312,9 +324,18 @@ fn perform_logical_right_shift(
     registers: &mut Registers,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    // TODO: Validate and/or define what happens if val_2 is > 16
+    let extended_a = a as u32;
+    let clamped_b = b.clamp(0, u16::BITS as u16);
 
-    let (result, carry) = a.overflowing_shr(b as u32);
+    // There doesn't seem to be a built in method to shift right and get a flag
+    // when a bit goes off the end so we can calculate carry.
+    // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
+    // rotates into the first position on the left side.
+    // The hardware implementation will look different to this
+    let wide_result = extended_a.rotate_right(clamped_b as u32);
+    let result = wide_result as u16;
+    let carry = (wide_result & MSB_MASK) == MSB_MASK;
+
     set_alu_bits(registers, result, carry, None);
 
     intermediate_registers.alu_output = result;
@@ -326,12 +347,21 @@ fn perform_arithmetic_left_shift(
     registers: &mut Registers,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    // TODO: Validate and/or define what happens if val_2 is > 16
+    // Same as LSL but will set the overflow bit if the sign changes
 
-    let (result, carry) = a.overflowing_shl(b as u32);
+    let extended_a = a as u32;
+    let clamped_b = b.clamp(0, u16::BITS as u16);
 
-    // There can never be an overflow bit set because the sign bit is preserved
-    set_alu_bits(registers, result, carry, None);
+    // There doesn't seem to be a built in method to shift left and get a flag
+    // when a bit goes off the end so we can calculate carry.
+    // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
+    // goes off the end. The hardware implementation will look different to this
+    let wide_result = extended_a.shl(clamped_b);
+    let result = wide_result as u16;
+    let carry = (wide_result.rotate_left(u16::BITS) & 0x1) == 0x1;
+
+    set_alu_bits(registers, result, carry, Some((a, a, result)));
+
     intermediate_registers.alu_output = result;
 }
 
@@ -341,14 +371,24 @@ fn perform_arithmetic_right_shift(
     registers: &mut Registers,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    let sign_bit = a & 0x8000;
+    // Same as LSR but preserves the sign bit
 
-    // TODO: Validate and/or define what happens if val_2 is > 16
-    let (result, carry) = a.overflowing_shr(b as u32);
-    let signed_result = result | sign_bit;
+    let sign_bit = a as u32 & 0x8000;
 
-    // There can never be an overflow bit set because the sign bit is preserved
-    set_alu_bits(registers, signed_result, carry, None);
+    let extended_a = a as u32;
+    let clamped_b = b.clamp(0, u16::BITS as u16);
+
+    // There doesn't seem to be a built in method to shift right and get a flag
+    // when a bit goes off the end so we can calculate carry.
+    // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
+    // rotates into the first position on the left side.
+    // The hardware implementation will look different to this
+    let wide_result = extended_a.rotate_right(clamped_b as u32) | sign_bit;
+    let result = wide_result as u16;
+    let carry = (wide_result & MSB_MASK) == MSB_MASK;
+
+    set_alu_bits(registers, result, carry, Some((a, a, result)));
+
     intermediate_registers.alu_output = result;
 }
 
@@ -427,9 +467,13 @@ pub fn set_alu_bits(
 ) {
     if value == 0 {
         set_sr_bit(StatusRegisterFields::Zero, registers);
+    } else {
+        clear_sr_bit(StatusRegisterFields::Zero, registers);
     }
     if (value as i16) < 0 {
         set_sr_bit(StatusRegisterFields::Negative, registers);
+    } else {
+        clear_sr_bit(StatusRegisterFields::Negative, registers);
     }
     if carry {
         set_sr_bit(StatusRegisterFields::Carry, registers);
@@ -443,7 +487,11 @@ pub fn set_alu_bits(
         if sign(i1) == sign(i2) && sign(result) != sign(i1) {
             set_sr_bit(StatusRegisterFields::Overflow, registers);
         } else {
+            // TODO: Can we collapse this if statement so we only have one else?
+            // The double clear seems redundant
             clear_sr_bit(StatusRegisterFields::Overflow, registers);
         }
+    } else {
+        clear_sr_bit(StatusRegisterFields::Overflow, registers);
     }
 }

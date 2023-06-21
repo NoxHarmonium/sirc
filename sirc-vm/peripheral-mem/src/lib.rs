@@ -54,7 +54,23 @@ impl MemoryPeripheral {
         })
     }
 
-    pub fn load_binary_data_into_segment(&self, label: &str, path: PathBuf) {
+    pub fn load_binary_data_into_segment_from_file(&self, label: &str, path: PathBuf) {
+        let maybe_binary_data = read(&path);
+        match maybe_binary_data {
+            Ok(binary_data) => {
+                self.load_binary_data_into_segment(label, binary_data);
+            }
+            Err(error) => {
+                panic!(
+                    "Could not load binary data from {} ({})",
+                    path.display(),
+                    error
+                );
+            }
+        }
+    }
+
+    pub fn load_binary_data_into_segment(&self, label: &str, binary_data: Vec<u8>) {
         let maybe_segment = self.get_segment_for_label(label);
 
         let (segment_size, mem_cell) = match maybe_segment {
@@ -65,37 +81,42 @@ impl MemoryPeripheral {
             }
         };
 
-        let maybe_binary_data = read(&path);
-        match maybe_binary_data {
-            Ok(binary_data) => {
-                if binary_data.len() > segment_size as usize {
-                    panic!(
-                        "Loaded binary data from {} is {} bytes long but segment has size of {}",
-                        path.display(),
-                        binary_data.len(),
-                        segment_size
-                    );
-                }
-                // Convert bytes to words
-                let mut mem = mem_cell.borrow_mut();
-                for i in 0..binary_data.len() / 2 {
-                    let destination_address = i;
-                    let source_address = i * 2;
-                    let data = u16::from_le_bytes([
-                        binary_data[source_address],
-                        binary_data[source_address + 1],
-                    ]);
-                    mem[destination_address] = data;
-                }
-            }
-            Err(error) => {
-                panic!(
-                    "Could not load binary data from {} ({})",
-                    path.display(),
-                    error
-                );
-            }
+        if binary_data.len() > segment_size as usize {
+            panic!(
+                "Loaded binary data is {} bytes long but segment has size of {}",
+                binary_data.len(),
+                segment_size
+            );
         }
+        // Convert bytes to words
+        let mut mem = mem_cell.borrow_mut();
+        for i in 0..binary_data.len() / 2 {
+            let destination_address = i;
+            let source_address = i * 2;
+            let data =
+                u16::from_be_bytes([binary_data[source_address + 1], binary_data[source_address]]);
+            mem[destination_address] = data;
+        }
+    }
+
+    pub fn dump_segment(&self, label: &str) -> Vec<u8> {
+        let maybe_segment = self.get_segment_for_label(label);
+
+        let (segment_size, mem_cell) = match maybe_segment {
+            // TODO: Make this nicer. Borrow checker was complaining if matchers are nested
+            Some(segment) => (segment.size, &segment.mem_cell),
+            None => {
+                panic!("Could not find segment with name: {}", label)
+            }
+        };
+
+        let segment_data = mem_cell.borrow();
+        // TODO: Is this efficient in rust? Does it get optimised?
+        segment_data
+            .iter()
+            .take(segment_size as usize)
+            .flat_map(|&word| u16::to_be_bytes(word))
+            .collect()
     }
 
     pub fn read_address(&self, address: u32) -> u16 {

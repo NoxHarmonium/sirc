@@ -5,6 +5,7 @@ use std::ops::{Index, IndexMut};
 /// (Only 24 bit addressing)
 pub const ADDRESS_MASK: u32 = 0x00FFFFFF;
 
+#[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
     // Byte 1
     Zero = 0b0000_0001,
@@ -114,7 +115,7 @@ pub trait FullAddress {
     fn to_segmented_address(self) -> (u16, u16);
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Registers {
     pub r1: u16,
     pub r2: u16,
