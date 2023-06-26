@@ -13,13 +13,11 @@ pub enum StatusRegisterFields {
     Carry = 0b0000_0100,
     Overflow = 0b0000_1000,
 
-    // Byte 3 (privileged)
+    // Byte 2 (privileged)
     SystemMode = 0b0000_0001 << u8::BITS,
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
     InterruptMaskHigh = 0b0000_1000 << u8::BITS,
-    // TODO: Is this the best place for this flag? No program will be able to read it
-    //       maybe move to internal register?
     WaitingForInterrupt = 0b0001_0000 << u8::BITS,
     CpuHalted = 0b0010_0000 << u8::BITS,
 }
@@ -365,6 +363,20 @@ impl FullAddress for u32 {
         let low = masked as u16;
         (high, low)
     }
+}
+
+///
+/// Returns true if the given status register bit is set in a value, otherwise false
+///
+/// ```
+/// use peripheral_cpu::registers::{sr_bit_is_set_value, StatusRegisterFields};
+///
+/// assert_eq!(true, sr_bit_is_set_value(StatusRegisterFields::Overflow, 0x0008));
+/// assert_eq!(false, sr_bit_is_set_value(StatusRegisterFields::Carry, 0x0008));
+/// ```
+pub fn sr_bit_is_set_value(field: StatusRegisterFields, value: u16) -> bool {
+    let bit_mask = field as u16;
+    value & bit_mask == bit_mask
 }
 
 ///

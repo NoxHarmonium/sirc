@@ -1,13 +1,17 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
-use nom::character::complete::{char, multispace0};
-use nom::combinator::{cut, map, opt};
+use nom::character::complete::{char, multispace0, space1};
+use nom::combinator::{cut, map, map_res, opt};
+use nom::error::{ErrorKind, FromExternalError};
 use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, pair, separated_pair};
+use nom_supreme::error::ErrorTree;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
-use peripheral_cpu::instructions::definitions::{ConditionFlags, InstructionData};
+use peripheral_cpu::instructions::definitions::{
+    ConditionFlags, InstructionData, ShiftType, MAX_SHIFT_COUNT,
+};
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use crate::types::object::{RefType, SymbolDefinition};
@@ -22,7 +26,7 @@ pub struct LabelToken {
     pub name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RefToken {
     pub name: String,
     pub ref_type: RefType,
@@ -92,6 +96,12 @@ pub enum OffsetType {
 }
 
 #[derive(Debug)]
+pub enum ShiftDefinitionData {
+    Immediate(ShiftType, u8),
+    Register(ShiftType, RegisterName),
+}
+
+#[derive(Debug)]
 pub enum AddressingMode {
     // Immediate | #n | BRAN #12
     Immediate(ImmediateType),
@@ -109,6 +119,8 @@ pub enum AddressingMode {
     IndirectPostIncrement(AddressRegisterName),
     // Address register indirect with pre decrement | -(a) | STOR x1, -(s)
     IndirectPreDecrement(AddressRegisterName),
+    // Shift Definition | LSL #4 | ADDI r1, #3, ASR #2
+    ShiftDefinition(ShiftDefinitionData),
 }
 
 fn parse_value(i: &str) -> AsmResult<ImmediateType> {
@@ -165,6 +177,41 @@ fn parse_indirect_pre_decrement(i: &str) -> AsmResult<AddressRegisterName> {
     Ok((i, address_register))
 }
 
+#[allow(clippy::let_and_return)]
+fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
+    let (i, shift_type) = parse_shift_type(i)?;
+    let (i, _) = space1(i)?;
+
+    let parse_register_shift_definition = map(parse_register, |register_name| {
+        ShiftDefinitionData::Register(shift_type, register_name)
+    });
+
+    let parse_immediate_shift_definition = map_res(parse_number, |shift_count| {
+        if shift_count > MAX_SHIFT_COUNT {
+            let error_string = format!(
+                "Shift definitions can only be in the range of 0-{}, got {}",
+                MAX_SHIFT_COUNT, shift_count
+            );
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i.to_owned(),
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        } else {
+            Ok(ShiftDefinitionData::Immediate(
+                shift_type,
+                shift_count as u8,
+            ))
+        }
+    });
+
+    let result = alt((
+        parse_immediate_shift_definition,
+        parse_register_shift_definition,
+    ))(i);
+    result
+}
+
 fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     // Immediate can have absolute label references (default lower 16 bit) (@label) or (@label.l explicit lower or @label.h higher (segment))
     // PC/SP relative can have relative label references (16 bit signed) (@label)
@@ -194,6 +241,10 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
             AddressingMode::IndirectPreDecrement(ar)
         })
         .context("indirect with pre decrement (e.g. -(a))"),
+        map(parse_shift_definition, |shift_definition| {
+            AddressingMode::ShiftDefinition(shift_definition)
+        })
+        .context("shift definition (e.g. ASR #4)"),
     ));
 
     addressing_mode_parser(i)
@@ -255,6 +306,30 @@ fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
     )(i)
 }
 
+fn parse_shift_type(i: &str) -> AsmResult<ShiftType> {
+    map(
+        alt((
+            tag("NUL"),
+            tag("LSL"),
+            tag("LSR"),
+            tag("ASL"),
+            tag("ASR"),
+            tag("RTL"),
+            tag("RTR"),
+        )),
+        |code| match code {
+            "NUL" => ShiftType::None,
+            "LSL" => ShiftType::LogicalLeftShift,
+            "LSR" => ShiftType::LogicalRightShift,
+            "ASL" => ShiftType::ArithmeticLeftShift,
+            "ASR" => ShiftType::ArithmeticRightShift,
+            "RTL" => ShiftType::RotateLeft,
+            "RTR" => ShiftType::RotateRight,
+            _ => panic!("Mismatch between this switch statement and parser tags"),
+        },
+    )(i)
+}
+
 pub fn parse_instruction_tag(
     instruction_tag: &str,
 ) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + '_ {
@@ -286,7 +361,6 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::arithmetic_immediate::arithmetic_immediate,
         opcodes::arithmetic_register::arithmetic_register,
         opcodes::branching::branching,
-        opcodes::excp::excp,
         opcodes::implied::implied,
         opcodes::ldea::ldea,
         opcodes::ljmp::ljmp,

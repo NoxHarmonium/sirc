@@ -97,8 +97,8 @@ fn main() -> io::Result<()> {
             RefType::SmallOffset => {
                 panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
             }
-            RefType::LowerByte => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
-            RefType::UpperByte => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
+            RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
+            RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
             RefType::Implied => {
                 panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
             }

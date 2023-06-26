@@ -1,7 +1,6 @@
 pub mod arithmetic_immediate;
 pub mod arithmetic_register;
 pub mod branching;
-pub mod excp;
 pub mod implied;
 pub mod ldea;
 pub mod ljmp;

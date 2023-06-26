@@ -1,14 +1,18 @@
 use crate::{
-    parsers::instruction::{
-        override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
-        AddressingMode, ImmediateType, InstructionToken,
+    parsers::{
+        instruction::{
+            override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
+            AddressingMode, ImmediateType, InstructionToken,
+        },
+        shared::split_shift_definition_data,
     },
     types::object::RefType,
 };
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
+    ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
+    ShiftType,
 };
 
 use super::super::shared::AsmResult;
@@ -43,8 +47,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             additional_flags: 0x0,
                         }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerByte,
+                            &ref_token,
+                            RefType::LowerWord,
                         )),
                     },
                 )),
@@ -59,6 +63,9 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         r1: dest_register.to_register_index(),
                         r2: src_register.to_register_index(),
                         r3: 0x00,
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
                         condition_flag,
                         additional_flags: 0x00,
                     }),
@@ -93,8 +100,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             additional_flags: address_register.to_register_index(),
                         }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerByte,
+                            &ref_token,
+                            RefType::LowerWord,
                         )),
                     },
                 )),
@@ -110,6 +117,32 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         r1: dest_register.to_register_index(),
                         r2: displacement_register.to_register_index(),
                         r3: 0x0, // Unused
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        // TODO: Clamp/validate additional_flags to 10 bits
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_definition_data);
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: Instruction::LoadRegisterFromIndirectRegister,
+                        r1: dest_register.to_register_index(),
+                        r2: displacement_register.to_register_index(),
+                        r3: 0x0, // Unused
+                        shift_operand,
+                        shift_type,
+                        shift_count,
                         condition_flag,
                         // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
@@ -128,6 +161,9 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: 0x0, // Unused
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
                         condition_flag,
                         // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
@@ -137,6 +173,29 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
 
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectPostIncrement(address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_definition_data);
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
+                        r1: dest_register.to_register_index(),
+                        r2: 0x0, // Unused
+                        r3: 0x0, // Unused
+                        shift_operand,
+                        shift_type,
+                        shift_count,
+                        condition_flag,
+                        // TODO: Clamp/validate additional_flags to 10 bits
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
         modes => {
             let error_string = format!("Invalid addressing mode for LOAD: ({:?})", modes);
             Err(nom::Err::Failure(ErrorTree::from_external_error(

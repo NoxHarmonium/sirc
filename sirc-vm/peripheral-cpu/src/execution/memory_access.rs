@@ -91,7 +91,7 @@ impl StageExecutor for MemoryAccessExecutor {
                 // A or B?
                 mem.write_address(
                     (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                    decoded.des_,
+                    decoded.sr_a_,
                 )
             }
             // c. Branch/Jump

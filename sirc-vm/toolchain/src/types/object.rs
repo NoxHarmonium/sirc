@@ -4,12 +4,12 @@ use serde::{Deserialize, Serialize};
 pub enum RefType {
     /// A 16-bit signed offset from the current PC
     Offset,
-    /// An 8 bit signed offset from the current PC (only used by the load/store many instructions LDMR/STMR)
+    /// An 8 bit signed offset from the current PC (used for short immediate instructions)
     SmallOffset,
     /// The lower 16 bits of a full 24-bit address of the target
-    LowerByte,
-    /// The upper 8 bits of a full 24-bit address of the target
-    UpperByte,
+    LowerWord,
+    /// The upper 8 bits of a full 24-bit address of the target (8 bits are ignored)
+    UpperWord,
     /// Automatically determine the ref type based on the instruction
     Implied,
 }

@@ -9,10 +9,11 @@ use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
 use nom_supreme::tag::complete::tag;
+use peripheral_cpu::instructions::definitions::{ShiftOperand, ShiftType};
 
 use crate::types::object::RefType;
 
-use super::instruction::RefToken;
+use super::instruction::{RefToken, ShiftDefinitionData};
 
 pub type AsmResult<'a, 'b, O> = IResult<&'a str, O, ErrorTree<&'b str>>;
 
@@ -86,8 +87,8 @@ pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> 
             alt((tag(".r"), tag(".u"), tag(".l"))),
             |parsed_value| match parsed_value {
                 ".r" => Some(RefType::Offset),
-                ".u" => Some(RefType::UpperByte),
-                ".l" => Some(RefType::LowerByte),
+                ".u" => Some(RefType::UpperWord),
+                ".l" => Some(RefType::LowerWord),
                 // TODO: Proper error handling again
                 _ => panic!("Unknown postamble {}", parsed_value),
             },
@@ -133,4 +134,30 @@ pub fn parse_label(i: &str) -> AsmResult<&str> {
 
 pub fn parse_symbol_reference(i: &str) -> AsmResult<RefToken> {
     lexeme(parse_symbol_reference_)(i)
+}
+
+///
+/// Takes the parser representation of a shift and splits it out into the components
+/// that get encoded into instructions.
+///
+/// In this case of instructions, the "shift_count" is either the index of the register,
+/// or a constant depending on the value of ShiftOperand.
+///
+/// TODO: Should shift be stored as an enum in the instruction structs? then it could be reused
+/// by the parser and avoid this function
+///
+pub fn split_shift_definition_data(
+    shift_definition_data: &ShiftDefinitionData,
+) -> (ShiftOperand, ShiftType, u8) {
+    match shift_definition_data {
+        // TODO: Probably can avoid this wrapping/unwrapping by using one type or something?
+        crate::parsers::instruction::ShiftDefinitionData::Immediate(shift_type, shift_count) => {
+            (ShiftOperand::Immediate, *shift_type, *shift_count)
+        }
+        crate::parsers::instruction::ShiftDefinitionData::Register(shift_type, shift_count) => (
+            ShiftOperand::Register,
+            *shift_type,
+            shift_count.to_register_index(),
+        ),
+    }
 }

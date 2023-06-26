@@ -15,8 +15,7 @@ enum ExecutionStepInstructionType {
     NoOp,
     MemoryRefRegDisplacement,
     MemoryRefImmDisplacement,
-    RegisterRegisterAlu,
-    RegisterImmediateAlu,
+    Alu,
     Branch,
 }
 
@@ -31,82 +30,50 @@ fn decode_execution_step_instruction_type(
     }
 
     match instruction {
-        // Arithmetic (Immediate)
-        Instruction::AddImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::AddImmediateWithCarry => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::SubtractImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::SubtractImmediateWithCarry => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
-        }
-        // Logic (Immediate)
-        Instruction::AndImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::OrImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::XorImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        // Shifts (Immediate)
-        Instruction::LogicalShiftLeftImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
-        }
-        Instruction::LogicalShiftRightImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
-        }
-        Instruction::ArithmeticShiftLeftImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
-        }
-        Instruction::ArithmeticShiftRightImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
-        }
-        Instruction::RotateLeftImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        Instruction::RotateRightImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        // Comparison (Immediate)
-        Instruction::CompareImmediate => ExecutionStepInstructionType::RegisterImmediateAlu,
-        // Flow Control (Immediate)
-        Instruction::ShortJumpImmediate => ExecutionStepInstructionType::Branch,
-        Instruction::ShortJumpToSubroutineImmediate => ExecutionStepInstructionType::Branch,
-
-        // Arithmetic (Register)
-        Instruction::AddRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::AddRegisterWithCarry => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::SubtractRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::SubtractRegisterWithCarry => ExecutionStepInstructionType::RegisterRegisterAlu,
-        // Logic (Register)
-        Instruction::AndRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::OrRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::XorRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        // Shifts (Register)
-        Instruction::LogicalShiftLeftRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::LogicalShiftRightRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::ArithmeticShiftLeftRegister => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
-        }
-        Instruction::ArithmeticShiftRightRegister => {
-            ExecutionStepInstructionType::RegisterRegisterAlu
-        }
-        Instruction::RotateLeftRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        Instruction::RotateRightRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        // Comparison (Register)
-        Instruction::CompareRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
-        // NOOP (Register)
-        Instruction::NoOperation => ExecutionStepInstructionType::NoOp,
-
-        // Flow Control (Immediate)
+        Instruction::AddImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::AddImmediateWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractImmediateWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::AndImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::OrImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::XorImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::CompareImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::TestAndImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::TestXorImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::ShiftImmediate => ExecutionStepInstructionType::Alu,
         Instruction::BranchImmediate => ExecutionStepInstructionType::Branch,
         Instruction::BranchToSubroutineImmediate => ExecutionStepInstructionType::Branch,
-        Instruction::WaitForException => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
-        Instruction::ReturnFromException => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
-        Instruction::Exception => ExecutionStepInstructionType::NoOp, // Handled by Exception Unit
-
-        // Data Access
-        Instruction::LoadRegisterFromImmediate => {
-            ExecutionStepInstructionType::RegisterImmediateAlu
+        Instruction::ShortJumpImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::ShortJumpToSubroutineImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::Exception => ExecutionStepInstructionType::NoOp,
+        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
         }
-        Instruction::LoadRegisterFromRegister => ExecutionStepInstructionType::RegisterRegisterAlu,
+        Instruction::LoadEffectiveAddressFromIndirectRegister => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::LongJumpWithImmediateDisplacement => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+        Instruction::LongJumpWithRegisterDisplacement => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
+        Instruction::LoadRegisterFromImmediate => {
+            ExecutionStepInstructionType::MemoryRefImmDisplacement
+        }
+        Instruction::LoadRegisterFromRegister => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
         Instruction::LoadRegisterFromIndirectImmediate => {
             ExecutionStepInstructionType::MemoryRefImmDisplacement
         }
         Instruction::LoadRegisterFromIndirectRegister => {
-            ExecutionStepInstructionType::MemoryRefRegDisplacement
-        }
-        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
             ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
         Instruction::StoreRegisterToIndirectImmediate => {
@@ -115,29 +82,43 @@ fn decode_execution_step_instruction_type(
         Instruction::StoreRegisterToIndirectRegister => {
             ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
+            ExecutionStepInstructionType::MemoryRefRegDisplacement
+        }
         Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
             ExecutionStepInstructionType::MemoryRefRegDisplacement
         }
-
-        Instruction::LongJumpWithImmediateDisplacement => {
-            ExecutionStepInstructionType::MemoryRefImmDisplacement
-        }
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
-            ExecutionStepInstructionType::MemoryRefRegDisplacement
-        }
-        Instruction::ReturnFromSubroutine => ExecutionStepInstructionType::MemoryRefImmDisplacement, // Encoded as zero offset from link register
-        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
-            ExecutionStepInstructionType::MemoryRefImmDisplacement
-        }
-        Instruction::LoadEffectiveAddressFromIndirectRegister => {
-            ExecutionStepInstructionType::MemoryRefRegDisplacement
-        }
-        Instruction::LongJumpWithRegisterDisplacement => {
-            ExecutionStepInstructionType::MemoryRefRegDisplacement
-        }
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
-            ExecutionStepInstructionType::MemoryRefImmDisplacement
-        }
+        Instruction::AddShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::AddShortImmediateWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractShortImmediateWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::AndShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::OrShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::XorShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::CompareShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::TestAndShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::TestXorShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::ShiftShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::BranchShortImmediate => ExecutionStepInstructionType::Branch,
+        Instruction::BranchToSubroutineShortImmediate => ExecutionStepInstructionType::Branch,
+        Instruction::ShortJumpShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::ShortJumpToSubroutineShortImmediate => ExecutionStepInstructionType::Alu,
+        Instruction::ExceptionShort => ExecutionStepInstructionType::NoOp,
+        Instruction::AddRegister => ExecutionStepInstructionType::Alu,
+        Instruction::AddRegisterWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractRegister => ExecutionStepInstructionType::Alu,
+        Instruction::SubtractRegisterWithCarry => ExecutionStepInstructionType::Alu,
+        Instruction::AndRegister => ExecutionStepInstructionType::Alu,
+        Instruction::OrRegister => ExecutionStepInstructionType::Alu,
+        Instruction::XorRegister => ExecutionStepInstructionType::Alu,
+        Instruction::CompareRegister => ExecutionStepInstructionType::Alu,
+        Instruction::TestAndRegister => ExecutionStepInstructionType::Alu,
+        Instruction::TestXorRegister => ExecutionStepInstructionType::Alu,
+        Instruction::ShiftRegister => ExecutionStepInstructionType::Alu,
+        Instruction::ReturnFromSubroutine => ExecutionStepInstructionType::Alu,
+        Instruction::NoOperation => ExecutionStepInstructionType::NoOp,
+        Instruction::WaitForException => ExecutionStepInstructionType::NoOp,
+        Instruction::ReturnFromException => ExecutionStepInstructionType::NoOp,
     }
 }
 
@@ -184,20 +165,22 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             //     ALUoutput <- imm + AdL
             ExecutionStepInstructionType::MemoryRefImmDisplacement => {
                 if decoded.addr_inc == -1 {
-                    intermediate_registers.alu_output = (decoded.imm + decoded.ad_l_)
+                    intermediate_registers.alu_output = (decoded.sr_b_ + decoded.ad_l_)
                         .wrapping_add(sign_extend_small_offset(decoded.addr_inc as u8));
                 } else {
-                    intermediate_registers.alu_output = decoded.imm + decoded.ad_l_;
+                    intermediate_registers.alu_output = decoded.sr_b_ + decoded.ad_l_;
                 }
             }
             // d. Register-Register ALU:
 
             // ALUoutput <- SrA' op SrB'
             // Regs[sr] <- status(SrA' op SrB', Sr)
-            ExecutionStepInstructionType::RegisterRegisterAlu => {
+            ExecutionStepInstructionType::Alu => {
                 perform_alu_operation(
-                    alu_op,
+                    &alu_op,
                     // TODO: Is this feasible in hardware?
+                    // TODO: Why did I do this again?
+                    // TODO: Wait a minute is this the same thing we do for the SHFT instruction?
                     if decoded.ins == Instruction::LoadRegisterFromImmediate {
                         0x0
                     } else {
@@ -208,36 +191,17 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     intermediate_registers,
                 );
             }
-            // e. Register-Immediate ALU operation:
 
-            // ALUoutput <- Des' op imm
-            // Regs[sr] <- status(Des' op imm, Sr)
-            ExecutionStepInstructionType::RegisterImmediateAlu => {
-                // TODO: Should the status register only be updated on writeback?
-                perform_alu_operation(
-                    alu_op,
-                    // TODO: Is this feasible in hardware?
-                    if decoded.ins == Instruction::LoadRegisterFromImmediate {
-                        0x0
-                    } else {
-                        decoded.des_
-                    },
-                    decoded.imm,
-                    registers,
-                    intermediate_registers,
-                );
-            }
-
-            // f. Branch:
+            // g. Branch:
 
             // ALUoutput <- PC + imm
             ExecutionStepInstructionType::Branch => {
                 // Update SR?
                 // TODO: Overflow?
                 perform_alu_operation(
-                    AluOp::Add,
+                    &AluOp::Add,
                     registers.pl,
-                    decoded.imm,
+                    decoded.sr_b_,
                     registers,
                     intermediate_registers,
                 );

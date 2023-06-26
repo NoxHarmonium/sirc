@@ -4,7 +4,7 @@ use peripheral_cpu::{
     self,
     instructions::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
-        INSTRUCTION_SIZE_WORDS,
+        StatusRegisterUpdateSource, INSTRUCTION_SIZE_WORDS,
     },
     registers::{set_sr_bit, sr_bit_is_set, RegisterIndexing, Registers, StatusRegisterFields},
 };
@@ -29,7 +29,7 @@ where
 }
 
 fn test_immediate_arithmetic_instruction(
-    instruction: Instruction,
+    instruction: &Instruction,
     target_register: u8,
     register_value: u16,
     immediate_value: u16,
@@ -37,19 +37,24 @@ fn test_immediate_arithmetic_instruction(
     initial_status_flags: Vec<StatusRegisterFields>,
     expected_status_flags: Vec<StatusRegisterFields>,
 ) {
-    let instruction = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: instruction,
+    let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: instruction.to_owned(),
         register: target_register,
         value: immediate_value,
         condition_flag: ConditionFlags::Always,
-        additional_flags: 0x0,
+        additional_flags: if instruction == &Instruction::ShiftImmediate {
+            StatusRegisterUpdateSource::Shift as u8
+        } else {
+            StatusRegisterUpdateSource::Alu as u8
+        },
     });
-    let (previous, current) = common::run_instruction(&instruction, |registers: &mut Registers| {
-        registers.set_at_index(target_register, register_value);
-        for &status_register_field in &initial_status_flags {
-            set_sr_bit(status_register_field, registers);
-        }
-    });
+    let (previous, current) =
+        common::run_instruction(&instruction_data, |registers: &mut Registers| {
+            registers.set_at_index(target_register, register_value);
+            for &status_register_field in &initial_status_flags {
+                set_sr_bit(status_register_field, registers);
+            }
+        });
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_at_index(target_register, expected_value);
@@ -71,7 +76,7 @@ fn test_immediate_arithmetic_instruction(
 fn test_add_immediate_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediate,
+            &Instruction::AddImmediate,
             register_index,
             0x1100,
             0x1101,
@@ -92,7 +97,7 @@ fn test_add_immediate_basic() {
 fn test_add_immediate_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediate,
+            &Instruction::AddImmediate,
             register_index,
             0xFFFF,
             0x0001,
@@ -107,7 +112,7 @@ fn test_add_immediate_unsigned_overflow() {
 fn test_add_immediate_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediate,
+            &Instruction::AddImmediate,
             register_index,
             0x7FFF,
             0x2000,
@@ -124,7 +129,7 @@ fn test_add_immediate_signed_overflow() {
 fn test_add_immediate_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediate,
+            &Instruction::AddImmediate,
             register_index,
             0x9FFF,
             0x9000,
@@ -143,7 +148,7 @@ fn test_add_immediate_both_overflow() {
 fn test_add_immediate_with_carry_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0x2212,
             0x1101,
@@ -164,7 +169,7 @@ fn test_add_immediate_with_carry_basic() {
 fn test_add_immediate_with_carry_carry_over() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0xFFFF,
             0xFFFF,
@@ -173,7 +178,7 @@ fn test_add_immediate_with_carry_carry_over() {
             vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0xFFFE,
             0xFFFF,
@@ -182,7 +187,7 @@ fn test_add_immediate_with_carry_carry_over() {
             vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0xFFFF,
             0xFFFF,
@@ -197,7 +202,7 @@ fn test_add_immediate_with_carry_carry_over() {
 fn test_add_immediate_with_carry_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0xFFFF,
             0x0001,
@@ -212,7 +217,7 @@ fn test_add_immediate_with_carry_unsigned_overflow() {
 fn test_add_immediate_with_carry_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0x7FFF,
             0x2000,
@@ -229,7 +234,7 @@ fn test_add_immediate_with_carry_signed_overflow() {
 fn test_add_immediate_with_carry_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AddImmediateWithCarry,
+            &Instruction::AddImmediateWithCarry,
             register_index,
             0x9FFF,
             0x9000,
@@ -248,7 +253,7 @@ fn test_add_immediate_with_carry_both_overflow() {
 fn test_subtract_immediate_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediate,
+            &Instruction::SubtractImmediate,
             register_index,
             0x5245,
             0x2143,
@@ -269,7 +274,7 @@ fn test_subtract_immediate_basic() {
 fn test_subtract_immediate_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediate,
+            &Instruction::SubtractImmediate,
             register_index,
             0x5FFF,
             0xFFFF,
@@ -284,7 +289,7 @@ fn test_subtract_immediate_unsigned_overflow() {
 fn test_subtract_immediate_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediate,
+            &Instruction::SubtractImmediate,
             register_index,
             0xDFFF,
             0x7FFF,
@@ -299,7 +304,7 @@ fn test_subtract_immediate_signed_overflow() {
 fn test_subtract_immediate_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediate,
+            &Instruction::SubtractImmediate,
             register_index,
             0x5FFF,
             0xBFFF,
@@ -322,7 +327,7 @@ fn test_subtract_immediate_both_overflow() {
 fn test_subtract_immediate_with_carry_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x5245,
             0x2143,
@@ -343,7 +348,7 @@ fn test_subtract_immediate_with_carry_basic() {
 fn test_subtract_immediate_with_carry_carry_over() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x0000,
             0xFFFF,
@@ -352,7 +357,7 @@ fn test_subtract_immediate_with_carry_carry_over() {
             vec![StatusRegisterFields::Carry],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x0001,
             0xFFFF,
@@ -361,7 +366,7 @@ fn test_subtract_immediate_with_carry_carry_over() {
             vec![StatusRegisterFields::Carry],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x0000,
             0xFFFF,
@@ -376,7 +381,7 @@ fn test_subtract_immediate_with_carry_carry_over() {
 fn test_subtract_immediate_with_carry_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x5FFF,
             0xFFFF,
@@ -391,7 +396,7 @@ fn test_subtract_immediate_with_carry_unsigned_overflow() {
 fn test_subtract_immediate_with_carry_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0xDFFF,
             0x7FFF,
@@ -405,7 +410,7 @@ fn test_subtract_immediate_with_carry_signed_overflow() {
 fn test_subtract_immediate_with_carry_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::SubtractImmediateWithCarry,
+            &Instruction::SubtractImmediateWithCarry,
             register_index,
             0x5FFF,
             0xBFFF,
@@ -428,7 +433,7 @@ fn test_subtract_immediate_with_carry_both_overflow() {
 fn test_and_immediate() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::AndImmediate,
+            &Instruction::AndImmediate,
             register_index,
             0xF0F0,
             0x0FFF,
@@ -443,7 +448,7 @@ fn test_and_immediate() {
             vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::AndImmediate,
+            &Instruction::AndImmediate,
             register_index,
             0xFFFF,
             0x0000,
@@ -462,7 +467,7 @@ fn test_and_immediate() {
 fn test_or_immediate() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::OrImmediate,
+            &Instruction::OrImmediate,
             register_index,
             0x0000,
             0xFFFF,
@@ -477,7 +482,7 @@ fn test_or_immediate() {
             vec![StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::OrImmediate,
+            &Instruction::OrImmediate,
             register_index,
             0xC0F0,
             0x0A0E,
@@ -496,7 +501,7 @@ fn test_or_immediate() {
 fn test_xor_immediate() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::XorImmediate,
+            &Instruction::XorImmediate,
             register_index,
             0x0000,
             0xFFFF,
@@ -511,7 +516,7 @@ fn test_xor_immediate() {
             vec![StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::XorImmediate,
+            &Instruction::XorImmediate,
             register_index,
             0xF0F0,
             0xF0F0,
@@ -523,18 +528,27 @@ fn test_xor_immediate() {
 }
 
 //
-// #### LSLI ####
+// #### SHFI ####
 //
 
 #[test]
-fn test_logical_shift_left_immediate() {
+fn test_shfi_immediate() {
+    // This is a strange instruction and only really exists to make decoding simpler
+    // Since it is a long immediate (0x0_) instruction, the shifter will be disabled
+    // The whole point of the SHFI instruction is to put the result of the shift into
+    // the status register, because when shifting other instructions the shift
+    // status bits are ignored. However, since the shift is disabled, the
+    // target register should remain untouched, no matter what the immediate value is
+    // so its effectively a no-op (although depending on the implementation it might
+    // set the status register bits to the register value?)
+
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
+            &Instruction::ShiftImmediate,
             register_index,
-            0b0011_0011_0011_0011,
-            0x1,
-            0b0110_0110_0110_0110,
+            0x0000,
+            0xFFFF,
+            0xFFFF,
             // Test flag clearing (these flags do not reflect the initial register value)
             vec![
                 StatusRegisterFields::Carry,
@@ -545,75 +559,11 @@ fn test_logical_shift_left_immediate() {
             vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
+            &Instruction::ShiftImmediate,
             register_index,
-            0b1011_0011_0011_0011,
-            0x1,
-            0b0110_0110_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            6,
-            0b1100_1100_1100_0000,
-            vec![],
-            vec![StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            15,
-            0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            16,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            17,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            u16::MAX,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-    }
-}
-
-//
-// #### LSRI ####
-//
-
-#[test]
-fn test_logical_shift_right_immediate() {
-    for register_index in get_register_index_range() {
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1100,
-            0x1,
-            0b0110_0110_0110_0110,
+            0xFFFF,
+            0x0000,
+            0x0000,
             // Test flag clearing (these flags do not reflect the initial register value)
             vec![
                 StatusRegisterFields::Carry,
@@ -624,228 +574,22 @@ fn test_logical_shift_right_immediate() {
             vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
+            &Instruction::ShiftImmediate,
             register_index,
-            0b1100_1100_1100_1101,
-            0x1,
-            0b0110_0110_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            6,
-            0b0000_0011_0011_0011,
+            0xFF00,
+            0xF0F0,
+            0xF0F0,
             vec![],
             vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
+            &Instruction::ShiftImmediate,
             register_index,
-            0b1100_1100_1100_1101,
-            15,
-            0b0000_0000_0000_0001,
+            0xFFFF,
+            0xF0F0,
+            0xF0F0,
             vec![],
-            vec![StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            16,
-            0b0000_0000_0000_0000,
             vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            17,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::LogicalShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            u16::MAX,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero, StatusRegisterFields::Carry],
-        );
-    }
-}
-
-//
-// #### ASLI ####
-//
-
-#[test]
-fn test_arithmetic_shift_left_immediate() {
-    for register_index in get_register_index_range() {
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b0011_0011_0011_0011,
-            0x1,
-            0b0110_0110_0110_0110,
-            // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Negative,
-                StatusRegisterFields::Overflow,
-                StatusRegisterFields::Zero,
-            ],
-            vec![],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            0x1,
-            0b0110_0110_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            6,
-            0b1100_1100_1100_0000,
-            vec![],
-            vec![StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            15,
-            0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            16,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![
-                StatusRegisterFields::Zero,
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Overflow,
-            ],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            17,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![
-                StatusRegisterFields::Zero,
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Overflow,
-            ],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftLeftImmediate,
-            register_index,
-            0b1011_0011_0011_0011,
-            u16::MAX,
-            0b0000_0000_0000_0000,
-            vec![],
-            vec![
-                StatusRegisterFields::Zero,
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Overflow,
-            ],
-        );
-    }
-}
-
-//
-// #### ASRI ####
-//
-
-#[test]
-fn test_arithmetic_shift_right_immediate() {
-    for register_index in get_register_index_range() {
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b0100_1100_1100_1100,
-            0x1,
-            0b0010_0110_0110_0110,
-            // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Negative,
-                StatusRegisterFields::Overflow,
-                StatusRegisterFields::Zero,
-            ],
-            vec![],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            0x1,
-            0b1110_0110_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            6,
-            0b1000_0011_0011_0011,
-            vec![],
-            vec![StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            15,
-            0b1000_0000_0000_0001,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            16,
-            0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            17,
-            0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ArithmeticShiftRightImmediate,
-            register_index,
-            0b1100_1100_1100_1101,
-            u16::MAX,
-            0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
     }
 }

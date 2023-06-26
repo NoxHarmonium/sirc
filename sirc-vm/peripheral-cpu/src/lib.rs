@@ -78,7 +78,7 @@ fn step<'a>(
     // 3. Decode/Register Fetch (ID)
     let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
 
-    if decoded_instruction.ins == Instruction::Exception && decoded_instruction.imm == 0xFFFF {
+    if decoded_instruction.ins == Instruction::Exception && decoded_instruction.sr_b_ == 0xFFFF {
         // Special instruction just for debugging purposes. Probably won't be in hardware
         panic!("Execution was halted due to 0xFFFF exception");
     }
@@ -87,6 +87,7 @@ fn step<'a>(
     // maybe it should only be zeroed on first run and shared between invocations
     let mut intermediate_registers = IntermediateRegisters {
         alu_output: 0,
+        alu_status_register: 0,
         lmd: 0,
         npc: registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16),
     };

@@ -1,7 +1,7 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    instructions::definitions::{ConditionFlags, Instruction},
+    instructions::definitions::{ConditionFlags, Instruction, StatusRegisterUpdateSource},
     registers::Registers,
 };
 
@@ -29,16 +29,16 @@ pub struct DecodedInstruction {
     pub sr_a: u8,
     pub sr_b: u8,
     pub con: ConditionFlags,
-    pub imm: u16,
     pub adr: u8,
+    pub sr_src: StatusRegisterUpdateSource,
     // Inferred
     pub ad_l: u8,
     pub ad_h: u8,
     pub addr_inc: i8,
     pub des_ad_l: u8,
     pub des_ad_h: u8,
+    pub sr_shift: u16,
     // Dereferenced
-    pub des_: u16,
     pub sr_a_: u16,
     pub sr_b_: u16,
     pub ad_l_: u16,
@@ -50,6 +50,7 @@ pub struct DecodedInstruction {
 #[derive(Debug, Default)]
 pub struct IntermediateRegisters {
     pub alu_output: u16,
+    pub alu_status_register: u16,
     pub lmd: u16,
     pub npc: u16,
 }
