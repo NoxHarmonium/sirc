@@ -8,7 +8,10 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::error::{ErrorKind, FromExternalError};
+use nom::{
+    error::{ErrorKind, FromExternalError},
+    sequence::tuple,
+};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
@@ -17,8 +20,8 @@ use peripheral_cpu::instructions::definitions::{
 
 use super::super::shared::AsmResult;
 pub fn load(i: &str) -> AsmResult<InstructionToken> {
-    let (i, (_, condition_flag)) = parse_instruction_tag("LOAD")(i)?;
-    let (i, operands) = parse_instruction_operands1(i)?;
+    let (i, ((_, condition_flag), operands)) =
+        tuple((parse_instruction_tag("LOAD"), parse_instruction_operands1))(i)?;
 
     match operands.as_slice() {
         [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(offset)] => {
@@ -47,7 +50,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             additional_flags: 0x0,
                         }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            &ref_token,
+                            ref_token,
                             RefType::LowerWord,
                         )),
                     },
@@ -100,7 +103,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             additional_flags: address_register.to_register_index(),
                         }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            &ref_token,
+                            ref_token,
                             RefType::LowerWord,
                         )),
                     },

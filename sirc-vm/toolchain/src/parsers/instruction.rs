@@ -1,11 +1,12 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
-use nom::character::complete::{char, multispace0, space1};
-use nom::combinator::{cut, map, map_res, opt};
+use nom::character::complete::{char, multispace0, one_of, space0, space1};
+use nom::combinator::{cut, eof, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
-use nom::multi::{many1, separated_list0};
 use nom::sequence::{delimited, pair, separated_pair};
+use nom::Parser;
 use nom_supreme::error::ErrorTree;
+use nom_supreme::multi::collect_separated_terminated;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
@@ -250,18 +251,11 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     addressing_mode_parser(i)
 }
 
-pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
-    separated_list0(
-        parse_comma_sep,
-        parse_addressing_mode.context("addressing mode"),
-    )(i)
-}
-
 pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {
-    separated_list0(
-        parse_comma_sep,
-        cut(parse_addressing_mode.context("addressing mode")),
-    )(i)
+    let mut parser =
+        collect_separated_terminated(parse_addressing_mode, parse_comma_sep, one_of("\n\r"))
+            .context("addressing modes");
+    parser.parse(i)
 }
 
 fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
@@ -335,16 +329,17 @@ pub fn parse_instruction_tag(
 ) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + '_ {
     move |i: &str| {
         // TODO: Work out how to use the nom_supreme tag here (there are lifetime issues with the nested closures)
-        let (i, tag) = nom::bytes::complete::tag(instruction_tag)(i)?;
+        let tag_parser = nom::bytes::complete::tag(instruction_tag);
+        let (i, tag) = tag_parser(i)?;
         let (i, condition_code_specified) = opt(char('|'))(i)?;
         let (i, condition_code) = if condition_code_specified.is_some() {
-            parse_condition_code(i)?
+            cut(parse_condition_code.context("condition code"))(i)?
         } else {
             (i, ConditionFlags::Always)
         };
 
         // TODO: Get lexeme working with this function to avoid this
-        let (i, _) = multispace0(i)?;
+        let (i, _) = space0(i)?;
 
         Ok((i, (String::from(tag), condition_code)))
     }
@@ -358,15 +353,18 @@ pub fn parse_instruction_tag(
 pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
     // Nested alts are to avoid hitting the maximum number of parsers that can be parsed in a single alt statement
     let (i, instruction_token) = alt((
-        opcodes::arithmetic_immediate::arithmetic_immediate,
-        opcodes::arithmetic_register::arithmetic_register,
-        opcodes::branching::branching,
-        opcodes::implied::implied,
-        opcodes::ldea::ldea,
-        opcodes::ljmp::ljmp,
-        opcodes::ljsr::ljsr,
-        opcodes::load::load,
-        opcodes::store::stor,
+        opcodes::arithmetic_immediate::arithmetic_immediate
+            .context("Arithmetic Immediate Instruction"),
+        opcodes::arithmetic_register::arithmetic_register
+            .context("Arithmetic Register Instruction"),
+        opcodes::branching::branching.context("Branching instruction"),
+        opcodes::excp::excp.context("EXCP instruction"),
+        opcodes::implied::implied.context("Implied instruction"),
+        opcodes::ldea::ldea.context("LDEA instruction"),
+        opcodes::ljmp::ljmp.context("LJMP instruction"),
+        opcodes::ljsr::ljsr.context("LJSR instruction"),
+        opcodes::load::load.context("LOAD instruction"),
+        opcodes::store::stor.context("STOR instruction"),
     ))(i)?;
 
     Ok((i, Token::Instruction(instruction_token)))
@@ -434,7 +432,7 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
 
 fn parse_comment_(i: &str) -> AsmResult<Token> {
     // TODO: Should there be a more flexible parser for eol?
-    map(pair(char(';'), is_not("\n\r")), |_| Token::Comment)(i)
+    map(pair(char(';'), cut(is_not("\n\r"))), |_| Token::Comment)(i)
 }
 
 fn parse_comment(i: &str) -> AsmResult<Token> {
@@ -458,11 +456,15 @@ fn parse_label_token(i: &str) -> AsmResult<Token> {
 // TODO: Create object file struct and serialize with serde
 // Addresses are replaced with indexes to object table and resolved by linker
 pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
-    let (i, tokens) = many1(alt((
-        parse_comment.context("comment"),
-        parse_instruction_token.context("instruction"),
-        parse_label_token.context("label"),
-    )))(i)?;
+    let mut parser = collect_separated_terminated(
+        alt((
+            parse_comment.context("comment"),
+            parse_instruction_token.context("instruction"),
+            parse_label_token.context("label"),
+        )),
+        multispace0,
+        eof,
+    );
 
-    Ok((i, tokens))
+    parser.parse(i)
 }

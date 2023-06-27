@@ -2,10 +2,11 @@ use crate::parsers::instruction::{
     parse_instruction_operands1, parse_instruction_tag, AddressingMode, InstructionToken,
 };
 use crate::parsers::shared::split_shift_definition_data;
+use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
-use nom::{branch::alt, combinator::map_res};
 use nom_supreme::error::ErrorTree;
+use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     Instruction, InstructionData, RegisterInstructionData, ShiftOperand, ShiftType,
 };
@@ -69,107 +70,117 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("ADDR"),
-        parse_instruction_tag("ADCR"),
-        parse_instruction_tag("SUBR"),
-        parse_instruction_tag("SBCR"),
-        parse_instruction_tag("ANDR"),
-        parse_instruction_tag("ORRR"),
-        parse_instruction_tag("XORR"),
-        parse_instruction_tag("CMPR"),
-        parse_instruction_tag("TSAR"),
-        parse_instruction_tag("TSXR"),
-        parse_instruction_tag("SHFR"),
+        parse_instruction_tag("ADDR").context("ADDR"),
+        parse_instruction_tag("ADCR").context("ADCR"),
+        parse_instruction_tag("SUBR").context("SUBR"),
+        parse_instruction_tag("SBCR").context("SBCR"),
+        parse_instruction_tag("ANDR").context("ANDR"),
+        parse_instruction_tag("ORRR").context("ORRR"),
+        parse_instruction_tag("XORR").context("XORR"),
+        parse_instruction_tag("CMPR").context("CMPR"),
+        parse_instruction_tag("TSAR").context("TSAR"),
+        parse_instruction_tag("TSXR").context("TSXR"),
+        parse_instruction_tag("SHFR").context("SHFR"),
     ));
 
-    map_res(
-        tuple((instructions, parse_instruction_operands1)),
-        |((tag, condition_flag), operands)| {
-            match operands.as_slice() {
-                // The CPU does not support register arithmetic instructions with two register operands
-                // If third register is omitted, it is implied that the first operand is the destination register and the assembler fills that in
-                [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
-                    Ok(InstructionToken {
-                        instruction: InstructionData::Register(RegisterInstructionData {
-                            op_code: tag_to_instruction(tag),
-                            r1: dest_register.to_register_index(),
-                            r2: dest_register.to_register_index(),
-                            r3: src_register.to_register_index(),
-                            shift_operand: ShiftOperand::Immediate,
-                            shift_type: ShiftType::None,
-                            shift_count: 0,
-                            condition_flag,
-                            additional_flags: 0x00,
-                        }),
-                        symbol_ref: None,
-                    })
-                }
-                [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register1), AddressingMode::DirectRegister(src_register2)] => {
-                    Ok(InstructionToken {
-                        instruction: InstructionData::Register(RegisterInstructionData {
-                            op_code: tag_to_instruction(tag),
-                            r1: dest_register.to_register_index(),
-                            r2: src_register1.to_register_index(),
-                            r3: src_register2.to_register_index(),
-                            shift_operand: ShiftOperand::Immediate,
-                            shift_type: ShiftType::None,
-                            shift_count: 0,
-                            condition_flag,
-                            additional_flags: 0x00,
-                        }),
-                        symbol_ref: None,
-                    })
-                }
-                // Same as above but with shift definitions
-                [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_defintion_data)] =>
-                {
-                    let (shift_operand, shift_type, shift_count) =
-                        split_shift_definition_data(shift_defintion_data);
+    let (i, ((tag, condition_flag), operands)) =
+        tuple((instructions, parse_instruction_operands1))(i)?;
 
-                    Ok(InstructionToken {
-                        instruction: InstructionData::Register(RegisterInstructionData {
-                            op_code: tag_to_instruction(tag),
-                            r1: dest_register.to_register_index(),
-                            r2: dest_register.to_register_index(),
-                            r3: src_register.to_register_index(),
-                            shift_operand,
-                            shift_type,
-                            shift_count,
-                            condition_flag,
-                            additional_flags: 0x00,
-                        }),
-                        symbol_ref: None,
-                    })
-                }
-                [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register1), AddressingMode::DirectRegister(src_register2), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-                {
-                    let (shift_operand, shift_type, shift_count) =
-                        split_shift_definition_data(shift_definition_data);
+    match operands.as_slice() {
+        // The CPU does not support register arithmetic instructions with two register operands
+        // If third register is omitted, it is implied that the first operand is the destination register and the assembler fills that in
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction(tag),
+                        r1: dest_register.to_register_index(),
+                        r2: dest_register.to_register_index(),
+                        r3: src_register.to_register_index(),
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        additional_flags: 0x00,
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register1), AddressingMode::DirectRegister(src_register2)] => {
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction(tag),
+                        r1: dest_register.to_register_index(),
+                        r2: src_register1.to_register_index(),
+                        r3: src_register2.to_register_index(),
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        additional_flags: 0x00,
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        // Same as above but with shift definitions
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_defintion_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_defintion_data);
 
-                    Ok(InstructionToken {
-                        instruction: InstructionData::Register(RegisterInstructionData {
-                            op_code: tag_to_instruction(tag),
-                            r1: dest_register.to_register_index(),
-                            r2: src_register1.to_register_index(),
-                            r3: src_register2.to_register_index(),
-                            shift_operand,
-                            shift_type,
-                            shift_count,
-                            condition_flag,
-                            additional_flags: 0x00,
-                        }),
-                        symbol_ref: None,
-                    })
-                }
-                _ => {
-                    let error_string = format!("The [{}] opcode only supports register->register or register->register->register addressing mode (e.g. ADDR y1, z2, a2 or SUBR y1, a2)", tag);
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i.to_owned(),
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
-            }
-        },
-    )(i)
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction(tag),
+                        r1: dest_register.to_register_index(),
+                        r2: dest_register.to_register_index(),
+                        r3: src_register.to_register_index(),
+                        shift_operand,
+                        shift_type,
+                        shift_count,
+                        condition_flag,
+                        additional_flags: 0x00,
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register1), AddressingMode::DirectRegister(src_register2), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_definition_data);
+
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction(tag),
+                        r1: dest_register.to_register_index(),
+                        r2: src_register1.to_register_index(),
+                        r3: src_register2.to_register_index(),
+                        shift_operand,
+                        shift_type,
+                        shift_count,
+                        condition_flag,
+                        additional_flags: 0x00,
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        _ => {
+            let error_string = format!("The [{}] opcode only supports register->register or register->register->register addressing mode (e.g. ADDR y1, z2, a2 or SUBR y1, a2)", tag);
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        }
+    }
 }

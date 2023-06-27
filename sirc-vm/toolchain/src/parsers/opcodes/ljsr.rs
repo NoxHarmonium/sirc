@@ -5,6 +5,7 @@ use crate::parsers::instruction::{
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
+use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
@@ -40,8 +41,8 @@ use super::super::shared::AsmResult;
 /// assert_eq!(additional_flags, 1);
 /// ```
 pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
-    let (i, (_, condition_flag)) = parse_instruction_tag("LJSR")(i)?;
-    let (i, operands) = parse_instruction_operands1(i)?;
+    let (i, ((_, condition_flag), operands)) =
+        tuple((parse_instruction_tag("LJSR"), parse_instruction_operands1))(i)?;
 
     match operands.as_slice() {
         [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
@@ -70,7 +71,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
                             additional_flags: address_register.to_register_index(),
                         }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            &ref_token,
+                            ref_token,
                             RefType::LowerWord,
                         )),
                     },

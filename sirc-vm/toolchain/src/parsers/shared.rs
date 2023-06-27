@@ -1,9 +1,9 @@
 use nom::branch::alt;
 use nom::bytes::complete::is_a;
-use nom::character::complete::{digit1, multispace0, one_of, space0};
-use nom::combinator::{map, map_res, opt, recognize};
+use nom::character::complete::{char, digit1, one_of, space0};
+use nom::combinator::{cut, map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
-use nom::sequence::{pair, terminated, tuple};
+use nom::sequence::{pair, preceded, terminated, tuple};
 use nom::{AsChar, IResult};
 use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
@@ -23,7 +23,7 @@ pub fn lexeme<'a, F: 'a, O, E: ParseError<&'a str>>(
 where
     F: FnMut(&'a str) -> IResult<&'a str, O, E>,
 {
-    terminated(inner, multispace0)
+    terminated(inner, space0)
 }
 
 fn parse_label_name_(i: &str) -> AsmResult<&str> {
@@ -65,18 +65,16 @@ fn parse_dec_(i: &str) -> AsmResult<u16> {
 }
 
 fn parse_number_(i: &str) -> AsmResult<u16> {
-    let (i, _) = tag("#")(i)?;
-    alt((parse_hex, parse_dec))(i)
+    preceded(char('#'), alt((parse_hex, parse_dec)))(i)
 }
 
 fn parse_comma_sep_(i: &str) -> AsmResult<()> {
-    let (i, (_, _)) = pair(tag(","), space0)(i)?;
+    let (i, (_, _)) = pair(char(','), space0)(i)?;
     Ok((i, ()))
 }
 
 pub fn parse_label_(i: &str) -> AsmResult<&str> {
-    let (i, _) = tag(":")(i)?;
-    parse_label_name_(i)
+    preceded(char(':'), cut(parse_label_name_))(i)
 }
 
 pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> {
@@ -98,9 +96,8 @@ pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> 
 }
 
 pub fn parse_symbol_reference_(i: &str) -> AsmResult<RefToken> {
-    let (i, _) = tag("@")(i)?;
-    // TODO: de
-    let (i, name) = parse_label_name_(i)?;
+    let (i, name) = preceded(char('@'), parse_label_name_)(i)?;
+
     let (i, optional_preamble) = parse_symbol_reference_postamble_(i)?;
 
     Ok((

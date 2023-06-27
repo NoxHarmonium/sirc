@@ -8,9 +8,9 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::{branch::alt, combinator::map_res, error::ErrorKind};
+use nom::{branch::alt, error::ErrorKind};
 use nom::{error::FromExternalError, sequence::tuple};
-use nom_supreme::error::ErrorTree;
+use nom_supreme::{error::ErrorTree, ParserExt};
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
 };
@@ -38,17 +38,20 @@ fn tag_to_instruction_short(tag: String) -> Instruction {
 use super::super::shared::AsmResult;
 pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("BRAN"),
-        parse_instruction_tag("BRSR"),
-        parse_instruction_tag("SJMP"),
-        parse_instruction_tag("SJSR"),
+        parse_instruction_tag("BRAN").context("BRAN"),
+        parse_instruction_tag("BRSR").context("BRSR"),
+        parse_instruction_tag("SJMP").context("SJMP"),
+        parse_instruction_tag("SJSR").context("SJSR"),
     ));
 
-    map_res(
-        tuple((instructions, parse_instruction_operands1)),
-        |((tag, condition_flag), operands)| match operands.as_slice() {
-            [AddressingMode::Immediate(offset)] => match offset {
-                ImmediateType::Value(offset) => Ok(InstructionToken {
+    let (i, ((tag, condition_flag), operands)) =
+        tuple((instructions, parse_instruction_operands1))(i)?;
+
+    match operands.as_slice() {
+        [AddressingMode::Immediate(offset)] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
                         op_code: tag_to_instruction_long(tag),
                         register: 0x0, // unused
@@ -57,8 +60,11 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         additional_flags: 0x0,
                     }),
                     symbol_ref: None,
-                }),
-                ImmediateType::SymbolRef(ref_token) => Ok(InstructionToken {
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
                         op_code: tag_to_instruction_long(tag),
                         register: 0x0, // unused
@@ -67,26 +73,29 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         additional_flags: 0x0,
                     }),
                     symbol_ref: Some(override_ref_token_type_if_implied(
-                        &ref_token,
+                        ref_token,
                         RefType::Offset,
                     )),
-                }),
-            },
-            [AddressingMode::Immediate(offset), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-            {
-                let (shift_operand, shift_type, shift_count) =
-                    split_shift_definition_data(shift_definition_data);
-                match offset {
-                    ImmediateType::Value(offset) => {
-                        if offset > &0xFF {
-                            let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({} > 0xFF)", offset);
-                            Err(nom::Err::Failure(ErrorTree::from_external_error(
-                                i.to_owned(),
-                                ErrorKind::Fail,
-                                error_string.as_str(),
-                            )))
-                        } else {
-                            Ok(InstructionToken {
+                },
+            )),
+        },
+        [AddressingMode::Immediate(offset), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_definition_data);
+            match offset {
+                ImmediateType::Value(offset) => {
+                    if offset > &0xFF {
+                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({} > 0xFF)", offset);
+                        Err(nom::Err::Failure(ErrorTree::from_external_error(
+                            i,
+                            ErrorKind::Fail,
+                            error_string.as_str(),
+                        )))
+                    } else {
+                        Ok((
+                            i,
+                            InstructionToken {
                                 instruction: InstructionData::ShortImmediate(
                                     ShortImmediateInstructionData {
                                         op_code: tag_to_instruction_short(tag),
@@ -100,10 +109,13 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                                     },
                                 ),
                                 symbol_ref: None,
-                            })
-                        }
+                            },
+                        ))
                     }
-                    ImmediateType::SymbolRef(ref_token) => Ok(InstructionToken {
+                }
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
                         instruction: InstructionData::ShortImmediate(
                             ShortImmediateInstructionData {
                                 op_code: tag_to_instruction_short(tag),
@@ -117,23 +129,23 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                             },
                         ),
                         symbol_ref: Some(override_ref_token_type_if_implied(
-                            &ref_token,
+                            ref_token,
                             RefType::Offset,
                         )),
-                    }),
-                }
+                    },
+                )),
             }
-            _ => {
-                let error_string = format!(
-                    "The [{}] opcode only supports immediate addressing mode (e.g. BRAN #-3)",
-                    tag
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i.to_owned(),
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        },
-    )(i)
+        }
+        _ => {
+            let error_string = format!(
+                "The [{}] opcode only supports immediate addressing mode (e.g. BRAN #-3)",
+                tag
+            );
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        }
+    }
 }

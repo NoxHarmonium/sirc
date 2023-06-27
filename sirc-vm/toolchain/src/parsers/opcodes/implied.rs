@@ -1,10 +1,10 @@
-use crate::parsers::instruction::{
-    parse_instruction_operands0, parse_instruction_tag, InstructionToken,
-};
+use crate::parsers::instruction::{parse_instruction_tag, InstructionToken};
+use nom::branch::alt;
+use nom::character::complete::one_of;
+use nom::combinator::peek;
 use nom::error::{ErrorKind, FromExternalError};
-use nom::sequence::tuple;
-use nom::{branch::alt, combinator::map_res};
 use nom_supreme::error::ErrorTree;
+use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, ImpliedInstructionData, Instruction, InstructionData,
 };
@@ -46,50 +46,55 @@ use super::super::shared::AsmResult;
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
 /// ```
 pub fn implied(i: &str) -> AsmResult<InstructionToken> {
-    let instructions = alt((
-        parse_instruction_tag("RETS"),
-        parse_instruction_tag("NOOP"),
-        parse_instruction_tag("WAIT"),
-        parse_instruction_tag("RETE"),
+    let mut instructions = alt((
+        parse_instruction_tag("RETS").context("RETS"),
+        parse_instruction_tag("NOOP").context("NOOP"),
+        parse_instruction_tag("WAIT").context("WAIT"),
+        parse_instruction_tag("RETE").context("RETE"),
     ));
 
-    map_res(
-        tuple((instructions, parse_instruction_operands0)),
-        |((tag, condition_flag), operands)| match operands.as_slice() {
-            [] => match tag_to_instruction(tag) {
-                // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump
-                // to the link register (TODO: should this be moved out to a different parser or something?)
-                Instruction::ReturnFromSubroutine => Ok(InstructionToken {
-                    instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: Instruction::ReturnFromSubroutine,
-                        register: AddressRegisterName::Address.to_register_index(),
-                        value: 0x0,
-                        additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
-                        condition_flag,
-                    }),
-                    symbol_ref: None,
-                }),
-                other => Ok(InstructionToken {
-                    instruction: InstructionData::Implied(ImpliedInstructionData {
-                        op_code: other,
-                        condition_flag,
-                    }),
-                    symbol_ref: None,
-                }),
-            },
+    let (i, (tag, condition_flag)) = instructions(i)?;
 
-            _ => {
-                // TODO: Homogenise the error messages for bad addressing modes across all the opcode parsers
-                let error_string = format!(
-                    "The [{}] opcode only supports implied addressing mode (e.g. WAIT)",
-                    tag
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i.to_owned(),
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        },
-    )(i)
+    match peek(one_of::<&str, &str, ErrorTree<&str>>("\r\n"))(i) {
+        Ok(_) => {}
+        Err(_) => {
+            let error_string = format!(
+                "The [{}] does not support any addressing modes (e.g. NOOP or RETE)",
+                tag
+            );
+            return Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )));
+        }
+    }
+
+    match tag_to_instruction(tag) {
+        // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump
+        // to the link register (TODO: should this be moved out to a different parser or something?)
+        Instruction::ReturnFromSubroutine => Ok((
+            i,
+            InstructionToken {
+                instruction: InstructionData::Immediate(ImmediateInstructionData {
+                    op_code: Instruction::ReturnFromSubroutine,
+                    register: AddressRegisterName::Address.to_register_index(),
+                    value: 0x0,
+                    additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
+                    condition_flag,
+                }),
+                symbol_ref: None,
+            },
+        )),
+        other => Ok((
+            i,
+            InstructionToken {
+                instruction: InstructionData::Implied(ImpliedInstructionData {
+                    op_code: other,
+                    condition_flag,
+                }),
+                symbol_ref: None,
+            },
+        )),
+    }
 }

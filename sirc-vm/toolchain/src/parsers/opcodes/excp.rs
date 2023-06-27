@@ -3,11 +3,9 @@ use crate::parsers::instruction::{
     InstructionToken,
 };
 use crate::parsers::shared::split_shift_definition_data;
-use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
     StatusRegisterUpdateSource,
@@ -54,22 +52,22 @@ fn tag_to_instruction_short(tag: &String) -> Instruction {
 use super::super::shared::AsmResult;
 
 ///
-/// Parses immediate arithmetic/logic opcodes
+/// Parses exception opcodes
 ///
 /// ```
-/// use toolchain::parsers::opcodes::arithmetic_immediate::arithmetic_immediate;
+/// use toolchain::parsers::opcodes::excp::excp;
 /// use toolchain::parsers::instruction::InstructionToken;
 /// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
 ///
 ///
-/// let (_, parsed_instruction) = arithmetic_immediate("ADDI|!= r2, #123, LSL #2").unwrap();
+/// let (_, parsed_instruction) = excp("EXCP|!= #123, LSL #2").unwrap();
 /// let (op_code, register, value, shift_type, shift_count, condition_flag, additional_flags) = match parsed_instruction.instruction {
 ///     InstructionData::ShortImmediate(inner) => (inner.op_code, inner.register, inner.value, inner.shift_type, inner.shift_count, inner.condition_flag, inner.additional_flags),
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
-/// assert_eq!(op_code, Instruction::AddShortImmediate);
+/// assert_eq!(op_code, Instruction::ExceptionShortImmediate);
 /// assert_eq!(register, 1);
 /// assert_eq!(value, 123);
 /// assert_eq!(shift_type, ShiftType::LogicalLeftShift);
@@ -78,58 +76,38 @@ use super::super::shared::AsmResult;
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 ///
 /// ```
-pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
-    let instructions = alt((
-        parse_instruction_tag("ADDI").context("ADDI"),
-        parse_instruction_tag("ADCI").context("ADCI"),
-        parse_instruction_tag("SUBI").context("SUBI"),
-        parse_instruction_tag("SBCI").context("SBCI"),
-        parse_instruction_tag("ANDI").context("ANDI"),
-        parse_instruction_tag("ORRI").context("ORRI"),
-        parse_instruction_tag("XORI").context("XORI"),
-        parse_instruction_tag("CMPI").context("CMPI"),
-        parse_instruction_tag("TSAI").context("TSAI"),
-        parse_instruction_tag("TSXI").context("TSXI"),
-        parse_instruction_tag("SHFI").context("SHFI"),
-    ));
-
+pub fn excp(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((tag, condition_flag), operands)) =
-        tuple((instructions, parse_instruction_operands1))(i)?;
-
+        tuple((parse_instruction_tag("EXCP"), parse_instruction_operands1))(i)?;
     match operands.as_slice() {
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
-            match immediate_type {
-                ImmediateType::Value(value) => Ok((
+        [AddressingMode::Immediate(immediate_type)] => match immediate_type {
+            ImmediateType::Value(value) => Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Immediate(ImmediateInstructionData {
+                        op_code: tag_to_instruction_long(&tag),
+                        register: 0x0,
+                        value: *value,
+                        condition_flag,
+                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+                    }),
+                    symbol_ref: None,
+                },
+            )),
+
+            _ => {
+                let error_string = format!(
+                    "The [{}] opcode does not support symbol refs at this time",
+                    tag
+                );
+                Err(nom::Err::Failure(ErrorTree::from_external_error(
                     i,
-                    InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: tag_to_instruction_long(&tag),
-                            register: dest_register.to_register_index(),
-                            value: *value,
-                            condition_flag,
-                            additional_flags: if &tag == "SHFI" {
-                                StatusRegisterUpdateSource::Shift.to_flags()
-                            } else {
-                                StatusRegisterUpdateSource::Alu.to_flags()
-                            },
-                        }),
-                        symbol_ref: None,
-                    },
-                )),
-                _ => {
-                    let error_string = format!(
-                        "The [{}] opcode does not support symbol refs at this time",
-                        tag
-                    );
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
+                    ErrorKind::Fail,
+                    error_string.as_str(),
+                )))
             }
-        }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        },
+        [AddressingMode::Immediate(immediate_type), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
@@ -149,14 +127,11 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 instruction: InstructionData::ShortImmediate(
                                     ShortImmediateInstructionData {
                                         op_code: tag_to_instruction_short(&tag),
-                                        register: dest_register.to_register_index(),
+                                        register: 0x0,
                                         value: *value as u8,
                                         condition_flag,
-                                        additional_flags: if &tag == "SHFI" {
-                                            StatusRegisterUpdateSource::Shift.to_flags()
-                                        } else {
-                                            StatusRegisterUpdateSource::Alu.to_flags()
-                                        },
+                                        additional_flags: StatusRegisterUpdateSource::Alu
+                                            .to_flags(),
                                         shift_operand,
                                         shift_type,
                                         shift_count,
@@ -181,7 +156,10 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             }
         }
         _ => {
-            let error_string = format!("The [{}] opcode only supports immediate->register addressing mode (e.g. ADDI y1, #1)", tag);
+            let error_string = format!(
+                "The [{}] opcode only supports immediate addressing mode (e.g. EXCP #1)",
+                tag
+            );
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,
