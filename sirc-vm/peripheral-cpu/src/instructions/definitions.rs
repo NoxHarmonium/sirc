@@ -107,6 +107,7 @@ pub enum StatusRegisterUpdateSource {
 }
 
 impl StatusRegisterUpdateSource {
+    #[must_use]
     pub fn to_flags(&self) -> u8 {
         num::ToPrimitive::to_u8(self).expect("Could not convert enum to u8") & 0x3
     }
@@ -114,48 +115,45 @@ impl StatusRegisterUpdateSource {
 
 // TODO: Define trait and move somewhere else?
 impl ConditionFlags {
+    #[must_use]
     pub fn should_execute(&self, registers: &Registers) -> bool {
         match self {
-            ConditionFlags::Always => true,
-            ConditionFlags::Equal => sr_bit_is_set(StatusRegisterFields::Zero, registers),
-            ConditionFlags::NotEqual => !sr_bit_is_set(StatusRegisterFields::Zero, registers),
-            ConditionFlags::CarrySet => sr_bit_is_set(StatusRegisterFields::Carry, registers),
-            ConditionFlags::CarryClear => !sr_bit_is_set(StatusRegisterFields::Carry, registers),
-            ConditionFlags::NegativeSet => sr_bit_is_set(StatusRegisterFields::Negative, registers),
-            ConditionFlags::NegativeClear => {
-                !sr_bit_is_set(StatusRegisterFields::Negative, registers)
-            }
-            ConditionFlags::OverflowSet => sr_bit_is_set(StatusRegisterFields::Overflow, registers),
-            ConditionFlags::OverflowClear => {
-                !sr_bit_is_set(StatusRegisterFields::Overflow, registers)
-            }
-            ConditionFlags::UnsignedHigher => {
+            Self::Always => true,
+            Self::Equal => sr_bit_is_set(StatusRegisterFields::Zero, registers),
+            Self::NotEqual => !sr_bit_is_set(StatusRegisterFields::Zero, registers),
+            Self::CarrySet => sr_bit_is_set(StatusRegisterFields::Carry, registers),
+            Self::CarryClear => !sr_bit_is_set(StatusRegisterFields::Carry, registers),
+            Self::NegativeSet => sr_bit_is_set(StatusRegisterFields::Negative, registers),
+            Self::NegativeClear => !sr_bit_is_set(StatusRegisterFields::Negative, registers),
+            Self::OverflowSet => sr_bit_is_set(StatusRegisterFields::Overflow, registers),
+            Self::OverflowClear => !sr_bit_is_set(StatusRegisterFields::Overflow, registers),
+            Self::UnsignedHigher => {
                 sr_bit_is_set(StatusRegisterFields::Carry, registers)
                     && !sr_bit_is_set(StatusRegisterFields::Zero, registers)
             }
-            ConditionFlags::UnsignedLowerOrSame => {
+            Self::UnsignedLowerOrSame => {
                 !sr_bit_is_set(StatusRegisterFields::Carry, registers)
                     || sr_bit_is_set(StatusRegisterFields::Zero, registers)
             }
-            ConditionFlags::GreaterOrEqual => {
+            Self::GreaterOrEqual => {
                 sr_bit_is_set(StatusRegisterFields::Negative, registers)
                     == sr_bit_is_set(StatusRegisterFields::Overflow, registers)
             }
-            ConditionFlags::LessThan => {
+            Self::LessThan => {
                 sr_bit_is_set(StatusRegisterFields::Negative, registers)
                     != sr_bit_is_set(StatusRegisterFields::Overflow, registers)
             }
-            ConditionFlags::GreaterThan => {
+            Self::GreaterThan => {
                 !sr_bit_is_set(StatusRegisterFields::Zero, registers)
                     && (sr_bit_is_set(StatusRegisterFields::Negative, registers)
                         == sr_bit_is_set(StatusRegisterFields::Overflow, registers))
             }
-            ConditionFlags::LessThanOrEqual => {
+            Self::LessThanOrEqual => {
                 sr_bit_is_set(StatusRegisterFields::Zero, registers)
                     || (sr_bit_is_set(StatusRegisterFields::Negative, registers)
                         != sr_bit_is_set(StatusRegisterFields::Overflow, registers))
             }
-            ConditionFlags::Never => false,
+            Self::Never => false,
         }
     }
 }
@@ -310,21 +308,25 @@ pub enum Instruction {
 use strum::IntoEnumIterator;
 
 #[cfg(test)]
+#[must_use]
 pub fn all_condition_flags() -> Vec<ConditionFlags> {
     ConditionFlags::iter().collect()
 }
 
 #[cfg(test)]
+#[must_use]
 pub fn all_shift_operands() -> Vec<ShiftOperand> {
     ShiftOperand::iter().collect()
 }
 
 #[cfg(test)]
+#[must_use]
 pub fn all_shift_types() -> Vec<ShiftType> {
     ShiftType::iter().collect()
 }
 
 #[cfg(test)]
+#[must_use]
 pub fn all_instructions() -> Vec<Instruction> {
     Instruction::iter().collect()
 }

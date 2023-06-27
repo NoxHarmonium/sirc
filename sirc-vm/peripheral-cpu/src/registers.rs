@@ -3,7 +3,7 @@ use std::ops::{Index, IndexMut};
 
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
-pub const ADDRESS_MASK: u32 = 0x00FFFFFF;
+pub const ADDRESS_MASK: u32 = 0x00FF_FFFF;
 
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
@@ -45,6 +45,7 @@ pub enum RegisterName {
 }
 
 impl RegisterName {
+    #[must_use]
     pub fn to_register_index(&self) -> u8 {
         num::ToPrimitive::to_u8(self).expect("Could not convert enum to u8")
     }
@@ -65,10 +66,12 @@ pub enum AddressRegisterName {
 }
 
 impl AddressRegisterName {
+    #[must_use]
     pub fn to_register_index(&self) -> u8 {
         num::ToPrimitive::to_u8(self).expect("Could not convert enum to u8")
     }
-    pub fn from_register_index(index: u8) -> AddressRegisterName {
+    #[must_use]
+    pub fn from_register_index(index: u8) -> Self {
         num::FromPrimitive::from_u8(index).expect("Could not convert u8 to enum")
     }
 }
@@ -177,7 +180,7 @@ impl Index<u8> for Registers {
             13 => &self.ph,
             14 => &self.pl,
             15 => &self.sr,
-            _ => panic!("Fatal: No register mapping for index [{}]", index),
+            _ => panic!("Fatal: No register mapping for index [{index}]"),
         }
     }
 }
@@ -213,7 +216,7 @@ impl IndexMut<u8> for Registers {
             13 => &mut self.ph,
             14 => &mut self.pl,
             15 => &mut self.sr,
-            _ => panic!("Fatal: No register mapping for index [{}]", index),
+            _ => panic!("Fatal: No register mapping for index [{index}]"),
         }
     }
 }
@@ -284,7 +287,7 @@ impl SegmentedAddress for (u16, u16) {
     ///
     /// You will most likely need this when converting from the internal CPU registers
     /// to the address representation exposed by the virtual address pins of the CPU
-    /// for something like peripheral_mem.
+    /// for something like `peripheral_mem`.
     ///
     /// ```
     /// use peripheral_cpu::registers::SegmentedAddress;
@@ -296,12 +299,12 @@ impl SegmentedAddress for (u16, u16) {
     fn to_full_address(self) -> u32 {
         let (high, low) = self;
         if high > 0x00FF {
-            println!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.")
+            println!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.");
         }
-        let high_shifted = (high as u32) << (size_of::<u16>() * u8::BITS as usize);
+        let high_shifted = u32::from(high) << (size_of::<u16>() * u8::BITS as usize);
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
         // This CPU only supports 24 bit addressing
-        (high_shifted | low as u32) & ADDRESS_MASK
+        (high_shifted | u32::from(low)) & ADDRESS_MASK
     }
 }
 
@@ -344,7 +347,7 @@ impl FullAddressRegisterAccess for Registers {
 /// a 24 bit address split into two 16 bit registers).
 ///
 /// You will most likely need this when converting address exposed
-/// by the virtual address pins of the CPU for something like peripheral_mem
+/// by the virtual address pins of the CPU for something like `peripheral_mem`
 /// to the representation in the internal CPU registers.
 ///
 /// ```
@@ -354,6 +357,7 @@ impl FullAddressRegisterAccess for Registers {
 /// assert_eq!(full_address.to_segmented_address(), (0x00FE, 0xCAFE));
 /// ```
 ///
+#[allow(clippy::cast_possible_truncation)]
 impl FullAddress for u32 {
     fn to_segmented_address(self) -> (u16, u16) {
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
@@ -374,6 +378,7 @@ impl FullAddress for u32 {
 /// assert_eq!(true, sr_bit_is_set_value(StatusRegisterFields::Overflow, 0x0008));
 /// assert_eq!(false, sr_bit_is_set_value(StatusRegisterFields::Carry, 0x0008));
 /// ```
+#[must_use]
 pub fn sr_bit_is_set_value(field: StatusRegisterFields, value: u16) -> bool {
     let bit_mask = field as u16;
     value & bit_mask == bit_mask
@@ -394,6 +399,7 @@ pub fn sr_bit_is_set_value(field: StatusRegisterFields, value: u16) -> bool {
 /// assert_eq!(true, sr_bit_is_set(StatusRegisterFields::Overflow, &registers));
 /// assert_eq!(false, sr_bit_is_set(StatusRegisterFields::Carry, &registers));
 /// ```
+#[must_use]
 pub fn sr_bit_is_set(field: StatusRegisterFields, registers: &Registers) -> bool {
     let bit_mask = field as u16;
     registers.sr & bit_mask == bit_mask
@@ -417,7 +423,7 @@ pub fn sr_bit_is_set(field: StatusRegisterFields, registers: &Registers) -> bool
 /// ```
 pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = field as u16;
-    registers.sr |= bit_mask
+    registers.sr |= bit_mask;
 }
 
 ///
@@ -438,7 +444,7 @@ pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 /// ```
 pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     let bit_mask = field as u16;
-    registers.sr &= !bit_mask
+    registers.sr &= !bit_mask;
 }
 
 ///
@@ -466,6 +472,7 @@ pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 /// registers.sr = 0b0000_1110 << u8::BITS;
 /// assert_eq!(7, get_interrupt_mask(&registers));
 /// ```
+#[must_use]
 pub fn get_interrupt_mask(registers: &Registers) -> u8 {
     let bit_mask = StatusRegisterFields::InterruptMaskHigh as u16
         | StatusRegisterFields::InterruptMaskMed as u16
@@ -505,7 +512,7 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
 /// ```
 pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
     // TODO: Can we work out this shift based on the fields position?
-    let shifted_value = (interrupt_mask.clamp(0, 7) as u16) << 9;
+    let shifted_value = u16::from(interrupt_mask.clamp(0, 7)) << 9;
     let bit_mask = !(StatusRegisterFields::InterruptMaskHigh as u16
         | StatusRegisterFields::InterruptMaskMed as u16
         | StatusRegisterFields::InterruptMaskLow as u16);
@@ -519,6 +526,11 @@ pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
 /// This should probably only be used when parsing instructions in an assembler,
 /// not in the actual functioning of the VM.
 ///
+/// # Panics
+///
+/// Will panic if the provided name does not map to a register
+///
+#[must_use]
 pub fn register_name_to_index(name: &str) -> u8 {
     match name {
         "r1" => 0,
@@ -541,12 +553,13 @@ pub fn register_name_to_index(name: &str) -> u8 {
         "ph" => 13, // Program counter high
         "pl" => 14, // Program counter low
         "sr" => 15,
-        _ => panic!("Fatal: No register mapping for name [{}]", name),
+        // TODO: Should this panic or just return None or something?
+        _ => panic!("Fatal: No register mapping for name [{name}]"),
     }
 }
 
 ///
-/// Returns true if start_index/end_index form a valid range of registers,
+/// Returns true if `start_index/end_index` form a valid range of registers,
 /// otherwise false.
 ///
 /// ```
@@ -559,6 +572,7 @@ pub fn register_name_to_index(name: &str) -> u8 {
 /// assert!(!is_valid_register_range(0, 0));
 ///
 /// ```
+#[must_use]
 pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
     // TODO: Use std::mem::variant_count::<RegisterName>() when it stabilises https://stackoverflow.com/a/73543241/1153203
     let register_count = 16;

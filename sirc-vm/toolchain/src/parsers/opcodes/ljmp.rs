@@ -127,7 +127,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         modes => {
-            let error_string = format!("Invalid addressing mode for LJMP: ({:?})", modes);
+            let error_string = format!("Invalid addressing mode for LJMP: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,

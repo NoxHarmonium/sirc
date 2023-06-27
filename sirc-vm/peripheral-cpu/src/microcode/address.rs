@@ -20,13 +20,16 @@ use crate::registers::{
 /// assert_eq!(sign_extend_small_offset(0x00), 0x0000);
 /// ```
 ///
+#[must_use]
+#[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 pub fn sign_extend_small_offset(small_offset: u8) -> u16 {
     // 1. Convert to i8 so the compiler knows we are dealing with a signed number
     // 2. Extend it to i16, the compiler knows it is signed so it preserves the sign
     // 3. Cast it back to unsigned which we deal with
-    ((small_offset as i8) as i16) as u16
+    i16::from(small_offset as i8) as u16
 }
 
+#[must_use]
 pub fn calculate_effective_address_with_pc_offset(registers: &Registers, offset: u16) -> u32 {
     let (h, l) = registers.get_segmented_pc();
     // TODO: Segment overflow?
@@ -34,6 +37,7 @@ pub fn calculate_effective_address_with_pc_offset(registers: &Registers, offset:
     (h, new_l).to_full_address()
 }
 
+#[must_use]
 pub fn calculate_effective_address_with_immediate(
     registers: &Registers,
     address_register_index: u8,
@@ -47,6 +51,7 @@ pub fn calculate_effective_address_with_immediate(
     (h, new_l).to_full_address()
 }
 
+#[must_use]
 pub fn calculate_effective_address_with_register(
     registers: &Registers,
     address_register_index: u8,

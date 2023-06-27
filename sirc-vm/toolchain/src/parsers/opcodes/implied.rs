@@ -10,13 +10,13 @@ use peripheral_cpu::instructions::definitions::{
 };
 use peripheral_cpu::registers::AddressRegisterName;
 
-fn tag_to_instruction(tag: String) -> Instruction {
-    match tag.as_str() {
+fn tag_to_instruction(tag: &str) -> Instruction {
+    match tag {
         "RETS" => Instruction::ReturnFromSubroutine,
         "NOOP" => Instruction::NoOperation,
         "WAIT" => Instruction::WaitForException,
         "RETE" => Instruction::ReturnFromException,
-        _ => panic!("No tag mapping for instruction [{}]", tag),
+        _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
@@ -55,22 +55,17 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, (tag, condition_flag)) = instructions(i)?;
 
-    match peek(one_of::<&str, &str, ErrorTree<&str>>("\r\n"))(i) {
-        Ok(_) => {}
-        Err(_) => {
-            let error_string = format!(
-                "The [{}] does not support any addressing modes (e.g. NOOP or RETE)",
-                tag
-            );
-            return Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
-                ErrorKind::Fail,
-                error_string.as_str(),
-            )));
-        }
+    if peek(one_of::<&str, &str, ErrorTree<&str>>("\r\n"))(i).is_err() {
+        let error_string =
+            format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string.as_str(),
+        )));
     }
 
-    match tag_to_instruction(tag) {
+    match tag_to_instruction(tag.as_str()) {
         // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump
         // to the link register (TODO: should this be moved out to a different parser or something?)
         Instruction::ReturnFromSubroutine => Ok((

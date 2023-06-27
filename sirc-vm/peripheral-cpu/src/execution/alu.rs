@@ -14,6 +14,7 @@ pub enum Sign {
     Negative,
 }
 
+#[must_use]
 pub fn sign(value: u16) -> Sign {
     let sign_bit = 0x8000;
 
@@ -312,6 +313,7 @@ fn perform_xor(a: u16, b: u16, intermediate_registers: &mut IntermediateRegister
 
 // Shifts
 
+#[must_use]
 pub fn perform_shift(operand: u16, shift_type: ShiftType, shift_count: u16) -> (u16, u16) {
     // println!(
     //     "!!SHIFT!! {:#?} | {:#?} | {:#?}",
@@ -334,22 +336,22 @@ pub fn perform_shift(operand: u16, shift_type: ShiftType, shift_count: u16) -> (
             return (operand, intermediate_registers.alu_status_register);
         }
         ShiftType::LogicalLeftShift => {
-            perform_logical_left_shift(operand, shift_count, &mut intermediate_registers)
+            perform_logical_left_shift(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::LogicalRightShift => {
-            perform_logical_right_shift(operand, shift_count, &mut intermediate_registers)
+            perform_logical_right_shift(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::ArithmeticLeftShift => {
-            perform_arithmetic_left_shift(operand, shift_count, &mut intermediate_registers)
+            perform_arithmetic_left_shift(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::ArithmeticRightShift => {
-            perform_arithmetic_right_shift(operand, shift_count, &mut intermediate_registers)
+            perform_arithmetic_right_shift(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::RotateLeft => {
-            perform_rotate_left(operand, shift_count, &mut intermediate_registers)
+            perform_rotate_left(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::RotateRight => {
-            perform_rotate_right(operand, shift_count, &mut intermediate_registers)
+            perform_rotate_right(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::Reserved => {
             intermediate_registers.alu_output = operand;
@@ -367,8 +369,9 @@ pub fn perform_shift(operand: u16, shift_type: ShiftType, shift_count: u16) -> (
     )
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn perform_logical_left_shift(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
-    let extended_a = a as u32;
+    let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
 
     // There doesn't seem to be a built in method to shift left and get a flag
@@ -389,8 +392,9 @@ fn perform_logical_left_shift(a: u16, b: u16, intermediate_registers: &mut Inter
     intermediate_registers.alu_output = result;
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn perform_logical_right_shift(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
-    let extended_a = a as u32;
+    let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
 
     // There doesn't seem to be a built in method to shift right and get a flag
@@ -398,7 +402,7 @@ fn perform_logical_right_shift(a: u16, b: u16, intermediate_registers: &mut Inte
     // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
     // rotates into the first position on the left side.
     // The hardware implementation will look different to this
-    let wide_result = extended_a.rotate_right(clamped_b as u32);
+    let wide_result = extended_a.rotate_right(u32::from(clamped_b));
     let result = wide_result as u16;
     let carry = (wide_result & MSB_MASK) == MSB_MASK;
 
@@ -412,6 +416,7 @@ fn perform_logical_right_shift(a: u16, b: u16, intermediate_registers: &mut Inte
     intermediate_registers.alu_output = result;
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn perform_arithmetic_left_shift(
     a: u16,
     b: u16,
@@ -419,7 +424,7 @@ fn perform_arithmetic_left_shift(
 ) {
     // Same as LSL but will set the overflow bit if the sign changes
 
-    let extended_a = a as u32;
+    let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
 
     // There doesn't seem to be a built in method to shift left and get a flag
@@ -440,6 +445,7 @@ fn perform_arithmetic_left_shift(
     intermediate_registers.alu_output = result;
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn perform_arithmetic_right_shift(
     a: u16,
     b: u16,
@@ -447,9 +453,9 @@ fn perform_arithmetic_right_shift(
 ) {
     // Same as LSR but preserves the sign bit
 
-    let sign_bit = a as u32 & 0x80;
+    let sign_bit = u32::from(a) & 0x80;
 
-    let extended_a = a as u32;
+    let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
 
     // There doesn't seem to be a built in method to shift right and get a flag
@@ -457,7 +463,7 @@ fn perform_arithmetic_right_shift(
     // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
     // rotates into the first position on the left side.
     // The hardware implementation will look different to this
-    let wide_result = extended_a.rotate_right(clamped_b as u32) | sign_bit;
+    let wide_result = extended_a.rotate_right(u32::from(clamped_b)) | sign_bit;
     let result = wide_result as u16;
     let carry = (wide_result & MSB_MASK) == MSB_MASK;
 
@@ -472,7 +478,7 @@ fn perform_arithmetic_right_shift(
 }
 
 fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
-    let result: u16 = a.rotate_left(b as u32);
+    let result: u16 = a.rotate_left(u32::from(b));
     // Bit shifted out goes into carry (that's what the 68k does :shrug:)
     // TODO: Extract bit checking to function
     // TODO: Check the purpose of bit shifted out going to carry
@@ -487,7 +493,7 @@ fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut Intermediate
 }
 
 fn perform_rotate_right(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
-    let result: u16 = a.rotate_right(b as u32);
+    let result: u16 = a.rotate_right(u32::from(b));
     // Bit shifted out goes into carry (that's what the 68k does :shrug:)
     // TODO: Extract bit checking to function
     // TODO: Check the purpose of bit shifted out going to carry
@@ -516,17 +522,14 @@ pub fn perform_alu_operation(
     match alu_op {
         AluOp::Add => perform_add(a, b, intermediate_registers),
         AluOp::AddWithCarry => perform_add_with_carry(a, b, registers, intermediate_registers),
-        AluOp::Subtract => perform_subtract(a, b, intermediate_registers),
+        AluOp::Subtract | AluOp::Compare => perform_subtract(a, b, intermediate_registers),
         AluOp::SubtractWithCarry => {
-            perform_subtract_with_carry(a, b, registers, intermediate_registers)
+            perform_subtract_with_carry(a, b, registers, intermediate_registers);
         }
-        AluOp::And => perform_and(a, b, intermediate_registers),
+        AluOp::And | AluOp::TestAnd => perform_and(a, b, intermediate_registers),
         AluOp::Or => perform_or(a, b, intermediate_registers),
-        AluOp::Xor => perform_xor(a, b, intermediate_registers),
+        AluOp::Xor | AluOp::TestXor => perform_xor(a, b, intermediate_registers),
         // These are the same in ALU land, the difference is in the write back stage
-        AluOp::Compare => perform_subtract(a, b, intermediate_registers),
-        AluOp::TestAnd => perform_and(a, b, intermediate_registers),
-        AluOp::TestXor => perform_xor(a, b, intermediate_registers),
         AluOp::Shift => {
             intermediate_registers.alu_output = b;
         }
@@ -536,6 +539,7 @@ pub fn perform_alu_operation(
     // println!("!!ALU DONE!! {:#?} | {:#?}", alu_op, intermediate_registers);
 }
 
+#[allow(clippy::cast_possible_wrap)]
 pub fn set_alu_bits(
     sr: &mut u16,
     value: u16,

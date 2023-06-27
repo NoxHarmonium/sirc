@@ -76,28 +76,27 @@ pub fn jump_to_interrupt(vector_offset: u8, registers: &mut Registers, mem: &Mem
     // push_value_to_stack(registers, mem, old_sr);
 
     // Jump to ISR
-    let vector_address = registers.system_ram_offset + vector_offset as u32;
+    let vector_address = registers.system_ram_offset + u32::from(vector_offset);
     (registers.ph, registers.pl) = (
         mem.read_address(vector_address),
         mem.read_address(vector_address + 1),
-    )
+    );
 }
 
-// pub fn return_from_interrupt(registers: &mut Registers, mem: &MemoryPeripheral) {
-// Get the important register values before we switch out of system mode
-// and can't access them anymore
-// registers.sr = pop_value_from_stack(registers, mem);
-// (registers.ph, registers.pl) = pop_address_from_stack(registers, mem).to_segmented_address();
-// }
-
+///
+/// This function is currently unmaintained and probably unused but will be resurrected when I
+/// get around to implementing the exception unit.
+///
+/// # Panics
+/// Will panic if `interupt_level` does not fit in three bits
+///
+#[allow(clippy::cast_possible_truncation)]
 pub fn trigger_hardware_interrupt(
     interrupt_level: u8,
     registers: &mut Registers,
     mem: &MemoryPeripheral,
 ) {
-    if interrupt_level == 0 || interrupt_level > 0b111 {
-        panic!("Interrupt level (0x{:08x}) must be greater than zero and fit in three bits (max 7 in decimal).", interrupt_level);
-    }
+    assert!(!(interrupt_level == 0 || interrupt_level > 0b111), "Interrupt level (0x{interrupt_level:08x}) must be greater than zero and fit in three bits (max 7 in decimal).");
 
     let vector_offset_start: u8 = vectors::LEVEL_ONE_INTERRUPT as u8 - 1;
     let vector_offset = vector_offset_start + interrupt_level;

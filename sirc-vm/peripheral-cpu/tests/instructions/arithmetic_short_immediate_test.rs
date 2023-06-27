@@ -15,6 +15,7 @@ fn get_register_index_range() -> Range<u8> {
     0..13
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn get_expected_registers<F>(previous: &Registers, register_setup: F) -> Registers
 where
     F: Fn(&mut Registers),
@@ -28,6 +29,9 @@ where
     initial
 }
 
+// TODO: Point taken from clippy about having too many arguments.
+// will fix up ASAP if possible
+#[allow(clippy::too_many_arguments)]
 fn test_short_immediate_arithmetic_instruction(
     instruction: Instruction,
     target_register: u8,
@@ -37,8 +41,8 @@ fn test_short_immediate_arithmetic_instruction(
     shift_type: ShiftType,
     shift_count: u8,
     expected_value: u16,
-    initial_status_flags: Vec<StatusRegisterFields>,
-    expected_status_flags: Vec<StatusRegisterFields>,
+    initial_status_flags: &Vec<StatusRegisterFields>,
+    expected_status_flags: &Vec<StatusRegisterFields>,
 ) {
     let instruction_data = InstructionData::ShortImmediate(ShortImmediateInstructionData {
         op_code: instruction,
@@ -57,19 +61,19 @@ fn test_short_immediate_arithmetic_instruction(
     let (previous, current) =
         common::run_instruction(&instruction_data, |registers: &mut Registers| {
             registers.set_at_index(target_register, register_value);
-            for &status_register_field in &initial_status_flags {
+            for &status_register_field in initial_status_flags {
                 set_sr_bit(status_register_field, registers);
             }
         });
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_at_index(target_register, expected_value);
-            for &status_register_field in &expected_status_flags {
+            for &status_register_field in expected_status_flags {
                 set_sr_bit(status_register_field, registers);
             }
         });
     assert_eq!(expected_registers, current.registers);
-    for &status_register_field in &expected_status_flags {
+    for &status_register_field in expected_status_flags {
         assert!(sr_bit_is_set(status_register_field, &current.registers));
     }
 }
@@ -91,13 +95,13 @@ fn test_add_immediate_basic() {
             0,
             0x1112,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
     }
 }
@@ -114,8 +118,8 @@ fn test_add_immediate_unsigned_overflow() {
             ShiftType::None,
             0,
             0x0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
         );
     }
 }
@@ -132,8 +136,8 @@ fn test_add_immediate_signed_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x9FFF,
-            vec![],
-            vec![
+            &vec![],
+            &vec![
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
@@ -152,8 +156,8 @@ fn test_add_immediate_both_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x2FFF,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
         );
     }
 }
@@ -175,13 +179,13 @@ fn test_add_immediate_with_carry_basic() {
             0,
             0x2214,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
     }
 }
@@ -198,8 +202,8 @@ fn test_add_immediate_with_carry_unsigned_overflow() {
             ShiftType::None,
             0,
             0x0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
         );
     }
 }
@@ -216,8 +220,8 @@ fn test_add_immediate_with_carry_signed_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x9FFF,
-            vec![],
-            vec![
+            &vec![],
+            &vec![
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
@@ -236,8 +240,8 @@ fn test_add_immediate_with_carry_both_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x2FFF,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
         );
     }
 }
@@ -259,13 +263,13 @@ fn test_subtract_immediate_basic() {
             0,
             0x5202,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
     }
 }
@@ -287,13 +291,13 @@ fn test_subtract_immediate_with_carry_basic() {
             0,
             0x5201,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
     }
 }
@@ -310,8 +314,8 @@ fn test_subtract_immediate_with_carry_unsigned_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x6000,
-            vec![],
-            vec![StatusRegisterFields::Carry],
+            &vec![],
+            &vec![StatusRegisterFields::Carry],
         );
     }
 }
@@ -328,8 +332,8 @@ fn test_subtract_immediate_with_carry_signed_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0x6000,
-            vec![],
-            vec![StatusRegisterFields::Overflow],
+            &vec![],
+            &vec![StatusRegisterFields::Overflow],
         );
     }
 }
@@ -345,8 +349,8 @@ fn test_subtract_immediate_with_carry_both_overflow() {
             ShiftType::LogicalLeftShift,
             8,
             0xA000,
-            vec![],
-            vec![
+            &vec![],
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
@@ -372,13 +376,13 @@ fn test_and_immediate() {
             0,
             0x00F0,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::AndShortImmediate,
@@ -389,8 +393,8 @@ fn test_and_immediate() {
             ShiftType::None,
             0,
             0x0000,
-            vec![],
-            vec![StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
         );
     }
 }
@@ -412,13 +416,13 @@ fn test_or_immediate() {
             0,
             0xFF,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::OrShortImmediate,
@@ -429,8 +433,8 @@ fn test_or_immediate() {
             ShiftType::None,
             0,
             0xC0FE,
-            vec![],
-            vec![StatusRegisterFields::Negative],
+            &vec![],
+            &vec![StatusRegisterFields::Negative],
         );
     }
 }
@@ -452,13 +456,13 @@ fn test_xor_immediate() {
             0,
             0x0000,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![StatusRegisterFields::Zero],
+            &vec![StatusRegisterFields::Zero],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::XorShortImmediate,
@@ -469,8 +473,8 @@ fn test_xor_immediate() {
             ShiftType::None,
             0,
             0xF000,
-            vec![],
-            vec![StatusRegisterFields::Negative],
+            &vec![],
+            &vec![StatusRegisterFields::Negative],
         );
     }
 }
@@ -492,13 +496,13 @@ fn test_logical_shift_left_immediate() {
             1,
             0b0000_0000_0110_0110,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -509,8 +513,8 @@ fn test_logical_shift_left_immediate() {
             ShiftType::LogicalLeftShift,
             1,
             0b0000_0001_0110_0110,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -521,8 +525,8 @@ fn test_logical_shift_left_immediate() {
             ShiftType::LogicalLeftShift,
             6,
             0b0010_1100_1100_0000,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -533,8 +537,8 @@ fn test_logical_shift_left_immediate() {
             ShiftType::LogicalLeftShift,
             15,
             0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -545,8 +549,8 @@ fn test_logical_shift_left_immediate() {
             ShiftType::LogicalLeftShift,
             0,
             0b0000_0000_1011_0011,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -558,8 +562,8 @@ fn test_logical_shift_left_immediate() {
             // Max immediate shift is 15
             u8::MAX,
             0b1000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
     }
 }
@@ -577,13 +581,13 @@ fn test_logical_shift_right_immediate() {
             0,
             0b0000_0000_1100_1100,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -594,8 +598,8 @@ fn test_logical_shift_right_immediate() {
             ShiftType::LogicalRightShift,
             1,
             0b0000_0000_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
+            &vec![],
+            &vec![StatusRegisterFields::Carry],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -606,8 +610,8 @@ fn test_logical_shift_right_immediate() {
             ShiftType::LogicalRightShift,
             6,
             0b0000_0000_0000_0011,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -618,8 +622,8 @@ fn test_logical_shift_right_immediate() {
             ShiftType::LogicalRightShift,
             15,
             0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -631,8 +635,8 @@ fn test_logical_shift_right_immediate() {
             // Max immediate shift is 15, truncates to zero
             16,
             0b0000_0000_1100_1101,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -644,8 +648,8 @@ fn test_logical_shift_right_immediate() {
             // Max immediate shift is 15, truncates to 1
             17,
             0b0000_0000_0110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
+            &vec![],
+            &vec![StatusRegisterFields::Carry],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -657,8 +661,8 @@ fn test_logical_shift_right_immediate() {
             // Max immediate shift is 15, truncates to 15
             u8::MAX,
             0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
         );
     }
 }
@@ -676,13 +680,13 @@ fn test_arithmetic_shift_left_immediate() {
             1,
             0b0000_0000_0110_0110,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -693,8 +697,8 @@ fn test_arithmetic_shift_left_immediate() {
             ShiftType::ArithmeticLeftShift,
             1,
             0b0000_0001_0110_0110,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -705,8 +709,8 @@ fn test_arithmetic_shift_left_immediate() {
             ShiftType::ArithmeticLeftShift,
             6,
             0b0010_1100_1100_0000,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -717,8 +721,8 @@ fn test_arithmetic_shift_left_immediate() {
             ShiftType::ArithmeticLeftShift,
             15,
             0b1000_0000_0000_0000,
-            vec![],
-            vec![
+            &vec![],
+            &vec![
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Carry,
@@ -733,8 +737,8 @@ fn test_arithmetic_shift_left_immediate() {
             ShiftType::ArithmeticLeftShift,
             0,
             0b0000_0000_1011_0011,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -746,8 +750,8 @@ fn test_arithmetic_shift_left_immediate() {
             // Max immediate shift is 15
             u8::MAX,
             0b1000_0000_0000_0000,
-            vec![],
-            vec![
+            &vec![],
+            &vec![
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Carry,
@@ -769,13 +773,13 @@ fn test_arithmetic_shift_right_immediate() {
             0,
             0b0000_0000_1100_1100,
             // Test flag clearing (these flags do not reflect the initial register value)
-            vec![
+            &vec![
                 StatusRegisterFields::Carry,
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Zero,
             ],
-            vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -786,8 +790,8 @@ fn test_arithmetic_shift_right_immediate() {
             ShiftType::ArithmeticRightShift,
             1,
             0b0000_0000_1110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
+            &vec![],
+            &vec![StatusRegisterFields::Carry],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -798,8 +802,8 @@ fn test_arithmetic_shift_right_immediate() {
             ShiftType::ArithmeticRightShift,
             6,
             0b0000_0000_1000_0011,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -810,8 +814,8 @@ fn test_arithmetic_shift_right_immediate() {
             ShiftType::ArithmeticRightShift,
             15,
             0b0000_0000_1000_0000,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -823,8 +827,8 @@ fn test_arithmetic_shift_right_immediate() {
             // Max immediate shift is 15, truncates to zero
             16,
             0b0000_0000_1100_1101,
-            vec![],
-            vec![],
+            &vec![],
+            &vec![],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -836,8 +840,8 @@ fn test_arithmetic_shift_right_immediate() {
             // Max immediate shift is 15, truncates to 1
             17,
             0b0000_0000_1110_0110,
-            vec![],
-            vec![StatusRegisterFields::Carry],
+            &vec![],
+            &vec![StatusRegisterFields::Carry],
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
@@ -849,8 +853,8 @@ fn test_arithmetic_shift_right_immediate() {
             // Max immediate shift is 15, truncates to 15
             u8::MAX,
             0b0000_0000_0000_0000,
-            vec![],
-            vec![StatusRegisterFields::Zero],
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
         );
     }
 }

@@ -1,3 +1,17 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Not sure what this is, will have to revisit
+    clippy::must_use_candidate,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn
+)]
+
 use clap::Parser;
 
 use nom_supreme::error::ErrorTree;
@@ -37,7 +51,7 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                         name: symbol_ref.name,
                         offset,
                         ref_type: symbol_ref.ref_type,
-                    })
+                    });
                 }
 
                 offset += INSTRUCTION_SIZE_BYTES;
@@ -52,7 +66,10 @@ fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
         }
     }
 
-    let bytes: Vec<u8> = program.iter().flat_map(|b| b.to_owned()).collect();
+    let bytes: Vec<u8> = program
+        .iter()
+        .flat_map(std::borrow::ToOwned::to_owned)
+        .collect();
 
     ObjectDefinition {
         symbols,
@@ -70,12 +87,12 @@ fn main() -> io::Result<()> {
     )(file_contents.as_str())
     {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file:\n{}", error),
+        Err(error) => panic!("Error parsing file:\n{error}"),
     };
     let object_definition = build_object(tokens);
     let bytes_to_write = match postcard::to_allocvec(&object_definition) {
         Ok(bytes_to_write) => bytes_to_write,
-        Err(error) => panic!("Error encoding file: {}", error),
+        Err(error) => panic!("Error encoding file: {error}"),
     };
 
     write(args.output_file, bytes_to_write)?;

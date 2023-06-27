@@ -11,8 +11,8 @@ use peripheral_cpu::instructions::definitions::{
     Instruction, InstructionData, RegisterInstructionData, ShiftOperand, ShiftType,
 };
 
-fn tag_to_instruction(tag: String) -> Instruction {
-    match tag.as_str() {
+fn tag_to_instruction(tag: &str) -> Instruction {
+    match tag {
         "ADDR" => Instruction::AddRegister,
         "ADCR" => Instruction::AddRegisterWithCarry,
         "SUBR" => Instruction::SubtractRegister,
@@ -24,7 +24,7 @@ fn tag_to_instruction(tag: String) -> Instruction {
         "TSAR" => Instruction::TestAndRegister,
         "TSXR" => Instruction::TestXorRegister,
         "SHFR" => Instruction::ShiftRegister,
-        _ => panic!("No tag mapping for instruction [{}]", tag),
+        _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
@@ -94,7 +94,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag),
+                        op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
                         r2: dest_register.to_register_index(),
                         r3: src_register.to_register_index(),
@@ -113,7 +113,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag),
+                        op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
                         r2: src_register1.to_register_index(),
                         r3: src_register2.to_register_index(),
@@ -137,7 +137,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag),
+                        op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
                         r2: dest_register.to_register_index(),
                         r3: src_register.to_register_index(),
@@ -160,7 +160,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag),
+                        op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
                         r2: src_register1.to_register_index(),
                         r3: src_register2.to_register_index(),
@@ -175,7 +175,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         _ => {
-            let error_string = format!("The [{}] opcode only supports register->register or register->register->register addressing mode (e.g. ADDR y1, z2, a2 or SUBR y1, a2)", tag);
+            let error_string = format!("The [{tag}] opcode only supports register->register or register->register->register addressing mode (e.g. ADDR y1, z2, a2 or SUBR y1, a2)");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,

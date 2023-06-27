@@ -21,8 +21,10 @@ enum ExecutionStepInstructionType {
 
 pub struct ExecutionEffectiveAddressExecutor;
 
+// TODO: Clean up this match and remove this exclusion
+#[allow(clippy::match_same_arms)]
 fn decode_execution_step_instruction_type(
-    instruction: &Instruction,
+    instruction: Instruction,
     decoded_instruction: &DecodedInstruction,
 ) -> ExecutionStepInstructionType {
     if !decoded_instruction.con_ {
@@ -122,6 +124,7 @@ fn decode_execution_step_instruction_type(
     }
 }
 
+#[allow(clippy::cast_sign_loss)]
 impl StageExecutor for ExecutionEffectiveAddressExecutor {
     fn execute(
         decoded: &DecodedInstruction,
@@ -135,7 +138,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code).unwrap();
 
         let execution_step_instruction_type =
-            decode_execution_step_instruction_type(&decoded.ins, decoded);
+            decode_execution_step_instruction_type(decoded.ins, decoded);
 
         // 4. ====== Execution (EX) ======
         match execution_step_instruction_type {

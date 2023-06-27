@@ -1,3 +1,15 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn
+)]
+
 use std::path::PathBuf;
 
 use peripheral_clock::ClockPeripheral;
@@ -28,7 +40,7 @@ fn main() {
     let mut memory_peripheral = new_memory_peripheral();
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
-    memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, args.program_file);
+    memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
     memory_peripheral.map_segment(SCRATCH_SEGMENT, 0xAAF0, 0x000F, true);
     memory_peripheral.map_segment(FILE_SEGMENT, 0x00F0_0000, 0xFFFF, true);
 
@@ -36,14 +48,14 @@ fn main() {
 
     let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
         Ok(actual_clocks_executed) => {
-            println!("actual_clocks_executed: {}", actual_clocks_executed);
+            println!("actual_clocks_executed: {actual_clocks_executed}");
         }
         Err(error) => {
-            panic!("CPU Error: {:08x?}", error);
+            panic!("CPU Error: {error:08x?}");
         }
     };
 
-    clock_peripheral.start_loop(execute)
+    clock_peripheral.start_loop(execute);
 }
 
 // TODO: Infinite loop but at least it assembles?

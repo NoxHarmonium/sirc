@@ -1,26 +1,29 @@
-use super::definitions::*;
+use super::definitions::{
+    ConditionFlags, ImmediateInstructionData, ImpliedInstructionData, InstructionData,
+    RegisterInstructionData, ShiftOperand, ShiftType, ShortImmediateInstructionData,
+};
 
 const INSTRUCTION_ID_LENGTH: u32 = 6; // bits
-const INSTRUCTION_ID_MASK: u32 = 0x0000003F;
+const INSTRUCTION_ID_MASK: u32 = 0x0000_003F;
 const REGISTER_ID_LENGTH: u32 = 4; // bits
-const REGISTER_ID_MASK: u32 = 0x0000000F;
+const REGISTER_ID_MASK: u32 = 0x0000_000F;
 const ADDRESS_REGISTER_ARGS_LENGTH: u32 = 2; // bits
-const ADDRESS_REGISTER_ARGS_MASK: u32 = 0x00000003;
+const ADDRESS_REGISTER_ARGS_MASK: u32 = 0x0000_0003;
 const VALUE_LENGTH: u32 = 16;
-const VALUE_MASK: u32 = 0x0000FFFF;
+const VALUE_MASK: u32 = 0x0000_FFFF;
 const SHORT_VALUE_LENGTH: u32 = 8;
-const SHORT_VALUE_MASK: u32 = 0x000000FF;
+const SHORT_VALUE_MASK: u32 = 0x0000_00FF;
 const SHIFT_OPERAND_TYPE_LENGTH: u32 = 1; // bit
-const SHIFT_OPERAND_TYPE_MASK: u32 = 0x00000001;
+const SHIFT_OPERAND_TYPE_MASK: u32 = 0x0000_0001;
 const SHIFT_TYPE_ARGS_LENGTH: u32 = 3; // bits
-const SHIFT_TYPE_ARGS_MASK: u32 = 0x000000007;
+const SHIFT_TYPE_ARGS_MASK: u32 = 0x0000_0000_0007;
 const SHIFT_COUNT_ARGS_LENGTH: u32 = 4; // bits
-const SHIFT_COUNT_ARGS_MASK: u32 = 0x00000000F;
+const SHIFT_COUNT_ARGS_MASK: u32 = 0x0000_0000_000F;
 const SHIFT_ALL_LENGTH: u32 =
     SHIFT_OPERAND_TYPE_LENGTH + SHIFT_TYPE_ARGS_LENGTH + SHIFT_COUNT_ARGS_LENGTH; // bits
 
 const CONDITION_FLAGS_LENGTH: u32 = 4; // bits
-const CONDITION_FLAGS_MASK: u32 = 0x0000000F;
+const CONDITION_FLAGS_MASK: u32 = 0x0000_000F;
 
 ///
 /// Extracts the instruction ID from a full 32 bit instruction.
@@ -36,12 +39,14 @@ const CONDITION_FLAGS_MASK: u32 = 0x0000000F;
 /// // Max value is 63, any higher value will clamp to 63
 /// assert_eq!(decode_instruction_id([0xFF, 0x00, 0x00, 0x00]), 63);
 /// ```
+#[must_use]
 pub fn decode_instruction_id(raw_instruction: [u8; 4]) -> u8 {
     // First 6 bits of every instruction is its ID
     let combined = u32::from_be_bytes(raw_instruction);
     ((combined.rotate_left(INSTRUCTION_ID_LENGTH)) & INSTRUCTION_ID_MASK) as u8
 }
 
+#[must_use]
 pub fn decode_condition_flags(raw_instruction: [u8; 4]) -> ConditionFlags {
     // Last 4 bits of every instruction are the condition flags
     let combined = u32::from_be_bytes(raw_instruction);
@@ -49,6 +54,7 @@ pub fn decode_condition_flags(raw_instruction: [u8; 4]) -> ConditionFlags {
     num::FromPrimitive::from_u8(raw_value).expect("Condition flag can only be 4 bits long")
 }
 
+#[must_use]
 pub fn decode_shift_operand(raw_instruction: [u8; 4]) -> ShiftOperand {
     let combined = u32::from_be_bytes(raw_instruction);
     let raw_value = ((combined
@@ -60,6 +66,7 @@ pub fn decode_shift_operand(raw_instruction: [u8; 4]) -> ShiftOperand {
     num::FromPrimitive::from_u8(raw_value).expect("Shift operand can only be one or zero")
 }
 
+#[must_use]
 pub fn decode_shift_type(raw_instruction: [u8; 4]) -> ShiftType {
     let combined = u32::from_be_bytes(raw_instruction);
     let raw_value = ((combined
@@ -68,6 +75,7 @@ pub fn decode_shift_type(raw_instruction: [u8; 4]) -> ShiftType {
     num::FromPrimitive::from_u8(raw_value).expect("Shift type can only be 3 bits long")
 }
 
+#[must_use]
 pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
     let combined = u32::from_be_bytes(raw_instruction);
     ((combined >> (CONDITION_FLAGS_LENGTH + ADDRESS_REGISTER_ARGS_LENGTH)) & SHIFT_COUNT_ARGS_MASK)
@@ -93,6 +101,7 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 /// });
 ///
 /// ```
+#[must_use]
 pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructionData {
     let op_code = decode_instruction_id(raw_instruction);
     let condition_flag = decode_condition_flags(raw_instruction);
@@ -130,6 +139,7 @@ pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructio
 /// });
 ///
 /// ```
+#[must_use]
 pub fn decode_immediate_instruction(raw_instruction: [u8; 4]) -> ImmediateInstructionData {
     let combined = u32::from_be_bytes(raw_instruction);
     let op_code = decode_instruction_id(raw_instruction);
@@ -181,6 +191,7 @@ pub fn decode_immediate_instruction(raw_instruction: [u8; 4]) -> ImmediateInstru
 /// });
 ///
 /// ```
+#[must_use]
 pub fn decode_short_immediate_instruction(
     raw_instruction: [u8; 4],
 ) -> ShortImmediateInstructionData {
@@ -244,8 +255,8 @@ pub fn decode_short_immediate_instruction(
 ///     condition_flag: ConditionFlags::UnsignedLowerOrSame,
 ///     additional_flags: 0x02
 /// });
-///
-/// ```
+///```
+#[must_use]
 pub fn decode_register_instruction(raw_instruction: [u8; 4]) -> RegisterInstructionData {
     let combined = u32::from_be_bytes(raw_instruction);
     let condition_flag = decode_condition_flags(raw_instruction);
@@ -275,7 +286,16 @@ pub fn decode_register_instruction(raw_instruction: [u8; 4]) -> RegisterInstruct
     }
 }
 
-// Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
+/// Decodes a raw instruction encoded in big endian bytes into a struct
+///
+/// Since it is a "16-bit" processor, we read/write 16 bits at a time (align on 16 bits)
+///
+/// # Panics
+///
+/// Will panic if the instruction code is not mapped to anything (the real CPU would just have undefined behaviour)
+///
+#[must_use]
+#[allow(clippy::match_same_arms)]
 pub fn decode_instruction(raw_instruction: [u8; 4]) -> InstructionData {
     let instruction_id = decode_instruction_id(raw_instruction);
     match instruction_id {
@@ -301,16 +321,17 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> InstructionData {
         } // SHORT Immediate arithmetic/logic and short jumps (e.g. SUBI, XORI)
         0x30..=0x3A => InstructionData::Register(decode_register_instruction(raw_instruction)), // Register-Register arithmetic/logic (e.g. SUBR, XORR, CMPR)
         0x3B..=0x3F => InstructionData::Implied(decode_implied_instruction(raw_instruction)), // RETS, NOOP, WAIY, RETE
-        _ => panic!("Fatal: Invalid instruction ID: 0x{:02x}", instruction_id),
+        _ => panic!("Fatal: Invalid instruction ID: 0x{instruction_id:02x}"),
     }
 }
 
 // Encode
 
 ///
-/// Encodes a condition flag enum into a 32 bit integer that can be ORed with
+/// Encodes a condition flag enum into a 32 bit integer that can be `ORed` with
 /// a 32 bit instruction to apply the condition flag to it.
 ///
+#[must_use]
 pub fn encode_condition_flags(condition_flags: &ConditionFlags) -> u32 {
     // Last 4 bits of every instruction are the condition flags
     // Therefore it should be safe to just convert this to 32 bit int and OR it with the final instruction data
@@ -319,9 +340,10 @@ pub fn encode_condition_flags(condition_flags: &ConditionFlags) -> u32 {
 }
 
 ///
-/// Encodes a shift operand enum into a 32 bit integer that can be ORed with
+/// Encodes a shift operand enum into a 32 bit integer that can be `ORed` with
 /// a 32 bit instruction to apply the condition flag to it.
 ///
+#[must_use]
 pub fn encode_shift_operand(shift_operand: &ShiftOperand) -> u32 {
     let raw_flags = num::ToPrimitive::to_u32(shift_operand)
         .expect("Rotate type should fit into 32 bits")
@@ -334,9 +356,10 @@ pub fn encode_shift_operand(shift_operand: &ShiftOperand) -> u32 {
 }
 
 ///
-/// Encodes a shift type enum into a 32 bit integer that can be ORed with
+/// Encodes a shift type enum into a 32 bit integer that can be `ORed` with
 /// a 32 bit instruction to apply the condition flag to it.
 ///
+#[must_use]
 pub fn encode_shift_type(shift_type: &ShiftType) -> u32 {
     let raw_flags = num::ToPrimitive::to_u32(shift_type)
         .expect("Rotate type should fit into 32 bits")
@@ -345,18 +368,20 @@ pub fn encode_shift_type(shift_type: &ShiftType) -> u32 {
 }
 
 ///
-/// Encodes a shift count into a 32 bit integer that can be ORed with
+/// Encodes a shift count into a 32 bit integer that can be `ORed` with
 /// a 32 bit instruction to apply the condition flag to it.
 ///
+#[must_use]
 pub fn encode_shift_count(shift_count: u8) -> u32 {
-    let raw_flags = shift_count as u32 & SHIFT_COUNT_ARGS_MASK;
+    let raw_flags = u32::from(shift_count) & SHIFT_COUNT_ARGS_MASK;
     raw_flags << (CONDITION_FLAGS_LENGTH + ADDRESS_REGISTER_ARGS_LENGTH)
 }
 
 ///
-/// Encodes all the shift components of an instruction into a 32 bit integer that can be ORed with
+/// Encodes all the shift components of an instruction into a 32 bit integer that can be `ORed` with
 /// a 32 bit instruction to apply the condition flag to it.
 ///
+#[must_use]
 pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_count: u8) -> u32 {
     encode_shift_operand(shift_operand)
         | encode_shift_type(shift_type)
@@ -378,8 +403,11 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
 ///   op_code: Instruction::NoOperation,
 ///   condition_flag: ConditionFlags::LessThan,
 /// }), [0xF0, 0x00, 0x00, 0x0C]);
-///
 /// ```
+/// # Panics
+///
+/// Will panic if the opcode value can't be converted to a 32 bit value, which is probably impossible.
+#[must_use]
 pub fn encode_implied_instruction(
     ImpliedInstructionData {
         op_code,
@@ -417,6 +445,8 @@ pub fn encode_implied_instruction(
 /// }), [0x2D, 0x32, 0xBF, 0x9C]);
 ///
 /// ```
+#[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn encode_immediate_instruction(
     ImmediateInstructionData {
         op_code,
@@ -429,11 +459,11 @@ pub fn encode_immediate_instruction(
     let op_code_raw =
         num::ToPrimitive::to_u32(op_code).expect("instruction should fit into 32 bits");
     let a = (op_code_raw & INSTRUCTION_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH);
-    let b = (*register as u32 & REGISTER_ID_MASK)
+    let b = (u32::from(*register) & REGISTER_ID_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH);
-    let c = (*value as u32 & VALUE_MASK)
+    let c = (u32::from(*value) & VALUE_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH + VALUE_LENGTH);
-    let d = (*additional_flags as u32 & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
+    let d = (u32::from(*additional_flags) & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
         INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH + VALUE_LENGTH + ADDRESS_REGISTER_ARGS_LENGTH,
     );
 
@@ -471,6 +501,8 @@ pub fn encode_immediate_instruction(
 /// }), [0xAD, 0x3F, 0xB8, 0x9C]);
 ///
 /// ```
+#[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn encode_short_immediate_instruction(
     ShortImmediateInstructionData {
         op_code,
@@ -486,12 +518,12 @@ pub fn encode_short_immediate_instruction(
     let op_code_raw =
         num::ToPrimitive::to_u32(op_code).expect("instruction should fit into 32 bits");
     let a = (op_code_raw & INSTRUCTION_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH);
-    let b = (*register as u32 & REGISTER_ID_MASK)
+    let b = (u32::from(*register) & REGISTER_ID_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH);
-    let c = (*value as u32 & SHORT_VALUE_MASK)
+    let c = (u32::from(*value) & SHORT_VALUE_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH + SHORT_VALUE_LENGTH);
     let d = encode_shift(shift_operand, shift_type, *shift_count);
-    let e = (*additional_flags as u32 & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
+    let e = (u32::from(*additional_flags) & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
         INSTRUCTION_ID_LENGTH
             + REGISTER_ID_LENGTH
             + SHORT_VALUE_LENGTH
@@ -530,6 +562,8 @@ pub fn encode_short_immediate_instruction(
 /// }), [0xDA, 0xAF, 0x08, 0xEA]);
 ///
 /// ```
+#[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn encode_register_instruction(
     RegisterInstructionData {
         op_code,
@@ -546,14 +580,14 @@ pub fn encode_register_instruction(
     let op_code_raw =
         num::ToPrimitive::to_u32(op_code).expect("instruction should fit into 32 bits");
     let a = (op_code_raw & INSTRUCTION_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH);
-    let b =
-        (*r1 as u32 & REGISTER_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH);
-    let c = (*r2 as u32 & REGISTER_ID_MASK)
+    let b = (u32::from(*r1) & REGISTER_ID_MASK)
+        .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH);
+    let c = (u32::from(*r2) & REGISTER_ID_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 2);
-    let d = (*r3 as u32 & REGISTER_ID_MASK)
+    let d = (u32::from(*r3) & REGISTER_ID_MASK)
         .rotate_right(INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 3);
     let e = encode_shift(shift_operand, shift_type, *shift_count);
-    let f = (*additional_flags as u32 & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
+    let f = (u32::from(*additional_flags) & ADDRESS_REGISTER_ARGS_MASK).rotate_right(
         (INSTRUCTION_ID_LENGTH + REGISTER_ID_LENGTH * 3)
             + SHIFT_ALL_LENGTH
             + ADDRESS_REGISTER_ARGS_LENGTH,
@@ -562,6 +596,7 @@ pub fn encode_register_instruction(
     u32::to_be_bytes(a | b | c | d | e | f | g)
 }
 
+#[must_use]
 pub fn encode_instruction(instruction_data: &InstructionData) -> [u8; 4] {
     match instruction_data {
         InstructionData::Implied(data) => encode_implied_instruction(data),
@@ -699,23 +734,23 @@ mod tests {
     }
 
     impl Arbitrary for ImpliedInstructionData {
-        fn arbitrary(g: &mut Gen) -> ImpliedInstructionData {
+        fn arbitrary(g: &mut Gen) -> Self {
             check_instruction_coverage();
 
-            ImpliedInstructionData {
+            Self {
                 condition_flag: *g.choose(all_condition_flags().as_slice()).unwrap(),
-                op_code: g.choose(VALID_IMPLIED_OP_CODES).unwrap().to_owned(),
+                op_code: *g.choose(VALID_IMPLIED_OP_CODES).unwrap(),
             }
         }
     }
 
     impl Arbitrary for ImmediateInstructionData {
-        fn arbitrary(g: &mut Gen) -> ImmediateInstructionData {
+        fn arbitrary(g: &mut Gen) -> Self {
             check_instruction_coverage();
 
-            ImmediateInstructionData {
+            Self {
                 condition_flag: *g.choose(all_condition_flags().as_slice()).unwrap(),
-                op_code: g.choose(VALID_IMMEDIATE_OP_CODES).unwrap().to_owned(),
+                op_code: *g.choose(VALID_IMMEDIATE_OP_CODES).unwrap(),
                 additional_flags: u8::arbitrary(g) & 0x3,
                 register: u8::arbitrary(g) & 0xF,
                 value: u16::arbitrary(g),
@@ -724,12 +759,12 @@ mod tests {
     }
 
     impl Arbitrary for ShortImmediateInstructionData {
-        fn arbitrary(g: &mut Gen) -> ShortImmediateInstructionData {
+        fn arbitrary(g: &mut Gen) -> Self {
             check_instruction_coverage();
 
-            ShortImmediateInstructionData {
+            Self {
                 condition_flag: *g.choose(all_condition_flags().as_slice()).unwrap(),
-                op_code: g.choose(VALID_SHORT_IMMEDIATE_OP_CODES).unwrap().to_owned(),
+                op_code: *g.choose(VALID_SHORT_IMMEDIATE_OP_CODES).unwrap(),
                 additional_flags: u8::arbitrary(g) & 0x3,
                 register: u8::arbitrary(g) & 0xF,
                 value: u8::arbitrary(g),
@@ -741,12 +776,12 @@ mod tests {
     }
 
     impl Arbitrary for RegisterInstructionData {
-        fn arbitrary(g: &mut Gen) -> RegisterInstructionData {
+        fn arbitrary(g: &mut Gen) -> Self {
             check_instruction_coverage();
 
-            RegisterInstructionData {
+            Self {
                 condition_flag: *g.choose(all_condition_flags().as_slice()).unwrap(),
-                op_code: g.choose(VALID_REGISTER_OP_CODES).unwrap().to_owned(),
+                op_code: *g.choose(VALID_REGISTER_OP_CODES).unwrap(),
                 r1: u8::arbitrary(g) & 0xF,
                 r2: u8::arbitrary(g) & 0xF,
                 r3: u8::arbitrary(g) & 0xF,
@@ -759,19 +794,20 @@ mod tests {
     }
 
     impl Arbitrary for InstructionData {
-        fn arbitrary(g: &mut Gen) -> InstructionData {
+        fn arbitrary(g: &mut Gen) -> Self {
             let choices = vec![
-                InstructionData::Implied(ImpliedInstructionData::arbitrary(g)),
-                InstructionData::Immediate(ImmediateInstructionData::arbitrary(g)),
-                InstructionData::ShortImmediate(ShortImmediateInstructionData::arbitrary(g)),
-                InstructionData::Register(RegisterInstructionData::arbitrary(g)),
+                Self::Implied(ImpliedInstructionData::arbitrary(g)),
+                Self::Immediate(ImmediateInstructionData::arbitrary(g)),
+                Self::ShortImmediate(ShortImmediateInstructionData::arbitrary(g)),
+                Self::Register(RegisterInstructionData::arbitrary(g)),
             ];
 
-            g.choose(choices.as_slice()).unwrap().to_owned()
+            g.choose(choices.as_slice()).unwrap().clone()
         }
     }
 
     #[quickcheck]
+    #[allow(clippy::needless_pass_by_value)]
     fn round_trip_encoding_test(instruction_data: InstructionData) -> bool {
         let raw_bytes = encode_instruction(&instruction_data);
         let decoded = decode_instruction(raw_bytes);

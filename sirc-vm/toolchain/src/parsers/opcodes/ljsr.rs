@@ -120,7 +120,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         modes => {
-            let error_string = format!("Invalid addressing mode for LJSR: ({:?})", modes);
+            let error_string = format!("Invalid addressing mode for LJSR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,
