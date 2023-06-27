@@ -7,7 +7,6 @@ use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
     StatusRegisterUpdateSource,
@@ -62,7 +61,7 @@ use super::super::shared::AsmResult;
 /// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
 ///
 ///
-/// let (_, parsed_instruction) = arithmetic_immediate("ADDI|!= r2, #123, LSL #2").unwrap();
+/// let (_, parsed_instruction) = arithmetic_immediate("ADDI|!= r2, #123, LSL #2\n").unwrap();
 /// let (op_code, register, value, shift_type, shift_count, condition_flag, additional_flags) = match parsed_instruction.instruction {
 ///     InstructionData::ShortImmediate(inner) => (inner.op_code, inner.register, inner.value, inner.shift_type, inner.shift_count, inner.condition_flag, inner.additional_flags),
 ///     _ => panic!("Incorrect instruction was parsed")
@@ -80,17 +79,17 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("ADDI").context("ADDI"),
-        parse_instruction_tag("ADCI").context("ADCI"),
-        parse_instruction_tag("SUBI").context("SUBI"),
-        parse_instruction_tag("SBCI").context("SBCI"),
-        parse_instruction_tag("ANDI").context("ANDI"),
-        parse_instruction_tag("ORRI").context("ORRI"),
-        parse_instruction_tag("XORI").context("XORI"),
-        parse_instruction_tag("CMPI").context("CMPI"),
-        parse_instruction_tag("TSAI").context("TSAI"),
-        parse_instruction_tag("TSXI").context("TSXI"),
-        parse_instruction_tag("SHFI").context("SHFI"),
+        parse_instruction_tag("ADDI"),
+        parse_instruction_tag("ADCI"),
+        parse_instruction_tag("SUBI"),
+        parse_instruction_tag("SBCI"),
+        parse_instruction_tag("ANDI"),
+        parse_instruction_tag("ORRI"),
+        parse_instruction_tag("XORI"),
+        parse_instruction_tag("CMPI"),
+        parse_instruction_tag("TSAI"),
+        parse_instruction_tag("TSXI"),
+        parse_instruction_tag("SHFI"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =

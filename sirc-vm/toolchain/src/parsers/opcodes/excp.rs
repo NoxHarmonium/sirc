@@ -60,15 +60,15 @@ use super::super::shared::AsmResult;
 /// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
 ///
 ///
-/// let (_, parsed_instruction) = excp("EXCP|!= #123, LSL #2").unwrap();
+/// let (_, parsed_instruction) = excp("EXCP|!= #123, LSL #2\n").unwrap();
 /// let (op_code, register, value, shift_type, shift_count, condition_flag, additional_flags) = match parsed_instruction.instruction {
 ///     InstructionData::ShortImmediate(inner) => (inner.op_code, inner.register, inner.value, inner.shift_type, inner.shift_count, inner.condition_flag, inner.additional_flags),
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
-/// assert_eq!(op_code, Instruction::ExceptionShortImmediate);
-/// assert_eq!(register, 1);
+/// assert_eq!(op_code, Instruction::ExceptionShort);
+/// assert_eq!(register, 0);
 /// assert_eq!(value, 123);
 /// assert_eq!(shift_type, ShiftType::LogicalLeftShift);
 /// assert_eq!(shift_count, 0x2);

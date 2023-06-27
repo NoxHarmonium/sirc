@@ -10,7 +10,7 @@ use crate::{
 };
 use nom::{branch::alt, error::ErrorKind};
 use nom::{error::FromExternalError, sequence::tuple};
-use nom_supreme::{error::ErrorTree, ParserExt};
+use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
 };
@@ -38,10 +38,10 @@ fn tag_to_instruction_short(tag: &str) -> Instruction {
 use super::super::shared::AsmResult;
 pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("BRAN").context("BRAN"),
-        parse_instruction_tag("BRSR").context("BRSR"),
-        parse_instruction_tag("SJMP").context("SJMP"),
-        parse_instruction_tag("SJSR").context("SJSR"),
+        parse_instruction_tag("BRAN"),
+        parse_instruction_tag("BRSR"),
+        parse_instruction_tag("SJMP"),
+        parse_instruction_tag("SJSR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =

@@ -24,7 +24,7 @@ use super::super::shared::AsmResult;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljmp)("LJMP|!= (r2, a), ASR #3 ") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljmp)("LJMP|!= (r2, a), ASR #3\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };

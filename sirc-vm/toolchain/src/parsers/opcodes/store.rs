@@ -10,7 +10,7 @@ use crate::{
 };
 use nom::error::FromExternalError;
 use nom::{error::ErrorKind, sequence::tuple};
-use nom_supreme::{error::ErrorTree, ParserExt};
+use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
     ShiftType,
@@ -18,10 +18,8 @@ use peripheral_cpu::instructions::definitions::{
 
 use super::super::shared::AsmResult;
 pub fn stor(i: &str) -> AsmResult<InstructionToken> {
-    let (i, ((_, condition_flag), operands)) = tuple((
-        parse_instruction_tag("STOR").context("STOR"),
-        parse_instruction_operands1,
-    ))(i)?;
+    let (i, ((_, condition_flag), operands)) =
+        tuple((parse_instruction_tag("STOR"), parse_instruction_operands1))(i)?;
 
     match operands.as_slice() {
         [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(dest_register)] =>

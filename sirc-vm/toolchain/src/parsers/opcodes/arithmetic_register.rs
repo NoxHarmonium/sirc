@@ -6,7 +6,6 @@ use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     Instruction, InstructionData, RegisterInstructionData, ShiftOperand, ShiftType,
 };
@@ -38,7 +37,7 @@ use super::super::shared::AsmResult;
 /// use toolchain::parsers::instruction::InstructionToken;
 /// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
 ///
-/// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r3, RTL #4").unwrap();
+/// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r3, RTL #4\n").unwrap();
 /// let (op_code, r1, r2, r3, shift_type, shift_count, condition_flag, additional_flags) = match parsed_instruction.instruction {
 ///     InstructionData::Register(inner) => (inner.op_code, inner.r1, inner.r2, inner.r3, inner.shift_type, inner.shift_count, inner.condition_flag, inner.additional_flags),
 ///     _ => panic!("Incorrect instruction was parsed")
@@ -54,7 +53,7 @@ use super::super::shared::AsmResult;
 /// assert_eq!(additional_flags, 0x0);
 /// assert_eq!(condition_flag, ConditionFlags::GreaterOrEqual);
 ///
-/// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r2, r3").unwrap();
+/// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r2, r3\n").unwrap();
 /// let (op_code, r1, r2, r3, condition_flag, additional_flags) = match parsed_instruction.instruction {
 ///     InstructionData::Register(inner) => (inner.op_code, inner.r1, inner.r2, inner.r3, inner.condition_flag, inner.additional_flags),
 ///     _ => panic!("Incorrect instruction was parsed")
@@ -70,17 +69,17 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("ADDR").context("ADDR"),
-        parse_instruction_tag("ADCR").context("ADCR"),
-        parse_instruction_tag("SUBR").context("SUBR"),
-        parse_instruction_tag("SBCR").context("SBCR"),
-        parse_instruction_tag("ANDR").context("ANDR"),
-        parse_instruction_tag("ORRR").context("ORRR"),
-        parse_instruction_tag("XORR").context("XORR"),
-        parse_instruction_tag("CMPR").context("CMPR"),
-        parse_instruction_tag("TSAR").context("TSAR"),
-        parse_instruction_tag("TSXR").context("TSXR"),
-        parse_instruction_tag("SHFR").context("SHFR"),
+        parse_instruction_tag("ADDR"),
+        parse_instruction_tag("ADCR"),
+        parse_instruction_tag("SUBR"),
+        parse_instruction_tag("SBCR"),
+        parse_instruction_tag("ANDR"),
+        parse_instruction_tag("ORRR"),
+        parse_instruction_tag("XORR"),
+        parse_instruction_tag("CMPR"),
+        parse_instruction_tag("TSAR"),
+        parse_instruction_tag("TSXR"),
+        parse_instruction_tag("SHFR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
