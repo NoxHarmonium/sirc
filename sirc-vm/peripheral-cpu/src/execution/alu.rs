@@ -38,6 +38,11 @@ pub enum AluOp {
     TestAnd = 0x8,
     TestXor = 0x9,
     Shift = 0x0A,
+    Reserved1 = 0x0B,
+    Reserved2 = 0x0C,
+    Reserved3 = 0x0D,
+    Reserved4 = 0x0E,
+    Reserved5 = 0x0F,
 }
 
 // Arithmetic
@@ -525,6 +530,7 @@ pub fn perform_alu_operation(
         AluOp::Shift => {
             intermediate_registers.alu_output = b;
         }
+        _ => {}
     }
 
     // println!("!!ALU DONE!! {:#?} | {:#?}", alu_op, intermediate_registers);
