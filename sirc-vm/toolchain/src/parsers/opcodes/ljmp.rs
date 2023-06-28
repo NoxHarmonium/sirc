@@ -24,7 +24,7 @@ use super::super::shared::AsmResult;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljmp)("LJMP|!= (r2, a), ASR #3 ") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljmp)("LJMP|!= (r2, a), ASR #3\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -127,7 +127,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         modes => {
-            let error_string = format!("Invalid addressing mode for LJMP: ({:?})", modes);
+            let error_string = format!("Invalid addressing mode for LJMP: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,

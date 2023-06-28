@@ -1,3 +1,18 @@
+// TODO: Make this clippy config global somehow
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Not sure what this is, will have to revisit
+    clippy::must_use_candidate,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn
+)]
+
 use clap::Parser;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, INSTRUCTION_SIZE_WORDS,
@@ -25,8 +40,11 @@ struct Args {
     segment_offset: u32,
 }
 
-// TODO: Fix linker to do placeholder replacement based on instruction
-
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
@@ -107,34 +125,13 @@ fn main() -> io::Result<()> {
         let instruction = decode_instruction(raw_instruction);
         let patched_instruction = match instruction {
             InstructionData::Immediate(data) => match data.op_code {
-                Instruction::ShortJumpImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                Instruction::ShortJumpToSubroutineImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                Instruction::BranchToSubroutineImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                Instruction::BranchImmediate => {
+                Instruction::ShortJumpToSubroutineImmediate
+                | Instruction::BranchToSubroutineImmediate
+                | Instruction::BranchImmediate
+                | Instruction::LoadRegisterFromImmediate
+                | Instruction::LoadRegisterFromIndirectImmediate
+                | Instruction::StoreRegisterToIndirectImmediate
+                | Instruction::ShortJumpImmediate => {
                     InstructionData::Immediate(ImmediateInstructionData {
                         op_code: data.op_code,
                         register: data.register,
@@ -155,33 +152,6 @@ fn main() -> io::Result<()> {
                 //         },
                 //     )
                 // }
-                Instruction::LoadRegisterFromImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                Instruction::LoadRegisterFromIndirectImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                Instruction::StoreRegisterToIndirectImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
                 _ => panic!(
                     "Can't patch address/offset for instruction: {:?}",
                     data.op_code

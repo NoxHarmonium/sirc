@@ -101,7 +101,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         modes => {
-            let error_string = format!("Invalid addressing mode for LOAD: ({:?})", modes);
+            let error_string = format!("Invalid addressing mode for LOAD: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,

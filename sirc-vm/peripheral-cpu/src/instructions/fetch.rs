@@ -2,6 +2,7 @@ use peripheral_mem::MemoryPeripheral;
 
 use crate::registers::SegmentedAddress;
 
+#[must_use]
 pub fn fetch_instruction(mem: &MemoryPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // Only the CPU knows that the address is split into two 16 bit registers
     // Any other peripheral will only see the 24 address lines

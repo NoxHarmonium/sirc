@@ -1,3 +1,17 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Not sure what this is, will have to revisit
+    clippy::must_use_candidate,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn
+)]
+
 extern crate num;
 #[macro_use]
 extern crate num_derive;
@@ -42,20 +56,22 @@ pub struct CpuPeripheral<'a> {
     pub registers: Registers,
 }
 
+///
+/// Instantiates a new `CpuPeripheral` with default values after doing some checks.
+///
+/// # Panics
+/// Will panic if the specified `program_segment_label` is not a segment defined in the provided `memory_peripheral`
+///
+#[must_use]
 pub fn new_cpu_peripheral<'a>(
     memory_peripheral: &'a MemoryPeripheral,
     program_segment_label: &str,
 ) -> CpuPeripheral<'a> {
     let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);
-    let (ph, pl) = match program_segment {
-        Some(s) => s.address.to_segmented_address(),
-        None => {
-            panic!(
-                "Could not find '{}' segment in memory peripheral",
-                program_segment_label
-            );
-        }
-    };
+    let (ph, pl) = program_segment.map_or_else(
+        || panic!("Could not find '{program_segment_label}' segment in memory peripheral"),
+        |s| s.address.to_segmented_address(),
+    );
 
     CpuPeripheral {
         memory_peripheral,
@@ -67,6 +83,7 @@ pub fn new_cpu_peripheral<'a>(
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn step<'a>(
     registers: &'a mut Registers,
     mem: &MemoryPeripheral,
@@ -78,10 +95,11 @@ fn step<'a>(
     // 3. Decode/Register Fetch (ID)
     let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
 
-    if decoded_instruction.ins == Instruction::Exception && decoded_instruction.sr_b_ == 0xFFFF {
-        // Special instruction just for debugging purposes. Probably won't be in hardware
-        panic!("Execution was halted due to 0xFFFF exception");
-    }
+    // Special instruction just for debugging purposes. Probably won't be in hardware
+    assert!(
+        !(decoded_instruction.ins == Instruction::Exception && decoded_instruction.sr_b_ == 0xFFFF),
+        "Execution was halted due to 0xFFFF exception"
+    );
 
     // TODO: On the real CPU these might have garbage in them?
     // maybe it should only be zeroed on first run and shared between invocations
@@ -112,7 +130,7 @@ fn step<'a>(
     );
 
     if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-        return Err(Error::ProcessorHalted(registers.to_owned()));
+        return Err(Error::ProcessorHalted(registers.clone()));
     }
 
     println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
@@ -126,7 +144,7 @@ impl CpuPeripheral<'_> {
         loop {
             match step(&mut self.registers, self.memory_peripheral) {
                 Err(error) => {
-                    println!("Execution stopped:\n{:08x?}", error);
+                    println!("Execution stopped:\n{error:08x?}");
                     return Err(error);
                 }
                 Ok((_registers, instruction_clocks, _instruction)) => {

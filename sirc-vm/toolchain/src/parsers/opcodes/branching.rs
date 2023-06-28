@@ -10,38 +10,38 @@ use crate::{
 };
 use nom::{branch::alt, error::ErrorKind};
 use nom::{error::FromExternalError, sequence::tuple};
-use nom_supreme::{error::ErrorTree, ParserExt};
+use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
 };
 
-fn tag_to_instruction_long(tag: String) -> Instruction {
-    match tag.as_str() {
+fn tag_to_instruction_long(tag: &str) -> Instruction {
+    match tag {
         "BRAN" => Instruction::BranchImmediate,
         "BRSR" => Instruction::BranchToSubroutineImmediate,
         "SJMP" => Instruction::ShortJumpImmediate,
         "SJSR" => Instruction::ShortJumpToSubroutineImmediate,
-        _ => panic!("No tag mapping for instruction [{}]", tag),
+        _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
-fn tag_to_instruction_short(tag: String) -> Instruction {
-    match tag.as_str() {
+fn tag_to_instruction_short(tag: &str) -> Instruction {
+    match tag {
         "BRAN" => Instruction::BranchShortImmediate,
         "BRSR" => Instruction::BranchToSubroutineShortImmediate,
         "SJMP" => Instruction::ShortJumpShortImmediate,
         "SJSR" => Instruction::ShortJumpToSubroutineShortImmediate,
-        _ => panic!("No tag mapping for instruction [{}]", tag),
+        _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
 use super::super::shared::AsmResult;
 pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((
-        parse_instruction_tag("BRAN").context("BRAN"),
-        parse_instruction_tag("BRSR").context("BRSR"),
-        parse_instruction_tag("SJMP").context("SJMP"),
-        parse_instruction_tag("SJSR").context("SJSR"),
+        parse_instruction_tag("BRAN"),
+        parse_instruction_tag("BRSR"),
+        parse_instruction_tag("SJMP"),
+        parse_instruction_tag("SJSR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
@@ -53,7 +53,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long(tag),
+                        op_code: tag_to_instruction_long(tag.as_str()),
                         register: 0x0, // unused
                         value: offset.to_owned(),
                         condition_flag,
@@ -66,7 +66,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long(tag),
+                        op_code: tag_to_instruction_long(tag.as_str()),
                         register: 0x0, // unused
                         value: 0x0,    // Placeholder
                         condition_flag,
@@ -86,7 +86,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             match offset {
                 ImmediateType::Value(offset) => {
                     if offset > &0xFF {
-                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({} > 0xFF)", offset);
+                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({offset} > 0xFF)");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
                             i,
                             ErrorKind::Fail,
@@ -98,9 +98,11 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                             InstructionToken {
                                 instruction: InstructionData::ShortImmediate(
                                     ShortImmediateInstructionData {
-                                        op_code: tag_to_instruction_short(tag),
+                                        op_code: tag_to_instruction_short(tag.as_str()),
                                         register: 0x0, // unused
-                                        value: offset.to_owned() as u8,
+                                        value: offset.to_owned().try_into().expect(
+                                            "Offset should fit into 0xFF as it checked above",
+                                        ),
                                         shift_operand,
                                         shift_type,
                                         shift_count,
@@ -118,7 +120,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         instruction: InstructionData::ShortImmediate(
                             ShortImmediateInstructionData {
-                                op_code: tag_to_instruction_short(tag),
+                                op_code: tag_to_instruction_short(tag.as_str()),
                                 register: 0x0, // unused
                                 value: 0x0,    // Placeholder
                                 shift_operand,
@@ -138,8 +140,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
         }
         _ => {
             let error_string = format!(
-                "The [{}] opcode only supports immediate addressing mode (e.g. BRAN #-3)",
-                tag
+                "The [{tag}] opcode only supports immediate addressing mode (e.g. BRAN #-3)"
             );
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,

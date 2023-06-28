@@ -18,8 +18,10 @@ enum FetchAndDecodeStepInstructionType {
     ShortImmediate,
 }
 
+// TODO: Clean up this match and remove this exclusion
+#[allow(clippy::match_same_arms)]
 fn decode_fetch_and_decode_step_instruction_type(
-    instruction: &Instruction,
+    instruction: Instruction,
 ) -> FetchAndDecodeStepInstructionType {
     match instruction {
         Instruction::AddImmediate => FetchAndDecodeStepInstructionType::Immediate,
@@ -128,7 +130,7 @@ fn do_shift(
             perform_shift(
                 sr_b_before_shift,
                 register_representation.shift_type,
-                register_representation.shift_count as u16,
+                u16::from(register_representation.shift_count),
             )
         }
         ShiftOperand::Register => {
@@ -145,7 +147,7 @@ fn do_shift(
 ///
 /// Decodes the instruction and fetches all the referenced registers into an intermediate set of registers
 ///
-/// Once all the data has been extracted and put into a DecodedInstruction it should contain everything required
+/// Once all the data has been extracted and put into a `DecodedInstruction` it should contain everything required
 /// for the following steps.
 ///
 /// Should match the hardware as closely as possible.
@@ -187,6 +189,8 @@ fn do_shift(
 /// assert_eq!(decoded.sr, registers.sr);
 /// ```
 ///
+#[must_use]
+#[allow(clippy::similar_names)]
 pub fn decode_and_register_fetch(
     raw_instruction: [u8; 4],
     registers: &Registers,
@@ -207,7 +211,7 @@ pub fn decode_and_register_fetch(
 
     // TODO: Is this decoded getting too complex? Probably
     let instruction_type =
-        decode_fetch_and_decode_step_instruction_type(&implied_representation.op_code);
+        decode_fetch_and_decode_step_instruction_type(implied_representation.op_code);
 
     let addr_inc: i8 = match implied_representation.op_code {
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement => 1, // TODO: Match LOAD (a)+
@@ -231,7 +235,7 @@ pub fn decode_and_register_fetch(
         FetchAndDecodeStepInstructionType::ShortImmediate => {
             let (sr_b_, sr_shift) = do_shift(
                 registers,
-                short_immediate_representation.value as u16,
+                u16::from(short_immediate_representation.value),
                 &register_representation,
             );
             (des_, sr_b_, sr_shift)

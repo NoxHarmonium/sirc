@@ -17,8 +17,10 @@ enum WriteBackInstructionType {
 
 pub struct WriteBackExecutor;
 
+// TODO: Clean up this match and remove this warning
+#[allow(clippy::match_same_arms)]
 fn decode_write_back_step_instruction_type(
-    instruction: &Instruction,
+    instruction: Instruction,
     decoded_instruction: &DecodedInstruction,
 ) -> WriteBackInstructionType {
     if !decoded_instruction.con_ {
@@ -100,7 +102,7 @@ impl StageExecutor for WriteBackExecutor {
         // ==== 6. Write-back cycle (WB): ====
 
         let write_back_step_instruction_type =
-            decode_write_back_step_instruction_type(&decoded.ins, decoded);
+            decode_write_back_step_instruction_type(decoded.ins, decoded);
 
         match write_back_step_instruction_type {
             WriteBackInstructionType::NoOp => {}

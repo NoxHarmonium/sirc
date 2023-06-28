@@ -17,6 +17,7 @@ use super::instruction::{RefToken, ShiftDefinitionData};
 
 pub type AsmResult<'a, 'b, O> = IResult<&'a str, O, ErrorTree<&'b str>>;
 
+#[allow(clippy::type_repetition_in_bounds)]
 pub fn lexeme<'a, F: 'a, O, E: ParseError<&'a str>>(
     inner: F,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
@@ -37,29 +38,32 @@ fn parse_hex_(i: &str) -> AsmResult<u16> {
     let (i, _) = tag("0x")(i)?;
     let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
     let hex_parse_result = u16::from_str_radix(raw_digits, 16);
-    match hex_parse_result {
-        Ok(hex_value) => Ok((i, hex_value)),
-        Err(_) => Err(Err::Error(ErrorTree::Base {
-            location: i,
-            kind: BaseErrorKind::Expected(Expectation::HexDigit),
-        })),
-    }
+    hex_parse_result.map_or_else(
+        |_| {
+            Err(Err::Error(ErrorTree::Base {
+                location: i,
+                kind: BaseErrorKind::Expected(Expectation::HexDigit),
+            }))
+        },
+        |hex_value| Ok((i, hex_value)),
+    )
 }
 
+#[allow(clippy::cast_sign_loss)]
 fn parse_dec_(i: &str) -> AsmResult<u16> {
     map_res(
         tuple((opt(one_of("+-")), recognize(digit1))),
         |(sign, number_string)| {
-            match sign {
-                Some(sign_value) => {
+            sign.map_or_else(
+                || str::parse::<u16>(number_string),
+                |sign_value| {
                     // TODO: Re-concatenating the original string seems bad
                     // We should probably just get the original value or something
-                    let full_number = format!("{}{}", sign_value, number_string);
+                    let full_number = format!("{sign_value}{number_string}");
                     // Signed numbers represented in parser as unsigned for simplicity
                     str::parse::<i16>(full_number.as_str()).map(|signed| signed as u16)
-                }
-                None => str::parse::<u16>(number_string),
-            }
+                },
+            )
         },
     )(i)
 }
@@ -88,7 +92,7 @@ pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> 
                 ".u" => Some(RefType::UpperWord),
                 ".l" => Some(RefType::LowerWord),
                 // TODO: Proper error handling again
-                _ => panic!("Unknown postamble {}", parsed_value),
+                _ => panic!("Unknown postamble {parsed_value}"),
             },
         )(i),
         None => Ok((i, None)),
@@ -137,8 +141,8 @@ pub fn parse_symbol_reference(i: &str) -> AsmResult<RefToken> {
 /// Takes the parser representation of a shift and splits it out into the components
 /// that get encoded into instructions.
 ///
-/// In this case of instructions, the "shift_count" is either the index of the register,
-/// or a constant depending on the value of ShiftOperand.
+/// In this case of instructions, the "`shift_count`" is either the index of the register,
+/// or a constant depending on the value of `ShiftOperand`.
 ///
 /// TODO: Should shift be stored as an enum in the instruction structs? then it could be reused
 /// by the parser and avoid this function

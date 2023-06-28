@@ -29,7 +29,7 @@ pub fn set_up_instruction_test(instruction_data: &InstructionData) -> MemoryPeri
     let program_data = encode_instruction(instruction_data);
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
-    memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, program_data.to_vec());
+    memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
     memory_peripheral.map_segment(SCRATCH_SEGMENT, SCRATCH_SEGMENT_BEGIN, 0x00FF, true);
     memory_peripheral
 }

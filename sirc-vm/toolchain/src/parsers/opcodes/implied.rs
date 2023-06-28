@@ -1,22 +1,20 @@
 use crate::parsers::instruction::{parse_instruction_tag, InstructionToken};
 use nom::branch::alt;
 use nom::character::complete::one_of;
-use nom::combinator::peek;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
-use nom_supreme::ParserExt;
 use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, ImpliedInstructionData, Instruction, InstructionData,
 };
 use peripheral_cpu::registers::AddressRegisterName;
 
-fn tag_to_instruction(tag: String) -> Instruction {
-    match tag.as_str() {
+fn tag_to_instruction(tag: &str) -> Instruction {
+    match tag {
         "RETS" => Instruction::ReturnFromSubroutine,
         "NOOP" => Instruction::NoOperation,
         "WAIT" => Instruction::WaitForException,
         "RETE" => Instruction::ReturnFromException,
-        _ => panic!("No tag mapping for instruction [{}]", tag),
+        _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
@@ -32,7 +30,7 @@ use super::super::shared::AsmResult;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("WAIT|==") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("WAIT|==\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -47,30 +45,26 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     let mut instructions = alt((
-        parse_instruction_tag("RETS").context("RETS"),
-        parse_instruction_tag("NOOP").context("NOOP"),
-        parse_instruction_tag("WAIT").context("WAIT"),
-        parse_instruction_tag("RETE").context("RETE"),
+        parse_instruction_tag("RETS"),
+        parse_instruction_tag("NOOP"),
+        parse_instruction_tag("WAIT"),
+        parse_instruction_tag("RETE"),
     ));
 
     let (i, (tag, condition_flag)) = instructions(i)?;
+    let (i, _) = one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).map_err(|_| {
+        let error_string =
+            format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
+        nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string.as_str(),
+        ))
+    })?;
 
-    match peek(one_of::<&str, &str, ErrorTree<&str>>("\r\n"))(i) {
-        Ok(_) => {}
-        Err(_) => {
-            let error_string = format!(
-                "The [{}] does not support any addressing modes (e.g. NOOP or RETE)",
-                tag
-            );
-            return Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
-                ErrorKind::Fail,
-                error_string.as_str(),
-            )));
-        }
-    }
+    if one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).is_err() {}
 
-    match tag_to_instruction(tag) {
+    match tag_to_instruction(tag.as_str()) {
         // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump
         // to the link register (TODO: should this be moved out to a different parser or something?)
         Instruction::ReturnFromSubroutine => Ok((

@@ -17,8 +17,10 @@ enum MemoryAccessInstructionType {
 
 pub struct MemoryAccessExecutor;
 
+// TODO: Clean up match and remove this warning
+#[allow(clippy::match_same_arms)]
 fn decode_memory_access_step_instruction_type(
-    instruction: &Instruction,
+    instruction: Instruction,
     decoded_instruction: &DecodedInstruction,
 ) -> MemoryAccessInstructionType {
     if !decoded_instruction.con_ {
@@ -69,7 +71,7 @@ impl StageExecutor for MemoryAccessExecutor {
         // 5. ====== Memory access/branch completion (MEM): ======
 
         let memory_access_step_instruction_type =
-            decode_memory_access_step_instruction_type(&decoded.ins, decoded);
+            decode_memory_access_step_instruction_type(decoded.ins, decoded);
 
         // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
         // but we might need to think about how this would work in FPGA
@@ -83,7 +85,7 @@ impl StageExecutor for MemoryAccessExecutor {
             MemoryAccessInstructionType::MemoryLoad => {
                 intermediate_registers.lmd = mem.read_address(
                     (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                )
+                );
             }
             // b. Memory store
             // Mem[AdrH | ALUOutput] <- A?
@@ -92,7 +94,7 @@ impl StageExecutor for MemoryAccessExecutor {
                 mem.write_address(
                     (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                     decoded.sr_a_,
-                )
+                );
             }
             // c. Branch/Jump
             // if (Cond') PC <- ALUoutput

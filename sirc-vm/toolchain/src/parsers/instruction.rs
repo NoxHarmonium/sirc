@@ -58,12 +58,12 @@ pub fn override_ref_token_type_if_implied(
 ) -> RefToken {
     match ref_token.ref_type {
         RefType::Implied => RefToken {
-            name: ref_token.name.to_owned(),
+            name: ref_token.name.clone(),
             ref_type: override_ref_type,
         },
         // TODO: Should try to do this without copying
         _ => RefToken {
-            name: ref_token.name.to_owned(),
+            name: ref_token.name.clone(),
             ref_type: ref_token.ref_type,
         },
     }
@@ -190,8 +190,7 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
     let parse_immediate_shift_definition = map_res(parse_number, |shift_count| {
         if shift_count > MAX_SHIFT_COUNT {
             let error_string = format!(
-                "Shift definitions can only be in the range of 0-{}, got {}",
-                MAX_SHIFT_COUNT, shift_count
+                "Shift definitions can only be in the range of 0-{MAX_SHIFT_COUNT}, got {shift_count}"
             );
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i.to_owned(),
@@ -201,7 +200,9 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
         } else {
             Ok(ShiftDefinitionData::Immediate(
                 shift_type,
-                shift_count as u8,
+                shift_count
+                    .try_into()
+                    .expect("shift_count should fit into MAX_SHIFT_COUNT as it is checked above"),
             ))
         }
     });
@@ -325,11 +326,10 @@ fn parse_shift_type(i: &str) -> AsmResult<ShiftType> {
 }
 
 pub fn parse_instruction_tag(
-    instruction_tag: &str,
+    instruction_tag: &'static str,
 ) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + '_ {
     move |i: &str| {
-        // TODO: Work out how to use the nom_supreme tag here (there are lifetime issues with the nested closures)
-        let tag_parser = nom::bytes::complete::tag(instruction_tag);
+        let tag_parser = tag(instruction_tag);
         let (i, tag) = tag_parser(i)?;
         let (i, condition_code_specified) = opt(char('|'))(i)?;
         let (i, condition_code) = if condition_code_specified.is_some() {
@@ -378,7 +378,7 @@ fn parse_address_register_(i: &str) -> AsmResult<AddressRegisterName> {
             "p" => AddressRegisterName::ProgramCounter,
             "s" => AddressRegisterName::StackPointer,
             "l" => AddressRegisterName::LinkRegister,
-            _ => panic!("Tag mismatch between parser and handler ({})", tag),
+            _ => panic!("Tag mismatch between parser and handler ({tag})"),
         },
     )(i)
 }

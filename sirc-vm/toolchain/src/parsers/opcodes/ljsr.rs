@@ -24,7 +24,7 @@ use super::super::shared::AsmResult;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljsr)("LJSR|!= (#-4, a)") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljsr)("LJSR|!= (#-4, a)\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -120,7 +120,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         modes => {
-            let error_string = format!("Invalid addressing mode for LJSR: ({:?})", modes);
+            let error_string = format!("Invalid addressing mode for LJSR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,
