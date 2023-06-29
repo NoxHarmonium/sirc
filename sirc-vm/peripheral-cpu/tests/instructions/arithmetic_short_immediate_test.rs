@@ -1,33 +1,15 @@
-use std::ops::Range;
-
 use peripheral_cpu::{
     self,
     instructions::definitions::{
         ConditionFlags, Instruction, InstructionData, ShiftOperand, ShiftType,
-        ShortImmediateInstructionData, StatusRegisterUpdateSource, INSTRUCTION_SIZE_WORDS,
+        ShortImmediateInstructionData, StatusRegisterUpdateSource,
     },
     registers::{set_sr_bit, sr_bit_is_set, RegisterIndexing, Registers, StatusRegisterFields},
 };
 
-use super::common;
+use crate::instructions::common;
 
-fn get_register_index_range() -> Range<u8> {
-    0..13
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn get_expected_registers<F>(previous: &Registers, register_setup: F) -> Registers
-where
-    F: Fn(&mut Registers),
-{
-    let mut initial = Registers {
-        ph: previous.ph,
-        pl: previous.pl + (INSTRUCTION_SIZE_WORDS as u16),
-        ..Registers::default()
-    };
-    register_setup(&mut initial);
-    initial
-}
+use super::common::{get_expected_registers, get_register_index_range};
 
 // TODO: Point taken from clippy about having too many arguments.
 // will fix up ASAP if possible
@@ -58,13 +40,16 @@ fn test_short_immediate_arithmetic_instruction(
             StatusRegisterUpdateSource::Alu as u8
         },
     });
-    let (previous, current) =
-        common::run_instruction(&instruction_data, |registers: &mut Registers| {
+    let (previous, current) = common::run_instruction(
+        &instruction_data,
+        |registers: &mut Registers| {
             registers.set_at_index(target_register, register_value);
             for &status_register_field in initial_status_flags {
                 set_sr_bit(status_register_field, registers);
             }
-        });
+        },
+        0xFACE,
+    );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_at_index(target_register, expected_value);
@@ -858,3 +843,7 @@ fn test_arithmetic_shift_right_immediate() {
         );
     }
 }
+
+// TODO: Test ShiftOperand::Register
+// TODO: Test Rotates
+// TODO: Test conditionals

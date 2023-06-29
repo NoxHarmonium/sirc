@@ -105,6 +105,7 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructionData {
     let op_code = decode_instruction_id(raw_instruction);
     let condition_flag = decode_condition_flags(raw_instruction);
+
     // No args are used at this point (reserved for more complex instructions)
     ImpliedInstructionData {
         // TODO: Handle better than unwrap

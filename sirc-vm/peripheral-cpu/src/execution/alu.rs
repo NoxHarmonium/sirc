@@ -314,7 +314,12 @@ fn perform_xor(a: u16, b: u16, intermediate_registers: &mut IntermediateRegister
 // Shifts
 
 #[must_use]
-pub fn perform_shift(operand: u16, shift_type: ShiftType, shift_count: u16) -> (u16, u16) {
+pub fn perform_shift(
+    operand: u16,
+    shift_type: ShiftType,
+    shift_count: u16,
+    short_immediate: bool, // TODO: Find a smarter solution to this
+) -> (u16, u16) {
     // println!(
     //     "!!SHIFT!! {:#?} | {:#?} | {:#?}",
     //     operand, shift_type, shift_count
@@ -345,7 +350,12 @@ pub fn perform_shift(operand: u16, shift_type: ShiftType, shift_count: u16) -> (
             perform_arithmetic_left_shift(operand, shift_count, &mut intermediate_registers);
         }
         ShiftType::ArithmeticRightShift => {
-            perform_arithmetic_right_shift(operand, shift_count, &mut intermediate_registers);
+            perform_arithmetic_right_shift(
+                operand,
+                shift_count,
+                &mut intermediate_registers,
+                short_immediate,
+            );
         }
         ShiftType::RotateLeft => {
             perform_rotate_left(operand, shift_count, &mut intermediate_registers);
@@ -450,10 +460,10 @@ fn perform_arithmetic_right_shift(
     a: u16,
     b: u16,
     intermediate_registers: &mut IntermediateRegisters,
+    short_immediate: bool, // TODO: Find a smarter solution to this
 ) {
     // Same as LSR but preserves the sign bit
-
-    let sign_bit = u32::from(a) & 0x80;
+    let sign_bit = u32::from(a) & if short_immediate { 0x80 } else { 0x8000 }; // TODO: Find a smarter solution to this
 
     let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);

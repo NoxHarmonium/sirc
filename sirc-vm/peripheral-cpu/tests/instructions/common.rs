@@ -1,5 +1,10 @@
+use std::ops::Range;
+
 use peripheral_cpu::{
-    instructions::{definitions::InstructionData, encoding::encode_instruction},
+    instructions::{
+        definitions::{InstructionData, INSTRUCTION_SIZE_WORDS},
+        encoding::encode_instruction,
+    },
     new_cpu_peripheral,
     registers::Registers,
     CpuPeripheral, CYCLES_PER_INSTRUCTION,
@@ -9,7 +14,7 @@ use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
 
-pub const SCRATCH_SEGMENT_BEGIN: u32 = 0xAAF0;
+pub const SCRATCH_SEGMENT_BEGIN: u32 = 0xFFFF;
 
 pub struct TestCpuState {
     pub registers: Registers,
@@ -23,12 +28,16 @@ fn capture_cpu_state(cpu: &CpuPeripheral) -> TestCpuState {
     }
 }
 
-pub fn set_up_instruction_test(instruction_data: &InstructionData) -> MemoryPeripheral {
+#[allow(clippy::cast_lossless)]
+pub fn set_up_instruction_test(
+    instruction_data: &InstructionData,
+    program_offset: u32,
+) -> MemoryPeripheral {
     let mut memory_peripheral = new_memory_peripheral();
 
     let program_data = encode_instruction(instruction_data);
 
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
+    memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, false);
     memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
     memory_peripheral.map_segment(SCRATCH_SEGMENT, SCRATCH_SEGMENT_BEGIN, 0x00FF, true);
     memory_peripheral
@@ -37,12 +46,15 @@ pub fn set_up_instruction_test(instruction_data: &InstructionData) -> MemoryPeri
 pub fn run_instruction<F>(
     instruction_data: &InstructionData,
     register_setup: F,
+    program_offset: u32,
 ) -> (TestCpuState, TestCpuState)
 where
     F: Fn(&mut Registers),
 {
-    let memory_peripheral = set_up_instruction_test(instruction_data);
+    let memory_peripheral = set_up_instruction_test(instruction_data, program_offset);
     let mut cpu = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
+
+    println!("run_instruction: {instruction_data:#?}");
 
     register_setup(&mut cpu.registers);
 
@@ -51,4 +63,22 @@ where
         .expect("expect CPU to run six cycles successfully");
     let current = capture_cpu_state(&cpu);
     (previous, current)
+}
+
+#[allow(clippy::cast_possible_truncation)]
+pub fn get_expected_registers<F>(previous: &Registers, register_setup: F) -> Registers
+where
+    F: Fn(&mut Registers),
+{
+    let mut initial = Registers {
+        ph: previous.ph,
+        pl: previous.pl + (INSTRUCTION_SIZE_WORDS as u16),
+        ..Registers::default()
+    };
+    register_setup(&mut initial);
+    initial
+}
+
+pub fn get_register_index_range() -> Range<u8> {
+    0..13
 }
