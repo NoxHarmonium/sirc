@@ -1,11 +1,12 @@
 use crate::{
     instructions::{
-        definitions::{Instruction, RegisterInstructionData, ShiftOperand},
+        definitions::{Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS},
         encoding::{
             decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
             decode_short_immediate_instruction,
         },
     },
+    microcode::address::sign_extend_small_offset,
     registers::Registers,
 };
 
@@ -193,7 +194,7 @@ fn do_shift(
 /// ```
 ///
 #[must_use]
-#[allow(clippy::similar_names)]
+#[allow(clippy::similar_names, clippy::cast_possible_truncation)]
 pub fn decode_and_register_fetch(
     raw_instruction: [u8; 4],
     registers: &Registers,
@@ -239,7 +240,7 @@ pub fn decode_and_register_fetch(
         FetchAndDecodeStepInstructionType::ShortImmediate => {
             let (sr_b_, sr_shift) = do_shift(
                 registers,
-                u16::from(short_immediate_representation.value),
+                sign_extend_small_offset(short_immediate_representation.value),
                 &register_representation,
                 true,
             );
@@ -252,6 +253,8 @@ pub fn decode_and_register_fetch(
     let des_ad_l = (immediate_representation.register * 2) + 8;
     let des_ad_h = (immediate_representation.register * 2) + 7;
     let condition_flag = immediate_representation.condition_flag;
+    let npc_l_ = registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16);
+    let npc_h_ = registers.ph;
 
     DecodedInstruction {
         ins: implied_representation.op_code,
@@ -274,5 +277,7 @@ pub fn decode_and_register_fetch(
         ad_h_: registers[ad_h],
         con_: condition_flag.should_execute(registers),
         sr: registers.sr,
+        npc_l_,
+        npc_h_,
     }
 }

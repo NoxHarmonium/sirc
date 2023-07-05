@@ -38,7 +38,6 @@ use crate::execution::fetch_and_decode::decode_and_register_fetch;
 use crate::execution::memory_access::MemoryAccessExecutor;
 use crate::execution::shared::{IntermediateRegisters, StageExecutor};
 use crate::execution::write_back::WriteBackExecutor;
-use crate::instructions::definitions::INSTRUCTION_SIZE_WORDS;
 use crate::instructions::fetch::fetch_instruction;
 use crate::registers::{Registers, SegmentedRegisterAccess};
 
@@ -107,7 +106,6 @@ fn step<'a>(
         alu_output: 0,
         alu_status_register: 0,
         lmd: 0,
-        npc: registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16),
     };
 
     ExecutionEffectiveAddressExecutor::execute(

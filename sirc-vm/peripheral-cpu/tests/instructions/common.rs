@@ -72,7 +72,7 @@ where
 {
     let mut initial = Registers {
         ph: previous.ph,
-        pl: previous.pl + (INSTRUCTION_SIZE_WORDS as u16),
+        pl: previous.pl.overflowing_add(INSTRUCTION_SIZE_WORDS as u16).0,
         ..Registers::default()
     };
     register_setup(&mut initial);

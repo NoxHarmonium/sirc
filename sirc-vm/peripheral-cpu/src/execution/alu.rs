@@ -3,7 +3,7 @@ use std::ops::Shl;
 use super::shared::IntermediateRegisters;
 use crate::{
     instructions::definitions::ShiftType,
-    registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set, Registers, StatusRegisterFields},
+    registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set_value, Registers, StatusRegisterFields},
 };
 
 const MSB_MASK: u32 = 0x8000_0000;
@@ -143,10 +143,13 @@ pub fn perform_add(a: u16, b: u16, intermediate_registers: &mut IntermediateRegi
 pub fn perform_add_with_carry(
     a: u16,
     b: u16,
-    registers: &Registers,
+    status_register: u16,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    let carry_from_previous = u16::from(sr_bit_is_set(StatusRegisterFields::Carry, registers));
+    let carry_from_previous = u16::from(sr_bit_is_set_value(
+        StatusRegisterFields::Carry,
+        status_register,
+    ));
 
     let (r1, c1) = a.overflowing_add(b);
     let (r2, c2) = r1.overflowing_add(carry_from_previous);
@@ -255,10 +258,13 @@ pub fn perform_subtract(a: u16, b: u16, intermediate_registers: &mut Intermediat
 pub fn perform_subtract_with_carry(
     a: u16,
     b: u16,
-    registers: &Registers,
+    status_register: u16,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    let carry_from_previous = u16::from(sr_bit_is_set(StatusRegisterFields::Carry, registers));
+    let carry_from_previous = u16::from(sr_bit_is_set_value(
+        StatusRegisterFields::Carry,
+        status_register,
+    ));
 
     let (r1, c1) = a.overflowing_sub(b);
     let (r2, c2) = r1.overflowing_sub(carry_from_previous);
@@ -521,7 +527,7 @@ pub fn perform_alu_operation(
     alu_op: &AluOp,
     a: u16,
     b: u16,
-    registers: &Registers,
+    status_register: u16,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
     // println!(
@@ -531,10 +537,12 @@ pub fn perform_alu_operation(
 
     match alu_op {
         AluOp::Add => perform_add(a, b, intermediate_registers),
-        AluOp::AddWithCarry => perform_add_with_carry(a, b, registers, intermediate_registers),
+        AluOp::AddWithCarry => {
+            perform_add_with_carry(a, b, status_register, intermediate_registers);
+        }
         AluOp::Subtract | AluOp::Compare => perform_subtract(a, b, intermediate_registers),
         AluOp::SubtractWithCarry => {
-            perform_subtract_with_carry(a, b, registers, intermediate_registers);
+            perform_subtract_with_carry(a, b, status_register, intermediate_registers);
         }
         AluOp::And | AluOp::TestAnd => perform_and(a, b, intermediate_registers),
         AluOp::Or => perform_or(a, b, intermediate_registers),

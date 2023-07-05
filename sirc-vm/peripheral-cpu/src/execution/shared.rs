@@ -45,6 +45,8 @@ pub struct DecodedInstruction {
     pub ad_h_: u16,
     pub con_: bool,
     pub sr: u16,
+    pub npc_l_: u16,
+    pub npc_h_: u16,
 }
 
 #[derive(Debug, Default)]
@@ -52,7 +54,6 @@ pub struct IntermediateRegisters {
     pub alu_output: u16,
     pub alu_status_register: u16,
     pub lmd: u16,
-    pub npc: u16,
 }
 
 pub trait StageExecutor {

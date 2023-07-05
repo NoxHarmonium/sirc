@@ -11,8 +11,11 @@ use crate::{
 use nom::{branch::alt, error::ErrorKind};
 use nom::{error::FromExternalError, sequence::tuple};
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::instructions::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
+use peripheral_cpu::{
+    instructions::definitions::{
+        ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
+    },
+    registers::AddressRegisterName,
 };
 
 fn tag_to_instruction_long(tag: &str) -> Instruction {
@@ -57,7 +60,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         register: 0x0, // unused
                         value: offset.to_owned(),
                         condition_flag,
-                        additional_flags: 0x0,
+                        additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
                     }),
                     symbol_ref: None,
                 },
@@ -70,7 +73,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         register: 0x0, // unused
                         value: 0x0,    // Placeholder
                         condition_flag,
-                        additional_flags: 0x0,
+                        additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
                     }),
                     symbol_ref: Some(override_ref_token_type_if_implied(
                         ref_token,
@@ -107,7 +110,8 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                                         shift_type,
                                         shift_count,
                                         condition_flag,
-                                        additional_flags: 0x0,
+                                        additional_flags: AddressRegisterName::ProgramCounter
+                                            .to_register_index(),
                                     },
                                 ),
                                 symbol_ref: None,
@@ -127,7 +131,8 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                                 shift_type,
                                 shift_count,
                                 condition_flag,
-                                additional_flags: 0x0,
+                                additional_flags: AddressRegisterName::ProgramCounter
+                                    .to_register_index(),
                             },
                         ),
                         symbol_ref: Some(override_ref_token_type_if_implied(

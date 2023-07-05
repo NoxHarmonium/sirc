@@ -13,6 +13,7 @@ enum MemoryAccessInstructionType {
     MemoryLoad,
     MemoryStore,
     BranchOrJump,
+    BranchOrJumpSubroutine,
 }
 
 pub struct MemoryAccessExecutor;
@@ -30,10 +31,22 @@ fn decode_memory_access_step_instruction_type(
     match instruction {
         // Flow Control (Immediate)
         Instruction::ShortJumpImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::ShortJumpToSubroutineImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::ShortJumpShortImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::ShortJumpToSubroutineImmediate => {
+            MemoryAccessInstructionType::BranchOrJumpSubroutine
+        }
+        Instruction::ShortJumpToSubroutineShortImmediate => {
+            MemoryAccessInstructionType::BranchOrJumpSubroutine
+        }
         // Flow Control (Immediate)
         Instruction::BranchImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::BranchToSubroutineImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::BranchShortImmediate => MemoryAccessInstructionType::BranchOrJump,
+        Instruction::BranchToSubroutineImmediate => {
+            MemoryAccessInstructionType::BranchOrJumpSubroutine
+        }
+        Instruction::BranchToSubroutineShortImmediate => {
+            MemoryAccessInstructionType::BranchOrJumpSubroutine
+        }
 
         // Data Access
         Instruction::LoadRegisterFromIndirectImmediate => MemoryAccessInstructionType::MemoryLoad,
@@ -75,7 +88,7 @@ impl StageExecutor for MemoryAccessExecutor {
 
         // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
         // but we might need to think about how this would work in FPGA
-        registers.pl = intermediate_registers.npc;
+        registers.pl = decoded.npc_l_;
 
         match memory_access_step_instruction_type {
             // a. No Op
@@ -100,8 +113,17 @@ impl StageExecutor for MemoryAccessExecutor {
             // if (Cond') PC <- ALUoutput
             // else      PC <- NPC
             MemoryAccessInstructionType::BranchOrJump => {
-                // TODO: Long Jump
                 registers.pl = intermediate_registers.alu_output;
+                registers.ph = decoded.ad_h_;
+            }
+
+            //
+            MemoryAccessInstructionType::BranchOrJumpSubroutine => {
+                registers.pl = intermediate_registers.alu_output;
+                registers.ph = decoded.ad_h_;
+                // Also store next instruction in link registers so RETS can jump back to after the branch/jump
+                registers.ll = decoded.npc_l_;
+                registers.lh = decoded.npc_h_;
             }
         }
     }

@@ -190,7 +190,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                         decoded.sr_a_
                     },
                     decoded.sr_b_,
-                    registers,
+                    decoded.sr,
                     intermediate_registers,
                 );
             }
@@ -205,7 +205,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     &AluOp::Add,
                     registers.pl,
                     decoded.sr_b_,
-                    registers,
+                    decoded.sr,
                     intermediate_registers,
                 );
             }
