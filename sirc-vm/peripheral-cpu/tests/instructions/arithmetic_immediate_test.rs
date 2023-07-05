@@ -532,8 +532,8 @@ fn test_shfi_immediate() {
         test_immediate_arithmetic_instruction(
             Instruction::ShiftImmediate,
             register_index,
-            0x0000,
             0xFFFF,
+            0x0000,
             0xFFFF,
             // Test flag clearing (these flags do not reflect the initial register value)
             &vec![
@@ -547,8 +547,8 @@ fn test_shfi_immediate() {
         test_immediate_arithmetic_instruction(
             Instruction::ShiftImmediate,
             register_index,
-            0xFFFF,
             0x0000,
+            0xFFFF,
             0x0000,
             // Test flag clearing (these flags do not reflect the initial register value)
             &vec![
@@ -562,17 +562,17 @@ fn test_shfi_immediate() {
         test_immediate_arithmetic_instruction(
             Instruction::ShiftImmediate,
             register_index,
+            0xF0F0,
             0xFF00,
             0xF0F0,
-            0xF0F0,
             &vec![],
             &vec![],
         );
         test_immediate_arithmetic_instruction(
             Instruction::ShiftImmediate,
             register_index,
-            0xFFFF,
             0xF0F0,
+            0xFFFF,
             0xF0F0,
             &vec![],
             &vec![],

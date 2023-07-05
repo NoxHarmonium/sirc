@@ -39,7 +39,7 @@ fn decode_fetch_and_decode_step_instruction_type(
 
 fn do_shift(
     registers: &Registers,
-    sr_b_before_shift: u16,
+    sr_a_before_shift: u16,
     register_representation: &RegisterInstructionData,
     short_immediate: bool, // TODO: Find a smarter solution to this
 ) -> (u16, u16) {
@@ -48,7 +48,7 @@ fn do_shift(
         ShiftOperand::Immediate => {
             // TODO: Think of a clever way to do this in hardward to save a barrel shifter?
             perform_shift(
-                sr_b_before_shift,
+                sr_a_before_shift,
                 register_representation.shift_type,
                 u16::from(register_representation.shift_count),
                 short_immediate,
@@ -57,7 +57,7 @@ fn do_shift(
         ShiftOperand::Register => {
             let dereferenced_shift_count = registers[register_representation.shift_count];
             perform_shift(
-                sr_b_before_shift,
+                sr_a_before_shift,
                 register_representation.shift_type,
                 dereferenced_shift_count,
                 short_immediate,
@@ -154,22 +154,18 @@ pub fn decode_and_register_fetch(
 
     let (sr_a_, sr_b_, sr_shift) = match instruction_type {
         FetchAndDecodeStepInstructionType::Register => {
-            let (sr_b_, sr_shift) =
-                do_shift(registers, registers[sr_b], &register_representation, false);
-            (registers[sr_a], sr_b_, sr_shift)
+            let (sr_a_, sr_shift) =
+                do_shift(registers, registers[sr_a], &register_representation, false);
+            (sr_a_, registers[sr_b], sr_shift)
         }
         FetchAndDecodeStepInstructionType::Immediate => (des_, immediate_representation.value, 0x0),
         FetchAndDecodeStepInstructionType::ShortImmediate => {
-            let (sr_b_, sr_shift) = do_shift(
-                registers,
-                short_immediate_representation.value as u16,
-                &register_representation,
-                true,
-            );
-            println!("((( : {:?}", (des_, sr_b_, sr_shift));
-            (des_, sr_b_, sr_shift)
+            let (sr_a_, sr_shift) = do_shift(registers, des_, &register_representation, true);
+            (sr_a_, short_immediate_representation.value as u16, sr_shift)
         }
     };
+
+    println!("the ops {:?}", (sr_a_, sr_b_, sr_shift));
 
     let ad_l = (immediate_representation.additional_flags * 2) + 8;
     let ad_h = (immediate_representation.additional_flags * 2) + 7;

@@ -341,6 +341,10 @@ pub fn perform_shift(
                 false,
                 None,
             );
+            println!(
+                "??? {:?}",
+                (operand, intermediate_registers.alu_status_register)
+            );
             return (operand, intermediate_registers.alu_status_register);
         }
         ShiftType::LogicalLeftShift => {
@@ -480,6 +484,10 @@ fn perform_arithmetic_right_shift(
     let result = wide_result as u16;
     let carry = (wide_result & MSB_MASK) == MSB_MASK;
 
+    println!(
+        "sign_bit: {sign_bit:#b} extended_a: {extended_a:#b} clamped_b: {clamped_b:#b} wide_result: {wide_result:#b} result: {result:#b} carry: {carry}",
+    );
+
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
         result,
@@ -546,7 +554,7 @@ pub fn perform_alu_operation(
         AluOp::Xor | AluOp::TestXor => perform_xor(a, b, intermediate_registers),
         // These are the same in ALU land, the difference is in the write back stage
         AluOp::Shift => {
-            intermediate_registers.alu_output = b;
+            intermediate_registers.alu_output = a;
         }
         _ => {}
     }

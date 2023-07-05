@@ -127,10 +127,10 @@ fn test_add_register_signed_overflow() {
             Instruction::AddRegister,
             register_index,
             0x7FFF,
-            0x20,
+            0x2000,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x9FFF,
             &vec![],
             &vec![
@@ -147,10 +147,10 @@ fn test_add_register_both_overflow() {
             Instruction::AddRegister,
             register_index,
             0x9FFF,
-            0x90,
+            0x9000,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x2FFF,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
@@ -211,10 +211,10 @@ fn test_add_register_with_carry_signed_overflow() {
             Instruction::AddRegisterWithCarry,
             register_index,
             0x7FFF,
-            0x20,
+            0x2000,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x9FFF,
             &vec![],
             &vec![
@@ -231,10 +231,10 @@ fn test_add_register_with_carry_both_overflow() {
             Instruction::AddRegisterWithCarry,
             register_index,
             0x9FFF,
-            0x90,
+            0x9000,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x2FFF,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
@@ -305,10 +305,10 @@ fn test_subtract_register_with_carry_unsigned_overflow() {
             Instruction::SubtractRegisterWithCarry,
             register_index,
             0x5F00,
-            0xFF,
+            0xFF00,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x6000,
             &vec![],
             &vec![StatusRegisterFields::Carry],
@@ -323,10 +323,10 @@ fn test_subtract_register_with_carry_signed_overflow() {
             Instruction::SubtractRegisterWithCarry,
             register_index,
             0xDF00,
-            0x7F,
+            0x7F00,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0x6000,
             &vec![],
             &vec![StatusRegisterFields::Overflow],
@@ -340,10 +340,10 @@ fn test_subtract_register_with_carry_both_overflow() {
             Instruction::SubtractRegisterWithCarry,
             register_index,
             0x5F00,
-            0xBF,
+            0xBF00,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
+            ShiftType::None,
+            0,
             0xA000,
             &vec![],
             &vec![
@@ -485,8 +485,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b0011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             1,
@@ -503,8 +503,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             1,
@@ -515,8 +515,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             6,
@@ -527,8 +527,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             15,
@@ -539,8 +539,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             16,
@@ -551,8 +551,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             0,
@@ -563,8 +563,8 @@ fn test_logical_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             u8::MAX,
@@ -581,8 +581,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1100,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             1,
@@ -599,8 +599,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             1,
@@ -611,8 +611,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             6,
@@ -623,8 +623,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             15,
@@ -635,8 +635,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             16,
@@ -647,8 +647,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             0,
@@ -659,8 +659,8 @@ fn test_logical_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             u8::MAX,
@@ -671,14 +671,16 @@ fn test_logical_shift_right_register() {
     }
 }
 
+// WHAT AM I DOING? FLIPPING SHIFT OPERAND (again?) so now operand 2 is shfited
+
 #[test]
 fn test_arithmetic_shift_left_register() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b0011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             1,
@@ -695,8 +697,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             1,
@@ -707,8 +709,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             6,
@@ -719,8 +721,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             15,
@@ -731,8 +733,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             16,
@@ -743,8 +745,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             0,
@@ -755,8 +757,8 @@ fn test_arithmetic_shift_left_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1011_0011_0011_0011,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             u8::MAX,
@@ -773,8 +775,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1100,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             1,
@@ -791,8 +793,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b0100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             1,
@@ -803,8 +805,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             6,
@@ -815,8 +817,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             15,
@@ -827,8 +829,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             16,
@@ -839,8 +841,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             0,
@@ -851,8 +853,8 @@ fn test_arithmetic_shift_right_register() {
         test_register_arithmetic_instruction(
             Instruction::ShiftRegister,
             register_index,
-            0,
             0b1100_1100_1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             u8::MAX,
@@ -864,6 +866,5 @@ fn test_arithmetic_shift_right_register() {
 }
 
 // TODO: Test ShiftOperand::Register
-// TODO: Test Rotates
 // TODO: Test first operand register not being destination register
 // TODO: Test conditionals

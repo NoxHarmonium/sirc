@@ -68,7 +68,7 @@ fn test_short_immediate_arithmetic_instruction(
 //
 
 #[test]
-fn test_add_immediate_basic() {
+fn test_add_short_immediate_basic() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
             Instruction::AddShortImmediate,
@@ -92,7 +92,7 @@ fn test_add_immediate_basic() {
 }
 
 #[test]
-fn test_add_immediate_unsigned_overflow() {
+fn test_add_short_immediate_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
             Instruction::AddShortImmediate,
@@ -110,39 +110,22 @@ fn test_add_immediate_unsigned_overflow() {
 }
 
 #[test]
-fn test_add_immediate_signed_overflow() {
+fn test_add_short_immediate_signed_overflow() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
             Instruction::AddShortImmediate,
             register_index,
             0x7FFF,
-            0x20,
+            0x0001,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x9FFF,
+            ShiftType::None,
+            0,
+            0x8000,
             &vec![],
             &vec![
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
-        );
-    }
-}
-#[test]
-fn test_add_immediate_both_overflow() {
-    for register_index in get_register_index_range() {
-        test_short_immediate_arithmetic_instruction(
-            Instruction::AddShortImmediate,
-            register_index,
-            0x9FFF,
-            0x90,
-            ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x2FFF,
-            &vec![],
-            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
         );
     }
 }
@@ -202,9 +185,9 @@ fn test_add_immediate_with_carry_signed_overflow() {
             0x7FFF,
             0x20,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x9FFF,
+            ShiftType::None,
+            0,
+            0x801F,
             &vec![],
             &vec![
                 StatusRegisterFields::Overflow,
@@ -213,20 +196,21 @@ fn test_add_immediate_with_carry_signed_overflow() {
         );
     }
 }
+
 #[test]
-fn test_add_immediate_with_carry_both_overflow() {
+fn test_add_immediate_with_carry_with_carry() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
             Instruction::AddShortImmediateWithCarry,
             register_index,
-            0x9FFF,
-            0x90,
+            0xFFFF,
+            0x01,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x2FFF,
-            &vec![],
-            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            ShiftType::None,
+            0,
+            0x0001,
+            &vec![StatusRegisterFields::Carry],
+            &vec![StatusRegisterFields::Carry],
         );
     }
 }
@@ -293,14 +277,14 @@ fn test_subtract_immediate_with_carry_unsigned_overflow() {
         test_short_immediate_arithmetic_instruction(
             Instruction::SubtractShortImmediateWithCarry,
             register_index,
-            0x5F00,
+            0x005F,
             0xFF,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x6000,
+            ShiftType::None,
+            0,
+            0xFF60,
             &vec![],
-            &vec![StatusRegisterFields::Carry],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
     }
 }
@@ -311,19 +295,19 @@ fn test_subtract_immediate_with_carry_signed_overflow() {
         test_short_immediate_arithmetic_instruction(
             Instruction::SubtractShortImmediateWithCarry,
             register_index,
-            0xDF00,
-            0x7F,
+            0x805F,
+            0xFF,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0x6000,
+            ShiftType::None,
+            0,
+            0x7F60,
             &vec![],
             &vec![StatusRegisterFields::Overflow],
         );
     }
 }
 #[test]
-fn test_subtract_immediate_with_carry_both_overflow() {
+fn test_subtract_immediate_with_carry_with_carry() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
             Instruction::SubtractShortImmediateWithCarry,
@@ -331,15 +315,11 @@ fn test_subtract_immediate_with_carry_both_overflow() {
             0x5F00,
             0xBF,
             ShiftOperand::Immediate,
-            ShiftType::LogicalLeftShift,
-            8,
-            0xA000,
+            ShiftType::None,
+            0,
+            0x5E40,
+            &vec![StatusRegisterFields::Carry],
             &vec![],
-            &vec![
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Overflow,
-                StatusRegisterFields::Negative,
-            ],
         );
     }
 }
@@ -474,8 +454,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b0011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             1,
@@ -492,8 +472,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             1,
@@ -504,8 +484,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             6,
@@ -516,8 +496,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             15,
@@ -528,8 +508,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             0,
@@ -540,8 +520,8 @@ fn test_logical_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::LogicalLeftShift,
             // Max immediate shift is 15
@@ -559,8 +539,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1100,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             0,
@@ -577,8 +557,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             1,
@@ -589,8 +569,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             6,
@@ -601,8 +581,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             15,
@@ -613,8 +593,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             // Max immediate shift is 15, truncates to zero
@@ -626,8 +606,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             // Max immediate shift is 15, truncates to 1
@@ -639,8 +619,8 @@ fn test_logical_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::LogicalRightShift,
             // Max immediate shift is 15, truncates to 15
@@ -658,8 +638,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b0011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             1,
@@ -676,8 +656,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             1,
@@ -688,8 +668,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             6,
@@ -700,8 +680,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             15,
@@ -716,8 +696,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             0,
@@ -728,8 +708,8 @@ fn test_arithmetic_shift_left_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0x0,
             0b1011_0011,
+            0x0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticLeftShift,
             // Max immediate shift is 15
@@ -751,8 +731,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1100,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             0,
@@ -769,8 +749,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             1,
@@ -781,8 +761,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             6,
@@ -793,8 +773,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             15,
@@ -805,8 +785,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             // Max immediate shift is 15, truncates to zero
@@ -818,8 +798,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b1100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             // Max immediate shift is 15, truncates to 1
@@ -831,8 +811,8 @@ fn test_arithmetic_shift_right_immediate() {
         test_short_immediate_arithmetic_instruction(
             Instruction::ShiftShortImmediate,
             register_index,
-            0,
             0b0100_1101,
+            0,
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             // Max immediate shift is 15, truncates to 15

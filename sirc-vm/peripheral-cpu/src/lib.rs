@@ -94,6 +94,8 @@ fn step<'a>(
     // 3. Decode/Register Fetch (ID)
     let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
 
+    println!("{decoded_instruction:#X?}");
+
     // Special instruction just for debugging purposes. Probably won't be in hardware
     assert!(
         !(decoded_instruction.ins == Instruction::Exception && decoded_instruction.sr_b_ == 0xFFFF),
