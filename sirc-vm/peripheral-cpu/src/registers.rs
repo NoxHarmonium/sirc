@@ -14,12 +14,27 @@ pub enum StatusRegisterFields {
     Overflow = 0b0000_1000,
 
     // Byte 2 (privileged)
+    /// Enabled "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
+    /// and if they are used in when this flag is cleared, an exception is thrown
+    /// TODO: Implement privilege system
     SystemMode = 0b0000_0001 << u8::BITS,
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
     InterruptMaskHigh = 0b0000_1000 << u8::BITS,
+    /// Set when a WAIT instruction is executed
+    /// Mainly just for control circuits, there shouldn't be a way to read this in a program
     WaitingForInterrupt = 0b0001_0000 << u8::BITS,
+    /// Set to one when the CPU is halted (stopped until reset)
+    /// TODO: I think this is getting dropped, a CPU usually doesn't halt, unless from external pin like when the bus is busy
+    /// during a DMA transfer or something but in that case we wouldn't be able to read the status bit anyway
     CpuHalted = 0b0010_0000 << u8::BITS,
+    /// During memory effective address calcs, if the address wraps around with either and overflow or underflow
+    /// and this bit is set, an exception will be thrown to detect an invalid access
+    /// TODO: Implement this
+    TrapOnAddressOverflow = 0b0100_0000 << u8::BITS,
+    /// When enabled, causes an exception every instruction to facilitate debuggers
+    /// TODO: Implement this
+    TraceMode = 0b1000_0000 << u8::BITS,
 }
 
 /// Should map 1:1 with the Registers struct
