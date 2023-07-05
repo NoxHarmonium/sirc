@@ -28,49 +28,14 @@ fn decode_memory_access_step_instruction_type(
         return MemoryAccessInstructionType::NoOp;
     }
 
-    match instruction {
-        // Flow Control (Immediate)
-        Instruction::ShortJumpImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::ShortJumpShortImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::ShortJumpToSubroutineImmediate => {
-            MemoryAccessInstructionType::BranchOrJumpSubroutine
-        }
-        Instruction::ShortJumpToSubroutineShortImmediate => {
-            MemoryAccessInstructionType::BranchOrJumpSubroutine
-        }
-        // Flow Control (Immediate)
-        Instruction::BranchImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::BranchShortImmediate => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::BranchToSubroutineImmediate => {
-            MemoryAccessInstructionType::BranchOrJumpSubroutine
-        }
-        Instruction::BranchToSubroutineShortImmediate => {
-            MemoryAccessInstructionType::BranchOrJumpSubroutine
-        }
-
-        // Data Access
-        Instruction::LoadRegisterFromIndirectImmediate => MemoryAccessInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromIndirectRegister => MemoryAccessInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
-            MemoryAccessInstructionType::MemoryLoad
-        }
-        Instruction::StoreRegisterToIndirectImmediate => MemoryAccessInstructionType::MemoryStore,
-        Instruction::StoreRegisterToIndirectRegister => MemoryAccessInstructionType::MemoryStore,
-        Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
-            MemoryAccessInstructionType::MemoryStore
-        }
-
-        Instruction::LongJumpWithImmediateDisplacement => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
-            MemoryAccessInstructionType::BranchOrJump
-        }
-        Instruction::LongJumpWithRegisterDisplacement => MemoryAccessInstructionType::BranchOrJump,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
-            MemoryAccessInstructionType::BranchOrJump
-        }
-
-        // Flow Control (Address Register Direct)
-        _ => MemoryAccessInstructionType::NoOp,
+    match num::ToPrimitive::to_u8(&instruction).unwrap() {
+        0x00..=0x0F => MemoryAccessInstructionType::NoOp,
+        0x10..=0x12 => MemoryAccessInstructionType::MemoryStore,
+        0x13..=0x15 => MemoryAccessInstructionType::MemoryLoad,
+        0x16..=0x19 => MemoryAccessInstructionType::BranchOrJumpSubroutine,
+        0x1A..=0x1D => MemoryAccessInstructionType::BranchOrJump,
+        0x1E..=0x3F => MemoryAccessInstructionType::NoOp,
+        _ => panic!("No mapping for [{instruction:?}] to MemoryAccessInstructionType"),
     }
 }
 
@@ -91,33 +56,24 @@ impl StageExecutor for MemoryAccessExecutor {
         registers.pl = decoded.npc_l_;
 
         match memory_access_step_instruction_type {
-            // a. No Op
             MemoryAccessInstructionType::NoOp => {}
-            // a. Memory load
-            // LMD <- Mem[AdrH | ALUOutput]
+
             MemoryAccessInstructionType::MemoryLoad => {
                 intermediate_registers.lmd = mem.read_address(
                     (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                 );
             }
-            // b. Memory store
-            // Mem[AdrH | ALUOutput] <- A?
             MemoryAccessInstructionType::MemoryStore => {
-                // A or B?
                 mem.write_address(
                     (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                     decoded.sr_a_,
                 );
             }
-            // c. Branch/Jump
-            // if (Cond') PC <- ALUoutput
-            // else      PC <- NPC
             MemoryAccessInstructionType::BranchOrJump => {
                 registers.pl = intermediate_registers.alu_output;
                 registers.ph = decoded.ad_h_;
             }
 
-            //
             MemoryAccessInstructionType::BranchOrJumpSubroutine => {
                 registers.pl = intermediate_registers.alu_output;
                 registers.ph = decoded.ad_h_;

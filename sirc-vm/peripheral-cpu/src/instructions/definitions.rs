@@ -217,88 +217,76 @@ pub enum InstructionData {
 #[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Default, Clone, Hash, Copy)]
 #[cfg_attr(test, derive(strum::EnumIter))]
 pub enum Instruction {
-    // Arithmetic (Immediate)
+    // ALU (Immediate)
+    #[default]
     AddImmediate = 0x00,
     AddImmediateWithCarry = 0x01,
     SubtractImmediate = 0x02,
     SubtractImmediateWithCarry = 0x03,
-    // Logic (Immediate)
     AndImmediate = 0x04,
     OrImmediate = 0x05,
     XorImmediate = 0x06,
-    // Comparison (Immediate)
     CompareImmediate = 0x07,
     TestAndImmediate = 0x08,
     TestXorImmediate = 0x09,
-    ShiftImmediate = 0x0A,
-    // Flow Control
-    BranchImmediate = 0x0B,
-    BranchToSubroutineImmediate = 0x0C,
-    ShortJumpImmediate = 0x0D,
-    ShortJumpToSubroutineImmediate = 0x0E,
-    Exception = 0x0F,
+    Exception = 0x0A,
+    ShiftImmediate = 0x0B,
+    LoadRegisterFromImmediate = 0x0C,
 
     // Addressing
-    LoadEffectiveAddressFromIndirectImmediate = 0x10,
-    LoadEffectiveAddressFromIndirectRegister = 0x11,
-    LongJumpWithImmediateDisplacement = 0x12,
-    LongJumpWithRegisterDisplacement = 0x13,
-    LongJumpToSubroutineWithImmediateDisplacement = 0x14,
-    LongJumpToSubroutineWithRegisterDisplacement = 0x15,
+    StoreRegisterToIndirectImmediate = 0x10,
+    StoreRegisterToIndirectRegister = 0x11,
+    StoreRegisterToIndirectRegisterPreDecrement = 0x12,
+    LoadRegisterFromIndirectRegisterPostIncrement = 0x13,
+    LoadRegisterFromIndirectImmediate = 0x14,
+    LoadRegisterFromIndirectRegister = 0x15,
+    BranchToSubroutineWithImmediateDisplacement = 0x16,
+    BranchToSubroutineWithRegisterDisplacement = 0x17,
+    LongJumpToSubroutineWithImmediateDisplacement = 0x18,
+    LongJumpToSubroutineWithRegisterDisplacement = 0x19,
+    BranchWithImmediateDisplacement = 0x1A,
+    BranchWithRegisterDisplacement = 0x1B,
+    LongJumpWithImmediateDisplacement = 0x1C,
+    LongJumpWithRegisterDisplacement = 0x1D,
+    LoadEffectiveAddressFromIndirectImmediate = 0x1E,
+    LoadEffectiveAddressFromIndirectRegister = 0x1F,
 
-    // Data Access
-    LoadRegisterFromImmediate = 0x16,
-    LoadRegisterFromRegister = 0x17,
-    LoadRegisterFromIndirectImmediate = 0x18,
-    LoadRegisterFromIndirectRegister = 0x19,
-    StoreRegisterToIndirectImmediate = 0x1A,
-    StoreRegisterToIndirectRegister = 0x1B,
-    LoadRegisterFromIndirectRegisterPostIncrement = 0x1D,
-    StoreRegisterToIndirectRegisterPreDecrement = 0x1F,
-
-    // Arithmetic (Immediate/SHORT)
+    // ALU (Short Immediate)
     AddShortImmediate = 0x20,
     AddShortImmediateWithCarry = 0x21,
     SubtractShortImmediate = 0x22,
     SubtractShortImmediateWithCarry = 0x23,
-    // Logic (Immediate)
     AndShortImmediate = 0x24,
     OrShortImmediate = 0x25,
     XorShortImmediate = 0x26,
-    // Comparison (Immediate)
     CompareShortImmediate = 0x27,
     TestAndShortImmediate = 0x28,
     TestXorShortImmediate = 0x29,
-    ShiftShortImmediate = 0x2A,
-    // Flow Control
-    BranchShortImmediate = 0x2B,
-    BranchToSubroutineShortImmediate = 0x2C,
-    ShortJumpShortImmediate = 0x2D,
-    ShortJumpToSubroutineShortImmediate = 0x2E,
-    ExceptionShort = 0x2F,
+    ExceptionShortImmediate = 0x2A,
+    ShiftShortImmediate = 0x2B,
+    LoadRegisterFromShortImmediate = 0x2C,
 
-    // Arithmetic (Register)
+    // ALU (Register)
     AddRegister = 0x30,
     AddRegisterWithCarry = 0x31,
     SubtractRegister = 0x32,
     SubtractRegisterWithCarry = 0x33,
-    // Logic (Register)
     AndRegister = 0x34,
     OrRegister = 0x35,
     XorRegister = 0x36,
-    // Comparison (Register)
     CompareRegister = 0x37,
     TestAndRegister = 0x38,
     TestXorRegister = 0x39,
-    ShiftRegister = 0x3A,
+    ExceptionRegister = 0x3A,
+    ShiftRegister = 0x3B,
+    LoadRegisterFromRegister = 0x3C,
 
     // Implied
-    ReturnFromSubroutine = 0x3B,
-    #[default]
-    NoOperation = 0x3C,
+    ReturnFromSubroutine = 0x3D,
+
     // Exception Handler
-    WaitForException = 0x3D,
-    ReturnFromException = 0x3E,
+    WaitForException = 0x3E,
+    ReturnFromException = 0x3F,
 }
 
 // Pending Instructions

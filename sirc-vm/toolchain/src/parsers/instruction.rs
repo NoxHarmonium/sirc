@@ -358,7 +358,6 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::arithmetic_register::arithmetic_register
             .context("Arithmetic Register Instruction"),
         opcodes::branching::branching.context("Branching instruction"),
-        opcodes::excp::excp.context("EXCP instruction"),
         opcodes::implied::implied.context("Implied instruction"),
         opcodes::ldea::ldea.context("LDEA instruction"),
         opcodes::ljmp::ljmp.context("LJMP instruction"),

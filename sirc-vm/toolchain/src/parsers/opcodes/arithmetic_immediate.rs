@@ -25,7 +25,7 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
         "TSAI" => Instruction::TestAndImmediate,
         "TSXI" => Instruction::TestXorImmediate,
         "SHFI" => Instruction::ShiftImmediate,
-        "EXCP" => Instruction::Exception,
+        "EXCI" => Instruction::Exception,
 
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -44,7 +44,7 @@ fn tag_to_instruction_short(tag: &String) -> Instruction {
         "TSAI" => Instruction::TestAndImmediate,
         "TSXI" => Instruction::TestXorImmediate,
         "SHFI" => Instruction::ShiftShortImmediate,
-        "EXCP" => Instruction::ExceptionShort,
+        "EXCI" => Instruction::ExceptionShortImmediate,
 
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }

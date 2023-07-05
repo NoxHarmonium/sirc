@@ -38,8 +38,8 @@ pub enum AluOp {
     Compare = 0x7,
     TestAnd = 0x8,
     TestXor = 0x9,
-    Shift = 0x0A,
-    Reserved1 = 0x0B,
+    Reserved1 = 0x0A,
+    Shift = 0x0B,
     Reserved2 = 0x0C,
     Reserved3 = 0x0D,
     Reserved4 = 0x0E,
@@ -110,31 +110,30 @@ pub fn perform_add(a: u16, b: u16, intermediate_registers: &mut IntermediateRegi
 /// If a signed overflow occurs, the overflow status flag will be set.
 ///
 /// ```
-/// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit};
+/// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit_value};
 /// use peripheral_cpu::execution::shared::IntermediateRegisters;
 /// use peripheral_cpu::execution::alu::perform_add_with_carry;
 ///
 /// // Thanks: https://stackoverflow.com/a/69125543/1153203
 ///
-/// let mut registers = Registers::default();
 /// let mut intermediate_registers = IntermediateRegisters::default();
 ///
 /// // Operation that produces carry
-/// perform_add_with_carry(0xFFFF, 0xFFFF, &registers, &mut intermediate_registers);
+/// perform_add_with_carry(0xFFFF, 0xFFFF, intermediate_registers.alu_status_register, &mut intermediate_registers);
 ///
 /// assert_eq!(intermediate_registers.alu_output, 0xFFFE);
 /// assert_eq!(sr_bit_is_set_value(StatusRegisterFields::Carry, intermediate_registers.alu_status_register), true);
 ///
-/// set_sr_bit(StatusRegisterFields::Carry, &mut registers);
+/// set_sr_bit_value(StatusRegisterFields::Carry, &mut intermediate_registers.alu_status_register);
 ///
 /// // Do the same operation now that the carry bit is set
-/// perform_add_with_carry(0xFFFF, 0xFFFF, &registers, &mut intermediate_registers);
+/// perform_add_with_carry(0xFFFF, 0xFFFF, intermediate_registers.alu_status_register, &mut intermediate_registers);
 ///
 /// assert_eq!(intermediate_registers.alu_output, 0xFFFF);
 /// assert_eq!(sr_bit_is_set_value(StatusRegisterFields::Carry, intermediate_registers.alu_status_register), true);
 ///
 /// // Wrapping to zero
-/// perform_add_with_carry(0x0000, 0xFFFF, &registers, &mut intermediate_registers);
+/// perform_add_with_carry(0x0000, 0xFFFF, intermediate_registers.alu_status_register, &mut intermediate_registers);
 ///
 /// assert_eq!(intermediate_registers.alu_output, 0x0000);
 /// assert_eq!(sr_bit_is_set_value(StatusRegisterFields::Carry, intermediate_registers.alu_status_register), true);
@@ -179,7 +178,6 @@ pub fn perform_add_with_carry(
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///
-/// let mut registers = Registers::default();
 /// let mut intermediate_registers = IntermediateRegisters::default();
 ///
 /// // Unsigned Overflow
@@ -231,25 +229,24 @@ pub fn perform_subtract(a: u16, b: u16, intermediate_registers: &mut Intermediat
 /// If a signed overflow occurs, the overflow status flag will be set.
 ///
 /// ```
-/// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit};
+/// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit_value};
 /// use peripheral_cpu::execution::shared::IntermediateRegisters;
 /// use peripheral_cpu::execution::alu::perform_subtract_with_carry;
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///
-/// let mut registers = Registers::default();
 /// let mut intermediate_registers = IntermediateRegisters::default();
 ///
 /// // Subtraction that causes borrow
-/// perform_subtract_with_carry(0x0000, 0xFFFF, &registers, &mut intermediate_registers);
+/// perform_subtract_with_carry(0x0000, 0xFFFF, intermediate_registers.alu_status_register, &mut intermediate_registers);
 ///
 /// assert_eq!(intermediate_registers.alu_output, 0x0001);
 /// assert_eq!(sr_bit_is_set_value(StatusRegisterFields::Carry, intermediate_registers.alu_status_register), true);
 ///
-/// set_sr_bit(StatusRegisterFields::Carry, &mut registers);
+/// set_sr_bit_value(StatusRegisterFields::Carry, &mut intermediate_registers.alu_status_register);
 ///
 /// // Subtraction with borrow (carry) bit set
-///  perform_subtract_with_carry(0x0000, 0xFFFF, &registers, &mut intermediate_registers);
+///  perform_subtract_with_carry(0x0000, 0xFFFF,  intermediate_registers.alu_status_register, &mut intermediate_registers);
 ///
 /// assert_eq!(intermediate_registers.alu_output, 0x0000);
 /// assert_eq!(sr_bit_is_set_value(StatusRegisterFields::Carry, intermediate_registers.alu_status_register), true);

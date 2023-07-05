@@ -13,51 +13,44 @@ use nom::{error::FromExternalError, sequence::tuple};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::{
     instructions::definitions::{
-        ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
+        ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
+        ShiftOperand, ShiftType,
     },
-    registers::AddressRegisterName,
+    registers::{AddressRegisterName, RegisterName},
 };
 
-fn tag_to_instruction_long(tag: &str) -> Instruction {
+fn tag_to_instruction_long_immediate(tag: &str) -> Instruction {
     match tag {
-        "BRAN" => Instruction::BranchImmediate,
-        "BRSR" => Instruction::BranchToSubroutineImmediate,
-        "SJMP" => Instruction::ShortJumpImmediate,
-        "SJSR" => Instruction::ShortJumpToSubroutineImmediate,
+        "BRAN" => Instruction::BranchWithImmediateDisplacement,
+        "BRSR" => Instruction::BranchToSubroutineWithImmediateDisplacement,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
-fn tag_to_instruction_short(tag: &str) -> Instruction {
+fn tag_to_instruction_long_register(tag: &str) -> Instruction {
     match tag {
-        "BRAN" => Instruction::BranchShortImmediate,
-        "BRSR" => Instruction::BranchToSubroutineShortImmediate,
-        "SJMP" => Instruction::ShortJumpShortImmediate,
-        "SJSR" => Instruction::ShortJumpToSubroutineShortImmediate,
+        "BRAN" => Instruction::BranchWithRegisterDisplacement,
+        "BRSR" => Instruction::BranchToSubroutineWithRegisterDisplacement,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
 
 use super::super::shared::AsmResult;
 pub fn branching(i: &str) -> AsmResult<InstructionToken> {
-    let instructions = alt((
-        parse_instruction_tag("BRAN"),
-        parse_instruction_tag("BRSR"),
-        parse_instruction_tag("SJMP"),
-        parse_instruction_tag("SJSR"),
-    ));
+    let instructions = alt((parse_instruction_tag("BRAN"), parse_instruction_tag("BRSR")));
 
     let (i, ((tag, condition_flag), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
 
     match operands.as_slice() {
         [AddressingMode::Immediate(offset)] => match offset {
+            // Shorthand, always immediate offset to PC. Can also use other address registers with full syntax below
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long(tag.as_str()),
-                        register: 0x0, // unused
+                        op_code: tag_to_instruction_long_immediate(tag.as_str()),
+                        register: RegisterName::Pl.to_register_index(),
                         value: offset.to_owned(),
                         condition_flag,
                         additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -69,9 +62,9 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long(tag.as_str()),
-                        register: 0x0, // unused
-                        value: 0x0,    // Placeholder
+                        op_code: tag_to_instruction_long_immediate(tag.as_str()),
+                        register: RegisterName::Pl.to_register_index(),
+                        value: 0x0, // Placeholder
                         condition_flag,
                         additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
                     }),
@@ -82,66 +75,81 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 },
             )),
         },
-        [AddressingMode::Immediate(offset), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
+        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
             match offset {
-                ImmediateType::Value(offset) => {
-                    if offset > &0xFF {
-                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({offset} > 0xFF)");
-                        Err(nom::Err::Failure(ErrorTree::from_external_error(
-                            i,
-                            ErrorKind::Fail,
-                            error_string.as_str(),
-                        )))
-                    } else {
-                        Ok((
-                            i,
-                            InstructionToken {
-                                instruction: InstructionData::ShortImmediate(
-                                    ShortImmediateInstructionData {
-                                        op_code: tag_to_instruction_short(tag.as_str()),
-                                        register: 0x0, // unused
-                                        value: offset.to_owned().try_into().expect(
-                                            "Offset should fit into 0xFF as it checked above",
-                                        ),
-                                        shift_operand,
-                                        shift_type,
-                                        shift_count,
-                                        condition_flag,
-                                        additional_flags: AddressRegisterName::ProgramCounter
-                                            .to_register_index(),
-                                    },
-                                ),
-                                symbol_ref: None,
-                            },
-                        ))
-                    }
-                }
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: tag_to_instruction_long_immediate(tag.as_str()),
+                            register: RegisterName::Pl.to_register_index(),
+                            value: offset.to_owned(),
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: None,
+                    },
+                )),
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::ShortImmediate(
-                            ShortImmediateInstructionData {
-                                op_code: tag_to_instruction_short(tag.as_str()),
-                                register: 0x0, // unused
-                                value: 0x0,    // Placeholder
-                                shift_operand,
-                                shift_type,
-                                shift_count,
-                                condition_flag,
-                                additional_flags: AddressRegisterName::ProgramCounter
-                                    .to_register_index(),
-                            },
-                        ),
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: tag_to_instruction_long_immediate(tag.as_str()),
+                            register: RegisterName::Pl.to_register_index(),
+                            value: 0x0, // Placeholder
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
                         symbol_ref: Some(override_ref_token_type_if_implied(
                             ref_token,
-                            RefType::Offset,
+                            RefType::LowerWord,
                         )),
                     },
                 )),
             }
+        }
+        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] => {
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction_long_register(tag.as_str()),
+                        r1: RegisterName::Pl.to_register_index(),
+                        r2: displacement_register.to_register_index(),
+                        r3: 0x0, // Unused
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        // TODO: Clamp/validate additional_flags to 10 bits
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    symbol_ref: None,
+                },
+            ))
+        }
+        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        {
+            let (shift_operand, shift_type, shift_count) =
+                split_shift_definition_data(shift_definition_data);
+            Ok((
+                i,
+                InstructionToken {
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: tag_to_instruction_long_register(tag.as_str()),
+                        r1: RegisterName::Pl.to_register_index(),
+                        r2: displacement_register.to_register_index(),
+                        r3: 0x0, // Unused
+                        shift_operand,
+                        shift_type,
+                        shift_count,
+                        condition_flag,
+                        // TODO: Clamp/validate additional_flags to 10 bits
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    symbol_ref: None,
+                },
+            ))
         }
         _ => {
             let error_string = format!(

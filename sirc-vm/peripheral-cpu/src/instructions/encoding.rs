@@ -93,10 +93,10 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 /// use peripheral_cpu::instructions::encoding::{decode_implied_instruction};
 /// use peripheral_cpu::instructions::definitions::{Instruction, ImpliedInstructionData, ConditionFlags};
 ///
-/// assert_eq!(decode_implied_instruction([0xF0, 0xBF, 0xEA, 0x80]), ImpliedInstructionData {
-///     op_code: Instruction::NoOperation, condition_flag: ConditionFlags::Always
+/// assert_eq!(decode_implied_instruction([0xFC, 0xBF, 0xEA, 0x80]), ImpliedInstructionData {
+///     op_code: Instruction::ReturnFromException, condition_flag: ConditionFlags::Always
 /// });
-/// assert_eq!(decode_implied_instruction([0xF4, 0xFF, 0xFF, 0xF0]), ImpliedInstructionData {
+/// assert_eq!(decode_implied_instruction([0xF8, 0xFF, 0xFF, 0xF0]), ImpliedInstructionData {
 ///     op_code: Instruction::WaitForException, condition_flag: ConditionFlags::Always
 /// });
 ///
@@ -302,9 +302,7 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> InstructionData {
     match instruction_id {
         0x00..=0x0F => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // Immediate arithmetic/logic and short jumps (e.g. SUBI, XORI)
         0x10 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LDEA Indirect Immediate
-        0x11 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LDEA Indirect Register
-        0x12 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LJMP Indirect Immediate
-        0x13 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LJMP Indirect Register
+        0x11..=0x13 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LDEA Indirect Register
         0x14 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LJSR Indirect Immediate
         0x15 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LJSR Indirect Register
         0x16 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LOAD Immediate
@@ -320,8 +318,8 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> InstructionData {
         0x20..=0x2F => {
             InstructionData::ShortImmediate(decode_short_immediate_instruction(raw_instruction))
         } // SHORT Immediate arithmetic/logic and short jumps (e.g. SUBI, XORI)
-        0x30..=0x3A => InstructionData::Register(decode_register_instruction(raw_instruction)), // Register-Register arithmetic/logic (e.g. SUBR, XORR, CMPR)
-        0x3B..=0x3F => InstructionData::Implied(decode_implied_instruction(raw_instruction)), // RETS, NOOP, WAIY, RETE
+        0x30..=0x3C => InstructionData::Register(decode_register_instruction(raw_instruction)), // Register-Register arithmetic/logic (e.g. SUBR, XORR, CMPR)
+        0x3D..=0x3F => InstructionData::Implied(decode_implied_instruction(raw_instruction)), // RETS, NOOP, WAIY, RETE
         _ => panic!("Fatal: Invalid instruction ID: 0x{instruction_id:02x}"),
     }
 }
@@ -401,9 +399,9 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
 /// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
 ///
 /// assert_eq!(encode_implied_instruction(&ImpliedInstructionData {
-///   op_code: Instruction::NoOperation,
+///   op_code: Instruction::ReturnFromSubroutine,
 ///   condition_flag: ConditionFlags::LessThan,
-/// }), [0xF0, 0x00, 0x00, 0x0C]);
+/// }), [0xF4, 0x00, 0x00, 0x0C]);
 /// ```
 /// # Panics
 ///
@@ -438,12 +436,12 @@ pub fn encode_implied_instruction(
 ///
 ///
 /// assert_eq!(encode_immediate_instruction(&ImmediateInstructionData {
-///   op_code: Instruction::BranchImmediate,
+///   op_code: Instruction::BranchWithImmediateDisplacement,
 ///   register: 0x4,
 ///   value: 0xCAFE,
 ///   condition_flag: ConditionFlags::LessThan,
 ///   additional_flags: 0x1,
-/// }), [0x2D, 0x32, 0xBF, 0x9C]);
+/// }), [0x69, 0x32, 0xBF, 0x9C]);
 ///
 /// ```
 #[must_use]
@@ -491,7 +489,7 @@ pub fn encode_immediate_instruction(
 ///
 ///
 /// assert_eq!(encode_short_immediate_instruction(&ShortImmediateInstructionData {
-///   op_code: Instruction::BranchShortImmediate,
+///   op_code: Instruction::OrShortImmediate,
 ///   register: 0x4,
 ///   value: 0xFE,
 ///   shift_operand: ShiftOperand::Register,
@@ -499,7 +497,7 @@ pub fn encode_immediate_instruction(
 ///   shift_count: 2,
 ///   condition_flag: ConditionFlags::LessThan,
 ///   additional_flags: 0x1,
-/// }), [0xAD, 0x3F, 0xB8, 0x9C]);
+/// }), [0x95, 0x3F, 0xB8, 0x9C]);
 ///
 /// ```
 #[must_use]
@@ -616,7 +614,6 @@ mod tests {
 
     const VALID_IMPLIED_OP_CODES: &[Instruction] = &[
         Instruction::ReturnFromSubroutine,
-        Instruction::NoOperation,
         Instruction::WaitForException,
         Instruction::ReturnFromException,
     ];
@@ -632,18 +629,16 @@ mod tests {
         Instruction::CompareImmediate,
         Instruction::TestAndImmediate,
         Instruction::TestXorImmediate,
-        Instruction::ShiftImmediate,
-        Instruction::BranchImmediate,
-        Instruction::BranchToSubroutineImmediate,
-        Instruction::ShortJumpImmediate,
-        Instruction::ShortJumpToSubroutineImmediate,
         Instruction::Exception,
-        Instruction::LoadEffectiveAddressFromIndirectImmediate,
-        Instruction::LongJumpWithImmediateDisplacement,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        Instruction::ShiftImmediate,
         Instruction::LoadRegisterFromImmediate,
-        Instruction::LoadRegisterFromIndirectImmediate,
         Instruction::StoreRegisterToIndirectImmediate,
+        Instruction::LoadRegisterFromIndirectImmediate,
+        Instruction::BranchToSubroutineWithImmediateDisplacement,
+        Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        Instruction::BranchWithImmediateDisplacement,
+        Instruction::LongJumpWithImmediateDisplacement,
+        Instruction::LoadEffectiveAddressFromIndirectImmediate,
     ];
 
     const VALID_SHORT_IMMEDIATE_OP_CODES: &[Instruction] = &[
@@ -657,15 +652,21 @@ mod tests {
         Instruction::CompareShortImmediate,
         Instruction::TestAndShortImmediate,
         Instruction::TestXorShortImmediate,
+        Instruction::ExceptionShortImmediate,
         Instruction::ShiftShortImmediate,
-        Instruction::BranchShortImmediate,
-        Instruction::BranchToSubroutineShortImmediate,
-        Instruction::ShortJumpShortImmediate,
-        Instruction::ShortJumpToSubroutineShortImmediate,
-        Instruction::ExceptionShort,
+        Instruction::LoadRegisterFromShortImmediate,
     ];
 
     const VALID_REGISTER_OP_CODES: &[Instruction] = &[
+        Instruction::StoreRegisterToIndirectRegister,
+        Instruction::StoreRegisterToIndirectRegisterPreDecrement,
+        Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
+        Instruction::LoadRegisterFromIndirectRegister,
+        Instruction::BranchToSubroutineWithRegisterDisplacement,
+        Instruction::LongJumpToSubroutineWithRegisterDisplacement,
+        Instruction::LongJumpWithRegisterDisplacement,
+        Instruction::BranchWithRegisterDisplacement,
+        Instruction::LoadEffectiveAddressFromIndirectRegister,
         Instruction::AddRegister,
         Instruction::AddRegisterWithCarry,
         Instruction::SubtractRegister,
@@ -676,22 +677,16 @@ mod tests {
         Instruction::CompareRegister,
         Instruction::TestAndRegister,
         Instruction::TestXorRegister,
+        Instruction::ExceptionRegister,
         Instruction::ShiftRegister,
-        Instruction::LoadEffectiveAddressFromIndirectRegister,
-        Instruction::LongJumpWithRegisterDisplacement,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement,
         Instruction::LoadRegisterFromRegister,
-        Instruction::LoadRegisterFromIndirectRegister,
-        Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
-        Instruction::StoreRegisterToIndirectRegister,
-        Instruction::StoreRegisterToIndirectRegisterPreDecrement,
     ];
 
     use crate::instructions::{
         definitions::{
             all_condition_flags, all_instructions, all_shift_operands, all_shift_types,
-            ImmediateInstructionData, ImpliedInstructionData, Instruction, InstructionData,
-            RegisterInstructionData, ShortImmediateInstructionData,
+            ConditionFlags, ImmediateInstructionData, ImpliedInstructionData, Instruction,
+            InstructionData, RegisterInstructionData, ShortImmediateInstructionData,
         },
         encoding::decode_instruction,
     };
@@ -813,5 +808,21 @@ mod tests {
         let raw_bytes = encode_instruction(&instruction_data);
         let decoded = decode_instruction(raw_bytes);
         instruction_data == decoded
+    }
+
+    #[test]
+    fn test_empty_memory_is_noop() {
+        let decoded = decode_instruction([0x0, 0x0, 0x0, 0x0]);
+        // Add zero to first register with no status register update should be effectively noop
+        assert_eq!(
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::AddImmediate,
+                register: 0x0,
+                value: 0x0,
+                additional_flags: 0x0, // No status register update
+                condition_flag: ConditionFlags::Always,
+            }),
+            decoded
+        );
     }
 }

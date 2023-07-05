@@ -6,7 +6,6 @@ use crate::{
             decode_short_immediate_instruction,
         },
     },
-    microcode::address::sign_extend_small_offset,
     registers::Registers,
 };
 
@@ -24,98 +23,17 @@ enum FetchAndDecodeStepInstructionType {
 fn decode_fetch_and_decode_step_instruction_type(
     instruction: Instruction,
 ) -> FetchAndDecodeStepInstructionType {
-    match instruction {
-        Instruction::AddImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::AddImmediateWithCarry => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::SubtractImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::SubtractImmediateWithCarry => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::AndImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::OrImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::XorImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::CompareImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::TestAndImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::TestXorImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::ShiftImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::BranchImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::BranchToSubroutineImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::ShortJumpImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::ShortJumpToSubroutineImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::Exception => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
+    match num::ToPrimitive::to_u8(&instruction).unwrap() {
+        0x00..=0x0F => FetchAndDecodeStepInstructionType::Immediate,
+        0x10 | 0x12 | 0x14 | 0x16 | 0x18 | 0x1A | 0x1C => {
             FetchAndDecodeStepInstructionType::Immediate
         }
-        Instruction::LoadEffectiveAddressFromIndirectRegister => {
+        0x11 | 0x13 | 0x15 | 0x17 | 0x19 | 0x1B | 0x1D | 0x1E | 0x1F => {
             FetchAndDecodeStepInstructionType::Register
         }
-        Instruction::LongJumpWithImmediateDisplacement => {
-            FetchAndDecodeStepInstructionType::Immediate
-        }
-        Instruction::LongJumpWithRegisterDisplacement => {
-            FetchAndDecodeStepInstructionType::Register
-        }
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement => {
-            FetchAndDecodeStepInstructionType::Immediate
-        }
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement => {
-            FetchAndDecodeStepInstructionType::Register
-        }
-        Instruction::LoadRegisterFromImmediate => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::LoadRegisterFromRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::LoadRegisterFromIndirectImmediate => {
-            FetchAndDecodeStepInstructionType::Immediate
-        }
-        Instruction::LoadRegisterFromIndirectRegister => {
-            FetchAndDecodeStepInstructionType::Register
-        }
-        Instruction::StoreRegisterToIndirectImmediate => {
-            FetchAndDecodeStepInstructionType::Immediate
-        }
-        Instruction::StoreRegisterToIndirectRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
-            FetchAndDecodeStepInstructionType::Register
-        }
-        Instruction::StoreRegisterToIndirectRegisterPreDecrement => {
-            FetchAndDecodeStepInstructionType::Register
-        }
-        Instruction::AddShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::AddShortImmediateWithCarry => {
-            FetchAndDecodeStepInstructionType::ShortImmediate
-        }
-        Instruction::SubtractShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::SubtractShortImmediateWithCarry => {
-            FetchAndDecodeStepInstructionType::ShortImmediate
-        }
-        Instruction::AndShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::OrShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::XorShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::CompareShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::TestAndShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::TestXorShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::ShiftShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::BranchShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::BranchToSubroutineShortImmediate => {
-            FetchAndDecodeStepInstructionType::ShortImmediate
-        }
-        Instruction::ShortJumpShortImmediate => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::ShortJumpToSubroutineShortImmediate => {
-            FetchAndDecodeStepInstructionType::ShortImmediate
-        }
-        Instruction::ExceptionShort => FetchAndDecodeStepInstructionType::ShortImmediate,
-        Instruction::AddRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::AddRegisterWithCarry => FetchAndDecodeStepInstructionType::Register,
-        Instruction::SubtractRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::SubtractRegisterWithCarry => FetchAndDecodeStepInstructionType::Register,
-        Instruction::AndRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::OrRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::XorRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::CompareRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::TestAndRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::TestXorRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::ShiftRegister => FetchAndDecodeStepInstructionType::Register,
-        Instruction::ReturnFromSubroutine => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::NoOperation => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::WaitForException => FetchAndDecodeStepInstructionType::Immediate,
-        Instruction::ReturnFromException => FetchAndDecodeStepInstructionType::Immediate,
+        0x20..=0x2F => FetchAndDecodeStepInstructionType::ShortImmediate,
+        0x30..=0x3F => FetchAndDecodeStepInstructionType::Register,
+        _ => panic!("No mapping for [{instruction:?}] to FetchAndDecodeStepInstructionType"),
     }
 }
 
@@ -194,7 +112,11 @@ fn do_shift(
 /// ```
 ///
 #[must_use]
-#[allow(clippy::similar_names, clippy::cast_possible_truncation)]
+#[allow(
+    clippy::similar_names,
+    clippy::cast_possible_truncation,
+    clippy::cast_lossless
+)]
 pub fn decode_and_register_fetch(
     raw_instruction: [u8; 4],
     registers: &Registers,
@@ -240,10 +162,11 @@ pub fn decode_and_register_fetch(
         FetchAndDecodeStepInstructionType::ShortImmediate => {
             let (sr_b_, sr_shift) = do_shift(
                 registers,
-                sign_extend_small_offset(short_immediate_representation.value),
+                short_immediate_representation.value as u16,
                 &register_representation,
                 true,
             );
+            println!("((( : {:?}", (des_, sr_b_, sr_shift));
             (des_, sr_b_, sr_shift)
         }
     };

@@ -12,7 +12,6 @@ enum WriteBackInstructionType {
     NoOp,
     MemoryLoad,
     AluToRegister,
-    LoadEffectiveAddress,
 }
 
 pub struct WriteBackExecutor;
@@ -27,68 +26,14 @@ fn decode_write_back_step_instruction_type(
         return WriteBackInstructionType::NoOp;
     }
 
-    match instruction {
-        // Arithmetic (Immediate)
-        Instruction::AddImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::AddImmediateWithCarry => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractImmediateWithCarry => WriteBackInstructionType::AluToRegister,
-        // Logic (Immediate)
-        Instruction::AndImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::OrImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::XorImmediate => WriteBackInstructionType::AluToRegister,
-        // Compare (Immediate)
-        Instruction::CompareImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::TestAndImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::TestXorImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::ShiftImmediate => WriteBackInstructionType::AluToRegister,
+    match num::ToPrimitive::to_u8(&instruction).unwrap() {
+        0x00..=0x0F => WriteBackInstructionType::AluToRegister,
+        0x10..=0x12 => WriteBackInstructionType::NoOp,
+        0x13..=0x15 => WriteBackInstructionType::MemoryLoad,
+        0x16..=0x3C => WriteBackInstructionType::AluToRegister,
+        0x3D..=0x3F => WriteBackInstructionType::NoOp,
 
-        // Arithmetic (SHORT Immediate)
-        Instruction::AddShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::AddShortImmediateWithCarry => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractShortImmediateWithCarry => WriteBackInstructionType::AluToRegister,
-        // Logic (SHORT Immediate)
-        Instruction::AndShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::OrShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::XorShortImmediate => WriteBackInstructionType::AluToRegister,
-        // Compare (SHORT Immediate)
-        Instruction::CompareShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::TestAndShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::TestXorShortImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::ShiftShortImmediate => WriteBackInstructionType::AluToRegister,
-
-        // Arithmetic (Register)
-        Instruction::AddRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::AddRegisterWithCarry => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::SubtractRegisterWithCarry => WriteBackInstructionType::AluToRegister,
-        // Logic (Register)
-        Instruction::AndRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::OrRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::XorRegister => WriteBackInstructionType::AluToRegister,
-        // Compare (Register)
-        Instruction::CompareRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::TestAndRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::TestXorRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::ShiftRegister => WriteBackInstructionType::AluToRegister,
-
-        // Data Access
-        Instruction::LoadRegisterFromImmediate => WriteBackInstructionType::AluToRegister,
-        Instruction::LoadRegisterFromRegister => WriteBackInstructionType::AluToRegister,
-        Instruction::LoadRegisterFromIndirectImmediate => WriteBackInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromIndirectRegister => WriteBackInstructionType::MemoryLoad,
-        Instruction::LoadRegisterFromIndirectRegisterPostIncrement => {
-            WriteBackInstructionType::MemoryLoad
-        }
-
-        Instruction::LoadEffectiveAddressFromIndirectImmediate => {
-            WriteBackInstructionType::LoadEffectiveAddress
-        }
-        Instruction::LoadEffectiveAddressFromIndirectRegister => {
-            WriteBackInstructionType::LoadEffectiveAddress
-        }
-        _ => WriteBackInstructionType::NoOp,
+        _ => panic!("No mapping for [{instruction:?}] to WriteBackInstructionType"),
     }
 }
 
@@ -99,20 +44,14 @@ impl StageExecutor for WriteBackExecutor {
         intermediate_registers: &mut IntermediateRegisters,
         _: &MemoryPeripheral,
     ) {
-        // ==== 6. Write-back cycle (WB): ====
-
         let write_back_step_instruction_type =
             decode_write_back_step_instruction_type(decoded.ins, decoded);
 
         match write_back_step_instruction_type {
             WriteBackInstructionType::NoOp => {}
-            // a. Memory load
-            // Regs[Des] <- LMD
             WriteBackInstructionType::MemoryLoad => {
                 registers[decoded.des] = intermediate_registers.lmd;
             }
-            //  b. Register-Register ALU or Register-Immediate ALU:
-            // Regs[Des] <- ALUoutput
             WriteBackInstructionType::AluToRegister => {
                 registers[decoded.des] = intermediate_registers.alu_output;
                 // TODO: Should this be done with an instruction type?
@@ -125,12 +64,6 @@ impl StageExecutor for WriteBackExecutor {
                     StatusRegisterUpdateSource::Shift => decoded.sr_shift,
                     _ => registers.sr,
                 }
-            }
-            //  c. Load Effective Address
-            // Regs[DesAdL] <- ALUOutput
-            // Regs[DesAdH] <- AdrH
-            WriteBackInstructionType::LoadEffectiveAddress => {
-                registers[decoded.des] = intermediate_registers.alu_output;
             }
         }
     }

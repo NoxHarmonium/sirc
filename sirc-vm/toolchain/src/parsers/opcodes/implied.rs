@@ -11,7 +11,6 @@ use peripheral_cpu::registers::AddressRegisterName;
 fn tag_to_instruction(tag: &str) -> Instruction {
     match tag {
         "RETS" => Instruction::ReturnFromSubroutine,
-        "NOOP" => Instruction::NoOperation,
         "WAIT" => Instruction::WaitForException,
         "RETE" => Instruction::ReturnFromException,
         _ => panic!("No tag mapping for instruction [{tag}]"),
@@ -63,6 +62,24 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     })?;
 
     if one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).is_err() {}
+
+    // Pseudo instruction - add zero to register 1 which does nothing
+    // I guess any instruction with condition flag set to "NEVER" would also work
+    if tag == "NOOP" {
+        return Ok((
+            i,
+            InstructionToken {
+                instruction: InstructionData::Immediate(ImmediateInstructionData {
+                    op_code: Instruction::AddImmediate,
+                    register: 0x0,
+                    value: 0x0,
+                    additional_flags: 0x0, // No status register update
+                    condition_flag,
+                }),
+                symbol_ref: None,
+            },
+        ));
+    }
 
     match tag_to_instruction(tag.as_str()) {
         // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump

@@ -52,17 +52,16 @@
 | CMPI | 0x07      |                 |                    |                   |                |               |
 | TSAI | 0x08      |                 |                    |                   |                |               |
 | TSXI | 0x09      |                 |                    |                   |                |               |
-| SHFI | 0x0A      |                 |                    |                   |                |               |
-| BRAN | 0x0B      |                 |                    |                   |                |               |
-| BRSR | 0x0C      |                 |                    |                   |                |               |
-| SJMP | 0x0D      |                 |                    |                   |                |               |
-| SJSR | 0x0E      |                 |                    |                   |                |               |
-| EXCP | 0x0F      |                 |                    |                   |                |               |         |
-| LDEA |           |                 | 0x10               | 0x11              |                |               |         |
-| LJMP |           |                 | 0x12               | 0x13              |                |               |         |
-| LJSR |           |                 | 0x14               | 0x15              |                |               |         |
-| LOAD | 0x16      | 0x17            | 0x18               | 0x19              | 0x1D           |               |         |
-| STOR |           |                 | 0x1A               | 0x1B              |                | 0x1F          |         |
+| EXCI | 0x0A      |                 |                    |                   |                |               |         |
+| SHFI | 0x0B      |                 |                    |                   |                |               |
+| LOAD | 0x0C      |                 |                    |                   |                |               |         |
+| STOR |           |                 | 0x10               | 0x11              | 0x12           |               |         |
+| LOAD |           |                 | 0x14               | 0x15              | 0x13           |               |         |
+| BRSR |           |                 | 0x16               | 0x17              |                |               |
+| LJSR |           |                 | 0x18               | 0x19              |                |               |         |
+| BRAN |           |                 | 0x1A               | 0x1B              |                |               |
+| LJMP |           |                 | 0x1C               | 0x1D              |                |               |         |
+| LDEA |           |                 | 0x1E               | 0x1F              |                |               |         |
 | ADDI |           |                 |                    |                   |                |               |         | 0x20                    |
 | ADCI |           |                 |                    |                   |                |               |         | 0x21                    |
 | SUBI |           |                 |                    |                   |                |               |         | 0x22                    |
@@ -73,12 +72,9 @@
 | CMPI |           |                 |                    |                   |                |               |         | 0x27                    |
 | TSAI |           |                 |                    |                   |                |               |         | 0x28                    |
 | TSXI |           |                 |                    |                   |                |               |         | 0x29                    |
-| SHFI |           |                 |                    |                   |                |               |         | 0x2A                    |
-| BRAN |           |                 |                    |                   |                |               |         | 0x2B                    |
-| BRSR |           |                 |                    |                   |                |               |         | 0x2C                    |
-| SJMP |           |                 |                    |                   |                |               |         | 0x2D                    |
-| SJSR |           |                 |                    |                   |                |               |         | 0x2E                    |
-| EXCP |           |                 |                    |                   |                |               |         | 0x2F                    |
+| EXCI |           |                 |                    |                   |                |               |         | 0x2A                    |
+| SHFI |           |                 |                    |                   |                |               |         | 0x2B                    |
+| LOAD |           |                 |                    |                   |                |               |         | 0x2C                    |
 | ADDR |           | 0x30            |                    |                   |                |               |
 | ADCR |           | 0x31            |                    |                   |                |               |
 | SUBR |           | 0x32            |                    |                   |                |               |
@@ -89,11 +85,12 @@
 | CMPR |           | 0x37            |                    |                   |                |               |
 | TSAR |           | 0x38            |                    |                   |                |               |
 | TSXR |           | 0x39            |                    |                   |                |               |
-| SHFR |           | 0x3A            |                    |                   |                |               |
-| RETS |           |                 |                    |                   |                |               | 0x3B    |
-| NOOP |           |                 |                    |                   |                |               | 0x3C    |
-| WAIT |           |                 |                    |                   |                |               | 0x3D    |
-| RETE |           |                 |                    |                   |                |               | 0x3E    |
+| EXCR |           | 0x3A            |                    |                   |                |               |         |                         |
+| SHFR |           | 0x3B            |                    |                   |                |               |
+| LOAD |           | 0x3C            |                    |                   |                |               |         |
+| RETS |           |                 |                    |                   |                |               | 0x3D    |
+| WAIT |           |                 |                    |                   |                |               | 0x3E    |
+| RETE |           |                 |                    |                   |                |               | 0x3F    |
 
 NUL
 LSL
@@ -104,3 +101,5 @@ RTL
 RTR
 
 SHFR r1, r2, r3, LSL #3
+
+NOOP is pseudo instruction -> write register to itself

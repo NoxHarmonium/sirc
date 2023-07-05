@@ -421,6 +421,24 @@ pub fn sr_bit_is_set(field: StatusRegisterFields, registers: &Registers) -> bool
 }
 
 ///
+/// Sets a register field (flag) in the value.
+///
+/// ```
+/// use peripheral_cpu::registers::{set_sr_bit_value, sr_bit_is_set_value, Registers, StatusRegisterFields};
+///
+/// let mut value: u16 = 0;
+///
+/// set_sr_bit_value(StatusRegisterFields::Overflow, &mut value);
+///
+/// assert_eq!(value, 0x0008);
+/// assert_eq!(true, sr_bit_is_set_value(StatusRegisterFields::Overflow, value));
+/// ```
+pub fn set_sr_bit_value(field: StatusRegisterFields, value: &mut u16) {
+    let bit_mask = field as u16;
+    *value |= bit_mask;
+}
+
+///
 /// Sets a register field (flag) in the status register.
 ///
 /// ```
