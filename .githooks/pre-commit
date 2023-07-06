@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
+pushd sirc-vm
+cargo build --release
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --verbose
+popd
