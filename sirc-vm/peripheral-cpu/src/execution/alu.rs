@@ -341,10 +341,6 @@ pub fn perform_shift(
                 false,
                 None,
             );
-            println!(
-                "??? {:?}",
-                (operand, intermediate_registers.alu_status_register)
-            );
             return (operand, intermediate_registers.alu_status_register);
         }
         ShiftType::LogicalLeftShift => {
@@ -374,11 +370,6 @@ pub fn perform_shift(
             intermediate_registers.alu_output = operand;
         }
     };
-
-    // println!(
-    //     "!!SHIFT DONE!! {:#?} | {:#?} ",
-    //     intermediate_registers.alu_output, intermediate_registers.alu_status_register
-    // );
 
     (
         intermediate_registers.alu_output,

@@ -165,8 +165,6 @@ pub fn decode_and_register_fetch(
         }
     };
 
-    println!("the ops {:?}", (sr_a_, sr_b_, sr_shift));
-
     let ad_l = (immediate_representation.additional_flags * 2) + 8;
     let ad_h = (immediate_representation.additional_flags * 2) + 7;
     let des_ad_l = (immediate_representation.register * 2) + 8;
