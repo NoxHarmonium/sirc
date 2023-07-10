@@ -11,6 +11,7 @@
     // Not stable yet - try again later
     clippy::missing_const_for_fn
 )]
+#![deny(warnings)]
 
 pub mod parsers;
 pub mod types;

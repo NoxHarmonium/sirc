@@ -12,6 +12,7 @@
     // Not stable yet - try again later
     clippy::missing_const_for_fn
 )]
+#![deny(warnings)]
 
 use clap::Parser;
 use peripheral_cpu::instructions::definitions::{

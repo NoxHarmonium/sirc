@@ -9,6 +9,7 @@
     // Not stable yet - try again later
     clippy::missing_const_for_fn
 )]
+#![deny(warnings)]
 
 use std::cell::RefCell;
 use std::fs::read;

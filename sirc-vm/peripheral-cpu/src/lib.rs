@@ -11,6 +11,7 @@
     // Not stable yet - try again later
     clippy::missing_const_for_fn
 )]
+#![deny(warnings)]
 
 extern crate num;
 #[macro_use]
