@@ -35,7 +35,7 @@ use super::super::shared::AsmResult;
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::LongJumpWithRegisterDisplacement);
-/// assert_eq!(r1, 0x01);
+/// assert_eq!(r1, 0x02);
 /// assert_eq!(r2, 0x00);
 /// assert_eq!(r3, 0x00);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);

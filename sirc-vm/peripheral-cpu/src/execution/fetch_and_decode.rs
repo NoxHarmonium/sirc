@@ -80,7 +80,7 @@ fn do_shift(
 /// use peripheral_cpu::execution::fetch_and_decode::decode_and_register_fetch;
 ///
 /// let mut registers = Registers::default();
-/// registers.r5 = 0xCE;
+/// registers.r4 = 0xCE;
 /// registers.sl = (0xFA, 0xFA);
 /// registers.al = 0xCE;
 /// registers.ah = 0xBB;
@@ -96,18 +96,19 @@ fn do_shift(
 /// assert_eq!(decoded.sr_b, 0xA);
 /// assert_eq!(decoded.con, ConditionFlags::LessThan);
 /// assert_eq!(decoded.adr, 1);
-/// assert_eq!(decoded.ad_l, 10);
-/// assert_eq!(decoded.ad_h, 9);
+/// assert_eq!(decoded.ad_l, 11);
+/// assert_eq!(decoded.ad_h, 10);
 /// assert_eq!(decoded.sr_src, StatusRegisterUpdateSource::Alu);
 /// assert_eq!(decoded.addr_inc, 0x0000);
-/// assert_eq!(decoded.des_ad_l, 0x10);
-/// assert_eq!(decoded.des_ad_h, 0x0F);
+/// assert_eq!(decoded.des_ad_l, 0x9);
+/// assert_eq!(decoded.des_ad_h, 0x8);
 /// assert_eq!(decoded.sr_shift, 0x00);
 /// assert_eq!(decoded.sr_a_, 0x00CE);
 /// assert_eq!(decoded.sr_b_, 0x00CA);
 /// assert_eq!(decoded.ad_l_, 0x00CE);
 /// assert_eq!(decoded.ad_h_, 0x00BB);
 /// assert_eq!(decoded.con_, true);
+///
 /// assert_eq!(decoded.sr, registers.sr);
 /// ```
 ///
@@ -165,10 +166,13 @@ pub fn decode_and_register_fetch(
         }
     };
 
-    let ad_l = (immediate_representation.additional_flags * 2) + 8;
-    let ad_h = (immediate_representation.additional_flags * 2) + 7;
-    let des_ad_l = (immediate_representation.register * 2) + 8;
-    let des_ad_h = (immediate_representation.register * 2) + 7;
+    // Address registers are 0x8-0xF - multiplying by two and setting the left most bit
+    // converts it to a full register index
+    // TODO: Extract to function
+    let ad_l = 0x9 | immediate_representation.additional_flags << 1;
+    let ad_h = 0x8 | immediate_representation.additional_flags << 1;
+    let des_ad_l = 0x9 | immediate_representation.register << 1;
+    let des_ad_h = 0x8 | immediate_representation.register << 1;
     let condition_flag = immediate_representation.condition_flag;
     let npc_l_ = registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16);
     let npc_h_ = registers.ph;

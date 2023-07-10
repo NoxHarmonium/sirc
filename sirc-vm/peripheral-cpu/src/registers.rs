@@ -41,7 +41,8 @@ pub enum StatusRegisterFields {
 /// TODO: Can we enforce that the two data structures line up?
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum RegisterName {
-    R1 = 0,
+    Sr = 0,
+    R1,
     R2,
     R3,
     R4,
@@ -56,7 +57,6 @@ pub enum RegisterName {
     Sl,
     Ph,
     Pl,
-    Sr,
 }
 
 impl RegisterName {
@@ -133,13 +133,15 @@ pub trait FullAddress {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Registers {
+    // Status Register
+    pub sr: u16,
     pub r1: u16,
     pub r2: u16,
     pub r3: u16,
     pub r4: u16,
     pub r5: u16,
     pub r6: u16,
-    pub z: u16,
+    pub r7: u16,
     // Link Register
     pub lh: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub ll: u16,
@@ -152,8 +154,6 @@ pub struct Registers {
     // Program Counter
     pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
     pub pl: u16,
-    // Status Register
-    pub sr: u16,
 
     // CPU Internal Registers (not directly accessible to programs)
     // No need to segment these registers into 16 bit registers because instructions don't address them
@@ -167,34 +167,34 @@ impl Index<u8> for Registers {
 
     fn index(&self, index: u8) -> &Self::Output {
         match index {
-            0 => &self.r1,
-            1 => &self.r2,
-            2 => &self.r3,
-            3 => &self.r4,
-            4 => &self.r5,
-            5 => &self.r6,
-            6 => &self.z,
-            7 => &self.lh,
-            8 => &self.ll,
-            9 => &self.ah,
-            10 => &self.al,
-            11 => {
+            0 => &self.sr,
+            1 => &self.r1,
+            2 => &self.r2,
+            3 => &self.r3,
+            4 => &self.r4,
+            5 => &self.r5,
+            6 => &self.r6,
+            7 => &self.r7,
+            8 => &self.lh,
+            9 => &self.ll,
+            10 => &self.ah,
+            11 => &self.al,
+            12 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &self.sh.1
                 } else {
                     &self.sh.0
                 }
             }
-            12 => {
+            13 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &self.sl.1
                 } else {
                     &self.sl.0
                 }
             }
-            13 => &self.ph,
-            14 => &self.pl,
-            15 => &self.sr,
+            14 => &self.ph,
+            15 => &self.pl,
             _ => panic!("Fatal: No register mapping for index [{index}]"),
         }
     }
@@ -203,34 +203,34 @@ impl Index<u8> for Registers {
 impl IndexMut<u8> for Registers {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
-            0 => &mut self.r1,
-            1 => &mut self.r2,
-            2 => &mut self.r3,
-            3 => &mut self.r4,
-            4 => &mut self.r5,
-            5 => &mut self.r6,
-            6 => &mut self.z,
-            7 => &mut self.lh,
-            8 => &mut self.ll,
-            9 => &mut self.ah,
-            10 => &mut self.al,
-            11 => {
+            0 => &mut self.sr,
+            1 => &mut self.r1,
+            2 => &mut self.r2,
+            3 => &mut self.r3,
+            4 => &mut self.r4,
+            5 => &mut self.r5,
+            6 => &mut self.r6,
+            7 => &mut self.r7,
+            8 => &mut self.lh,
+            9 => &mut self.ll,
+            10 => &mut self.ah,
+            11 => &mut self.al,
+            12 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &mut self.sh.1
                 } else {
                     &mut self.sh.0
                 }
             }
-            12 => {
+            13 => {
                 if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
                     &mut self.sl.1
                 } else {
                     &mut self.sl.0
                 }
             }
-            13 => &mut self.ph,
-            14 => &mut self.pl,
-            15 => &mut self.sr,
+            14 => &mut self.ph,
+            15 => &mut self.pl,
             _ => panic!("Fatal: No register mapping for index [{index}]"),
         }
     }
@@ -566,26 +566,26 @@ pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
 #[must_use]
 pub fn register_name_to_index(name: &str) -> u8 {
     match name {
-        "r1" => 0,
-        "r2" => 1,
-        "r3" => 2,
-        "r4" => 3,
-        "r5" => 4,
-        "r6" => 5,
-        "r7" => 6,
+        "sr" => 0,
+        "r1" => 1,
+        "r2" => 2,
+        "r3" => 3,
+        "r4" => 4,
+        "r5" => 5,
+        "r6" => 6,
+        "r7" => 7,
         // [ah, al]
-        "lh" => 7, // Link high
-        "ll" => 8, // Link low
+        "lh" => 8, // Link high
+        "ll" => 9, // Link low
         // [ah, al]
-        "ah" => 9,  // Address high
-        "al" => 10, // Address low
+        "ah" => 10, // Address high
+        "al" => 11, // Address low
         // [sh, sl]
-        "sh" => 11, // Stack pointer high
-        "sl" => 12, // Stack pointer low
+        "sh" => 12, // Stack pointer high
+        "sl" => 13, // Stack pointer low
         // [ph, pl]
-        "ph" => 13, // Program counter high
-        "pl" => 14, // Program counter low
-        "sr" => 15,
+        "ph" => 14, // Program counter high
+        "pl" => 15, // Program counter low
         // TODO: Should this panic or just return None or something?
         _ => panic!("Fatal: No register mapping for name [{name}]"),
     }

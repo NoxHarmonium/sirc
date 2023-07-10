@@ -46,9 +46,9 @@ use super::super::shared::AsmResult;
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::AddRegister);
-/// assert_eq!(r1, 0);
-/// assert_eq!(r2, 0);
-/// assert_eq!(r3, 2);
+/// assert_eq!(r1, 1);
+/// assert_eq!(r2, 1);
+/// assert_eq!(r3, 3);
 /// assert_eq!(shift_type, ShiftType::RotateLeft);
 /// assert_eq!(shift_count, 4);
 /// assert_eq!(additional_flags, 0x0);
@@ -62,9 +62,9 @@ use super::super::shared::AsmResult;
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::AddRegister);
-/// assert_eq!(r1, 0);
-/// assert_eq!(r2, 1);
-/// assert_eq!(r3, 2);
+/// assert_eq!(r1, 1);
+/// assert_eq!(r2, 2);
+/// assert_eq!(r3, 3);
 /// assert_eq!(additional_flags, 0x0);
 /// assert_eq!(condition_flag, ConditionFlags::GreaterOrEqual);
 /// ```

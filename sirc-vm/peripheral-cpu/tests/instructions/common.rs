@@ -80,7 +80,7 @@ where
 }
 
 pub fn get_register_index_range() -> Range<u8> {
-    0..13
+    1..14
 }
 
 pub fn get_address_register_index_range() -> Range<u8> {
