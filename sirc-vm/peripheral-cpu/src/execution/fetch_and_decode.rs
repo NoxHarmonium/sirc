@@ -11,7 +11,7 @@ use crate::{
 
 use super::{alu::perform_shift, shared::DecodedInstruction};
 
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
 enum FetchAndDecodeStepInstructionType {
     Register,
     Immediate,
@@ -25,10 +25,10 @@ fn decode_fetch_and_decode_step_instruction_type(
 ) -> FetchAndDecodeStepInstructionType {
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
         0x00..=0x0F => FetchAndDecodeStepInstructionType::Immediate,
-        0x10 | 0x12 | 0x14 | 0x16 | 0x18 | 0x1A | 0x1C => {
+        0x10 | 0x14 | 0x16 | 0x18 | 0x1A | 0x1C | 0x1E => {
             FetchAndDecodeStepInstructionType::Immediate
         }
-        0x11 | 0x13 | 0x15 | 0x17 | 0x19 | 0x1B | 0x1D | 0x1E | 0x1F => {
+        0x11 | 0x12 | 0x13 | 0x15 | 0x17 | 0x19 | 0x1B | 0x1D | 0x1F => {
             FetchAndDecodeStepInstructionType::Register
         }
         0x20..=0x2F => FetchAndDecodeStepInstructionType::ShortImmediate,

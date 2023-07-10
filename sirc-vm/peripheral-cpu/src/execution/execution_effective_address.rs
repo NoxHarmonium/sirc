@@ -58,7 +58,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             ExecutionStepInstructionType::NoOp => {}
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
-                let (displaced, _) = decoded.sr_b_.overflowing_add(decoded.ad_l_);
+                let (displaced, _) = decoded.ad_l_.overflowing_add(decoded.sr_b_);
 
                 (intermediate_registers.alu_output, _) =
                     displaced.overflowing_add(sign_extend_small_offset(decoded.addr_inc as u8));

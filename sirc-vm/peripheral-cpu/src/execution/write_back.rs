@@ -12,6 +12,7 @@ enum WriteBackInstructionType {
     NoOp,
     MemoryLoad,
     AluToRegister,
+    AddressWrite,
 }
 
 pub struct WriteBackExecutor;
@@ -30,7 +31,10 @@ fn decode_write_back_step_instruction_type(
         0x00..=0x0F => WriteBackInstructionType::AluToRegister,
         0x10..=0x12 => WriteBackInstructionType::NoOp,
         0x13..=0x15 => WriteBackInstructionType::MemoryLoad,
-        0x16..=0x3C => WriteBackInstructionType::AluToRegister,
+        // TODO: Can we use AddressWrite to simplify branch? (e.g. branch is just an address write?)
+        0x16..=0x1D => WriteBackInstructionType::AluToRegister,
+        0x1E..=0x1F => WriteBackInstructionType::AddressWrite,
+        0x20..=0x3C => WriteBackInstructionType::AluToRegister,
         0x3D..=0x3F => WriteBackInstructionType::NoOp,
 
         _ => panic!("No mapping for [{instruction:?}] to WriteBackInstructionType"),
@@ -64,6 +68,14 @@ impl StageExecutor for WriteBackExecutor {
                     StatusRegisterUpdateSource::Shift => decoded.sr_shift,
                     _ => registers.sr,
                 }
+            }
+            WriteBackInstructionType::AddressWrite => {
+                // How hard is this to do in hardware? Do we need an adder?
+                let ad_l = (decoded.des * 2) + 8;
+                let ad_h = (decoded.des * 2) + 7;
+
+                registers[ad_h] = decoded.ad_h_;
+                registers[ad_l] = intermediate_registers.alu_output;
             }
         }
     }
