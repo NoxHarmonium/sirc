@@ -12,7 +12,6 @@ enum MemoryAccessInstructionType {
     NoOp,
     MemoryLoad,
     MemoryStore,
-    BranchOrJump,
     BranchOrJumpSubroutine,
 }
 
@@ -33,8 +32,7 @@ fn decode_memory_access_step_instruction_type(
         0x10..=0x12 => MemoryAccessInstructionType::MemoryStore,
         0x13..=0x15 => MemoryAccessInstructionType::MemoryLoad,
         0x16..=0x19 => MemoryAccessInstructionType::BranchOrJumpSubroutine,
-        0x1A..=0x1D => MemoryAccessInstructionType::BranchOrJump,
-        0x1E..=0x3F => MemoryAccessInstructionType::NoOp,
+        0x1A..=0x3F => MemoryAccessInstructionType::NoOp,
         _ => panic!("No mapping for [{instruction:?}] to MemoryAccessInstructionType"),
     }
 }
@@ -69,15 +67,10 @@ impl StageExecutor for MemoryAccessExecutor {
                     decoded.sr_a_,
                 );
             }
-            MemoryAccessInstructionType::BranchOrJump => {
-                registers.pl = intermediate_registers.alu_output;
-                registers.ph = decoded.ad_h_;
-            }
 
             MemoryAccessInstructionType::BranchOrJumpSubroutine => {
-                registers.pl = intermediate_registers.alu_output;
-                registers.ph = decoded.ad_h_;
                 // Also store next instruction in link registers so RETS can jump back to after the branch/jump
+                // TODO: This should probably be in the write back stage
                 registers.ll = decoded.npc_l_;
                 registers.lh = decoded.npc_h_;
             }

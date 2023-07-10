@@ -2,7 +2,7 @@ use peripheral_cpu::{
     instructions::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
     },
-    registers::{set_sr_bit, AddressRegisterName, RegisterName, Registers, StatusRegisterFields},
+    registers::{set_sr_bit, AddressRegisterName, Registers, StatusRegisterFields},
 };
 
 use crate::instructions::common;
@@ -21,7 +21,7 @@ fn test_immediate_branch_instruction(
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::BranchWithImmediateDisplacement,
-        register: RegisterName::Pl.to_register_index(),
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: offset as u16,
         condition_flag,
         additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -69,7 +69,7 @@ fn test_immediate_branch_with_subroutine_instruction(
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
-        register: RegisterName::Pl.to_register_index(),
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: offset as u16,
         condition_flag,
         additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
