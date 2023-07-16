@@ -29,10 +29,11 @@ fn decode_memory_access_step_instruction_type(
 
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
         0x00..=0x0F => MemoryAccessInstructionType::NoOp,
-        0x10..=0x12 => MemoryAccessInstructionType::MemoryStore,
-        0x13..=0x15 => MemoryAccessInstructionType::MemoryLoad,
-        0x16..=0x19 => MemoryAccessInstructionType::BranchOrJumpSubroutine,
-        0x1A..=0x3F => MemoryAccessInstructionType::NoOp,
+        0x10..=0x13 => MemoryAccessInstructionType::MemoryStore,
+        0x14..=0x17 => MemoryAccessInstructionType::MemoryLoad,
+        0x18..=0x1B => MemoryAccessInstructionType::NoOp, // LDEA/BRAN
+        0x1C..=0x1F => MemoryAccessInstructionType::BranchOrJumpSubroutine, // LJSR/BRSR
+        0x20..=0x3F => MemoryAccessInstructionType::NoOp,
         _ => panic!("No mapping for [{instruction:?}] to MemoryAccessInstructionType"),
     }
 }

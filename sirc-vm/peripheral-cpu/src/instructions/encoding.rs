@@ -637,7 +637,6 @@ mod tests {
         Instruction::BranchToSubroutineWithImmediateDisplacement,
         Instruction::LongJumpToSubroutineWithImmediateDisplacement,
         Instruction::BranchWithImmediateDisplacement,
-        Instruction::LongJumpWithImmediateDisplacement,
         Instruction::LoadEffectiveAddressFromIndirectImmediate,
     ];
 
@@ -664,7 +663,6 @@ mod tests {
         Instruction::LoadRegisterFromIndirectRegister,
         Instruction::BranchToSubroutineWithRegisterDisplacement,
         Instruction::LongJumpToSubroutineWithRegisterDisplacement,
-        Instruction::LongJumpWithRegisterDisplacement,
         Instruction::BranchWithRegisterDisplacement,
         Instruction::LoadEffectiveAddressFromIndirectRegister,
         Instruction::AddRegister,

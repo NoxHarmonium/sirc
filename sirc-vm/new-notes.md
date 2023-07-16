@@ -55,13 +55,12 @@
 | EXCI | 0x0A      |                 |                    |                   |                |               |         |
 | SHFI | 0x0B      |                 |                    |                   |                |               |
 | LOAD | 0x0C      |                 |                    |                   |                |               |         |
-| STOR |           |                 | 0x10               | 0x11              |                | 0x12          |         |
-| LOAD |           |                 | 0x14               | 0x15              | 0x13           |               |         |
-| BRSR |           |                 | 0x16               | 0x17              |                |               |
-| LJSR |           |                 | 0x18               | 0x19              |                |               |         |
+| STOR |           |                 | 0x10               | 0x11              |                | 0x13          |         |
+| LOAD |           |                 | 0x14               | 0x15              | 0x17           |               |         |
+| LDEA |           |                 | 0x18               | 0x19              |                |               |         |
 | BRAN |           |                 | 0x1A               | 0x1B              |                |               |
-| LJMP |           |                 | 0x1C               | 0x1D              |                |               |         |
-| LDEA |           |                 | 0x1E               | 0x1F              |                |               |         |
+| LJSR |           |                 | 0x1C               | 0x1D              |                |               |         |
+| BRSR |           |                 | 0x1E               | 0x1F              |                |               |
 | ADDI |           |                 |                    |                   |                |               |         | 0x20                    |
 | ADCI |           |                 |                    |                   |                |               |         | 0x21                    |
 | SUBI |           |                 |                    |                   |                |               |         | 0x22                    |
@@ -103,3 +102,34 @@ RTR
 SHFR r1, r2, r3, LSL #3
 
 NOOP is pseudo instruction -> write register to itself
+LJMP -> LDEA p, x
+
+# 0x1X Instructions
+
+These are the memory access and branch instructions which are a bit special since they aren't just an operation on a register.
+
+The instructions at 0x10-0x1F follow a pattern to (hopefully) simplify the decoder.
+
+| 7   | 6   | 5   | 4        | 3/2                                                                | 1                                        | 0                          |
+| --- | --- | --- | -------- | ------------------------------------------------------------------ | ---------------------------------------- | -------------------------- |
+| ?   | ?   | ?   | Always 1 | 00 = Store 01 = Load 10 = Load Address 11 = Load Address With Link | 0 = Both Registers 1 = Only Low Register | 0 = Immediate 1 = Register |
+
+E.g.
+
+LDEA (LONG JUMP) Immediate would be:
+Load Address: 10
+Both Registers: 0
+Immediate: 0
+
+= 0x18
+
+Where as LJSR Immediate would be:
+Load Address with Link: 11
+Both Registers: 0
+Immediate: 0
+
+= 0xC
+
+The second bit is used to distinguish between operations that write to both pairs of an address register, vs ones that only write to the lower register.
+Why do we need instructions that only write to the lower register? Because when the system mode/privileged bit is not set, updating the upper register
+in an address register pair is illegal to prevent escaping the bank/segment and provide a crude memory protection.

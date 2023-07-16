@@ -11,11 +11,12 @@ use peripheral_cpu::instructions::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
     ShiftType,
 };
+use peripheral_cpu::registers::AddressRegisterName;
 
 use super::super::shared::AsmResult;
 
 ///
-/// Parses a long jump instruction
+/// Parses a long jump meta instruction (LDEA with p implied as the destination)
 ///
 /// ```
 /// use toolchain::parsers::opcodes::ljmp::ljmp;
@@ -34,9 +35,9 @@ use super::super::shared::AsmResult;
 /// };
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
-/// assert_eq!(op_code, Instruction::LongJumpWithRegisterDisplacement);
-/// assert_eq!(r1, 0x02);
-/// assert_eq!(r2, 0x00);
+/// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectRegister);
+/// assert_eq!(r1, 0x03);
+/// assert_eq!(r2, 0x02);
 /// assert_eq!(r3, 0x00);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// assert_eq!(shift_type, ShiftType::ArithmeticRightShift);
@@ -58,8 +59,8 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                     i,
                     InstructionToken {
                         instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LongJumpWithImmediateDisplacement,
-                            register: 0x0, // Unused
+                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                            register: AddressRegisterName::ProgramCounter.to_register_index(),
                             value: offset.to_owned(),
                             condition_flag,
                             additional_flags: address_register.to_register_index(),
@@ -71,9 +72,9 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                     i,
                     InstructionToken {
                         instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LongJumpWithImmediateDisplacement,
-                            register: 0x0, // Unused
-                            value: 0x0,    // Placeholder
+                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                            register: AddressRegisterName::ProgramCounter.to_register_index(),
+                            value: 0x0, // Placeholder
                             condition_flag,
                             additional_flags: address_register.to_register_index(),
                         }),
@@ -90,9 +91,9 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LongJumpWithRegisterDisplacement,
-                        r1: displacement_register.to_register_index(),
-                        r2: 0x0, // Unused
+                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
+                        r1: AddressRegisterName::ProgramCounter.to_register_index(),
+                        r2: displacement_register.to_register_index(),
                         r3: 0x0, // Unused
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
@@ -112,9 +113,9 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LongJumpWithRegisterDisplacement,
-                        r1: displacement_register.to_register_index(),
-                        r2: 0x0, // Unused
+                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
+                        r1: AddressRegisterName::ProgramCounter.to_register_index(),
+                        r2: displacement_register.to_register_index(),
                         r3: 0x0, // Unused
                         shift_operand,
                         shift_type,
