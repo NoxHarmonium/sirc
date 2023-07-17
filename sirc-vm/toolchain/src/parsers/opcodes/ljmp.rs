@@ -37,8 +37,8 @@ use super::super::shared::AsmResult;
 /// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectRegister);
 /// assert_eq!(r1, 0x03);
-/// assert_eq!(r2, 0x02);
-/// assert_eq!(r3, 0x00);
+/// assert_eq!(r2, 0x03);
+/// assert_eq!(r3, 0x02);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// assert_eq!(shift_type, ShiftType::ArithmeticRightShift);
 /// assert_eq!(shift_count, 3);
@@ -93,8 +93,8 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: AddressRegisterName::ProgramCounter.to_register_index(),
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -115,8 +115,8 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: AddressRegisterName::ProgramCounter.to_register_index(),
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,

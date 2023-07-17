@@ -83,6 +83,10 @@ pub fn get_register_index_range() -> Range<u8> {
     1..14
 }
 
+pub fn get_non_address_register_index_range() -> Range<u8> {
+    1..8
+}
+
 pub fn get_address_register_index_range() -> Range<u8> {
     0..4
 }
