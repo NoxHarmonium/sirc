@@ -99,8 +99,9 @@ fn step<'a>(
 
     // Special instruction just for debugging purposes. Probably won't be in hardware
     assert!(
-        !(decoded_instruction.ins == Instruction::Exception && decoded_instruction.sr_b_ == 0xFFFF),
-        "Execution was halted due to 0xFFFF exception"
+        !(decoded_instruction.ins == Instruction::CoprocessorCallImmediate
+            && decoded_instruction.sr_b_ == 0x0FFF),
+        "Execution was halted due to 0xFF exception"
     );
 
     // TODO: On the real CPU these might have garbage in them?

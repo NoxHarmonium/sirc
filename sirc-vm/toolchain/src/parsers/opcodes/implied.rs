@@ -4,18 +4,9 @@ use nom::character::complete::one_of;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::instructions::definitions::{
-    ImmediateInstructionData, ImpliedInstructionData, Instruction, InstructionData,
+    ImmediateInstructionData, Instruction, InstructionData,
 };
 use peripheral_cpu::registers::AddressRegisterName;
-
-fn tag_to_instruction(tag: &str) -> Instruction {
-    match tag {
-        "RETS" => Instruction::ReturnFromSubroutine,
-        "WAIT" => Instruction::WaitForException,
-        "RETE" => Instruction::ReturnFromException,
-        _ => panic!("No tag mapping for instruction [{tag}]"),
-    }
-}
 
 use super::super::shared::AsmResult;
 
@@ -34,12 +25,12 @@ use super::super::shared::AsmResult;
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
 /// let (op_code, condition_flag) = match parsed_instruction.instruction {
-///     InstructionData::Implied(inner) => (inner.op_code, inner.condition_flag),
+///     InstructionData::Immediate(inner) => (inner.op_code, inner.condition_flag),
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
 /// // TODO: Make a helper function or something to make these asserts smaller
-/// assert_eq!(op_code, Instruction::WaitForException);
+/// assert_eq!(op_code, Instruction::CoprocessorCallImmediate);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
 /// ```
 pub fn implied(i: &str) -> AsmResult<InstructionToken> {
@@ -61,12 +52,25 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         ))
     })?;
 
-    if one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).is_err() {}
-
-    // Pseudo instruction - add zero to register 1 which does nothing
-    // I guess any instruction with condition flag set to "NEVER" would also work
-    if tag == "NOOP" {
-        return Ok((
+    match tag.as_str() {
+        // Returning from a subroutine is just loading the link register into the PC again
+        // TODO: Double check this doesn't provide a way for code running in non system mode to change the program segment (ph)
+        "RETS" => Ok((
+            i,
+            InstructionToken {
+                instruction: InstructionData::Immediate(ImmediateInstructionData {
+                    op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                    register: AddressRegisterName::ProgramCounter.to_register_index(),
+                    value: 0x0,
+                    condition_flag,
+                    additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
+                }),
+                symbol_ref: None,
+            },
+        )),
+        // Pseudo instruction - add zero to register 1 which does nothing
+        // I guess any instruction with condition flag set to "NEVER" would also work
+        "NOOP" => Ok((
             i,
             InstructionToken {
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
@@ -78,34 +82,42 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                 }),
                 symbol_ref: None,
             },
-        ));
-    }
-
-    match tag_to_instruction(tag.as_str()) {
-        // Special case, RETS doesn't have any arguments, but the instruction format encodes a long jump
-        // to the link register (TODO: should this be moved out to a different parser or something?)
-        Instruction::ReturnFromSubroutine => Ok((
+        )),
+        // Tell the exception module to halt the CPU until an event comes through by passing it 0xFFFF
+        "WAIT" => Ok((
             i,
             InstructionToken {
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::ReturnFromSubroutine,
-                    register: AddressRegisterName::Address.to_register_index(),
-                    value: 0x0,
-                    additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
+                    op_code: Instruction::CoprocessorCallImmediate,
+                    register: 0x0,
+                    value: 0x01F00,
+                    additional_flags: 0x0,
                     condition_flag,
                 }),
                 symbol_ref: None,
             },
         )),
-        other => Ok((
+        // Tell the exception module to return by passing it 0xFFFE
+        "RETE" => Ok((
             i,
             InstructionToken {
-                instruction: InstructionData::Implied(ImpliedInstructionData {
-                    op_code: other,
+                instruction: InstructionData::Immediate(ImmediateInstructionData {
+                    op_code: Instruction::CoprocessorCallImmediate,
+                    register: 0x0,
+                    value: 0x0200,
+                    additional_flags: 0x0,
                     condition_flag,
                 }),
                 symbol_ref: None,
             },
         )),
+        _ => {
+            let error_string = format!("Mismatch between parser and handler for tag [{tag}] ");
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            )))
+        }
     }
 }

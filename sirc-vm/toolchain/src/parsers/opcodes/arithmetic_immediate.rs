@@ -24,8 +24,7 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
         "CMPI" => Instruction::CompareShortImmediate,
         "TSAI" => Instruction::TestAndImmediate,
         "TSXI" => Instruction::TestXorImmediate,
-        "SHFI" => Instruction::ShiftImmediate,
-        "EXCI" => Instruction::Exception,
+        "COPI" => Instruction::CoprocessorCallImmediate,
 
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -43,8 +42,7 @@ fn tag_to_instruction_short(tag: &String) -> Instruction {
         "CMPI" => Instruction::CompareShortImmediate,
         "TSAI" => Instruction::TestAndImmediate,
         "TSXI" => Instruction::TestXorImmediate,
-        "SHFI" => Instruction::ShiftShortImmediate,
-        "EXCI" => Instruction::ExceptionShortImmediate,
+        "COPI" => Instruction::CoprocessorCallShortImmediate,
 
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -89,7 +87,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("CMPI"),
         parse_instruction_tag("TSAI"),
         parse_instruction_tag("TSXI"),
-        parse_instruction_tag("SHFI"),
+        parse_instruction_tag("COPI"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =

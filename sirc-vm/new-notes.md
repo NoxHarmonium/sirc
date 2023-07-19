@@ -49,12 +49,11 @@
 | ANDI | 0x04      |                 |                    |                   |                |               |
 | ORRI | 0x05      |                 |                    |                   |                |               |
 | XORI | 0x06      |                 |                    |                   |                |               |
-| CMPI | 0x07      |                 |                    |                   |                |               |
-| TSAI | 0x08      |                 |                    |                   |                |               |
-| TSXI | 0x09      |                 |                    |                   |                |               |
-| EXCI | 0x0A      |                 |                    |                   |                |               |         |
-| SHFI | 0x0B      |                 |                    |                   |                |               |
-| LOAD | 0x0C      |                 |                    |                   |                |               |         |
+| LOAD | 0x07      |                 |                    |                   |                |               |
+| CMPI | 0x0A      |                 |                    |                   |                |               |
+| TSAI | 0x0C      |                 |                    |                   |                |               |
+| TSXI | 0x0E      |                 |                    |                   |                |               |
+| COPI | 0x0F      |                 |                    |                   |                |               |         |
 | STOR |           |                 | 0x10               | 0x11              |                | 0x13          |         |
 | LOAD |           |                 | 0x14               | 0x15              | 0x17           |               |         |
 | LDEA |           |                 | 0x18               | 0x19              |                |               |         |
@@ -68,12 +67,11 @@
 | ANDI |           |                 |                    |                   |                |               |         | 0x24                    |
 | ORRI |           |                 |                    |                   |                |               |         | 0x25                    |
 | XORI |           |                 |                    |                   |                |               |         | 0x26                    |
-| CMPI |           |                 |                    |                   |                |               |         | 0x27                    |
-| TSAI |           |                 |                    |                   |                |               |         | 0x28                    |
-| TSXI |           |                 |                    |                   |                |               |         | 0x29                    |
-| EXCI |           |                 |                    |                   |                |               |         | 0x2A                    |
-| SHFI |           |                 |                    |                   |                |               |         | 0x2B                    |
-| LOAD |           |                 |                    |                   |                |               |         | 0x2C                    |
+| LOAD |           |                 |                    |                   |                |               |         | 0x27                    |
+| CMPI |           |                 |                    |                   |                |               |         | 0x2A                    |
+| TSAI |           |                 |                    |                   |                |               |         | 0x2C                    |
+| TSXI |           |                 |                    |                   |                |               |         | 0x2E                    |
+| COPI |           |                 |                    |                   |                |               |         | 0x2F                    |
 | ADDR |           | 0x30            |                    |                   |                |               |
 | ADCR |           | 0x31            |                    |                   |                |               |
 | SUBR |           | 0x32            |                    |                   |                |               |
@@ -81,15 +79,11 @@
 | ANDR |           | 0x34            |                    |                   |                |               |
 | ORRR |           | 0x35            |                    |                   |                |               |
 | XORR |           | 0x36            |                    |                   |                |               |
-| CMPR |           | 0x37            |                    |                   |                |               |
-| TSAR |           | 0x38            |                    |                   |                |               |
-| TSXR |           | 0x39            |                    |                   |                |               |
-| EXCR |           | 0x3A            |                    |                   |                |               |         |                         |
-| SHFR |           | 0x3B            |                    |                   |                |               |
-| LOAD |           | 0x3C            |                    |                   |                |               |         |
-| RETS |           |                 |                    |                   |                |               | 0x3D    |
-| WAIT |           |                 |                    |                   |                |               | 0x3E    |
-| RETE |           |                 |                    |                   |                |               | 0x3F    |
+| LOAD |           | 0x37            |                    |                   |                |               |         |
+| CMPR |           | 0x3A            |                    |                   |                |               |
+| TSAR |           | 0x3C            |                    |                   |                |               |
+| TSXR |           | 0x3E            |                    |                   |                |               |
+| COPR |           | 0x3F            |                    |                   |                |               |         |                         |
 
 NUL
 LSL
@@ -103,6 +97,18 @@ SHFR r1, r2, r3, LSL #3
 
 NOOP is pseudo instruction -> write register to itself
 LJMP -> LDEA p, x
+SHFI/SHFR -> ADD r #0, (with SR source set to shift)
+RETS -> LDEA p, l
+
+Exception handling is done by a coprocessor
+The operand for the COPI/COPR instructions is made up of the following:
+4 bits cooprocessor ID (0x0 is exception unit)
+4 bits coprocessor opcode (for exception unit 0x0 is WAIT and 0x1 is RETS)
+8 bits argument (e..g. the trap number for exception handling)
+
+EXCP -> COPI #0x04FF
+WAIT -> COPI #0x0100
+RETE -> COPI #0x0200
 
 # 0x1X Instructions
 

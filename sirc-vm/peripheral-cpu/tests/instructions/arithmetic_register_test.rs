@@ -25,6 +25,7 @@ fn test_register_arithmetic_instruction(
     expected_value: u16,
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
+    status_register_update_source: StatusRegisterUpdateSource,
 ) {
     for src_register_index in get_register_index_range() {
         if target_register == src_register_index {
@@ -42,11 +43,7 @@ fn test_register_arithmetic_instruction(
             shift_type,
             shift_count,
             condition_flag: ConditionFlags::Always,
-            additional_flags: if instruction == Instruction::ShiftRegister {
-                StatusRegisterUpdateSource::Shift as u8
-            } else {
-                StatusRegisterUpdateSource::Alu as u8
-            },
+            additional_flags: status_register_update_source as u8,
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
@@ -98,6 +95,7 @@ fn test_add_register_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -116,6 +114,7 @@ fn test_add_register_unsigned_overflow() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -137,6 +136,7 @@ fn test_add_register_signed_overflow() {
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -154,6 +154,7 @@ fn test_add_register_both_overflow() {
             0x2FFF,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -182,6 +183,7 @@ fn test_add_register_with_carry_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -200,6 +202,7 @@ fn test_add_register_with_carry_unsigned_overflow() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -221,6 +224,7 @@ fn test_add_register_with_carry_signed_overflow() {
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -238,6 +242,7 @@ fn test_add_register_with_carry_both_overflow() {
             0x2FFF,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -266,6 +271,7 @@ fn test_subtract_register_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -294,6 +300,7 @@ fn test_subtract_register_with_carry_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -312,6 +319,7 @@ fn test_subtract_register_with_carry_unsigned_overflow() {
             0x6000,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -330,6 +338,7 @@ fn test_subtract_register_with_carry_signed_overflow() {
             0x6000,
             &vec![],
             &vec![StatusRegisterFields::Overflow],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -351,6 +360,7 @@ fn test_subtract_register_with_carry_both_overflow() {
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -379,6 +389,7 @@ fn test_and_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
         test_register_arithmetic_instruction(
             Instruction::AndRegister,
@@ -391,6 +402,7 @@ fn test_and_register() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -419,6 +431,7 @@ fn test_or_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
         test_register_arithmetic_instruction(
             Instruction::OrRegister,
@@ -431,6 +444,7 @@ fn test_or_register() {
             0xC0FE,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -459,6 +473,7 @@ fn test_xor_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
         test_register_arithmetic_instruction(
             Instruction::XorRegister,
@@ -471,19 +486,65 @@ fn test_xor_register() {
             0xF000,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
 
 //
-// #### SHFR ####
+// #### LOAD ####
+//
+
+#[test]
+fn test_load_register() {
+    for register_index in get_register_index_range() {
+        test_register_arithmetic_instruction(
+            Instruction::LoadRegisterFromRegister,
+            register_index,
+            0xCAFE,
+            0xFACE,
+            // Shifting for LOAD should be ignored because shifts are applied to the first operand,
+            // and LOAD only uses the second operand
+            ShiftOperand::Immediate,
+            ShiftType::LogicalLeftShift,
+            4,
+            0xFACE,
+            // Test flag clearing (these flags do not reflect the initial register value)
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
+        );
+        test_register_arithmetic_instruction(
+            Instruction::LoadRegisterFromRegister,
+            register_index,
+            0xFFFF,
+            0x0000,
+            ShiftOperand::Immediate,
+            ShiftType::None,
+            0,
+            0x0000,
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
+        );
+    }
+}
+
+//
+// #### Shifting ####
+// (Adding with zero to try to test shifting in isolation)
 //
 
 #[test]
 fn test_logical_shift_left_register() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b0011_0011_0011_0011,
             0,
@@ -499,9 +560,10 @@ fn test_logical_shift_left_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -511,9 +573,10 @@ fn test_logical_shift_left_register() {
             0b0110_0110_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -523,9 +586,10 @@ fn test_logical_shift_left_register() {
             0b1100_1100_1100_0000,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -534,10 +598,11 @@ fn test_logical_shift_left_register() {
             15,
             0b1000_0000_0000_0000,
             &vec![],
-            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -547,9 +612,10 @@ fn test_logical_shift_left_register() {
             0b1011_0011_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -559,9 +625,10 @@ fn test_logical_shift_left_register() {
             0b1011_0011_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -570,7 +637,8 @@ fn test_logical_shift_left_register() {
             u8::MAX,
             0b1000_0000_0000_0000,
             &vec![],
-            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
@@ -579,7 +647,7 @@ fn test_logical_shift_left_register() {
 fn test_logical_shift_right_register() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1100,
             0,
@@ -595,9 +663,10 @@ fn test_logical_shift_right_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -607,9 +676,10 @@ fn test_logical_shift_right_register() {
             0b0110_0110_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -619,9 +689,10 @@ fn test_logical_shift_right_register() {
             0b0000_0011_0011_0011,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -631,9 +702,10 @@ fn test_logical_shift_right_register() {
             0b0000_0000_0000_0001,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -643,9 +715,10 @@ fn test_logical_shift_right_register() {
             0b1100_1100_1100_1101,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -655,9 +728,10 @@ fn test_logical_shift_right_register() {
             0b1100_1100_1100_1101,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -667,17 +741,16 @@ fn test_logical_shift_right_register() {
             0b0000_0000_0000_0001,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
-
-// WHAT AM I DOING? FLIPPING SHIFT OPERAND (again?) so now operand 2 is shfited
 
 #[test]
 fn test_arithmetic_shift_left_register() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b0011_0011_0011_0011,
             0,
@@ -693,9 +766,10 @@ fn test_arithmetic_shift_left_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -705,9 +779,10 @@ fn test_arithmetic_shift_left_register() {
             0b0110_0110_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Overflow],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -717,9 +792,10 @@ fn test_arithmetic_shift_left_register() {
             0b1100_1100_1100_0000,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -729,9 +805,10 @@ fn test_arithmetic_shift_left_register() {
             0b1000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -741,9 +818,10 @@ fn test_arithmetic_shift_left_register() {
             0b1011_0011_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -753,9 +831,10 @@ fn test_arithmetic_shift_left_register() {
             0b1011_0011_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1011_0011_0011_0011,
             0,
@@ -765,6 +844,7 @@ fn test_arithmetic_shift_left_register() {
             0b1000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
@@ -773,7 +853,7 @@ fn test_arithmetic_shift_left_register() {
 fn test_arithmetic_shift_right_register() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1100,
             0,
@@ -789,9 +869,10 @@ fn test_arithmetic_shift_right_register() {
                 StatusRegisterFields::Zero,
             ],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b0100_1100_1100_1101,
             0,
@@ -801,9 +882,10 @@ fn test_arithmetic_shift_right_register() {
             0b0010_0110_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -813,9 +895,10 @@ fn test_arithmetic_shift_right_register() {
             0b1000_0011_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -825,9 +908,10 @@ fn test_arithmetic_shift_right_register() {
             0b1000_0000_0000_0001,
             &vec![],
             &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -837,9 +921,10 @@ fn test_arithmetic_shift_right_register() {
             0b1100_1100_1100_1101,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -849,9 +934,10 @@ fn test_arithmetic_shift_right_register() {
             0b1100_1100_1100_1101,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_register_arithmetic_instruction(
-            Instruction::ShiftRegister,
+            Instruction::AddRegister,
             register_index,
             0b1100_1100_1100_1101,
             0,
@@ -861,6 +947,7 @@ fn test_arithmetic_shift_right_register() {
             0b1000_0000_0000_0001,
             &vec![],
             &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }

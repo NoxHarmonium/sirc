@@ -207,7 +207,6 @@ pub struct RegisterInstructionData {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstructionData {
-    Implied(ImpliedInstructionData),
     Immediate(ImmediateInstructionData),
     ShortImmediate(ShortImmediateInstructionData),
     Register(RegisterInstructionData),
@@ -226,12 +225,11 @@ pub enum Instruction {
     AndImmediate = 0x04,
     OrImmediate = 0x05,
     XorImmediate = 0x06,
-    CompareImmediate = 0x07,
-    TestAndImmediate = 0x08,
-    TestXorImmediate = 0x09,
-    Exception = 0x0A,
-    ShiftImmediate = 0x0B,
-    LoadRegisterFromImmediate = 0x0C,
+    LoadRegisterFromImmediate = 0x07,
+    CompareImmediate = 0x0A,
+    TestAndImmediate = 0x0C,
+    TestXorImmediate = 0x0E,
+    CoprocessorCallImmediate = 0x0F,
 
     // Addressing
     StoreRegisterToIndirectImmediate = 0x10,
@@ -257,12 +255,11 @@ pub enum Instruction {
     AndShortImmediate = 0x24,
     OrShortImmediate = 0x25,
     XorShortImmediate = 0x26,
-    CompareShortImmediate = 0x27,
-    TestAndShortImmediate = 0x28,
-    TestXorShortImmediate = 0x29,
-    ExceptionShortImmediate = 0x2A,
-    ShiftShortImmediate = 0x2B,
-    LoadRegisterFromShortImmediate = 0x2C,
+    LoadRegisterFromShortImmediate = 0x27,
+    CompareShortImmediate = 0x2A,
+    TestAndShortImmediate = 0x2C,
+    TestXorShortImmediate = 0x2E,
+    CoprocessorCallShortImmediate = 0x2F,
 
     // ALU (Register)
     AddRegister = 0x30,
@@ -272,19 +269,11 @@ pub enum Instruction {
     AndRegister = 0x34,
     OrRegister = 0x35,
     XorRegister = 0x36,
-    CompareRegister = 0x37,
-    TestAndRegister = 0x38,
-    TestXorRegister = 0x39,
-    ExceptionRegister = 0x3A,
-    ShiftRegister = 0x3B,
-    LoadRegisterFromRegister = 0x3C,
-
-    // Implied
-    ReturnFromSubroutine = 0x3D,
-
-    // Exception Handler
-    WaitForException = 0x3E,
-    ReturnFromException = 0x3F,
+    LoadRegisterFromRegister = 0x37,
+    CompareRegister = 0x3A,
+    TestAndRegister = 0x3C,
+    TestXorRegister = 0x3E,
+    CoprocessorCallRegister = 0x3F,
 }
 
 // Pending Instructions
