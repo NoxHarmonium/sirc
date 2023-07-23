@@ -460,6 +460,48 @@ fn test_xor_immediate() {
 }
 
 //
+// #### LOAD ####
+//
+
+#[test]
+fn test_load_immediate() {
+    for register_index in get_register_index_range() {
+        test_short_immediate_arithmetic_instruction(
+            Instruction::LoadRegisterFromShortImmediate,
+            register_index,
+            0xCAFE,
+            0xFA,
+            ShiftOperand::Immediate,
+            ShiftType::None,
+            0,
+            0xFA,
+            // Test flag clearing (these flags do not reflect the initial register value)
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![],
+            StatusRegisterUpdateSource::Alu,
+        );
+        test_short_immediate_arithmetic_instruction(
+            Instruction::LoadRegisterFromShortImmediate,
+            register_index,
+            0xF0F0,
+            0x0,
+            ShiftOperand::Immediate,
+            ShiftType::None,
+            0,
+            0x0,
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
+        );
+    }
+}
+
+//
 // #### Shifting ####
 // (Adding with zero to try to test shifting in isolation)
 //
