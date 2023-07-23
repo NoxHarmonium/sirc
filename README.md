@@ -2,6 +2,8 @@
 
 The best retro console that never existed
 
+[![codecov](https://codecov.io/gh/NoxHarmonium/sirc/branch/main/graph/badge.svg?token=8VC7KHXLBI)](https://codecov.io/gh/NoxHarmonium/sirc)
+
 # Summary
 
 This is a project to develop a retro video game console from scratch that never existed.

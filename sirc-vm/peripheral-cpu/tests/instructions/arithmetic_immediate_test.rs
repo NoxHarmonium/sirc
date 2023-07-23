@@ -25,7 +25,7 @@ fn test_immediate_arithmetic_instruction(
         register: target_register,
         value: immediate_value,
         condition_flag: ConditionFlags::Always,
-        additional_flags: if instruction == Instruction::ShiftImmediate {
+        additional_flags: if instruction == Instruction::LoadRegisterFromImmediate {
             StatusRegisterUpdateSource::Shift as u8
         } else {
             StatusRegisterUpdateSource::Alu as u8
@@ -514,41 +514,17 @@ fn test_xor_immediate() {
 }
 
 //
-// #### SHFI ####
+// #### LOAD ####
 //
 
 #[test]
-fn test_shfi_immediate() {
-    // This is a strange instruction and only really exists to make decoding simpler
-    // Since it is a long immediate (0x0_) instruction, the shifter will be disabled
-    // The whole point of the SHFI instruction is to put the result of the shift into
-    // the status register, because when shifting other instructions the shift
-    // status bits are ignored. However, since the shift is disabled, the
-    // target register should remain untouched, no matter what the immediate value is
-    // so its effectively a no-op (although depending on the implementation it might
-    // set the status register bits to the register value?)
-
+fn test_load_immediate() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::ShiftImmediate,
+            Instruction::LoadRegisterFromImmediate,
             register_index,
             0xFFFF,
             0x0000,
-            0xFFFF,
-            // Test flag clearing (these flags do not reflect the initial register value)
-            &vec![
-                StatusRegisterFields::Carry,
-                StatusRegisterFields::Negative,
-                StatusRegisterFields::Overflow,
-                StatusRegisterFields::Zero,
-            ],
-            &vec![],
-        );
-        test_immediate_arithmetic_instruction(
-            Instruction::ShiftImmediate,
-            register_index,
-            0x0000,
-            0xFFFF,
             0x0000,
             // Test flag clearing (these flags do not reflect the initial register value)
             &vec![
@@ -560,20 +536,35 @@ fn test_shfi_immediate() {
             &vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::ShiftImmediate,
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x0000,
+            0xFFFF,
+            0xFFFF,
+            // Test flag clearing (these flags do not reflect the initial register value)
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![],
+        );
+        test_immediate_arithmetic_instruction(
+            Instruction::LoadRegisterFromImmediate,
             register_index,
             0xF0F0,
             0xFF00,
-            0xF0F0,
+            0xFF00,
             &vec![],
             &vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::ShiftImmediate,
+            Instruction::LoadRegisterFromImmediate,
             register_index,
             0xF0F0,
             0xFFFF,
-            0xF0F0,
+            0xFFFF,
             &vec![],
             &vec![],
         );

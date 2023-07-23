@@ -207,7 +207,6 @@ pub struct RegisterInstructionData {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstructionData {
-    Implied(ImpliedInstructionData),
     Immediate(ImmediateInstructionData),
     ShortImmediate(ShortImmediateInstructionData),
     Register(RegisterInstructionData),
@@ -226,19 +225,24 @@ pub enum Instruction {
     AndImmediate = 0x04,
     OrImmediate = 0x05,
     XorImmediate = 0x06,
-    CompareImmediate = 0x07,
-    TestAndImmediate = 0x08,
-    TestXorImmediate = 0x09,
-    Exception = 0x0A,
-    ShiftImmediate = 0x0B,
-    LoadRegisterFromImmediate = 0x0C,
+    LoadRegisterFromImmediate = 0x07,
+    _Undocumented0x08 = 0x08,
+    _Undocumented0x09 = 0x09,
+    CompareImmediate = 0x0A,
+    _Undocumented0x0B = 0x0B,
+    TestAndImmediate = 0x0C,
+    _Undocumented0x0D = 0x0D,
+    TestXorImmediate = 0x0E,
+    CoprocessorCallImmediate = 0x0F,
 
     // Addressing
     StoreRegisterToIndirectImmediate = 0x10,
     StoreRegisterToIndirectRegister = 0x11,
+    _Undocumented0x12 = 0x12,
     StoreRegisterToIndirectRegisterPreDecrement = 0x13,
     LoadRegisterFromIndirectImmediate = 0x14,
     LoadRegisterFromIndirectRegister = 0x15,
+    _Undocumented0x16 = 0x16,
     LoadRegisterFromIndirectRegisterPostIncrement = 0x17,
     LoadEffectiveAddressFromIndirectImmediate = 0x18,
     LoadEffectiveAddressFromIndirectRegister = 0x19,
@@ -257,12 +261,15 @@ pub enum Instruction {
     AndShortImmediate = 0x24,
     OrShortImmediate = 0x25,
     XorShortImmediate = 0x26,
-    CompareShortImmediate = 0x27,
-    TestAndShortImmediate = 0x28,
-    TestXorShortImmediate = 0x29,
-    ExceptionShortImmediate = 0x2A,
-    ShiftShortImmediate = 0x2B,
-    LoadRegisterFromShortImmediate = 0x2C,
+    LoadRegisterFromShortImmediate = 0x27,
+    _Undocumented0x28 = 0x28,
+    _Undocumented0x29 = 0x29,
+    CompareShortImmediate = 0x2A,
+    _Undocumented0x2B = 0x2B,
+    TestAndShortImmediate = 0x2C,
+    _Undocumented0x2D = 0x2D,
+    TestXorShortImmediate = 0x2E,
+    CoprocessorCallShortImmediate = 0x2F,
 
     // ALU (Register)
     AddRegister = 0x30,
@@ -272,19 +279,15 @@ pub enum Instruction {
     AndRegister = 0x34,
     OrRegister = 0x35,
     XorRegister = 0x36,
-    CompareRegister = 0x37,
-    TestAndRegister = 0x38,
-    TestXorRegister = 0x39,
-    ExceptionRegister = 0x3A,
-    ShiftRegister = 0x3B,
-    LoadRegisterFromRegister = 0x3C,
-
-    // Implied
-    ReturnFromSubroutine = 0x3D,
-
-    // Exception Handler
-    WaitForException = 0x3E,
-    ReturnFromException = 0x3F,
+    LoadRegisterFromRegister = 0x37,
+    _Undocumented0x38 = 0x38,
+    _Undocumented0x39 = 0x39,
+    CompareRegister = 0x3A,
+    _Undocumented0x3B = 0x3B,
+    TestAndRegister = 0x3C,
+    _Undocumented0x3D = 0x3D,
+    TestXorRegister = 0x3E,
+    CoprocessorCallRegister = 0x3F,
 }
 
 // Pending Instructions

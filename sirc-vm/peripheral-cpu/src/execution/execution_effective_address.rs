@@ -47,8 +47,13 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
     ) {
         // TODO: Replace unwrap with something better
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
-        // TODO: Should this be unwrap? - clean this up
-        let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code).unwrap();
+        // TODO: Should this be unwrap? - clean this up - make 0x7 a constant or put in function
+        // Only the first 3 bits are used to determine the ALU operation, the fourth bit determines whether the result is stored or not
+        let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code & 0x7).unwrap();
+        // TODO : Clean this up - make 0x8 a constant or put in function
+        // bit 3 determines whether the ALU output is used or not
+        // e.g. CMPI is a SUBI without storing ALU output
+        let simulate = alu_code & 0x8 == 0x8;
 
         let execution_step_instruction_type =
             decode_execution_step_instruction_type(decoded.ins, decoded);
@@ -67,14 +72,8 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             ExecutionStepInstructionType::Alu => {
                 perform_alu_operation(
                     &alu_op,
-                    // TODO: Is this feasible in hardware?
-                    // TODO: Why did I do this again?
-                    // TODO: Wait a minute is this the same thing we do for the SHFT instruction?
-                    if decoded.ins == Instruction::LoadRegisterFromImmediate {
-                        0x0
-                    } else {
-                        decoded.sr_a_
-                    },
+                    simulate,
+                    decoded.sr_a_,
                     decoded.sr_b_,
                     decoded.sr,
                     intermediate_registers,

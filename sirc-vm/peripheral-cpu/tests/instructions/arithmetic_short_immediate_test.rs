@@ -25,6 +25,7 @@ fn test_short_immediate_arithmetic_instruction(
     expected_value: u16,
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
+    status_register_update_source: StatusRegisterUpdateSource,
 ) {
     let instruction_data = InstructionData::ShortImmediate(ShortImmediateInstructionData {
         op_code: instruction,
@@ -34,11 +35,7 @@ fn test_short_immediate_arithmetic_instruction(
         shift_type,
         shift_count,
         condition_flag: ConditionFlags::Always,
-        additional_flags: if instruction == Instruction::ShiftShortImmediate {
-            StatusRegisterUpdateSource::Shift as u8
-        } else {
-            StatusRegisterUpdateSource::Alu as u8
-        },
+        additional_flags: status_register_update_source as u8,
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
@@ -87,6 +84,7 @@ fn test_add_short_immediate_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -105,6 +103,7 @@ fn test_add_short_immediate_unsigned_overflow() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -126,6 +125,7 @@ fn test_add_short_immediate_signed_overflow() {
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -154,6 +154,7 @@ fn test_add_immediate_with_carry_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -172,6 +173,7 @@ fn test_add_immediate_with_carry_unsigned_overflow() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -193,6 +195,7 @@ fn test_add_immediate_with_carry_signed_overflow() {
                 StatusRegisterFields::Overflow,
                 StatusRegisterFields::Negative,
             ],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -211,6 +214,7 @@ fn test_add_immediate_with_carry_with_carry() {
             0x0001,
             &vec![StatusRegisterFields::Carry],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -239,6 +243,7 @@ fn test_subtract_immediate_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -267,6 +272,7 @@ fn test_subtract_immediate_with_carry_basic() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -285,6 +291,7 @@ fn test_subtract_immediate_with_carry_unsigned_overflow() {
             0xFF60,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -303,6 +310,7 @@ fn test_subtract_immediate_with_carry_signed_overflow() {
             0x7F60,
             &vec![],
             &vec![StatusRegisterFields::Overflow],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -320,6 +328,7 @@ fn test_subtract_immediate_with_carry_with_carry() {
             0x5E40,
             &vec![StatusRegisterFields::Carry],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -348,6 +357,7 @@ fn test_and_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::AndShortImmediate,
@@ -360,6 +370,7 @@ fn test_and_immediate() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -388,6 +399,7 @@ fn test_or_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Alu,
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::OrShortImmediate,
@@ -400,6 +412,7 @@ fn test_or_immediate() {
             0xC0FE,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
@@ -428,6 +441,7 @@ fn test_xor_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
         );
         test_short_immediate_arithmetic_instruction(
             Instruction::XorShortImmediate,
@@ -440,19 +454,63 @@ fn test_xor_immediate() {
             0xF000,
             &vec![],
             &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
         );
     }
 }
 
 //
-// #### SHFI ####
+// #### LOAD ####
+//
+
+#[test]
+fn test_load_immediate() {
+    for register_index in get_register_index_range() {
+        test_short_immediate_arithmetic_instruction(
+            Instruction::LoadRegisterFromShortImmediate,
+            register_index,
+            0xCAFE,
+            0xFA,
+            ShiftOperand::Immediate,
+            ShiftType::None,
+            0,
+            0xFA,
+            // Test flag clearing (these flags do not reflect the initial register value)
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![],
+            StatusRegisterUpdateSource::Alu,
+        );
+        test_short_immediate_arithmetic_instruction(
+            Instruction::LoadRegisterFromShortImmediate,
+            register_index,
+            0xF0F0,
+            0x0,
+            ShiftOperand::Immediate,
+            ShiftType::None,
+            0,
+            0x0,
+            &vec![],
+            &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
+        );
+    }
+}
+
+//
+// #### Shifting ####
+// (Adding with zero to try to test shifting in isolation)
 //
 
 #[test]
 fn test_logical_shift_left_immediate() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b0011_0011,
             0x0,
@@ -468,9 +526,10 @@ fn test_logical_shift_left_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -480,9 +539,10 @@ fn test_logical_shift_left_immediate() {
             0b0000_0001_0110_0110,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -492,9 +552,10 @@ fn test_logical_shift_left_immediate() {
             0b0010_1100_1100_0000,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -504,9 +565,10 @@ fn test_logical_shift_left_immediate() {
             0b1000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -516,9 +578,10 @@ fn test_logical_shift_left_immediate() {
             0b0000_0000_1011_0011,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -529,6 +592,7 @@ fn test_logical_shift_left_immediate() {
             0b1000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
@@ -537,7 +601,7 @@ fn test_logical_shift_left_immediate() {
 fn test_logical_shift_right_immediate() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1100,
             0,
@@ -553,9 +617,10 @@ fn test_logical_shift_right_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -565,9 +630,10 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -577,9 +643,10 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_0000_0011,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -589,9 +656,10 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -602,9 +670,10 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_1100_1101,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -615,9 +684,10 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_0110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -628,6 +698,7 @@ fn test_logical_shift_right_immediate() {
             0b0000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
@@ -636,7 +707,7 @@ fn test_logical_shift_right_immediate() {
 fn test_arithmetic_shift_left_immediate() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b0011_0011,
             0x0,
@@ -652,9 +723,10 @@ fn test_arithmetic_shift_left_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -664,9 +736,10 @@ fn test_arithmetic_shift_left_immediate() {
             0b0000_0001_0110_0110,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -676,9 +749,10 @@ fn test_arithmetic_shift_left_immediate() {
             0b0010_1100_1100_0000,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -692,9 +766,10 @@ fn test_arithmetic_shift_left_immediate() {
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Carry,
             ],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -704,9 +779,10 @@ fn test_arithmetic_shift_left_immediate() {
             0b0000_0000_1011_0011,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1011_0011,
             0x0,
@@ -721,6 +797,7 @@ fn test_arithmetic_shift_left_immediate() {
                 StatusRegisterFields::Negative,
                 StatusRegisterFields::Carry,
             ],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }
@@ -729,7 +806,7 @@ fn test_arithmetic_shift_left_immediate() {
 fn test_arithmetic_shift_right_immediate() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1100,
             0,
@@ -745,9 +822,10 @@ fn test_arithmetic_shift_right_immediate() {
                 StatusRegisterFields::Zero,
             ],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -757,9 +835,10 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_1110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -769,9 +848,10 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_1000_0011,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -781,9 +861,10 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_1000_0000,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -794,9 +875,10 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_1100_1101,
             &vec![],
             &vec![],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b1100_1101,
             0,
@@ -807,9 +889,10 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_1110_0110,
             &vec![],
             &vec![StatusRegisterFields::Carry],
+            StatusRegisterUpdateSource::Shift,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::ShiftShortImmediate,
+            Instruction::AddShortImmediate,
             register_index,
             0b0100_1101,
             0,
@@ -820,6 +903,7 @@ fn test_arithmetic_shift_right_immediate() {
             0b0000_0000_0000_0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Shift,
         );
     }
 }

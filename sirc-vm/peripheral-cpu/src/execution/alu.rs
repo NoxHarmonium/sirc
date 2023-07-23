@@ -35,15 +35,7 @@ pub enum AluOp {
     And = 0x4,
     Or = 0x5,
     Xor = 0x6,
-    Compare = 0x7,
-    TestAnd = 0x8,
-    TestXor = 0x9,
-    Reserved1 = 0x0A,
-    Shift = 0x0B,
-    Reserved2 = 0x0C,
-    Reserved3 = 0x0D,
-    Reserved4 = 0x0E,
-    Reserved5 = 0x0F,
+    Load = 0x7,
 }
 
 // Arithmetic
@@ -314,6 +306,18 @@ fn perform_xor(a: u16, b: u16, intermediate_registers: &mut IntermediateRegister
     intermediate_registers.alu_output = result;
 }
 
+fn perform_load(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
+    let result = b;
+    set_alu_bits(
+        &mut intermediate_registers.alu_status_register,
+        result,
+        false,
+        Some((a, b, result)),
+    );
+
+    intermediate_registers.alu_output = result;
+}
+
 // Shifts
 
 #[must_use]
@@ -521,6 +525,7 @@ fn perform_rotate_right(a: u16, b: u16, intermediate_registers: &mut Intermediat
 
 pub fn perform_alu_operation(
     alu_op: &AluOp,
+    simulate: bool,
     a: u16,
     b: u16,
     status_register: u16,
@@ -536,18 +541,22 @@ pub fn perform_alu_operation(
         AluOp::AddWithCarry => {
             perform_add_with_carry(a, b, status_register, intermediate_registers);
         }
-        AluOp::Subtract | AluOp::Compare => perform_subtract(a, b, intermediate_registers),
+        AluOp::Subtract => perform_subtract(a, b, intermediate_registers),
         AluOp::SubtractWithCarry => {
             perform_subtract_with_carry(a, b, status_register, intermediate_registers);
         }
-        AluOp::And | AluOp::TestAnd => perform_and(a, b, intermediate_registers),
+        AluOp::And => perform_and(a, b, intermediate_registers),
         AluOp::Or => perform_or(a, b, intermediate_registers),
-        AluOp::Xor | AluOp::TestXor => perform_xor(a, b, intermediate_registers),
-        // These are the same in ALU land, the difference is in the write back stage
-        AluOp::Shift => {
-            intermediate_registers.alu_output = a;
+        AluOp::Xor => perform_xor(a, b, intermediate_registers),
+        AluOp::Load => {
+            perform_load(a, b, intermediate_registers);
         }
-        _ => {}
+    }
+
+    if simulate {
+        // Alu op from 0x8-0xF don't actually store the ALU result, just the status code
+        // TODO: Do this in a cleaner way, probably without passing boolean as function param
+        intermediate_registers.alu_output = 0x0;
     }
 
     // println!("!!ALU DONE!! {:#?} | {:#?}", alu_op, intermediate_registers);

@@ -153,6 +153,11 @@ pub fn decode_and_register_fetch(
 
     let des_ = registers[des];
 
+    println!(
+        "instruction_type: {:#?}, immediate_representation.value: {:X}",
+        instruction_type, immediate_representation.value
+    );
+
     let (sr_a_, sr_b_, sr_shift) = match instruction_type {
         FetchAndDecodeStepInstructionType::Register => {
             let (sr_a_, sr_shift) =

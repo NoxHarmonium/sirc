@@ -22,8 +22,7 @@ fn tag_to_instruction(tag: &str) -> Instruction {
         "CMPR" => Instruction::CompareRegister,
         "TSAR" => Instruction::TestAndRegister,
         "TSXR" => Instruction::TestXorRegister,
-        "EXCR" => Instruction::ExceptionRegister,
-        "SHFR" => Instruction::ShiftRegister,
+        "COPR" => Instruction::CoprocessorCallRegister,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
@@ -80,8 +79,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("CMPR"),
         parse_instruction_tag("TSAR"),
         parse_instruction_tag("TSXR"),
-        parse_instruction_tag("EXCR"),
-        parse_instruction_tag("SHFR"),
+        parse_instruction_tag("COPR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
