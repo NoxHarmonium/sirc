@@ -301,18 +301,14 @@ pub fn decode_instruction(raw_instruction: [u8; 4]) -> InstructionData {
     let instruction_id = decode_instruction_id(raw_instruction);
     match instruction_id {
         0x00..=0x0F => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // Immediate arithmetic/logic and short jumps (e.g. SUBI, XORI)
-        0x10 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LDEA Indirect Immediate
-        0x11..=0x13 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LDEA Indirect Register
-        0x14 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)), // LJSR Indirect Immediate
-        0x15..=0x17 => InstructionData::Register(decode_register_instruction(raw_instruction)), // LJSR Indirect Register
-        0x18 => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)),      //
-        0x19 => InstructionData::Register(decode_register_instruction(raw_instruction)),        //
-        0x1A => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)),      //
-        0x1B => InstructionData::Register(decode_register_instruction(raw_instruction)),        //
-        0x1C => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)),      //
-        0x1D => InstructionData::Register(decode_register_instruction(raw_instruction)),        //
-        0x1E => InstructionData::Immediate(decode_immediate_instruction(raw_instruction)),      //
-        0x1F => InstructionData::Register(decode_register_instruction(raw_instruction)),        //
+        0x10..=0x1F => {
+            // In the 0x1_ block of instructions, all even instructions are immediate and odd are register
+            if instruction_id & 0x1 == 1 {
+                InstructionData::Register(decode_register_instruction(raw_instruction))
+            } else {
+                InstructionData::Immediate(decode_immediate_instruction(raw_instruction))
+            }
+        }
         0x20..=0x2F => {
             InstructionData::ShortImmediate(decode_short_immediate_instruction(raw_instruction))
         } // SHORT Immediate arithmetic/logic and short jumps (e.g. SUBI, XORI)
@@ -617,16 +613,22 @@ mod tests {
         Instruction::OrImmediate,
         Instruction::XorImmediate,
         Instruction::LoadRegisterFromImmediate,
+        Instruction::_Undocumented0x08,
+        Instruction::_Undocumented0x09,
         Instruction::CompareImmediate,
+        Instruction::_Undocumented0x0B,
         Instruction::TestAndImmediate,
+        Instruction::_Undocumented0x0D,
         Instruction::TestXorImmediate,
         Instruction::CoprocessorCallImmediate,
         Instruction::StoreRegisterToIndirectImmediate,
+        Instruction::_Undocumented0x12,
         Instruction::LoadRegisterFromIndirectImmediate,
-        Instruction::BranchToSubroutineWithImmediateDisplacement,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement,
-        Instruction::BranchWithImmediateDisplacement,
+        Instruction::_Undocumented0x16,
         Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        Instruction::BranchWithImmediateDisplacement,
+        Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        Instruction::BranchToSubroutineWithImmediateDisplacement,
     ];
 
     const VALID_SHORT_IMMEDIATE_OP_CODES: &[Instruction] = &[
@@ -638,8 +640,12 @@ mod tests {
         Instruction::OrShortImmediate,
         Instruction::XorShortImmediate,
         Instruction::LoadRegisterFromShortImmediate,
+        Instruction::_Undocumented0x28,
+        Instruction::_Undocumented0x29,
         Instruction::CompareShortImmediate,
+        Instruction::_Undocumented0x2B,
         Instruction::TestAndShortImmediate,
+        Instruction::_Undocumented0x2D,
         Instruction::TestXorShortImmediate,
         Instruction::CoprocessorCallShortImmediate,
     ];
@@ -649,10 +655,10 @@ mod tests {
         Instruction::StoreRegisterToIndirectRegisterPreDecrement,
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
         Instruction::LoadRegisterFromIndirectRegister,
-        Instruction::BranchToSubroutineWithRegisterDisplacement,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement,
-        Instruction::BranchWithRegisterDisplacement,
         Instruction::LoadEffectiveAddressFromIndirectRegister,
+        Instruction::BranchWithRegisterDisplacement,
+        Instruction::LongJumpToSubroutineWithRegisterDisplacement,
+        Instruction::BranchToSubroutineWithRegisterDisplacement,
         Instruction::AddRegister,
         Instruction::AddRegisterWithCarry,
         Instruction::SubtractRegister,
@@ -661,8 +667,12 @@ mod tests {
         Instruction::OrRegister,
         Instruction::XorRegister,
         Instruction::LoadRegisterFromRegister,
+        Instruction::_Undocumented0x38,
+        Instruction::_Undocumented0x39,
         Instruction::CompareRegister,
+        Instruction::_Undocumented0x3B,
         Instruction::TestAndRegister,
+        Instruction::_Undocumented0x3D,
         Instruction::TestXorRegister,
         Instruction::CoprocessorCallRegister,
     ];
@@ -774,6 +784,20 @@ mod tests {
         let raw_bytes = encode_instruction(&instruction_data);
         let decoded = decode_instruction(raw_bytes);
         instruction_data == decoded
+    }
+
+    #[quickcheck()]
+    #[allow(clippy::needless_pass_by_value)]
+    fn decoding_fuzz_test((a, b, c, d): (u8, u8, u8, u8)) -> bool {
+        // This just simply tests that the decoder will accept any input
+        // just like the real CPU would
+        let decoded = decode_instruction([a, b, c, d]);
+        let op_code = match decoded {
+            InstructionData::Immediate(data) => data.op_code,
+            InstructionData::ShortImmediate(data) => data.op_code,
+            InstructionData::Register(data) => data.op_code,
+        };
+        num::ToPrimitive::to_u8(&op_code).unwrap() == a >> 2
     }
 
     #[test]
