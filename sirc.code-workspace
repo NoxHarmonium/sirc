@@ -2,6 +2,9 @@
   "folders": [
     {
       "path": "./sirc-vm"
+    },
+    {
+      "path": ".github"
     }
   ],
   "settings": {}
