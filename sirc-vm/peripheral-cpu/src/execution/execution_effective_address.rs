@@ -73,14 +73,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 perform_alu_operation(
                     &alu_op,
                     simulate,
-                    // TODO: Is this feasible in hardware?
-                    // TODO: Why did I do this again?
-                    // TODO: Wait a minute is this the same thing we do for the SHFT instruction?
-                    if decoded.ins == Instruction::LoadRegisterFromImmediate {
-                        0x0
-                    } else {
-                        decoded.sr_a_
-                    },
+                    decoded.sr_a_,
                     decoded.sr_b_,
                     decoded.sr,
                     intermediate_registers,
