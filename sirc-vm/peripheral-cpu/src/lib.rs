@@ -110,6 +110,7 @@ fn step<'a>(
         alu_output: 0,
         alu_status_register: 0,
         lmd: 0,
+        address_output: 0,
     };
 
     ExecutionEffectiveAddressExecutor::execute(

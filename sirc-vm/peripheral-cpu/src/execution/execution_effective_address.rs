@@ -1,9 +1,6 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::{
-    instructions::definitions::Instruction, microcode::address::sign_extend_small_offset,
-    registers::Registers,
-};
+use crate::{instructions::definitions::Instruction, registers::Registers};
 
 use super::{
     alu::{perform_alu_operation, AluOp},
@@ -64,9 +61,29 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
                 let (displaced, _) = decoded.ad_l_.overflowing_add(decoded.sr_b_);
+                // This is the original address with the pre/post increment/decrement applied (no offset)
+                // we need this value to write back to the source address register to do the inc/dec
+                let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
 
-                (intermediate_registers.alu_output, _) =
-                    displaced.overflowing_add(sign_extend_small_offset(decoded.addr_inc as u8));
+                match decoded.addr_inc {
+                    -1 => {
+                        // alu_output drives the memory store so it needs to PRE decremented here
+                        (intermediate_registers.alu_output, _) =
+                            displaced.overflowing_add(decoded.addr_inc as u16);
+                        intermediate_registers.address_output = incremented_src;
+                    }
+                    0 => {
+                        intermediate_registers.alu_output = displaced;
+                        // If we aren't doing a pre decrement/post increment,
+                        // the address we want to write is just the calculated address
+                        intermediate_registers.address_output = displaced;
+                    }
+                    1 => {
+                        intermediate_registers.alu_output = displaced;
+                        intermediate_registers.address_output = incremented_src;
+                    }
+                    _ => panic!("addr_inc should never not be -1, 0 or 1"),
+                }
             }
 
             ExecutionStepInstructionType::Alu => {

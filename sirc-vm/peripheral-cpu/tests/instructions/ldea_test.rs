@@ -8,6 +8,7 @@ use peripheral_cpu::{
         AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress,
     },
 };
+use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -42,7 +43,7 @@ fn test_ldea_indirect_immediate() {
                 });
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers| {
+                    |registers: &mut Registers, _: &MemoryPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                     },
@@ -87,9 +88,6 @@ fn test_ldea_indirect_register() {
                 0i16, -32i16, -64i16, -0x7FFFi16, -32768i16, 32i16, 64i16, 0x7FFFi16,
             ] {
                 for offset_register in get_non_address_register_index_range() {
-                    println!(
-                        "src addr index {src_address_register_index} | dest addr index {dest_address_register_index} | offset {offset} | offset_register {offset_register}"
-                    );
                     let instruction_data = InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: dest_address_register_index,
@@ -103,7 +101,7 @@ fn test_ldea_indirect_register() {
                     });
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers| {
+                        |registers: &mut Registers, _: &MemoryPeripheral| {
                             registers.set_at_index(offset_register, offset as u16);
                             registers.set_address_register_at_index(
                                 src_address_register_index,
