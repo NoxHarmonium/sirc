@@ -81,7 +81,7 @@ fn do_shift(
 ///
 /// let mut registers = Registers::default();
 /// registers.r4 = 0xCE;
-/// registers.sl = (0xFA, 0xFA);
+/// registers.sl = 0xFA;
 /// registers.al = 0xCE;
 /// registers.ah = 0xBB;
 /// registers.sr = 0x00;

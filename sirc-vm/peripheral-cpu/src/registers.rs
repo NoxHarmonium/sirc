@@ -148,9 +148,9 @@ pub struct Registers {
     // Address Register
     pub ah: u16, // Base/segment address (8 bits concatenated with al/most significant 8 bits ignored)
     pub al: u16,
-    // Stack Pointer (user, system) - depending on system status bit
-    pub sh: (u16, u16), // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
-    pub sl: (u16, u16),
+    // Stack Register
+    pub sh: u16, // Base/segment address (8 bits concatenated with sl/most significant 8 bits ignored)
+    pub sl: u16,
     // Program Counter
     pub ph: u16, // Base/segment address (8 bits concatenated with pl/most significant 8 bits ignored)
     pub pl: u16,
@@ -179,20 +179,8 @@ impl Index<u8> for Registers {
             9 => &self.ll,
             10 => &self.ah,
             11 => &self.al,
-            12 => {
-                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-                    &self.sh.1
-                } else {
-                    &self.sh.0
-                }
-            }
-            13 => {
-                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-                    &self.sl.1
-                } else {
-                    &self.sl.0
-                }
-            }
+            12 => &self.sh,
+            13 => &self.sl,
             14 => &self.ph,
             15 => &self.pl,
             _ => panic!("Fatal: No register mapping for index [{index}]"),
@@ -215,20 +203,8 @@ impl IndexMut<u8> for Registers {
             9 => &mut self.ll,
             10 => &mut self.ah,
             11 => &mut self.al,
-            12 => {
-                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-                    &mut self.sh.1
-                } else {
-                    &mut self.sh.0
-                }
-            }
-            13 => {
-                if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-                    &mut self.sl.1
-                } else {
-                    &mut self.sl.0
-                }
-            }
+            12 => &mut self.sh,
+            13 => &mut self.sl,
             14 => &mut self.ph,
             15 => &mut self.pl,
             _ => panic!("Fatal: No register mapping for index [{index}]"),
@@ -279,19 +255,11 @@ impl SegmentedRegisterAccess for Registers {
     }
 
     fn get_segmented_sp(&self) -> (u16, u16) {
-        if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-            (self.sh.1, self.sl.1)
-        } else {
-            (self.sh.0, self.sl.0)
-        }
+        (self.sh, self.sl)
     }
 
     fn set_segmented_sp(&mut self, segmented_sp: (u16, u16)) {
-        if sr_bit_is_set(StatusRegisterFields::SystemMode, self) {
-            (self.sh.1, self.sl.1) = segmented_sp;
-        } else {
-            (self.sh.0, self.sl.0) = segmented_sp;
-        }
+        (self.sh, self.sl) = segmented_sp;
     }
 }
 
