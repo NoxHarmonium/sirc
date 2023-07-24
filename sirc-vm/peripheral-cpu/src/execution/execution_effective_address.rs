@@ -1,9 +1,6 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::{
-    instructions::definitions::Instruction, microcode::address::sign_extend_small_offset,
-    registers::Registers,
-};
+use crate::{instructions::definitions::Instruction, registers::Registers};
 
 use super::{
     alu::{perform_alu_operation, AluOp},
@@ -64,9 +61,19 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
                 let (displaced, _) = decoded.ad_l_.overflowing_add(decoded.sr_b_);
+                intermediate_registers.alu_output = displaced;
 
-                (intermediate_registers.alu_output, _) =
-                    displaced.overflowing_add(sign_extend_small_offset(decoded.addr_inc as u8));
+                if decoded.addr_inc == 0 {
+                    intermediate_registers.address_output = displaced;
+                } else {
+                    (intermediate_registers.address_output, _) =
+                        decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
+
+                    if decoded.addr_inc < 0 {
+                        (intermediate_registers.alu_output, _) =
+                            displaced.overflowing_add(decoded.addr_inc as u16);
+                    }
+                }
             }
 
             ExecutionStepInstructionType::Alu => {

@@ -34,7 +34,7 @@ pub struct DecodedInstruction {
     // Inferred
     pub ad_l: u8,
     pub ad_h: u8,
-    pub addr_inc: i8,
+    pub addr_inc: i16,
     pub des_ad_l: u8,
     pub des_ad_h: u8,
     pub sr_shift: u16,
@@ -52,6 +52,7 @@ pub struct DecodedInstruction {
 #[derive(Debug, Default)]
 pub struct IntermediateRegisters {
     pub alu_output: u16,
+    pub address_output: u16,
     pub alu_status_register: u16,
     pub lmd: u16,
 }

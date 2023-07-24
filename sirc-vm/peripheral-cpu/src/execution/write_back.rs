@@ -13,6 +13,7 @@ enum WriteBackInstructionType {
     MemoryLoad,
     AluToRegister,
     AddressWrite,
+    AddressWritePostPreIncrement,
 }
 
 pub struct WriteBackExecutor;
@@ -30,8 +31,10 @@ fn decode_write_back_step_instruction_type(
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
         0x00..=0x0F => WriteBackInstructionType::AluToRegister,
         0x10..=0x12 => WriteBackInstructionType::NoOp,
-        0x13..=0x15 => WriteBackInstructionType::MemoryLoad,
-        0x16..=0x1F => WriteBackInstructionType::AddressWrite,
+        0x13 => WriteBackInstructionType::AddressWritePostPreIncrement,
+        0x14..=0x16 => WriteBackInstructionType::MemoryLoad,
+        0x17 => WriteBackInstructionType::AddressWritePostPreIncrement,
+        0x18..=0x1F => WriteBackInstructionType::AddressWrite,
         0x20..=0x3C => WriteBackInstructionType::AluToRegister,
         0x3D..=0x3F => WriteBackInstructionType::NoOp,
 
@@ -71,6 +74,16 @@ impl StageExecutor for WriteBackExecutor {
             WriteBackInstructionType::AddressWrite => {
                 registers[decoded.des_ad_h] = decoded.ad_h_;
                 registers[decoded.des_ad_l] = intermediate_registers.alu_output;
+            }
+            WriteBackInstructionType::AddressWritePostPreIncrement => {
+                // TODO: Is there a smarter way to do this that doesn't duplicate MemoryLoad branch
+                // also make sure that this is ok to do in hardware
+                // TODO: The order of operations matters here which probably doesn't bode well for the hardware
+                // implementation. What happens if the destination register is the same as the address source register?
+                // I guess the destination register should take precedence
+                registers[decoded.ad_h] = decoded.ad_h_;
+                registers[decoded.ad_l] = intermediate_registers.address_output;
+                registers[decoded.des] = intermediate_registers.lmd;
             }
         }
     }
