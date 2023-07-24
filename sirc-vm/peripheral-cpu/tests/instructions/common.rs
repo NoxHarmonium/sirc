@@ -60,7 +60,7 @@ where
 
     let previous = capture_cpu_state(&cpu);
     cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expect CPU to run six cycles successfully");
+        .expect("expected CPU to run six cycles successfully");
     let current = capture_cpu_state(&cpu);
     (previous, current)
 }

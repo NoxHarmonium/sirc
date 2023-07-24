@@ -6,3 +6,4 @@ mod common;
 mod ldea_test;
 mod ljmp_test;
 mod load_test;
+mod store_test;
