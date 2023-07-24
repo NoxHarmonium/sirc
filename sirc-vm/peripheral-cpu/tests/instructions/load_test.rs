@@ -5,7 +5,8 @@ use peripheral_cpu::{
         RegisterInstructionData, ShiftOperand, ShiftType,
     },
     registers::{
-        AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress,
+        AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, RegisterName, Registers,
+        SegmentedAddress,
     },
 };
 use peripheral_mem::MemoryPeripheral;
@@ -14,19 +15,20 @@ use crate::instructions::common;
 
 use super::common::{
     get_address_register_index_range, get_expected_registers, get_non_address_register_index_range,
+    get_register_index_range,
 };
 
 #[allow(clippy::cast_sign_loss)]
 #[test]
-fn test_ldea_indirect_immediate() {
+fn test_load_indirect_immediate() {
     for src_address_register_index in get_address_register_index_range() {
-        for dest_address_register_index in get_address_register_index_range() {
-            if src_address_register_index == dest_address_register_index
+        for dest_register_index in get_register_index_range() {
+            if
             // TODO: Handle PC writes/reads etc.
-                || src_address_register_index
-                    == AddressRegisterName::ProgramCounter.to_register_index()
-                || dest_address_register_index
-                    == AddressRegisterName::ProgramCounter.to_register_index()
+            // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
+            src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
+                || dest_register_index == RegisterName::Pl.to_register_index()
+                || dest_register_index == RegisterName::Ph.to_register_index()
             {
                 continue;
             }
@@ -35,15 +37,18 @@ fn test_ldea_indirect_immediate() {
                 0i16, -32i16, -64i16, -0x7FFFi16, -32768i16, 32i16, 64i16, 0x7FFFi16,
             ] {
                 let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
-                    register: dest_address_register_index,
+                    op_code: Instruction::LoadRegisterFromIndirectImmediate,
+                    register: dest_register_index,
                     value: offset as u16,
                     condition_flag: ConditionFlags::Always,
                     additional_flags: src_address_register_index,
                 });
+                let calculated_address =
+                    (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, memory: &MemoryPeripheral| {
+                        memory.write_address(calculated_address, 0xCAFE);
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                     },
@@ -53,11 +58,7 @@ fn test_ldea_indirect_immediate() {
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
-                        registers.set_address_register_at_index(
-                            dest_address_register_index,
-                            (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0)
-                                .to_full_address(),
-                        );
+                        registers.set_at_index(dest_register_index, 0xCAFE);
                     });
                 assert_eq!(
                     expected_registers, current.registers,
@@ -71,57 +72,60 @@ fn test_ldea_indirect_immediate() {
 
 #[allow(clippy::cast_sign_loss)]
 #[test]
-fn test_ldea_indirect_register() {
+fn test_load_indirect_register() {
     for src_address_register_index in get_address_register_index_range() {
-        for dest_address_register_index in get_address_register_index_range() {
-            if src_address_register_index == dest_address_register_index
-            // TODO: Handle PC writes/reads etc.
-                || src_address_register_index
+        for dest_register_index in get_register_index_range() {
+            for offset_register_index in get_non_address_register_index_range() {
+                if
+                // TODO: Handle PC writes/reads etc.
+                // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
+                src_address_register_index
                     == AddressRegisterName::ProgramCounter.to_register_index()
-                || dest_address_register_index
-                    == AddressRegisterName::ProgramCounter.to_register_index()
-            {
-                continue;
-            }
+                    || dest_register_index == RegisterName::Pl.to_register_index()
+                    || dest_register_index == RegisterName::Ph.to_register_index()
+                    || offset_register_index == RegisterName::Pl.to_register_index()
+                    || offset_register_index == RegisterName::Ph.to_register_index()
+                    || dest_register_index == offset_register_index
+                {
+                    continue;
+                }
 
-            for offset in [
-                0i16, -32i16, -64i16, -0x7FFFi16, -32768i16, 32i16, 64i16, 0x7FFFi16,
-            ] {
-                for offset_register in get_non_address_register_index_range() {
+                for offset in [
+                    0i16, -32i16, -64i16, -0x7FFFi16, -32768i16, 32i16, 64i16, 0x7FFFi16,
+                ] {
                     let instruction_data = InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
-                        r1: dest_address_register_index,
+                        op_code: Instruction::LoadRegisterFromIndirectRegister,
+                        r1: dest_register_index,
                         r2: 0x0,
-                        r3: offset_register,
+                        r3: offset_register_index,
+                        condition_flag: ConditionFlags::Always,
+                        additional_flags: src_address_register_index,
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
-                        condition_flag: ConditionFlags::Always,
-                        additional_flags: src_address_register_index,
                     });
+                    let calculated_address =
+                        (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
-                            registers.set_at_index(offset_register, offset as u16);
+                        |registers: &mut Registers, memory: &MemoryPeripheral| {
+                            memory.write_address(calculated_address, 0xCAFE);
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
                             );
+                            registers.set_at_index(offset_register_index, offset as u16);
                         },
                         0xFACE,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {
-                            registers.set_at_index(offset_register, offset as u16);
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
                             );
-                            registers.set_address_register_at_index(
-                                dest_address_register_index,
-                                (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0)
-                                    .to_full_address(),
-                            );
+                            registers.set_at_index(offset_register_index, offset as u16);
+                            registers.set_at_index(dest_register_index, 0xCAFE);
                         });
                     assert_eq!(
                         expected_registers, current.registers,
@@ -133,6 +137,3 @@ fn test_ldea_indirect_register() {
         }
     }
 }
-
-// TODO: Test PC offsets
-// TODO: Can PC be written to with LDEA?

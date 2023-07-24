@@ -14,7 +14,7 @@ use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
 
-pub const SCRATCH_SEGMENT_BEGIN: u32 = 0xFFFF;
+pub const SCRATCH_SEGMENT_BEGIN: u32 = 0x00FA_0000;
 
 pub struct TestCpuState {
     pub registers: Registers,
@@ -39,7 +39,7 @@ pub fn set_up_instruction_test(
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, false);
     memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
-    memory_peripheral.map_segment(SCRATCH_SEGMENT, SCRATCH_SEGMENT_BEGIN, 0x00FF, true);
+    memory_peripheral.map_segment(SCRATCH_SEGMENT, SCRATCH_SEGMENT_BEGIN, 0xFFFF, true);
     memory_peripheral
 }
 
@@ -49,14 +49,14 @@ pub fn run_instruction<F>(
     program_offset: u32,
 ) -> (TestCpuState, TestCpuState)
 where
-    F: Fn(&mut Registers),
+    F: Fn(&mut Registers, &MemoryPeripheral),
 {
     let memory_peripheral = set_up_instruction_test(instruction_data, program_offset);
     let mut cpu = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
     println!("run_instruction: {instruction_data:#?}");
 
-    register_setup(&mut cpu.registers);
+    register_setup(&mut cpu.registers, &memory_peripheral);
 
     let previous = capture_cpu_state(&cpu);
     cpu.run_cpu(CYCLES_PER_INSTRUCTION)
