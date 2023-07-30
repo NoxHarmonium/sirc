@@ -65,3 +65,6 @@ BRAN    @SIEVE
 
 :DONE
 ; Result is in COUNT (r6)
+
+; Halt CPU
+COPI    r1, #0x14FF
