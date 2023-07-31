@@ -956,3 +956,5 @@ fn test_arithmetic_shift_right_register() {
 // TODO: Test ShiftOperand::Register
 // TODO: Test first operand register not being destination register
 // TODO: Test conditionals
+// TODO: Test COPR
+// TODO: Test CMPI/TSAI/TSXI etc.
