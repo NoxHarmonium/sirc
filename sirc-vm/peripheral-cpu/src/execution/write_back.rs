@@ -12,6 +12,7 @@ enum WriteBackInstructionType {
     NoOp,
     MemoryLoad,
     AluToRegister,
+    AluStatusOnly,
     AddressWrite,
     AddressWritePostPreIncrement,
 }
@@ -29,16 +30,35 @@ fn decode_write_back_step_instruction_type(
     }
 
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
-        0x00..=0x0F => WriteBackInstructionType::AluToRegister,
+        0x00..=0x07 => WriteBackInstructionType::AluToRegister,
+        0x08..=0x0F => WriteBackInstructionType::AluStatusOnly,
         0x10..=0x12 => WriteBackInstructionType::NoOp,
         0x13 => WriteBackInstructionType::AddressWritePostPreIncrement,
         0x14..=0x16 => WriteBackInstructionType::MemoryLoad,
         0x17 => WriteBackInstructionType::AddressWritePostPreIncrement,
         0x18..=0x1F => WriteBackInstructionType::AddressWrite,
-        0x20..=0x3C => WriteBackInstructionType::AluToRegister,
-        0x3D..=0x3F => WriteBackInstructionType::NoOp,
-
+        0x20..=0x27 => WriteBackInstructionType::AluToRegister,
+        0x28..=0x2F => WriteBackInstructionType::AluStatusOnly,
+        0x30..=0x37 => WriteBackInstructionType::AluToRegister,
+        0x38..=0x3F => WriteBackInstructionType::AluStatusOnly,
         _ => panic!("No mapping for [{instruction:?}] to WriteBackInstructionType"),
+    }
+}
+
+fn update_status_flags(
+    decoded: &DecodedInstruction,
+    registers: &mut Registers,
+    intermediate_registers: &mut IntermediateRegisters,
+) {
+    // TODO: Should this be done with an instruction type?
+    registers.sr = match decoded.sr_src {
+        // TODO: Define assembly syntax to define this explicitly if required and make sure it is tested
+        StatusRegisterUpdateSource::Alu => {
+            // Do not allow updates to the privileged byte of the SR via the ALU!
+            (registers.sr & 0xFF00) | (intermediate_registers.alu_status_register & 0x00FF)
+        }
+        StatusRegisterUpdateSource::Shift => decoded.sr_shift,
+        _ => registers.sr,
     }
 }
 
@@ -57,19 +77,12 @@ impl StageExecutor for WriteBackExecutor {
             WriteBackInstructionType::MemoryLoad => {
                 registers[decoded.des] = intermediate_registers.lmd;
             }
+            WriteBackInstructionType::AluStatusOnly => {
+                update_status_flags(decoded, registers, intermediate_registers);
+            }
             WriteBackInstructionType::AluToRegister => {
                 registers[decoded.des] = intermediate_registers.alu_output;
-                // TODO: Should this be done with an instruction type?
-                registers.sr = match decoded.sr_src {
-                    // TODO: Define assembly syntax to define this explicitly if required and make sure it is tested
-                    StatusRegisterUpdateSource::Alu => {
-                        // Do not allow updates to the privileged byte of the SR via the ALU!
-                        (registers.sr & 0xFF00)
-                            | (intermediate_registers.alu_status_register & 0x00FF)
-                    }
-                    StatusRegisterUpdateSource::Shift => decoded.sr_shift,
-                    _ => registers.sr,
-                }
+                update_status_flags(decoded, registers, intermediate_registers);
             }
             WriteBackInstructionType::AddressWrite => {
                 registers[decoded.des_ad_h] = decoded.ad_h_;

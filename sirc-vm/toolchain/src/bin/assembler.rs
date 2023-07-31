@@ -83,9 +83,11 @@ fn main() -> io::Result<()> {
     let args = Args::parse();
 
     let file_contents = read_to_string(args.input_file)?;
+    // Workaround for parsing errors where there isn't a newline at the end of the file
+    let file_contents_with_new_line = file_contents.trim_end().to_owned() + "\n";
     let tokens = match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(
         parse_tokens,
-    )(file_contents.as_str())
+    )(file_contents_with_new_line.as_str())
     {
         Ok(tokens) => tokens,
         Err(error) => panic!("Error parsing file:\n{error}"),

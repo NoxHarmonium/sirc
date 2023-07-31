@@ -102,13 +102,13 @@ RETS -> LDEA p, l
 
 Exception handling is done by a coprocessor
 The operand for the COPI/COPR instructions is made up of the following:
-4 bits cooprocessor ID (0x0 is exception unit)
+4 bits cooprocessor ID (0x1 is exception unit)
 4 bits coprocessor opcode (for exception unit 0x0 is WAIT and 0x1 is RETS)
 8 bits argument (e..g. the trap number for exception handling)
 
-EXCP -> COPI #0x04FF
-WAIT -> COPI #0x0100
-RETE -> COPI #0x0200
+EXCP -> COPI #0x14FF
+WAIT -> COPI #0x1100
+RETE -> COPI #0x1200
 
 # 0x1X Instructions
 

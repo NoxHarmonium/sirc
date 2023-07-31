@@ -11,4 +11,5 @@ BRAN|>= @loop
 
 NOOP
 
-EXCP    #0xFFFF
+; Halt CPU
+COPI    r1, #0x14FF

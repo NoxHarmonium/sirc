@@ -100,7 +100,7 @@ fn step<'a>(
     // Special instruction just for debugging purposes. Probably won't be in hardware
     assert!(
         !(decoded_instruction.ins == Instruction::CoprocessorCallImmediate
-            && decoded_instruction.sr_b_ == 0x0FFF),
+            && decoded_instruction.sr_b_ == 0x14FF),
         "Execution was halted due to 0xFF exception"
     );
 
