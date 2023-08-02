@@ -22,7 +22,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
         tuple((parse_instruction_tag("STOR"), parse_instruction_operands1))(i)?;
 
     match operands.as_slice() {
-        [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(dest_register)] =>
+        [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(src_register)] =>
         {
             match offset {
                 ImmediateType::Value(offset) => Ok((
@@ -30,7 +30,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         instruction: InstructionData::Immediate(ImmediateInstructionData {
                             op_code: Instruction::StoreRegisterToIndirectImmediate,
-                            register: dest_register.to_register_index(),
+                            register: src_register.to_register_index(),
                             value: offset.to_owned(),
                             condition_flag,
                             additional_flags: address_register.to_register_index(),
@@ -43,7 +43,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         instruction: InstructionData::Immediate(ImmediateInstructionData {
                             op_code: Instruction::StoreRegisterToIndirectImmediate,
-                            register: dest_register.to_register_index(),
+                            register: src_register.to_register_index(),
                             value: 0x0, // placeholder
                             condition_flag,
                             additional_flags: address_register.to_register_index(),
@@ -56,16 +56,16 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
-        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(dest_register)] =>
+        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register)] =>
         {
             Ok((
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // unused
+                        r1: 0x0, // unused
+                        r2: src_register.to_register_index(),
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -76,7 +76,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(dest_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
@@ -85,9 +85,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // unused
+                        r1: 0x0, // unused
+                        r2: src_register.to_register_index(),
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,
@@ -98,15 +98,51 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        [AddressingMode::IndirectPreDecrement(address_register), AddressingMode::DirectRegister(dest_register)] =>
+        [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] =>
         {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
+                            register: src_register.to_register_index(),
+                            value: offset.to_owned(),
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: None,
+                    },
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
+                            register: src_register.to_register_index(),
+                            value: 0x0, // placeholder
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: Some(override_ref_token_type_if_implied(
+                            ref_token,
+                            RefType::LowerWord,
+                        )),
+                    },
+                )),
+            }
+        }
+        [AddressingMode::IndirectRegisterDisplacementPreDecrement(
+            displacement_register,
+            address_register,
+        ), AddressingMode::DirectRegister(src_register)] => {
             Ok((i, {
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, //Unused
-                        r3: 0x0, //Unused
+                        r1: 0x0, //Unused
+                        r2: src_register.to_register_index(),
+                        r3: displacement_register.to_register_index(), //Unused
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -117,7 +153,10 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 }
             }))
         }
-        [AddressingMode::IndirectPreDecrement(address_register), AddressingMode::DirectRegister(dest_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
+        [AddressingMode::IndirectRegisterDisplacementPreDecrement(
+            displacement_register,
+            address_register,
+        ), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
@@ -125,9 +164,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, //Unused
-                        r3: 0x0, //Unused
+                        r1: 0x0, //Unused
+                        r2: src_register.to_register_index(),
+                        r3: displacement_register.to_register_index(), //Unused
                         shift_operand,
                         shift_type,
                         shift_count,

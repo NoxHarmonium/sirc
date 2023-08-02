@@ -106,20 +106,22 @@ pub enum ShiftDefinitionData {
 pub enum AddressingMode {
     // Immediate | #n | BRAN #12
     Immediate(ImmediateType),
-    // Register Direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
+    // Register Direct | rN, lB, aB, sB, pB, sr | LOAD r1, r2
     DirectRegister(RegisterName),
-    // Register range direct | rN->rM, | STMR (a), x1->z1
-    // DirectRegisterRange((RegisterName, RegisterName)),
     // Address Register Direct | a, p, s | LJMP a
     DirectAddressRegister(AddressRegisterName),
-    // Address register indirect with register displacement | (r, a) | STOR (y1, a), x1
+    // Address register indirect with register displacement | (r, a) | STOR (r1, a), r2
     IndirectRegisterDisplacement(RegisterName, AddressRegisterName),
-    // Address register indirect with immediate displacement | (#n, a) | LOAD y1, (#-3, a)
+    // Address register indirect with immediate displacement | (#n, a) | LOAD r1, (#-3, a)
     IndirectImmediateDisplacement(ImmediateType, AddressRegisterName),
-    // Address register indirect with post increment | (a)+ | LOAD (s)+, x1
-    IndirectPostIncrement(AddressRegisterName),
-    // Address register indirect with pre decrement | -(a) | STOR x1, -(s)
-    IndirectPreDecrement(AddressRegisterName),
+    // Address register indirect with post increment | (#n, a)+ | LOAD (#-3, s)+, r1
+    IndirectRegisterDisplacementPostIncrement(RegisterName, AddressRegisterName),
+    // Address register indirect with post increment | (r, a)+ | LOAD (r2, s)+, r1
+    IndirectImmediateDisplacementPostIncrement(ImmediateType, AddressRegisterName),
+    // Address register indirect with pre decrement | -(#n, a) | STOR x1, -(#-3, s)
+    IndirectRegisterDisplacementPreDecrement(RegisterName, AddressRegisterName),
+    // Address register indirect with pre decrement | -(r, a) | STOR r1, -(r2, s)
+    IndirectImmediateDisplacementPreDecrement(ImmediateType, AddressRegisterName),
     // Shift Definition | LSL #4 | ADDI r1, #3, ASR #2
     ShiftDefinition(ShiftDefinitionData),
 }
@@ -140,12 +142,12 @@ fn parse_immediate_addressing(i: &str) -> AsmResult<ImmediateType> {
     parse_value(i)
 }
 
-// Register Direct | xN, yN, zN, aB, sB, pB, sr | LOAD x1, y2
+// Register Direct | rN, lB, aB, sB, pB, sr | LOAD r1, r2
 fn parse_direct_register(i: &str) -> AsmResult<RegisterName> {
     parse_register(i)
 }
 
-// Register Direct | a, p, s | LJMP a
+// Register Direct | l, a, p, s | LJMP a
 fn parse_direct_address_register(i: &str) -> AsmResult<AddressRegisterName> {
     parse_address_register(i)
 }
@@ -156,7 +158,7 @@ fn parse_indirect_register_displacement(i: &str) -> AsmResult<(RegisterName, Add
     delimited(char('('), args, char(')'))(i)
 }
 
-// Address register indirect with immediate displacement | (#n, a) | LOAD y1, (#-3, a)
+// Address register indirect with immediate displacement | (#n, a) | LOAD r1, (#-3, a)
 fn parse_indirect_immediate_displacement(
     i: &str,
 ) -> AsmResult<(ImmediateType, AddressRegisterName)> {
@@ -164,18 +166,40 @@ fn parse_indirect_immediate_displacement(
     delimited(char('('), args, char(')'))(i)
 }
 
-// Address register indirect with post increment | (a)+ | LOAD (s)+, x1
-fn parse_indirect_post_increment(i: &str) -> AsmResult<AddressRegisterName> {
-    let (i, address_register) = delimited(char('('), parse_address_register, char(')'))(i)?;
+// Address register indirect with immediate displacement and post increment | (#n, a)+ | LOAD (#-3, s)+, x1
+fn parse_indirect_immediate_post_increment(
+    i: &str,
+) -> AsmResult<(ImmediateType, AddressRegisterName)> {
+    let (i, args) = parse_indirect_immediate_displacement(i)?;
     let (i, _) = char('+')(i)?;
-    Ok((i, address_register))
+    Ok((i, args))
 }
 
-// Address register indirect with pre decrement | -(a) | STOR x1, -(s)
-fn parse_indirect_pre_decrement(i: &str) -> AsmResult<AddressRegisterName> {
+// Address register indirect with register displacement and post increment | (r, a)+ | LOAD (r1, s)+, x1
+fn parse_indirect_register_post_increment(
+    i: &str,
+) -> AsmResult<(RegisterName, AddressRegisterName)> {
+    let (i, args) = parse_indirect_register_displacement(i)?;
+    let (i, _) = char('+')(i)?;
+    Ok((i, args))
+}
+
+// Address register indirect with immediate displacement and pre decrement | -(#n, a) | STOR x1, -(#-3, s)
+fn parse_indirect_immediate_pre_decrement(
+    i: &str,
+) -> AsmResult<(ImmediateType, AddressRegisterName)> {
     let (i, _) = char('-')(i)?;
-    let (i, address_register) = delimited(char('('), parse_address_register, char(')'))(i)?;
-    Ok((i, address_register))
+    let (i, args) = parse_indirect_immediate_displacement(i)?;
+    Ok((i, args))
+}
+
+// Address register indirect with register displacement and pre decrement | -(r, a) | STOR x1, -(r1, s)
+fn parse_indirect_register_pre_decrement(
+    i: &str,
+) -> AsmResult<(RegisterName, AddressRegisterName)> {
+    let (i, _) = char('-')(i)?;
+    let (i, args) = parse_indirect_register_displacement(i)?;
+    Ok((i, args))
 }
 
 #[allow(clippy::let_and_return)]
@@ -227,6 +251,22 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
             AddressingMode::DirectAddressRegister,
         )
         .context("address register (e.g. a)"),
+        map(parse_indirect_register_post_increment, |(i, ar)| {
+            AddressingMode::IndirectRegisterDisplacementPostIncrement(i, ar)
+        })
+        .context("indirect with register displacement and post increment (e.g. (r1, a)+)"),
+        map(parse_indirect_immediate_post_increment, |(i, ar)| {
+            AddressingMode::IndirectImmediateDisplacementPostIncrement(i, ar)
+        })
+        .context("indirect with immediate displacement and post increment (e.g. (#-1, a)+)"),
+        map(parse_indirect_register_pre_decrement, |(i, ar)| {
+            AddressingMode::IndirectRegisterDisplacementPreDecrement(i, ar)
+        })
+        .context("indirect with register displacement and pre decrement (e.g. -(r1, a))"),
+        map(parse_indirect_immediate_pre_decrement, |(i, ar)| {
+            AddressingMode::IndirectImmediateDisplacementPreDecrement(i, ar)
+        })
+        .context("indirect with immediate displacement and pre decrement (e.g. -(#-1, a))"),
         map(parse_indirect_register_displacement, |(r, ar)| {
             AddressingMode::IndirectRegisterDisplacement(r, ar)
         })
@@ -235,14 +275,6 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
             AddressingMode::IndirectImmediateDisplacement(i, ar)
         })
         .context("indirect with immediate displacement (e.g. (#-1, a))"),
-        map(parse_indirect_post_increment, |ar| {
-            AddressingMode::IndirectPostIncrement(ar)
-        })
-        .context("indirect with post increment (e.g. (a)+)"),
-        map(parse_indirect_pre_decrement, |ar| {
-            AddressingMode::IndirectPreDecrement(ar)
-        })
-        .context("indirect with pre decrement (e.g. -(a))"),
         map(parse_shift_definition, |shift_definition| {
             AddressingMode::ShiftDefinition(shift_definition)
         })
