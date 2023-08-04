@@ -57,15 +57,16 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] =>
+        {
             Ok((
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromRegister,
                         r1: dest_register.to_register_index(),
-                        r2: src_register.to_register_index(),
-                        r3: 0x00,
+                        r2: 0x0, // Unused
+                        r3: src_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -118,8 +119,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegister,
                         r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -141,8 +142,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegister,
                         r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,
@@ -164,8 +165,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
                         r1: dest_register.to_register_index(),
-                        r2: 0x0,                                       // Unused
-                        r3: displacement_register.to_register_index(), // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -189,8 +190,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
                         r1: dest_register.to_register_index(),
-                        r2: 0x0,                                       // Unused
-                        r3: displacement_register.to_register_index(), // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,

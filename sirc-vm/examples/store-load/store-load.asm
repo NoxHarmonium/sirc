@@ -11,4 +11,5 @@ LOAD    r2, (#0x000F, a)
 STOR    (r5, a), r3
 LOAD    r4, (r5, a)
 
-EXCP #0xFFFF
+; Halt CPU
+COPI    r1, #0x14FF
