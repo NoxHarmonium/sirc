@@ -14,7 +14,8 @@ enum WriteBackInstructionType {
     AluToRegister,
     AluStatusOnly,
     AddressWrite,
-    AddressWritePostPreIncrement,
+    AddressWriteLoadPostDecrement,
+    AddressWriteStorePreIncrement,
 }
 
 pub struct WriteBackExecutor;
@@ -32,10 +33,10 @@ fn decode_write_back_step_instruction_type(
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
         0x00..=0x07 => WriteBackInstructionType::AluToRegister,
         0x08..=0x0F => WriteBackInstructionType::AluStatusOnly,
-        0x10..=0x12 => WriteBackInstructionType::NoOp,
-        0x13 => WriteBackInstructionType::AddressWritePostPreIncrement,
-        0x14..=0x16 => WriteBackInstructionType::MemoryLoad,
-        0x17 => WriteBackInstructionType::AddressWritePostPreIncrement,
+        0x10..=0x11 => WriteBackInstructionType::NoOp,
+        0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreIncrement,
+        0x14..=0x15 => WriteBackInstructionType::MemoryLoad,
+        0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostDecrement,
         0x18..=0x1F => WriteBackInstructionType::AddressWrite,
         0x20..=0x27 => WriteBackInstructionType::AluToRegister,
         0x28..=0x2F => WriteBackInstructionType::AluStatusOnly,
@@ -88,8 +89,8 @@ impl StageExecutor for WriteBackExecutor {
                 registers[decoded.des_ad_h] = decoded.ad_h_;
                 registers[decoded.des_ad_l] = intermediate_registers.alu_output;
             }
-            WriteBackInstructionType::AddressWritePostPreIncrement => {
-                // TODO: Is there a smarter way to do this that doesn't duplicate MemoryLoad branch
+            WriteBackInstructionType::AddressWriteLoadPostDecrement => {
+                // TODO: Is there a smarter way to do this that doesn't duplicate MemoryLoad and AddressWriteStorePreIncrement branch
                 // also make sure that this is ok to do in hardware
                 // TODO: The order of operations matters here which probably doesn't bode well for the hardware
                 // implementation. What happens if the destination register is the same as the address source register?
@@ -97,6 +98,10 @@ impl StageExecutor for WriteBackExecutor {
                 registers[decoded.ad_h] = decoded.ad_h_;
                 registers[decoded.ad_l] = intermediate_registers.address_output;
                 registers[decoded.des] = intermediate_registers.lmd;
+            }
+            WriteBackInstructionType::AddressWriteStorePreIncrement => {
+                registers[decoded.ad_h] = decoded.ad_h_;
+                registers[decoded.ad_l] = intermediate_registers.address_output;
             }
         }
     }

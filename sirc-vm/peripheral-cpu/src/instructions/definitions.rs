@@ -238,11 +238,11 @@ pub enum Instruction {
     // Addressing
     StoreRegisterToIndirectImmediate = 0x10,
     StoreRegisterToIndirectRegister = 0x11,
-    _Undocumented0x12 = 0x12,
+    StoreRegisterToIndirectImmediatePreDecrement = 0x12,
     StoreRegisterToIndirectRegisterPreDecrement = 0x13,
     LoadRegisterFromIndirectImmediate = 0x14,
     LoadRegisterFromIndirectRegister = 0x15,
-    _Undocumented0x16 = 0x16,
+    LoadRegisterFromIndirectImmediatePostIncrement = 0x16,
     LoadRegisterFromIndirectRegisterPostIncrement = 0x17,
     LoadEffectiveAddressFromIndirectImmediate = 0x18,
     LoadEffectiveAddressFromIndirectRegister = 0x19,

@@ -57,15 +57,16 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] => {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] =>
+        {
             Ok((
                 i,
                 InstructionToken {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromRegister,
                         r1: dest_register.to_register_index(),
-                        r2: src_register.to_register_index(),
-                        r3: 0x00,
+                        r2: 0x0, // Unused
+                        r3: src_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -118,8 +119,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegister,
                         r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -141,8 +142,8 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadRegisterFromIndirectRegister,
                         r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,
@@ -154,8 +155,10 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectPostIncrement(address_register)] =>
-        {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
+            displacement_register,
+            address_register,
+        )] => {
             Ok((
                 i,
                 InstructionToken {
@@ -163,7 +166,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
-                        r3: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
@@ -175,9 +178,10 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectPostIncrement(address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
+            displacement_register,
+            address_register,
+        ), AddressingMode::ShiftDefinition(shift_definition_data)] => {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((
@@ -187,7 +191,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
-                        r3: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand,
                         shift_type,
                         shift_count,
@@ -198,6 +202,40 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     symbol_ref: None,
                 },
             ))
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] =>
+        {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::LoadRegisterFromIndirectImmediatePostIncrement,
+                            register: dest_register.to_register_index(),
+                            value: offset.to_owned(),
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: None,
+                    },
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: Instruction::LoadRegisterFromIndirectImmediatePostIncrement,
+                            register: dest_register.to_register_index(),
+                            value: 0x0, // Placeholder
+                            condition_flag,
+                            additional_flags: address_register.to_register_index(),
+                        }),
+                        symbol_ref: Some(override_ref_token_type_if_implied(
+                            ref_token,
+                            RefType::LowerWord,
+                        )),
+                    },
+                )),
+            }
         }
         modes => {
             let error_string = format!("Invalid addressing mode for LOAD: ({modes:?})");
