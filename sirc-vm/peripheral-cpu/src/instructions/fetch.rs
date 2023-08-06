@@ -12,5 +12,5 @@ pub fn fetch_instruction(mem: &MemoryPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // TODO: Do we need to copy here?
     let [b1, b2] = u16::to_be_bytes(mem.read_address(full_address).to_owned());
     let [b3, b4] = u16::to_be_bytes(mem.read_address(full_address + 1).to_owned());
-    [b2, b1, b4, b3]
+    [b1, b2, b3, b4]
 }

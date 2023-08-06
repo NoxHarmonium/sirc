@@ -12,18 +12,25 @@
 #![deny(warnings)]
 
 use std::cell::RefCell;
-use std::fs::read;
-use std::path::PathBuf;
+use std::fs::{read, File, OpenOptions};
+use std::path::{Path, PathBuf};
+
+use memmap::{MmapMut, MmapOptions};
+
+pub enum SegmentMemCell {
+    // At the moment, all raw segments get the maximum allowable of memory allocated
+    // for a single segment (16 bit address). This is wasteful but not a huge issue
+    // at the moment running on a machine with GBs of memory
+    RawMemory(Box<[u8; 0xFFFF * 2]>),
+    FileMapped(Box<File>, Box<MmapMut>),
+}
 
 pub struct Segment {
     pub label: String,
     pub address: u32,
     pub size: u32,
     pub writable: bool,
-    // At the moment, all segments get the maximum allowable of memory allocated
-    // for a single segment (16 bit address). This is wasteful but not a huge issue
-    // at the moment running on a machine with GBs of memory
-    mem_cell: RefCell<[u16; 65536]>,
+    pub mem_cell: RefCell<SegmentMemCell>,
 }
 
 pub struct MemoryPeripheral {
@@ -66,7 +73,52 @@ impl MemoryPeripheral {
             address,
             size,
             writable,
-            mem_cell: RefCell::new([0; 65536]),
+            mem_cell: RefCell::new(SegmentMemCell::RawMemory(Box::new([0; 0xFFFF * 2]))),
+        });
+    }
+
+    /// Memory maps a segment to a file.
+    ///
+    /// Useful to provide a basic low level interface with the outside world.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the given file cannot be opened
+    ///
+    pub fn map_segment_to_file(
+        &mut self,
+        label: &str,
+        address: u32,
+        size: u32,
+        writable: bool,
+        file_path: &Path,
+    ) {
+        println!(
+            "Map segment {} from 0x{:08x} to 0x{:08x} to file {}",
+            label,
+            address,
+            address + size,
+            file_path.to_string_lossy()
+        );
+
+        // TODO: Proper error handling?
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(file_path)
+            .unwrap();
+        // TODO: Proper error handling here too?
+        let mmap = unsafe { MmapOptions::new().map_mut(&file).unwrap() };
+
+        //TODO: I reckon we open the file and set up the mmap in the parent scope to avoid lifetime issues
+        // and just pass mutable buffer into here
+
+        self.segments.push(Segment {
+            label: String::from(label),
+            address,
+            size,
+            writable,
+            mem_cell: RefCell::new(SegmentMemCell::FileMapped(Box::new(file), Box::new(mmap))),
         });
     }
 
@@ -108,14 +160,15 @@ impl MemoryPeripheral {
             binary_data.len(),
             segment_size
         );
-        // Convert bytes to words
-        let mut mem = mem_cell.borrow_mut();
-        for i in 0..binary_data.len() / 2 {
-            let destination_address = i;
-            let source_address = i * 2;
-            let data =
-                u16::from_be_bytes([binary_data[source_address + 1], binary_data[source_address]]);
-            mem[destination_address] = data;
+
+        let mut cell = mem_cell.borrow_mut();
+        match *cell {
+            SegmentMemCell::RawMemory(ref mut mem) => {
+                mem[0..binary_data.len()].copy_from_slice(binary_data);
+            }
+            SegmentMemCell::FileMapped(_, ref mut mmap) => {
+                mmap[0..binary_data.len()].copy_from_slice(binary_data);
+            }
         }
     }
 
@@ -132,13 +185,25 @@ impl MemoryPeripheral {
             |segment| (segment.size, &segment.mem_cell),
         );
 
-        let segment_data = mem_cell.borrow();
-        // TODO: Is this efficient in rust? Does it get optimised?
-        segment_data
-            .iter()
-            .take(segment_size as usize)
-            .flat_map(|&word| u16::to_be_bytes(word))
-            .collect()
+        let cell = mem_cell.borrow();
+
+        // TODO: Do we even need to match here?
+        match *cell {
+            SegmentMemCell::RawMemory(ref mem) => {
+                // TODO: Is this efficient in rust? Does it get optimised?
+                mem.iter()
+                    .take(segment_size as usize * 2)
+                    .copied()
+                    .collect()
+            }
+            SegmentMemCell::FileMapped(_, ref mmap) => {
+                // TODO: Is this efficient in rust? Does it get optimised?
+                mmap.iter()
+                    .take(segment_size as usize * 2)
+                    .copied()
+                    .collect()
+            }
+        }
     }
 
     /// Reads a single 16 bit value out of a memory address
@@ -157,15 +222,37 @@ impl MemoryPeripheral {
             },
             |segment| {
                 // Range check?
-                let mem = segment.mem_cell.borrow();
-                mem.get(address as usize - segment.address as usize)
-                    .unwrap()
-                    .to_owned()
+                let base_index = (address as usize - segment.address as usize) * 2;
+                let cell = segment.mem_cell.borrow();
+
+                match *cell {
+                    SegmentMemCell::RawMemory(ref mem) => {
+                        let byte_pair: [u8; 2] =
+                            mem[base_index..=base_index + 1].try_into().unwrap();
+                        u16::from_be_bytes(byte_pair)
+                    }
+                    SegmentMemCell::FileMapped(_, ref mmap) => {
+                        let byte_pair: [u8; 2] =
+                            mmap[base_index..=base_index + 1].try_into().unwrap();
+                        u16::from_be_bytes(byte_pair)
+                    }
+                }
             },
         )
     }
 
     /// Writes a single 16 bit value into  a memory address
+    ///
+    /// ```
+    /// use peripheral_mem::new_memory_peripheral;
+    ///
+    /// let mut mem = new_memory_peripheral();
+    /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true);
+    /// let address = 0x00F0_CAFE;
+    /// let value = 0xFEAB;
+    /// mem.write_address(address, value);
+    /// assert_eq!(mem.read_address(address), value);
+    /// ```
     ///
     /// # Panics
     /// Will panic if the segment is in use (unlikely), the segment is readonly or if the internal address calculation goes out of bounds.
@@ -181,8 +268,21 @@ impl MemoryPeripheral {
                 "Segment {} is read-only and cannot be written to",
                 segment.label
             );
-            let mut mem = segment.mem_cell.borrow_mut();
-            mem[address as usize - segment.address as usize] = value;
+            let byte_pair: [u8; 2] =  u16::to_be_bytes(value);
+
+            let base_index = (address as usize - segment.address as usize) * 2;
+            let mut cell = segment.mem_cell.borrow_mut();
+
+            match *cell {
+                SegmentMemCell::RawMemory(ref mut mem) => {
+                    mem[base_index] = byte_pair[0];
+                    mem[base_index + 1] = byte_pair[1];
+                }
+                SegmentMemCell::FileMapped(_, ref mut mmap) => {
+                    mmap[base_index] = byte_pair[0];
+                    mmap[base_index + 1] = byte_pair[1];
+                }
+            }
         });
     }
 }

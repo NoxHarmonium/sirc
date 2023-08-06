@@ -7,6 +7,11 @@ LOAD    ah, #0x00F0
 ; Array Start = 0x00F0_0000
 LOAD    al, #0x0000
 
+; Stack segment (other end of mapped file)
+LOAD    sh, #0x00F0
+; Array Start = 0x00F0_0000
+LOAD    sl, #0xFFFF
+
 LOAD    r7, #2
 LOAD    r1, #2
 LOAD    r2, #1
@@ -27,6 +32,7 @@ CMPI    r2, #1
 BRAN|== @4
 ; THIS NUMBER IS A PRIME!
 ; TODO: Log this somehow
+STOR    -(#0, s), r1
 LOAD    r7, r1
 LOAD    r2, r1
 
@@ -42,7 +48,6 @@ CMPI    r1, #1000
 BRAN|<= @2
 
 :DONE
-; Result is in COUNT (r6)
 
 ; Halt CPU
 COPI    r1, #0x14FF
