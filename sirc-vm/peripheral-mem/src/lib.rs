@@ -56,7 +56,7 @@ impl MemoryPeripheral {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
             .iter()
-            .find(|s| address >= s.address && address <= s.address + s.size)
+            .find(|s| address >= s.address && address < s.address + s.size)
             .map(|s| s.to_owned())
     }
 
@@ -215,7 +215,7 @@ impl MemoryPeripheral {
         self.get_segment_for_address(address).map_or_else(
             || {
                 println!(
-                "Warning: No segment mapped to address 0x{address:08x}. Value will always be 0x0000"
+                "Warning: No segment mapped to address 0x{address:08x}. Value read will always be 0x0000"
             );
                 // If a segment isn't mapped, the address just maps to nothing
                 0x0000
