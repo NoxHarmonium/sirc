@@ -162,14 +162,12 @@ impl MemoryPeripheral {
         );
 
         let mut cell = mem_cell.borrow_mut();
-        match *cell {
-            SegmentMemCell::RawMemory(ref mut mem) => {
-                mem[0..binary_data.len()].copy_from_slice(binary_data);
-            }
-            SegmentMemCell::FileMapped(_, ref mut mmap) => {
-                mmap[0..binary_data.len()].copy_from_slice(binary_data);
-            }
-        }
+        let raw_memory: &mut [u8] = match *cell {
+            SegmentMemCell::RawMemory(ref mut mem) => &mut mem[..],
+            SegmentMemCell::FileMapped(_, ref mut mmap) => &mut mmap[..],
+        };
+
+        raw_memory[0..binary_data.len()].copy_from_slice(binary_data);
     }
 
     /// Dumps a segment to raw binary data
@@ -187,23 +185,17 @@ impl MemoryPeripheral {
 
         let cell = mem_cell.borrow();
 
-        // TODO: Do we even need to match here?
-        match *cell {
-            SegmentMemCell::RawMemory(ref mem) => {
-                // TODO: Is this efficient in rust? Does it get optimised?
-                mem.iter()
-                    .take(segment_size as usize * 2)
-                    .copied()
-                    .collect()
-            }
-            SegmentMemCell::FileMapped(_, ref mmap) => {
-                // TODO: Is this efficient in rust? Does it get optimised?
-                mmap.iter()
-                    .take(segment_size as usize * 2)
-                    .copied()
-                    .collect()
-            }
-        }
+        let raw_memory: &[u8] = match *cell {
+            SegmentMemCell::RawMemory(ref mem) => &mem[..],
+            SegmentMemCell::FileMapped(_, ref mmap) => &mmap[..],
+        };
+
+        // TODO: Is this efficient in rust? Does it get optimised?
+        raw_memory
+            .iter()
+            .take(segment_size as usize * 2)
+            .copied()
+            .collect()
     }
 
     /// Reads a single 16 bit value out of a memory address
@@ -225,18 +217,16 @@ impl MemoryPeripheral {
                 let base_index = (address as usize - segment.address as usize) * 2;
                 let cell = segment.mem_cell.borrow();
 
-                match *cell {
+                let raw_memory: &[u8] = match *cell {
                     SegmentMemCell::RawMemory(ref mem) => {
-                        let byte_pair: [u8; 2] =
-                            mem[base_index..=base_index + 1].try_into().unwrap();
-                        u16::from_be_bytes(byte_pair)
+                       &mem[..]
                     }
                     SegmentMemCell::FileMapped(_, ref mmap) => {
-                        let byte_pair: [u8; 2] =
-                            mmap[base_index..=base_index + 1].try_into().unwrap();
-                        u16::from_be_bytes(byte_pair)
+                        &mmap[..]
                     }
-                }
+                };
+                let byte_pair: [u8; 2] = raw_memory[base_index..=base_index + 1].try_into().unwrap();
+                u16::from_be_bytes(byte_pair)
             },
         )
     }
@@ -273,16 +263,16 @@ impl MemoryPeripheral {
             let base_index = (address as usize - segment.address as usize) * 2;
             let mut cell = segment.mem_cell.borrow_mut();
 
-            match *cell {
+            let raw_memory: &mut [u8] = match *cell {
                 SegmentMemCell::RawMemory(ref mut mem) => {
-                    mem[base_index] = byte_pair[0];
-                    mem[base_index + 1] = byte_pair[1];
+                    &mut mem[..]
                 }
                 SegmentMemCell::FileMapped(_, ref mut mmap) => {
-                    mmap[base_index] = byte_pair[0];
-                    mmap[base_index + 1] = byte_pair[1];
+                    &mut mmap[..]
                 }
-            }
+            };
+            raw_memory[base_index] = byte_pair[0];
+            raw_memory[base_index + 1] = byte_pair[1];
         });
     }
 }
