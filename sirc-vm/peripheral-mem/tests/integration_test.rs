@@ -1,3 +1,22 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Not sure what this is, will have to revisit
+    clippy::must_use_candidate,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn
+)]
+#![deny(warnings)]
+
+extern crate quickcheck;
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 use std::{
     fs::File,
     io::{Read, Seek},
@@ -5,6 +24,7 @@ use std::{
 };
 
 use peripheral_mem::new_memory_peripheral;
+use quickcheck::TestResult;
 use tempfile::tempdir;
 
 #[test]
@@ -12,7 +32,7 @@ fn regular_segment_test() {
     let segment_size: u32 = 0xF;
 
     let mut mem = new_memory_peripheral();
-    mem.map_segment("some_segment", 0xCAFE_BEEF, 0xF, true);
+    mem.map_segment("some_segment", 0xCAFE_BEEF, segment_size, true);
 
     let out_of_bounds_address = 0xCAFE_FFFF;
     let in_bounds_address = 0xCAFE_BEF2;
@@ -75,11 +95,32 @@ fn memory_mapped_segment_test() {
         }
         assert_file_has_expected_value(
             &mut mem_mapped_file,
-            address,
+            *address,
             base_address,
-            expected_value_to_read,
+            *expected_value_to_read,
         );
     }
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::needless_pass_by_value)]
+#[quickcheck()]
+fn dump_segment_to_file_test(test_buffer: Vec<u16>) -> TestResult {
+    let base_address: u32 = 0xCAFE_BEEF;
+
+    let mut mem = new_memory_peripheral();
+    mem.map_segment("some_segment", base_address, test_buffer.len() as u32, true);
+
+    for i in 0..test_buffer.len() {
+        mem.write_address(base_address + i as u32, *test_buffer.get(i).unwrap());
+    }
+
+    let dump = mem.dump_segment("some_segment");
+
+    let actual: Vec<u16> = dump
+        .chunks_exact(2)
+        .map(|chunk| u16::from_be_bytes(chunk.try_into().unwrap()))
+        .collect();
+    TestResult::from_bool(test_buffer == actual)
 }
 
 fn write_data_to_file_segment(
@@ -110,20 +151,21 @@ fn write_data_to_file_segment(
 
 fn assert_file_has_expected_value(
     mem_mapped_file: &mut File,
-    address: &u32,
+    address: u32,
     base_address: u32,
-    expected_value_to_read: &u16,
+    expected_value_to_read: u16,
 ) {
     mem_mapped_file
         .seek(std::io::SeekFrom::Start(
-            ((*address - base_address) * 2).into(),
+            ((address - base_address) * 2).into(),
         ))
         .unwrap();
     let mut bytes = [0; 2];
     mem_mapped_file.read_exact(&mut bytes).unwrap();
-    assert_eq!(*expected_value_to_read, u16::from_be_bytes(bytes));
+    assert_eq!(expected_value_to_read, u16::from_be_bytes(bytes));
 }
 
+#[allow(clippy::cast_lossless)]
 fn setup_memory_mapped_file(file_to_memory_map: &Path, segment_size: u32) {
     let new_file = File::create(file_to_memory_map).unwrap();
     // Multiply by two because memory is accessed as words

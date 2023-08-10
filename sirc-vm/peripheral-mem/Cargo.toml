@@ -9,4 +9,6 @@ edition = "2021"
 memmap = "0.7.0"
 
 [dev-dependencies]
+quickcheck = "1"
+quickcheck_macros = "1"
 tempfile = "3"

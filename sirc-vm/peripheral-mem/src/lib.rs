@@ -110,9 +110,6 @@ impl MemoryPeripheral {
         // TODO: Proper error handling here too?
         let mmap = unsafe { MmapOptions::new().map_mut(&file).unwrap() };
 
-        //TODO: I reckon we open the file and set up the mmap in the parent scope to avoid lifetime issues
-        // and just pass mutable buffer into here
-
         self.segments.push(Segment {
             label: String::from(label),
             address,
