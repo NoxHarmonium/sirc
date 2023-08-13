@@ -42,3 +42,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           files: lcov.info
           fail_ci_if_error: true
+
+  examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        run: rustup update stable
+
+      - name: Run byte-sieve
+        run: make check
+        working-directory: ./sirc-vm/examples/byte-sieve
