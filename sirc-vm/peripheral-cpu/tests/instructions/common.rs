@@ -23,7 +23,7 @@ pub struct TestCpuState {
 
 fn capture_cpu_state(cpu: &CpuPeripheral) -> TestCpuState {
     TestCpuState {
-        registers: cpu.registers.clone(),
+        registers: cpu.registers,
         memory_dump: cpu.memory_peripheral.dump_segment(SCRATCH_SEGMENT),
     }
 }

@@ -479,10 +479,6 @@ fn perform_arithmetic_right_shift(
     let result = wide_result as u16;
     let carry = (wide_result & MSB_MASK) == MSB_MASK;
 
-    println!(
-        "sign_bit: {sign_bit:#b} extended_a: {extended_a:#b} clamped_b: {clamped_b:#b} wide_result: {wide_result:#b} result: {result:#b} carry: {carry}",
-    );
-
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
         result,

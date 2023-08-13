@@ -95,14 +95,12 @@ fn step<'a>(
     // 3. Decode/Register Fetch (ID)
     let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
 
-    println!("{decoded_instruction:#X?}");
-
     // Special instruction just for debugging purposes. Probably won't be in hardware
-    assert!(
-        !(decoded_instruction.ins == Instruction::CoprocessorCallImmediate
-            && decoded_instruction.sr_b_ == 0x14FF),
-        "Execution was halted due to 0xFF exception"
-    );
+    if decoded_instruction.ins == Instruction::CoprocessorCallImmediate
+        && decoded_instruction.sr_b_ == 0x14FF
+    {
+        return Err(Error::ProcessorHalted(*registers));
+    }
 
     // TODO: On the real CPU these might have garbage in them?
     // maybe it should only be zeroed on first run and shared between invocations
@@ -133,10 +131,10 @@ fn step<'a>(
     );
 
     if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-        return Err(Error::ProcessorHalted(registers.clone()));
+        return Err(Error::ProcessorHalted(*registers));
     }
 
-    println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
+    // println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
 
     Ok((registers, CYCLES_PER_INSTRUCTION, decoded_instruction.ins))
 }

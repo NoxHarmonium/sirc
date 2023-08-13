@@ -11,7 +11,7 @@
 )]
 #![deny(warnings)]
 
-use std::path::PathBuf;
+use std::{path::PathBuf, process::exit};
 
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
@@ -131,9 +131,13 @@ fn main() {
         Ok(actual_clocks_executed) => {
             println!("actual_clocks_executed: {actual_clocks_executed}");
         }
-        Err(error) => {
-            panic!("CPU Error: {error:08x?}");
-        }
+        Err(error) => match error {
+            peripheral_cpu::Error::ProcessorHalted(_) => {
+                println!("Processor halted error caught. This type of error will exit with code zero for testing purposes.");
+                exit(0);
+            }
+            peripheral_cpu::Error::InvalidInstruction(_) => panic!("CPU Error: {error:08x?}"),
+        },
     };
 
     clock_peripheral.start_loop(execute);
