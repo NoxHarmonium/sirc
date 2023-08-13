@@ -18,12 +18,15 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 use std::{
-    fs::File,
-    io::{Read, Seek},
+    fs::{File, OpenOptions},
+    io::{Read, Seek, Write},
     path::Path,
 };
 
-use peripheral_mem::new_memory_peripheral;
+use peripheral_mem::{
+    conversion::{bytes_to_words, words_to_bytes},
+    new_memory_peripheral,
+};
 use quickcheck::TestResult;
 use tempfile::tempdir;
 
@@ -56,6 +59,21 @@ fn regular_segment_test() {
         mem.write_address(address, value_to_write);
         assert_eq!(expected_value_to_read, mem.read_address(address));
     }
+}
+
+#[test]
+#[should_panic(expected = "Segment some_segment is read-only and cannot be written to")]
+fn readonly_segment_test() {
+    let segment_size: u32 = 0xF;
+
+    let mut mem = new_memory_peripheral();
+    mem.map_segment("some_segment", 0xCAFE_BEEF, segment_size, false);
+
+    let in_bounds_address = 0xCAFE_BEF2;
+    // Should read 0x0 if not written to
+    assert_eq!(0x0, mem.read_address(in_bounds_address));
+    mem.write_address(in_bounds_address, 0xFACE);
+    assert_eq!(0x0, mem.read_address(in_bounds_address));
 }
 
 #[test]
@@ -116,11 +134,31 @@ fn dump_segment_to_file_test(test_buffer: Vec<u16>) -> TestResult {
 
     let dump = mem.dump_segment("some_segment");
 
-    let actual: Vec<u16> = dump
-        .chunks_exact(2)
-        .map(|chunk| u16::from_be_bytes(chunk.try_into().unwrap()))
-        .collect();
+    let actual: Vec<u16> = bytes_to_words(&dump);
     TestResult::from_bool(test_buffer == actual)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::needless_pass_by_value)]
+#[quickcheck()]
+fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
+    let dir = tempdir().unwrap();
+    let file_to_load = dir.path().join("load.bin");
+
+    setup_file_to_load_into_segment(&file_to_load, &test_buffer);
+
+    let mut mem = new_memory_peripheral();
+    mem.map_segment(
+        "some_label",
+        0x0,
+        test_buffer.len().try_into().unwrap(),
+        true,
+    );
+    mem.load_binary_data_into_segment_from_file("some_label", &file_to_load);
+
+    let all_equal = (0..test_buffer.len())
+        .all(|index| (*test_buffer.get(index).unwrap() == mem.read_address(index as u32)));
+
+    TestResult::from_bool(all_equal)
 }
 
 fn write_data_to_file_segment(
@@ -170,5 +208,15 @@ fn setup_memory_mapped_file(file_to_memory_map: &Path, segment_size: u32) {
     let new_file = File::create(file_to_memory_map).unwrap();
     // Multiply by two because memory is accessed as words
     new_file.set_len((segment_size * 2) as u64).unwrap();
-    drop(new_file);
+}
+
+#[allow(clippy::cast_lossless)]
+fn setup_file_to_load_into_segment(file_to_memory_map: &Path, segment_data: &[u16]) {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(file_to_memory_map)
+        .unwrap();
+    file.write_all(&words_to_bytes(segment_data)).unwrap();
 }

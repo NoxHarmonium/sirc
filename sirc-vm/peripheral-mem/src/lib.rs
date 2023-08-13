@@ -11,9 +11,11 @@
 )]
 #![deny(warnings)]
 
+pub mod conversion;
+
 use std::cell::RefCell;
 use std::fs::{read, File, OpenOptions};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use memmap::{MmapMut, MmapOptions};
 
@@ -123,7 +125,7 @@ impl MemoryPeripheral {
     ///
     /// # Panics
     /// Will panic if there was an error loading the binary data
-    pub fn load_binary_data_into_segment_from_file(&self, label: &str, path: &PathBuf) {
+    pub fn load_binary_data_into_segment_from_file(&self, label: &str, path: &Path) {
         let maybe_binary_data = read(path);
         match maybe_binary_data {
             Ok(binary_data) => {
@@ -152,8 +154,8 @@ impl MemoryPeripheral {
         );
 
         assert!(
-            binary_data.len() <= segment_size as usize,
-            "Loaded binary data is {} bytes long but segment has size of {}",
+            binary_data.len() <= (segment_size * 2) as usize,
+            "Loaded binary data is {} bytes long but segment has size of {} words",
             binary_data.len(),
             segment_size
         );
