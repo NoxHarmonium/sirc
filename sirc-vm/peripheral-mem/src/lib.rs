@@ -11,19 +11,28 @@
 )]
 #![deny(warnings)]
 
+pub mod conversion;
+
 use std::cell::RefCell;
-use std::fs::read;
-use std::path::PathBuf;
+use std::fs::{read, File, OpenOptions};
+use std::path::Path;
+
+use memmap::{MmapMut, MmapOptions};
+
+pub enum SegmentMemCell {
+    // At the moment, all raw segments get the maximum allowable of memory allocated
+    // for a single segment (16 bit address). This is wasteful but not a huge issue
+    // at the moment running on a machine with GBs of memory
+    RawMemory(Box<[u8; 0xFFFF * 2]>),
+    FileMapped(Box<File>, Box<MmapMut>),
+}
 
 pub struct Segment {
     pub label: String,
     pub address: u32,
     pub size: u32,
     pub writable: bool,
-    // At the moment, all segments get the maximum allowable of memory allocated
-    // for a single segment (16 bit address). This is wasteful but not a huge issue
-    // at the moment running on a machine with GBs of memory
-    mem_cell: RefCell<[u16; 65536]>,
+    pub mem_cell: RefCell<SegmentMemCell>,
 }
 
 pub struct MemoryPeripheral {
@@ -49,7 +58,7 @@ impl MemoryPeripheral {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
             .iter()
-            .find(|s| address >= s.address && address <= s.address + s.size)
+            .find(|s| address >= s.address && address < s.address + s.size)
             .map(|s| s.to_owned())
     }
 
@@ -66,7 +75,49 @@ impl MemoryPeripheral {
             address,
             size,
             writable,
-            mem_cell: RefCell::new([0; 65536]),
+            mem_cell: RefCell::new(SegmentMemCell::RawMemory(Box::new([0; 0xFFFF * 2]))),
+        });
+    }
+
+    /// Memory maps a segment to a file.
+    ///
+    /// Useful to provide a basic low level interface with the outside world.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the given file cannot be opened
+    ///
+    pub fn map_segment_to_file(
+        &mut self,
+        label: &str,
+        address: u32,
+        size: u32,
+        writable: bool,
+        file_path: &Path,
+    ) {
+        println!(
+            "Map segment {} from 0x{:08x} to 0x{:08x} to file {}",
+            label,
+            address,
+            address + size,
+            file_path.to_string_lossy()
+        );
+
+        // TODO: Proper error handling?
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(file_path)
+            .unwrap();
+        // TODO: Proper error handling here too?
+        let mmap = unsafe { MmapOptions::new().map_mut(&file).unwrap() };
+
+        self.segments.push(Segment {
+            label: String::from(label),
+            address,
+            size,
+            writable,
+            mem_cell: RefCell::new(SegmentMemCell::FileMapped(Box::new(file), Box::new(mmap))),
         });
     }
 
@@ -74,7 +125,7 @@ impl MemoryPeripheral {
     ///
     /// # Panics
     /// Will panic if there was an error loading the binary data
-    pub fn load_binary_data_into_segment_from_file(&self, label: &str, path: &PathBuf) {
+    pub fn load_binary_data_into_segment_from_file(&self, label: &str, path: &Path) {
         let maybe_binary_data = read(path);
         match maybe_binary_data {
             Ok(binary_data) => {
@@ -103,20 +154,19 @@ impl MemoryPeripheral {
         );
 
         assert!(
-            binary_data.len() <= segment_size as usize,
-            "Loaded binary data is {} bytes long but segment has size of {}",
+            binary_data.len() <= (segment_size * 2) as usize,
+            "Loaded binary data is {} bytes long but segment has size of {} words",
             binary_data.len(),
             segment_size
         );
-        // Convert bytes to words
-        let mut mem = mem_cell.borrow_mut();
-        for i in 0..binary_data.len() / 2 {
-            let destination_address = i;
-            let source_address = i * 2;
-            let data =
-                u16::from_be_bytes([binary_data[source_address + 1], binary_data[source_address]]);
-            mem[destination_address] = data;
-        }
+
+        let mut cell = mem_cell.borrow_mut();
+        let raw_memory: &mut [u8] = match *cell {
+            SegmentMemCell::RawMemory(ref mut mem) => &mut mem[..],
+            SegmentMemCell::FileMapped(_, ref mut mmap) => &mut mmap[..],
+        };
+
+        raw_memory[0..binary_data.len()].copy_from_slice(binary_data);
     }
 
     /// Dumps a segment to raw binary data
@@ -132,12 +182,18 @@ impl MemoryPeripheral {
             |segment| (segment.size, &segment.mem_cell),
         );
 
-        let segment_data = mem_cell.borrow();
+        let cell = mem_cell.borrow();
+
+        let raw_memory: &[u8] = match *cell {
+            SegmentMemCell::RawMemory(ref mem) => &mem[..],
+            SegmentMemCell::FileMapped(_, ref mmap) => &mmap[..],
+        };
+
         // TODO: Is this efficient in rust? Does it get optimised?
-        segment_data
+        raw_memory
             .iter()
-            .take(segment_size as usize)
-            .flat_map(|&word| u16::to_be_bytes(word))
+            .take(segment_size as usize * 2)
+            .copied()
             .collect()
     }
 
@@ -150,22 +206,42 @@ impl MemoryPeripheral {
         self.get_segment_for_address(address).map_or_else(
             || {
                 println!(
-                "Warning: No segment mapped to address 0x{address:08x}. Value will always be 0x0000"
+                "Warning: No segment mapped to address 0x{address:08x}. Value read will always be 0x0000"
             );
                 // If a segment isn't mapped, the address just maps to nothing
                 0x0000
             },
             |segment| {
                 // Range check?
-                let mem = segment.mem_cell.borrow();
-                mem.get(address as usize - segment.address as usize)
-                    .unwrap()
-                    .to_owned()
+                let base_index = (address as usize - segment.address as usize) * 2;
+                let cell = segment.mem_cell.borrow();
+
+                let raw_memory: &[u8] = match *cell {
+                    SegmentMemCell::RawMemory(ref mem) => {
+                       &mem[..]
+                    }
+                    SegmentMemCell::FileMapped(_, ref mmap) => {
+                        &mmap[..]
+                    }
+                };
+                let byte_pair: [u8; 2] = raw_memory[base_index..=base_index + 1].try_into().unwrap();
+                u16::from_be_bytes(byte_pair)
             },
         )
     }
 
     /// Writes a single 16 bit value into  a memory address
+    ///
+    /// ```
+    /// use peripheral_mem::new_memory_peripheral;
+    ///
+    /// let mut mem = new_memory_peripheral();
+    /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true);
+    /// let address = 0x00F0_CAFE;
+    /// let value = 0xFEAB;
+    /// mem.write_address(address, value);
+    /// assert_eq!(mem.read_address(address), value);
+    /// ```
     ///
     /// # Panics
     /// Will panic if the segment is in use (unlikely), the segment is readonly or if the internal address calculation goes out of bounds.
@@ -181,8 +257,21 @@ impl MemoryPeripheral {
                 "Segment {} is read-only and cannot be written to",
                 segment.label
             );
-            let mut mem = segment.mem_cell.borrow_mut();
-            mem[address as usize - segment.address as usize] = value;
+            let byte_pair: [u8; 2] =  u16::to_be_bytes(value);
+
+            let base_index = (address as usize - segment.address as usize) * 2;
+            let mut cell = segment.mem_cell.borrow_mut();
+
+            let raw_memory: &mut [u8] = match *cell {
+                SegmentMemCell::RawMemory(ref mut mem) => {
+                    &mut mem[..]
+                }
+                SegmentMemCell::FileMapped(_, ref mut mmap) => {
+                    &mut mmap[..]
+                }
+            };
+            raw_memory[base_index] = byte_pair[0];
+            raw_memory[base_index + 1] = byte_pair[1];
         });
     }
 }

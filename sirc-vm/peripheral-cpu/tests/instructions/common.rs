@@ -23,7 +23,7 @@ pub struct TestCpuState {
 
 fn capture_cpu_state(cpu: &CpuPeripheral) -> TestCpuState {
     TestCpuState {
-        registers: cpu.registers.clone(),
+        registers: cpu.registers,
         memory_dump: cpu.memory_peripheral.dump_segment(SCRATCH_SEGMENT),
     }
 }
@@ -39,7 +39,12 @@ pub fn set_up_instruction_test(
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, false);
     memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
-    memory_peripheral.map_segment(SCRATCH_SEGMENT, SCRATCH_SEGMENT_BEGIN, 0xFFFF, true);
+    memory_peripheral.map_segment(
+        SCRATCH_SEGMENT,
+        SCRATCH_SEGMENT_BEGIN,
+        u16::MAX as u32,
+        true,
+    );
     memory_peripheral
 }
 

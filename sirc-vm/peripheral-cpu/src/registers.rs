@@ -131,7 +131,7 @@ pub trait FullAddress {
     fn to_segmented_address(self) -> (u16, u16);
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct Registers {
     // Status Register
     pub sr: u16,

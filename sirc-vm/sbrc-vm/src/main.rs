@@ -11,23 +11,83 @@
 )]
 #![deny(warnings)]
 
-use std::path::PathBuf;
+use std::{path::PathBuf, process::exit};
 
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
 use peripheral_mem::new_memory_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
-static SCRATCH_SEGMENT: &str = "SCRATCH";
-// TODO: Map this to a physical file (probs do it through a command line arg)
-static FILE_SEGMENT: &str = "FILE";
 
 use clap::Parser;
+
+fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
+    let segment_args: Vec<_> = s.split(':').collect();
+    if segment_args.len() < 3 || segment_args.len() > 4 {
+        return Err(format!(
+            "Incorrect format for segment args [${s}] . Should in the format <label>:<offset>:<length>:<optional_mapped_file>:<writable>.",
+        ));
+    }
+    match segment_args.as_slice() {
+        [label, offset_str, length_str] => {
+            // TODO: Surely there is a cleaner idomatic way to do this
+            let offset = match u32::from_str_radix(offset_str, 16) {
+                Ok(x) => x,
+                Err(error) => return Err(error.to_string()),
+            };
+            let length = match u32::from_str_radix(length_str, 16) {
+                Ok(x) => x,
+                Err(error) => return Err(error.to_string()),
+            };
+
+            Ok(SegmentArg {
+                label: (*label).to_string(),
+                offset,
+                length,
+                mapped_file: None,
+                writeable: true,
+            })
+        }
+        [label, offset_str, length_str, file] => {
+            // TODO: Surely there is a cleaner idomatic way to do this
+            let offset = match u32::from_str_radix(offset_str, 16) {
+                Ok(x) => x,
+                Err(error) => return Err(error.to_string()),
+            };
+            let length = match u32::from_str_radix(length_str, 16) {
+                Ok(x) => x,
+                Err(error) => return Err(error.to_string()),
+            };
+
+            Ok(SegmentArg {
+                label: (*label).to_string(),
+                offset,
+                length,
+                mapped_file: Some(PathBuf::from(file)),
+                writeable: true,
+            })
+        }
+        _ => Err("Error".to_string()),
+    }
+}
+
+#[derive(Clone, Debug)]
+struct SegmentArg {
+    pub label: String,
+    pub offset: u32,
+    pub length: u32,
+    pub mapped_file: Option<PathBuf>,
+    pub writeable: bool,
+}
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
     #[clap(short, long, value_parser, value_name = "FILE")]
     program_file: PathBuf,
+
+    #[clap(short, long, value_parser = segment_arg_parser)]
+    segment: Vec<SegmentArg>,
 }
 
 fn main() {
@@ -42,8 +102,28 @@ fn main() {
 
     memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
     memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
-    memory_peripheral.map_segment(SCRATCH_SEGMENT, 0xAAF0, 0x000F, true);
-    memory_peripheral.map_segment(FILE_SEGMENT, 0x00F0_0000, 0xFFFF, true);
+
+    for segment in args.segment {
+        match segment.mapped_file {
+            Some(mapped_file) => {
+                memory_peripheral.map_segment_to_file(
+                    segment.label.as_str(),
+                    segment.offset,
+                    segment.length,
+                    segment.writeable,
+                    &mapped_file,
+                );
+            }
+            None => {
+                memory_peripheral.map_segment(
+                    segment.label.as_str(),
+                    segment.offset,
+                    segment.length,
+                    segment.writeable,
+                );
+            }
+        }
+    }
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
@@ -51,9 +131,13 @@ fn main() {
         Ok(actual_clocks_executed) => {
             println!("actual_clocks_executed: {actual_clocks_executed}");
         }
-        Err(error) => {
-            panic!("CPU Error: {error:08x?}");
-        }
+        Err(error) => match error {
+            peripheral_cpu::Error::ProcessorHalted(_) => {
+                println!("Processor halted error caught. This type of error will exit with code zero for testing purposes.");
+                exit(0);
+            }
+            peripheral_cpu::Error::InvalidInstruction(_) => panic!("CPU Error: {error:08x?}"),
+        },
     };
 
     clock_peripheral.start_loop(execute);
