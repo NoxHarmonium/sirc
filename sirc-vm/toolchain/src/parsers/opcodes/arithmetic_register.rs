@@ -6,7 +6,7 @@ use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     Instruction, InstructionData, RegisterInstructionData, ShiftOperand, ShiftType,
     StatusRegisterUpdateSource,
 };
@@ -36,7 +36,7 @@ use super::super::shared::AsmResult;
 /// ```
 /// use toolchain::parsers::opcodes::arithmetic_register::arithmetic_register;
 /// use toolchain::parsers::instruction::InstructionToken;
-/// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
 ///
 /// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r3, RTL #4\n").unwrap();
 /// let (op_code, r1, r2, r3, shift_type, shift_count, condition_flag, additional_flags) = match parsed_instruction.instruction {

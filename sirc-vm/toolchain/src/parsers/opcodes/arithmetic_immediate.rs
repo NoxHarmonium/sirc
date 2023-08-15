@@ -7,7 +7,7 @@ use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
     StatusRegisterUpdateSource,
 };
@@ -56,7 +56,7 @@ use super::super::shared::AsmResult;
 /// ```
 /// use toolchain::parsers::opcodes::arithmetic_immediate::arithmetic_immediate;
 /// use toolchain::parsers::instruction::InstructionToken;
-/// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
 ///
 ///
 /// let (_, parsed_instruction) = arithmetic_immediate("ADDI|!= r2, #123, LSL #2\n").unwrap();

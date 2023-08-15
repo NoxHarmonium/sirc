@@ -9,7 +9,7 @@ use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
 use nom_supreme::tag::complete::tag;
-use peripheral_cpu::instructions::definitions::{ShiftOperand, ShiftType};
+use peripheral_cpu::coprocessors::processing_unit::definitions::{ShiftOperand, ShiftType};
 
 use crate::types::object::RefType;
 

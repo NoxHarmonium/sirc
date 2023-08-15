@@ -2,6 +2,7 @@ use peripheral_mem::MemoryPeripheral;
 
 use crate::registers::SegmentedAddress;
 
+// TODO: Rename to something more generic like fetch double word
 #[must_use]
 pub fn fetch_instruction(mem: &MemoryPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // Only the CPU knows that the address is split into two 16 bit registers

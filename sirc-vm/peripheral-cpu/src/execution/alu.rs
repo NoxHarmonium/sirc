@@ -2,7 +2,7 @@ use std::ops::Shl;
 
 use super::shared::IntermediateRegisters;
 use crate::{
-    instructions::definitions::ShiftType,
+    coprocessors::processing_unit::definitions::ShiftType,
     registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set_value, Registers, StatusRegisterFields},
 };
 

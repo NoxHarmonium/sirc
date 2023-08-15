@@ -1,10 +1,10 @@
+use crate::coprocessors::processing_unit::definitions::{
+    Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS,
+};
 use crate::{
-    instructions::{
-        definitions::{Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS},
-        encoding::{
-            decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
-            decode_short_immediate_instruction,
-        },
+    instructions::encoding::{
+        decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
+        decode_short_immediate_instruction,
     },
     registers::Registers,
 };
@@ -76,7 +76,7 @@ fn do_shift(
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields, set_sr_bit};
-/// use peripheral_cpu::instructions::definitions::{Instruction, ConditionFlags, StatusRegisterUpdateSource};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ConditionFlags, StatusRegisterUpdateSource};
 /// use peripheral_cpu::execution::fetch_and_decode::decode_and_register_fetch;
 ///
 /// let mut registers = Registers::default();

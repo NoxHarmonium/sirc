@@ -1,7 +1,7 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    instructions::definitions::Instruction,
+    coprocessors::processing_unit::definitions::Instruction,
     registers::{Registers, SegmentedAddress},
 };
 

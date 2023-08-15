@@ -17,7 +17,7 @@ use clap::Parser;
 
 use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::{final_parser, Location};
-use peripheral_cpu::instructions::definitions::INSTRUCTION_SIZE_BYTES;
+use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_BYTES;
 
 use peripheral_cpu::instructions::encoding::encode_instruction;
 use toolchain::parsers::instruction::{parse_tokens, Token};

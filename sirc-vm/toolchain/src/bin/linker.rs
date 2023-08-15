@@ -15,7 +15,7 @@
 #![deny(warnings)]
 
 use clap::Parser;
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::instructions::encoding::{decode_instruction, encode_instruction};

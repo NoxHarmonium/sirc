@@ -10,7 +10,7 @@ use nom_supreme::multi::collect_separated_terminated;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, InstructionData, ShiftType, MAX_SHIFT_COUNT,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};

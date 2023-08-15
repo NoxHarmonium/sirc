@@ -1,7 +1,9 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    instructions::definitions::{ConditionFlags, Instruction, StatusRegisterUpdateSource},
+    coprocessors::processing_unit::definitions::{
+        ConditionFlags, Instruction, StatusRegisterUpdateSource,
+    },
     registers::Registers,
 };
 

@@ -25,22 +25,17 @@ extern crate quickcheck_macros;
 
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
+pub mod coprocessors;
 pub mod execution;
 pub mod instructions;
 pub mod microcode;
 pub mod registers;
 
-use instructions::definitions::Instruction;
+use coprocessors::{exception_unit::registers::ExceptionUnitRegisters, shared::Executor};
 use peripheral_mem::MemoryPeripheral;
-use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
+use registers::FullAddress;
 
-use crate::execution::execution_effective_address::ExecutionEffectiveAddressExecutor;
-use crate::execution::fetch_and_decode::decode_and_register_fetch;
-use crate::execution::memory_access::MemoryAccessExecutor;
-use crate::execution::shared::{IntermediateRegisters, StageExecutor};
-use crate::execution::write_back::WriteBackExecutor;
-use crate::instructions::fetch::fetch_instruction;
-use crate::registers::{Registers, SegmentedRegisterAccess};
+use crate::registers::Registers;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
@@ -54,6 +49,7 @@ pub enum Error {
 pub struct CpuPeripheral<'a> {
     pub memory_peripheral: &'a MemoryPeripheral,
     pub registers: Registers,
+    pub eu_registers: ExceptionUnitRegisters,
 }
 
 ///
@@ -80,75 +76,47 @@ pub fn new_cpu_peripheral<'a>(
             pl,
             ..Registers::default()
         },
+        eu_registers: ExceptionUnitRegisters::default(),
     }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn step<'a>(
-    registers: &'a mut Registers,
-    mem: &MemoryPeripheral,
-) -> Result<(&'a Registers, u32, Instruction), Error> {
-    // 1. Instruction Fetch (1/2)
-    // 2. Instruction Fetch (2/2)
-    let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
-
-    // 3. Decode/Register Fetch (ID)
-    let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
-
-    // Special instruction just for debugging purposes. Probably won't be in hardware
-    if decoded_instruction.ins == Instruction::CoprocessorCallImmediate
-        && decoded_instruction.sr_b_ == 0x14FF
-    {
-        return Err(Error::ProcessorHalted(*registers));
-    }
-
-    // TODO: On the real CPU these might have garbage in them?
-    // maybe it should only be zeroed on first run and shared between invocations
-    let mut intermediate_registers = IntermediateRegisters {
-        alu_output: 0,
-        alu_status_register: 0,
-        lmd: 0,
-        address_output: 0,
-    };
-
-    ExecutionEffectiveAddressExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-    MemoryAccessExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-    WriteBackExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-
-    if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-        return Err(Error::ProcessorHalted(*registers));
-    }
-
-    // println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
-
-    Ok((registers, CYCLES_PER_INSTRUCTION, decoded_instruction.ins))
 }
 
 impl CpuPeripheral<'_> {
+    ///
+    /// # Panics
+    /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
         let mut clocks: u32 = 0;
         loop {
-            match step(&mut self.registers, self.memory_peripheral) {
+            // TODO: call exception step instead if eu registers have pending value
+
+            let result = match self.eu_registers.cause_register & 0xF000 {
+                0x0000..=0x0FFF => {
+                    coprocessors::processing_unit::execution::ProcessingUnitExecutor::step(
+                        &mut self.registers,
+                        &mut self.eu_registers,
+                        self.memory_peripheral,
+                    )
+                }
+                0x1000..=0x2FFF => {
+                    coprocessors::exception_unit::execution::ExceptionUnitExecutor::step(
+                        &mut self.registers,
+                        &mut self.eu_registers,
+                        self.memory_peripheral,
+                    )
+                }
+                _ => {
+                    // TODO: Work out what would happen in hardware here
+                    // Do we want another coprocessor (multiplication?)
+                    panic!("This coprocessor not implemented yet")
+                }
+            };
+
+            match result {
                 Err(error) => {
                     println!("Execution stopped:\n{error:08x?}");
                     return Err(error);
                 }
-                Ok((_registers, instruction_clocks, _instruction)) => {
+                Ok((_registers, _eu_registers, instruction_clocks)) => {
                     // println!("{:?} {:?}", instruction, registers);
                     clocks += instruction_clocks;
 

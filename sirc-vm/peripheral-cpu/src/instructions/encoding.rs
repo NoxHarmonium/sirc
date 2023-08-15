@@ -1,4 +1,4 @@
-use super::definitions::{
+use crate::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, ImpliedInstructionData, InstructionData,
     RegisterInstructionData, ShiftOperand, ShiftType, ShortImmediateInstructionData,
 };
@@ -91,7 +91,7 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::{decode_implied_instruction};
-/// use peripheral_cpu::instructions::definitions::{Instruction, ImpliedInstructionData, ConditionFlags};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ImpliedInstructionData, ConditionFlags};
 ///
 /// assert_eq!(decode_implied_instruction([0xF1, 0xBF, 0xEA, 0x80]), ImpliedInstructionData {
 ///     op_code: Instruction::TestAndRegister, condition_flag: ConditionFlags::Always
@@ -127,7 +127,7 @@ pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructio
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::{decode_immediate_instruction, encode_immediate_instruction};
-/// use peripheral_cpu::instructions::definitions::{Instruction, ImmediateInstructionData, ConditionFlags};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ImmediateInstructionData, ConditionFlags};
 ///
 /// assert_eq!(decode_immediate_instruction([0x08, 0xBF, 0xEA, 0x80]), ImmediateInstructionData {
 ///     op_code: Instruction::SubtractImmediate, register: 0x02, value: 0xFFAA, condition_flag: ConditionFlags::Always, additional_flags: 0x0
@@ -179,7 +179,7 @@ pub fn decode_immediate_instruction(raw_instruction: [u8; 4]) -> ImmediateInstru
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::{decode_short_immediate_instruction, encode_immediate_instruction};
-/// use peripheral_cpu::instructions::definitions::{Instruction, ShortImmediateInstructionData, ConditionFlags, ShiftType, ShiftOperand};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ShortImmediateInstructionData, ConditionFlags, ShiftType, ShiftOperand};
 ///
 /// assert_eq!(decode_short_immediate_instruction([0x08, 0xBF, 0xEA, 0x80]), ShortImmediateInstructionData {
 ///     op_code: Instruction::SubtractImmediate, register: 0x02, value: 0xFF, shift_operand: ShiftOperand::Register, shift_type: ShiftType::LogicalRightShift, shift_count: 10, condition_flag: ConditionFlags::Always, additional_flags: 0x0
@@ -242,7 +242,7 @@ pub fn decode_short_immediate_instruction(
 /// 4 bit condition flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
 /// use peripheral_cpu::instructions::encoding::decode_register_instruction;
 ///
 /// assert_eq!(decode_register_instruction([0xDA, 0xAF, 0x08, 0xEA]), RegisterInstructionData {
@@ -389,7 +389,7 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::encode_implied_instruction;
-/// use peripheral_cpu::instructions::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
 ///
 /// assert_eq!(encode_implied_instruction(&ImpliedInstructionData {
 ///   op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
@@ -425,7 +425,7 @@ pub fn encode_implied_instruction(
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::encode_immediate_instruction;
-/// use peripheral_cpu::instructions::definitions::{ImmediateInstructionData, ConditionFlags, Instruction};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ImmediateInstructionData, ConditionFlags, Instruction};
 ///
 ///
 /// assert_eq!(encode_immediate_instruction(&ImmediateInstructionData {
@@ -478,7 +478,7 @@ pub fn encode_immediate_instruction(
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::encode_short_immediate_instruction;
-/// use peripheral_cpu::instructions::definitions::{ShortImmediateInstructionData, ConditionFlags, Instruction, ShiftOperand, ShiftType};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ShortImmediateInstructionData, ConditionFlags, Instruction, ShiftOperand, ShiftType};
 ///
 ///
 /// assert_eq!(encode_short_immediate_instruction(&ShortImmediateInstructionData {
@@ -539,7 +539,7 @@ pub fn encode_short_immediate_instruction(
 ///
 /// ```
 /// use peripheral_cpu::instructions::encoding::encode_register_instruction;
-/// use peripheral_cpu::instructions::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
 ///
 /// assert_eq!(encode_register_instruction(&RegisterInstructionData {
 ///     op_code: Instruction::XorRegister,
@@ -677,14 +677,12 @@ mod tests {
         Instruction::CoprocessorCallRegister,
     ];
 
-    use crate::instructions::{
-        definitions::{
-            all_condition_flags, all_instructions, all_shift_operands, all_shift_types,
-            ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
-            RegisterInstructionData, ShortImmediateInstructionData,
-        },
-        encoding::decode_instruction,
+    use crate::coprocessors::processing_unit::definitions::{
+        all_condition_flags, all_instructions, all_shift_operands, all_shift_types, ConditionFlags,
+        ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
+        ShortImmediateInstructionData,
     };
+    use crate::instructions::encoding::decode_instruction;
 
     use super::encode_instruction;
 

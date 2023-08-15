@@ -1,6 +1,6 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::{instructions::definitions::Instruction, registers::Registers};
+use crate::{coprocessors::processing_unit::definitions::Instruction, registers::Registers};
 
 use super::{
     alu::{perform_alu_operation, AluOp},
