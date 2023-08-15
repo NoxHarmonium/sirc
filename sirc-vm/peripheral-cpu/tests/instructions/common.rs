@@ -3,9 +3,9 @@ use std::ops::Range;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
 };
+use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::{
-    instructions::encoding::encode_instruction, new_cpu_peripheral, registers::Registers,
-    CpuPeripheral, CYCLES_PER_INSTRUCTION,
+    new_cpu_peripheral, registers::Registers, CpuPeripheral, CYCLES_PER_INSTRUCTION,
 };
 use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
 

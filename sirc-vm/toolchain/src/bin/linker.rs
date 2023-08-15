@@ -18,7 +18,9 @@ use clap::Parser;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, INSTRUCTION_SIZE_WORDS,
 };
-use peripheral_cpu::instructions::encoding::{decode_instruction, encode_instruction};
+use peripheral_cpu::coprocessors::processing_unit::encoding::{
+    decode_instruction, encode_instruction,
+};
 
 use core::panic;
 use std::fs::{read, write};

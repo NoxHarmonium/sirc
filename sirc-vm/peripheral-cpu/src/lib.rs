@@ -26,14 +26,11 @@ extern crate quickcheck_macros;
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod coprocessors;
-pub mod execution;
-pub mod instructions;
-pub mod microcode;
 pub mod registers;
 
-use coprocessors::{exception_unit::registers::ExceptionUnitRegisters, shared::Executor};
+use coprocessors::shared::Executor;
 use peripheral_mem::MemoryPeripheral;
-use registers::FullAddress;
+use registers::{ExceptionUnitRegisters, FullAddress};
 
 use crate::registers::Registers;
 

@@ -1,15 +1,13 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    coprocessors::exception_unit::definitions::vectors,
-    instructions::fetch::fetch_instruction,
-    registers::{get_interrupt_mask, FullAddressRegisterAccess, Registers},
+    coprocessors::{exception_unit::definitions::vectors, shared::fetch_instruction},
+    registers::{get_interrupt_mask, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers},
     CYCLES_PER_INSTRUCTION,
 };
 
 use super::super::super::Error;
 use super::super::shared::Executor;
-use super::registers::ExceptionUnitRegisters;
 use crate::registers::FullAddress;
 use crate::registers::{set_interrupt_mask, set_sr_bit, StatusRegisterFields};
 

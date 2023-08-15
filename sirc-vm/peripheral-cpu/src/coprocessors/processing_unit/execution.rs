@@ -1,15 +1,15 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::coprocessors::exception_unit::registers::ExceptionUnitRegisters;
 use crate::coprocessors::processing_unit::definitions::Instruction;
-use crate::coprocessors::shared::Executor;
-use crate::execution::execution_effective_address::ExecutionEffectiveAddressExecutor;
-use crate::execution::fetch_and_decode::decode_and_register_fetch;
-use crate::execution::memory_access::MemoryAccessExecutor;
-use crate::execution::shared::{IntermediateRegisters, StageExecutor};
-use crate::execution::write_back::WriteBackExecutor;
-use crate::instructions::fetch::fetch_instruction;
-use crate::registers::{sr_bit_is_set, Registers, SegmentedRegisterAccess, StatusRegisterFields};
+use crate::coprocessors::processing_unit::stages::execution_effective_address::ExecutionEffectiveAddressExecutor;
+use crate::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
+use crate::coprocessors::processing_unit::stages::memory_access::MemoryAccessExecutor;
+use crate::coprocessors::processing_unit::stages::shared::{IntermediateRegisters, StageExecutor};
+use crate::coprocessors::processing_unit::stages::write_back::WriteBackExecutor;
+use crate::coprocessors::shared::{fetch_instruction, Executor};
+use crate::registers::{
+    sr_bit_is_set, ExceptionUnitRegisters, Registers, SegmentedRegisterAccess, StatusRegisterFields,
+};
 use crate::{Error, CYCLES_PER_INSTRUCTION};
 
 pub struct ProcessingUnitExecutor {}

@@ -30,7 +30,7 @@ const CONDITION_FLAGS_MASK: u32 = 0x0000_000F;
 /// This is the same for every instruction type
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::decode_instruction_id;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::decode_instruction_id;
 ///
 /// assert_eq!(decode_instruction_id([0x00, 0x00, 0x00, 0x00]), 0);
 /// assert_eq!(decode_instruction_id([0xA0, 0x00, 0x00, 0x00]), 40);
@@ -90,7 +90,7 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::{decode_implied_instruction};
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::{decode_implied_instruction};
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ImpliedInstructionData, ConditionFlags};
 ///
 /// assert_eq!(decode_implied_instruction([0xF1, 0xBF, 0xEA, 0x80]), ImpliedInstructionData {
@@ -126,7 +126,7 @@ pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructio
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::{decode_immediate_instruction, encode_immediate_instruction};
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::{decode_immediate_instruction, encode_immediate_instruction};
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ImmediateInstructionData, ConditionFlags};
 ///
 /// assert_eq!(decode_immediate_instruction([0x08, 0xBF, 0xEA, 0x80]), ImmediateInstructionData {
@@ -178,7 +178,7 @@ pub fn decode_immediate_instruction(raw_instruction: [u8; 4]) -> ImmediateInstru
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::{decode_short_immediate_instruction, encode_immediate_instruction};
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::{decode_short_immediate_instruction, encode_immediate_instruction};
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ShortImmediateInstructionData, ConditionFlags, ShiftType, ShiftOperand};
 ///
 /// assert_eq!(decode_short_immediate_instruction([0x08, 0xBF, 0xEA, 0x80]), ShortImmediateInstructionData {
@@ -243,7 +243,7 @@ pub fn decode_short_immediate_instruction(
 ///
 /// ```
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
-/// use peripheral_cpu::instructions::encoding::decode_register_instruction;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::decode_register_instruction;
 ///
 /// assert_eq!(decode_register_instruction([0xDA, 0xAF, 0x08, 0xEA]), RegisterInstructionData {
 ///     op_code: Instruction::XorRegister,
@@ -388,7 +388,7 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::encode_implied_instruction;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::encode_implied_instruction;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
 ///
 /// assert_eq!(encode_implied_instruction(&ImpliedInstructionData {
@@ -424,7 +424,7 @@ pub fn encode_implied_instruction(
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::encode_immediate_instruction;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::encode_immediate_instruction;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ImmediateInstructionData, ConditionFlags, Instruction};
 ///
 ///
@@ -477,7 +477,7 @@ pub fn encode_immediate_instruction(
 /// 4 bit conditions flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::encode_short_immediate_instruction;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::encode_short_immediate_instruction;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ShortImmediateInstructionData, ConditionFlags, Instruction, ShiftOperand, ShiftType};
 ///
 ///
@@ -538,7 +538,7 @@ pub fn encode_short_immediate_instruction(
 /// 4 bit condition flags
 ///
 /// ```
-/// use peripheral_cpu::instructions::encoding::encode_register_instruction;
+/// use peripheral_cpu::coprocessors::processing_unit::encoding::encode_register_instruction;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{RegisterInstructionData, ConditionFlags, Instruction, ShiftType, ShiftOperand};
 ///
 /// assert_eq!(encode_register_instruction(&RegisterInstructionData {
@@ -682,7 +682,7 @@ mod tests {
         ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
         ShortImmediateInstructionData,
     };
-    use crate::instructions::encoding::decode_instruction;
+    use crate::coprocessors::processing_unit::encoding::decode_instruction;
 
     use super::encode_instruction;
 

@@ -1,15 +1,12 @@
+use super::{alu::perform_shift, shared::DecodedInstruction};
 use crate::coprocessors::processing_unit::definitions::{
     Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS,
 };
-use crate::{
-    instructions::encoding::{
-        decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
-        decode_short_immediate_instruction,
-    },
-    registers::Registers,
+use crate::coprocessors::processing_unit::encoding::{
+    decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
+    decode_short_immediate_instruction,
 };
-
-use super::{alu::perform_shift, shared::DecodedInstruction};
+use crate::registers::Registers;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
 enum FetchAndDecodeStepInstructionType {
@@ -77,7 +74,7 @@ fn do_shift(
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set, StatusRegisterFields, set_sr_bit};
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ConditionFlags, StatusRegisterUpdateSource};
-/// use peripheral_cpu::execution::fetch_and_decode::decode_and_register_fetch;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
 ///
 /// let mut registers = Registers::default();
 /// registers.r4 = 0xCE;
