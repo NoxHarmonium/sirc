@@ -13,3 +13,4 @@ run: store-load.bin
 
 clean:
 	rm -f store-load.bin store-load.o
+	cargo clean

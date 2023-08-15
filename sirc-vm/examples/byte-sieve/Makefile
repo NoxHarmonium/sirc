@@ -24,3 +24,4 @@ actual.hex: mem.bin expected.hex
 
 clean:
 	rm -f byte-sieve.bin byte-sieve.o actual.hex mem.bin
+	cargo clean

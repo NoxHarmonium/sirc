@@ -13,3 +13,4 @@ run: boring.bin
 
 clean:
 	rm -f boring.bin boring.o
+	cargo clean
