@@ -18,3 +18,4 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 mod instructions;
+mod exceptions;

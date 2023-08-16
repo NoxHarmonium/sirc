@@ -20,6 +20,10 @@ impl Executor for ExceptionUnitExecutor {
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error> {
+        // TODO: Implement return from exception
+        // TODO: Implement hardware exception triggers
+        // TODO: Implement waiting for exception
+
         let vector = (eu_registers.cause_register & 0xFF) as u8;
 
         // Fetch the vector address

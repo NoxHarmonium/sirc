@@ -43,6 +43,7 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+#[derive(Clone)]
 pub struct CpuPeripheral<'a> {
     pub memory_peripheral: &'a MemoryPeripheral,
     pub registers: Registers,
@@ -87,20 +88,16 @@ impl CpuPeripheral<'_> {
             // TODO: call exception step instead if eu registers have pending value
 
             let result = match self.eu_registers.cause_register & 0xF000 {
-                0x0000..=0x0FFF => {
-                    coprocessors::processing_unit::execution::ProcessingUnitExecutor::step(
-                        &mut self.registers,
-                        &mut self.eu_registers,
-                        self.memory_peripheral,
-                    )
-                }
-                0x1000..=0x2FFF => {
-                    coprocessors::exception_unit::execution::ExceptionUnitExecutor::step(
-                        &mut self.registers,
-                        &mut self.eu_registers,
-                        self.memory_peripheral,
-                    )
-                }
+                0x0000 => coprocessors::processing_unit::execution::ProcessingUnitExecutor::step(
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
+                0x1000 => coprocessors::exception_unit::execution::ExceptionUnitExecutor::step(
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
                 _ => {
                     // TODO: Work out what would happen in hardware here
                     // Do we want another coprocessor (multiplication?)

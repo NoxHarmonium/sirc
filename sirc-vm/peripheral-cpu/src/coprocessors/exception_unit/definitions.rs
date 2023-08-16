@@ -36,25 +36,7 @@ pub mod vectors {
 
     // ...more reserved vectors...
 
-    // 16 Unimplemented instruction vectors...
-
-    // These are useful for implementing "forward compatibility" with later
-    // CPU versions. For example, if a new CPU version comes out that adds
-    // new instructions, and a program is written that uses these instructions,
-    // but is run on the older version of the CPU, these vectors will be triggered.
-    // and the new CPU features can be emulated in software.
-    //
-    // Due to the instruction encoding, the number of instructions is limited to
-    // 5 bits (64 instructions). The last 16 instruction opcodes (0x30-0x3F) map
-    // to each of these vectors (e.g. 0x30 will trigger vector 0xFF70, 0x31 will
-    // trigger vector 0x0FF72 and so on...)
-
-    /// The start address of the 16 word range of unimplemented instruction vectors
-    pub const UNIMPLEMENTED_INSTRUCTION_START: u16 = 0x60;
-    /// The end address of the 16 word range of unimplemented instruction vectors
-    pub const UNIMPLEMENTED_INSTRUCTION_END: u16 = 0x7F;
-
-    // 64 user exception vectors triggered by the EXCP instruction (e.g. a TRAP on the 68k)
+    // 128 user exception vectors triggered by the EXCP instruction (e.g. a TRAP on the 68k)
 
     pub const USER_EXCEPTION_VECTOR_START: u16 = 0x80;
     pub const USER_EXCEPTION_VECTOR_END: u16 = 0xFF;

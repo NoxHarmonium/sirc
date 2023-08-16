@@ -2,7 +2,7 @@ use peripheral_mem::MemoryPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
-    registers::{Registers, SegmentedAddress},
+    registers::{ExceptionUnitRegisters, Registers, SegmentedAddress},
 };
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
@@ -42,6 +42,7 @@ impl StageExecutor for MemoryAccessExecutor {
     fn execute(
         decoded: &DecodedInstruction,
         registers: &mut Registers,
+        _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         mem: &MemoryPeripheral,
     ) {

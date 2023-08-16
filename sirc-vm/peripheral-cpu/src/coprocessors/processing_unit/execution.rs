@@ -47,18 +47,21 @@ impl Executor for ProcessingUnitExecutor {
         ExecutionEffectiveAddressExecutor::execute(
             &decoded_instruction,
             registers,
+            eu_registers,
             &mut intermediate_registers,
             mem,
         );
         MemoryAccessExecutor::execute(
             &decoded_instruction,
             registers,
+            eu_registers,
             &mut intermediate_registers,
             mem,
         );
         WriteBackExecutor::execute(
             &decoded_instruction,
             registers,
+            eu_registers,
             &mut intermediate_registers,
             mem,
         );

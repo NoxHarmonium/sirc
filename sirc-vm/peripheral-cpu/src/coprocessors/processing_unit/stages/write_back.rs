@@ -2,7 +2,7 @@ use peripheral_mem::MemoryPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
-    registers::Registers,
+    registers::{ExceptionUnitRegisters, Registers},
 };
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
@@ -16,6 +16,7 @@ enum WriteBackInstructionType {
     AddressWrite,
     AddressWriteLoadPostDecrement,
     AddressWriteStorePreIncrement,
+    CoprocessorCall,
 }
 
 pub struct WriteBackExecutor;
@@ -32,16 +33,19 @@ fn decode_write_back_step_instruction_type(
 
     match num::ToPrimitive::to_u8(&instruction).unwrap() {
         0x00..=0x07 => WriteBackInstructionType::AluToRegister,
-        0x08..=0x0F => WriteBackInstructionType::AluStatusOnly,
+        0x08..=0x0E => WriteBackInstructionType::AluStatusOnly,
+        0x0F => WriteBackInstructionType::CoprocessorCall,
         0x10..=0x11 => WriteBackInstructionType::NoOp,
         0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreIncrement,
         0x14..=0x15 => WriteBackInstructionType::MemoryLoad,
         0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostDecrement,
         0x18..=0x1F => WriteBackInstructionType::AddressWrite,
         0x20..=0x27 => WriteBackInstructionType::AluToRegister,
-        0x28..=0x2F => WriteBackInstructionType::AluStatusOnly,
+        0x28..=0x2E => WriteBackInstructionType::AluStatusOnly,
+        0x2F => WriteBackInstructionType::CoprocessorCall,
         0x30..=0x37 => WriteBackInstructionType::AluToRegister,
-        0x38..=0x3F => WriteBackInstructionType::AluStatusOnly,
+        0x38..=0x3E => WriteBackInstructionType::AluStatusOnly,
+        0x3F => WriteBackInstructionType::CoprocessorCall,
         _ => panic!("No mapping for [{instruction:?}] to WriteBackInstructionType"),
     }
 }
@@ -67,6 +71,7 @@ impl StageExecutor for WriteBackExecutor {
     fn execute(
         decoded: &DecodedInstruction,
         registers: &mut Registers,
+        eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         _: &MemoryPeripheral,
     ) {
@@ -102,6 +107,10 @@ impl StageExecutor for WriteBackExecutor {
             WriteBackInstructionType::AddressWriteStorePreIncrement => {
                 registers[decoded.ad_h] = decoded.ad_h_;
                 registers[decoded.ad_l] = intermediate_registers.address_output;
+            }
+            WriteBackInstructionType::CoprocessorCall => {
+                eu_registers.cause_register = intermediate_registers.alu_output;
+                eu_registers.exception_level = 1; // Software exceptions are always one
             }
         }
     }
