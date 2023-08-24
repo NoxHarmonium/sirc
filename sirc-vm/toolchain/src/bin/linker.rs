@@ -46,7 +46,8 @@ struct Args {
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    clippy::cast_lossless
 )]
 fn main() -> io::Result<()> {
     let args = Args::parse();
@@ -69,7 +70,13 @@ fn main() -> io::Result<()> {
             .symbols
             .iter()
             .find(|symbol| symbol.name == symbol_ref.name)
-            .unwrap();
+            .unwrap_or_else(|| {
+                panic!(
+                    "Cannot find symbol [{}] in symbol definitions. Check you have a label with that name defined in your program.",
+                    symbol_ref.name
+                );
+            });
+
         // TODO: Clear up confusion between byte addressing and instruction addressing
         let target_offset_words =
             (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
@@ -118,57 +125,79 @@ fn main() -> io::Result<()> {
             RefType::SmallOffset => {
                 panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
             }
+            // TODO: I think LowerWord and UpperWord should be absolute, not relative?
             RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
             RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
+            RefType::FullAddress => {
+                panic!("RefType should not be FullAddress when resolving for instructions (try the DQ directive)")
+            }
             RefType::Implied => {
                 panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
             }
         };
 
-        let instruction = decode_instruction(raw_instruction);
-        let patched_instruction = match instruction {
-            InstructionData::Immediate(data) => match data.op_code {
-                Instruction::BranchToSubroutineWithImmediateDisplacement
-                | Instruction::BranchWithImmediateDisplacement
-                | Instruction::LoadRegisterFromImmediate
-                | Instruction::LoadRegisterFromIndirectImmediate
-                | Instruction::StoreRegisterToIndirectImmediate => {
-                    InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: data.op_code,
-                        register: data.register,
-                        value: calculate_16_bit_value(),
-                        condition_flag: data.condition_flag,
-                        additional_flags: data.additional_flags,
-                    })
-                }
-                // Instruction::LoadEffectiveAddressIndirectImmediate(data) => {
-                //     Instruction::LoadEffectiveAddressIndirectImmediate(
-                //         LoadEffectiveAddressFromIndirectImmediateData {
-                //             data: ImmediateInstructionData {
-                //                 register: data.register,
-                //                 value: calculate_16_bit_value(),
-                //                 condition_flag: data.condition_flag,
-                //                 additional_flags: data.additional_flags,
-                //             },
-                //         },
-                //     )
-                // }
-                _ => panic!(
-                    "Can't patch address/offset for instruction: {:?}",
-                    data.op_code
-                ),
-            },
-            _ => panic!(
-                "Can't patch address/offset for instruction: {:?}",
-                instruction
-            ),
+        let calculate_32_bit_value = || match symbol_ref.ref_type {
+            // TODO: Support other ref types
+            // TODO: Support DB and DW
+            RefType::FullAddress => target_offset_words,
+            _ => {
+                panic!("Only FullAddress ref type currectly supported for data directives")
+            }
         };
 
-        let raw_patched_instruction = encode_instruction(&patched_instruction);
+        if symbol_ref.data_only {
+            // TODO: Allow 32 bit values here
+            let value_to_insert = calculate_32_bit_value();
+            let value_to_insert_bytes = u32::to_be_bytes(value_to_insert);
+            // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
+            linked_program[program_offset_bytes..=program_offset_bytes + 3]
+                .copy_from_slice(&value_to_insert_bytes);
+        } else {
+            let instruction = decode_instruction(raw_instruction);
+            let patched_instruction = match instruction {
+                InstructionData::Immediate(data) => match data.op_code {
+                    Instruction::BranchToSubroutineWithImmediateDisplacement
+                    | Instruction::BranchWithImmediateDisplacement
+                    | Instruction::LoadRegisterFromImmediate
+                    | Instruction::LoadRegisterFromIndirectImmediate
+                    | Instruction::StoreRegisterToIndirectImmediate => {
+                        InstructionData::Immediate(ImmediateInstructionData {
+                            op_code: data.op_code,
+                            register: data.register,
+                            value: calculate_16_bit_value(),
+                            condition_flag: data.condition_flag,
+                            additional_flags: data.additional_flags,
+                        })
+                    }
+                    // Instruction::LoadEffectiveAddressIndirectImmediate(data) => {
+                    //     Instruction::LoadEffectiveAddressIndirectImmediate(
+                    //         LoadEffectiveAddressFromIndirectImmediateData {
+                    //             data: ImmediateInstructionData {
+                    //                 register: data.register,
+                    //                 value: calculate_16_bit_value(),
+                    //                 condition_flag: data.condition_flag,
+                    //                 additional_flags: data.additional_flags,
+                    //             },
+                    //         },
+                    //     )
+                    // }
+                    _ => panic!(
+                        "Can't patch address/offset for instruction: {:?}",
+                        data.op_code
+                    ),
+                },
+                _ => panic!(
+                    "Can't patch address/offset for instruction: {:?}",
+                    instruction
+                ),
+            };
 
-        // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
-        linked_program[program_offset_bytes..=program_offset_bytes + 3]
-            .copy_from_slice(&raw_patched_instruction);
+            let raw_patched_instruction = encode_instruction(&patched_instruction);
+
+            // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
+            linked_program[program_offset_bytes..=program_offset_bytes + 3]
+                .copy_from_slice(&raw_patched_instruction);
+        }
     }
 
     write(args.output_file, linked_program)?;

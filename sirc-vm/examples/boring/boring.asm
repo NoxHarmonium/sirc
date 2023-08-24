@@ -1,3 +1,9 @@
+; Reserved space for 128x32 bit exception vectors
+.ORG 0x0000
+DQ @init
+
+.ORG 0x0100
+
 :init
 LOAD    r1, #5
 LOAD    r2, #3

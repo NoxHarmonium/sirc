@@ -10,6 +10,8 @@ pub enum RefType {
     LowerWord,
     /// The upper 8 bits of a full 24-bit address of the target (8 bits are ignored)
     UpperWord,
+    /// Full 24 bit program address. Only supported with the DQ directive, can not fit in instructions
+    FullAddress,
     /// Automatically determine the ref type based on the instruction
     Implied,
 }
@@ -25,6 +27,7 @@ pub struct SymbolRef {
     pub name: String,
     pub offset: u32,
     pub ref_type: RefType,
+    pub data_only: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

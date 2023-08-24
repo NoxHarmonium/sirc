@@ -100,7 +100,7 @@ fn main() {
     };
     let mut memory_peripheral = new_memory_peripheral();
 
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
+    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0, 0xFFFF, false);
     memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {
@@ -126,6 +126,11 @@ fn main() {
     }
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
+
+    // TODO: This is a quick hack
+    // formalise this (use exception unit?)
+    cpu_peripheral.registers.ph = memory_peripheral.read_address(0x0);
+    cpu_peripheral.registers.pl = memory_peripheral.read_address(0x1);
 
     let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
         Ok(actual_clocks_executed) => {

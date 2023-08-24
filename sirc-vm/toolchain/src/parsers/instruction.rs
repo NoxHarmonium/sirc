@@ -17,9 +17,11 @@ use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use crate::types::object::{RefType, SymbolDefinition};
 
+use super::data::{parse_data, DataType};
 use super::opcodes;
 use super::shared::{
-    lexeme, parse_comma_sep, parse_label, parse_number, parse_symbol_reference, AsmResult,
+    lexeme, parse_comma_sep, parse_label, parse_number, parse_origin, parse_symbol_reference,
+    AsmResult,
 };
 
 #[derive(Debug)]
@@ -40,6 +42,17 @@ pub struct InstructionToken {
 }
 
 #[derive(Debug)]
+pub struct OriginToken {
+    pub offset: u32,
+}
+
+#[derive(Debug)]
+pub struct DataToken {
+    pub size_bytes: u8,
+    pub value: DataType,
+}
+
+#[derive(Debug)]
 pub enum Address {
     Value(u32),
     SymbolRef(String),
@@ -50,6 +63,8 @@ pub enum Token {
     Comment,
     Label(LabelToken),
     Instruction(InstructionToken),
+    Origin(OriginToken),
+    Data(DataToken),
 }
 
 pub fn override_ref_token_type_if_implied(
@@ -126,10 +141,11 @@ pub enum AddressingMode {
     ShiftDefinition(ShiftDefinitionData),
 }
 
-fn parse_value(i: &str) -> AsmResult<ImmediateType> {
+#[allow(clippy::cast_possible_truncation)]
+pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
     alt((
-        // TODO: Add hash before number!
-        map(parse_number, ImmediateType::Value).context("number"),
+        // TODO: Check this cast down to u16?
+        map(parse_number, |n| ImmediateType::Value(n as u16)).context("number"),
         map(parse_symbol_reference, |ref_token| {
             ImmediateType::SymbolRef(ref_token)
         })
@@ -484,6 +500,32 @@ fn parse_label_token(i: &str) -> AsmResult<Token> {
     ))
 }
 
+fn parse_origin_token(i: &str) -> AsmResult<Token> {
+    let (i, offset) = parse_origin(i)?;
+    Ok((i, Token::Origin(OriginToken { offset })))
+}
+
+fn parse_data_token(i: &str) -> AsmResult<Token> {
+    let (i, (size_bytes, value)) = parse_data(i)?;
+
+    let override_value = match value {
+        // TODO: Is there a better way to do this without the ugly unwrap/wrap
+        DataType::Value(value) => DataType::Value(value),
+        DataType::SymbolRef(ref_token) => DataType::SymbolRef(override_ref_token_type_if_implied(
+            &ref_token,
+            RefType::FullAddress,
+        )),
+    };
+
+    Ok((
+        i,
+        Token::Data(DataToken {
+            size_bytes,
+            value: override_value,
+        }),
+    ))
+}
+
 // TODO: Create object file struct and serialize with serde
 // Addresses are replaced with indexes to object table and resolved by linker
 pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
@@ -492,6 +534,8 @@ pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
             parse_comment.context("comment"),
             parse_instruction_token.context("instruction"),
             parse_label_token.context("label"),
+            parse_origin_token.context("origin"),
+            parse_data_token.context("data"),
         )),
         multispace0,
         eof,

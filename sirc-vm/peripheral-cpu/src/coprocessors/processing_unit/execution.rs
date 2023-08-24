@@ -70,6 +70,8 @@ impl Executor for ProcessingUnitExecutor {
             return Err(Error::ProcessorHalted(*registers));
         }
 
+        println!("step: {decoded_instruction:X?}");
+
         Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
     }
 }

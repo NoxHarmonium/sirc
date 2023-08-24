@@ -1,8 +1,14 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    coprocessors::{exception_unit::definitions::vectors, shared::fetch_instruction},
-    registers::{get_interrupt_mask, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers},
+    coprocessors::{
+        exception_unit::definitions::vectors, processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
+        shared::fetch_instruction,
+    },
+    registers::{
+        get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
+        FullAddressRegisterAccess, Registers,
+    },
     CYCLES_PER_INSTRUCTION,
 };
 
@@ -24,29 +30,62 @@ impl Executor for ExceptionUnitExecutor {
         // TODO: Implement hardware exception triggers
         // TODO: Implement waiting for exception
 
+        let op = (eu_registers.cause_register & 0x0F00) >> 8;
         let vector = (eu_registers.cause_register & 0xFF) as u8;
 
         // Fetch the vector address
         let vector_address_bytes = fetch_instruction(
             mem,
-            (registers.system_ram_offset + vector as u32).to_segmented_address(),
+            (registers.system_ram_offset + (vector as u32 * INSTRUCTION_SIZE_WORDS))
+                .to_segmented_address(),
         );
         let vector_address = u32::from_be_bytes(vector_address_bytes);
-
-        // Store the current PC into the windowed interrupt register
         let current_interrupt_mask: u8 = get_interrupt_mask(registers);
 
-        if current_interrupt_mask >= eu_registers.exception_level {
-            // Note: Interrupt level seven cannot be interrupted
-            return Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION));
+        match op {
+            0x01 => {
+                // WAIT
+                println!("WAIT!");
+            }
+            0x02 => {
+                // RETE
+                // Store current windowed link register to PC and jump to vector
+                let ExceptionLinkRegister {
+                    return_address,
+                    return_exception_mask,
+                } = eu_registers.link_registers[current_interrupt_mask as usize];
+
+                registers.set_full_pc_address(return_address);
+
+                set_interrupt_mask(registers, return_exception_mask);
+            }
+            0x04 => {
+                // EXCP
+                // Store the current PC into the windowed interrupt register
+
+                if current_interrupt_mask >= eu_registers.exception_level {
+                    // Note: Interrupt level seven cannot be interrupted
+                    return Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION));
+                }
+
+                // Store current PC in windowed link register and jump to vector
+                eu_registers.link_registers[eu_registers.exception_level as usize] =
+                    ExceptionLinkRegister {
+                        return_address: registers.get_full_pc_address(),
+                        return_exception_mask: eu_registers.exception_level,
+                    };
+
+                registers.set_full_pc_address(vector_address);
+
+                set_interrupt_mask(registers, eu_registers.exception_level);
+            }
+            _ => {
+                // TODO: Real CPU can't panic. Work out what should actually happen here (probably nothing)
+                panic!("Unimplemented op code [{op:X}] for exception co-processor")
+            }
         }
 
-        // Store current PC in windowed link register and jump to vector
-        eu_registers.link_registers[eu_registers.exception_level as usize] =
-            registers.get_full_pc_address();
-        registers.set_full_pc_address(vector_address);
-
-        set_interrupt_mask(registers, eu_registers.exception_level);
+        eu_registers.cause_register = 0x0;
 
         Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
     }

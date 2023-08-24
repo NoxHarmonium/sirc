@@ -1,5 +1,10 @@
 ; https://rosettacode.org/wiki/Sieve_of_Eratosthenes
 
+; Reserved space for 128x32 bit exception vectors
+.ORG 0x0000
+DQ @main
+
+.ORG 0x0100
 :main
 
 ; File I/O segment
