@@ -15,6 +15,8 @@ use crate::{Error, CYCLES_PER_INSTRUCTION};
 pub struct ProcessingUnitExecutor {}
 
 impl Executor for ProcessingUnitExecutor {
+    const COPROCESSOR_ID: u8 = 0;
+
     #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(
         registers: &'a mut Registers,

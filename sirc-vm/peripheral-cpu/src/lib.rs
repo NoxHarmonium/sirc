@@ -28,7 +28,10 @@ extern crate quickcheck_macros;
 pub mod coprocessors;
 pub mod registers;
 
-use coprocessors::shared::Executor;
+use coprocessors::{
+    exception_unit::execution::ExceptionUnitExecutor,
+    processing_unit::execution::ProcessingUnitExecutor, shared::Executor,
+};
 use peripheral_mem::MemoryPeripheral;
 use registers::{ExceptionUnitRegisters, FullAddress};
 
@@ -36,6 +39,11 @@ use crate::registers::Registers;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
+
+pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
+pub const COPROCESSOR_ID_LENGTH: u16 = 12;
+pub const RESET_CAUSE_VALUE: u16 =
+    (ExceptionUnitExecutor::COPROCESSOR_ID as u16) << COPROCESSOR_ID_LENGTH;
 
 #[derive(Debug)]
 pub enum Error {
@@ -79,21 +87,31 @@ pub fn new_cpu_peripheral<'a>(
 }
 
 impl CpuPeripheral<'_> {
+    fn decode_processor_id(cause_register_value: u16) -> u8 {
+        ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
+    }
+
+    pub fn reset(&mut self) {
+        // Will cause the exception coprocessor to jump to reset vector
+        //.and clear transient state
+        self.eu_registers.cause_register = RESET_CAUSE_VALUE;
+    }
+
     ///
     /// # Panics
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
         let mut clocks: u32 = 0;
         loop {
-            // TODO: call exception step instead if eu registers have pending value
-
-            let result = match self.eu_registers.cause_register & 0xF000 {
-                0x0000 => coprocessors::processing_unit::execution::ProcessingUnitExecutor::step(
+            let coprocessor_id: u8 =
+                CpuPeripheral::decode_processor_id(self.eu_registers.cause_register);
+            let result = match coprocessor_id {
+                ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
                     &mut self.registers,
                     &mut self.eu_registers,
                     self.memory_peripheral,
                 ),
-                0x1000 => coprocessors::exception_unit::execution::ExceptionUnitExecutor::step(
+                ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
                     &mut self.registers,
                     &mut self.eu_registers,
                     self.memory_peripheral,
@@ -101,7 +119,7 @@ impl CpuPeripheral<'_> {
                 _ => {
                     // TODO: Work out what would happen in hardware here
                     // Do we want another coprocessor (multiplication?)
-                    panic!("This coprocessor not implemented yet")
+                    panic!("Coprocessor ID [{coprocessor_id}] not implemented yet")
                 }
             };
 

@@ -11,6 +11,9 @@ boring.bin: boring.o
 run: boring.bin
 	cargo run --bin sbrc_vm -- --program-file ./boring.bin
 
+check: run
+	# TODO: Implement an actual check
+
 clean:
 	rm -f boring.bin boring.o
 	cargo clean

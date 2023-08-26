@@ -6,6 +6,8 @@ use crate::{
 };
 
 pub trait Executor {
+    const COPROCESSOR_ID: u8;
+
     fn step<'a>(
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,

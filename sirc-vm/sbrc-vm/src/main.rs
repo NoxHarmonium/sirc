@@ -127,10 +127,8 @@ fn main() {
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
-    // TODO: This is a quick hack
-    // formalise this (use exception unit?)
-    cpu_peripheral.registers.ph = memory_peripheral.read_address(0x0);
-    cpu_peripheral.registers.pl = memory_peripheral.read_address(0x1);
+    // Jump to reset vector
+    cpu_peripheral.reset();
 
     let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
         Ok(actual_clocks_executed) => {

@@ -11,6 +11,9 @@ software-exception.bin: software-exception.o
 run: software-exception.bin
 	cargo run --bin sbrc_vm -- --program-file ./software-exception.bin
 
+check: run
+	# TODO: Implement an actual check
+
 clean:
 	rm -f software-exception.bin software-exception.o
 	cargo clean

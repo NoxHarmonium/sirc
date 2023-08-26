@@ -11,6 +11,9 @@ store-load.bin: store-load.o
 run: store-load.bin
 	cargo run --bin sbrc_vm -- --program-file ./store-load.bin
 
+check: run
+	# TODO: Implement an actual check
+
 clean:
 	rm -f store-load.bin store-load.o
 	cargo clean
