@@ -9,7 +9,7 @@ store-load.bin: store-load.o
 	cargo run --bin linker -- --segment-offset 0 --output-file store-load.bin store-load.o
 
 run: store-load.bin
-	cargo run --bin sbrc_vm -- --program-file ./store-load.bin
+	cargo run --bin sbrc_vm -- --program-file ./store-load.bin --segment scratch:00080000:FFFF
 
 check: run
 	# TODO: Implement an actual check
