@@ -708,7 +708,7 @@ mod tests {
             .filter(|&i| !instruction_set.remove(i))
             .collect();
 
-        let missing_op_codes: Vec<&Instruction> = vec![a, b, c].iter().flatten().copied().collect();
+        let missing_op_codes: Vec<&Instruction> = [a, b, c].iter().flatten().copied().collect();
 
         assert_eq!(valid_op_code_count_total, instructions.len());
         assert_eq!(missing_op_codes, Vec::<&Instruction>::new());
@@ -786,16 +786,17 @@ mod tests {
 
     #[quickcheck()]
     #[allow(clippy::needless_pass_by_value)]
-    fn decoding_fuzz_test((a, b, c, d): (u8, u8, u8, u8)) -> bool {
+    fn decoding_fuzz_test(values: (u8, u8, u8, u8)) -> bool {
         // This just simply tests that the decoder will accept any input
         // just like the real CPU would
-        let decoded = decode_instruction([a, b, c, d]);
+        let value_array = <[u8; 4]>::from(values);
+        let decoded = decode_instruction(value_array);
         let op_code = match decoded {
             InstructionData::Immediate(data) => data.op_code,
             InstructionData::ShortImmediate(data) => data.op_code,
             InstructionData::Register(data) => data.op_code,
         };
-        num::ToPrimitive::to_u8(&op_code).unwrap() == a >> 2
+        num::ToPrimitive::to_u8(&op_code).unwrap() == value_array[0] >> 2
     }
 
     #[test]
