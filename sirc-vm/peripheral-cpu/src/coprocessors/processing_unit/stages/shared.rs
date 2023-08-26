@@ -1,8 +1,10 @@
 use peripheral_mem::MemoryPeripheral;
 
 use crate::{
-    instructions::definitions::{ConditionFlags, Instruction, StatusRegisterUpdateSource},
-    registers::Registers,
+    coprocessors::processing_unit::definitions::{
+        ConditionFlags, Instruction, StatusRegisterUpdateSource,
+    },
+    registers::{ExceptionUnitRegisters, Registers},
 };
 
 /**
@@ -61,6 +63,7 @@ pub trait StageExecutor {
     fn execute(
         decoded_instruction: &DecodedInstruction,
         registers: &mut Registers,
+        eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         // TODO: Only the memory access stage needs this. Maybe there is a clever way to only provide each stage what they need?
         mem: &MemoryPeripheral,

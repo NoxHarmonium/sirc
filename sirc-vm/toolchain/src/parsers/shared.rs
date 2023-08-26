@@ -9,7 +9,7 @@ use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
 use nom_supreme::tag::complete::tag;
-use peripheral_cpu::instructions::definitions::{ShiftOperand, ShiftType};
+use peripheral_cpu::coprocessors::processing_unit::definitions::{ShiftOperand, ShiftType};
 
 use crate::types::object::RefType;
 
@@ -34,10 +34,10 @@ fn parse_label_name_(i: &str) -> AsmResult<&str> {
     )
 }
 
-fn parse_hex_(i: &str) -> AsmResult<u16> {
+fn parse_hex_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     let (i, _) = tag("0x")(i)?;
     let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
-    let hex_parse_result = u16::from_str_radix(raw_digits, 16);
+    let hex_parse_result = T::from_str_radix(raw_digits, 16);
     hex_parse_result.map_or_else(
         |_| {
             Err(Err::Error(ErrorTree::Base {
@@ -49,26 +49,27 @@ fn parse_hex_(i: &str) -> AsmResult<u16> {
     )
 }
 
+// TODO: Allow u32 decimal
 #[allow(clippy::cast_sign_loss)]
-fn parse_dec_(i: &str) -> AsmResult<u16> {
+fn parse_dec_(i: &str) -> AsmResult<u32> {
     map_res(
         tuple((opt(one_of("+-")), recognize(digit1))),
         |(sign, number_string)| {
             sign.map_or_else(
-                || str::parse::<u16>(number_string),
+                || str::parse::<u32>(number_string),
                 |sign_value| {
                     // TODO: Re-concatenating the original string seems bad
                     // We should probably just get the original value or something
                     let full_number = format!("{sign_value}{number_string}");
                     // Signed numbers represented in parser as unsigned for simplicity
-                    str::parse::<i16>(full_number.as_str()).map(|signed| signed as u16)
+                    str::parse::<i32>(full_number.as_str()).map(|signed| signed as u32)
                 },
             )
         },
     )(i)
 }
 
-fn parse_number_(i: &str) -> AsmResult<u16> {
+fn parse_number_(i: &str) -> AsmResult<u32> {
     preceded(char('#'), alt((parse_hex, parse_dec)))(i)
 }
 
@@ -79,6 +80,12 @@ fn parse_comma_sep_(i: &str) -> AsmResult<()> {
 
 pub fn parse_label_(i: &str) -> AsmResult<&str> {
     preceded(char(':'), cut(parse_label_name_))(i)
+}
+
+pub fn parse_origin_(i: &str) -> AsmResult<u32> {
+    let (i, (_, value)) = tuple((lexeme(tag(".ORG")), alt((parse_hex, parse_dec))))(i)?;
+
+    Ok((i, value))
 }
 
 pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> {
@@ -113,15 +120,15 @@ pub fn parse_symbol_reference_(i: &str) -> AsmResult<RefToken> {
     ))
 }
 
-pub fn parse_hex(i: &str) -> AsmResult<u16> {
+pub fn parse_hex(i: &str) -> AsmResult<u32> {
     lexeme(parse_hex_)(i)
 }
 
-pub fn parse_dec(i: &str) -> AsmResult<u16> {
+pub fn parse_dec(i: &str) -> AsmResult<u32> {
     lexeme(parse_dec_)(i)
 }
 
-pub fn parse_number(i: &str) -> AsmResult<u16> {
+pub fn parse_number(i: &str) -> AsmResult<u32> {
     lexeme(parse_number_)(i)
 }
 
@@ -131,6 +138,10 @@ pub fn parse_comma_sep(i: &str) -> AsmResult<()> {
 
 pub fn parse_label(i: &str) -> AsmResult<&str> {
     lexeme(parse_label_)(i)
+}
+
+pub fn parse_origin(i: &str) -> AsmResult<u32> {
+    lexeme(parse_origin_)(i)
 }
 
 pub fn parse_symbol_reference(i: &str) -> AsmResult<RefToken> {

@@ -6,10 +6,14 @@ store-load.o: store-load.asm
 	cargo run --bin assembler -- --input-file store-load.asm --output-file store-load.o
 
 store-load.bin: store-load.o
-	cargo run --bin linker -- --segment-offset 256 --output-file store-load.bin store-load.o
+	cargo run --bin linker -- --segment-offset 0 --output-file store-load.bin store-load.o
 
 run: store-load.bin
-	cargo run --bin sbrc_vm -- --program-file ./store-load.bin
+	cargo run --bin sbrc_vm -- --program-file ./store-load.bin --segment scratch:00080000:FFFF
+
+check: run
+	# TODO: Implement an actual check
 
 clean:
 	rm -f store-load.bin store-load.o
+	cargo clean

@@ -7,7 +7,9 @@
     // Might be good practice but too much work for now
     clippy::missing_errors_doc,
     // Not stable yet - try again later
-    clippy::missing_const_for_fn
+    clippy::missing_const_for_fn,
+    // I have a lot of temporary panics for debugging that will probably be cleaned up
+    clippy::missing_panics_doc
 )]
 #![deny(warnings)]
 
@@ -100,7 +102,7 @@ fn main() {
     };
     let mut memory_peripheral = new_memory_peripheral();
 
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0100, 1024, false);
+    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0, 0xFFFF, false);
     memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {
@@ -126,6 +128,9 @@ fn main() {
     }
 
     let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
+
+    // Jump to reset vector
+    cpu_peripheral.reset();
 
     let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
         Ok(actual_clocks_executed) => {

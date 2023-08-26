@@ -579,3 +579,16 @@ pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
     let register_count = 16;
     start_index < register_count && end_index < register_count && end_index > start_index
 }
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
+pub struct ExceptionLinkRegister {
+    pub return_address: u32,
+    pub return_exception_mask: u8,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
+pub struct ExceptionUnitRegisters {
+    pub cause_register: u16,
+    pub exception_level: u8,
+    pub link_registers: [ExceptionLinkRegister; 7],
+}

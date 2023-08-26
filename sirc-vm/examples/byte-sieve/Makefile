@@ -11,7 +11,7 @@ byte-sieve.o: byte-sieve.asm
 	cargo run --bin assembler -- --input-file byte-sieve.asm --output-file byte-sieve.o
 
 byte-sieve.bin: byte-sieve.o
-	cargo run --bin linker -- --segment-offset 256 --output-file byte-sieve.bin byte-sieve.o
+	cargo run --bin linker -- --segment-offset 0 --output-file byte-sieve.bin byte-sieve.o
 
 mem.bin: byte-sieve.bin
 	rm -f ./mem.bin
@@ -24,3 +24,4 @@ actual.hex: mem.bin expected.hex
 
 clean:
 	rm -f byte-sieve.bin byte-sieve.o actual.hex mem.bin
+	cargo clean

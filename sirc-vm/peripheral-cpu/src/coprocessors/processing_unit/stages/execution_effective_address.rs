@@ -1,6 +1,9 @@
 use peripheral_mem::MemoryPeripheral;
 
-use crate::{instructions::definitions::Instruction, registers::Registers};
+use crate::{
+    coprocessors::processing_unit::definitions::Instruction,
+    registers::{ExceptionUnitRegisters, Registers},
+};
 
 use super::{
     alu::{perform_alu_operation, AluOp},
@@ -39,6 +42,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
     fn execute(
         decoded: &DecodedInstruction,
         _: &mut Registers,
+        _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         _: &MemoryPeripheral,
     ) {
@@ -50,7 +54,8 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         // TODO : Clean this up - make 0x8 a constant or put in function
         // bit 3 determines whether the ALU output is used or not
         // e.g. CMPI is a SUBI without storing ALU output
-        let simulate = alu_code & 0x8 == 0x8;
+        // 0xF is special (co processor call) which needs the value to be written
+        let simulate = alu_code != 0xF && alu_code & 0x8 == 0x8;
 
         let execution_step_instruction_type =
             decode_execution_step_instruction_type(decoded.ins, decoded);

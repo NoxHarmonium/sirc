@@ -7,7 +7,7 @@ use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
     ShiftType,
 };
@@ -21,7 +21,7 @@ use super::super::shared::AsmResult;
 /// ```
 /// use toolchain::parsers::opcodes::ljmp::ljmp;
 /// use toolchain::parsers::instruction::InstructionToken;
-/// use peripheral_cpu::instructions::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
+/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///

@@ -9,7 +9,9 @@
     // Might be good practice but too much work for now
     clippy::missing_errors_doc,
     // Not stable yet - try again later
-    clippy::missing_const_for_fn
+    clippy::missing_const_for_fn,
+    // I have a lot of temporary panics for debugging that will probably be cleaned up
+    clippy::missing_panics_doc
 )]
 #![deny(warnings)]
 
@@ -25,25 +27,25 @@ extern crate quickcheck_macros;
 
 // TODO: Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
-pub mod execution;
-pub mod instructions;
-pub mod microcode;
+pub mod coprocessors;
 pub mod registers;
 
-use instructions::definitions::Instruction;
+use coprocessors::{
+    exception_unit::execution::ExceptionUnitExecutor,
+    processing_unit::execution::ProcessingUnitExecutor, shared::Executor,
+};
 use peripheral_mem::MemoryPeripheral;
-use registers::{sr_bit_is_set, FullAddress, StatusRegisterFields};
+use registers::{ExceptionUnitRegisters, FullAddress};
 
-use crate::execution::execution_effective_address::ExecutionEffectiveAddressExecutor;
-use crate::execution::fetch_and_decode::decode_and_register_fetch;
-use crate::execution::memory_access::MemoryAccessExecutor;
-use crate::execution::shared::{IntermediateRegisters, StageExecutor};
-use crate::execution::write_back::WriteBackExecutor;
-use crate::instructions::fetch::fetch_instruction;
-use crate::registers::{Registers, SegmentedRegisterAccess};
+use crate::registers::Registers;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
+
+pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
+pub const COPROCESSOR_ID_LENGTH: u16 = 12;
+pub const RESET_CAUSE_VALUE: u16 =
+    (ExceptionUnitExecutor::COPROCESSOR_ID as u16) << COPROCESSOR_ID_LENGTH;
 
 #[derive(Debug)]
 pub enum Error {
@@ -51,9 +53,11 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+#[derive(Clone)]
 pub struct CpuPeripheral<'a> {
     pub memory_peripheral: &'a MemoryPeripheral,
     pub registers: Registers,
+    pub eu_registers: ExceptionUnitRegisters,
 }
 
 ///
@@ -80,75 +84,53 @@ pub fn new_cpu_peripheral<'a>(
             pl,
             ..Registers::default()
         },
+        eu_registers: ExceptionUnitRegisters::default(),
     }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn step<'a>(
-    registers: &'a mut Registers,
-    mem: &MemoryPeripheral,
-) -> Result<(&'a Registers, u32, Instruction), Error> {
-    // 1. Instruction Fetch (1/2)
-    // 2. Instruction Fetch (2/2)
-    let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
-
-    // 3. Decode/Register Fetch (ID)
-    let decoded_instruction = decode_and_register_fetch(raw_instruction, registers);
-
-    // Special instruction just for debugging purposes. Probably won't be in hardware
-    if decoded_instruction.ins == Instruction::CoprocessorCallImmediate
-        && decoded_instruction.sr_b_ == 0x14FF
-    {
-        return Err(Error::ProcessorHalted(*registers));
-    }
-
-    // TODO: On the real CPU these might have garbage in them?
-    // maybe it should only be zeroed on first run and shared between invocations
-    let mut intermediate_registers = IntermediateRegisters {
-        alu_output: 0,
-        alu_status_register: 0,
-        lmd: 0,
-        address_output: 0,
-    };
-
-    ExecutionEffectiveAddressExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-    MemoryAccessExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-    WriteBackExecutor::execute(
-        &decoded_instruction,
-        registers,
-        &mut intermediate_registers,
-        mem,
-    );
-
-    if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-        return Err(Error::ProcessorHalted(*registers));
-    }
-
-    // println!("step: {:X?} {:X?}", decoded_instruction.ins, registers);
-
-    Ok((registers, CYCLES_PER_INSTRUCTION, decoded_instruction.ins))
 }
 
 impl CpuPeripheral<'_> {
+    fn decode_processor_id(cause_register_value: u16) -> u8 {
+        ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
+    }
+
+    pub fn reset(&mut self) {
+        // Will cause the exception coprocessor to jump to reset vector
+        //.and clear transient state
+        self.eu_registers.cause_register = RESET_CAUSE_VALUE;
+    }
+
+    ///
+    /// # Panics
+    /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
         let mut clocks: u32 = 0;
         loop {
-            match step(&mut self.registers, self.memory_peripheral) {
+            let coprocessor_id: u8 =
+                CpuPeripheral::decode_processor_id(self.eu_registers.cause_register);
+            let result = match coprocessor_id {
+                ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
+                ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
+                _ => {
+                    // TODO: Work out what would happen in hardware here
+                    // Do we want another coprocessor (multiplication?)
+                    panic!("Coprocessor ID [{coprocessor_id}] not implemented yet")
+                }
+            };
+
+            match result {
                 Err(error) => {
                     println!("Execution stopped:\n{error:08x?}");
                     return Err(error);
                 }
-                Ok((_registers, instruction_clocks, _instruction)) => {
+                Ok((_registers, _eu_registers, instruction_clocks)) => {
                     // println!("{:?} {:?}", instruction, registers);
                     clocks += instruction_clocks;
 

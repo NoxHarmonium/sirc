@@ -1,6 +1,6 @@
 use peripheral_cpu::{
     self,
-    instructions::definitions::{
+    coprocessors::processing_unit::definitions::{
         ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
         ShiftType, StatusRegisterUpdateSource,
     },

@@ -2,7 +2,7 @@ use std::ops::Shl;
 
 use super::shared::IntermediateRegisters;
 use crate::{
-    instructions::definitions::ShiftType,
+    coprocessors::processing_unit::definitions::ShiftType,
     registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set_value, Registers, StatusRegisterFields},
 };
 
@@ -51,8 +51,8 @@ pub enum AluOp {
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields};
-/// use peripheral_cpu::execution::shared::IntermediateRegisters;
-/// use peripheral_cpu::execution::alu::perform_add;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::shared::IntermediateRegisters;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::alu::perform_add;
 ///
 /// // Thanks: https://stackoverflow.com/a/69125543/1153203
 ///
@@ -103,8 +103,8 @@ pub fn perform_add(a: u16, b: u16, intermediate_registers: &mut IntermediateRegi
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit_value};
-/// use peripheral_cpu::execution::shared::IntermediateRegisters;
-/// use peripheral_cpu::execution::alu::perform_add_with_carry;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::shared::IntermediateRegisters;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::alu::perform_add_with_carry;
 ///
 /// // Thanks: https://stackoverflow.com/a/69125543/1153203
 ///
@@ -165,8 +165,8 @@ pub fn perform_add_with_carry(
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields};
-/// use peripheral_cpu::execution::shared::IntermediateRegisters;
-/// use peripheral_cpu::execution::alu::perform_subtract;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::shared::IntermediateRegisters;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::alu::perform_subtract;
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///
@@ -222,8 +222,8 @@ pub fn perform_subtract(a: u16, b: u16, intermediate_registers: &mut Intermediat
 ///
 /// ```
 /// use peripheral_cpu::registers::{Registers, sr_bit_is_set_value, StatusRegisterFields, set_sr_bit_value};
-/// use peripheral_cpu::execution::shared::IntermediateRegisters;
-/// use peripheral_cpu::execution::alu::perform_subtract_with_carry;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::shared::IntermediateRegisters;
+/// use peripheral_cpu::coprocessors::processing_unit::stages::alu::perform_subtract_with_carry;
 ///
 /// // Thanks: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 ///

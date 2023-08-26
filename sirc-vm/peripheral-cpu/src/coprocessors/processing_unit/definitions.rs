@@ -45,7 +45,7 @@ use crate::registers::{sr_bit_is_set, Registers, StatusRegisterFields};
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;
 pub const INSTRUCTION_SIZE_BYTES: u32 = INSTRUCTION_SIZE_WORDS * 2;
 
-pub const MAX_SHIFT_COUNT: u16 = 15; // 4 bits (the size of the shift count in the instruction)
+pub const MAX_SHIFT_COUNT: u32 = 15; // 4 bits (the size of the shift count in the instruction)
 
 // Condition Flags
 

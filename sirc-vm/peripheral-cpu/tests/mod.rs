@@ -9,7 +9,9 @@
     // Might be good practice but too much work for now
     clippy::missing_errors_doc,
     // Not stable yet - try again later
-    clippy::missing_const_for_fn
+    clippy::missing_const_for_fn,
+    // I have a lot of temporary panics for debugging that will probably be cleaned up
+    clippy::missing_panics_doc
 )]
 #![deny(warnings)]
 
@@ -17,4 +19,5 @@ extern crate quickcheck;
 #[macro_use(quickcheck)]
 extern crate quickcheck_macros;
 
+mod exceptions;
 mod instructions;

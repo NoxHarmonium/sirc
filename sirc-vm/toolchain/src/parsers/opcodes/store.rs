@@ -11,7 +11,7 @@ use crate::{
 use nom::error::FromExternalError;
 use nom::{error::ErrorKind, sequence::tuple};
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::instructions::definitions::{
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
     ShiftType,
 };
