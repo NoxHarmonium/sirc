@@ -1,8 +1,10 @@
 ; https://rosettacode.org/wiki/Sieve_of_Eratosthenes
 
+.EQU $MAX_PRIME #1000
+
 ; Reserved space for 128x32 bit exception vectors
 .ORG 0x0000
-DQ @main
+.DQ @main
 
 .ORG 0x0100
 :main
@@ -25,7 +27,7 @@ LOAD    r2, #1
 
 STOR    (r1, a), r2
 ADDI    r1, #2
-CMPI    r1, #1000
+CMPI    r1, $MAX_PRIME
 BRAN|<= @1
 LOAD    r1, #3
 LOAD    r3, #1
@@ -44,12 +46,12 @@ LOAD    r2, r1
 :3
 STOR    (r2, a), r3
 ADDR    r2, r1
-CMPI    r2, #1000
+CMPI    r2, $MAX_PRIME
 BRAN|<= @3
 
 :4
 ADDI    r1, #2
-CMPI    r1, #1000
+CMPI    r1, $MAX_PRIME
 BRAN|<= @2
 
 :DONE

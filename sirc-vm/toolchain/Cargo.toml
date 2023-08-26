@@ -13,3 +13,7 @@ postcard = { version = "1.0.6", features = ["alloc"] }
 serde = "1.0.186"
 bytemuck = "1.13.1"
 num-traits = "0.2"
+
+[dev-dependencies]
+insta = { version = "1.31.0", features = ["yaml"] }
+pretty-hex = "0.2.1"

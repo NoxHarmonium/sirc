@@ -108,7 +108,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                             StatusRegisterUpdateSource::Alu.to_flags()
                         },
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -131,7 +131,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                             StatusRegisterUpdateSource::Alu.to_flags()
                         },
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -159,7 +159,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                             StatusRegisterUpdateSource::Alu.to_flags()
                         },
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -186,7 +186,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                             StatusRegisterUpdateSource::Alu.to_flags()
                         },
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }

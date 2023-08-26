@@ -17,13 +17,11 @@ use clap::Parser;
 
 use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::{final_parser, Location};
-use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_BYTES;
 
-use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use toolchain::parsers::data::DataType;
+use toolchain::data::object::build_object;
 use toolchain::parsers::instruction::{parse_tokens, Token};
-use toolchain::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 
+use core::panic;
 use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
@@ -36,88 +34,6 @@ struct Args {
 
     #[clap(short, long, value_parser, value_name = "FILE")]
     output_file: PathBuf,
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
-    let mut symbols: Vec<SymbolDefinition> = vec![];
-    let mut symbol_refs: Vec<SymbolRef> = vec![];
-    let mut offset: u32 = 0x0;
-    let mut program: Vec<[u8; 4]> = vec![];
-
-    for token in tokens {
-        let program_offset: usize = offset as usize / 4;
-        program.resize(program_offset + 1, [0x0, 0x0, 0x0, 0x0]);
-
-        match token {
-            Token::Instruction(data) => {
-                let encoded_instruction = encode_instruction(&data.instruction);
-                program[program_offset] = encoded_instruction;
-                if let Some(symbol_ref) = data.symbol_ref {
-                    symbol_refs.push(SymbolRef {
-                        name: symbol_ref.name,
-                        offset,
-                        ref_type: symbol_ref.ref_type,
-                        data_only: false,
-                    });
-                }
-
-                offset += INSTRUCTION_SIZE_BYTES;
-            }
-            Token::Label(data) => symbols.push(SymbolDefinition {
-                name: data.name,
-                offset,
-            }),
-            Token::Comment => {
-                // Do nothing.
-            }
-            Token::Origin(data) => {
-                // Word based addressing to match CPU
-                offset = data.offset * 2;
-            }
-            Token::Data(data) => {
-                match data.value {
-                    DataType::Value(value) => {
-                        // Align on instruction sizes
-                        // TODO: Make packing smaller data sizes more efficient
-                        // E.g. put 4 DBs in one 32 bit chunk
-                        // TODO: Clean up this mess
-                        let bytes: [u8; 4] = match data.size_bytes {
-                            1 => [0x0, 0x0, 0x0, value as u8],
-                            2 => {
-                                let word_bytes = u16::to_be_bytes(value as u16);
-                                [0x0, 0x0, word_bytes[0], word_bytes[1]]
-                            }
-                            4 => u32::to_be_bytes(value),
-                            _ => panic!("Unsupported data size bytes {}", data.size_bytes),
-                        };
-
-                        program[program_offset] = bytes;
-                    }
-                    DataType::SymbolRef(symbol_ref) => {
-                        program[program_offset] = [0x0, 0x0, 0x0, 0x0];
-                        symbol_refs.push(SymbolRef {
-                            name: symbol_ref.name,
-                            offset,
-                            ref_type: symbol_ref.ref_type,
-                            data_only: true,
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    let bytes: Vec<u8> = program
-        .iter()
-        .flat_map(std::borrow::ToOwned::to_owned)
-        .collect();
-
-    ObjectDefinition {
-        symbols,
-        symbol_refs,
-        program: bytes,
-    }
 }
 
 fn main() -> io::Result<()> {

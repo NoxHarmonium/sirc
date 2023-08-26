@@ -1,6 +1,6 @@
 ; Reserved space for 128x32 bit exception vectors
 .ORG 0x0000
-DQ @init
+.DQ @init
 
 .ORG 0x0100
 

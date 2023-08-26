@@ -13,15 +13,31 @@ use nom::{
     sequence::tuple,
 };
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
-    ShiftType,
+use peripheral_cpu::{
+    coprocessors::processing_unit::definitions::{
+        ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
+        ShiftOperand, ShiftType,
+    },
+    registers::AddressRegisterName,
 };
 
 use super::super::shared::AsmResult;
 pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((_, condition_flag), operands)) =
         tuple((parse_instruction_tag("LDEA"), parse_instruction_operands1))(i)?;
+
+    let construct_load_effective_address_instruction =
+        |value: u16,
+         dest_register: &AddressRegisterName,
+         address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                register: dest_register.to_register_index(),
+                value,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
 
     match operands.as_slice() {
         [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
@@ -30,30 +46,39 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
-                            register: dest_register.to_register_index(),
-                            value: offset.to_owned(),
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: None,
+                        instruction: construct_load_effective_address_instruction(
+                            offset.to_owned(),
+                            dest_register,
+                            address_register,
+                        ),
+                        ..Default::default()
                     },
                 )),
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
-                            register: dest_register.to_register_index(),
-                            value: 0x0, // Placeholder
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
+                        instruction: construct_load_effective_address_instruction(
+                            0x0, // Will be replaced by linker
+                            dest_register,
+                            address_register,
+                        ),
                         symbol_ref: Some(override_ref_token_type_if_implied(
                             ref_token,
                             RefType::LowerWord,
                         )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: construct_load_effective_address_instruction(
+                            0x0, // Will be replaced by linker
+                            dest_register,
+                            address_register,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
                     },
                 )),
             }
@@ -74,7 +99,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -96,7 +121,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }

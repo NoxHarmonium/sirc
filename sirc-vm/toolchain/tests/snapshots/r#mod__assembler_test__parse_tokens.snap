@@ -1,0 +1,17 @@
+---
+source: toolchain/tests/assembler_test.rs
+expression: "config_hex(&object.program.as_slice(), hex_config)"
+---
+Length: 48 (0x30) bytes
+0000:   00 40 00 50   .@.P
+0004:   04 40 00 50   .@.P
+0008:   08 40 00 50   .@.P
+000c:   0c 40 00 50   .@.P
+0010:   10 40 00 50   .@.P
+0014:   14 40 00 50   .@.P
+0018:   18 40 00 50   .@.P
+001c:   1c 40 00 40   .@.@
+0020:   28 40 00 50   (@.P
+0024:   30 40 00 50   0@.P
+0028:   38 40 00 50   8@.P
+002c:   3c 40 00 50   <@.P

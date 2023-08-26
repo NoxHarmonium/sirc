@@ -15,6 +15,4 @@
 )]
 #![deny(warnings)]
 
-pub mod data;
-pub mod parsers;
-pub mod types;
+mod assembler_test;

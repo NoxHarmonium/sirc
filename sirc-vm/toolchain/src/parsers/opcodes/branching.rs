@@ -72,72 +72,94 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((tag, condition_flag), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
 
+    let construct_branch_immediate_instruction = |value: u16| {
+        InstructionData::Immediate(ImmediateInstructionData {
+            op_code: tag_to_instruction_long_immediate(tag.as_str()),
+            register: AddressRegisterName::ProgramCounter.to_register_index(),
+            value,
+            condition_flag,
+            additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
+        })
+    };
+
+    let construct_branch_indirect_immediate_instruction =
+        |value: u16, address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: tag_to_instruction_long_immediate(tag.as_str()),
+                register: AddressRegisterName::ProgramCounter.to_register_index(),
+                value,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
+
     match operands.as_slice() {
         [AddressingMode::Immediate(offset)] => match offset {
             // Shorthand, always immediate offset to PC. Can also use other address registers with full syntax below
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
-                    instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long_immediate(tag.as_str()),
-                        register: AddressRegisterName::ProgramCounter.to_register_index(),
-                        value: offset.to_owned(),
-                        condition_flag,
-                        additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
-                    }),
-                    symbol_ref: None,
+                    instruction: construct_branch_immediate_instruction(offset.to_owned()),
+                    ..Default::default()
                 },
             )),
             ImmediateType::SymbolRef(ref_token) => Ok((
                 i,
                 InstructionToken {
-                    instruction: InstructionData::Immediate(ImmediateInstructionData {
-                        op_code: tag_to_instruction_long_immediate(tag.as_str()),
-                        register: AddressRegisterName::ProgramCounter.to_register_index(),
-                        value: 0x0, // Placeholder
-                        condition_flag,
-                        additional_flags: AddressRegisterName::ProgramCounter.to_register_index(),
-                    }),
+                    instruction: construct_branch_immediate_instruction(0x0), // 0x0 will be replaced by linker
                     symbol_ref: Some(override_ref_token_type_if_implied(
                         ref_token,
                         RefType::Offset,
                     )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_branch_immediate_instruction(0x0), // 0x0 will be replaced by linker
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
                 },
             )),
         },
-        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
-            match offset {
-                ImmediateType::Value(offset) => Ok((
-                    i,
-                    InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: tag_to_instruction_long_immediate(tag.as_str()),
-                            register: AddressRegisterName::ProgramCounter.to_register_index(),
-                            value: offset.to_owned(),
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: None,
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: tag_to_instruction_long_immediate(tag.as_str()),
-                            register: AddressRegisterName::ProgramCounter.to_register_index(),
-                            value: 0x0, // Placeholder
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                    },
-                )),
-            }
-        }
+        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_branch_indirect_immediate_instruction(
+                        offset.to_owned(),
+                        address_register,
+                    ),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_branch_indirect_immediate_instruction(
+                        0x0,
+                        address_register,
+                    ),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_branch_indirect_immediate_instruction(
+                        0x0,
+                        address_register,
+                    ),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] => {
             Ok((
                 i,
@@ -154,7 +176,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -177,7 +199,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }

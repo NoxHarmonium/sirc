@@ -1,10 +1,10 @@
 ; Reserved space for 128x32 bit exception vectors
 .ORG 0x0000
-DQ @start
+.DQ @start
 
 ; 64th vector (*2 words per vector)
 .ORG 0x0080
-DQ @exception_handler
+.DQ @exception_handler
 
 .ORG 0x0100
 
