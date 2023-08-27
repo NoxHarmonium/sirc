@@ -100,6 +100,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             register: dest_register.to_register_index(),
             value,
             condition_flag,
+            // TODO: Is this actually parseable?
             additional_flags: if &tag == "SHFI" {
                 StatusRegisterUpdateSource::Shift.to_flags()
             } else {
@@ -119,6 +120,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 register: dest_register.to_register_index(),
                 value,
                 condition_flag,
+                // TODO: Is this actually parseable?
                 additional_flags: if &tag == "SHFI" {
                     StatusRegisterUpdateSource::Shift.to_flags()
                 } else {

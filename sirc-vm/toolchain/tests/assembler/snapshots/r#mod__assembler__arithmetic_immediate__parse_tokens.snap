@@ -1,0 +1,21 @@
+---
+source: toolchain/tests/assembler/arithmetic_immediate.rs
+expression: "config_hex(&object.program.as_slice(), hex_config)"
+---
+Length: 64 (0x40) bytes
+0000:   00 40 00 10   .@..
+0004:   04 80 00 10   ....
+0008:   08 c0 00 50   ...P
+000c:   0d 00 00 50   ...P
+0010:   11 7f ff d0   ....
+0014:   15 bf ff d0   ....
+0018:   19 c3 ff d0   ....
+001c:   1e 00 3f c0   ..?.
+0020:   2a 40 03 d0   *@..
+0024:   32 80 19 10   2...
+0028:   3a c0 40 10   :.@.
+002c:   3e bc 3c 10   >.<.
+0030:   03 40 00 10   .@..
+0034:   07 00 00 10   ....
+0038:   0b c0 00 50   ...P
+003c:   0f 80 00 50   ...P

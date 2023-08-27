@@ -586,5 +586,7 @@ pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
         eof,
     );
 
+    // Consume any extra space at the start
+    let (i, _) = multispace0(i)?;
     parser.parse(i)
 }

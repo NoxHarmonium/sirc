@@ -15,4 +15,4 @@
 )]
 #![deny(warnings)]
 
-mod assembler_test;
+mod assembler;
