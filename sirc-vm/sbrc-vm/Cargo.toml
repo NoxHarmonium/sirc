@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.4.0", features = ["derive"] }
+clap = { version = "4.4.1", features = ["derive"] }
 peripheral_clock = { path = "../peripheral-clock" }
 peripheral_cpu = { path = "../peripheral-cpu" }
 peripheral_mem = { path = "../peripheral-mem" }
