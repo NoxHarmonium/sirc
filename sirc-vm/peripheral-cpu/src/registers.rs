@@ -583,7 +583,7 @@ pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionLinkRegister {
     pub return_address: u32,
-    pub return_exception_mask: u8,
+    pub return_status_register: u16,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
