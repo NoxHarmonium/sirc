@@ -17,7 +17,7 @@ fn test_assembler_arithmetic_immediate() {
 
     let tokens =
         match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(parse_tokens)(
-            r#"
+            r"
     ; Two argument - destination and source register the same
     ADDI r1, #0
     ADCI r2, #0x0
@@ -59,7 +59,7 @@ fn test_assembler_arithmetic_immediate() {
     ANDI r5, #254, RTL r5
     ORRI r6, #0xAF, RTR r6
     XORI r7, #0xFA, NUL r7
-"#,
+",
         ) {
             Ok(tokens) => tokens,
             Err(error) => panic!("Error parsing file:\n{error}"),

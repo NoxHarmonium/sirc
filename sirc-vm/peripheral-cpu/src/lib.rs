@@ -31,8 +31,9 @@ pub mod coprocessors;
 pub mod registers;
 
 use coprocessors::{
-    exception_unit::execution::ExceptionUnitExecutor,
-    processing_unit::execution::ProcessingUnitExecutor, shared::Executor,
+    exception_unit::execution::{set_cause_register_if_pending_interrupt, ExceptionUnitExecutor},
+    processing_unit::execution::ProcessingUnitExecutor,
+    shared::Executor,
 };
 use peripheral_mem::MemoryPeripheral;
 use registers::{ExceptionUnitRegisters, FullAddress};
@@ -89,6 +90,7 @@ pub fn new_cpu_peripheral<'a>(
 }
 
 impl CpuPeripheral<'_> {
+    /// Works out which coprocessor should run on this cycle
     fn decode_processor_id(cause_register_value: u16) -> u8 {
         ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
     }
@@ -96,7 +98,7 @@ impl CpuPeripheral<'_> {
     pub fn reset(&mut self) {
         // Will cause the exception coprocessor to jump to reset vector
         //.and clear transient state
-        self.eu_registers.cause_register = RESET_CAUSE_VALUE;
+        self.registers.pending_coprocessor_command = RESET_CAUSE_VALUE;
     }
 
     ///
@@ -105,8 +107,12 @@ impl CpuPeripheral<'_> {
     pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
         let mut clocks: u32 = 0;
         loop {
-            let coprocessor_id: u8 =
-                CpuPeripheral::decode_processor_id(self.eu_registers.cause_register);
+            set_cause_register_if_pending_interrupt(&self.registers, &mut self.eu_registers);
+            let coprocessor_id: u8 = if self.eu_registers.hardware_cause_register == 0x0 {
+                CpuPeripheral::decode_processor_id(self.registers.pending_coprocessor_command)
+            } else {
+                ExceptionUnitExecutor::COPROCESSOR_ID
+            };
             let result = match coprocessor_id {
                 ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
                     &mut self.registers,

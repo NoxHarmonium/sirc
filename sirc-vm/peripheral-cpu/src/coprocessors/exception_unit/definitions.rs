@@ -5,6 +5,10 @@ pub mod vectors {
     // that can be defined. Multiply the vector ID by two to get the actually memory address
     // The first 64 addresses are privileged and can only be raised by hardware or in system
     // mode. The second 64 addresses can be raised in user mode to trap into system mode.
+    //
+    // Priority is determined 7 minus the value first nibble (e.g. 0x00 is priority 7, 0x40 is priority 3, 0x60 and above are all priority 1)
+
+    // Privileged Abort Exceptions (0x00-0x07)
 
     /// An external device raised an error via a CPU pin
     /// This could happen, for example, if a unmapped address is presented by the CPU
@@ -42,11 +46,13 @@ pub mod vectors {
     /// 3. Triggering exception below 0x80
     pub const PRIVILEGE_VIOLATION_FAULT: u16 = 0x04;
 
-    // 0x05-0x0F Reserved (privileged abort exceptions)
+    // 0x05-0x07 Reserved
+
+    // Privileged Regular Exceptions (0x08-0x0F)
 
     /// Raised after every instruction when the `TraceMode` SR bit is set
     /// Used for debugging
-    pub const INSTRUCTION_TRACE_FAULT: u16 = 0x10;
+    pub const INSTRUCTION_TRACE_FAULT: u16 = 0x08;
 
     /// Raised when a level five hardware exception is raised
     /// when one is already being handled
@@ -56,24 +62,25 @@ pub mod vectors {
     /// masked, but it could indicate a hardware misconfiguration,
     /// so it is handy so that hardware bugs for things that should
     /// not be interrupted are picked up.
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u16 = 0x011;
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u16 = 0x09;
 
-    //  0x11-0x1F Reserved (privileged regular exceptions)
+    //  0x09-0x0F Reserved
 
-    pub const LEVEL_ONE_HARDWARE_EXCEPTION: u16 = 0x20;
-    pub const LEVEL_TWO_HARDWARE_EXCEPTION: u16 = 0x21;
-    pub const LEVEL_THREE_HARDWARE_EXCEPTION: u16 = 0x22;
-    pub const LEVEL_FOUR_HARDWARE_EXCEPTION: u16 = 0x23;
+    /// Hardware Exceptions
+
     // Special level - When level five hardware exception is masked and
     // another one is triggered, it isn't ignored, it triggers a LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
     // (see above)
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION: u16 = 0x24;
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION: u16 = 0x10;
+    pub const LEVEL_FOUR_HARDWARE_EXCEPTION: u16 = 0x20;
+    pub const LEVEL_THREE_HARDWARE_EXCEPTION: u16 = 0x30;
+    pub const LEVEL_TWO_HARDWARE_EXCEPTION: u16 = 0x40;
+    pub const LEVEL_ONE_HARDWARE_EXCEPTION: u16 = 0x50;
 
-    // ...more reserved vectors...
+    /// User Exceptions
+    // 159 user exception vectors triggered by the EXCP instruction (e.g. a TRAP on the 68k)
 
-    // 128 user exception vectors triggered by the EXCP instruction (e.g. a TRAP on the 68k)
-
-    pub const USER_EXCEPTION_VECTOR_START: u16 = 0x80;
+    pub const USER_EXCEPTION_VECTOR_START: u16 = 0x60;
     pub const USER_EXCEPTION_VECTOR_END: u16 = 0xFF;
 }
 
@@ -93,3 +100,28 @@ pub mod vectors {
 //
 // Abort Exceptions (0x0-0xF): Reset, Bus Fault, Alignment Fault, Privilege violation, Invalid Op Code
 // Regular Exceptions: (0x10-0xFF) COP, Hardware, All other faults
+
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum ExceptionPriorities {
+    NoException = 0x0,
+    Software = 0x1,
+    LevelOneHardware = 0x2,
+    LevelTwoHardware = 0x3,
+    LevelThreeHardware = 0x4,
+    LevelFourHardware = 0x5,
+    LevelFiveHardware = 0x6,
+    Fault = 0x7,
+}
+
+#[derive(Debug, PartialEq, Eq, FromPrimitive)]
+
+pub enum ExceptionUnitOpCodes {
+    SoftwareException = 0x1,
+
+    // Privileged
+    WaitForException = 0x9,
+    ReturnFromException = 0xA,
+    Reset = 0xB,
+    HardwareException = 0xF,
+}

@@ -53,7 +53,7 @@ fn decode_write_back_step_instruction_type(
 fn update_status_flags(
     decoded: &DecodedInstruction,
     registers: &mut Registers,
-    intermediate_registers: &mut IntermediateRegisters,
+    intermediate_registers: &IntermediateRegisters,
 ) {
     // TODO: Should this be done with an instruction type?
     registers.sr = match decoded.sr_src {
@@ -71,7 +71,7 @@ impl StageExecutor for WriteBackExecutor {
     fn execute(
         decoded: &DecodedInstruction,
         registers: &mut Registers,
-        eu_registers: &mut ExceptionUnitRegisters,
+        _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         _: &MemoryPeripheral,
     ) {
@@ -109,8 +109,7 @@ impl StageExecutor for WriteBackExecutor {
                 registers[decoded.ad_l] = intermediate_registers.address_output;
             }
             WriteBackInstructionType::CoprocessorCall => {
-                eu_registers.cause_register = intermediate_registers.alu_output;
-                eu_registers.exception_level = 1; // Software exceptions are always one
+                registers.pending_coprocessor_command = intermediate_registers.alu_output;
             }
         }
     }

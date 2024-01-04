@@ -160,6 +160,9 @@ pub struct Registers {
 
     // System RAM access is offset from here (e.g. interrupt vectors)
     pub system_ram_offset: u32,
+    // Used to delegate to coprocessors
+    // If first nibble is 0x0, will just invoke CPU as normal
+    pub pending_coprocessor_command: u16,
 }
 
 impl Index<u8> for Registers {
@@ -588,7 +591,7 @@ pub struct ExceptionLinkRegister {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
-    pub cause_register: u16,
+    pub hardware_cause_register: u16,
     pub exception_level: u8,
     pub link_registers: [ExceptionLinkRegister; 7],
 }

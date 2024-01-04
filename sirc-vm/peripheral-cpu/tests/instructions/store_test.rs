@@ -243,10 +243,10 @@ fn test_store_indirect_immediate_pre_decrement() {
             ] {
                 let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
-                    // Why doesn't this work??
-                    /// probs the register pre decrement doesnt actually work
-                    /// // it sets dest register to 0x0 which is SR and probs ignored
-                    /// // so the test is broken!
+                    // TODO: Why doesn't this work??
+                    // probs the register pre decrement doesnt actually work
+                    // // it sets dest register to 0x0 which is SR and probs ignored
+                    // // so the test is broken!
                     register: src_register_index,
                     value: offset as u16,
                     condition_flag: ConditionFlags::Always,

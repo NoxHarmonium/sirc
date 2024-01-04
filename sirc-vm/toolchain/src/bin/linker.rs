@@ -61,7 +61,7 @@ fn main() -> io::Result<()> {
         .collect();
 
     // TODO: Support merging (more than one file)!
-    let object_file = object_files.get(0).unwrap();
+    let object_file = object_files.first().unwrap();
 
     let mut linked_program = object_file.program.clone();
     for symbol_ref in &object_file.symbol_refs {

@@ -17,7 +17,7 @@ fn test_assembler_arithmetic_register() {
 
     let tokens =
         match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(parse_tokens)(
-            r#"
+            r"
     ; Two argument - destination and source register the same
     ADDR r1, ph
     ADCR r2, pl
@@ -49,7 +49,7 @@ fn test_assembler_arithmetic_register() {
     ADDR sl, r3, r5
     ADCR ph, r2, r6
     SUBR pl, r1, r7
-"#,
+",
         ) {
             Ok(tokens) => tokens,
             Err(error) => panic!("Error parsing file:\n{error}"),
