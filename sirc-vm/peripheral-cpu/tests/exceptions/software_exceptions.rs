@@ -12,6 +12,31 @@ use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
 
 pub const PROGRAM_OFFSET: u32 = 0x00CE_0000;
 pub const SYSTEM_RAM_OFFSET: u32 = 0x0;
+pub const EXCEPTION_JUMP_ADDRESS: u16 = 0xFAFF;
+
+fn build_copi_instruction(exception_code: u16) -> InstructionData {
+    let exception_op_code = 0x1100 | exception_code;
+
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0x0, // Unused?
+        value: exception_op_code,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    })
+}
+
+fn build_rete_instruction() -> InstructionData {
+    let exception_op_code = 0x1A00;
+
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0x0, // Unused?
+        value: exception_op_code,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    })
+}
 
 #[allow(clippy::cast_lossless)]
 #[test]
@@ -19,23 +44,21 @@ fn test_software_exception_trigger() {
     let exception_code = 0x0F;
     let exception_op_code = 0x1100 | exception_code;
 
-    let initial_copi_instruction = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::CoprocessorCallImmediate,
-        register: 0x0, // Unused?
-        value: exception_op_code,
-        condition_flag: ConditionFlags::Always,
-        additional_flags: 0x0,
-    });
+    let initial_copi_instruction = build_copi_instruction(exception_code);
     let mem = set_up_instruction_test(&initial_copi_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
     let mut cpu = new_cpu_peripheral(&mem, PROGRAM_SEGMENT);
     cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
 
     let expected_vector_address = SYSTEM_RAM_OFFSET + (exception_code as u32 * 2);
+    let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
 
     // 32 bit vector: write upper word (the program segment)
-    mem.write_address(expected_vector_address, (PROGRAM_OFFSET >> 16) as u16);
+    mem.write_address(
+        expected_vector_address,
+        (PROGRAM_OFFSET >> u16::BITS) as u16,
+    );
     // write lower word (the offset in the segment)
-    mem.write_address(expected_vector_address + 1, 0xFAFF);
+    mem.write_address(expected_vector_address + 1, EXCEPTION_JUMP_ADDRESS);
     // 32 bit vector: write upper word (the program segment)
 
     // First six cycles will run the COPI instruction and load the cause register
@@ -50,35 +73,79 @@ fn test_software_exception_trigger() {
     cpu.run_cpu(CYCLES_PER_INSTRUCTION)
         .expect("expected CPU to run six cycles successfully");
 
+    assert_eq!(
+        PROGRAM_OFFSET | vector_target_address,
+        cpu.registers.get_full_pc_address()
+    );
     assert_eq!(0x1, cpu.eu_registers.exception_level);
-    assert_eq!(0x00CE_FAFF, cpu.registers.get_full_pc_address());
     assert_eq!(
         0x00CE_0002,
         cpu.eu_registers.link_registers[1].return_address
     );
     assert_eq!(0x1, get_interrupt_mask(&cpu.registers));
 
-    // This instruction should be ignored because it has the same exception level as the current mask
-    // Software exceptions are always level one and cannot interrupt each other (cannot be nested)
-    let ignored_copi_instruction = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::CoprocessorCallImmediate,
-        register: 0x0, // Unused?
-        value: exception_op_code,
-        condition_flag: ConditionFlags::Always,
-        additional_flags: 0x0,
-    });
-    let ignored_copi_instruction_data = encode_instruction(&ignored_copi_instruction);
-
-    mem.load_binary_data_into_segment(PROGRAM_SEGMENT, &ignored_copi_instruction_data.to_vec());
-    // Reset PC to check if jump occurs
+    // Reset PC to run the software interrupt again
     cpu.registers.set_full_pc_address(PROGRAM_OFFSET);
 
     // First six cycles will run the COPI instruction and load the cause register
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expected CPU to run six cycles successfully");
     // The next six cycles the exception unit should run but ignore the exception
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expected CPU to run six cycles successfully");
+    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
+        .expect("expected CPU to run twelve cycles successfully");
 
+    // Check that no jump occurred (e.g. PC proceed normally) because an exception is already being processed
     assert_eq!(0x00CE_0002, cpu.registers.get_full_pc_address());
+}
+
+#[allow(clippy::cast_lossless)]
+#[test]
+fn test_software_exception_return() {
+    let exception_code = 0x0F;
+
+    let initial_copi_instruction = build_copi_instruction(exception_code);
+    let mem: peripheral_mem::MemoryPeripheral =
+        set_up_instruction_test(&initial_copi_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
+    let mut cpu = new_cpu_peripheral(&mem, PROGRAM_SEGMENT);
+    cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
+
+    let expected_vector_address = SYSTEM_RAM_OFFSET + (exception_code as u32 * 2);
+    let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
+
+    // 32 bit vector: write upper word (the program segment)
+    mem.write_address(
+        expected_vector_address,
+        (PROGRAM_OFFSET >> u16::BITS) as u16,
+    );
+    // write lower word (the offset in the segment)
+    mem.write_address(expected_vector_address + 1, EXCEPTION_JUMP_ADDRESS);
+    // 32 bit vector: write upper word (the program segment)
+
+    let return_instruction = build_rete_instruction();
+    let encoded_instruction = u32::from_be_bytes(encode_instruction(&return_instruction));
+
+    // Write the return instruction to the location that is jumped to
+    mem.write_address(
+        vector_target_address,
+        (encoded_instruction >> u16::BITS) as u16,
+    );
+    mem.write_address(
+        vector_target_address + 1,
+        (encoded_instruction & 0xFFFF) as u16,
+    );
+
+    // First six cycles sets the cause register - second six cycles performs the jump
+    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
+        .expect("expected CPU to run twelve cycles successfully");
+
+    assert_eq!(
+        PROGRAM_OFFSET | vector_target_address,
+        cpu.registers.get_full_pc_address()
+    );
+
+    // First six cycles sets the cause register - second six cycles performs the return
+    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
+        .expect("expected CPU to run twelve cycles successfully");
+
+    // Check it jumped back to the instruction after the original branch
+    assert_eq!(0x00CE_0002, cpu.registers.get_full_pc_address());
+    assert_eq!(0x0, get_interrupt_mask(&cpu.registers));
 }

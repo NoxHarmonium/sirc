@@ -20,7 +20,7 @@ pub fn set_up_instruction_test(
     let program_data = encode_instruction(instruction_data);
 
     memory_peripheral.map_segment(VECTOR_SEGMENT, system_ram_offset, 0xFF, true);
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, false);
+    memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, true);
     memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
     memory_peripheral.map_segment(
         SCRATCH_SEGMENT,
