@@ -14,6 +14,7 @@
 #![deny(warnings)]
 
 pub mod conversion;
+pub mod helpers;
 
 use std::cell::RefCell;
 use std::fs::{read, File, OpenOptions};

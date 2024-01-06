@@ -7,6 +7,7 @@ use peripheral_cpu::{
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
     CYCLES_PER_INSTRUCTION,
 };
+use peripheral_mem::helpers::write_bytes;
 
 use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
 
@@ -52,14 +53,12 @@ fn test_software_exception_trigger() {
     let expected_vector_address = SYSTEM_RAM_OFFSET + (exception_code as u32 * 2);
     let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
 
-    // 32 bit vector: write upper word (the program segment)
-    mem.write_address(
+    // 32 bit vector: write upper word (the program segment) / write lower word (the offset in the segment)
+    write_bytes(
+        &mem,
         expected_vector_address,
-        (PROGRAM_OFFSET >> u16::BITS) as u16,
+        &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
     );
-    // write lower word (the offset in the segment)
-    mem.write_address(expected_vector_address + 1, EXCEPTION_JUMP_ADDRESS);
-    // 32 bit vector: write upper word (the program segment)
 
     // First six cycles will run the COPI instruction and load the cause register
     cpu.run_cpu(CYCLES_PER_INSTRUCTION)
@@ -110,27 +109,18 @@ fn test_software_exception_return() {
     let expected_vector_address = SYSTEM_RAM_OFFSET + (exception_code as u32 * 2);
     let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
 
-    // 32 bit vector: write upper word (the program segment)
-    mem.write_address(
+    // 32 bit vector: write upper word (the program segment) / write lower word (the offset in the segment)
+    write_bytes(
+        &mem,
         expected_vector_address,
-        (PROGRAM_OFFSET >> u16::BITS) as u16,
+        &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
     );
-    // write lower word (the offset in the segment)
-    mem.write_address(expected_vector_address + 1, EXCEPTION_JUMP_ADDRESS);
-    // 32 bit vector: write upper word (the program segment)
 
     let return_instruction = build_rete_instruction();
-    let encoded_instruction = u32::from_be_bytes(encode_instruction(&return_instruction));
+    let encoded_instruction = encode_instruction(&return_instruction);
 
     // Write the return instruction to the location that is jumped to
-    mem.write_address(
-        vector_target_address,
-        (encoded_instruction >> u16::BITS) as u16,
-    );
-    mem.write_address(
-        vector_target_address + 1,
-        (encoded_instruction & 0xFFFF) as u16,
-    );
+    write_bytes(&mem, vector_target_address, &encoded_instruction);
 
     // First six cycles sets the cause register - second six cycles performs the jump
     cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
