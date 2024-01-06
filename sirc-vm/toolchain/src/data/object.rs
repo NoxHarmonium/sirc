@@ -92,6 +92,12 @@ fn inject_data_value(
     }
 }
 
+fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
+    if min_size > program.len() {
+        program.resize(min_size + 1, [0x0, 0x0, 0x0, 0x0]);
+    }
+}
+
 pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut symbol_refs: Vec<SymbolRef> = vec![];
@@ -101,7 +107,7 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
 
     for token in tokens {
         let program_offset: usize = offset as usize / 4;
-        program.resize(program_offset + 1, [0x0, 0x0, 0x0, 0x0]);
+        ensure_program_size(&mut program, program_offset + 1);
 
         match token {
             Token::Instruction(data) => {
