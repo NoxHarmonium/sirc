@@ -9,11 +9,11 @@ store-load.bin: store-load.o
 	cargo run --bin linker -- --segment-offset 0 --output-file store-load.bin store-load.o
 
 run: store-load.bin
-	cargo run --bin sbrc_vm -- --program-file ./store-load.bin --segment scratch:00080000:FFFF
+	cargo run --bin sbrc_vm -- --program-file ./store-load.bin --segment scratch:00080000:FFFF  --register-dump-file ./software-exception.register-dump
 
 check: run
-	# TODO: Implement an actual check
+	diff -u ./software-exception.register-dump ./software-exception.register-dump-expected
 
 clean:
-	rm -f store-load.bin store-load.o
+	rm -f store-load.bin store-load.o software-exception.register-dump
 	cargo clean

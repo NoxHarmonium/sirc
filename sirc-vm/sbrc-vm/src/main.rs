@@ -90,6 +90,24 @@ struct Args {
 
     #[clap(short, long, value_parser = segment_arg_parser)]
     segment: Vec<SegmentArg>,
+
+    #[clap(short, long, value_parser, value_name = "FILE")]
+    register_dump_file: Option<PathBuf>,
+}
+
+fn dump_registers(
+    dump_file: &PathBuf,
+    cpu_peripheral: &CpuPeripheral,
+) -> Result<(), std::io::Error> {
+    let mut handle = File::create(dump_file)?;
+    let register_text = format!("{:#x?}", cpu_peripheral.registers);
+    let eu_register_text = format!("{:#x?}", cpu_peripheral.eu_registers);
+
+    writeln!(&mut handle, "===REGISTERS===")?;
+    writeln!(&mut handle, "{register_text}")?;
+    writeln!(&mut handle, "===EXCEPTION UNIT REGISTERS===")?;
+    writeln!(&mut handle, "{eu_register_text}")?;
+    Ok(())
 }
 
 fn main() {
@@ -136,17 +154,31 @@ fn main() {
         Ok(actual_clocks_executed) => {
             println!("actual_clocks_executed: {actual_clocks_executed}");
         }
-        Err(error) => match error {
-            peripheral_cpu::Error::ProcessorHalted(_) => {
-                println!("Processor halted error caught. This type of error will exit with code zero for testing purposes.");
-                exit(0);
+        Err(error) => {
+            if let Some(register_dump_file) = &args.register_dump_file {
+                println!(
+                    "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
+                );
+                if let Err(error) = dump_registers(register_dump_file, &cpu_peripheral) {
+                    println!(
+                        "There was an error dumping registers to [{}].\n{}",
+                        register_dump_file.display(),
+                        error
+                    );
+                };
             }
-            peripheral_cpu::Error::InvalidInstruction(_) => panic!("CPU Error: {error:08x?}"),
-        },
+
+            match error {
+                peripheral_cpu::Error::ProcessorHalted(_) => {
+                    println!("Processor halted error caught. This type of error exits with code zero for testing purposes.");
+                    exit(0);
+                }
+                peripheral_cpu::Error::InvalidInstruction(_) => panic!("CPU Error: {error:08x?}"),
+            };
+        }
     };
 
     clock_peripheral.start_loop(execute);
 }
 
-// TODO: Infinite loop but at least it assembles?
-// Probs need to a step debugger
+// TODO: Probs need to a step debugger

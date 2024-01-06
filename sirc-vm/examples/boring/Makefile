@@ -9,11 +9,11 @@ boring.bin: boring.o
 	cargo run --bin linker -- --segment-offset 0 --output-file boring.bin boring.o
 
 run: boring.bin
-	cargo run --bin sbrc_vm -- --program-file ./boring.bin
+	cargo run --bin sbrc_vm -- --program-file ./boring.bin --register-dump-file ./software-exception.register-dump
 
 check: run
-	# TODO: Implement an actual check
+	diff -u ./software-exception.register-dump ./software-exception.register-dump-expected
 
 clean:
-	rm -f boring.bin boring.o
+	rm -f boring.bin boring.o software-exception.register-dump
 	cargo clean

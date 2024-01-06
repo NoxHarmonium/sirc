@@ -1,0 +1,55 @@
+===REGISTERS===
+Registers {
+    sr: 0x100,
+    r1: 0xff,
+    r2: 0x0,
+    r3: 0x0,
+    r4: 0x0,
+    r5: 0x0,
+    r6: 0x0,
+    r7: 0x0,
+    lh: 0x0,
+    ll: 0x0,
+    ah: 0x0,
+    al: 0x0,
+    sh: 0x0,
+    sl: 0x0,
+    ph: 0x0,
+    pl: 0x104,
+    system_ram_offset: 0x0,
+    pending_coprocessor_command: 0x0,
+}
+===EXCEPTION UNIT REGISTERS===
+ExceptionUnitRegisters {
+    pending_hardware_exception_level: 0x0,
+    link_registers: [
+        ExceptionLinkRegister {
+            return_address: 0x104,
+            return_status_register: 0x100,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+        },
+    ],
+}
