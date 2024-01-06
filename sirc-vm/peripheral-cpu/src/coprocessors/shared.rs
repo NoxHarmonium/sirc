@@ -9,6 +9,7 @@ pub trait Executor {
     const COPROCESSOR_ID: u8;
 
     fn step<'a>(
+        cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,

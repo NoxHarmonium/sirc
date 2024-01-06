@@ -13,10 +13,10 @@
 )]
 #![deny(warnings)]
 
-use std::{path::PathBuf, process::exit};
+use std::{fs::File, io::Write, path::PathBuf, process::exit};
 
 use peripheral_clock::ClockPeripheral;
-use peripheral_cpu::new_cpu_peripheral;
+use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
 use peripheral_mem::new_memory_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";

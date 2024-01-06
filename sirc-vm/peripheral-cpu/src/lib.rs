@@ -31,7 +31,10 @@ pub mod coprocessors;
 pub mod registers;
 
 use coprocessors::{
-    exception_unit::execution::{set_cause_register_if_pending_interrupt, ExceptionUnitExecutor},
+    exception_unit::{
+        definitions::ExceptionUnitOpCodes,
+        execution::{construct_cause_value, get_cause_register_value, ExceptionUnitExecutor},
+    },
     processing_unit::execution::ProcessingUnitExecutor,
     shared::Executor,
 };
@@ -43,10 +46,11 @@ use crate::registers::Registers;
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
 
+// Cause register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
 pub const COPROCESSOR_ID_LENGTH: u16 = 12;
-pub const RESET_CAUSE_VALUE: u16 =
-    (ExceptionUnitExecutor::COPROCESSOR_ID as u16) << COPROCESSOR_ID_LENGTH;
+pub const CAUSE_OPCODE_ID_MASK: u16 = 0x0F00;
+pub const CAUSE_OPCODE_ID_LENGTH: u16 = 8;
 
 #[derive(Debug)]
 pub enum Error {
@@ -97,8 +101,8 @@ impl CpuPeripheral<'_> {
 
     pub fn reset(&mut self) {
         // Will cause the exception coprocessor to jump to reset vector
-        //.and clear transient state
-        self.registers.pending_coprocessor_command = RESET_CAUSE_VALUE;
+        let reset_cause_value = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
+        self.registers.pending_coprocessor_command = reset_cause_value;
     }
 
     ///
@@ -107,19 +111,19 @@ impl CpuPeripheral<'_> {
     pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
         let mut clocks: u32 = 0;
         loop {
-            set_cause_register_if_pending_interrupt(&self.registers, &mut self.eu_registers);
-            let coprocessor_id: u8 = if self.eu_registers.hardware_cause_register == 0x0 {
-                CpuPeripheral::decode_processor_id(self.registers.pending_coprocessor_command)
-            } else {
-                ExceptionUnitExecutor::COPROCESSOR_ID
-            };
+            // TODO: use a better name than "cause" register and make it consistent across everywhere
+            let cause_register_value =
+                get_cause_register_value(&self.registers, &self.eu_registers);
+            let coprocessor_id = CpuPeripheral::decode_processor_id(cause_register_value);
             let result = match coprocessor_id {
                 ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
+                    cause_register_value,
                     &mut self.registers,
                     &mut self.eu_registers,
                     self.memory_peripheral,
                 ),
                 ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
+                    cause_register_value,
                     &mut self.registers,
                     &mut self.eu_registers,
                     self.memory_peripheral,

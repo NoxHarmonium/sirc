@@ -66,7 +66,7 @@ fn test_software_exception_trigger() {
 
     assert_eq!(exception_op_code, cpu.registers.pending_coprocessor_command);
     assert_eq!(0x0, get_interrupt_mask(&cpu.registers));
-    assert_eq!(0x0, cpu.eu_registers.exception_level);
+    assert_eq!(0x0, cpu.eu_registers.pending_hardware_exception_level);
 
     // The next six cycles the exception unit should run and do the actual jump
     cpu.run_cpu(CYCLES_PER_INSTRUCTION)
@@ -76,10 +76,14 @@ fn test_software_exception_trigger() {
         PROGRAM_OFFSET | vector_target_address,
         cpu.registers.get_full_pc_address()
     );
-    assert_eq!(0x1, cpu.eu_registers.exception_level);
+    assert_eq!(0x0, cpu.eu_registers.pending_hardware_exception_level);
     assert_eq!(
         0x00CE_0002,
-        cpu.eu_registers.link_registers[1].return_address
+        cpu.eu_registers.link_registers[0].return_address
+    );
+    assert_eq!(
+        0x0000_0000,
+        cpu.eu_registers.link_registers[0].return_status_register
     );
     assert_eq!(0x1, get_interrupt_mask(&cpu.registers));
 

@@ -19,6 +19,7 @@ impl Executor for ProcessingUnitExecutor {
 
     #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(
+        _: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
@@ -72,7 +73,7 @@ impl Executor for ProcessingUnitExecutor {
             return Err(Error::ProcessorHalted(*registers));
         }
 
-        println!("step: {decoded_instruction:X?}");
+        println!("EU: {decoded_instruction:X?}");
 
         Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
     }

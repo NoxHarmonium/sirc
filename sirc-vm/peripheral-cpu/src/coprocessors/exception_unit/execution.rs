@@ -13,6 +13,7 @@ use crate::{
         get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
         FullAddressRegisterAccess, Registers,
     },
+    CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
     CYCLES_PER_INSTRUCTION,
 };
 
@@ -24,9 +25,37 @@ use super::{
 use crate::registers::FullAddress;
 use crate::registers::{set_interrupt_mask, set_sr_bit, StatusRegisterFields};
 
-pub fn hardware_exception_level_to_vector(level: u8) -> u16 {
+///
+/// Constructs a value that can be put into the cause register to run an exception unit instruction.
+///
+/// The cause register is used to communicate between different CPU units.
+///
+/// The first nibble is the co processor ID (e.g. 1 for the exception unit)
+/// The second nibble is the co processor op code (e.g. what command to run on the exception unit)
+/// The third and fourth nibbles are an arbitrary value that is optionally used in the instruction.
+///
+/// ```
+/// use peripheral_cpu::coprocessors::exception_unit::execution::construct_cause_value;
+/// use peripheral_cpu::coprocessors::exception_unit::definitions::ExceptionUnitOpCodes;
+///
+/// // Software exeception at vector 0x10
+///  let actual = construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x10);
+///  assert_eq!(0x1110, actual);
+/// ```
+///
+#[allow(clippy::cast_lossless)]
+pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, value: u8) -> u16 {
+    let executor_id: u8 = ExceptionUnitExecutor::COPROCESSOR_ID;
+    let op_code_id = num::ToPrimitive::to_u8(op_code)
+        .expect("ExceptionUnitOpCodes values should fit into 8 bits");
+    ((executor_id as u16) << COPROCESSOR_ID_LENGTH) & COPROCESSOR_ID_MASK
+        | ((op_code_id as u16) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK
+        | value as u16
+}
+
+pub fn hardware_exception_level_to_vector(level: u8) -> u8 {
     assert!(level != ExceptionPriorities::NoException as u8, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
-    let vector = (u16::from(level) - 1) + LEVEL_ONE_HARDWARE_EXCEPTION;
+    let vector = (level - 1) + LEVEL_ONE_HARDWARE_EXCEPTION;
     assert!(
         (LEVEL_FIVE_HARDWARE_EXCEPTION..=LEVEL_ONE_HARDWARE_EXCEPTION).contains(&vector),
         "Calculated hardware exception vector should be in valid range ({LEVEL_ONE_HARDWARE_EXCEPTION}-{LEVEL_FIVE_HARDWARE_EXCEPTION}) got [{vector}]"
@@ -34,14 +63,16 @@ pub fn hardware_exception_level_to_vector(level: u8) -> u16 {
     vector
 }
 
-pub fn set_cause_register_if_pending_interrupt(
+pub fn get_cause_register_value(
     registers: &Registers,
-    eu_registers: &mut ExceptionUnitRegisters,
-) {
-    if eu_registers.exception_level > get_interrupt_mask(registers) {
-        let vector = hardware_exception_level_to_vector(eu_registers.exception_level);
-        eu_registers.hardware_cause_register = 0x1400 | vector;
+    eu_registers: &ExceptionUnitRegisters,
+) -> u16 {
+    if eu_registers.pending_hardware_exception_level > get_interrupt_mask(registers) {
+        let vector =
+            hardware_exception_level_to_vector(eu_registers.pending_hardware_exception_level);
+        return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
     };
+    registers.pending_coprocessor_command
 }
 
 pub fn raise_hardware_interrupt(
@@ -49,7 +80,7 @@ pub fn raise_hardware_interrupt(
     level: ExceptionPriorities,
 ) {
     assert!(level != ExceptionPriorities::NoException, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
-    eu_registers.exception_level = level as u8;
+    eu_registers.pending_hardware_exception_level = level as u8;
 }
 
 pub struct ExceptionUnitExecutor {}
@@ -59,26 +90,13 @@ impl Executor for ExceptionUnitExecutor {
 
     #[allow(clippy::cast_lossless)]
     fn step<'a>(
+        cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error> {
         // TODO: Implement hardware exception triggers
         // TODO: Implement waiting for exception
-
-        let exception_level = eu_registers.exception_level;
-        let is_hardware_exception = eu_registers.hardware_cause_register != 0;
-        let cause_register_value = if is_hardware_exception {
-            let value = eu_registers.hardware_cause_register;
-            eu_registers.hardware_cause_register = 0x0;
-            value
-        } else {
-            let value = registers.pending_coprocessor_command;
-            registers.pending_coprocessor_command = 0x0;
-            value
-        };
-
-        println!("cause_register_value: {cause_register_value:X?}");
 
         let decoded = decode_exception_unit_instruction(cause_register_value);
 
@@ -100,6 +118,10 @@ impl Executor for ExceptionUnitExecutor {
             )
         });
 
+        println!(
+            "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
+        );
+
         match typed_op_code {
             ExceptionUnitOpCodes::SoftwareException => {
                 handle_exception(
@@ -119,27 +141,29 @@ impl Executor for ExceptionUnitExecutor {
                 let ExceptionLinkRegister {
                     return_address,
                     return_status_register,
-                } = eu_registers.link_registers[current_interrupt_mask as usize];
+                } = eu_registers.link_registers[(current_interrupt_mask - 1) as usize];
 
                 registers.set_full_pc_address(return_address);
                 registers.sr = return_status_register;
             }
             ExceptionUnitOpCodes::Reset => {
-                // RESET
-                registers.set_full_pc_address(vector_address);
                 registers.sr = 0x0;
                 set_sr_bit(StatusRegisterFields::SystemMode, registers);
+                registers.set_full_pc_address(vector_address);
             }
             ExceptionUnitOpCodes::HardwareException => {
                 handle_exception(
                     current_interrupt_mask,
-                    exception_level,
+                    eu_registers.pending_hardware_exception_level,
                     registers,
                     eu_registers,
                     vector_address,
                 );
             }
         }
+
+        eu_registers.pending_hardware_exception_level = 0x0;
+        registers.pending_coprocessor_command = 0x0;
 
         Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
     }
@@ -152,17 +176,17 @@ fn handle_exception(
     eu_registers: &mut ExceptionUnitRegisters,
     vector_address: u32,
 ) {
-    println!("current_interrupt_mask: {current_interrupt_mask} exception_level: {exception_level}",);
+    println!("XU: current_interrupt_mask: {current_interrupt_mask} >= exception_level: {exception_level} ?");
     // Store current PC in windowed link register and jump to vector
     if current_interrupt_mask >= exception_level {
         // Ignore lower priority exceptions
         return;
     }
-    eu_registers.exception_level = exception_level;
-    eu_registers.link_registers[exception_level as usize] = ExceptionLinkRegister {
+    eu_registers.link_registers[(exception_level - 1) as usize] = ExceptionLinkRegister {
         return_address: registers.get_full_pc_address(),
         return_status_register: registers.sr,
     };
+    set_sr_bit(StatusRegisterFields::SystemMode, registers);
     registers.set_full_pc_address(vector_address);
     set_interrupt_mask(registers, exception_level);
 }

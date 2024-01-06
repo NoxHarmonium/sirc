@@ -591,7 +591,6 @@ pub struct ExceptionLinkRegister {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
-    pub hardware_cause_register: u16,
-    pub exception_level: u8,
+    pub pending_hardware_exception_level: u8,
     pub link_registers: [ExceptionLinkRegister; 7],
 }
