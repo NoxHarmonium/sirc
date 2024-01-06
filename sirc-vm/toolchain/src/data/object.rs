@@ -150,6 +150,7 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                     offset,
                     &placeholders,
                 );
+                offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Equ(data) => {
                 placeholders.insert(data.placeholder_name, data.value);
