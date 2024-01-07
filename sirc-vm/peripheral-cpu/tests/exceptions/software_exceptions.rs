@@ -42,7 +42,7 @@ fn build_rete_instruction() -> InstructionData {
 #[allow(clippy::cast_lossless)]
 #[test]
 fn test_software_exception_trigger() {
-    let exception_code = 0x0F;
+    let exception_code = 0x40;
     let exception_op_code = 0x1100 | exception_code;
 
     let initial_copi_instruction = build_copi_instruction(exception_code);
@@ -102,7 +102,7 @@ fn test_software_exception_trigger() {
 #[allow(clippy::cast_lossless)]
 #[test]
 fn test_software_exception_return() {
-    let exception_code = 0x0F;
+    let exception_code = 0x40;
 
     let initial_copi_instruction = build_copi_instruction(exception_code);
     let mem: peripheral_mem::MemoryPeripheral =

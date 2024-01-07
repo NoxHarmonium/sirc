@@ -99,6 +99,12 @@ impl CpuPeripheral<'_> {
         ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
     }
 
+    pub fn raise_hardware_interrupt(&mut self, level: u8) {
+        if level > self.eu_registers.pending_hardware_exception_level {
+            self.eu_registers.pending_hardware_exception_level = level;
+        }
+    }
+
     pub fn reset(&mut self) {
         // Will cause the exception coprocessor to jump to reset vector
         let reset_cause_value = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);

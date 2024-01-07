@@ -3,7 +3,10 @@ use peripheral_mem::MemoryPeripheral;
 use crate::{
     coprocessors::{
         exception_unit::definitions::{
-            vectors::{LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION},
+            vectors::{
+                LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
+                USER_EXCEPTION_VECTOR_START,
+            },
             ExceptionPriorities,
         },
         processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
@@ -55,10 +58,17 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, value: u8) -> u16 {
 
 pub fn hardware_exception_level_to_vector(level: u8) -> u8 {
     assert!(level != ExceptionPriorities::NoException as u8, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
-    let vector = (level - 1) + LEVEL_ONE_HARDWARE_EXCEPTION;
+    assert!(
+        level != ExceptionPriorities::Software as u8,
+        "Level one interrupts are reserved for software interrupts"
+    );
+    // Priority is the second nibble of the vector ID
+    // So if we shift the level left by a nibble we get the vector
+    let flipped = ExceptionPriorities::LevelFiveHardware as u8 - level + 1;
+    let vector = flipped << (u8::BITS / 2);
     assert!(
         (LEVEL_FIVE_HARDWARE_EXCEPTION..=LEVEL_ONE_HARDWARE_EXCEPTION).contains(&vector),
-        "Calculated hardware exception vector should be in valid range ({LEVEL_ONE_HARDWARE_EXCEPTION}-{LEVEL_FIVE_HARDWARE_EXCEPTION}) got [{vector}]"
+        "Calculated hardware exception vector should be in valid range ({LEVEL_FIVE_HARDWARE_EXCEPTION}-{LEVEL_ONE_HARDWARE_EXCEPTION}) got [{vector}]"
     );
     vector
 }
@@ -89,6 +99,7 @@ impl Executor for ExceptionUnitExecutor {
     const COPROCESSOR_ID: u8 = 1;
 
     #[allow(clippy::cast_lossless)]
+    #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(
         cause_register_value: u16,
         registers: &'a mut Registers,
@@ -99,12 +110,12 @@ impl Executor for ExceptionUnitExecutor {
         // TODO: Implement waiting for exception
 
         let decoded = decode_exception_unit_instruction(cause_register_value);
+        let vector_address_low = decoded.value * (INSTRUCTION_SIZE_WORDS as u8);
 
         // Fetch the vector address
         let vector_address_bytes = fetch_instruction(
             mem,
-            (registers.system_ram_offset + (decoded.value as u32 * INSTRUCTION_SIZE_WORDS))
-                .to_segmented_address(),
+            (registers.system_ram_offset | vector_address_low as u32).to_segmented_address(),
         );
         let vector_address = u32::from_be_bytes(vector_address_bytes);
         let current_interrupt_mask: u8 = get_interrupt_mask(registers);
@@ -117,6 +128,11 @@ impl Executor for ExceptionUnitExecutor {
                 decoded.op_code
             )
         });
+
+        assert!(
+            typed_op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_low >= USER_EXCEPTION_VECTOR_START,
+            "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_low:X}",
+        );
 
         println!(
             "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"

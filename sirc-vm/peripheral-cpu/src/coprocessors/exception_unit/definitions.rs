@@ -1,14 +1,12 @@
 pub mod vectors {
-    // These are all u16 because they are added to the system_ram_offset register to
-    // get the full 24 bit address
     // The full vector range is 8 bits, so there are a possible 128 32-bit vector addresses
-    // that can be defined. Multiply the vector ID by two to get the actually memory address
-    // The first 64 addresses are privileged and can only be raised by hardware or in system
-    // mode. The second 64 addresses can be raised in user mode to trap into system mode.
+    // that can be defined. Multiply the vector ID by two to get the actual memory address
+    // The first 48 addresses are privileged and can only be raised by hardware or in system
+    // mode. The remaining 80 addresses can be raised in user mode to trap into system mode.
     //
     // Priority is determined 7 minus the value first nibble (e.g. 0x00 is priority 7, 0x40 is priority 3, 0x60 and above are all priority 1)
 
-    // Privileged Abort Exceptions (0x00-0x07)
+    // Privileged Abort Exceptions (0x00-0x07) (all priority 7)
 
     /// An external device raised an error via a CPU pin
     /// This could happen, for example, if a unmapped address is presented by the CPU
@@ -62,7 +60,7 @@ pub mod vectors {
     /// masked, but it could indicate a hardware misconfiguration,
     /// so it is handy so that hardware bugs for things that should
     /// not be interrupted are picked up.
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x09;
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x09; // 0000_1001;
 
     //  0x09-0x0F Reserved
 
@@ -71,16 +69,16 @@ pub mod vectors {
     // Special level - When level five hardware exception is masked and
     // another one is triggered, it isn't ignored, it triggers a LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
     // (see above)
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION: u8 = 0x10;
-    pub const LEVEL_FOUR_HARDWARE_EXCEPTION: u8 = 0x20;
-    pub const LEVEL_THREE_HARDWARE_EXCEPTION: u8 = 0x30;
-    pub const LEVEL_TWO_HARDWARE_EXCEPTION: u8 = 0x40;
-    pub const LEVEL_ONE_HARDWARE_EXCEPTION: u8 = 0x50;
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION: u8 = 0x10; // 7 - 1 = p6
+    pub const LEVEL_FOUR_HARDWARE_EXCEPTION: u8 = 0x20; // 7 - 2 = p5
+    pub const LEVEL_THREE_HARDWARE_EXCEPTION: u8 = 0x30; // 7 - 3 = p4
+    pub const LEVEL_TWO_HARDWARE_EXCEPTION: u8 = 0x40; // 7 - 4 = p3
+    pub const LEVEL_ONE_HARDWARE_EXCEPTION: u8 = 0x50; // 7 - 5 = p2
 
     /// User Exceptions
-    // 159 user exception vectors triggered by the EXCP instruction (e.g. a TRAP on the 68k)
+    // 128 user exception vectors triggered by the EXCP instruction (i.e. a TRAP on the 68k)
 
-    pub const USER_EXCEPTION_VECTOR_START: u8 = 0x60;
+    pub const USER_EXCEPTION_VECTOR_START: u8 = 0x60; // 7 - 6 = p1 (clamped at p1, nothing is p0 or below)
     pub const USER_EXCEPTION_VECTOR_END: u8 = 0xFF;
 }
 

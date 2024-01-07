@@ -14,3 +14,4 @@ num = "0.4"
 quickcheck = "1"
 quickcheck_macros = "1"
 strum = { version = "0.25", features = ["derive"] }
+assert_hex = "0.4"
