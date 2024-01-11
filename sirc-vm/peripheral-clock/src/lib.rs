@@ -17,38 +17,32 @@
 
 use std::time::Duration;
 
-use spin_sleep::LoopHelper;
-
 pub struct ClockPeripheral {
     pub master_clock_freq: u32, //hz
-    pub cpu_divider: u32,
-    pub hsync_divider: u32,
+    pub vsync_frequency: u32,   //hz
 }
 
 impl ClockPeripheral {
-    pub fn start_loop(&self, mut closure: impl FnMut(Duration, u32)) {
-        let clocks_per_hsync = self.master_clock_freq / self.hsync_divider;
-        // 312.5 lines per frame
+    pub fn start_loop(&self, mut closure: impl FnMut(u32)) {
         let vsync_frequency = 50;
+        let clocks_per_vsync = self.master_clock_freq / self.vsync_frequency;
+        let mut frame: u64 = 0;
 
-        let mut loop_helper = LoopHelper::builder()
-            .report_interval_s(5f64)
-            .build_with_target_rate(vsync_frequency);
+        let mut interval = spin_sleep_util::interval(Duration::from_secs(1) / vsync_frequency);
+        let mut reporter = spin_sleep_util::RateReporter::new(Duration::from_secs(5));
+        // 312.5 lines per frame
 
         loop {
-            let delta = loop_helper.loop_start(); // or .loop_start_s() for f64 seconds
+            frame += 1;
 
-            // TODO: Instruction quota
             // TODO TODO: Test with something that takes time (bubble sort a whole segment?) (https://stackoverflow.com/a/47366256/1153203)
-            closure(delta, clocks_per_hsync);
+            closure(clocks_per_vsync);
 
-            if let Some(fps) = loop_helper.report_rate() {
-                println!("HSync Per Second: {fps}");
+            if let Some(fps) = reporter.increment_and_report() {
+                println!("Frame: [{frame}] FPS: [{fps}]");
             }
 
-            // render_fps(current_fps);
-
-            loop_helper.loop_sleep(); // sleeps to achieve a 250 FPS rate
+            interval.tick();
         }
     }
 }
@@ -57,7 +51,7 @@ impl ClockPeripheral {
 // Target FGPA Peripherals Reference: https://github.com/emeb/ulx3s_6502/blob/master/trellis/ulx3s_v20.lpf
 
 // Master clock of target FGPA is 25 Mhz
-// CPU divider = 6 = 4.16666667 Mhz (Similar to the SNES)
+// CPU divider = 6 cycles per instruction = 4.16666667 Mhz (Similar to the SNES)
 
 // Component video rather than VGA because I want to be like a retro console
 // It will probably be a lot more complicated

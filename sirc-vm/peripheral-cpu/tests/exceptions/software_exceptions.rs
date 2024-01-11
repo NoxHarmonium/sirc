@@ -105,8 +105,7 @@ fn test_software_exception_return() {
     let exception_code = 0x40;
 
     let initial_copi_instruction = build_copi_instruction(exception_code);
-    let mem: peripheral_mem::MemoryPeripheral =
-        set_up_instruction_test(&initial_copi_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
+    let mem = set_up_instruction_test(&initial_copi_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
     let mut cpu = new_cpu_peripheral(&mem, PROGRAM_SEGMENT);
     cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
 

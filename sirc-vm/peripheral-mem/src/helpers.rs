@@ -12,9 +12,10 @@ use num::Integer;
 /// ```
 /// use peripheral_mem::helpers::write_bytes;
 /// use peripheral_mem::new_memory_peripheral;
+/// use peripheral_mem::memory_mapped_device::new_stub_memory_mapped_device;
 ///
 /// let mut mem = new_memory_peripheral();
-/// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true);
+/// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
 ///
 /// let bytes = "abcd".as_bytes();
 /// write_bytes(&mem, 0x00F0_00FF, bytes);

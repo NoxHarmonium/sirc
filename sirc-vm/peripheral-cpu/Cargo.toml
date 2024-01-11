@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 peripheral_mem = { path = "../peripheral-mem" }
+device_ram = { path = "../device-ram" }
 enum_dispatch = "0.3.12"
 num-traits = "0.2"
 num-derive = "0.4"

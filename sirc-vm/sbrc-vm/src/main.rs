@@ -15,11 +15,14 @@
 
 use std::{fs::File, io::Write, path::PathBuf, process::exit};
 
+use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
 use peripheral_mem::new_memory_peripheral;
+use peripheral_terminal::new_terminal_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
+static TERMINAL_SEGMENT: &str = "TERMINAL";
 
 use clap::Parser;
 
@@ -115,33 +118,48 @@ fn main() {
 
     let clock_peripheral = ClockPeripheral {
         master_clock_freq: 25_000_000,
-        cpu_divider: 6,
-        hsync_divider: 1600,
+        vsync_frequency: 50,
     };
+    let program_ram_device = new_ram_device_standard();
     let mut memory_peripheral = new_memory_peripheral();
+    let terminal_peripheral = new_terminal_peripheral();
 
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, 0x0, 0xFFFF, false);
+    memory_peripheral.map_segment(
+        TERMINAL_SEGMENT,
+        0x000A_0000,
+        0xF,
+        true,
+        Box::new(terminal_peripheral),
+    );
+
+    memory_peripheral.map_segment(
+        PROGRAM_SEGMENT,
+        0x0,
+        0xFFFF,
+        false,
+        Box::new(program_ram_device),
+    );
     memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {
-        match segment.mapped_file {
-            Some(mapped_file) => {
-                memory_peripheral.map_segment_to_file(
-                    segment.label.as_str(),
-                    segment.offset,
-                    segment.length,
-                    segment.writeable,
-                    &mapped_file,
-                );
-            }
-            None => {
-                memory_peripheral.map_segment(
-                    segment.label.as_str(),
-                    segment.offset,
-                    segment.length,
-                    segment.writeable,
-                );
-            }
+        if let Some(mapped_file) = segment.mapped_file {
+            let mm_ram_device = new_ram_device_file_mapped(mapped_file);
+            memory_peripheral.map_segment(
+                segment.label.as_str(),
+                segment.offset,
+                segment.length,
+                segment.writeable,
+                Box::new(mm_ram_device),
+            );
+        } else {
+            let standard_ram_device = new_ram_device_standard();
+            memory_peripheral.map_segment(
+                segment.label.as_str(),
+                segment.offset,
+                segment.length,
+                segment.writeable,
+                Box::new(standard_ram_device),
+            );
         }
     }
 
@@ -150,31 +168,37 @@ fn main() {
     // Jump to reset vector
     cpu_peripheral.reset();
 
-    let execute = |_delta, clock_quota| match cpu_peripheral.run_cpu(clock_quota) {
-        Ok(actual_clocks_executed) => {
-            println!("actual_clocks_executed: {actual_clocks_executed}");
-        }
-        Err(error) => {
-            if let Some(register_dump_file) = &args.register_dump_file {
-                println!(
+    let execute = |clock_quota| {
+        memory_peripheral.poll_all();
+
+        match cpu_peripheral.run_cpu(clock_quota) {
+            Ok(_actual_clocks_executed) => {
+                // Clock quota reached successfully
+            }
+            Err(error) => {
+                if let Some(register_dump_file) = &args.register_dump_file {
+                    println!(
                     "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
                 );
-                if let Err(error) = dump_registers(register_dump_file, &cpu_peripheral) {
-                    println!(
-                        "There was an error dumping registers to [{}].\n{}",
-                        register_dump_file.display(),
-                        error
-                    );
+                    if let Err(error) = dump_registers(register_dump_file, &cpu_peripheral) {
+                        println!(
+                            "There was an error dumping registers to [{}].\n{}",
+                            register_dump_file.display(),
+                            error
+                        );
+                    };
+                }
+
+                match error {
+                    peripheral_cpu::Error::ProcessorHalted(_) => {
+                        println!("Processor halted error caught. This type of error exits with code zero for testing purposes.");
+                        exit(0);
+                    }
+                    peripheral_cpu::Error::InvalidInstruction(_) => {
+                        panic!("CPU Error: {error:08x?}")
+                    }
                 };
             }
-
-            match error {
-                peripheral_cpu::Error::ProcessorHalted(_) => {
-                    println!("Processor halted error caught. This type of error exits with code zero for testing purposes.");
-                    exit(0);
-                }
-                peripheral_cpu::Error::InvalidInstruction(_) => panic!("CPU Error: {error:08x?}"),
-            };
         }
     };
 

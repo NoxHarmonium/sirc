@@ -17,7 +17,6 @@ use crate::{
         FullAddressRegisterAccess, Registers,
     },
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
-    CYCLES_PER_INSTRUCTION,
 };
 
 use super::super::shared::Executor;
@@ -105,7 +104,7 @@ impl Executor for ExceptionUnitExecutor {
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error> {
+    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
         // TODO: Implement hardware exception triggers
         // TODO: Implement waiting for exception
 
@@ -149,8 +148,7 @@ impl Executor for ExceptionUnitExecutor {
                 );
             }
             ExceptionUnitOpCodes::WaitForException => {
-                // TODO:
-                println!("WAIT!");
+                eu_registers.waiting_for_exception = true;
             }
             ExceptionUnitOpCodes::ReturnFromException => {
                 // Store current windowed link register to PC and jump to vector
@@ -179,9 +177,10 @@ impl Executor for ExceptionUnitExecutor {
         }
 
         eu_registers.pending_hardware_exception_level = 0x0;
+        // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
         registers.pending_coprocessor_command = 0x0;
 
-        Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
+        Ok((registers, eu_registers))
     }
 }
 

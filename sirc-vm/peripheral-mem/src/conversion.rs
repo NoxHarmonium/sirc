@@ -48,7 +48,11 @@ pub fn words_to_bytes(words: &[u16]) -> Vec<u8> {
 #[must_use]
 pub fn bytes_to_words(bytes: &[u8]) -> Vec<u16> {
     bytes
-        .chunks_exact(2)
-        .map(|chunk| u16::from_be_bytes(chunk.try_into().expect("chunk was not 2 bytes long")))
+        .chunks(2)
+        .map(|chunk| match chunk {
+            [lonely_byte] => u16::from_be_bytes([0, *lonely_byte]),
+            [high_byte, low_byte] => u16::from_be_bytes([*high_byte, *low_byte]),
+            _ => panic!("chunk must be either one or two bytes long"),
+        })
         .collect()
 }

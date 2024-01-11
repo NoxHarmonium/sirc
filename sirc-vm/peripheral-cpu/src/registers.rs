@@ -593,4 +593,5 @@ pub struct ExceptionLinkRegister {
 pub struct ExceptionUnitRegisters {
     pub pending_hardware_exception_level: u8,
     pub link_registers: [ExceptionLinkRegister; 7],
+    pub waiting_for_exception: bool,
 }

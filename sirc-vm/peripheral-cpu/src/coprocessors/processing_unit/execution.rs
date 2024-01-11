@@ -10,7 +10,7 @@ use crate::coprocessors::shared::{fetch_instruction, Executor};
 use crate::registers::{
     sr_bit_is_set, ExceptionUnitRegisters, Registers, SegmentedRegisterAccess, StatusRegisterFields,
 };
-use crate::{Error, CYCLES_PER_INSTRUCTION};
+use crate::Error;
 
 pub struct ProcessingUnitExecutor {}
 
@@ -23,7 +23,7 @@ impl Executor for ProcessingUnitExecutor {
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error> {
+    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
         // 1. Instruction Fetch (1/2)
         // 2. Instruction Fetch (2/2)
         let raw_instruction = fetch_instruction(mem, registers.get_segmented_pc());
@@ -75,6 +75,6 @@ impl Executor for ProcessingUnitExecutor {
 
         println!("EU: {decoded_instruction:X?}");
 
-        Ok((registers, eu_registers, CYCLES_PER_INSTRUCTION))
+        Ok((registers, eu_registers))
     }
 }

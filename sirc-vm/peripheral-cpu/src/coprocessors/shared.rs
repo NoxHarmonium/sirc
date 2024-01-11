@@ -13,7 +13,7 @@ pub trait Executor {
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &MemoryPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error>;
+    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error>;
 }
 
 /// Extends an 8 bit value that is signed to a 16 bit value
