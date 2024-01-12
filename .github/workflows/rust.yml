@@ -48,7 +48,13 @@ jobs:
     strategy:
       matrix:
         example-name:
-          ["boring", "byte-sieve", "software-exception", "store-load"]
+          [
+            "boring",
+            "byte-sieve",
+            "hardware-exception",
+            "software-exception",
+            "store-load",
+          ]
 
     steps:
       - uses: actions/checkout@v3
