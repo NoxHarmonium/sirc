@@ -1,12 +1,12 @@
 ///
 /// Converts a slice of words into a vector of bytes.
 ///
-/// Usually used to convert something that is stored in words (e.g. `MemoryPeripheral`)
+/// Usually used to convert something that is stored in words (e.g. `BusPeripheral`)
 /// into a format that can be written to, for example, a file.
 /// In other words, moving data from inside the VM to outside it (the environment).
 ///
 /// ```
-/// use peripheral_mem::conversion::words_to_bytes;
+/// use peripheral_bus::conversion::words_to_bytes;
 ///
 /// let words = &[0x7A79, 0x7877];
 /// let bytes = words_to_bytes(words);
@@ -27,13 +27,13 @@ pub fn words_to_bytes(words: &[u16]) -> Vec<u8> {
 /// Converts a slice of bytes into a vector of words.
 ///
 /// Usually used to convert something that is stored in bytes (e.g. a file read from disk)
-/// into a format that can be written to a `MemoryPeripheral` which has a 16 bit data bus
+/// into a format that can be written to a `BusPeripheral` which has a 16 bit data bus
 /// and does not deal with bytes.
 ///
 /// In other words, moving data from outside the VM (the environment).to inside it.
 ///
 /// ```
-/// use peripheral_mem::conversion::bytes_to_words;
+/// use peripheral_bus::conversion::bytes_to_words;
 ///
 /// let bytes = "zyxw".as_bytes();
 /// let words = bytes_to_words(bytes);

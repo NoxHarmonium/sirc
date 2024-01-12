@@ -19,10 +19,10 @@ extern crate quickcheck_macros;
 
 use std::{fs::OpenOptions, io::Write, path::Path};
 
-use peripheral_mem::{
+use peripheral_bus::{
     conversion::{bytes_to_words, words_to_bytes},
     memory_mapped_device::new_stub_memory_mapped_device,
-    new_memory_peripheral,
+    new_bus_peripheral,
 };
 use quickcheck::TestResult;
 use tempfile::tempdir;
@@ -32,7 +32,7 @@ fn regular_segment_test() {
     let segment_size: u32 = 0xF;
 
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_memory_peripheral();
+    let mut mem = new_bus_peripheral();
     mem.map_segment(
         "some_segment",
         0xCAFE_BEEF,
@@ -71,7 +71,7 @@ fn readonly_segment_test() {
     let segment_size: u32 = 0xF;
 
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_memory_peripheral();
+    let mut mem = new_bus_peripheral();
     mem.map_segment(
         "some_segment",
         0xCAFE_BEEF,
@@ -138,7 +138,7 @@ fn dump_segment_to_file_test(test_buffer: Vec<u16>) -> TestResult {
     let base_address: u32 = 0xCAFE_BEEF;
 
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_memory_peripheral();
+    let mut mem = new_bus_peripheral();
     mem.map_segment(
         "some_segment",
         base_address,
@@ -168,7 +168,7 @@ fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
     setup_file_to_load_into_segment(&file_to_load, &test_buffer);
 
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_memory_peripheral();
+    let mut mem = new_bus_peripheral();
     mem.map_segment(
         "some_label",
         0x0,
@@ -200,7 +200,7 @@ fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
 // ) {
 //     let mut stub_memory_mapped_device: Box<StubMemoryMappedDevice> =
 //         new_stub_memory_mapped_device();
-//     let mut mem = new_memory_peripheral();
+//     let mut mem = new_bus_peripheral();
 //     mem.map_segment_to_file(
 //         "some_segment",
 //         base_address,
@@ -217,7 +217,7 @@ fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
 //         assert_eq!(*expected_value_to_read, mem.read_address(*address));
 //     }
 
-//     // Make sure that the file is not mounted by the MemoryPeripheral anymore
+//     // Make sure that the file is not mounted by the BusPeripheral anymore
 //     drop(mem);
 // }
 

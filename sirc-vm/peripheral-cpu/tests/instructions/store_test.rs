@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -9,7 +10,6 @@ use peripheral_cpu::{
         Registers, SegmentedAddress,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -45,7 +45,7 @@ fn test_store_indirect_immediate() {
                     (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, _: &BusPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);
@@ -112,7 +112,7 @@ fn test_store_indirect_register() {
                         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
+                        |registers: &mut Registers, _: &BusPeripheral| {
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
@@ -187,7 +187,7 @@ fn test_store_indirect_register_pre_decrement() {
                             - 1;
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
+                        |registers: &mut Registers, _: &BusPeripheral| {
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
@@ -256,7 +256,7 @@ fn test_store_indirect_immediate_pre_decrement() {
                     (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address() - 1;
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, _: &BusPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);

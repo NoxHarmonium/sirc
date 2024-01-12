@@ -14,7 +14,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::TryRecvError;
 use std::thread;
 
-use peripheral_mem::memory_mapped_device::MemoryMappedDevice;
+use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
 
 fn spawn_stdin_channel() -> Receiver<String> {
     let (tx, rx) = mpsc::channel::<String>();

@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
@@ -44,7 +44,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         _: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: &MemoryPeripheral,
+        _: &BusPeripheral,
     ) {
         // TODO: Replace unwrap with something better
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;

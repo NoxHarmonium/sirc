@@ -1,6 +1,7 @@
 use std::ops::Range;
 
 use device_ram::new_ram_device_standard;
+use peripheral_bus::{new_bus_peripheral, BusPeripheral};
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
 };
@@ -8,7 +9,6 @@ use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::{
     new_cpu_peripheral, registers::Registers, CpuPeripheral, CYCLES_PER_INSTRUCTION,
 };
-use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
@@ -31,8 +31,8 @@ fn capture_cpu_state(cpu: &CpuPeripheral) -> TestCpuState {
 pub fn set_up_instruction_test(
     instruction_data: &InstructionData,
     program_offset: u32,
-) -> MemoryPeripheral {
-    let mut memory_peripheral = new_memory_peripheral();
+) -> BusPeripheral {
+    let mut memory_peripheral = new_bus_peripheral();
 
     let program_data = encode_instruction(instruction_data);
 
@@ -60,7 +60,7 @@ pub fn run_instruction<F>(
     program_offset: u32,
 ) -> (TestCpuState, TestCpuState)
 where
-    F: Fn(&mut Registers, &MemoryPeripheral),
+    F: Fn(&mut Registers, &BusPeripheral),
 {
     let memory_peripheral = set_up_instruction_test(instruction_data, program_offset);
     let mut cpu = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);

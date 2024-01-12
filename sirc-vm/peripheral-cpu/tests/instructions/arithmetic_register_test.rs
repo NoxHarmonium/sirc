@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -6,7 +7,6 @@ use peripheral_cpu::{
     },
     registers::{set_sr_bit, sr_bit_is_set, RegisterIndexing, Registers, StatusRegisterFields},
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -48,7 +48,7 @@ fn test_register_arithmetic_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &MemoryPeripheral| {
+            |registers: &mut Registers, _: &BusPeripheral| {
                 registers.set_at_index(target_register, register_value);
                 registers.set_at_index(src_register_index, operand_value);
                 for &status_register_field in initial_status_flags {

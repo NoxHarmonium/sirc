@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
@@ -7,7 +8,6 @@ use peripheral_cpu::{
         set_sr_bit, AddressRegisterName, RegisterIndexing, Registers, StatusRegisterFields,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -34,7 +34,7 @@ fn test_immediate_branch_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &MemoryPeripheral| {
+        |registers: &mut Registers, _: &BusPeripheral| {
             registers.ph = default_ph;
             registers.pl = initial_pl;
             for &status_register_field in initial_status_flags {
@@ -82,7 +82,7 @@ fn test_immediate_branch_with_subroutine_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &MemoryPeripheral| {
+        |registers: &mut Registers, _: &BusPeripheral| {
             registers.ph = default_ph;
             registers.pl = initial_pl;
             for &status_register_field in initial_status_flags {
@@ -136,7 +136,7 @@ fn test_register_branch_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &MemoryPeripheral| {
+            |registers: &mut Registers, _: &BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = default_ph;
                 registers.pl = initial_pl;
@@ -192,7 +192,7 @@ fn test_register_branch_with_subroutine_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &MemoryPeripheral| {
+            |registers: &mut Registers, _: &BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = default_ph;
                 registers.pl = initial_pl;

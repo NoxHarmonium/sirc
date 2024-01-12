@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
@@ -44,7 +44,7 @@ impl StageExecutor for MemoryAccessExecutor {
         registers: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        mem: &MemoryPeripheral,
+        mem: &BusPeripheral,
     ) {
         // 5. ====== Memory access/branch completion (MEM): ======
 

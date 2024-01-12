@@ -16,9 +16,9 @@
 use std::{fs::File, io::Write, path::PathBuf, process::exit};
 
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
+use peripheral_bus::new_bus_peripheral;
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
-use peripheral_mem::new_memory_peripheral;
 use peripheral_terminal::new_terminal_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
@@ -121,7 +121,7 @@ fn main() {
         vsync_frequency: 50,
     };
     let program_ram_device = new_ram_device_standard();
-    let mut memory_peripheral = new_memory_peripheral();
+    let mut memory_peripheral = new_bus_peripheral();
     let terminal_peripheral = new_terminal_peripheral();
 
     memory_peripheral.map_segment(

@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
@@ -8,7 +9,6 @@ use peripheral_cpu::{
         StatusRegisterFields,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -38,7 +38,7 @@ fn test_immediate_branch_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &MemoryPeripheral| {
+        |registers: &mut Registers, _: &BusPeripheral| {
             registers.ph = initial_pl.0;
             registers.pl = initial_pl.1;
             for &status_register_field in initial_status_flags {
@@ -85,7 +85,7 @@ fn test_immediate_branch_with_subroutine_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &MemoryPeripheral| {
+        |registers: &mut Registers, _: &BusPeripheral| {
             registers.ph = initial_pl.0;
             registers.pl = initial_pl.1;
             for &status_register_field in initial_status_flags {
@@ -137,7 +137,7 @@ fn test_register_branch_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &MemoryPeripheral| {
+            |registers: &mut Registers, _: &BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = initial_pl.0;
                 registers.pl = initial_pl.1;
@@ -191,7 +191,7 @@ fn test_register_branch_with_subroutine_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &MemoryPeripheral| {
+            |registers: &mut Registers, _: &BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = initial_pl.0;
                 registers.pl = initial_pl.1;

@@ -5,7 +5,7 @@ use std::{
 };
 
 use memmap::{MmapMut, MmapOptions};
-use peripheral_mem::memory_mapped_device::MemoryMappedDevice;
+use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
 
 pub enum SegmentMemCell {
     // At the moment, all raw segments get the maximum allowable of memory allocated

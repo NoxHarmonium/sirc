@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
@@ -73,7 +73,7 @@ impl StageExecutor for WriteBackExecutor {
         registers: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: &MemoryPeripheral,
+        _: &BusPeripheral,
     ) {
         let write_back_step_instruction_type =
             decode_write_back_step_instruction_type(decoded.ins, decoded);

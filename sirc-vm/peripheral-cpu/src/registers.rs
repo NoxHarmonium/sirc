@@ -273,7 +273,7 @@ impl SegmentedAddress for (u16, u16) {
     ///
     /// You will most likely need this when converting from the internal CPU registers
     /// to the address representation exposed by the virtual address pins of the CPU
-    /// for something like `peripheral_mem`.
+    /// for something like `peripheral_bus`.
     ///
     /// ```
     /// use peripheral_cpu::registers::SegmentedAddress;
@@ -333,7 +333,7 @@ impl FullAddressRegisterAccess for Registers {
 /// a 24 bit address split into two 16 bit registers).
 ///
 /// You will most likely need this when converting address exposed
-/// by the virtual address pins of the CPU for something like `peripheral_mem`
+/// by the virtual address pins of the CPU for something like `peripheral_bus`
 /// to the representation in the internal CPU registers.
 ///
 /// ```

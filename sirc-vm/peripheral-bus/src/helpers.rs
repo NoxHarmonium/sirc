@@ -1,20 +1,20 @@
-use crate::{conversion::bytes_to_words, MemoryPeripheral};
+use crate::{conversion::bytes_to_words, BusPeripheral};
 use num::Integer;
 
 ///
 /// Writes a slice of contiguous bytes to memory at the given address.
 ///
 /// You would think this would be a simple operation but there is a lot of byte/word/endian marshalling
-/// as usual. It is not currently part of the `MemoryPeripheral` API because I wanted to keep that as close
+/// as usual. It is not currently part of the `BusPeripheral` API because I wanted to keep that as close
 /// to the hardware as possible (one word read/write at a time). I'm not sure if that is actually wise
 /// and it might change in the future
 ///
 /// ```
-/// use peripheral_mem::helpers::write_bytes;
-/// use peripheral_mem::new_memory_peripheral;
-/// use peripheral_mem::memory_mapped_device::new_stub_memory_mapped_device;
+/// use peripheral_bus::helpers::write_bytes;
+/// use peripheral_bus::new_bus_peripheral;
+/// use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
 ///
-/// let mut mem = new_memory_peripheral();
+/// let mut mem = new_bus_peripheral();
 /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
 ///
 /// let bytes = "abcd".as_bytes();
@@ -29,7 +29,7 @@ use num::Integer;
 /// Will panic if an odd number of bytes are provided
 /// Will panic if the bytes don't fit into a 32 bit address space
 /// Will panic if there is a logic error in the function which causes a misalignment of bytes to words
-pub fn write_bytes(memory_peripheral: &MemoryPeripheral, start_address: u32, bytes: &[u8]) {
+pub fn write_bytes(memory_peripheral: &BusPeripheral, start_address: u32, bytes: &[u8]) {
     let byte_count = bytes.len();
     assert!(
         !byte_count.is_odd(),

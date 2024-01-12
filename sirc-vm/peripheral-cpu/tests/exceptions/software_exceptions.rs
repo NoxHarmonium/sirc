@@ -1,3 +1,4 @@
+use peripheral_bus::helpers::write_bytes;
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -7,7 +8,6 @@ use peripheral_cpu::{
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
     CYCLES_PER_INSTRUCTION,
 };
-use peripheral_mem::helpers::write_bytes;
 
 use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
 

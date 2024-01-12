@@ -1,7 +1,7 @@
 use device_ram::new_ram_device_standard;
+use peripheral_bus::{new_bus_peripheral, BusPeripheral};
 use peripheral_cpu::coprocessors::processing_unit::definitions::InstructionData;
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
 
 pub static VECTOR_SEGMENT: &str = "VECTOR";
 pub static PROGRAM_SEGMENT: &str = "PROGRAM";
@@ -15,8 +15,8 @@ pub fn set_up_instruction_test(
     instruction_data: &InstructionData,
     program_offset: u32,
     system_ram_offset: u32,
-) -> MemoryPeripheral {
-    let mut memory_peripheral = new_memory_peripheral();
+) -> BusPeripheral {
+    let mut memory_peripheral = new_bus_peripheral();
 
     let program_data = encode_instruction(instruction_data);
 

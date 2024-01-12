@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     coprocessors::processing_unit::definitions::{
@@ -66,7 +66,7 @@ pub trait StageExecutor {
         eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         // TODO: Only the memory access stage needs this. Maybe there is a clever way to only provide each stage what they need?
-        mem: &MemoryPeripheral,
+        mem: &BusPeripheral,
     );
 }
 

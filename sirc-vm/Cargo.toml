@@ -6,7 +6,7 @@ members = [
     "device-ram",
     "peripheral-clock",
     "peripheral-cpu",
-    "peripheral-mem",
+    "peripheral-bus",
     "peripheral-terminal",
     "sbrc-vm",
     "toolchain",

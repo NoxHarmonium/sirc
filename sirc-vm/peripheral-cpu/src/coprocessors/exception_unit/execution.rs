@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     coprocessors::{
@@ -103,7 +103,7 @@ impl Executor for ExceptionUnitExecutor {
         cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &MemoryPeripheral,
+        mem: &BusPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
         // TODO: Implement hardware exception triggers
         // TODO: Implement waiting for exception

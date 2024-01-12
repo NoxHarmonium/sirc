@@ -1,4 +1,5 @@
 use assert_hex::assert_eq_hex;
+use peripheral_bus::helpers::write_bytes;
 use peripheral_cpu::coprocessors::exception_unit::definitions::vectors;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -8,7 +9,6 @@ use peripheral_cpu::{
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
     CYCLES_PER_INSTRUCTION,
 };
-use peripheral_mem::helpers::write_bytes;
 
 use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
 

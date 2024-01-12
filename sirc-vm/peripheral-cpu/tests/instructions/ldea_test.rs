@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -8,7 +9,6 @@ use peripheral_cpu::{
         AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -43,7 +43,7 @@ fn test_ldea_indirect_immediate() {
                 });
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, _: &BusPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                     },
@@ -101,7 +101,7 @@ fn test_ldea_indirect_register() {
                     });
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
+                        |registers: &mut Registers, _: &BusPeripheral| {
                             registers.set_at_index(offset_register, offset as u16);
                             registers.set_address_register_at_index(
                                 src_address_register_index,

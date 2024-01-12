@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::{
     registers::{ExceptionUnitRegisters, Registers, SegmentedAddress},
@@ -12,7 +12,7 @@ pub trait Executor {
         cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &MemoryPeripheral,
+        mem: &BusPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error>;
 }
 
@@ -44,7 +44,7 @@ pub fn sign_extend_small_offset(small_offset: u8) -> u16 {
 
 // TODO: Rename to something more generic like fetch double word
 #[must_use]
-pub fn fetch_instruction(mem: &MemoryPeripheral, pc: (u16, u16)) -> [u8; 4] {
+pub fn fetch_instruction(mem: &BusPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // Only the CPU knows that the address is split into two 16 bit registers
     // Any other peripheral will only see the 24 address lines
     let full_address: u32 = pc.to_full_address();

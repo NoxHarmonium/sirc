@@ -38,7 +38,7 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::Executor,
 };
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 use registers::{ExceptionUnitRegisters, FullAddress};
 
 use crate::registers::Registers;
@@ -59,7 +59,7 @@ pub enum Error {
 }
 
 pub struct CpuPeripheral<'a> {
-    pub memory_peripheral: &'a MemoryPeripheral,
+    pub memory_peripheral: &'a BusPeripheral,
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
 }
@@ -72,7 +72,7 @@ pub struct CpuPeripheral<'a> {
 ///
 #[must_use]
 pub fn new_cpu_peripheral<'a>(
-    memory_peripheral: &'a MemoryPeripheral,
+    memory_peripheral: &'a BusPeripheral,
     program_segment_label: &str,
 ) -> CpuPeripheral<'a> {
     let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);

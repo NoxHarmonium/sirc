@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::BusPeripheral;
 
 use crate::coprocessors::processing_unit::definitions::Instruction;
 use crate::coprocessors::processing_unit::stages::execution_effective_address::ExecutionEffectiveAddressExecutor;
@@ -22,7 +22,7 @@ impl Executor for ProcessingUnitExecutor {
         _: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &MemoryPeripheral,
+        mem: &BusPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
         // 1. Instruction Fetch (1/2)
         // 2. Instruction Fetch (2/2)

@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -9,7 +10,6 @@ use peripheral_cpu::{
         SegmentedAddress,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 use quickcheck::{Arbitrary, Gen, TestResult};
 
 use crate::instructions::common;
@@ -64,7 +64,7 @@ fn test_load_indirect_immediate(test_data: LoadTestData) -> TestResult {
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
         },
@@ -124,7 +124,7 @@ fn test_load_indirect_register(test_data: LoadTestData) -> TestResult {
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
             registers.set_at_index(offset_register_index, offset as u16);
@@ -185,7 +185,7 @@ fn test_load_indirect_register_post_increment(test_data: LoadTestData) -> TestRe
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
             registers.set_at_index(offset_register_index, offset as u16);
@@ -239,7 +239,7 @@ fn test_load_indirect_immediate_post_increment(test_data: LoadTestData) -> TestR
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
         },

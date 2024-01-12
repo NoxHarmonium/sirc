@@ -31,17 +31,16 @@ pub struct Segment {
     pub device: RefCell<Box<dyn MemoryMappedDevice>>,
 }
 
-pub struct MemoryPeripheral {
+pub struct BusPeripheral {
     segments: Vec<Segment>,
 }
 
 #[must_use]
-pub fn new_memory_peripheral() -> MemoryPeripheral {
-    MemoryPeripheral { segments: vec![] }
+pub fn new_bus_peripheral() -> BusPeripheral {
+    BusPeripheral { segments: vec![] }
 }
 
-// TODO: Rename to BusPeripheral
-impl MemoryPeripheral {
+impl BusPeripheral {
     #[must_use]
     pub fn get_segment_for_label(&self, label: &str) -> Option<&Segment> {
         self.segments.iter().find(|s| s.label == label)
@@ -162,10 +161,10 @@ impl MemoryPeripheral {
     /// Writes a single 16 bit value into  a memory address
     ///
     /// ```
-    /// use peripheral_mem::new_memory_peripheral;
-    /// use peripheral_mem::memory_mapped_device::new_stub_memory_mapped_device;
+    /// use peripheral_bus::new_bus_peripheral;
+    /// use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
     ///
-    /// let mut mem = new_memory_peripheral();
+    /// let mut mem = new_bus_peripheral();
     /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
     /// let address = 0x00F0_CAFE;
     /// let value = 0xFEAB;
