@@ -13,8 +13,10 @@
 
 ; Reset register
 LOAD    r1, #1
+
 ; Wait for exception (will spin until interrupted)
-COPI    r1, #0x1900
+; TODO: Uncomment once the serial device is working and can interrupt this
+; COPI    r1, #0x1900
 
 ; r1 should be 0x0FF here after exception handler runs
 
