@@ -4,10 +4,10 @@ resolver = "2"
 
 members = [
     "device-ram",
+    "device-terminal",
+    "peripheral-bus",
     "peripheral-clock",
     "peripheral-cpu",
-    "peripheral-bus",
-    "peripheral-terminal",
     "sbrc-vm",
     "toolchain",
 ]

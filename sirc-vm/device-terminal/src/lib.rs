@@ -34,21 +34,21 @@ fn spawn_stdin_channel() -> Receiver<String> {
 }
 
 // TODO: Rename to TerminalDevice
-pub struct TerminalPeripheral {
+pub struct TerminalDevice {
     stdin_channel: Receiver<String>,
     stdin_buffer: VecDeque<u8>,
 }
 
 #[must_use]
-pub fn new_terminal_peripheral() -> TerminalPeripheral {
+pub fn new_terminal_device() -> TerminalDevice {
     let stdin_channel = spawn_stdin_channel();
-    TerminalPeripheral {
+    TerminalDevice {
         stdin_channel,
         stdin_buffer: VecDeque::new(),
     }
 }
 
-impl MemoryMappedDevice for TerminalPeripheral {
+impl MemoryMappedDevice for TerminalDevice {
     ///  # Panics
     /// Will panic if there is an unexpected error in the channel that reads from stdin
     fn poll(&mut self) {

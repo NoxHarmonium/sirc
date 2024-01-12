@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.3.24", features = ["derive"] }
+device_ram = { path = "../device-ram" }
+device_terminal = { path = "../device-terminal" }
+peripheral_bus = { path = "../peripheral-bus" }
 peripheral_clock = { path = "../peripheral-clock" }
 peripheral_cpu = { path = "../peripheral-cpu" }
-peripheral_bus = { path = "../peripheral-bus" }
-peripheral_terminal = { path = "../peripheral-terminal" }
-device_ram = { path = "../device-ram" }
