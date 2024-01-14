@@ -73,7 +73,7 @@ impl Executor for ProcessingUnitExecutor {
             return Err(Error::ProcessorHalted(*registers));
         }
 
-        println!("EU: {decoded_instruction:X?}");
+        // println!("EU: {decoded_instruction:X?}");
 
         Ok((registers, eu_registers))
     }

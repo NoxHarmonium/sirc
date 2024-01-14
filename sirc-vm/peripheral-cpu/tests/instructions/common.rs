@@ -6,9 +6,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_cpu::{
-    new_cpu_peripheral, registers::Registers, CpuPeripheral, CYCLES_PER_INSTRUCTION,
-};
+use peripheral_cpu::{new_cpu_peripheral, registers::Registers, CpuPeripheral};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
@@ -70,7 +68,7 @@ where
     register_setup(&mut cpu.registers, &memory_peripheral);
 
     let previous = capture_cpu_state(&cpu);
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
+    cpu.run_cpu()
         .expect("expected CPU to run six cycles successfully");
     let current = capture_cpu_state(&cpu);
     (previous, current)

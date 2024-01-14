@@ -59,7 +59,6 @@ fn inject_data_value(
 ) {
     match data.value {
         DataType::Value(value) => {
-            // Align on instruction sizes
             // TODO: Make packing smaller data sizes more efficient
             // E.g. put 4 DBs in one 32 bit chunk
             // TODO: Clean up this mess
@@ -73,6 +72,7 @@ fn inject_data_value(
                 _ => panic!("Unsupported data size bytes {}", data.size_bytes),
             };
 
+            println!("writing {bytes:X?} to 0x{program_offset:X?}");
             program[program_offset] = bytes;
         }
         DataType::SymbolRef(symbol_ref) => {
@@ -107,6 +107,8 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
 
     for token in tokens {
         let program_offset: usize = offset as usize / 4;
+        println!("HUH program_offset: {program_offset:X} offset {offset:X}");
+
         ensure_program_size(&mut program, program_offset + 1);
 
         match token {
@@ -127,6 +129,11 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 };
 
                 program[program_offset] = encode_instruction(&instruction);
+
+                println!(
+                    "{:X?} encoded as {:X?}",
+                    instruction, program[program_offset],
+                );
 
                 offset += INSTRUCTION_SIZE_BYTES;
             }

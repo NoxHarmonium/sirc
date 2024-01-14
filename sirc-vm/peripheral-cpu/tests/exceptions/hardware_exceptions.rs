@@ -7,7 +7,6 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
-    CYCLES_PER_INSTRUCTION,
 };
 
 use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
@@ -36,7 +35,7 @@ fn test_hardware_exception_trigger() {
     cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
 
     let expected_vector_address =
-        SYSTEM_RAM_OFFSET + (vectors::LEVEL_ONE_HARDWARE_EXCEPTION as u32 * 2);
+        SYSTEM_RAM_OFFSET + (vectors::LEVEL_TWO_HARDWARE_EXCEPTION as u32 * 2);
     let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
 
     // 32 bit vector: write upper word (the program segment) / write lower word (the offset in the segment)
@@ -51,7 +50,7 @@ fn test_hardware_exception_trigger() {
     assert_eq_hex!(0x0, get_interrupt_mask(&cpu.registers));
     assert_eq_hex!(0x2, cpu.eu_registers.pending_hardware_exception_level);
 
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
+    cpu.run_cpu()
         .expect("expected CPU to run six cycles successfully");
 
     assert_eq_hex!(0x2, get_interrupt_mask(&cpu.registers));

@@ -115,14 +115,15 @@ fn dump_registers(
 
 fn main() {
     let args = Args::parse();
+    let master_clock_freq = 25_000_000;
 
     let clock_peripheral = ClockPeripheral {
-        master_clock_freq: 25_000_000,
+        master_clock_freq,
         vsync_frequency: 50,
     };
     let program_ram_device = new_ram_device_standard();
     let mut memory_peripheral = new_bus_peripheral();
-    let terminal_peripheral = new_terminal_device();
+    let terminal_peripheral = new_terminal_device(master_clock_freq);
 
     memory_peripheral.map_segment(
         TERMINAL_SEGMENT,
@@ -168,10 +169,11 @@ fn main() {
     // Jump to reset vector
     cpu_peripheral.reset();
 
-    let execute = |clock_quota| {
-        memory_peripheral.poll_all();
+    let execute = |_| {
+        let interrupt_assertions = memory_peripheral.poll_all();
+        cpu_peripheral.raise_hardware_interrupt(interrupt_assertions);
 
-        match cpu_peripheral.run_cpu(clock_quota) {
+        match cpu_peripheral.run_cpu() {
             Ok(_actual_clocks_executed) => {
                 // Clock quota reached successfully
             }

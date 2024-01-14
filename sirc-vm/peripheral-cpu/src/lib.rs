@@ -29,6 +29,7 @@ extern crate quickcheck_macros;
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod coprocessors;
 pub mod registers;
+pub mod util;
 
 use coprocessors::{
     exception_unit::{
@@ -99,7 +100,7 @@ impl CpuPeripheral<'_> {
     }
 
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
-        if level > self.eu_registers.pending_hardware_exception_level {
+        if level > 0 {
             self.eu_registers.pending_hardware_exception_level = level;
             self.eu_registers.waiting_for_exception = false;
         }
@@ -114,55 +115,46 @@ impl CpuPeripheral<'_> {
     ///
     /// # Panics
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
-    pub fn run_cpu(&mut self, clock_quota: u32) -> Result<u32, Error> {
-        let mut clocks: u32 = 0;
-        loop {
-            // TODO: use a better name than "cause" register and make it consistent across everywhere
-            let cause_register_value =
-                get_cause_register_value(&self.registers, &self.eu_registers);
-            let coprocessor_id = CpuPeripheral::decode_processor_id(cause_register_value);
-            let result = if self.eu_registers.waiting_for_exception {
-                // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
-                // TODO: WHAT AM I DOING? --- Make a new peripheral that allows async IO to cause a hardware interrupt. Peripheral that causes an exception for each character going into stdin?
-                // Would need to interrupt the CPU loop when stdio comes in
-                Ok((&self.registers, &mut self.eu_registers))
-            } else {
-                match coprocessor_id {
-                    ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
-                        cause_register_value,
-                        &mut self.registers,
-                        &mut self.eu_registers,
-                        self.memory_peripheral,
-                    ),
-                    ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
-                        cause_register_value,
-                        &mut self.registers,
-                        &mut self.eu_registers,
-                        self.memory_peripheral,
-                    ),
-                    _ => {
-                        // TODO: Work out what would happen in hardware here
-                        // Do we want another coprocessor (multiplication?)
-                        panic!("Coprocessor ID [{coprocessor_id}] not implemented yet")
-                    }
+    pub fn run_cpu(&mut self) -> Result<u32, Error> {
+        // TODO: use a better name than "cause" register and make it consistent across everywhere
+        let cause_register_value = get_cause_register_value(&self.registers, &self.eu_registers);
+        let coprocessor_id = CpuPeripheral::decode_processor_id(cause_register_value);
+        let result = if self.eu_registers.waiting_for_exception {
+            // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
+            // TODO: WHAT AM I DOING? --- Make a new peripheral that allows async IO to cause a hardware interrupt. Peripheral that causes an exception for each character going into stdin?
+            // Would need to interrupt the CPU loop when stdio comes in
+            Ok((&self.registers, &mut self.eu_registers))
+        } else {
+            match coprocessor_id {
+                ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
+                    cause_register_value,
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
+                ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
+                    cause_register_value,
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    self.memory_peripheral,
+                ),
+                _ => {
+                    // TODO: Work out what would happen in hardware here
+                    // Do we want another coprocessor (multiplication?)
+                    panic!("Coprocessor ID [{coprocessor_id}] not implemented yet")
                 }
-            };
+            }
+        };
 
-            match result {
-                Err(error) => {
-                    println!("Execution stopped:\n{error:08x?}");
-                    return Err(error);
-                }
-                Ok((_registers, _eu_registers)) => {
-                    // Note: When the CPU is waiting for an interrupt, in hardware the clock would probably be disconnected to save power
-                    // Therefore this value should just be used for timing, it might not be the actual cycles the CPU physically executes
-                    clocks += CYCLES_PER_INSTRUCTION;
-
-                    if clocks >= clock_quota {
-                        // Exit if quota is reached to allow other devices to run
-                        return Ok(clocks);
-                    }
-                }
+        match result {
+            Err(error) => {
+                println!("Execution stopped:\n{error:08x?}");
+                Err(error)
+            }
+            Ok((_registers, _eu_registers)) => {
+                // Note: When the CPU is waiting for an interrupt, in hardware the clock would probably be disconnected to save power
+                // Therefore this value should just be used for timing, it might not be the actual cycles the CPU physically executes
+                Ok(CYCLES_PER_INSTRUCTION)
             }
         }
     }

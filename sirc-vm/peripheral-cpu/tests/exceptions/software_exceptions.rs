@@ -6,7 +6,6 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
-    CYCLES_PER_INSTRUCTION,
 };
 
 use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
@@ -61,7 +60,7 @@ fn test_software_exception_trigger() {
     );
 
     // First six cycles will run the COPI instruction and load the cause register
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
+    cpu.run_cpu()
         .expect("expected CPU to run six cycles successfully");
 
     assert_eq!(exception_op_code, cpu.registers.pending_coprocessor_command);
@@ -69,7 +68,7 @@ fn test_software_exception_trigger() {
     assert_eq!(0x0, cpu.eu_registers.pending_hardware_exception_level);
 
     // The next six cycles the exception unit should run and do the actual jump
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
+    cpu.run_cpu()
         .expect("expected CPU to run six cycles successfully");
 
     assert_eq!(
@@ -92,8 +91,10 @@ fn test_software_exception_trigger() {
 
     // First six cycles will run the COPI instruction and load the cause register
     // The next six cycles the exception unit should run but ignore the exception
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
-        .expect("expected CPU to run twelve cycles successfully");
+    for _ in 0..2 {
+        cpu.run_cpu()
+            .expect("expected CPU to run twelve cycles successfully");
+    }
 
     // Check that no jump occurred (e.g. PC proceed normally) because an exception is already being processed
     assert_eq!(0x00CE_0002, cpu.registers.get_full_pc_address());
@@ -126,8 +127,10 @@ fn test_software_exception_return() {
     write_bytes(&mem, vector_target_address, &encoded_instruction);
 
     // First six cycles sets the cause register - second six cycles performs the jump
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
-        .expect("expected CPU to run twelve cycles successfully");
+    for _ in 0..2 {
+        cpu.run_cpu()
+            .expect("expected CPU to run twelve cycles successfully");
+    }
 
     assert_eq!(
         PROGRAM_OFFSET | vector_target_address,
@@ -135,8 +138,10 @@ fn test_software_exception_return() {
     );
 
     // First six cycles sets the cause register - second six cycles performs the return
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION * 2)
-        .expect("expected CPU to run twelve cycles successfully");
+    for _ in 0..2 {
+        cpu.run_cpu()
+            .expect("expected CPU to run twelve cycles successfully");
+    }
 
     // Check it jumped back to the instruction after the original branch
     assert_eq!(0x00CE_0002, cpu.registers.get_full_pc_address());

@@ -5,7 +5,7 @@ use std::{
 };
 
 use memmap::{MmapMut, MmapOptions};
-use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
+use peripheral_bus::memory_mapped_device::{BusAssertions, MemoryMappedDevice};
 
 pub enum SegmentMemCell {
     // At the moment, all raw segments get the maximum allowable of memory allocated
@@ -43,8 +43,9 @@ pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
 }
 
 impl MemoryMappedDevice for RamDevice {
-    fn poll(&mut self) {
+    fn poll(&mut self) -> BusAssertions {
         // Does nothing for RAM at the moment
+        BusAssertions::default()
     }
 
     fn read_address(&self, address: u32) -> u16 {

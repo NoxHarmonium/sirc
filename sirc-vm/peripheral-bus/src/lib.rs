@@ -191,11 +191,13 @@ impl BusPeripheral {
         });
     }
 
-    pub fn poll_all(&self) {
+    #[must_use]
+    pub fn poll_all(&self) -> u8 {
         let segments = &self.segments;
-        for segment in segments {
+        segments.iter().fold(0x0, |prev, segment| {
             let mut device = segment.device.borrow_mut();
-            device.poll();
-        }
+            let assertions = device.poll();
+            prev | assertions.interrupt_assertion
+        })
     }
 }

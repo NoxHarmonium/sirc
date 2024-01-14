@@ -16,6 +16,7 @@ use crate::{
         get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
         FullAddressRegisterAccess, Registers,
     },
+    util::find_highest_active_bit,
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
 };
 
@@ -55,15 +56,51 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, value: u8) -> u16 {
         | value as u16
 }
 
-pub fn hardware_exception_level_to_vector(level: u8) -> u8 {
-    assert!(level != ExceptionPriorities::NoException as u8, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
+///
+/// Takes an CPU interrupt bit mask (e.g. a bit for each active interrupt) and
+/// returns the vector number. It will always use the MSB to determine the level.
+///
+/// ```
+/// use assert_hex::assert_eq_hex;
+/// use peripheral_cpu::coprocessors::exception_unit::execution::hardware_exception_level_to_vector;
+///
+/// assert_eq_hex!(0x50, hardware_exception_level_to_vector(0x01));
+/// assert_eq_hex!(0x40 ,hardware_exception_level_to_vector(0x02));
+/// assert_eq_hex!(0x30, hardware_exception_level_to_vector(0x04));
+/// assert_eq_hex!(0x20, hardware_exception_level_to_vector(0x08));
+/// assert_eq_hex!(0x10, hardware_exception_level_to_vector(0x10));
+///
+/// assert_eq_hex!(0x10, hardware_exception_level_to_vector(0xFF));
+/// assert_eq_hex!(0x10 ,hardware_exception_level_to_vector(0x12));
+/// assert_eq_hex!(0x20, hardware_exception_level_to_vector(0x0F));
+/// assert_eq_hex!(0x40, hardware_exception_level_to_vector(0x03));
+/// assert_eq_hex!(0x30, hardware_exception_level_to_vector(0x06));
+///
+/// ```
+#[allow(clippy::cast_possible_truncation)]
+pub fn hardware_exception_level_to_vector(active_interrupt_bitfield: u8) -> u8 {
+    // There are only 5 interrupt lines
+    let valid_bits = 0x1F;
+    // Even though multiple interrupts can be active at once,
+    // we should service the highest priority one
+    let highest_active_interrupt = find_highest_active_bit(active_interrupt_bitfield & valid_bits);
+    // +1 to make bit zero into interrupt one, +1 again because hardware interrupts start at 2 (1 is software exception)
+    let exception_level: u8 = (highest_active_interrupt.ilog2()) as u8 + 2;
+
+    assert!(exception_level != ExceptionPriorities::NoException as u8, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
     assert!(
-        level != ExceptionPriorities::Software as u8,
+        exception_level != ExceptionPriorities::Software as u8,
         "Level one interrupts are reserved for software interrupts"
     );
+    assert!(
+        exception_level < ExceptionPriorities::Fault as u8,
+        "There is no interrupt level above level five"
+    );
+
     // Priority is the second nibble of the vector ID
     // So if we shift the level left by a nibble we get the vector
-    let flipped = ExceptionPriorities::LevelFiveHardware as u8 - level + 1;
+    // We also invert it because vectors with lower memory addresses are higher priority
+    let flipped = ExceptionPriorities::LevelFiveHardware as u8 - exception_level + 1;
     let vector = flipped << (u8::BITS / 2);
     assert!(
         (LEVEL_FIVE_HARDWARE_EXCEPTION..=LEVEL_ONE_HARDWARE_EXCEPTION).contains(&vector),
@@ -133,9 +170,9 @@ impl Executor for ExceptionUnitExecutor {
             "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_low:X}",
         );
 
-        println!(
-            "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
-        );
+        // println!(
+        //     "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
+        // );
 
         match typed_op_code {
             ExceptionUnitOpCodes::SoftwareException => {
@@ -152,11 +189,16 @@ impl Executor for ExceptionUnitExecutor {
             }
             ExceptionUnitOpCodes::ReturnFromException => {
                 // Store current windowed link register to PC and jump to vector
+                // TODO: Is it safe to use the current_interrupt_mask here? Could that be user editable? Does that matter?
                 let ExceptionLinkRegister {
                     return_address,
                     return_status_register,
                 } = eu_registers.link_registers[(current_interrupt_mask - 1) as usize];
 
+                println!(
+                    "resetting saved SR 0Xx{return_status_register:X} -> current 0x{:X}",
+                    registers.sr,
+                );
                 registers.set_full_pc_address(return_address);
                 registers.sr = return_status_register;
             }
@@ -191,7 +233,7 @@ fn handle_exception(
     eu_registers: &mut ExceptionUnitRegisters,
     vector_address: u32,
 ) {
-    println!("XU: current_interrupt_mask: {current_interrupt_mask} >= exception_level: {exception_level} ?");
+    println!("XU: current_interrupt_mask: {current_interrupt_mask} >= exception_level: {exception_level} ? vector_address: 0x{vector_address:X}");
     // Store current PC in windowed link register and jump to vector
     if current_interrupt_mask >= exception_level {
         // Ignore lower priority exceptions
@@ -202,6 +244,7 @@ fn handle_exception(
         return_status_register: registers.sr,
     };
     set_sr_bit(StatusRegisterFields::SystemMode, registers);
+
     registers.set_full_pc_address(vector_address);
     set_interrupt_mask(registers, exception_level);
 }

@@ -104,7 +104,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::CoprocessorCallImmediate,
                     register: 0x0,
-                    value: 0x0200,
+                    value: 0x1A00,
                     additional_flags: 0x0,
                     condition_flag,
                 }),

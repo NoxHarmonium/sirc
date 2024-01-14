@@ -36,7 +36,9 @@ impl ClockPeripheral {
             frame += 1;
 
             // TODO TODO: Test with something that takes time (bubble sort a whole segment?) (https://stackoverflow.com/a/47366256/1153203)
-            closure(clocks_per_vsync);
+            for _ in 0..clocks_per_vsync {
+                closure(clocks_per_vsync);
+            }
 
             if let Some(fps) = reporter.increment_and_report() {
                 println!("Frame: [{frame}] FPS: [{fps}]");

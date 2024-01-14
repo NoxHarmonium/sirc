@@ -63,5 +63,5 @@ jobs:
         run: rustup update stable
 
       - name: Run ${{ matrix.example-name }}
-        run: make check
+        run: make clean check
         working-directory: ./sirc-vm/examples/${{ matrix.example-name }}
