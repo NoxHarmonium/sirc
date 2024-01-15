@@ -17,6 +17,8 @@
 
 use std::time::Duration;
 
+use log::debug;
+
 pub struct ClockPeripheral {
     pub master_clock_freq: u32, //hz
     pub vsync_frequency: u32,   //hz
@@ -41,7 +43,7 @@ impl ClockPeripheral {
             }
 
             if let Some(fps) = reporter.increment_and_report() {
-                println!("Frame: [{frame}] FPS: [{fps}]");
+                debug!("Frame: [{frame}] FPS: [{fps}]");
             }
 
             interval.tick();

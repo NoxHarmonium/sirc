@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.3.24", features = ["derive"] }
+clap = { version = "4.4.16", features = ["derive"] }
+clap-verbosity-flag = "2.1.1"
+log = "0.4.20"
+stderrlog = "0.5.4"
 device_ram = { path = "../device-ram" }
 device_terminal = { path = "../device-terminal" }
 peripheral_bus = { path = "../peripheral-bus" }

@@ -7,15 +7,18 @@
 )]
 #![deny(warnings)]
 
+use log::debug;
+use log::error;
+
+use peripheral_bus::memory_mapped_device::BusAssertions;
+use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
+
 use std::collections::VecDeque;
 use std::io;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::TryRecvError;
 use std::thread;
-
-use peripheral_bus::memory_mapped_device::BusAssertions;
-use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
 
 // TODO: Could use a trait on u16 for this?
 const REGISTER_FALSE: u16 = 0x0;
@@ -29,9 +32,14 @@ fn spawn_stdin_channel() -> Receiver<String> {
         // However, due to line buffering we probably wouldn't get the input until a new line anyway
         // If it is an issue we could use a crate or maybe use raw mode but it's not too important
         // at this point.
-        io::stdin().read_line(&mut buffer).unwrap();
-        if tx.send(buffer).is_err() {
-            // Stop looping if there is an error
+        let bytes_read = io::stdin().read_line(&mut buffer).unwrap();
+        if bytes_read == 0 {
+            // read_line always returns zero bytes_read when EOF has been reached (nothing)
+            break;
+        }
+        if let Err(error) = tx.send(buffer) {
+            error!("Error reading stdin: {error:?}");
+            // If we get an error we probably wan't to clean up rather than try and read anything else from the stream
             break;
         }
     });
@@ -48,8 +56,8 @@ pub struct TerminalDeviceControlRegisters {
     send_pending: u16,
     send_data: u16,
 }
-// TODO: Rename to TerminalDevice
 pub struct TerminalDevice {
+    reading_finished: bool,
     master_clock_freq: u32,
     clock_counter: usize,
     stdin_channel: Receiver<String>,
@@ -61,6 +69,7 @@ pub struct TerminalDevice {
 pub fn new_terminal_device(master_clock_freq: u32) -> TerminalDevice {
     let stdin_channel = spawn_stdin_channel();
     TerminalDevice {
+        reading_finished: false,
         clock_counter: 0,
         master_clock_freq,
         stdin_channel,
@@ -75,17 +84,20 @@ impl MemoryMappedDevice for TerminalDevice {
     /// Will panic if there is an unexpected error in the channel that reads from stdin
     fn poll(&mut self) -> BusAssertions {
         // Pull any pending data from stdin into the virtual buffer
-        match self.stdin_channel.try_recv() {
-            Ok(data) => {
-                // TODO: Write the result somewhere and flag exception
-                println!("Received: {data}");
-                self.stdin_buffer.extend(data.as_bytes());
-            }
-            Err(TryRecvError::Empty) => {
-                // Nothing to do
-            }
-            Err(TryRecvError::Disconnected) => {
-                panic!("TP: stdin channel disconnected unexpectedly")
+        if !self.reading_finished {
+            match self.stdin_channel.try_recv() {
+                Ok(data) => {
+                    // TODO: Write the result somewhere and flag exception
+                    debug!("Received: [{:X?}]", data.as_bytes());
+                    self.stdin_buffer.extend(data.as_bytes());
+                }
+                Err(TryRecvError::Empty) => {
+                    // Nothing to do
+                }
+                Err(TryRecvError::Disconnected) => {
+                    debug!("Channel to read stdin has closed. This does not necessarily mean an error occurred if EOF was encountered");
+                    self.reading_finished = true;
+                }
             }
         }
 
@@ -101,15 +113,10 @@ impl MemoryMappedDevice for TerminalDevice {
             false
         };
 
-        // println!(
-        //     "clock_counter: {} should_activate: {should_activate} clocks_per_recv: {clocks_per_recv:?} struct {:?}",
-        //     self.clock_counter, self.control_registers
-        // );
-
         // Drip feed the actual data register that the CPU can access at the rate specified by baud
         if self.control_registers.recv_enabled == REGISTER_TRUE && should_activate {
             if let Some(data) = self.stdin_buffer.pop_front() {
-                println!("READ OUT OF stdin_buffer {data:X}");
+                debug!("Data received: [0x{data:X}]");
                 self.control_registers.recv_data = u16::from(data);
                 self.control_registers.recv_pending = REGISTER_TRUE;
             }

@@ -1,6 +1,8 @@
 use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 
+use log::warn;
+
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
 pub const ADDRESS_MASK: u32 = 0x00FF_FFFF;
@@ -285,7 +287,7 @@ impl SegmentedAddress for (u16, u16) {
     fn to_full_address(self) -> u32 {
         let (high, low) = self;
         if high > 0x00FF {
-            println!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.");
+            warn!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.");
         }
         let high_shifted = u32::from(high) << (size_of::<u16>() * u8::BITS as usize);
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored

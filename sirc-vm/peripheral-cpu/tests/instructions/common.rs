@@ -63,8 +63,6 @@ where
     let memory_peripheral = set_up_instruction_test(instruction_data, program_offset);
     let mut cpu = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
 
-    println!("run_instruction: {instruction_data:#?}");
-
     register_setup(&mut cpu.registers, &memory_peripheral);
 
     let previous = capture_cpu_state(&cpu);

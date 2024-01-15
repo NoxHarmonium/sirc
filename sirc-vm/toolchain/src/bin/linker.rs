@@ -77,8 +77,6 @@ fn main() -> io::Result<()> {
                 );
             });
 
-        println!("TS: {target_symbol:X?}");
-
         // TODO: Clear up confusion between byte addressing and instruction addressing
         let target_offset_words =
             (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
@@ -95,29 +93,6 @@ fn main() -> io::Result<()> {
         ];
 
         let full_offset = target_offset_words as i32 - program_offset_words as i32;
-
-        // let calculate_8_bit_value = || match symbol_ref.ref_type {
-        //     RefType::SmallOffset => i8::try_from(full_offset).unwrap_or_else(|_| {
-        //         panic!(
-        //             "Offset {} ({} - {}) does not fit into a 8 bit signed integer ({}-{})",
-        //             full_offset,
-        //             target_offset_words,
-        //             program_offset_words,
-        //             i8::MIN,
-        //             i8::MAX
-        //         )
-        //     }) as u8,
-        //     RefType::Implied => {
-        //         panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
-        //     }
-        //     _ => panic!("Only SmallOffset RefType is supported by the LDMR/STMR instructions"),
-        // };
-
-        println!(
-            "calc: {target_offset_words} {:X?} {:X?}",
-            symbol_ref.ref_type,
-            bytemuck::cast::<u32, [u16; 2]>(target_offset_words)
-        );
 
         let calculate_16_bit_value = || match symbol_ref.ref_type {
             RefType::Offset => i16::try_from(full_offset).unwrap_or_else(|_| {
@@ -163,7 +138,6 @@ fn main() -> io::Result<()> {
                 .copy_from_slice(&value_to_insert_bytes);
         } else {
             let instruction = decode_instruction(raw_instruction);
-            println!("PATCHING: {instruction:X?}");
             let patched_instruction = match instruction {
                 InstructionData::Immediate(data) => match data.op_code {
                     Instruction::BranchToSubroutineWithImmediateDisplacement
@@ -202,13 +176,7 @@ fn main() -> io::Result<()> {
                 ),
             };
 
-            println!("after patch: {patched_instruction:X?}");
-
             let raw_patched_instruction = encode_instruction(&patched_instruction);
-
-            println!(
-                "saving patch byte: {raw_patched_instruction:X?} to 0x{program_offset_bytes:X}"
-            );
 
             // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
             linked_program[program_offset_bytes..=program_offset_bytes + 3]

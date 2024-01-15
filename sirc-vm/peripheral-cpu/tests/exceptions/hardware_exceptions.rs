@@ -60,7 +60,6 @@ fn test_hardware_exception_trigger() {
         PROGRAM_OFFSET | vector_target_address,
         cpu.registers.get_full_pc_address()
     );
-    println!("{:X?}", cpu.eu_registers.link_registers);
     assert_eq_hex!(
         0x00CE_0000,
         cpu.eu_registers.link_registers[1].return_address

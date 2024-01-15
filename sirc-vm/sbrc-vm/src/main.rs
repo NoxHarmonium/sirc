@@ -15,6 +15,8 @@
 
 use std::{fs::File, io::Write, path::PathBuf, process::exit};
 
+use log::{error, info, Level};
+
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
 use peripheral_bus::new_bus_peripheral;
@@ -96,6 +98,9 @@ struct Args {
 
     #[clap(short, long, value_parser, value_name = "FILE")]
     register_dump_file: Option<PathBuf>,
+
+    #[command(flatten)]
+    verbose: clap_verbosity_flag::Verbosity,
 }
 
 fn dump_registers(
@@ -115,6 +120,24 @@ fn dump_registers(
 
 fn main() {
     let args = Args::parse();
+
+    stderrlog::new()
+        .module(module_path!())
+        // TODO: Is there a way to get this from the dependency list?
+        .modules(vec![
+            "device_ram",
+            "device_terminal",
+            "peripheral_bus",
+            "peripheral_clock",
+            "peripheral_cpu",
+        ])
+        .quiet(args.verbose.is_silent())
+        .verbosity(args.verbose.log_level().unwrap_or(Level::Error))
+        .timestamp(stderrlog::Timestamp::Millisecond)
+        .show_module_names(true)
+        .init()
+        .unwrap();
+
     let master_clock_freq = 25_000_000;
 
     let clock_peripheral = ClockPeripheral {
@@ -179,11 +202,11 @@ fn main() {
             }
             Err(error) => {
                 if let Some(register_dump_file) = &args.register_dump_file {
-                    println!(
+                    info!(
                     "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
                 );
                     if let Err(error) = dump_registers(register_dump_file, &cpu_peripheral) {
-                        println!(
+                        error!(
                             "There was an error dumping registers to [{}].\n{}",
                             register_dump_file.display(),
                             error
@@ -193,7 +216,7 @@ fn main() {
 
                 match error {
                     peripheral_cpu::Error::ProcessorHalted(_) => {
-                        println!("Processor halted error caught. This type of error exits with code zero for testing purposes.");
+                        info!("Processor halted error caught (COP 0x14FF). This type of error exits with code zero for testing purposes.");
                         exit(0);
                     }
                     peripheral_cpu::Error::InvalidInstruction(_) => {

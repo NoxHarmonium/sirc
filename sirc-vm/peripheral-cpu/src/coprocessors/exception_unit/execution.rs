@@ -1,3 +1,4 @@
+use log::trace;
 use peripheral_bus::BusPeripheral;
 
 use crate::{
@@ -170,9 +171,9 @@ impl Executor for ExceptionUnitExecutor {
             "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_low:X}",
         );
 
-        // println!(
-        //     "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
-        // );
+        trace!(
+            "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
+        );
 
         match typed_op_code {
             ExceptionUnitOpCodes::SoftwareException => {
@@ -195,10 +196,6 @@ impl Executor for ExceptionUnitExecutor {
                     return_status_register,
                 } = eu_registers.link_registers[(current_interrupt_mask - 1) as usize];
 
-                // println!(
-                //     "resetting saved SR 0Xx{return_status_register:X} -> current 0x{:X}",
-                //     registers.sr,
-                // );
                 registers.set_full_pc_address(return_address);
                 registers.sr = return_status_register;
             }
@@ -233,7 +230,6 @@ fn handle_exception(
     eu_registers: &mut ExceptionUnitRegisters,
     vector_address: u32,
 ) {
-    // println!("XU: current_interrupt_mask: {current_interrupt_mask} >= exception_level: {exception_level} ? vector_address: 0x{vector_address:X}");
     // Store current PC in windowed link register and jump to vector
     if current_interrupt_mask >= exception_level {
         // Ignore lower priority exceptions

@@ -43,6 +43,7 @@ use peripheral_bus::BusPeripheral;
 use registers::{ExceptionUnitRegisters, FullAddress};
 
 use crate::registers::Registers;
+use log::error;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
@@ -148,7 +149,7 @@ impl CpuPeripheral<'_> {
 
         match result {
             Err(error) => {
-                println!("Execution stopped:\n{error:08x?}");
+                error!("Execution stopped:\n{error:08x?}");
                 Err(error)
             }
             Ok((_registers, _eu_registers)) => {

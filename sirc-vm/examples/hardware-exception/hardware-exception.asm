@@ -23,8 +23,8 @@
 .EQU $SERIAL_DEVICE_SEND_DATA       #0x0006
 
 ;; Scratch Variables
-.EQU $MESSAGE_SEND_POINTER          #0x0000
-.EQU $MESSAGE_SEND_LENGTH           #0x0001
+.EQU $MESSAGE_SEND_BASE             #0x0000
+.EQU $MESSAGE_SEND_POINTER          #0x0001
 
 
 ;; Exception Vectors
@@ -35,18 +35,22 @@
 .ORG 0x0080
 .DQ @exception_handler_p2
 
+;;;;;;; MAIN CODE SECTION
+
 .ORG 0x0100
 :start
 
 ; Setup routines
 BRSR @setup_serial
 BRSR @print_help
+; Make sure this is after the initial help message print (see the subroutine for more info)
+BRSR @enable_serial_recv
 
 :wait_for_char
 ; Wait for exception (will spin until interrupted)
 COPI    r1, #0x1900
 
-; Pending byte should be in r7
+; Pending byte should be in r7 after exeception handler runs
 CMPI    r7, $EXPECTED_CHAR
 BRAN|== @finish
 
@@ -60,6 +64,18 @@ LOAD    al, $SERIAL_DEVICE_BAUD
 ; TODO: Allow omitting the #0 offset when not using an offset (infer the #0)
 STOR    (#0, a), r1
 
+RETS
+
+:enable_serial_recv
+
+; When piping data to stdin, an EOF character gets sent which closes stdin
+; This means that we can't trigger any more interrupts manually after the data is piped
+; (stdin is currently the only way to externally trigger an interrupt)
+; If the data is coming in at the same type we are sending data out,
+; it ends up with the program gets stuck waiting for an interupt and never finishes
+; TODO: Actually that shouldn't be a problem - better investigate this further (
+;   maybe the exception handler routines are conflicting with each other)
+
 LOAD    r1, #0x1
 LOAD    al, $SERIAL_DEVICE_RECV_ENABLED
 STOR    (#0, a), r1
@@ -67,32 +83,55 @@ STOR    (#0, a), r1
 RETS
 
 :print_help
+
+LOAD    r1, @help_message
+BRAN    @print
+
+:print_exit
+
+LOAD    r1, @exit_message
+BRAN    @print
+
+:print
+
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_BASE
+STOR    (#0, a), r1
+
 ; Align pointer
-ADDI r4, #1
-; String size (*2 due to words getting padded to dw)
-LOAD r5, #34
+LOAD    r1, #1
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r4
-
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_LENGTH
-STOR    (#0, a), r5
+STOR    (#0, a), r1
 
 LOAD    r1, $TRUE
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
 STOR    (#0, a), r1
 
+:wait_for_print_finish
+
+; Wait for exception (will spin until interrupted)
+COPI    r1, #0x1900
+
+LOAD    ah, $SERIAL_DEVICE_SEGMENT
+LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+LOAD    r1, (#0, a)
+
+CMPI    r1, $TRUE
+BRAN|== @wait_for_print_finish
+
 RETS
 
 :finish
 
-; r1 should be 0x0FF here after exception handler runs
+BRSR    @print_exit
 
 ; Halt CPU
 COPI    r1, #0x14FF
+
+;;;;;;; EXCEPTION HANDLERS
 
 .ORG 0x0400
 :exception_handler_p2
@@ -139,34 +178,31 @@ RETE|==
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-LOAD    r1, (#0, a)
-
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_LENGTH
 LOAD    r2, (#0, a)
-
-; If the message buffer has been sent. Stop sending
-CMPR    r1, r2
-BRAN|>= @stop_send
+LOAD    al, $MESSAGE_SEND_BASE
+LOAD    al, (#0, a)
 
 LOAD    ah, $PROGRAM_SEGMENT
-LOAD    al, @help_message
-LOAD    r3, (r1, a)
+LOAD    r3, (r2, a)
+
+; If the message buffer (zero terminated) has been sent. Stop sending
+CMPI    r3, #0
+BRAN|== @stop_send
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_DATA
 STOR    (#0, a), r3
 
 ; Increment by two because of lack of packing (a word actually is padded to a DW)
-ADDI    r1, #2
+ADDI    r2, #2
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r1
+STOR    (#0, a), r2
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r3, $TRUE
-STOR    (#0, a), r3
+LOAD    r1, $TRUE
+STOR    (#0, a), r1
 
 RETS
 
@@ -178,9 +214,10 @@ STOR    (#0, a), r1
 
 RETS
 
+;;;;;;; DATA
 
+; TODO: A string data type that does this for us
 .ORG 0x0800
-; Message to print in ASCII codes (length 17)
 :help_message
 .DW #84
 .DW #121
@@ -199,6 +236,19 @@ RETS
 .DW #105
 .DW #116
 .DW #10
+.DW #0
+
+:exit_message
+.DW #71
+.DW #111
+.DW #111
+.DW #100
+.DW #98
+.DW #121
+.DW #101
+.DW #33
+.DW #10
+.DW #0
 
 ; TODO: Why do I need this here to make this file parse???
 NOOP

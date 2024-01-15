@@ -21,6 +21,7 @@ use std::cell::RefCell;
 use std::fs::read;
 use std::path::Path;
 
+use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
 
 pub struct Segment {
@@ -62,7 +63,7 @@ impl BusPeripheral {
         writable: bool,
         device: Box<dyn MemoryMappedDevice>,
     ) {
-        println!(
+        debug!(
             "Map segment {} from 0x{:08x} to 0x{:08x}",
             label,
             address,
@@ -144,7 +145,7 @@ impl BusPeripheral {
     pub fn read_address(&self, address: u32) -> u16 {
         self.get_segment_for_address(address).map_or_else(
             || {
-                println!(
+                warn!(
                 "Warning: No segment mapped to address 0x{address:08x}. Value read will always be 0x0000"
             );
                 // If a segment isn't mapped, the address just maps to nothing
@@ -177,7 +178,7 @@ impl BusPeripheral {
     pub fn write_address(&self, address: u32, value: u16) {
         self.get_segment_for_address(address).map_or_else(|| {
              // If a segment isn't mapped, the value just goes into a black hole
-             println!(
+             warn!(
                 "Warning: No segment mapped to address 0x{address:08x}. Value will be ignored (not written)"
             );
         } , |segment| {

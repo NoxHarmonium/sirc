@@ -327,11 +327,6 @@ pub fn perform_shift(
     shift_count: u16,
     short_immediate: bool, // TODO: Find a smarter solution to this
 ) -> (u16, u16) {
-    // println!(
-    //     "!!SHIFT!! {:#?} | {:#?} | {:#?}",
-    //     operand, shift_type, shift_count
-    // );
-
     // TODO: This is terrible. It needs a proper refactor, but in the interest of time at the moment
     // we will conform to the current interface and fix it later
     let mut intermediate_registers = IntermediateRegisters::default();
@@ -527,11 +522,6 @@ pub fn perform_alu_operation(
     status_register: u16,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    // println!(
-    //     "!!ALU!! {:#?} | {} | {} | {:#?} | {:#?}",
-    //     alu_op, a, b, registers, intermediate_registers
-    // );
-
     match alu_op {
         AluOp::Add => perform_add(a, b, intermediate_registers),
         AluOp::AddWithCarry => {
@@ -554,8 +544,6 @@ pub fn perform_alu_operation(
         // TODO: Do this in a cleaner way, probably without passing boolean as function param
         intermediate_registers.alu_output = 0x0;
     }
-
-    // println!("!!ALU DONE!! {:#?} | {:#?}", alu_op, intermediate_registers);
 }
 
 #[allow(clippy::cast_possible_wrap)]

@@ -160,8 +160,6 @@ fn dump_segment_to_file_test(test_buffer: Vec<u16>) -> TestResult {
 #[allow(clippy::cast_possible_truncation, clippy::needless_pass_by_value)]
 #[quickcheck()]
 fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
-    println!("test_buffer: {test_buffer:X?}");
-
     let dir = tempdir().unwrap();
     let file_to_load = dir.path().join("load.bin");
 
