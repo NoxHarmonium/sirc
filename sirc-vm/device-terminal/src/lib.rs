@@ -131,7 +131,11 @@ impl MemoryMappedDevice for TerminalDevice {
             self.clock_counter += 1;
         }
 
-        if self.control_registers.recv_pending == REGISTER_TRUE {
+        if (self.control_registers.recv_enabled == REGISTER_TRUE
+            && self.control_registers.recv_pending == REGISTER_TRUE)
+            || (self.control_registers.send_enabled == REGISTER_TRUE
+                && self.control_registers.send_pending == REGISTER_FALSE)
+        {
             return BusAssertions {
                 interrupt_assertion: 0x2,
             };

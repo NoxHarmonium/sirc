@@ -9,7 +9,7 @@ hardware-exception.bin: hardware-exception.o
 	cargo run --bin linker -- --segment-offset 0 --output-file hardware-exception.bin hardware-exception.o
 
 run: hardware-exception.bin
-	cargo run --bin sbrc_vm -- --program-file ./hardware-exception.bin --register-dump-file ./hardware-exception.register-dump
+	cargo run --bin sbrc_vm -- --program-file ./hardware-exception.bin --register-dump-file ./hardware-exception.register-dump --segment SCRATCH:00010000:FFFF
 
 check: run
 	diff -u ./hardware-exception.register-dump ./hardware-exception.register-dump-expected

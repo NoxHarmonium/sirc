@@ -9,6 +9,7 @@
 
 ;; Segments
 .EQU $PROGRAM_SEGMENT               #0x0000
+.EQU $SCRATCH_SEGMENT               #0x0001
 
 ;; Devices
 ; Serial
@@ -20,6 +21,10 @@
 .EQU $SERIAL_DEVICE_SEND_ENABLED    #0x0004
 .EQU $SERIAL_DEVICE_SEND_PENDING    #0x0005
 .EQU $SERIAL_DEVICE_SEND_DATA       #0x0006
+
+;; Scratch Variables
+.EQU $MESSAGE_SEND_POINTER          #0x0000
+.EQU $MESSAGE_SEND_LENGTH           #0x0001
 
 
 ;; Exception Vectors
@@ -58,41 +63,28 @@ STOR    (#0, a), r1
 LOAD    r1, #0x1
 LOAD    al, $SERIAL_DEVICE_RECV_ENABLED
 STOR    (#0, a), r1
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-STOR    (#0, a), r1
 
 RETS
 
 :print_help
-; Loop counter
-LOAD r4, #1
+; Align pointer
+ADDI r4, #1
 ; String size (*2 due to words getting padded to dw)
 LOAD r5, #34
 
-:print_loop_start
-LOAD    ah, $PROGRAM_SEGMENT
-LOAD    al, @help_message
-LOAD    r3, (r4, a)
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_POINTER
+STOR    (#0, a), r4
 
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_LENGTH
+STOR    (#0, a), r5
+
+LOAD    r1, $TRUE
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_DATA
-STOR    (#0, a), r3
+LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+STOR    (#0, a), r1
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r3, $TRUE
-STOR    (#0, a), r3
-
-; TODO: Should we use an interrupt for this instead of spinning?
-:wait_for_print_ready
-LOAD    r3, (#0, a)
-CMPI    r3, $TRUE
-BRAN|== @wait_for_print_ready
-
-; Increment by two because of lack of packing (a word actually is padded to a DW)
-ADDI    r4, #2
-CMPR    r4, r5
-BRAN|<< @print_loop_start
 RETS
 
 :finish
@@ -105,6 +97,18 @@ COPI    r1, #0x14FF
 .ORG 0x0400
 :exception_handler_p2
 
+; Save the link register
+LDEA s, (#0, l)
+
+BRSR @read_pending_byte
+BRSR @write_pending_byte
+
+; Restore the link register
+LDEA l, (#0, s)
+
+RETE
+
+:read_pending_byte
 ; Check if there is something we need to read
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_RECV_PENDING
@@ -112,7 +116,7 @@ LOAD    r1, (#0, a)
 
 ; Return early if not
 CMPI    r1, $FALSE
-RETE|==
+RETS|==
 
 ; Read pending byte
 LOAD    al, $SERIAL_DEVICE_RECV_DATA
@@ -121,8 +125,59 @@ LOAD    r7, (#0, a)
 LOAD    al, $SERIAL_DEVICE_RECV_PENDING
 LOAD    r1, $FALSE
 STOR    (#0, a), r1
+RETS
 
-RETE
+:write_pending_byte
+; Check if the device is ready to write
+LOAD    ah, $SERIAL_DEVICE_SEGMENT
+LOAD    al, $SERIAL_DEVICE_SEND_PENDING
+LOAD    r1, (#0, a)
+
+; Return early if not (there is already a send pending)
+CMPI    r1, $TRUE
+RETE|==
+
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_POINTER
+LOAD    r1, (#0, a)
+
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_LENGTH
+LOAD    r2, (#0, a)
+
+; If the message buffer has been sent. Stop sending
+CMPR    r1, r2
+BRAN|>= @stop_send
+
+LOAD    ah, $PROGRAM_SEGMENT
+LOAD    al, @help_message
+LOAD    r3, (r1, a)
+
+LOAD    ah, $SERIAL_DEVICE_SEGMENT
+LOAD    al, $SERIAL_DEVICE_SEND_DATA
+STOR    (#0, a), r3
+
+; Increment by two because of lack of packing (a word actually is padded to a DW)
+ADDI    r1, #2
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $MESSAGE_SEND_POINTER
+STOR    (#0, a), r1
+
+LOAD    ah, $SERIAL_DEVICE_SEGMENT
+LOAD    al, $SERIAL_DEVICE_SEND_PENDING
+LOAD    r3, $TRUE
+STOR    (#0, a), r3
+
+RETS
+
+:stop_send
+LOAD    ah, $SERIAL_DEVICE_SEGMENT
+LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+LOAD    r1, $FALSE
+STOR    (#0, a), r1
+
+RETS
+
 
 .ORG 0x0800
 ; Message to print in ASCII codes (length 17)
