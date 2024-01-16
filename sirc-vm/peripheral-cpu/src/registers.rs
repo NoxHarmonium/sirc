@@ -3,6 +3,8 @@ use std::ops::{Index, IndexMut};
 
 use log::warn;
 
+use crate::coprocessors::exception_unit::definitions::Faults;
+
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
 pub const ADDRESS_MASK: u32 = 0x00FF_FFFF;
@@ -594,6 +596,7 @@ pub struct ExceptionLinkRegister {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
     pub pending_hardware_exception_level: u8,
+    pub pending_fault: Option<Faults>,
     pub link_registers: [ExceptionLinkRegister; 7],
     pub waiting_for_exception: bool,
 }

@@ -1,3 +1,4 @@
+use assert_hex::assert_eq_hex;
 use peripheral_bus::helpers::write_bytes;
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::{
@@ -120,8 +121,11 @@ fn test_software_exception_return() {
         &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
     );
 
+    // WTH why is this getting read as B instead of A?
     let return_instruction = build_rete_instruction();
     let encoded_instruction = encode_instruction(&return_instruction);
+
+    println!("!!!!! encoded_instruction: {encoded_instruction:X?}");
 
     // Write the return instruction to the location that is jumped to
     write_bytes(&mem, vector_target_address, &encoded_instruction);
@@ -144,6 +148,6 @@ fn test_software_exception_return() {
     }
 
     // Check it jumped back to the instruction after the original branch
-    assert_eq!(0x00CE_0002, cpu.registers.get_full_pc_address());
+    assert_eq_hex!(0x00CE_0002, cpu.registers.get_full_pc_address());
     assert_eq!(0x0, get_interrupt_mask(&cpu.registers));
 }

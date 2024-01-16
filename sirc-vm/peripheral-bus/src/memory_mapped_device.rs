@@ -16,6 +16,9 @@ pub struct BusAssertions {
     /// zero is no interrupt, is a bit field
     /// Interrupt assertions from all devices will be ORed together
     pub interrupt_assertion: u8,
+    /// Set to true to cause a bus fault in the CPU
+    /// Usually used for invalid access on devices etc.
+    pub bus_error: bool,
 }
 
 #[allow(clippy::cast_possible_truncation)]

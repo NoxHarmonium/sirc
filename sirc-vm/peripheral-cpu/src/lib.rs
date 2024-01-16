@@ -31,19 +31,21 @@ pub mod coprocessors;
 pub mod registers;
 pub mod util;
 
+use log::{error, trace};
+
 use coprocessors::{
     exception_unit::{
-        definitions::ExceptionUnitOpCodes,
+        definitions::{ExceptionUnitOpCodes, Faults},
         execution::{construct_cause_value, get_cause_register_value, ExceptionUnitExecutor},
     },
     processing_unit::execution::ProcessingUnitExecutor,
-    shared::Executor,
+    shared::{ExecutionPhase, Executor},
 };
+use num_traits::FromPrimitive;
 use peripheral_bus::BusPeripheral;
 use registers::{ExceptionUnitRegisters, FullAddress};
 
 use crate::registers::Registers;
-use log::error;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
@@ -64,6 +66,10 @@ pub struct CpuPeripheral<'a> {
     pub memory_peripheral: &'a BusPeripheral,
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
+    pub phase: u8,
+    pub processing_unit_executor: ProcessingUnitExecutor,
+    pub exception_unit_executor: ExceptionUnitExecutor,
+    pub cause_register_value: u16,
 }
 
 ///
@@ -91,6 +97,10 @@ pub fn new_cpu_peripheral<'a>(
             ..Registers::default()
         },
         eu_registers: ExceptionUnitRegisters::default(),
+        phase: 0,
+        processing_unit_executor: ProcessingUnitExecutor::default(),
+        exception_unit_executor: ExceptionUnitExecutor::default(),
+        cause_register_value: 0,
     }
 }
 
@@ -101,10 +111,28 @@ impl CpuPeripheral<'_> {
     }
 
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
+        trace!("Interrupt level [{level}] raised");
         if level > 0 {
             self.eu_registers.pending_hardware_exception_level = level;
             self.eu_registers.waiting_for_exception = false;
         }
+    }
+
+    pub fn raise_fault(&mut self, _: Faults) {
+        // Disabled during refactor
+
+        // if let Some(pending_fault) = self.eu_registers.pending_fault {
+        //     // TODO: Is this possible in hardware? If so, what would happen?
+        //     panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
+        // }
+
+        // let current_interrupt_mask: u8 = get_interrupt_mask(&self.registers);
+        // if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
+        //     error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
+        //     panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
+        // }
+
+        // self.eu_registers.pending_fault = Some(fault);
     }
 
     pub fn reset(&mut self) {
@@ -113,46 +141,69 @@ impl CpuPeripheral<'_> {
         self.registers.pending_coprocessor_command = reset_cause_value;
     }
 
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn poll(&mut self) -> Result<(), Error> {
+        let phase: ExecutionPhase =
+            FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
+
+        if phase == ExecutionPhase::InstructionFetchLow {
+            // Only reset the cause register every full instruction cycle
+            self.cause_register_value =
+                get_cause_register_value(&self.registers, &self.eu_registers);
+        }
+
+        let coprocessor_id = CpuPeripheral::decode_processor_id(self.cause_register_value);
+
+        // TODO: Do something with error results, instead of unwrap
+        let result = match coprocessor_id {
+            ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
+                &phase,
+                self.cause_register_value,
+                &mut self.registers,
+                &mut self.eu_registers,
+                self.memory_peripheral,
+            ),
+            ExceptionUnitExecutor::COPROCESSOR_ID => self.exception_unit_executor.step(
+                &phase,
+                self.cause_register_value,
+                &mut self.registers,
+                &mut self.eu_registers,
+                self.memory_peripheral,
+            ),
+            _ => {
+                // TODO: Work out what would happen in hardware here
+                // Do we want another coprocessor (multiplication?)
+                panic!("Coprocessor ID [{coprocessor_id}] not implemented yet");
+            }
+        };
+
+        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
+
+        result.map(|_| ())
+    }
+
     ///
     /// # Panics
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     pub fn run_cpu(&mut self) -> Result<u32, Error> {
-        // TODO: use a better name than "cause" register and make it consistent across everywhere
-        let cause_register_value = get_cause_register_value(&self.registers, &self.eu_registers);
-        let coprocessor_id = CpuPeripheral::decode_processor_id(cause_register_value);
-        let result = if self.eu_registers.waiting_for_exception {
+        let mut run = || {
             // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
-            // TODO: WHAT AM I DOING? --- Make a new peripheral that allows async IO to cause a hardware interrupt. Peripheral that causes an exception for each character going into stdin?
-            // Would need to interrupt the CPU loop when stdio comes in
-            Ok((&self.registers, &mut self.eu_registers))
-        } else {
-            match coprocessor_id {
-                ProcessingUnitExecutor::COPROCESSOR_ID => ProcessingUnitExecutor::step(
-                    cause_register_value,
-                    &mut self.registers,
-                    &mut self.eu_registers,
-                    self.memory_peripheral,
-                ),
-                ExceptionUnitExecutor::COPROCESSOR_ID => ExceptionUnitExecutor::step(
-                    cause_register_value,
-                    &mut self.registers,
-                    &mut self.eu_registers,
-                    self.memory_peripheral,
-                ),
-                _ => {
-                    // TODO: Work out what would happen in hardware here
-                    // Do we want another coprocessor (multiplication?)
-                    panic!("Coprocessor ID [{coprocessor_id}] not implemented yet")
+            if !self.eu_registers.waiting_for_exception {
+                for _ in 0..CYCLES_PER_INSTRUCTION {
+                    self.poll()?;
                 }
             }
+            Ok(())
         };
+
+        let result = run();
 
         match result {
             Err(error) => {
                 error!("Execution stopped:\n{error:08x?}");
                 Err(error)
             }
-            Ok((_registers, _eu_registers)) => {
+            Ok(()) => {
                 // Note: When the CPU is waiting for an interrupt, in hardware the clock would probably be disconnected to save power
                 // Therefore this value should just be used for timing, it might not be the actual cycles the CPU physically executes
                 Ok(CYCLES_PER_INSTRUCTION)

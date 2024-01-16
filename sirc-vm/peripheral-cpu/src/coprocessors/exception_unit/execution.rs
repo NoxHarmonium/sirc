@@ -11,7 +11,7 @@ use crate::{
             ExceptionPriorities,
         },
         processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
-        shared::fetch_instruction,
+        shared::ExecutionPhase,
     },
     registers::{
         get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
@@ -23,10 +23,10 @@ use crate::{
 
 use super::super::shared::Executor;
 use super::{
-    super::super::Error, definitions::ExceptionUnitOpCodes,
-    encoding::decode_exception_unit_instruction,
+    super::super::Error,
+    definitions::ExceptionUnitOpCodes,
+    encoding::{decode_exception_unit_instruction, ExceptionUnitInstruction},
 };
-use crate::registers::FullAddress;
 use crate::registers::{set_interrupt_mask, set_sr_bit, StatusRegisterFields};
 
 ///
@@ -114,6 +114,28 @@ pub fn get_cause_register_value(
     registers: &Registers,
     eu_registers: &ExceptionUnitRegisters,
 ) -> u16 {
+    // let fault_can_occur = get_interrupt_mask(registers) < ExceptionPriorities::Fault as u8;
+
+    // WHAT I WAS UP TO. Trying to get the first fault (bus fault) to actually work
+    // TODO: The bus error is stuck in a loop or something
+    // Actually! :-( bus error can occur mid instruction (.e.g IF/mem read/writeback) so I think we need to make the bus clock more granular
+    // if fault_can_occur {
+    //     if let Some(pending_fault) = eu_registers.pending_fault {
+    //         let vector = match pending_fault {
+    //             super::definitions::Faults::Bus => BUS_FAULT,
+    //             super::definitions::Faults::Alignment => ALIGNMENT_FAULT,
+    //             super::definitions::Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
+    //             super::definitions::Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
+    //             super::definitions::Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
+    //             super::definitions::Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
+    //             super::definitions::Faults::LevelFiveInterruptConflict => {
+    //                 LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
+    //             }
+    //         };
+
+    //         return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
+    //     }
+    // }
     if eu_registers.pending_hardware_exception_level > get_interrupt_mask(registers) {
         let vector =
             hardware_exception_level_to_vector(eu_registers.pending_hardware_exception_level);
@@ -130,7 +152,13 @@ pub fn raise_hardware_interrupt(
     eu_registers.pending_hardware_exception_level = level as u8;
 }
 
-pub struct ExceptionUnitExecutor {}
+#[derive(Default)]
+pub struct ExceptionUnitExecutor {
+    pub exception_unit_instruction: ExceptionUnitInstruction,
+    pub vector_address: u32,
+    pub vector_value: u32,
+    pub exception_unit_opcode: ExceptionUnitOpCodes,
+}
 
 impl Executor for ExceptionUnitExecutor {
     const COPROCESSOR_ID: u8 = 1;
@@ -138,86 +166,114 @@ impl Executor for ExceptionUnitExecutor {
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(
+        &mut self,
+        phase: &ExecutionPhase,
         cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         mem: &BusPeripheral,
     ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
-        // TODO: Implement hardware exception triggers
-        // TODO: Implement waiting for exception
+        // TODO: Implement faults
+        // TODO: P5 interrupts should be edge triggered and if one is triggered while another is being serviced, it should be a fault
+        // println!(
+        //     "phase: {phase:?} BEFORE current_interrupt_mask: 0x{:X}",
+        //     get_interrupt_mask(registers)
+        // );
 
-        let decoded = decode_exception_unit_instruction(cause_register_value);
-        let vector_address_low = decoded.value * (INSTRUCTION_SIZE_WORDS as u8);
+        match phase {
+            ExecutionPhase::InstructionFetchLow => {
+                self.exception_unit_instruction =
+                    decode_exception_unit_instruction(cause_register_value);
+                let vector_address_offset =
+                    self.exception_unit_instruction.value as u32 * INSTRUCTION_SIZE_WORDS;
+                self.vector_address = registers.system_ram_offset | vector_address_offset;
+                self.vector_value =
+                    (mem.read_address(self.vector_address).to_owned() as u32) << u16::BITS;
+                trace!("decoded: {:X?}", self.exception_unit_instruction);
+            }
+            ExecutionPhase::InstructionFetchHigh => {
+                self.vector_value |= mem.read_address(self.vector_address + 1).to_owned() as u32;
+            }
+            ExecutionPhase::InstructionDecode => {
+                // TODO: Real CPU can't panic. Work out what should actually happen here (probably nothing)
+                // TODO: Better error handling
+                self.exception_unit_opcode =
+                    num::FromPrimitive::from_u8(self.exception_unit_instruction.op_code)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "Unimplemented op code [{:X}] for exception co-processor",
+                                self.exception_unit_instruction.op_code
+                            )
+                        });
 
-        // Fetch the vector address
-        let vector_address_bytes = fetch_instruction(
-            mem,
-            (registers.system_ram_offset | vector_address_low as u32).to_segmented_address(),
-        );
-        let vector_address = u32::from_be_bytes(vector_address_bytes);
-        let current_interrupt_mask: u8 = get_interrupt_mask(registers);
+                let vector_address_high = self.vector_address as u8 & u8::MAX;
 
-        // TODO: Real CPU can't panic. Work out what should actually happen here (probably nothing)
-        // TODO: Better error handling
-        let typed_op_code = num::FromPrimitive::from_u8(decoded.op_code).unwrap_or_else(|| {
-            panic!(
-                "Unimplemented op code [{:X}] for exception co-processor",
-                decoded.op_code
-            )
-        });
-
-        assert!(
-            typed_op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_low >= USER_EXCEPTION_VECTOR_START,
-            "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_low:X}",
-        );
-
-        trace!(
-            "XU: typed_op_code: {typed_op_code:#?} cause_register_value: 0x{cause_register_value:X?} vector_address: 0x{vector_address:X?} current_interrupt_mask: {current_interrupt_mask}"
-        );
-
-        match typed_op_code {
-            ExceptionUnitOpCodes::SoftwareException => {
-                handle_exception(
-                    current_interrupt_mask,
-                    1,
-                    registers,
-                    eu_registers,
-                    vector_address,
+                assert!(
+                    self.exception_unit_opcode != ExceptionUnitOpCodes::SoftwareException || vector_address_high >= USER_EXCEPTION_VECTOR_START,
+                    "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_high:X}",
                 );
             }
-            ExceptionUnitOpCodes::WaitForException => {
-                eu_registers.waiting_for_exception = true;
-            }
-            ExceptionUnitOpCodes::ReturnFromException => {
-                // Store current windowed link register to PC and jump to vector
-                // TODO: Is it safe to use the current_interrupt_mask here? Could that be user editable? Does that matter?
-                let ExceptionLinkRegister {
-                    return_address,
-                    return_status_register,
-                } = eu_registers.link_registers[(current_interrupt_mask - 1) as usize];
+            ExecutionPhase::ExecutionEffectiveAddressExecutor => {
+                // TODO: Some of these may have to be spread into the other execution phases depending on things like memory access
+                let current_interrupt_mask: u8 = get_interrupt_mask(registers);
 
-                registers.set_full_pc_address(return_address);
-                registers.sr = return_status_register;
+                match self.exception_unit_opcode {
+                    ExceptionUnitOpCodes::None => {
+                        // No-op
+                    }
+                    ExceptionUnitOpCodes::SoftwareException => {
+                        handle_exception(
+                            current_interrupt_mask,
+                            1,
+                            registers,
+                            eu_registers,
+                            self.vector_value,
+                        );
+                    }
+                    ExceptionUnitOpCodes::WaitForException => {
+                        eu_registers.waiting_for_exception = true;
+                    }
+                    ExceptionUnitOpCodes::ReturnFromException => {
+                        // Store current windowed link register to PC and jump to vector
+                        // TODO: Is it safe to use the current_interrupt_mask here? Could that be user editable? Does that matter?
+                        let ExceptionLinkRegister {
+                            return_address,
+                            return_status_register,
+                        } = eu_registers.link_registers[(current_interrupt_mask - 1) as usize];
+
+                        registers.set_full_pc_address(return_address);
+                        registers.sr = return_status_register;
+                    }
+                    ExceptionUnitOpCodes::Reset => {
+                        registers.sr = 0x0;
+                        set_sr_bit(StatusRegisterFields::SystemMode, registers);
+                        registers.set_full_pc_address(self.vector_value);
+                    }
+                    ExceptionUnitOpCodes::HardwareException => {
+                        handle_exception(
+                            current_interrupt_mask,
+                            eu_registers.pending_hardware_exception_level,
+                            registers,
+                            eu_registers,
+                            self.vector_value,
+                        );
+                    }
+                }
             }
-            ExceptionUnitOpCodes::Reset => {
-                registers.sr = 0x0;
-                set_sr_bit(StatusRegisterFields::SystemMode, registers);
-                registers.set_full_pc_address(vector_address);
-            }
-            ExceptionUnitOpCodes::HardwareException => {
-                handle_exception(
-                    current_interrupt_mask,
-                    eu_registers.pending_hardware_exception_level,
-                    registers,
-                    eu_registers,
-                    vector_address,
-                );
+            ExecutionPhase::MemoryAccessExecutor => {}
+            ExecutionPhase::WriteBackExecutor => {
+                // TODO: Where should these go?
+                eu_registers.pending_hardware_exception_level = 0x0;
+                // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
+                registers.pending_coprocessor_command = 0x0;
             }
         }
 
-        eu_registers.pending_hardware_exception_level = 0x0;
-        // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
-        registers.pending_coprocessor_command = 0x0;
+        // println!(
+        //     "phase: {phase:?} self.exception_unit_opcode {:?} AFTER current_interrupt_mask: 0x{:X}",
+        //     self.exception_unit_opcode,
+        //     get_interrupt_mask(registers)
+        // );
 
         Ok((registers, eu_registers))
     }
@@ -230,6 +286,8 @@ fn handle_exception(
     eu_registers: &mut ExceptionUnitRegisters,
     vector_address: u32,
 ) {
+    trace!("HANDLE EXCEPTION: current_interrupt_mask: 0x{current_interrupt_mask:X} exception_level: 0x{exception_level:X} pc: 0x{:X} vector_address: 0x{vector_address:X}", registers.get_full_pc_address() );
+
     // Store current PC in windowed link register and jump to vector
     if current_interrupt_mask >= exception_level {
         // Ignore lower priority exceptions

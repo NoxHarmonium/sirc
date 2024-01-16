@@ -22,7 +22,7 @@ use std::fs::read;
 use std::path::Path;
 
 use log::{debug, warn};
-use memory_mapped_device::MemoryMappedDevice;
+use memory_mapped_device::{BusAssertions, MemoryMappedDevice};
 
 pub struct Segment {
     pub label: String,
@@ -187,18 +187,31 @@ impl BusPeripheral {
                 "Segment {} is read-only and cannot be written to",
                 segment.label
             );
+
             let relative_address = address - segment.address;
             segment.device.borrow_mut().write_address(relative_address , value);
         });
     }
 
+    ///
+    /// Runs each device, and then combines all their bus assertions into a single one.
+    ///
     #[must_use]
-    pub fn poll_all(&self) -> u8 {
+    pub fn poll_all(&self) -> BusAssertions {
         let segments = &self.segments;
-        segments.iter().fold(0x0, |prev, segment| {
-            let mut device = segment.device.borrow_mut();
-            let assertions = device.poll();
-            prev | assertions.interrupt_assertion
-        })
+        segments
+            .iter()
+            .fold(BusAssertions::default(), |prev, segment| {
+                let mut device = segment.device.borrow_mut();
+                let assertions = device.poll();
+                BusAssertions {
+                    // Interrupts are all merged together
+                    interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
+                    // If at least one device has a bus error, then a fault will be raised
+                    // The devices will have to be polled by the program to find the cause of the error at the moment
+                    // (I don't really want to implement complex error signalling like the 68k has)
+                    bus_error: prev.bus_error | assertions.bus_error,
+                }
+            })
     }
 }

@@ -13,19 +13,19 @@ pub mod vectors {
     /// and another chip detects this and raises an error.
     /// It could also be used to implement virtual memory as the instrtuction is aborted
     /// and pl is not incremented for a bus fault.
-    pub const BUS_FAULT: u8 = 0x00;
+    pub const BUS_FAULT: u8 = 0x01;
     /// Raised when fetching instructions if pl points to an odd address
     /// This is to simplify fetching as the second word of an instruction is always at pl | 0x1
     /// and ensures that we never have to worry about instructions overflowing segments
     /// (e.g. if the first word is at 0xFFFF and the second word at 0x0000)
     /// which is a weird edge case that might complicate fetching.
-    pub const ALIGNMENT_FAULT: u8 = 0x01;
+    pub const ALIGNMENT_FAULT: u8 = 0x02;
     /// Raised with some instructions if the computed address would go outside the current
     /// segment. E.g. if you are accessing data in the stack segment, and then compute
     /// an address that overflows, it is probably a stack overflow.
     /// There might be situations where you want address calculations to wrap around
     /// so it is only raised if the `TrapOnAddressOverflow` SR bit is set.
-    pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x02;
+    pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x03;
     /// Raised when a co-processor call is done for a non-existant co-processor
     /// or if the co-processor opcode is invalid.
     /// Can be used for forward compatibility.
@@ -36,13 +36,13 @@ pub mod vectors {
     /// This is just to keep things simple. There is a risk of people using undocumented instructions
     /// and those programs breaking in future iterations of the CPU but it is expected that the core
     /// of the CPU will remain stable and future ISA improvements will be done via co-processors.
-    pub const INVALID_OPCODE_FAULT: u8 = 0x03;
+    pub const INVALID_OPCODE_FAULT: u8 = 0x04;
 
     /// Raised when not in system mode and a privileged operation is performed:
     /// 1. Writing to the high word of any address registers
     /// 2. Writing to the high byte of the SR register
     /// 3. Triggering exception below 0x80
-    pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x04;
+    pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
     // 0x05-0x07 Reserved
 
@@ -50,17 +50,18 @@ pub mod vectors {
 
     /// Raised after every instruction when the `TraceMode` SR bit is set
     /// Used for debugging
-    pub const INSTRUCTION_TRACE_FAULT: u8 = 0x08;
+    pub const INSTRUCTION_TRACE_FAULT: u8 = 0x06;
 
     /// Raised when a level five hardware exception is raised
     /// when one is already being handled
-    /// We don't use a stack for handling exceptions, so we can't
-    /// make a NMI because there is nowhere to store the return address
+    /// We don't use a stack for handling exceptions, so there
+    /// is nowhere to store the return address past level five.
     /// We could just ignore any level five HW exceptions while it is
-    /// masked, but it could indicate a hardware misconfiguration,
+    /// masked, but that could indicate a hardware misconfiguration,
     /// so it is handy so that hardware bugs for things that should
     /// not be interrupted are picked up.
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x09; // 0000_1001;
+    /// Level 5 interrupts should be treated like NMIs.
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x07; // 0000_1001;
 
     //  0x09-0x0F Reserved
 
@@ -100,8 +101,9 @@ pub mod vectors {
 // Regular Exceptions: (0x10-0xFF) COP, Hardware, All other faults
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub enum ExceptionPriorities {
+    #[default]
     NoException = 0x0,
     Software = 0x1,
     LevelOneHardware = 0x2,
@@ -113,8 +115,10 @@ pub enum ExceptionPriorities {
 }
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Default, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum ExceptionUnitOpCodes {
+    #[default]
+    None = 0x0,
     SoftwareException = 0x1,
 
     // Privileged
@@ -122,4 +126,17 @@ pub enum ExceptionUnitOpCodes {
     ReturnFromException = 0xA,
     Reset = 0xB,
     HardwareException = 0xF,
+}
+
+#[repr(u8)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+pub enum Faults {
+    #[default]
+    Bus = 0x1,
+    Alignment = 0x2,
+    SegmentOverflow = 0x3,
+    InvalidOpCode = 0x4,
+    PrivilegeViolation = 0x5,
+    InstructionTrace = 0x6,
+    LevelFiveInterruptConflict = 0x7,
 }

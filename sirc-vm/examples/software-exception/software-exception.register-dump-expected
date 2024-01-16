@@ -22,6 +22,7 @@ Registers {
 ===EXCEPTION UNIT REGISTERS===
 ExceptionUnitRegisters {
     pending_hardware_exception_level: 0x0,
+    pending_fault: None,
     link_registers: [
         ExceptionLinkRegister {
             return_address: 0x104,

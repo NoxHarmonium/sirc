@@ -145,6 +145,7 @@ impl MemoryMappedDevice for TerminalDevice {
         {
             return BusAssertions {
                 interrupt_assertion: 0x2,
+                ..BusAssertions::default()
             };
         }
         BusAssertions::default()

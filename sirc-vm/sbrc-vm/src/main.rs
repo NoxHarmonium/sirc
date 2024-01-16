@@ -15,6 +15,7 @@
 
 use std::{fs::File, io::Write, path::PathBuf, process::exit};
 
+use device_debug::new_debug_device;
 use log::{error, info, Level};
 
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
@@ -25,6 +26,7 @@ use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
+static DEBUG_SEGMENT: &str = "DEBUG";
 
 use clap::Parser;
 
@@ -125,6 +127,7 @@ fn main() {
         .module(module_path!())
         // TODO: Is there a way to get this from the dependency list?
         .modules(vec![
+            "device_debug",
             "device_ram",
             "device_terminal",
             "peripheral_bus",
@@ -144,16 +147,24 @@ fn main() {
         master_clock_freq,
         vsync_frequency: 50,
     };
-    let program_ram_device = new_ram_device_standard();
     let mut memory_peripheral = new_bus_peripheral();
-    let terminal_peripheral = new_terminal_device(master_clock_freq);
+    let program_ram_device = new_ram_device_standard();
+    let terminal_device = new_terminal_device(master_clock_freq);
+    let debug_device = new_debug_device();
 
     memory_peripheral.map_segment(
         TERMINAL_SEGMENT,
         0x000A_0000,
         0xF,
         true,
-        Box::new(terminal_peripheral),
+        Box::new(terminal_device),
+    );
+    memory_peripheral.map_segment(
+        DEBUG_SEGMENT,
+        0x000B_0000,
+        0xF,
+        true,
+        Box::new(debug_device),
     );
 
     memory_peripheral.map_segment(
@@ -192,9 +203,17 @@ fn main() {
     // Jump to reset vector
     cpu_peripheral.reset();
 
+    // TODO: Profile and make this actually performant (currently is only 20fps when hardly doing anything)
     let execute = |_| {
-        let interrupt_assertions = memory_peripheral.poll_all();
-        cpu_peripheral.raise_hardware_interrupt(interrupt_assertions);
+        let merged_assertions = memory_peripheral.poll_all();
+        if merged_assertions.bus_error {
+            cpu_peripheral.raise_fault(
+                peripheral_cpu::coprocessors::exception_unit::definitions::Faults::Bus,
+            );
+        }
+        if merged_assertions.interrupt_assertion > 0 {
+            cpu_peripheral.raise_hardware_interrupt(merged_assertions.interrupt_assertion);
+        }
 
         match cpu_peripheral.run_cpu() {
             Ok(_actual_clocks_executed) => {
