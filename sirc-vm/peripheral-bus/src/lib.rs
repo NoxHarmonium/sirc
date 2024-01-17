@@ -14,6 +14,7 @@
 #![deny(warnings)]
 
 pub mod conversion;
+pub mod device;
 pub mod helpers;
 pub mod memory_mapped_device;
 
@@ -21,8 +22,9 @@ use std::cell::RefCell;
 use std::fs::read;
 use std::path::Path;
 
+use device::BusAssertions;
 use log::{debug, warn};
-use memory_mapped_device::{BusAssertions, MemoryMappedDevice};
+use memory_mapped_device::MemoryMappedDevice;
 
 pub struct Segment {
     pub label: String,

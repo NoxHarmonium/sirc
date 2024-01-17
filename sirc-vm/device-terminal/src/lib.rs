@@ -10,7 +10,8 @@
 use log::debug;
 use log::error;
 
-use peripheral_bus::memory_mapped_device::BusAssertions;
+use peripheral_bus::device::BusAssertions;
+use peripheral_bus::device::Device;
 use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
 
 use std::collections::VecDeque;
@@ -78,8 +79,7 @@ pub fn new_terminal_device(master_clock_freq: u32) -> TerminalDevice {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
-impl MemoryMappedDevice for TerminalDevice {
+impl Device for TerminalDevice {
     ///  # Panics
     /// Will panic if there is an unexpected error in the channel that reads from stdin
     fn poll(&mut self) -> BusAssertions {
@@ -100,7 +100,6 @@ impl MemoryMappedDevice for TerminalDevice {
                 }
             }
         }
-
         let clocks_per_recv: Option<usize> = if self.control_registers.baud > 0 {
             Some(self.master_clock_freq as usize / self.control_registers.baud as usize)
         } else {
@@ -126,7 +125,6 @@ impl MemoryMappedDevice for TerminalDevice {
             && should_activate
             && self.control_registers.send_pending == REGISTER_TRUE
         {
-            print!("{}", char::from(self.control_registers.send_data as u8));
             self.control_registers.send_pending = REGISTER_FALSE;
         }
 
@@ -150,7 +148,10 @@ impl MemoryMappedDevice for TerminalDevice {
         }
         BusAssertions::default()
     }
+}
 
+#[allow(clippy::cast_possible_truncation)]
+impl MemoryMappedDevice for TerminalDevice {
     fn read_address(&self, address: u32) -> u16 {
         match address {
             0x0 => self.control_registers.baud,
