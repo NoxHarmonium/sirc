@@ -12,9 +12,11 @@ use num::Integer;
 /// ```
 /// use peripheral_bus::helpers::write_bytes;
 /// use peripheral_bus::new_bus_peripheral;
+/// use peripheral_bus::device::new_stub_device;
 /// use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
 ///
-/// let mut mem = new_bus_peripheral();
+/// let stub_master = new_stub_device();
+/// let mut mem = new_bus_peripheral(Box::new(stub_master));
 /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
 ///
 /// let bytes = "abcd".as_bytes();

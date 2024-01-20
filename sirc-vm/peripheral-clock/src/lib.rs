@@ -25,7 +25,7 @@ pub struct ClockPeripheral {
 }
 
 impl ClockPeripheral {
-    pub fn start_loop(&self, mut closure: impl FnMut(u32)) {
+    pub fn start_loop(&self, mut closure: impl FnMut(u32) -> bool) {
         let vsync_frequency = 50;
         let clocks_per_vsync = self.master_clock_freq / self.vsync_frequency;
         let mut frame: u64 = 0;
@@ -39,7 +39,9 @@ impl ClockPeripheral {
 
             // TODO TODO: Test with something that takes time (bubble sort a whole segment?) (https://stackoverflow.com/a/47366256/1153203)
             for _ in 0..clocks_per_vsync {
-                closure(clocks_per_vsync);
+                if !closure(clocks_per_vsync) {
+                    return;
+                }
             }
 
             if let Some(fps) = reporter.increment_and_report() {

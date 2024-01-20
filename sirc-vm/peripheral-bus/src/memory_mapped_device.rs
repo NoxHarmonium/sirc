@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use crate::{
     conversion::{bytes_to_words, words_to_bytes},
     device::{BusAssertions, Device},
@@ -38,9 +40,12 @@ pub struct StubMemoryMappedDevice {
 }
 
 impl Device for StubMemoryMappedDevice {
-    fn poll(&mut self) -> BusAssertions {
+    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
         // No-op
         BusAssertions::default()
+    }
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

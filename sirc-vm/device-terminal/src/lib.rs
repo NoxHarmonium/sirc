@@ -14,6 +14,7 @@ use peripheral_bus::device::BusAssertions;
 use peripheral_bus::device::Device;
 use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
 
+use std::any::Any;
 use std::collections::VecDeque;
 use std::io;
 use std::sync::mpsc;
@@ -82,7 +83,7 @@ pub fn new_terminal_device(master_clock_freq: u32) -> TerminalDevice {
 impl Device for TerminalDevice {
     ///  # Panics
     /// Will panic if there is an unexpected error in the channel that reads from stdin
-    fn poll(&mut self) -> BusAssertions {
+    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
         // Pull any pending data from stdin into the virtual buffer
         if !self.reading_finished {
             match self.stdin_channel.try_recv() {
@@ -147,6 +148,9 @@ impl Device for TerminalDevice {
             };
         }
         BusAssertions::default()
+    }
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

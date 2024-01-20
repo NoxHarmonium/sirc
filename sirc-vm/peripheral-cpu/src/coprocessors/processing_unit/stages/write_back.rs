@@ -1,4 +1,4 @@
-use peripheral_bus::BusPeripheral;
+use peripheral_bus::device::BusAssertions;
 
 use crate::{
     coprocessors::processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
@@ -7,7 +7,7 @@ use crate::{
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
 
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
 enum WriteBackInstructionType {
     NoOp,
     MemoryLoad,
@@ -73,15 +73,17 @@ impl StageExecutor for WriteBackExecutor {
         registers: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: &BusPeripheral,
-    ) {
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions {
         let write_back_step_instruction_type =
             decode_write_back_step_instruction_type(decoded.ins, decoded);
+
+        println!("write_back_step_instruction_type: {write_back_step_instruction_type:?} intermediate_registers.alu_output: {}", intermediate_registers.alu_output);
 
         match write_back_step_instruction_type {
             WriteBackInstructionType::NoOp => {}
             WriteBackInstructionType::MemoryLoad => {
-                registers[decoded.des] = intermediate_registers.lmd;
+                registers[decoded.des] = bus_assertions.data;
             }
             WriteBackInstructionType::AluStatusOnly => {
                 update_status_flags(decoded, registers, intermediate_registers);
@@ -102,7 +104,7 @@ impl StageExecutor for WriteBackExecutor {
                 // I guess the destination register should take precedence
                 registers[decoded.ad_h] = decoded.ad_h_;
                 registers[decoded.ad_l] = intermediate_registers.address_output;
-                registers[decoded.des] = intermediate_registers.lmd;
+                registers[decoded.des] = bus_assertions.data;
             }
             WriteBackInstructionType::AddressWriteStorePreIncrement => {
                 registers[decoded.ad_h] = decoded.ad_h_;
@@ -112,5 +114,6 @@ impl StageExecutor for WriteBackExecutor {
                 registers.pending_coprocessor_command = intermediate_registers.alu_output;
             }
         }
+        BusAssertions::default()
     }
 }

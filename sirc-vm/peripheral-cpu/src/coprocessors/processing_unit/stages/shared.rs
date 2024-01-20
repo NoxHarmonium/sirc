@@ -1,4 +1,4 @@
-use peripheral_bus::BusPeripheral;
+use peripheral_bus::device::BusAssertions;
 
 use crate::{
     coprocessors::processing_unit::definitions::{
@@ -56,7 +56,6 @@ pub struct IntermediateRegisters {
     pub alu_output: u16,
     pub address_output: u16,
     pub alu_status_register: u16,
-    pub lmd: u16,
 }
 
 pub trait StageExecutor {
@@ -65,9 +64,8 @@ pub trait StageExecutor {
         registers: &mut Registers,
         eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        // TODO: Only the memory access stage needs this. Maybe there is a clever way to only provide each stage what they need?
-        mem: &BusPeripheral,
-    );
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions;
 }
 
 pub enum ExecutionStage {

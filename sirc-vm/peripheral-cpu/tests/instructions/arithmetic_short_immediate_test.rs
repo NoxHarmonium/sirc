@@ -46,7 +46,7 @@ fn test_short_immediate_arithmetic_instruction(
                 set_sr_bit(status_register_field, registers);
             }
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {

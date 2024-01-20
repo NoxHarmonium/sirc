@@ -31,7 +31,9 @@ pub mod coprocessors;
 pub mod registers;
 pub mod util;
 
-use log::{error, trace};
+use std::{any::Any, fmt::Write};
+
+use log::trace;
 
 use coprocessors::{
     exception_unit::{
@@ -42,8 +44,8 @@ use coprocessors::{
     shared::{ExecutionPhase, Executor},
 };
 use num_traits::FromPrimitive;
-use peripheral_bus::BusPeripheral;
-use registers::{ExceptionUnitRegisters, FullAddress};
+use peripheral_bus::device::{BusAssertions, Device};
+use registers::ExceptionUnitRegisters;
 
 use crate::registers::Registers;
 
@@ -62,8 +64,7 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
-pub struct CpuPeripheral<'a> {
-    pub memory_peripheral: &'a BusPeripheral,
+pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
     pub phase: u8,
@@ -79,21 +80,16 @@ pub struct CpuPeripheral<'a> {
 /// Will panic if the specified `program_segment_label` is not a segment defined in the provided `memory_peripheral`
 ///
 #[must_use]
-pub fn new_cpu_peripheral<'a>(
-    memory_peripheral: &'a BusPeripheral,
-    program_segment_label: &str,
-) -> CpuPeripheral<'a> {
-    let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);
-    let (ph, pl) = program_segment.map_or_else(
-        || panic!("Could not find '{program_segment_label}' segment in memory peripheral"),
-        |s| s.address.to_segmented_address(),
-    );
+pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
+    // let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);
+    // let (ph, pl) = program_segment.map_or_else(
+    //     || panic!("Could not find '{program_segment_label}' segment in memory peripheral"),
+    //     |s| s.address.to_segmented_address(),
+    // );
 
     CpuPeripheral {
-        memory_peripheral,
         registers: Registers {
-            ph,
-            pl,
+            system_ram_offset,
             ..Registers::default()
         },
         eu_registers: ExceptionUnitRegisters::default(),
@@ -104,7 +100,69 @@ pub fn new_cpu_peripheral<'a>(
     }
 }
 
-impl CpuPeripheral<'_> {
+impl Device for CpuPeripheral {
+    #[allow(clippy::cast_possible_truncation)]
+    fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        let phase: ExecutionPhase =
+            FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
+
+        if phase == ExecutionPhase::InstructionFetchLow {
+            // Only reset the cause register every full instruction cycle
+            self.cause_register_value =
+                get_cause_register_value(&self.registers, &self.eu_registers);
+        }
+
+        let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
+
+        println!("phase: {phase:?} coprocessor_id: {coprocessor_id}");
+
+        // TODO: Do something with error results, instead of unwrap
+        let result = match coprocessor_id {
+            ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
+                &phase,
+                self.cause_register_value,
+                &mut self.registers,
+                &mut self.eu_registers,
+                bus_assertions,
+            ),
+            ExceptionUnitExecutor::COPROCESSOR_ID => self.exception_unit_executor.step(
+                &phase,
+                self.cause_register_value,
+                &mut self.registers,
+                &mut self.eu_registers,
+                bus_assertions,
+            ),
+            _ => {
+                // TODO: Work out what would happen in hardware here
+                // Do we want another coprocessor (multiplication?)
+                panic!("Coprocessor ID [{coprocessor_id}] not implemented yet");
+            }
+        };
+
+        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
+
+        result
+    }
+
+    fn dump_diagnostic(&self) -> String {
+        let register_text = format!("{:#x?}", self.registers);
+        let eu_register_text = format!("{:#x?}", self.eu_registers);
+
+        let mut s = String::new();
+        writeln!(s, "===REGISTERS===").unwrap();
+        writeln!(s, "{register_text}").unwrap();
+        writeln!(s, "===EXCEPTION UNIT REGISTERS===").unwrap();
+        writeln!(s, "{eu_register_text}").unwrap();
+
+        s
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl CpuPeripheral {
     /// Works out which coprocessor should run on this cycle
     fn decode_processor_id(cause_register_value: u16) -> u8 {
         ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
@@ -141,72 +199,18 @@ impl CpuPeripheral<'_> {
         self.registers.pending_coprocessor_command = reset_cause_value;
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn poll(&mut self) -> Result<(), Error> {
-        let phase: ExecutionPhase =
-            FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
-
-        if phase == ExecutionPhase::InstructionFetchLow {
-            // Only reset the cause register every full instruction cycle
-            self.cause_register_value =
-                get_cause_register_value(&self.registers, &self.eu_registers);
-        }
-
-        let coprocessor_id = CpuPeripheral::decode_processor_id(self.cause_register_value);
-
-        // TODO: Do something with error results, instead of unwrap
-        let result = match coprocessor_id {
-            ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
-                &phase,
-                self.cause_register_value,
-                &mut self.registers,
-                &mut self.eu_registers,
-                self.memory_peripheral,
-            ),
-            ExceptionUnitExecutor::COPROCESSOR_ID => self.exception_unit_executor.step(
-                &phase,
-                self.cause_register_value,
-                &mut self.registers,
-                &mut self.eu_registers,
-                self.memory_peripheral,
-            ),
-            _ => {
-                // TODO: Work out what would happen in hardware here
-                // Do we want another coprocessor (multiplication?)
-                panic!("Coprocessor ID [{coprocessor_id}] not implemented yet");
-            }
-        };
-
-        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
-
-        result.map(|_| ())
-    }
-
+    /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
     ///
     /// # Panics
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
-    pub fn run_cpu(&mut self) -> Result<u32, Error> {
-        let mut run = || {
-            // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
-            if !self.eu_registers.waiting_for_exception {
-                for _ in 0..CYCLES_PER_INSTRUCTION {
-                    self.poll()?;
-                }
-            }
-            Ok(())
-        };
-
-        let result = run();
-
-        match result {
-            Err(error) => {
-                error!("Execution stopped:\n{error:08x?}");
-                Err(error)
-            }
-            Ok(()) => {
-                // Note: When the CPU is waiting for an interrupt, in hardware the clock would probably be disconnected to save power
-                // Therefore this value should just be used for timing, it might not be the actual cycles the CPU physically executes
-                Ok(CYCLES_PER_INSTRUCTION)
+    #[cfg(test)]
+    pub fn run_cpu(&mut self) {
+        // TODO: Remove this function and do the polling via the bus
+        // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
+        if !self.eu_registers.waiting_for_exception {
+            for _ in 0..CYCLES_PER_INSTRUCTION {
+                // TODO: this needs a bus
+                self.poll(BusAssertions::default(), true);
             }
         }
     }

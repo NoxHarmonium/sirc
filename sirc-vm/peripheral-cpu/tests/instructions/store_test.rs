@@ -50,7 +50,7 @@ fn test_store_indirect_immediate() {
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);
                     },
-                    0xFACE,
+                    0xFACE_0000,
                 );
                 let expected_registers =
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -120,7 +120,7 @@ fn test_store_indirect_register() {
                             registers.set_at_index(offset_register_index, offset as u16);
                             registers.set_at_index(src_register_index, 0xCAFE);
                         },
-                        0xFACE,
+                        0xFACE_0000,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -195,7 +195,7 @@ fn test_store_indirect_register_pre_decrement() {
                             registers.set_at_index(offset_register_index, offset as u16);
                             registers.set_at_index(src_register_index, 0xCAFE);
                         },
-                        0xFACE,
+                        0xFACE_0000,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -261,7 +261,7 @@ fn test_store_indirect_immediate_pre_decrement() {
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);
                     },
-                    0xFACE,
+                    0xFACE_0000,
                 );
                 let expected_registers =
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {

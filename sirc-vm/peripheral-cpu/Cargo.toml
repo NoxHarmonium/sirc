@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 peripheral_bus = { path = "../peripheral-bus" }
+# TODO: Remove this dependency when all ram access goes via the bus
 device_ram = { path = "../device-ram" }
 num-traits = "0.2"
 num-derive = "0.4"

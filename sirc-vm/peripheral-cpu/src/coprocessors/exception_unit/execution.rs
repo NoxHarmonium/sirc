@@ -1,5 +1,5 @@
 use log::trace;
-use peripheral_bus::BusPeripheral;
+use peripheral_bus::device::{BusAssertions, BusOperation};
 
 use crate::{
     coprocessors::{
@@ -23,7 +23,6 @@ use crate::{
 
 use super::super::shared::Executor;
 use super::{
-    super::super::Error,
     definitions::ExceptionUnitOpCodes,
     encoding::{decode_exception_unit_instruction, ExceptionUnitInstruction},
 };
@@ -158,6 +157,7 @@ pub struct ExceptionUnitExecutor {
     pub vector_address: u32,
     pub vector_value: u32,
     pub exception_unit_opcode: ExceptionUnitOpCodes,
+    // TODO: Use cell?
 }
 
 impl Executor for ExceptionUnitExecutor {
@@ -171,8 +171,8 @@ impl Executor for ExceptionUnitExecutor {
         cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &BusPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions {
         // TODO: Implement faults
         // TODO: P5 interrupts should be edge triggered and if one is triggered while another is being serviced, it should be a fault
         // println!(
@@ -187,14 +187,24 @@ impl Executor for ExceptionUnitExecutor {
                 let vector_address_offset =
                     self.exception_unit_instruction.value as u32 * INSTRUCTION_SIZE_WORDS;
                 self.vector_address = registers.system_ram_offset | vector_address_offset;
-                self.vector_value =
-                    (mem.read_address(self.vector_address).to_owned() as u32) << u16::BITS;
-                trace!("decoded: {:X?}", self.exception_unit_instruction);
+                println!("decoded: {:X?}", self.exception_unit_instruction);
+                return BusAssertions {
+                    address: self.vector_address,
+                    op: BusOperation::Read,
+                    ..BusAssertions::default()
+                };
             }
             ExecutionPhase::InstructionFetchHigh => {
-                self.vector_value |= mem.read_address(self.vector_address + 1).to_owned() as u32;
+                self.vector_value = (bus_assertions.data as u32) << u16::BITS;
+                return BusAssertions {
+                    address: self.vector_address + 1,
+                    op: BusOperation::Read,
+                    ..BusAssertions::default()
+                };
             }
             ExecutionPhase::InstructionDecode => {
+                self.vector_value |= bus_assertions.data as u32;
+
                 // TODO: Real CPU can't panic. Work out what should actually happen here (probably nothing)
                 // TODO: Better error handling
                 self.exception_unit_opcode =
@@ -275,7 +285,7 @@ impl Executor for ExceptionUnitExecutor {
         //     get_interrupt_mask(registers)
         // );
 
-        Ok((registers, eu_registers))
+        BusAssertions::default()
     }
 }
 

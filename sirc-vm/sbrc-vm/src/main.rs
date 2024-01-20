@@ -20,7 +20,7 @@ use log::{error, info, Level};
 
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
-use peripheral_bus::new_bus_peripheral;
+use peripheral_bus::{device::Device, new_bus_peripheral};
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
 
@@ -105,18 +105,11 @@ struct Args {
     verbose: clap_verbosity_flag::Verbosity,
 }
 
-fn dump_registers(
-    dump_file: &PathBuf,
-    cpu_peripheral: &CpuPeripheral,
-) -> Result<(), std::io::Error> {
+#[allow(clippy::borrowed_box)]
+fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::io::Error> {
     let mut handle = File::create(dump_file)?;
-    let register_text = format!("{:#x?}", cpu_peripheral.registers);
-    let eu_register_text = format!("{:#x?}", cpu_peripheral.eu_registers);
 
-    writeln!(&mut handle, "===REGISTERS===")?;
-    writeln!(&mut handle, "{register_text}")?;
-    writeln!(&mut handle, "===EXCEPTION UNIT REGISTERS===")?;
-    writeln!(&mut handle, "{eu_register_text}")?;
+    write!(&mut handle, "{}", device.dump_diagnostic())?;
     Ok(())
 }
 
@@ -147,19 +140,23 @@ fn main() {
         master_clock_freq,
         vsync_frequency: 50,
     };
-    let mut memory_peripheral = new_bus_peripheral();
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    // Jump to reset vector
+    cpu_peripheral.reset();
+
+    let mut bus_peripheral = new_bus_peripheral(Box::new(cpu_peripheral));
     let program_ram_device = new_ram_device_standard();
     let terminal_device = new_terminal_device(master_clock_freq);
     let debug_device = new_debug_device();
 
-    memory_peripheral.map_segment(
+    bus_peripheral.map_segment(
         TERMINAL_SEGMENT,
         0x000A_0000,
         0xF,
         true,
         Box::new(terminal_device),
     );
-    memory_peripheral.map_segment(
+    bus_peripheral.map_segment(
         DEBUG_SEGMENT,
         0x000B_0000,
         0xF,
@@ -167,19 +164,19 @@ fn main() {
         Box::new(debug_device),
     );
 
-    memory_peripheral.map_segment(
+    bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         0x0,
         0xFFFF,
         false,
         Box::new(program_ram_device),
     );
-    memory_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
+    bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {
         if let Some(mapped_file) = segment.mapped_file {
             let mm_ram_device = new_ram_device_file_mapped(mapped_file);
-            memory_peripheral.map_segment(
+            bus_peripheral.map_segment(
                 segment.label.as_str(),
                 segment.offset,
                 segment.length,
@@ -188,7 +185,7 @@ fn main() {
             );
         } else {
             let standard_ram_device = new_ram_device_standard();
-            memory_peripheral.map_segment(
+            bus_peripheral.map_segment(
                 segment.label.as_str(),
                 segment.offset,
                 segment.length,
@@ -198,55 +195,48 @@ fn main() {
         }
     }
 
-    let mut cpu_peripheral = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
-
-    // Jump to reset vector
-    cpu_peripheral.reset();
-
     // TODO: Profile and make this actually performant (currently is only 20fps when hardly doing anything)
     let execute = |_| {
-        let merged_assertions = memory_peripheral.poll_all();
+        let merged_assertions = bus_peripheral.poll_all();
         if merged_assertions.bus_error {
-            cpu_peripheral.raise_fault(
-                peripheral_cpu::coprocessors::exception_unit::definitions::Faults::Bus,
-            );
+            // TODO: Raise bus error in CPU by reading bus
+            // bus_peripheral.cpu_peripheral.raise_fault(
+            //     peripheral_cpu::coprocessors::exception_unit::definitions::Faults::Bus,
+            // );
         }
         if merged_assertions.interrupt_assertion > 0 {
-            cpu_peripheral.raise_hardware_interrupt(merged_assertions.interrupt_assertion);
+            // TODO: Raise interrupt in CPU by reading bus
+            // bus_peripheral
+            //     .cpu_peripheral
+            //     .raise_hardware_interrupt(merged_assertions.interrupt_assertion);
         }
-
-        match cpu_peripheral.run_cpu() {
-            Ok(_actual_clocks_executed) => {
-                // Clock quota reached successfully
-            }
-            Err(error) => {
-                if let Some(register_dump_file) = &args.register_dump_file {
-                    info!(
-                    "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
-                );
-                    if let Err(error) = dump_registers(register_dump_file, &cpu_peripheral) {
-                        error!(
-                            "There was an error dumping registers to [{}].\n{}",
-                            register_dump_file.display(),
-                            error
-                        );
-                    };
-                }
-
-                match error {
-                    peripheral_cpu::Error::ProcessorHalted(_) => {
-                        info!("Processor halted error caught (COP 0x14FF). This type of error exits with code zero for testing purposes.");
-                        exit(0);
-                    }
-                    peripheral_cpu::Error::InvalidInstruction(_) => {
-                        panic!("CPU Error: {error:08x?}")
-                    }
-                };
-            }
-        }
+        !merged_assertions.exit_simulation
     };
 
     clock_peripheral.start_loop(execute);
+
+    if let Some(register_dump_file) = &args.register_dump_file {
+        // TODO: This is terrible - again
+        let cpu: &CpuPeripheral = bus_peripheral
+            .bus_master
+            .as_any()
+            .downcast_ref::<CpuPeripheral>()
+            .expect("failed to downcast");
+
+        info!(
+                "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
+            );
+        if let Err(error) = dump_registers(register_dump_file, cpu) {
+            error!(
+                "There was an error dumping registers to [{}].\n{}",
+                register_dump_file.display(),
+                error
+            );
+        };
+    }
+
+    info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
+    exit(0);
 }
 
 // TODO: Probs need to a step debugger

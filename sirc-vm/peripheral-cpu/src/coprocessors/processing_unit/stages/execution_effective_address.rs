@@ -1,4 +1,4 @@
-use peripheral_bus::BusPeripheral;
+use peripheral_bus::device::BusAssertions;
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
@@ -44,8 +44,8 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         _: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: &BusPeripheral,
-    ) {
+        _: BusAssertions,
+    ) -> BusAssertions {
         // TODO: Replace unwrap with something better
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
         // TODO: Should this be unwrap? - clean this up - make 0x7 a constant or put in function
@@ -69,6 +69,11 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 // This is the original address with the pre/post increment/decrement applied (no offset)
                 // we need this value to write back to the source address register to do the inc/dec
                 let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
+
+                println!(
+                    "decoded.addr_inc: {} displaced: {}",
+                    decoded.addr_inc, displaced
+                );
 
                 match decoded.addr_inc {
                     -1 => {
@@ -102,5 +107,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 );
             }
         }
+
+        BusAssertions::default()
     }
 }

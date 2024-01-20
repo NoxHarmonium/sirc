@@ -1,9 +1,6 @@
-use peripheral_bus::BusPeripheral;
+use peripheral_bus::{device::BusAssertions, BusPeripheral};
 
-use crate::{
-    registers::{ExceptionUnitRegisters, Registers, SegmentedAddress},
-    Error,
-};
+use crate::registers::{ExceptionUnitRegisters, Registers, SegmentedAddress};
 
 #[derive(Default, FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum ExecutionPhase {
@@ -25,8 +22,8 @@ pub trait Executor {
         cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &BusPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error>;
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions;
 }
 
 /// Extends an 8 bit value that is signed to a 16 bit value

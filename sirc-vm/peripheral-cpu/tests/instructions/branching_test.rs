@@ -1,3 +1,4 @@
+use assert_hex::assert_eq_hex;
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -71,6 +72,8 @@ fn test_immediate_branch_with_subroutine_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
+    println!("???inital_pl???: 0x{initial_pl:X}");
+
     // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
@@ -101,10 +104,12 @@ fn test_immediate_branch_with_subroutine_instruction(
                 set_sr_bit(status_register_field, registers);
             }
         });
-    assert_eq!(
-        expected_registers, current.registers,
+    assert_eq_hex!(
+        expected_registers,
+        current.registers,
         "Not equal:\nleft: {:X?}\nright:{:X?}\n",
-        expected_registers, current.registers
+        expected_registers,
+        current.registers
     );
 }
 
@@ -260,8 +265,8 @@ fn test_immediate_branch_basic() {
 
 #[test]
 fn test_immediate_branch_overflow() {
-    test_immediate_branch_instruction(0xFFFF, 0x0001, 0x0000, ConditionFlags::Always, &vec![]);
-    test_immediate_branch_instruction(0x0000, -0x0001, 0xFFFF, ConditionFlags::Always, &vec![]);
+    test_immediate_branch_instruction(0xFFFE, 0x0002, 0x0000, ConditionFlags::Always, &vec![]);
+    test_immediate_branch_instruction(0x0000, -0x0002, 0xFFFE, ConditionFlags::Always, &vec![]);
 }
 
 #[test]
@@ -322,17 +327,17 @@ fn test_immediate_branch_with_subroutine_basic() {
 #[test]
 fn test_immediate_branch_with_subroutine_overflow() {
     test_immediate_branch_with_subroutine_instruction(
-        0xFFFF,
-        0x0001,
+        0xFFFE,
+        0x0002,
         0x0000,
-        (0x00FE, 0x0001),
+        (0x00FE, 0x0000),
         ConditionFlags::Always,
         &vec![],
     );
     test_immediate_branch_with_subroutine_instruction(
         0x0000,
-        -0x0001,
-        0xFFFF,
+        -0x0002,
+        0xFFFE,
         (0x00FE, 0x0002),
         ConditionFlags::Always,
         &vec![],
@@ -380,8 +385,8 @@ fn test_register_branch_basic() {
 
 #[test]
 fn test_register_branch_overflow() {
-    test_register_branch_instruction(0xFFFF, 0x0001, 0x0000, ConditionFlags::Always, &vec![]);
-    test_register_branch_instruction(0x0000, -0x0001, 0xFFFF, ConditionFlags::Always, &vec![]);
+    test_register_branch_instruction(0xFFFE, 0x0002, 0x0000, ConditionFlags::Always, &vec![]);
+    test_register_branch_instruction(0x0000, -0x0002, 0xFFFE, ConditionFlags::Always, &vec![]);
 }
 
 #[test]
@@ -442,17 +447,17 @@ fn test_register_branch_with_subroutine_basic() {
 #[test]
 fn test_register_branch_with_subroutine_overflow() {
     test_register_branch_with_subroutine_instruction(
-        0xFFFF,
-        0x0001,
+        0xFFFE,
+        0x0002,
         0x0000,
-        (0x00FE, 0x0001),
+        (0x00FE, 0x0000),
         ConditionFlags::Always,
         &vec![],
     );
     test_register_branch_with_subroutine_instruction(
         0x0000,
-        -0x0001,
-        0xFFFF,
+        -0x0002,
+        0xFFFE,
         (0x00FE, 0x0002),
         ConditionFlags::Always,
         &vec![],
@@ -461,3 +466,5 @@ fn test_register_branch_with_subroutine_overflow() {
 
 // TODO: Test ShiftOperand::Register
 // TODO: deduplicate test functions
+
+// TODO: Check for misaligned jumps (should fault when that is implemented)

@@ -30,9 +30,6 @@ fn build_test_instruction() -> InstructionData {
 fn test_hardware_exception_trigger() {
     let initial_instruction = build_test_instruction();
     let mem = set_up_instruction_test(&initial_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
-    let mut cpu = new_cpu_peripheral(&mem, PROGRAM_SEGMENT);
-    cpu.reset();
-    cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
 
     let expected_vector_address =
         SYSTEM_RAM_OFFSET + (vectors::LEVEL_TWO_HARDWARE_EXCEPTION as u32 * 2);

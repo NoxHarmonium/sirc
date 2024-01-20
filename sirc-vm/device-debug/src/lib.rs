@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use log::debug;
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
@@ -19,7 +21,7 @@ pub fn new_debug_device() -> DebugDevice {
 }
 
 impl Device for DebugDevice {
-    fn poll(&mut self) -> BusAssertions {
+    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
         // TODO: Bus error should be edge triggered I think so we don't get double faults
         // if devices are slow to stop asserting
         if self.trigger_bus_error {
@@ -32,6 +34,9 @@ impl Device for DebugDevice {
             };
         }
         BusAssertions::default()
+    }
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

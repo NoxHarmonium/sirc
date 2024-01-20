@@ -47,7 +47,7 @@ fn test_ldea_indirect_immediate() {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                     },
-                    0xFACE,
+                    0xFACE_0000,
                 );
                 let expected_registers =
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -108,7 +108,7 @@ fn test_ldea_indirect_register() {
                                 0xFAFA_FAFA,
                             );
                         },
-                        0xFACE,
+                        0xFACE_0000,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {

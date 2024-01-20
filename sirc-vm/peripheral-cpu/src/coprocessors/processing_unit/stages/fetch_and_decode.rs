@@ -137,6 +137,8 @@ pub fn decode_and_register_fetch(
     let instruction_type =
         decode_fetch_and_decode_step_instruction_type(implied_representation.op_code);
 
+    println!("instruction_type: {instruction_type:?}");
+
     let addr_inc: i16 = match implied_representation.op_code {
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement
         | Instruction::LoadRegisterFromIndirectImmediatePostIncrement => 1, // TODO: Match LOAD (a)+
@@ -151,6 +153,11 @@ pub fn decode_and_register_fetch(
     let sr_b = register_representation.r3;
 
     let des_ = registers[des];
+
+    println!(
+        "registers: {registers:?} immediate_representation.register: {} des_: {des_}",
+        immediate_representation.register
+    );
 
     let (sr_a_, sr_b_, sr_shift) = match instruction_type {
         FetchAndDecodeStepInstructionType::Register => {

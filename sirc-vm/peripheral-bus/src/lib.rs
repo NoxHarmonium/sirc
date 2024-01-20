@@ -13,6 +13,10 @@
 )]
 #![deny(warnings)]
 
+// Addressing is technically only 24 bit
+// Only use the 24 bits to match segments
+const ADDRESS_MASK: u32 = 0x00FF_FFFF;
+
 pub mod conversion;
 pub mod device;
 pub mod helpers;
@@ -22,7 +26,7 @@ use std::cell::RefCell;
 use std::fs::read;
 use std::path::Path;
 
-use device::BusAssertions;
+use device::{BusAssertions, Device};
 use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
 
@@ -31,16 +35,32 @@ pub struct Segment {
     pub address: u32,
     pub size: u32,
     pub writable: bool,
-    pub device: RefCell<Box<dyn MemoryMappedDevice>>,
+    device: RefCell<Box<dyn MemoryMappedDevice>>,
+}
+
+impl Segment {
+    fn address_is_in_segment_range(&self, address: u32) -> bool {
+        // TODO: Warn about address masking?
+        let masked_segment_address = self.address & ADDRESS_MASK;
+        let masked_input_address = address & ADDRESS_MASK;
+        masked_input_address >= masked_segment_address
+            && masked_input_address < masked_segment_address + self.size
+    }
 }
 
 pub struct BusPeripheral {
+    assertions: BusAssertions,
+    pub bus_master: Box<dyn Device>,
     segments: Vec<Segment>,
 }
 
 #[must_use]
-pub fn new_bus_peripheral() -> BusPeripheral {
-    BusPeripheral { segments: vec![] }
+pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
+    BusPeripheral {
+        assertions: BusAssertions::default(),
+        bus_master,
+        segments: vec![],
+    }
 }
 
 impl BusPeripheral {
@@ -54,7 +74,7 @@ impl BusPeripheral {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
             .iter()
-            .find(|s| address >= s.address && address < s.address + s.size)
+            .find(|s| s.address_is_in_segment_range(address))
     }
 
     pub fn map_segment(
@@ -114,7 +134,7 @@ impl BusPeripheral {
         );
 
         assert!(
-            binary_data.len() <= (segment_size * 2) as usize,
+            binary_data.len() <= ((segment_size + 1) * 2) as usize,
             "Loaded binary data is {} bytes long but segment has size of {} words",
             binary_data.len(),
             segment_size
@@ -165,9 +185,11 @@ impl BusPeripheral {
     ///
     /// ```
     /// use peripheral_bus::new_bus_peripheral;
+    /// use peripheral_bus::device::new_stub_device;
     /// use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
     ///
-    /// let mut mem = new_bus_peripheral();
+    /// let stub_master = new_stub_device();
+    /// let mut mem = new_bus_peripheral(Box::new(stub_master));
     /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
     /// let address = 0x00F0_CAFE;
     /// let value = 0xFEAB;
@@ -199,21 +221,52 @@ impl BusPeripheral {
     /// Runs each device, and then combines all their bus assertions into a single one.
     ///
     #[must_use]
-    pub fn poll_all(&self) -> BusAssertions {
+    pub fn poll_all(&mut self) -> BusAssertions {
+        let assertions = self.assertions;
+
+        // TODO:: Assert no conflicts (e.g. two devices asserting the address or data bus at the same time)
+
+        let master_assertions = self.bus_master.poll(assertions, true);
+        println!("Master assertions: {master_assertions:X?}");
+
         let segments = &self.segments;
-        segments
-            .iter()
-            .fold(BusAssertions::default(), |prev, segment| {
-                let mut device = segment.device.borrow_mut();
-                let assertions = device.poll();
-                BusAssertions {
-                    // Interrupts are all merged together
-                    interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
-                    // If at least one device has a bus error, then a fault will be raised
-                    // The devices will have to be polled by the program to find the cause of the error at the moment
-                    // (I don't really want to implement complex error signalling like the 68k has)
-                    bus_error: prev.bus_error | assertions.bus_error,
-                }
-            })
+        let merged_assertions = segments.iter().fold(master_assertions, |prev, segment| {
+            let selected = segment.address_is_in_segment_range(prev.address);
+            println!(
+                "selected: {selected} address 0x{:X} label: {} SA: 0x{:X}",
+                prev.address, segment.label, segment.address
+            );
+
+            let mut device = segment.device.borrow_mut();
+            let assertions = device.poll(prev, selected);
+            BusAssertions {
+                // Interrupts are all merged together
+                interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
+                // If at least one device has a bus error, then a fault will be raised
+                // The devices will have to be polled by the program to find the cause of the error at the moment
+                // (I don't really want to implement complex error signalling like the 68k has)
+                bus_error: prev.bus_error | assertions.bus_error,
+                data: if selected { assertions.data } else { prev.data },
+                ..prev
+            }
+        });
+        self.assertions = merged_assertions;
+        merged_assertions
+    }
+
+    /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
+    ///
+    /// # Panics
+    /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
+    // #[cfg(test)]
+    pub fn run_full_cycle(&mut self, max_cycles: u32) -> BusAssertions {
+        let mut cycle_count = 0;
+        loop {
+            let result = self.poll_all();
+            cycle_count += 1;
+            if cycle_count >= max_cycles {
+                return result;
+            }
+        }
     }
 }

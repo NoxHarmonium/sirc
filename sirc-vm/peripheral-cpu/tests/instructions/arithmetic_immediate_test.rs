@@ -1,3 +1,4 @@
+use assert_hex::assert_eq_hex;
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
@@ -21,6 +22,7 @@ fn test_immediate_arithmetic_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
 ) {
+    println!("target_register!!! : {target_register}");
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: instruction,
         register: target_register,
@@ -40,7 +42,7 @@ fn test_immediate_arithmetic_instruction(
                 set_sr_bit(status_register_field, registers);
             }
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -49,7 +51,7 @@ fn test_immediate_arithmetic_instruction(
                 set_sr_bit(status_register_field, registers);
             }
         });
-    assert_eq!(expected_registers, current.registers);
+    assert_eq_hex!(expected_registers, current.registers);
     for &status_register_field in expected_status_flags {
         assert!(sr_bit_is_set(status_register_field, &current.registers));
     }

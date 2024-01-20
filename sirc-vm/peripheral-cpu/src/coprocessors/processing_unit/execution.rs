@@ -1,6 +1,7 @@
-use log::trace;
-use peripheral_bus::BusPeripheral;
+// use log::trace;
+use peripheral_bus::device::{BusAssertions, BusOperation};
 
+use super::stages::shared::DecodedInstruction;
 use crate::coprocessors::processing_unit::definitions::Instruction;
 use crate::coprocessors::processing_unit::stages::execution_effective_address::ExecutionEffectiveAddressExecutor;
 use crate::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
@@ -12,9 +13,6 @@ use crate::registers::{
     sr_bit_is_set, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     StatusRegisterFields,
 };
-use crate::Error;
-
-use super::stages::shared::DecodedInstruction;
 
 #[derive(Default)]
 pub struct ProcessingUnitExecutor {
@@ -33,66 +31,80 @@ impl Executor for ProcessingUnitExecutor {
         _: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &BusPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters), Error> {
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions {
         match phase {
             ExecutionPhase::InstructionFetchLow => {
                 // TODO: Alignment check?
-                self.instruction =
-                    u32::from(mem.read_address(registers.get_full_pc_address()).to_owned())
-                        << u16::BITS;
+
+                return BusAssertions {
+                    address: registers.get_full_pc_address(),
+                    op: BusOperation::Read,
+                    ..BusAssertions::default()
+                };
             }
             ExecutionPhase::InstructionFetchHigh => {
-                self.instruction |= u32::from(
-                    mem.read_address(registers.get_full_pc_address() + 1)
-                        .to_owned(),
-                );
+                self.instruction = u32::from(bus_assertions.data) << u16::BITS;
+
+                return BusAssertions {
+                    address: registers.get_full_pc_address() + 1,
+                    op: BusOperation::Read,
+                    ..BusAssertions::default()
+                };
             }
             ExecutionPhase::InstructionDecode => {
+                self.instruction |= u32::from(bus_assertions.data);
+
                 self.decoded_instruction =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
-                trace!("EU: {:X?}", self.decoded_instruction);
+                println!("EU: {:X?}", self.decoded_instruction);
 
                 // Special instruction just for debugging purposes. Probably won't be in hardware
                 if self.decoded_instruction.ins == Instruction::CoprocessorCallImmediate
                     && self.decoded_instruction.sr_b_ == 0x14FF
                 {
-                    return Err(Error::ProcessorHalted(*registers));
+                    return BusAssertions {
+                        exit_simulation: true,
+                        ..BusAssertions::default()
+                    };
                 }
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
-                ExecutionEffectiveAddressExecutor::execute(
+                return ExecutionEffectiveAddressExecutor::execute(
                     &self.decoded_instruction,
                     registers,
                     eu_registers,
                     &mut self.intermediate_registers,
-                    mem,
+                    bus_assertions,
                 );
             }
             ExecutionPhase::MemoryAccessExecutor => {
-                MemoryAccessExecutor::execute(
+                return MemoryAccessExecutor::execute(
                     &self.decoded_instruction,
                     registers,
                     eu_registers,
                     &mut self.intermediate_registers,
-                    mem,
+                    bus_assertions,
                 );
             }
             ExecutionPhase::WriteBackExecutor => {
-                WriteBackExecutor::execute(
+                return WriteBackExecutor::execute(
                     &self.decoded_instruction,
                     registers,
                     eu_registers,
                     &mut self.intermediate_registers,
-                    mem,
+                    bus_assertions,
                 );
             }
         }
 
         if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-            return Err(Error::ProcessorHalted(*registers));
+            return BusAssertions {
+                exit_simulation: true,
+                ..BusAssertions::default()
+            };
         }
 
-        Ok((registers, eu_registers))
+        BusAssertions::default()
     }
 }

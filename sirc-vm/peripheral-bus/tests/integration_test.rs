@@ -21,6 +21,7 @@ use std::{fs::OpenOptions, io::Write, path::Path};
 
 use peripheral_bus::{
     conversion::{bytes_to_words, words_to_bytes},
+    device::new_stub_device,
     memory_mapped_device::new_stub_memory_mapped_device,
     new_bus_peripheral,
 };
@@ -31,8 +32,9 @@ use tempfile::tempdir;
 fn regular_segment_test() {
     let segment_size: u32 = 0xF;
 
+    let stub_master_device = new_stub_device();
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_bus_peripheral();
+    let mut mem = new_bus_peripheral(Box::new(stub_master_device));
     mem.map_segment(
         "some_segment",
         0xCAFE_BEEF,
@@ -70,8 +72,9 @@ fn regular_segment_test() {
 fn readonly_segment_test() {
     let segment_size: u32 = 0xF;
 
+    let stub_master_device = new_stub_device();
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_bus_peripheral();
+    let mut mem = new_bus_peripheral(Box::new(stub_master_device));
     mem.map_segment(
         "some_segment",
         0xCAFE_BEEF,
@@ -137,8 +140,9 @@ fn readonly_segment_test() {
 fn dump_segment_to_file_test(test_buffer: Vec<u16>) -> TestResult {
     let base_address: u32 = 0xCAFE_BEEF;
 
+    let stub_master_device = new_stub_device();
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_bus_peripheral();
+    let mut mem = new_bus_peripheral(Box::new(stub_master_device));
     mem.map_segment(
         "some_segment",
         base_address,
@@ -165,8 +169,9 @@ fn load_binary_data_into_segment_test(test_buffer: Vec<u16>) -> TestResult {
 
     setup_file_to_load_into_segment(&file_to_load, &test_buffer);
 
+    let stub_master_device = new_stub_device();
     let stub_memory_mapped_device = new_stub_memory_mapped_device();
-    let mut mem = new_bus_peripheral();
+    let mut mem = new_bus_peripheral(Box::new(stub_master_device));
     mem.map_segment(
         "some_label",
         0x0,

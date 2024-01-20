@@ -272,16 +272,16 @@ fn test_immediate_branch_basic() {
 #[test]
 fn test_immediate_branch_overflow() {
     test_immediate_branch_instruction(
-        (0xCC, 0xFFFF),
-        0x0001,
+        (0xCC, 0xFFFE),
+        0x0002,
         (0x00CC, 0x0000),
         ConditionFlags::Always,
         &vec![],
     );
     test_immediate_branch_instruction(
         (0xCC, 0x0000),
-        -0x0001,
-        (0x00CC, 0xFFFF),
+        -0x0002,
+        (0x00CC, 0xFFFE),
         ConditionFlags::Always,
         &vec![],
     );
@@ -345,10 +345,10 @@ fn test_immediate_branch_with_subroutine_basic() {
 #[test]
 fn test_immediate_branch_with_subroutine_overflow() {
     test_immediate_branch_with_subroutine_instruction(
-        (0x00CC, 0xFFFF),
-        0x0001,
+        (0x00CC, 0xFFFE),
+        0x0002,
         (0x00CC, 0x0000),
-        (0x00CC, 0x0001),
+        (0x00CC, 0x0000),
         ConditionFlags::Always,
         &vec![],
     );
@@ -416,8 +416,8 @@ fn test_register_branch_basic() {
 #[test]
 fn test_register_branch_overflow() {
     test_register_branch_instruction(
-        (0x00CC, 0xFFFF),
-        0x0001,
+        (0x00CC, 0xFFFE),
+        0x0002,
         (0x00CC, 0x0000),
         ConditionFlags::Always,
         &vec![],
@@ -489,10 +489,10 @@ fn test_register_branch_with_subroutine_basic() {
 #[test]
 fn test_register_branch_with_subroutine_overflow() {
     test_register_branch_with_subroutine_instruction(
-        (0xCC, 0xFFFF),
-        0x0001,
+        (0xCC, 0xFFFE),
+        0x0002,
         (0x00CC, 0x0000),
-        (0x00CC, 0x0001),
+        (0x00CC, 0x0000),
         ConditionFlags::Always,
         &vec![],
     );
