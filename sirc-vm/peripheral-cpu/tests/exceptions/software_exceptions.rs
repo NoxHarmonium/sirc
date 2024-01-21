@@ -125,8 +125,6 @@ fn test_software_exception_return() {
     let return_instruction = build_rete_instruction();
     let encoded_instruction = encode_instruction(&return_instruction);
 
-    println!("!!!!! encoded_instruction: {encoded_instruction:X?}");
-
     // Write the return instruction to the location that is jumped to
     write_bytes(&mem, vector_target_address, &encoded_instruction);
 

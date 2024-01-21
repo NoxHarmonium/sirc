@@ -34,8 +34,6 @@ pub fn set_up_instruction_test(
     let mut program_vector = vec![0; ((program_offset & 0xFFFF) * 2) as usize];
     program_vector.extend(program_data);
 
-    println!("program_data: {program_data:X?}");
-
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         // TODO: This should be passed in already as segment address
@@ -44,7 +42,6 @@ pub fn set_up_instruction_test(
         false,
         Box::new(new_ram_device_standard()),
     );
-    println!("program_offset program_offset program_offset: 0x{program_offset:X}");
     bus_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_vector);
     bus_peripheral.map_segment(
         SCRATCH_SEGMENT,

@@ -57,7 +57,6 @@ impl Executor for ProcessingUnitExecutor {
 
                 self.decoded_instruction =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
-                println!("EU: {:X?}", self.decoded_instruction);
 
                 // Special instruction just for debugging purposes. Probably won't be in hardware
                 if self.decoded_instruction.ins == Instruction::CoprocessorCallImmediate

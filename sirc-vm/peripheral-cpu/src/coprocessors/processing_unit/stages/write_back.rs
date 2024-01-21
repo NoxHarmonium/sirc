@@ -78,8 +78,6 @@ impl StageExecutor for WriteBackExecutor {
         let write_back_step_instruction_type =
             decode_write_back_step_instruction_type(decoded.ins, decoded);
 
-        println!("write_back_step_instruction_type: {write_back_step_instruction_type:?} intermediate_registers.alu_output: {}", intermediate_registers.alu_output);
-
         match write_back_step_instruction_type {
             WriteBackInstructionType::NoOp => {}
             WriteBackInstructionType::MemoryLoad => {

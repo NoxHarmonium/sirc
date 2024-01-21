@@ -22,7 +22,6 @@ fn test_immediate_arithmetic_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    println!("target_register!!! : {target_register}");
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: instruction,
         register: target_register,

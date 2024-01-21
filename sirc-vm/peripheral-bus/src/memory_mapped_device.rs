@@ -2,8 +2,11 @@ use std::any::Any;
 
 use crate::{
     conversion::{bytes_to_words, words_to_bytes},
-    device::{BusAssertions, Device},
+    device::{BusAssertions, BusOperation, Device},
 };
+
+// The first word is generally used as a "chip select" and the second word is the address used by the device
+pub const ADDRESS_MASK: u32 = 0x0000_FFFF;
 
 #[allow(clippy::cast_possible_truncation)]
 pub trait MemoryMappedDevice: Device {
@@ -31,6 +34,24 @@ pub trait MemoryMappedDevice: Device {
         let words = bytes_to_words(binary_data);
         for (address, word) in words.iter().enumerate() {
             self.write_address(address as u32, *word);
+        }
+    }
+
+    fn perform_bus_io(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        if selected {
+            let address = bus_assertions.address & ADDRESS_MASK;
+            match bus_assertions.op {
+                BusOperation::Read => BusAssertions {
+                    data: self.read_address(address),
+                    ..BusAssertions::default()
+                },
+                BusOperation::Write => {
+                    self.write_address(address, bus_assertions.data);
+                    BusAssertions::default()
+                }
+            }
+        } else {
+            BusAssertions::default()
         }
     }
 }

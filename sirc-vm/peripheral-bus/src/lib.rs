@@ -226,18 +226,12 @@ impl BusPeripheral {
         // TODO:: Assert no conflicts (e.g. two devices asserting the address or data bus at the same time)
 
         let master_assertions = self.bus_master.poll(assertions, true);
-        println!("Master assertions: {master_assertions:X?}");
 
         let segments = &mut self.segments;
         let merged_assertions = segments
             .iter_mut()
             .fold(master_assertions, |prev, segment| {
                 let selected = segment.address_is_in_segment_range(prev.address);
-                println!(
-                    "selected: {selected} address 0x{:X} label: {} SA: 0x{:X}",
-                    prev.address, segment.label, segment.address
-                );
-
                 let device = &mut segment.device;
                 let assertions = device.poll(prev, selected);
                 BusAssertions {

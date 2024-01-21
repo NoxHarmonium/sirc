@@ -9,7 +9,7 @@ use peripheral_cpu::{
     registers::{get_interrupt_mask, FullAddressRegisterAccess},
 };
 
-use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
+use super::common::set_up_instruction_test;
 
 pub const PROGRAM_OFFSET: u32 = 0x00CE_0000;
 pub const SYSTEM_RAM_OFFSET: u32 = 0x0;
@@ -37,7 +37,7 @@ fn test_hardware_exception_trigger() {
 
     // 32 bit vector: write upper word (the program segment) / write lower word (the offset in the segment)
     write_bytes(
-        &mem,
+        &mut mem,
         expected_vector_address,
         &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
     );

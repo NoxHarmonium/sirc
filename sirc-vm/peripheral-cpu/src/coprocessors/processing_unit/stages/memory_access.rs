@@ -55,11 +55,6 @@ impl StageExecutor for MemoryAccessExecutor {
         // but we might need to think about how this would work in FPGA
         registers.pl = decoded.npc_l_;
 
-        println!(
-            "{memory_access_step_instruction_type:?} intermediate_registers.alu_output: {}",
-            intermediate_registers.alu_output
-        );
-
         match memory_access_step_instruction_type {
             MemoryAccessInstructionType::NoOp => {}
 

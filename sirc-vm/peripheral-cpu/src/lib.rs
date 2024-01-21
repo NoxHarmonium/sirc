@@ -103,6 +103,13 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
 impl Device for CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        if bus_assertions.bus_error {
+            self.raise_fault(Faults::Bus);
+        }
+        if bus_assertions.interrupt_assertion > 0 {
+            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+        }
+
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
 
@@ -113,8 +120,6 @@ impl Device for CpuPeripheral {
         }
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
-
-        println!("phase: {phase:?} coprocessor_id: {coprocessor_id}");
 
         // TODO: Do something with error results, instead of unwrap
         let result = match coprocessor_id {

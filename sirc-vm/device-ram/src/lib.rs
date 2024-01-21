@@ -10,9 +10,6 @@ use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
 
-// The first word is generally used as a "chip select" and the second word is the address used by the device
-const ADDRESS_MASK: u32 = 0x0000_FFFF;
-
 pub enum SegmentMemCell {
     // At the moment, all raw segments get the maximum allowable of memory allocated
     // for a single segment (16 bit address). This is wasteful but not a huge issue
@@ -49,27 +46,7 @@ pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
 }
 impl Device for RamDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        if !selected {
-            return BusAssertions::default();
-        }
-        let address = bus_assertions.address & ADDRESS_MASK;
-        match bus_assertions.op {
-            peripheral_bus::device::BusOperation::Read => {
-                println!(
-                    "Reading 0x{:X} from address 0x{:X}",
-                    self.read_address(address),
-                    address
-                );
-                BusAssertions {
-                    data: self.read_address(address),
-                    ..BusAssertions::default()
-                }
-            }
-            peripheral_bus::device::BusOperation::Write => {
-                self.write_address(address, bus_assertions.data);
-                BusAssertions::default()
-            }
-        }
+        self.perform_bus_io(bus_assertions, selected)
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self

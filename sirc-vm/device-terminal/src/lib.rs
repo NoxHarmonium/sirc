@@ -83,7 +83,10 @@ pub fn new_terminal_device(master_clock_freq: u32) -> TerminalDevice {
 impl Device for TerminalDevice {
     ///  # Panics
     /// Will panic if there is an unexpected error in the channel that reads from stdin
-    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
+    #[allow(clippy::cast_possible_truncation)]
+    fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        let io_assertions = self.perform_bus_io(bus_assertions, selected);
+
         // Pull any pending data from stdin into the virtual buffer
         if !self.reading_finished {
             match self.stdin_channel.try_recv() {
@@ -126,6 +129,7 @@ impl Device for TerminalDevice {
             && should_activate
             && self.control_registers.send_pending == REGISTER_TRUE
         {
+            print!("{}", char::from(self.control_registers.send_data as u8));
             self.control_registers.send_pending = REGISTER_FALSE;
         }
 
@@ -144,10 +148,10 @@ impl Device for TerminalDevice {
         {
             return BusAssertions {
                 interrupt_assertion: 0x2,
-                ..BusAssertions::default()
+                ..io_assertions
             };
         }
-        BusAssertions::default()
+        io_assertions
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self

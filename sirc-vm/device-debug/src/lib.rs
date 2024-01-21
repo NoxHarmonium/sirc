@@ -21,7 +21,8 @@ pub fn new_debug_device() -> DebugDevice {
 }
 
 impl Device for DebugDevice {
-    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
+    fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        let io_assertions = self.perform_bus_io(bus_assertions, selected);
         // TODO: Bus error should be edge triggered I think so we don't get double faults
         // if devices are slow to stop asserting
         if self.trigger_bus_error {
@@ -30,10 +31,10 @@ impl Device for DebugDevice {
             self.trigger_bus_error = false;
             return BusAssertions {
                 bus_error: true,
-                ..BusAssertions::default()
+                ..io_assertions
             };
         }
-        BusAssertions::default()
+        io_assertions
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self

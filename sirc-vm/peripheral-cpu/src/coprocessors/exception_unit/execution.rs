@@ -175,10 +175,6 @@ impl Executor for ExceptionUnitExecutor {
     ) -> BusAssertions {
         // TODO: Implement faults
         // TODO: P5 interrupts should be edge triggered and if one is triggered while another is being serviced, it should be a fault
-        // println!(
-        //     "phase: {phase:?} BEFORE current_interrupt_mask: 0x{:X}",
-        //     get_interrupt_mask(registers)
-        // );
 
         match phase {
             ExecutionPhase::InstructionFetchLow => {
@@ -187,7 +183,6 @@ impl Executor for ExceptionUnitExecutor {
                 let vector_address_offset =
                     self.exception_unit_instruction.value as u32 * INSTRUCTION_SIZE_WORDS;
                 self.vector_address = registers.system_ram_offset | vector_address_offset;
-                println!("decoded: {:X?}", self.exception_unit_instruction);
                 return BusAssertions {
                     address: self.vector_address,
                     op: BusOperation::Read,
@@ -278,12 +273,6 @@ impl Executor for ExceptionUnitExecutor {
                 registers.pending_coprocessor_command = 0x0;
             }
         }
-
-        // println!(
-        //     "phase: {phase:?} self.exception_unit_opcode {:?} AFTER current_interrupt_mask: 0x{:X}",
-        //     self.exception_unit_opcode,
-        //     get_interrupt_mask(registers)
-        // );
 
         BusAssertions::default()
     }

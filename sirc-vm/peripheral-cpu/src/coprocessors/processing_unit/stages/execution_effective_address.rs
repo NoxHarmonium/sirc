@@ -70,11 +70,6 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 // we need this value to write back to the source address register to do the inc/dec
                 let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
 
-                println!(
-                    "decoded.addr_inc: {} displaced: {}",
-                    decoded.addr_inc, displaced
-                );
-
                 match decoded.addr_inc {
                     -1 => {
                         // alu_output drives the memory store so it needs to PRE decremented here

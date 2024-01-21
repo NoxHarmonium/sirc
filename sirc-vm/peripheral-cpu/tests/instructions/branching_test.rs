@@ -72,8 +72,6 @@ fn test_immediate_branch_with_subroutine_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    println!("???inital_pl???: 0x{initial_pl:X}");
-
     // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
