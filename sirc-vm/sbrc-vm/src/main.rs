@@ -195,21 +195,9 @@ fn main() {
         }
     }
 
-    // TODO: Profile and make this actually performant (currently is only 20fps when hardly doing anything)
+    // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
     let execute = |_| {
         let merged_assertions = bus_peripheral.poll_all();
-        if merged_assertions.bus_error {
-            // TODO: Raise bus error in CPU by reading bus
-            // bus_peripheral.cpu_peripheral.raise_fault(
-            //     peripheral_cpu::coprocessors::exception_unit::definitions::Faults::Bus,
-            // );
-        }
-        if merged_assertions.interrupt_assertion > 0 {
-            // TODO: Raise interrupt in CPU by reading bus
-            // bus_peripheral
-            //     .cpu_peripheral
-            //     .raise_hardware_interrupt(merged_assertions.interrupt_assertion);
-        }
         !merged_assertions.exit_simulation
     };
 

@@ -21,7 +21,13 @@ use crate::{
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
 };
 
-use super::super::shared::Executor;
+use super::{
+    super::shared::Executor,
+    definitions::vectors::{
+        ALIGNMENT_FAULT, BUS_FAULT, INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT,
+        LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT, SEGMENT_OVERFLOW_FAULT,
+    },
+};
 use super::{
     definitions::ExceptionUnitOpCodes,
     encoding::{decode_exception_unit_instruction, ExceptionUnitInstruction},
@@ -113,28 +119,21 @@ pub fn get_cause_register_value(
     registers: &Registers,
     eu_registers: &ExceptionUnitRegisters,
 ) -> u16 {
-    // let fault_can_occur = get_interrupt_mask(registers) < ExceptionPriorities::Fault as u8;
+    if let Some(pending_fault) = eu_registers.pending_fault {
+        let vector = match pending_fault {
+            super::definitions::Faults::Bus => BUS_FAULT,
+            super::definitions::Faults::Alignment => ALIGNMENT_FAULT,
+            super::definitions::Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
+            super::definitions::Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
+            super::definitions::Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
+            super::definitions::Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
+            super::definitions::Faults::LevelFiveInterruptConflict => {
+                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
+            }
+        };
 
-    // WHAT I WAS UP TO. Trying to get the first fault (bus fault) to actually work
-    // TODO: The bus error is stuck in a loop or something
-    // Actually! :-( bus error can occur mid instruction (.e.g IF/mem read/writeback) so I think we need to make the bus clock more granular
-    // if fault_can_occur {
-    //     if let Some(pending_fault) = eu_registers.pending_fault {
-    //         let vector = match pending_fault {
-    //             super::definitions::Faults::Bus => BUS_FAULT,
-    //             super::definitions::Faults::Alignment => ALIGNMENT_FAULT,
-    //             super::definitions::Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
-    //             super::definitions::Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
-    //             super::definitions::Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
-    //             super::definitions::Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
-    //             super::definitions::Faults::LevelFiveInterruptConflict => {
-    //                 LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
-    //             }
-    //         };
-
-    //         return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
-    //     }
-    // }
+        return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
+    }
     if eu_registers.pending_hardware_exception_level > get_interrupt_mask(registers) {
         let vector =
             hardware_exception_level_to_vector(eu_registers.pending_hardware_exception_level);
@@ -254,6 +253,15 @@ impl Executor for ExceptionUnitExecutor {
                         set_sr_bit(StatusRegisterFields::SystemMode, registers);
                         registers.set_full_pc_address(self.vector_value);
                     }
+                    ExceptionUnitOpCodes::Fault => {
+                        handle_exception(
+                            current_interrupt_mask,
+                            6,
+                            registers,
+                            eu_registers,
+                            self.vector_value,
+                        );
+                    }
                     ExceptionUnitOpCodes::HardwareException => {
                         handle_exception(
                             current_interrupt_mask,
@@ -269,6 +277,8 @@ impl Executor for ExceptionUnitExecutor {
             ExecutionPhase::WriteBackExecutor => {
                 // TODO: Where should these go?
                 eu_registers.pending_hardware_exception_level = 0x0;
+                eu_registers.pending_fault = None;
+
                 // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
                 registers.pending_coprocessor_command = 0x0;
             }
@@ -289,6 +299,7 @@ fn handle_exception(
 
     // Store current PC in windowed link register and jump to vector
     if current_interrupt_mask >= exception_level {
+        // TODO: Should this just be done when determining the cause register?
         // Ignore lower priority exceptions
         return;
     }

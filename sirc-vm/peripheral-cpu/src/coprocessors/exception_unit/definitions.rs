@@ -125,6 +125,7 @@ pub enum ExceptionUnitOpCodes {
     WaitForException = 0x9,
     ReturnFromException = 0xA,
     Reset = 0xB,
+    Fault = 0xE,
     HardwareException = 0xF,
 }
 

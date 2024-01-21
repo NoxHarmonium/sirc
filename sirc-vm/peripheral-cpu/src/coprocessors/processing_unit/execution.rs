@@ -33,24 +33,28 @@ impl Executor for ProcessingUnitExecutor {
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
-        match phase {
+        if eu_registers.pending_fault.is_some() {
+            // Abort CPU execution if fault detected
+            return BusAssertions::default();
+        }
+        let result = match phase {
             ExecutionPhase::InstructionFetchLow => {
                 // TODO: Alignment check?
 
-                return BusAssertions {
+                BusAssertions {
                     address: registers.get_full_pc_address(),
                     op: BusOperation::Read,
                     ..BusAssertions::default()
-                };
+                }
             }
             ExecutionPhase::InstructionFetchHigh => {
                 self.instruction = u32::from(bus_assertions.data) << u16::BITS;
 
-                return BusAssertions {
+                BusAssertions {
                     address: registers.get_full_pc_address() + 1,
                     op: BusOperation::Read,
                     ..BusAssertions::default()
-                };
+                }
             }
             ExecutionPhase::InstructionDecode => {
                 self.instruction |= u32::from(bus_assertions.data);
@@ -62,48 +66,46 @@ impl Executor for ProcessingUnitExecutor {
                 if self.decoded_instruction.ins == Instruction::CoprocessorCallImmediate
                     && self.decoded_instruction.sr_b_ == 0x14FF
                 {
-                    return BusAssertions {
+                    BusAssertions {
                         exit_simulation: true,
                         ..BusAssertions::default()
-                    };
+                    }
+                } else {
+                    BusAssertions::default()
                 }
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
-                return ExecutionEffectiveAddressExecutor::execute(
+                ExecutionEffectiveAddressExecutor::execute(
                     &self.decoded_instruction,
                     registers,
                     eu_registers,
                     &mut self.intermediate_registers,
                     bus_assertions,
-                );
+                )
             }
-            ExecutionPhase::MemoryAccessExecutor => {
-                return MemoryAccessExecutor::execute(
-                    &self.decoded_instruction,
-                    registers,
-                    eu_registers,
-                    &mut self.intermediate_registers,
-                    bus_assertions,
-                );
-            }
-            ExecutionPhase::WriteBackExecutor => {
-                return WriteBackExecutor::execute(
-                    &self.decoded_instruction,
-                    registers,
-                    eu_registers,
-                    &mut self.intermediate_registers,
-                    bus_assertions,
-                );
-            }
-        }
+            ExecutionPhase::MemoryAccessExecutor => MemoryAccessExecutor::execute(
+                &self.decoded_instruction,
+                registers,
+                eu_registers,
+                &mut self.intermediate_registers,
+                bus_assertions,
+            ),
+            ExecutionPhase::WriteBackExecutor => WriteBackExecutor::execute(
+                &self.decoded_instruction,
+                registers,
+                eu_registers,
+                &mut self.intermediate_registers,
+                bus_assertions,
+            ),
+        };
 
         if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
-            return BusAssertions {
+            BusAssertions {
                 exit_simulation: true,
                 ..BusAssertions::default()
-            };
+            }
+        } else {
+            result
         }
-
-        BusAssertions::default()
     }
 }

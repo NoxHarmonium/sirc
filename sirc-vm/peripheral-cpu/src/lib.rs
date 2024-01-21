@@ -33,11 +33,11 @@ pub mod util;
 
 use std::{any::Any, fmt::Write};
 
-use log::trace;
+use log::{error, trace};
 
 use coprocessors::{
     exception_unit::{
-        definitions::{ExceptionUnitOpCodes, Faults},
+        definitions::{ExceptionPriorities, ExceptionUnitOpCodes, Faults},
         execution::{construct_cause_value, get_cause_register_value, ExceptionUnitExecutor},
     },
     processing_unit::execution::ProcessingUnitExecutor,
@@ -45,7 +45,7 @@ use coprocessors::{
 };
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
-use registers::ExceptionUnitRegisters;
+use registers::{get_interrupt_mask, ExceptionUnitRegisters};
 
 use crate::registers::Registers;
 
@@ -181,21 +181,21 @@ impl CpuPeripheral {
         }
     }
 
-    pub fn raise_fault(&mut self, _: Faults) {
+    pub fn raise_fault(&mut self, fault: Faults) {
         // Disabled during refactor
 
-        // if let Some(pending_fault) = self.eu_registers.pending_fault {
-        //     // TODO: Is this possible in hardware? If so, what would happen?
-        //     panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
-        // }
+        if let Some(pending_fault) = self.eu_registers.pending_fault {
+            // TODO: Is this possible in hardware? If so, what would happen?
+            panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
+        }
 
-        // let current_interrupt_mask: u8 = get_interrupt_mask(&self.registers);
-        // if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
-        //     error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
-        //     panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
-        // }
+        let current_interrupt_mask: u8 = get_interrupt_mask(&self.registers);
+        if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
+            error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
+            panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
+        }
 
-        // self.eu_registers.pending_fault = Some(fault);
+        self.eu_registers.pending_fault = Some(fault);
     }
 
     pub fn reset(&mut self) {
