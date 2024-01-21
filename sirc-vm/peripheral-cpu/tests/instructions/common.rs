@@ -58,7 +58,7 @@ pub fn set_up_instruction_test(
 
 pub fn setup_test<F>(bus: &mut BusPeripheral, register_setup: F, program_offset: u32)
 where
-    F: Fn(&mut Registers, &BusPeripheral),
+    F: Fn(&mut Registers, &mut BusPeripheral),
 {
     // TODO: I think this might be the worst code I've ever written
     let mut registers;
@@ -104,7 +104,7 @@ pub fn run_instruction<F>(
     program_offset: u32,
 ) -> (TestCpuState, TestCpuState)
 where
-    F: Fn(&mut Registers, &BusPeripheral),
+    F: Fn(&mut Registers, &mut BusPeripheral),
 {
     let mut bus = set_up_instruction_test(instruction_data, program_offset);
     setup_test(&mut bus, register_setup, program_offset);

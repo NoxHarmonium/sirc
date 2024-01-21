@@ -54,7 +54,7 @@ pub fn sign_extend_small_offset(small_offset: u8) -> u16 {
 
 // TODO: Rename to something more generic like fetch double word
 #[must_use]
-pub fn fetch_instruction(mem: &BusPeripheral, pc: (u16, u16)) -> [u8; 4] {
+pub fn fetch_instruction(mem: &mut BusPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // Only the CPU knows that the address is split into two 16 bit registers
     // Any other peripheral will only see the 24 address lines
     let full_address: u32 = pc.to_full_address();

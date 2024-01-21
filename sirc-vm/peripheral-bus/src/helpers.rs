@@ -20,7 +20,7 @@ use num::Integer;
 /// mem.map_segment("doctest", 0x00F0_0000, 0xFFFF, true, Box::new(new_stub_memory_mapped_device()));
 ///
 /// let bytes = "abcd".as_bytes();
-/// write_bytes(&mem, 0x00F0_00FF, bytes);
+/// write_bytes(&mut mem, 0x00F0_00FF, bytes);
 ///
 /// // Check ASCII byte codes for "abcd"
 /// assert_eq!(mem.read_address(0x00F0_00FF), 0x6162); // a
@@ -31,7 +31,7 @@ use num::Integer;
 /// Will panic if an odd number of bytes are provided
 /// Will panic if the bytes don't fit into a 32 bit address space
 /// Will panic if there is a logic error in the function which causes a misalignment of bytes to words
-pub fn write_bytes(memory_peripheral: &BusPeripheral, start_address: u32, bytes: &[u8]) {
+pub fn write_bytes(memory_peripheral: &mut BusPeripheral, start_address: u32, bytes: &[u8]) {
     let byte_count = bytes.len();
     assert!(
         !byte_count.is_odd(),

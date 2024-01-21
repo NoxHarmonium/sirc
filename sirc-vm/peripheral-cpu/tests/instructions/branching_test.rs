@@ -35,7 +35,7 @@ fn test_immediate_branch_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &BusPeripheral| {
+        |registers: &mut Registers, _: &mut BusPeripheral| {
             registers.ph = default_ph;
             registers.pl = initial_pl;
             for &status_register_field in initial_status_flags {
@@ -85,7 +85,7 @@ fn test_immediate_branch_with_subroutine_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &BusPeripheral| {
+        |registers: &mut Registers, _: &mut BusPeripheral| {
             registers.ph = default_ph;
             registers.pl = initial_pl;
             for &status_register_field in initial_status_flags {
@@ -141,7 +141,7 @@ fn test_register_branch_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &BusPeripheral| {
+            |registers: &mut Registers, _: &mut BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = default_ph;
                 registers.pl = initial_pl;
@@ -197,7 +197,7 @@ fn test_register_branch_with_subroutine_instruction(
         });
         let (previous, current) = common::run_instruction(
             &instruction_data,
-            |registers: &mut Registers, _: &BusPeripheral| {
+            |registers: &mut Registers, _: &mut BusPeripheral| {
                 registers.set_at_index(src_register_index, offset as u16);
                 registers.ph = default_ph;
                 registers.pl = initial_pl;

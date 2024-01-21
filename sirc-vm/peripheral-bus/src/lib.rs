@@ -22,7 +22,6 @@ pub mod device;
 pub mod helpers;
 pub mod memory_mapped_device;
 
-use std::cell::RefCell;
 use std::fs::read;
 use std::path::Path;
 
@@ -35,7 +34,7 @@ pub struct Segment {
     pub address: u32,
     pub size: u32,
     pub writable: bool,
-    device: RefCell<Box<dyn MemoryMappedDevice>>,
+    device: Box<dyn MemoryMappedDevice>,
 }
 
 impl Segment {
@@ -65,15 +64,15 @@ pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
 
 impl BusPeripheral {
     #[must_use]
-    pub fn get_segment_for_label(&self, label: &str) -> Option<&Segment> {
-        self.segments.iter().find(|s| s.label == label)
+    pub fn get_segment_for_label(&mut self, label: &str) -> Option<&mut Segment> {
+        self.segments.iter_mut().find(|s| s.label == label)
     }
 
     #[must_use]
-    pub fn get_segment_for_address(&self, address: u32) -> Option<&Segment> {
+    pub fn get_segment_for_address(&mut self, address: u32) -> Option<&mut Segment> {
         // TODO: More efficient way to simulate memory mapping? E.g. range map
         self.segments
-            .iter()
+            .iter_mut()
             .find(|s| s.address_is_in_segment_range(address))
     }
 
@@ -97,7 +96,7 @@ impl BusPeripheral {
             address,
             size,
             writable,
-            device: RefCell::new(device),
+            device,
         });
     }
 
@@ -125,12 +124,12 @@ impl BusPeripheral {
     ///
     /// # Panics
     /// Will panic if the specified segment is not found, or if the binary data will not fit in the segment
-    pub fn load_binary_data_into_segment(&self, label: &str, binary_data: &Vec<u8>) {
+    pub fn load_binary_data_into_segment(&mut self, label: &str, binary_data: &Vec<u8>) {
         let maybe_segment = self.get_segment_for_label(label);
 
         let (segment_size, device) = maybe_segment.map_or_else(
             || panic!("Could not find segment with name: {label}"),
-            |segment| (segment.size, &segment.device),
+            |segment| (segment.size, &mut segment.device),
         );
 
         assert!(
@@ -140,7 +139,7 @@ impl BusPeripheral {
             segment_size
         );
 
-        device.borrow_mut().write_raw_bytes(binary_data);
+        device.write_raw_bytes(binary_data);
     }
 
     /// Dumps a segment to raw binary data
@@ -148,7 +147,7 @@ impl BusPeripheral {
     /// # Panics
     /// Will panic if the specified segment is not found
     #[must_use]
-    pub fn dump_segment(&self, label: &str) -> Vec<u8> {
+    pub fn dump_segment(&mut self, label: &str) -> Vec<u8> {
         let maybe_segment = self.get_segment_for_label(label);
 
         let (segment_size, device) = maybe_segment.map_or_else(
@@ -156,7 +155,7 @@ impl BusPeripheral {
             |segment| (segment.size, &segment.device),
         );
 
-        device.borrow_mut().read_raw_bytes(segment_size)
+        device.read_raw_bytes(segment_size)
     }
 
     /// Reads a single 16 bit value out of a memory address
@@ -164,7 +163,7 @@ impl BusPeripheral {
     /// # Panics
     /// Will panic if the segment is in use (unlikely) or if the internal address calculation goes out of bounds.
     #[must_use]
-    pub fn read_address(&self, address: u32) -> u16 {
+    pub fn read_address(&mut self, address: u32) -> u16 {
         self.get_segment_for_address(address).map_or_else(
             || {
                 warn!(
@@ -176,7 +175,7 @@ impl BusPeripheral {
             |segment| {
                 let relative_address = address - segment.address;
 
-                segment.device.borrow().read_address(relative_address)
+                segment.device.read_address(relative_address)
             },
         )
     }
@@ -199,7 +198,7 @@ impl BusPeripheral {
     ///
     /// # Panics
     /// Will panic if the segment is in use (unlikely), the segment is readonly or if the internal address calculation goes out of bounds.
-    pub fn write_address(&self, address: u32, value: u16) {
+    pub fn write_address(&mut self, address: u32, value: u16) {
         self.get_segment_for_address(address).map_or_else(|| {
              // If a segment isn't mapped, the value just goes into a black hole
              warn!(
@@ -213,7 +212,7 @@ impl BusPeripheral {
             );
 
             let relative_address = address - segment.address;
-            segment.device.borrow_mut().write_address(relative_address , value);
+            segment.device.write_address(relative_address , value);
         });
     }
 
@@ -229,27 +228,29 @@ impl BusPeripheral {
         let master_assertions = self.bus_master.poll(assertions, true);
         println!("Master assertions: {master_assertions:X?}");
 
-        let segments = &self.segments;
-        let merged_assertions = segments.iter().fold(master_assertions, |prev, segment| {
-            let selected = segment.address_is_in_segment_range(prev.address);
-            println!(
-                "selected: {selected} address 0x{:X} label: {} SA: 0x{:X}",
-                prev.address, segment.label, segment.address
-            );
+        let segments = &mut self.segments;
+        let merged_assertions = segments
+            .iter_mut()
+            .fold(master_assertions, |prev, segment| {
+                let selected = segment.address_is_in_segment_range(prev.address);
+                println!(
+                    "selected: {selected} address 0x{:X} label: {} SA: 0x{:X}",
+                    prev.address, segment.label, segment.address
+                );
 
-            let mut device = segment.device.borrow_mut();
-            let assertions = device.poll(prev, selected);
-            BusAssertions {
-                // Interrupts are all merged together
-                interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
-                // If at least one device has a bus error, then a fault will be raised
-                // The devices will have to be polled by the program to find the cause of the error at the moment
-                // (I don't really want to implement complex error signalling like the 68k has)
-                bus_error: prev.bus_error | assertions.bus_error,
-                data: if selected { assertions.data } else { prev.data },
-                ..prev
-            }
-        });
+                let device = &mut segment.device;
+                let assertions = device.poll(prev, selected);
+                BusAssertions {
+                    // Interrupts are all merged together
+                    interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
+                    // If at least one device has a bus error, then a fault will be raised
+                    // The devices will have to be polled by the program to find the cause of the error at the moment
+                    // (I don't really want to implement complex error signalling like the 68k has)
+                    bus_error: prev.bus_error | assertions.bus_error,
+                    data: if selected { assertions.data } else { prev.data },
+                    ..prev
+                }
+            });
         self.assertions = merged_assertions;
         merged_assertions
     }
