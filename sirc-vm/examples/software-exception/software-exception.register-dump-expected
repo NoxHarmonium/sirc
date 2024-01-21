@@ -1,6 +1,6 @@
 ===REGISTERS===
 Registers {
-    sr: 0x100,
+    sr: 0x0,
     r1: 0xff,
     r2: 0x0,
     r3: 0x0,
@@ -15,7 +15,7 @@ Registers {
     sh: 0x0,
     sl: 0x0,
     ph: 0x0,
-    pl: 0x104,
+    pl: 0x106,
     system_ram_offset: 0x0,
     pending_coprocessor_command: 0x0,
 }
@@ -26,7 +26,7 @@ ExceptionUnitRegisters {
     link_registers: [
         ExceptionLinkRegister {
             return_address: 0x104,
-            return_status_register: 0x100,
+            return_status_register: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,

@@ -14,7 +14,7 @@ use crate::{
         shared::ExecutionPhase,
     },
     registers::{
-        get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
+        clear_sr_bit, get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
         FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
@@ -32,7 +32,7 @@ use super::{
     definitions::ExceptionUnitOpCodes,
     encoding::{decode_exception_unit_instruction, ExceptionUnitInstruction},
 };
-use crate::registers::{set_interrupt_mask, set_sr_bit, StatusRegisterFields};
+use crate::registers::{set_interrupt_mask, StatusRegisterFields};
 
 ///
 /// Constructs a value that can be put into the cause register to run an exception unit instruction.
@@ -175,6 +175,11 @@ impl Executor for ExceptionUnitExecutor {
         // TODO: Implement faults
         // TODO: P5 interrupts should be edge triggered and if one is triggered while another is being serviced, it should be a fault
 
+        trace!(
+            "PHASE '{phase:?}' :: FAULT '{:?}'",
+            eu_registers.pending_fault
+        );
+
         match phase {
             ExecutionPhase::InstructionFetchLow => {
                 self.exception_unit_instruction =
@@ -250,7 +255,6 @@ impl Executor for ExceptionUnitExecutor {
                     }
                     ExceptionUnitOpCodes::Reset => {
                         registers.sr = 0x0;
-                        set_sr_bit(StatusRegisterFields::SystemMode, registers);
                         registers.set_full_pc_address(self.vector_value);
                     }
                     ExceptionUnitOpCodes::Fault => {
@@ -307,7 +311,10 @@ fn handle_exception(
         return_address: registers.get_full_pc_address(),
         return_status_register: registers.sr,
     };
-    set_sr_bit(StatusRegisterFields::SystemMode, registers);
+
+    trace!("return_address.pl: 0x{:X}", registers.get_full_pc_address());
+
+    clear_sr_bit(StatusRegisterFields::ProtectedMode, registers);
 
     registers.set_full_pc_address(vector_address);
     set_interrupt_mask(registers, exception_level);

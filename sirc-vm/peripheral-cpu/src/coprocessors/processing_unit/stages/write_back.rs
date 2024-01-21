@@ -2,7 +2,10 @@ use peripheral_bus::device::BusAssertions;
 
 use crate::{
     coprocessors::processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
-    registers::{ExceptionUnitRegisters, Registers},
+    registers::{
+        sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, StatusRegisterFields,
+        SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
+    },
 };
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
@@ -20,6 +23,16 @@ enum WriteBackInstructionType {
 }
 
 pub struct WriteBackExecutor;
+
+fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
+    let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
+    let sr_register_index = RegisterName::Sr as u8;
+    if should_redact_sr && index == sr_register_index {
+        registers[index] = (registers[index] & SR_PRIVILEGED_MASK) | (value & SR_REDACTION_MASK);
+    } else {
+        registers[index] = value;
+    }
+}
 
 // TODO: Clean up this match and remove this warning
 #[allow(clippy::match_same_arms)]
@@ -60,7 +73,8 @@ fn update_status_flags(
         // TODO: Define assembly syntax to define this explicitly if required and make sure it is tested
         StatusRegisterUpdateSource::Alu => {
             // Do not allow updates to the privileged byte of the SR via the ALU!
-            (registers.sr & 0xFF00) | (intermediate_registers.alu_status_register & 0x00FF)
+            (registers.sr & SR_PRIVILEGED_MASK)
+                | (intermediate_registers.alu_status_register & SR_REDACTION_MASK)
         }
         StatusRegisterUpdateSource::Shift => decoded.sr_shift,
         _ => registers.sr,
@@ -81,13 +95,13 @@ impl StageExecutor for WriteBackExecutor {
         match write_back_step_instruction_type {
             WriteBackInstructionType::NoOp => {}
             WriteBackInstructionType::MemoryLoad => {
-                registers[decoded.des] = bus_assertions.data;
+                set_register_value(registers, decoded.des, bus_assertions.data);
             }
             WriteBackInstructionType::AluStatusOnly => {
                 update_status_flags(decoded, registers, intermediate_registers);
             }
             WriteBackInstructionType::AluToRegister => {
-                registers[decoded.des] = intermediate_registers.alu_output;
+                set_register_value(registers, decoded.des, intermediate_registers.alu_output);
                 update_status_flags(decoded, registers, intermediate_registers);
             }
             WriteBackInstructionType::AddressWrite => {
@@ -102,7 +116,7 @@ impl StageExecutor for WriteBackExecutor {
                 // I guess the destination register should take precedence
                 registers[decoded.ad_h] = decoded.ad_h_;
                 registers[decoded.ad_l] = intermediate_registers.address_output;
-                registers[decoded.des] = bus_assertions.data;
+                set_register_value(registers, decoded.des, bus_assertions.data);
             }
             WriteBackInstructionType::AddressWriteStorePreIncrement => {
                 registers[decoded.ad_h] = decoded.ad_h_;

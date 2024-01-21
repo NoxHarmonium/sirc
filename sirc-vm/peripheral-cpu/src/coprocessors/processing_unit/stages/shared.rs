@@ -46,7 +46,6 @@ pub struct DecodedInstruction {
     pub ad_l_: u16,
     pub ad_h_: u16,
     pub con_: bool,
-    pub sr: u16,
     pub npc_l_: u16,
     pub npc_h_: u16,
 }

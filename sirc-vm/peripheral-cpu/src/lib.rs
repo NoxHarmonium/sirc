@@ -73,6 +73,27 @@ pub struct CpuPeripheral {
     pub cause_register_value: u16,
 }
 
+pub fn raise_fault(
+    registers: &Registers,
+    eu_registers: &ExceptionUnitRegisters,
+    fault: Faults,
+) -> Option<Faults> {
+    // Disabled during refactor
+
+    if let Some(pending_fault) = eu_registers.pending_fault {
+        // TODO: Is this possible in hardware? If so, what would happen?
+        panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
+    }
+
+    let current_interrupt_mask: u8 = get_interrupt_mask(registers);
+    if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
+        error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
+        panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
+    }
+
+    Some(fault)
+}
+
 ///
 /// Instantiates a new `CpuPeripheral` with default values after doing some checks.
 ///
@@ -104,7 +125,8 @@ impl Device for CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
         if bus_assertions.bus_error {
-            self.raise_fault(Faults::Bus);
+            self.eu_registers.pending_fault =
+                raise_fault(&self.registers, &self.eu_registers, Faults::Bus);
         }
         if bus_assertions.interrupt_assertion > 0 {
             self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
@@ -138,9 +160,16 @@ impl Device for CpuPeripheral {
                 bus_assertions,
             ),
             _ => {
-                // TODO: Work out what would happen in hardware here
-                // Do we want another coprocessor (multiplication?)
-                panic!("Coprocessor ID [{coprocessor_id}] not implemented yet");
+                // TODO: This doesn't seem to line up with how the other faults are handled
+                // because of this check. We need it because the cause register is currently
+                // only set on the first phase of the CPU cycles, so this gets run each cycle
+                if self.eu_registers.pending_fault != Some(Faults::InvalidOpCode) {
+                    // Can be used for forwards compatibility if co-processors are added in later models
+                    self.eu_registers.pending_fault =
+                        raise_fault(&self.registers, &self.eu_registers, Faults::InvalidOpCode);
+                }
+
+                BusAssertions::default()
             }
         };
 
@@ -179,23 +208,6 @@ impl CpuPeripheral {
             self.eu_registers.pending_hardware_exception_level = level;
             self.eu_registers.waiting_for_exception = false;
         }
-    }
-
-    pub fn raise_fault(&mut self, fault: Faults) {
-        // Disabled during refactor
-
-        if let Some(pending_fault) = self.eu_registers.pending_fault {
-            // TODO: Is this possible in hardware? If so, what would happen?
-            panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
-        }
-
-        let current_interrupt_mask: u8 = get_interrupt_mask(&self.registers);
-        if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
-            error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
-            panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
-        }
-
-        self.eu_registers.pending_fault = Some(fault);
     }
 
     pub fn reset(&mut self) {

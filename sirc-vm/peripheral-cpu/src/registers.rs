@@ -8,6 +8,9 @@ use crate::coprocessors::exception_unit::definitions::Faults;
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
 pub const ADDRESS_MASK: u32 = 0x00FF_FFFF;
+pub const SR_PRIVILEGED_MASK: u16 = 0xFF00;
+// The parts of the status register that non privileged code can "see" (or write to)
+pub const SR_REDACTION_MASK: u16 = 0x00FF;
 
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
@@ -18,10 +21,10 @@ pub enum StatusRegisterFields {
     Overflow = 0b0000_1000,
 
     // Byte 2 (privileged)
-    /// Enabled "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
-    /// and if they are used in when this flag is cleared, an exception is thrown
+    /// Setting bit 8 disables "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
+    /// and if they are used in when this flag is set, an exception is thrown
     /// TODO: Implement privilege system
-    SystemMode = 0b0000_0001 << u8::BITS,
+    ProtectedMode = 0b0000_0001 << u8::BITS,
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
     InterruptMaskHigh = 0b0000_1000 << u8::BITS,

@@ -1,6 +1,6 @@
 ===REGISTERS===
 Registers {
-    sr: 0x106,
+    sr: 0x6,
     r1: 0x5,
     r2: 0x44,
     r3: 0x40,
@@ -15,7 +15,7 @@ Registers {
     sh: 0x0,
     sl: 0x0,
     ph: 0x0,
-    pl: 0x10e,
+    pl: 0x110,
     system_ram_offset: 0x0,
     pending_coprocessor_command: 0x0,
 }

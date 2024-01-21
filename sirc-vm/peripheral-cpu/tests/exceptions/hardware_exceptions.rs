@@ -42,6 +42,8 @@ fn test_hardware_exception_trigger() {
         &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
     );
 
+    mem.poll_all();
+
     cpu.raise_hardware_interrupt(2);
 
     assert_eq_hex!(0x0, get_interrupt_mask(&cpu.registers));
