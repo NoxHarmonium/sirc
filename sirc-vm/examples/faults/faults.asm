@@ -1,5 +1,6 @@
 ;; Segments
 .EQU $PROGRAM_SEGMENT               #0x0000
+.EQU $SCRATCH_SEGMENT               #0x1000
 
 ;; Devices
 ; Debug
@@ -34,8 +35,16 @@ LOAD    al, $DEBUG_DEVICE_BUS_ERROR
 STOR    (#0, a), r1
 
 ; Jumping to an odd address triggers an alignment fault
-; TODO: Uncomment this when can override return address
-; LOAD    pl, #0x0101
+LOAD    pl, #0x0101
+
+:after_odd_address
+
+; Loading/storing from an odd address should not trigger an alignment fault
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, #0x0
+LOAD    r6, #0xCAFE
+STOR    (#1, a), r6
+LOAD    r6, (#1, a)
 
 ; Calculating an effective address that overflows triggers a segment overflow fault
 ; (but only if the SR is set up the right way)
@@ -61,25 +70,32 @@ LOAD     ph, #0xFEFE
 COPI    r1, #0x14FF
 
 :bus_fault_handler
-ADDI    r1, #2
+ADDI    r1, #1
 RETE
 
 :alignment_fault_handler
-ADDI    r2, #3
+ADDI    r2, #1
 
-;;; TODO: The return address is invalid here
-;;; TODO: HOW DO WE RETURN FROM THE EXCEPTION TO A SPECIFIC LOCATION?
+; Fix up the return address because the original PC causes an alignment fault
+; Returning witout fixing up the return address would cause an endless loop
+
+; Transfer current ELR into 'a' register
+COPI    r1, #0x1C16
+; Correct the lower word
+LOAD    al, @after_odd_address
+; Transfer corrected address back to ELR - TODO Why 5? Wouldn't it be six?
+COPI    r1, #0x1D16
 
 RETE
 
 :segment_overflow_fault_handler
-ADDI    r3, #4
+ADDI    r3, #1
 RETE
 
 :invalid_opcode_fault_handler
-ADDI    r4, #4
+ADDI    r4, #1
 RETE
 
 :privilege_violation_fault_handler
-ADDI    r5, #5
+ADDI    r5, #1
 RETE
