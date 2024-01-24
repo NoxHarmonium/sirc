@@ -12,6 +12,9 @@ pub const SR_PRIVILEGED_MASK: u16 = 0xFF00;
 // The parts of the status register that non privileged code can "see" (or write to)
 pub const SR_REDACTION_MASK: u16 = 0x00FF;
 
+// 0 = SW Exception, 1-5 interrupts, 6 = fault, 7 = fault metadata
+pub const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
+
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
     // Byte 1
@@ -23,7 +26,6 @@ pub enum StatusRegisterFields {
     // Byte 2 (privileged)
     /// Setting bit 8 disables "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
     /// and if they are used in when this flag is set, an exception is thrown
-    /// TODO: Implement privilege system
     ProtectedMode = 0b0000_0001 << u8::BITS,
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
@@ -598,8 +600,10 @@ pub struct ExceptionLinkRegister {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
-    pub pending_hardware_exception_level: u8,
+    // TODO: Capture bus information
+    pub pending_hardware_exceptions: u8,
     pub pending_fault: Option<Faults>,
-    pub link_registers: [ExceptionLinkRegister; 7],
+    // 7 exception levels - one (index 7) to store fault metadata
+    pub link_registers: [ExceptionLinkRegister; 8],
     pub waiting_for_exception: bool,
 }

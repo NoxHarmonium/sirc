@@ -45,7 +45,10 @@ use coprocessors::{
 };
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
-use registers::{get_interrupt_mask, ExceptionUnitRegisters};
+use registers::{
+    get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
+    FAULT_METADATA_LINK_REGISTER_INDEX,
+};
 
 use crate::registers::Registers;
 
@@ -75,8 +78,10 @@ pub struct CpuPeripheral {
 
 pub fn raise_fault(
     registers: &Registers,
-    eu_registers: &ExceptionUnitRegisters,
+    eu_registers: &mut ExceptionUnitRegisters,
     fault: Faults,
+    phase: ExecutionPhase,
+    bus_assertions: &BusAssertions,
 ) -> Option<Faults> {
     // Disabled during refactor
 
@@ -90,6 +95,11 @@ pub fn raise_fault(
         error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
         panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
     }
+
+    eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
+        return_address: bus_assertions.address,
+        return_status_register: phase as u16, // TODO: phase only takes up u8 (or less), could fit more data in here - what is useful?
+    };
 
     Some(fault)
 }
@@ -124,21 +134,28 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
 impl Device for CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        let phase: ExecutionPhase =
+            FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
+
         if bus_assertions.bus_error {
-            self.eu_registers.pending_fault =
-                raise_fault(&self.registers, &self.eu_registers, Faults::Bus);
+            // TODO: Can we do this without have a mut ref to eu_registers?
+            self.eu_registers.pending_fault = raise_fault(
+                &self.registers,
+                &mut self.eu_registers,
+                Faults::Bus,
+                phase,
+                &bus_assertions,
+            );
         }
         if bus_assertions.interrupt_assertion > 0 {
             self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
         }
 
-        let phase: ExecutionPhase =
-            FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
-
         if phase == ExecutionPhase::InstructionFetchLow {
             // Only reset the cause register every full instruction cycle
+            // TODO: Can we do this without have a mut ref to eu_registers?
             self.cause_register_value =
-                get_cause_register_value(&self.registers, &self.eu_registers);
+                get_cause_register_value(&self.registers, &mut self.eu_registers);
         }
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
@@ -163,10 +180,17 @@ impl Device for CpuPeripheral {
                 // TODO: This doesn't seem to line up with how the other faults are handled
                 // because of this check. We need it because the cause register is currently
                 // only set on the first phase of the CPU cycles, so this gets run each cycle
-                if self.eu_registers.pending_fault != Some(Faults::InvalidOpCode) {
+                let should_fault = self.eu_registers.pending_fault != Some(Faults::InvalidOpCode);
+
+                if should_fault {
                     // Can be used for forwards compatibility if co-processors are added in later models
-                    self.eu_registers.pending_fault =
-                        raise_fault(&self.registers, &self.eu_registers, Faults::InvalidOpCode);
+                    self.eu_registers.pending_fault = raise_fault(
+                        &self.registers,
+                        &mut self.eu_registers,
+                        Faults::InvalidOpCode,
+                        phase,
+                        &bus_assertions,
+                    );
                 }
 
                 BusAssertions::default()
@@ -203,9 +227,19 @@ impl CpuPeripheral {
     }
 
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
-        trace!("Interrupt level [{level}] raised");
+        // This level is a bitmask
         if level > 0 {
-            self.eu_registers.pending_hardware_exception_level = level;
+            trace!("Interrupt level [b{level:b}] raised");
+            // TODO: WHAT AM I DOING
+            // This pending exception level needs to be a combination of every pending interrupt
+            // so this should be an OR I guess
+            // Also it seems like some code treats this as a regular number, when it is actually a bit mask. Fix that so that L5 interrupts actually work
+            // If a lower level interrupt comes in while a higher level is being serviced, it should be set as pending. WHen the higher level exception returns, the CPU will immediately service the next highest level interrupt
+            // (could probably test this in the hardware exception example by queuing up all 5 exception levels)
+            //  TODO: What happens when a software exception is triggered in an interrupt handler? By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+            // I think L2 interrupts were working because they fit into the link register array - it accidently worked. Probably should have tested all the interrupt levels
+            // TODO: Use consistent terminology. Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+            self.eu_registers.pending_hardware_exceptions |= level;
             self.eu_registers.waiting_for_exception = false;
         }
     }

@@ -66,13 +66,21 @@ impl Executor for ProcessingUnitExecutor {
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
-        if registers.pl.is_odd() {
-            eu_registers.pending_fault = raise_fault(registers, eu_registers, Faults::Alignment);
-        }
-
         if eu_registers.pending_fault.is_some() {
             // Abort CPU execution if fault detected
             return BusAssertions::default();
+        }
+
+        trace!("phase: {phase:?} sr: 0x{:X}", registers.sr);
+
+        if registers.pl.is_odd() {
+            eu_registers.pending_fault = raise_fault(
+                registers,
+                eu_registers,
+                Faults::Alignment,
+                *phase,
+                &bus_assertions,
+            );
         }
 
         let result = match phase {
@@ -102,8 +110,13 @@ impl Executor for ProcessingUnitExecutor {
 
                 let privilege_violation = check_privilege(&self.decoded_instruction, registers);
                 if privilege_violation {
-                    eu_registers.pending_fault =
-                        raise_fault(registers, eu_registers, Faults::PrivilegeViolation);
+                    eu_registers.pending_fault = raise_fault(
+                        registers,
+                        eu_registers,
+                        Faults::PrivilegeViolation,
+                        *phase,
+                        &bus_assertions,
+                    );
                 }
 
                 // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.

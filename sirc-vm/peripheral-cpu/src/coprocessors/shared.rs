@@ -2,7 +2,7 @@ use peripheral_bus::{device::BusAssertions, BusPeripheral};
 
 use crate::registers::{ExceptionUnitRegisters, Registers, SegmentedAddress};
 
-#[derive(Default, FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
+#[derive(Default, FromPrimitive, ToPrimitive, Debug, PartialEq, Eq, Copy, Clone)]
 pub enum ExecutionPhase {
     #[default]
     InstructionFetchLow = 0x0,

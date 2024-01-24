@@ -3,6 +3,7 @@ use peripheral_bus::device::BusAssertions;
 use crate::{
     coprocessors::{
         exception_unit::definitions::Faults, processing_unit::definitions::Instruction,
+        shared::ExecutionPhase,
     },
     raise_fault,
     registers::{sr_bit_is_set, ExceptionUnitRegisters, Registers, StatusRegisterFields},
@@ -47,7 +48,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         registers: &mut Registers,
         eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: BusAssertions,
+        bus_assertions: BusAssertions,
     ) -> BusAssertions {
         // TODO: Replace unwrap with something better
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
@@ -102,8 +103,13 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
                     && (displacement_overflowed || displacement_overflowed_after_inc)
                 {
-                    eu_registers.pending_fault =
-                        raise_fault(registers, eu_registers, Faults::SegmentOverflow);
+                    eu_registers.pending_fault = raise_fault(
+                        registers,
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        ExecutionPhase::ExecutionEffectiveAddressExecutor,
+                        &bus_assertions,
+                    );
                 }
             }
 

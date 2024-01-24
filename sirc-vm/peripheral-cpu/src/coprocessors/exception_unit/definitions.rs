@@ -1,3 +1,7 @@
+pub const EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK: u8 = 0xF;
+pub const EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH: u8 = 4;
+pub const EXCEPTION_UNIT_TRANSFER_REGISTER_SELECT_MASK: u8 = 0x03;
+
 pub mod vectors {
     // The full vector range is 8 bits, so there are a possible 128 32-bit vector addresses
     // that can be defined. Multiply the vector ID by two to get the actual memory address
@@ -125,6 +129,8 @@ pub enum ExceptionUnitOpCodes {
     WaitForException = 0x9,
     ReturnFromException = 0xA,
     Reset = 0xB,
+    TransferFromRegister = 0xC,
+    TransferToRegister = 0xD,
     Fault = 0xE,
     HardwareException = 0xF,
 }

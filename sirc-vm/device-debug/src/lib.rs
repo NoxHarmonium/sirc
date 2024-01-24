@@ -11,12 +11,14 @@ use peripheral_bus::{
 ///
 pub struct DebugDevice {
     pub trigger_bus_error: bool,
+    pub trigger_interrupt: u8,
 }
 
 #[must_use]
 pub fn new_debug_device() -> DebugDevice {
     DebugDevice {
         trigger_bus_error: false,
+        trigger_interrupt: 0,
     }
 }
 
@@ -31,6 +33,16 @@ impl Device for DebugDevice {
             self.trigger_bus_error = false;
             return BusAssertions {
                 bus_error: true,
+                ..io_assertions
+            };
+        }
+        if self.trigger_interrupt > 0 {
+            debug!("Interrupt L{} error triggered!", self.trigger_interrupt);
+
+            let interrupt_level = self.trigger_interrupt;
+            self.trigger_interrupt = 0;
+            return BusAssertions {
+                interrupt_assertion: 0x1 << (interrupt_level - 1),
                 ..io_assertions
             };
         }
@@ -52,16 +64,27 @@ impl MemoryMappedDevice for DebugDevice {
                     0x0
                 }
             }
+            0x1..=0x5 => {
+                if (address as u8) == self.trigger_interrupt {
+                    0x1
+                } else {
+                    0x0
+                }
+            }
             _ => 0x0,
         }
     }
 
-    #[allow(clippy::single_match)]
     fn write_address(&mut self, address: u32, value: u16) {
         debug!("Writing 0x{value:X} to address 0x{address:X}");
 
         match address {
             0x0 => self.trigger_bus_error = value == 0x1,
+            0x1..=0x5 => {
+                if value == 0x1 {
+                    self.trigger_interrupt = address as u8
+                }
+            }
             _ => {}
         }
     }
