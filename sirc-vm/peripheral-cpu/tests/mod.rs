@@ -15,6 +15,28 @@
 )]
 #![deny(warnings)]
 
+#[cfg(test)]
+#[ctor::ctor]
+fn init() {
+    stderrlog::new()
+        .module(module_path!())
+        // TODO: Is there a way to get this from the dependency list?
+        .modules(vec![
+            "device_debug",
+            "device_ram",
+            "device_terminal",
+            "peripheral_bus",
+            "peripheral_clock",
+            "peripheral_cpu",
+        ])
+        .quiet(false)
+        .verbosity(log::Level::Info)
+        .timestamp(stderrlog::Timestamp::Millisecond)
+        .show_module_names(true)
+        .init()
+        .unwrap();
+}
+
 extern crate quickcheck;
 #[macro_use(quickcheck)]
 extern crate quickcheck_macros;

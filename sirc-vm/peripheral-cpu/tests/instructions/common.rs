@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use device_ram::new_ram_device_standard;
+use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
 use peripheral_bus::{new_bus_peripheral, BusPeripheral};
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
@@ -40,7 +40,7 @@ pub fn set_up_instruction_test(
         program_offset,
         u16::MAX as u32,
         false,
-        Box::new(new_ram_device_standard()),
+        Box::new(new_stub_memory_mapped_device()),
     );
     bus_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_vector);
     bus_peripheral.map_segment(
@@ -48,7 +48,7 @@ pub fn set_up_instruction_test(
         SCRATCH_SEGMENT_BEGIN,
         u16::MAX as u32,
         true,
-        Box::new(new_ram_device_standard()),
+        Box::new(new_stub_memory_mapped_device()),
     );
     bus_peripheral
 }

@@ -15,5 +15,5 @@ quickcheck = "1"
 quickcheck_macros = "1"
 strum = { version = "0.25", features = ["derive"] }
 assert_hex = "0.4"
-# TODO: Remove this dependency when all ram access goes via the bus
-device_ram = { path = "../device-ram" }
+stderrlog = "0.5.4"
+ctor = "0.2.6"

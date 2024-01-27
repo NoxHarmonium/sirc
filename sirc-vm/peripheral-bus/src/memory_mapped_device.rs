@@ -1,5 +1,7 @@
 use std::any::Any;
 
+use log::trace;
+
 use crate::{
     conversion::{bytes_to_words, words_to_bytes},
     device::{BusAssertions, BusOperation, Device},
@@ -61,9 +63,8 @@ pub struct StubMemoryMappedDevice {
 }
 
 impl Device for StubMemoryMappedDevice {
-    fn poll(&mut self, _: BusAssertions, _: bool) -> BusAssertions {
-        // No-op
-        BusAssertions::default()
+    fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        self.perform_bus_io(bus_assertions, selected)
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self
@@ -85,6 +86,7 @@ impl MemoryMappedDevice for StubMemoryMappedDevice {
     }
 
     fn write_raw_bytes(&mut self, binary_data: &[u8]) {
+        trace!("write_raw_bytes: len: {}", binary_data.len());
         let words = bytes_to_words(binary_data);
         self.data[..words.len()].copy_from_slice(words.as_slice());
     }
@@ -93,6 +95,6 @@ impl MemoryMappedDevice for StubMemoryMappedDevice {
 #[must_use]
 pub fn new_stub_memory_mapped_device() -> StubMemoryMappedDevice {
     StubMemoryMappedDevice {
-        data: vec![0; u16::MAX as usize],
+        data: vec![0; u16::MAX as usize + 1],
     }
 }
