@@ -15,7 +15,7 @@
 )]
 #![deny(warnings)]
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use log::debug;
 
@@ -25,21 +25,30 @@ pub struct ClockPeripheral {
 }
 
 impl ClockPeripheral {
+    #[allow(clippy::cast_precision_loss)]
     pub fn start_loop(&self, mut closure: impl FnMut(u32) -> bool) {
         let vsync_frequency = 50;
         let clocks_per_vsync = self.master_clock_freq / self.vsync_frequency;
         let mut frame: u64 = 0;
+        let start_instant = Instant::now();
+        let seconds_per_frame = Duration::from_secs(1) / vsync_frequency;
 
-        let mut interval = spin_sleep_util::interval(Duration::from_secs(1) / vsync_frequency);
+        let mut interval = spin_sleep_util::interval(seconds_per_frame);
         let mut reporter = spin_sleep_util::RateReporter::new(Duration::from_secs(5));
-        // 312.5 lines per frame
 
+        // 312.5 lines per frame
         loop {
             frame += 1;
 
             // TODO TODO: Test with something that takes time (bubble sort a whole segment?) (https://stackoverflow.com/a/47366256/1153203)
             for _ in 0..clocks_per_vsync {
                 if !closure(clocks_per_vsync) {
+                    let elapsed = start_instant.elapsed().as_secs_f64();
+                    let expected_frame = elapsed / seconds_per_frame.as_secs_f64();
+
+                    // TODO: Need to get this run_rate actually up to 1.0
+                    let run_rate = frame as f64 / expected_frame;
+                    debug!("Exiting main loop. Actual Duration: {elapsed}s Expected frame: {expected_frame} Actual Frame: {frame} Seconds per frame: {} Run rate: {run_rate}",seconds_per_frame.as_secs_f64());
                     return;
                 }
             }
