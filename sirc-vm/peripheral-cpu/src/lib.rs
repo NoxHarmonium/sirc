@@ -33,7 +33,7 @@ pub mod util;
 
 use std::{any::Any, fmt::Write};
 
-use log::{error, trace};
+use log::{error, trace, warn};
 
 use coprocessors::{
     exception_unit::{
@@ -160,6 +160,11 @@ impl Device for CpuPeripheral {
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
 
+        trace!(
+            "coprocessor_id: {coprocessor_id} eu_registers.pending_fault: {:?}",
+            self.eu_registers.pending_fault
+        );
+
         // TODO: Do something with error results, instead of unwrap
         let result = match coprocessor_id {
             ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
@@ -177,6 +182,7 @@ impl Device for CpuPeripheral {
                 bus_assertions,
             ),
             _ => {
+                warn!("Invalid op code detected");
                 // TODO: This doesn't seem to line up with how the other faults are handled
                 // because of this check. We need it because the cause register is currently
                 // only set on the first phase of the CPU cycles, so this gets run each cycle

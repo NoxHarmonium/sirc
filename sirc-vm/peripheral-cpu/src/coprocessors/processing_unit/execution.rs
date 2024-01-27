@@ -71,7 +71,10 @@ impl Executor for ProcessingUnitExecutor {
             return BusAssertions::default();
         }
 
-        trace!("phase: {phase:?} sr: 0x{:X}", registers.sr);
+        trace!(
+            "phase: {phase:?} sr: 0x{:X} bus_assertions: {bus_assertions:X?}",
+            registers.sr
+        );
 
         if registers.pl.is_odd() {
             eu_registers.pending_fault = raise_fault(
@@ -105,8 +108,12 @@ impl Executor for ProcessingUnitExecutor {
             ExecutionPhase::InstructionDecode => {
                 self.instruction |= u32::from(bus_assertions.data);
 
+                trace!("self.instruction: {:?}", self.instruction);
+
                 self.decoded_instruction =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
+
+                trace!("self.decoded_instruction: {:?}", self.decoded_instruction);
 
                 let privilege_violation = check_privilege(&self.decoded_instruction, registers);
                 if privilege_violation {

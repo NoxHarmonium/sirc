@@ -1,70 +1,132 @@
 use assert_hex::assert_eq_hex;
-use peripheral_bus::helpers::write_bytes;
-use peripheral_cpu::coprocessors::exception_unit::definitions::vectors;
-use peripheral_cpu::{
-    coprocessors::processing_unit::definitions::{
-        ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
-    },
-    new_cpu_peripheral,
-    registers::{get_interrupt_mask, FullAddressRegisterAccess},
+use log::info;
+use peripheral_bus::conversion::bytes_to_words;
+use peripheral_bus::device::{BusAssertions, Device};
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
+    ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
 };
-
-use super::common::set_up_instruction_test;
-
-pub const PROGRAM_OFFSET: u32 = 0x00CE_0000;
-pub const SYSTEM_RAM_OFFSET: u32 = 0x0;
-pub const EXCEPTION_JUMP_ADDRESS: u16 = 0xFAFF;
+use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
+use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
 
 fn build_test_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::AddImmediate,
-        register: 0x0,
+        register: 0x1,
         value: 0xFA,
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x0,
     })
 }
 
+struct Expectation {
+    pub cycle: usize,
+    pub bus_data: Option<u16>,
+    pub bus_interrupts: Option<u8>,
+    pub cpu_address: Option<u32>,
+    pub cpu_data: Option<u16>,
+}
+
+fn expectation(
+    cycle: usize,
+    bus_data: Option<u16>,
+    bus_interrupts: Option<u8>,
+    cpu_address: Option<u32>,
+    cpu_data: Option<u16>,
+) -> Expectation {
+    Expectation {
+        cycle,
+        bus_data,
+        bus_interrupts,
+        cpu_address,
+        cpu_data,
+    }
+}
+
+fn run_expectations(cpu: &mut CpuPeripheral, expectations: &Vec<Option<Expectation>>) -> usize {
+    for expectation in expectations {
+        let input_bus_assertions =
+            expectation
+                .as_ref()
+                .map_or_else(BusAssertions::default, |expectation| BusAssertions {
+                    data: expectation.bus_data.unwrap_or(0),
+                    interrupt_assertion: expectation.bus_interrupts.unwrap_or(0),
+                    ..BusAssertions::default() // TODO: should we assert on op?
+                });
+        let output_bus_assertions = cpu.poll(input_bus_assertions, true);
+        if let Some(expectation) = expectation {
+            info!("Cycle: {}", expectation.cycle);
+            if let Some(expected_cpu_address) = expectation.cpu_address {
+                assert_eq_hex!(expected_cpu_address, output_bus_assertions.address);
+            }
+            if let Some(expected_cpu_data) = expectation.cpu_data {
+                assert_eq_hex!(expected_cpu_data, output_bus_assertions.data);
+            }
+        }
+    }
+
+    expectations.len()
+}
+
 #[allow(clippy::cast_lossless)]
 #[test]
 fn test_hardware_exception_trigger() {
-    let initial_instruction = build_test_instruction();
-    let mem = set_up_instruction_test(&initial_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
+    let test_instruction = build_test_instruction();
+    let test_instruction_bytes: [u8; 4] = encode_instruction(&test_instruction);
+    let test_instruction_words = bytes_to_words(&test_instruction_bytes);
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
 
-    let expected_vector_address =
-        SYSTEM_RAM_OFFSET + (vectors::LEVEL_TWO_HARDWARE_EXCEPTION as u32 * 2);
-    let vector_target_address = PROGRAM_OFFSET | (EXCEPTION_JUMP_ADDRESS as u32);
+    // Smoke test - Add 1 to r1
+    let expectations = vec![
+        Some(expectation(0, None, None, Some(0x0000_0000), None)),
+        Some(expectation(
+            1,
+            Some(test_instruction_words[0]),
+            None,
+            Some(0x0000_0001),
+            None,
+        )),
+        Some(expectation(
+            2,
+            Some(test_instruction_words[1]),
+            None,
+            None,
+            None,
+        )),
+        None,
+        None,
+        None,
+    ];
 
-    // 32 bit vector: write upper word (the program segment) / write lower word (the offset in the segment)
-    write_bytes(
-        &mut mem,
-        expected_vector_address,
-        &u32::to_be_bytes(PROGRAM_OFFSET | EXCEPTION_JUMP_ADDRESS as u32),
-    );
+    run_expectations(&mut cpu_peripheral, &expectations);
 
-    mem.poll_all();
+    println!("{:X?}", cpu_peripheral.registers);
+    assert_eq_hex!(0xFA, cpu_peripheral.registers.r1);
 
-    cpu.raise_hardware_interrupt(2);
+    // Smoke test - Add 1 to r1
+    let expectations2 = vec![
+        // Level 4 interrupt vector
+        Some(expectation(7, None, Some(0x0F), Some(0x0000_0040), None)),
+        Some(expectation(8, Some(0xABCD), None, Some(0x0000_0041), None)),
+        Some(expectation(9, Some(0xEF00), None, None, None)),
+        None,
+        None,
+        None,
+        Some(expectation(13, None, None, Some(0x00CD_EF00), None)),
+        Some(expectation(
+            14,
+            Some(test_instruction_words[0]),
+            None,
+            Some(0x00CD_EF01),
+            None,
+        )),
+        Some(expectation(
+            15,
+            Some(test_instruction_words[1]),
+            None,
+            None,
+            None,
+        )),
+    ];
 
-    assert_eq_hex!(0x0, get_interrupt_mask(&cpu.registers));
-    assert_eq_hex!(0x2, cpu.eu_registers.pending_hardware_exception_level);
-
-    cpu.run_cpu()
-        .expect("expected CPU to run six cycles successfully");
-
-    assert_eq_hex!(0x2, get_interrupt_mask(&cpu.registers));
-    assert_eq_hex!(0x0, cpu.eu_registers.pending_hardware_exception_level);
-
-    assert_eq_hex!(
-        PROGRAM_OFFSET | vector_target_address,
-        cpu.registers.get_full_pc_address()
-    );
-    assert_eq_hex!(
-        0x00CE_0000,
-        cpu.eu_registers.link_registers[1].return_address
-    );
-    assert_eq_hex!(
-        0x0000_0000,
-        cpu.eu_registers.link_registers[1].return_status_register
-    );
+    run_expectations(&mut cpu_peripheral, &expectations2);
 }
