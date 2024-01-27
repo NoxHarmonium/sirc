@@ -134,7 +134,7 @@ fn main() {
         .init()
         .unwrap();
 
-    let master_clock_freq = 25_000_000;
+    let master_clock_freq = 8_000_000;
 
     let clock_peripheral = ClockPeripheral {
         master_clock_freq,
