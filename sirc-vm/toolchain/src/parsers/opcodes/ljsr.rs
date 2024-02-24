@@ -11,6 +11,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
     ShiftType,
 };
+use peripheral_cpu::registers::AddressRegisterName;
 
 use super::super::shared::AsmResult;
 
@@ -44,40 +45,48 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((_, condition_flag), operands)) =
         tuple((parse_instruction_tag("LJSR"), parse_instruction_operands1))(i)?;
 
+    let construct_immediate_instruction = |offset: u16, address_register: &AddressRegisterName| {
+        InstructionData::Immediate(ImmediateInstructionData {
+            op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+            register: 0x0, // unused
+            value: offset,
+            condition_flag,
+            additional_flags: address_register.to_register_index(),
+        })
+    };
+
     match operands.as_slice() {
-        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
-            match offset {
-                ImmediateType::Value(offset) => Ok((
-                    i,
-                    InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
-                            register: 0x0, // unused
-                            value: offset.to_owned(),
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: None,
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
-                            register: 0x0, // unused
-                            value: 0x0,    // Placeholder
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                    },
-                )),
-            }
-        }
+        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_immediate_instruction(
+                        offset.to_owned(),
+                        address_register,
+                    ),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_immediate_instruction(0x0, address_register),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    instruction: construct_immediate_instruction(0x0, address_register),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] => {
             Ok((
                 i,
@@ -93,7 +102,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -115,7 +124,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }

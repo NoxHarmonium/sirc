@@ -1,8 +1,12 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::device::BusAssertions;
 
 use crate::{
-    coprocessors::processing_unit::definitions::Instruction,
-    registers::{ExceptionUnitRegisters, Registers},
+    coprocessors::{
+        exception_unit::definitions::Faults, processing_unit::definitions::Instruction,
+        shared::ExecutionPhase,
+    },
+    raise_fault,
+    registers::{sr_bit_is_set, ExceptionUnitRegisters, Registers, StatusRegisterFields},
 };
 
 use super::{
@@ -41,11 +45,11 @@ fn decode_execution_step_instruction_type(
 impl StageExecutor for ExecutionEffectiveAddressExecutor {
     fn execute(
         decoded: &DecodedInstruction,
-        _: &mut Registers,
-        _: &mut ExceptionUnitRegisters,
+        registers: &mut Registers,
+        eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        _: &MemoryPeripheral,
-    ) {
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions {
         // TODO: Replace unwrap with something better
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
         // TODO: Should this be unwrap? - clean this up - make 0x7 a constant or put in function
@@ -65,29 +69,47 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             ExecutionStepInstructionType::NoOp => {}
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
-                let (displaced, _) = decoded.ad_l_.overflowing_add(decoded.sr_b_);
+                let (displaced, displacement_overflowed) =
+                    decoded.ad_l_.overflowing_add(decoded.sr_b_);
                 // This is the original address with the pre/post increment/decrement applied (no offset)
                 // we need this value to write back to the source address register to do the inc/dec
                 let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
+                let (incremented_displacement, displacement_overflowed_after_inc) =
+                    displaced.overflowing_add(decoded.addr_inc as u16);
 
                 match decoded.addr_inc {
                     -1 => {
+                        // :: Pre-decrement ::
                         // alu_output drives the memory store so it needs to PRE decremented here
-                        (intermediate_registers.alu_output, _) =
-                            displaced.overflowing_add(decoded.addr_inc as u16);
+                        intermediate_registers.alu_output = incremented_displacement;
                         intermediate_registers.address_output = incremented_src;
                     }
                     0 => {
+                        // :: Regular ::
                         intermediate_registers.alu_output = displaced;
                         // If we aren't doing a pre decrement/post increment,
                         // the address we want to write is just the calculated address
                         intermediate_registers.address_output = displaced;
                     }
                     1 => {
+                        // :: Post-increment ::
                         intermediate_registers.alu_output = displaced;
                         intermediate_registers.address_output = incremented_src;
                     }
                     _ => panic!("addr_inc should never not be -1, 0 or 1"),
+                }
+
+                // Overflow check
+                if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
+                    && (displacement_overflowed || displacement_overflowed_after_inc)
+                {
+                    eu_registers.pending_fault = raise_fault(
+                        registers,
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        ExecutionPhase::ExecutionEffectiveAddressExecutor,
+                        &bus_assertions,
+                    );
                 }
             }
 
@@ -97,10 +119,12 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     simulate,
                     decoded.sr_a_,
                     decoded.sr_b_,
-                    decoded.sr,
+                    registers.sr,
                     intermediate_registers,
                 );
             }
         }
+
+        BusAssertions::default()
     }
 }

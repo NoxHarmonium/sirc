@@ -16,7 +16,7 @@ byte-sieve.bin: byte-sieve.o
 mem.bin: byte-sieve.bin
 	rm -f ./mem.bin
 	truncate -s 131070 ./mem.bin
-	cargo run --bin sbrc_vm -- --program-file ./byte-sieve.bin --segment file:00F00000:FFFF:./mem.bin
+	cargo run --bin sbrc_vm -- -vv --program-file ./byte-sieve.bin --segment file:00F00000:FFFF:./mem.bin
 
 actual.hex: mem.bin expected.hex
 	hexdump -C  ./mem.bin > actual.hex

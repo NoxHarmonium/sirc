@@ -3,52 +3,65 @@ use peripheral_cpu::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
     },
     new_cpu_peripheral,
-    registers::{get_interrupt_mask, FullAddressRegisterAccess},
-    CYCLES_PER_INSTRUCTION,
+    registers::{set_sr_bit, sr_bit_is_set, StatusRegisterFields},
 };
 
-use super::common::{set_up_instruction_test, PROGRAM_SEGMENT};
+use crate::exceptions::common::{
+    expect_exception_handler, expect_main_program_cycle_with_instruction, run_expectations,
+    run_return_from_exception,
+};
 
-pub const PROGRAM_OFFSET: u32 = 0x00CE_0000;
-pub const SYSTEM_RAM_OFFSET: u32 = 0x0;
-
-#[allow(clippy::cast_lossless)]
-#[test]
-fn test_software_exception_trigger() {
-    let exception_code = 0x0F;
-    let exception_op_code = 0x1400 | exception_code;
-
-    let initial_copi_instruction = InstructionData::Immediate(ImmediateInstructionData {
+pub fn build_software_exception_instruction() -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::CoprocessorCallImmediate,
-        register: 0x0, // Unused?
-        value: exception_op_code,
+        register: 0x0,
+        value: 0x1170,
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x0,
-    });
-    let mem = set_up_instruction_test(&initial_copi_instruction, PROGRAM_OFFSET, SYSTEM_RAM_OFFSET);
-    let mut cpu = new_cpu_peripheral(&mem, PROGRAM_SEGMENT);
-    cpu.registers.system_ram_offset = SYSTEM_RAM_OFFSET;
-
-    let expected_vector_address = SYSTEM_RAM_OFFSET + (exception_code as u32 * 2);
-
-    mem.write_address(expected_vector_address, (PROGRAM_OFFSET >> 16) as u16);
-    mem.write_address(expected_vector_address + 1, 0xFAFF);
-
-    // First six cycles will run the COPI instruction and load the cause register
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expected CPU to run six cycles successfully");
-
-    assert_eq!(exception_op_code, cpu.eu_registers.cause_register);
-    assert_eq!(0x1, cpu.eu_registers.exception_level);
-
-    // The next six cycles the exception unit should run and do the actual jump
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expected CPU to run six cycles successfully");
-
-    assert_eq!(0x00CE_FAFF, cpu.registers.get_full_pc_address());
-    assert_eq!(
-        0x00CE_0002,
-        cpu.eu_registers.link_registers[1].return_address
-    );
-    assert_eq!(0x1, get_interrupt_mask(&cpu.registers));
+    })
 }
+
+#[test]
+fn test_software_exception_vector() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    let software_exception: InstructionData = build_software_exception_instruction();
+
+    // Set protected mode to test if the exception flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0000_0000, &software_exception),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_exception_handler(0x0, 0x70, (0xABCD, 0xAB00)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &run_return_from_exception(0x0, (0xABCD, 0xAB00)),
+        &mut clocks,
+    );
+
+    assert!(sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+}
+
+// TODO: Test fault priorities
+// TODO: Test SW exception out of range?

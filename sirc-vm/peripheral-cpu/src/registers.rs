@@ -1,9 +1,19 @@
 use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 
+use crate::coprocessors::exception_unit::definitions::Faults;
+
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
 pub const ADDRESS_MASK: u32 = 0x00FF_FFFF;
+pub const SR_PRIVILEGED_MASK: u16 = 0xFF00;
+// The parts of the status register that non privileged code can "see" (or write to)
+pub const SR_REDACTION_MASK: u16 = 0x00FF;
+
+// Fault metadata is the extra data like what the bus is doing when the fault happened,
+// index 6 stores the actual return address
+// 0 = SW Exception, 1-5 interrupts, 6 = fault, 7 = fault metadata
+pub const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
@@ -14,10 +24,9 @@ pub enum StatusRegisterFields {
     Overflow = 0b0000_1000,
 
     // Byte 2 (privileged)
-    /// Enabled "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
-    /// and if they are used in when this flag is cleared, an exception is thrown
-    /// TODO: Implement privilege system
-    SystemMode = 0b0000_0001 << u8::BITS,
+    /// Setting bit 8 disables "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
+    /// and if they are used in when this flag is set, an exception is thrown
+    ProtectedMode = 0b0000_0001 << u8::BITS,
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
     InterruptMaskHigh = 0b0000_1000 << u8::BITS,
@@ -160,6 +169,9 @@ pub struct Registers {
 
     // System RAM access is offset from here (e.g. interrupt vectors)
     pub system_ram_offset: u32,
+    // Used to delegate to coprocessors
+    // If first nibble is 0x0, will just invoke CPU as normal
+    pub pending_coprocessor_command: u16,
 }
 
 impl Index<u8> for Registers {
@@ -270,7 +282,7 @@ impl SegmentedAddress for (u16, u16) {
     ///
     /// You will most likely need this when converting from the internal CPU registers
     /// to the address representation exposed by the virtual address pins of the CPU
-    /// for something like `peripheral_mem`.
+    /// for something like `peripheral_bus`.
     ///
     /// ```
     /// use peripheral_cpu::registers::SegmentedAddress;
@@ -281,9 +293,6 @@ impl SegmentedAddress for (u16, u16) {
     ///
     fn to_full_address(self) -> u32 {
         let (high, low) = self;
-        if high > 0x00FF {
-            println!("Warning: ah is > 0x0FF. The SIRC CPU only has 24 bit addressing. The top 8 bits of the ah register will be ignored for STOR/LOAD operations.");
-        }
         let high_shifted = u32::from(high) << (size_of::<u16>() * u8::BITS as usize);
         // Bitwise AND with address mask to ensure that the highest 8 bits are ignored
         // This CPU only supports 24 bit addressing
@@ -330,7 +339,7 @@ impl FullAddressRegisterAccess for Registers {
 /// a 24 bit address split into two 16 bit registers).
 ///
 /// You will most likely need this when converting address exposed
-/// by the virtual address pins of the CPU for something like `peripheral_mem`
+/// by the virtual address pins of the CPU for something like `peripheral_bus`
 /// to the representation in the internal CPU registers.
 ///
 /// ```
@@ -583,12 +592,15 @@ pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionLinkRegister {
     pub return_address: u32,
-    pub return_exception_mask: u8,
+    pub return_status_register: u16,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
-    pub cause_register: u16,
-    pub exception_level: u8,
-    pub link_registers: [ExceptionLinkRegister; 7],
+    // TODO: Capture bus information
+    pub pending_hardware_exceptions: u8,
+    pub pending_fault: Option<Faults>,
+    // 7 exception levels - one (index 7) to store fault metadata
+    pub link_registers: [ExceptionLinkRegister; 8],
+    pub waiting_for_exception: bool,
 }

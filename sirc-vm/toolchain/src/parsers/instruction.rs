@@ -11,25 +11,27 @@ use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ConditionFlags, InstructionData, ShiftType, MAX_SHIFT_COUNT,
+    ConditionFlags, ImmediateInstructionData, Instruction, InstructionData, ShiftType,
+    MAX_SHIFT_COUNT,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
+use serde::Serialize;
 
 use crate::types::object::{RefType, SymbolDefinition};
 
-use super::data::{parse_data, DataType};
+use super::data::{parse_data, parse_equ, DataType};
 use super::opcodes;
 use super::shared::{
-    lexeme, parse_comma_sep, parse_label, parse_number, parse_origin, parse_symbol_reference,
-    AsmResult,
+    lexeme, parse_comma_sep, parse_label, parse_number, parse_origin, parse_placeholder,
+    parse_symbol_reference, AsmResult,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct LabelToken {
     pub name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RefToken {
     pub name: String,
     pub ref_type: RefType,
@@ -39,17 +41,40 @@ pub struct RefToken {
 pub struct InstructionToken {
     pub instruction: InstructionData,
     pub symbol_ref: Option<RefToken>,
+    pub placeholder_name: Option<String>,
 }
 
-#[derive(Debug)]
+impl Default for InstructionToken {
+    fn default() -> Self {
+        Self {
+            instruction: InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::AddImmediate,
+                register: 0x0,
+                value: 0x0,
+                condition_flag: ConditionFlags::Always,
+                additional_flags: 0x0,
+            }),
+            symbol_ref: None,
+            placeholder_name: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub struct OriginToken {
     pub offset: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct DataToken {
     pub size_bytes: u8,
     pub value: DataType,
+}
+
+#[derive(Debug, Serialize)]
+pub struct EquToken {
+    pub placeholder_name: String,
+    pub value: u32,
 }
 
 #[derive(Debug)]
@@ -65,6 +90,7 @@ pub enum Token {
     Instruction(InstructionToken),
     Origin(OriginToken),
     Data(DataToken),
+    Equ(EquToken),
 }
 
 pub fn override_ref_token_type_if_implied(
@@ -104,6 +130,7 @@ pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinit
 pub enum ImmediateType {
     Value(u16),
     SymbolRef(RefToken),
+    PlaceHolder(String),
 }
 
 pub enum OffsetType {
@@ -150,6 +177,10 @@ pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
             ImmediateType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
+        map(parse_placeholder, |placeholder_name| {
+            ImmediateType::PlaceHolder(placeholder_name)
+        })
+        .context("placeholder"),
     ))(i)
 }
 
@@ -515,6 +546,7 @@ fn parse_data_token(i: &str) -> AsmResult<Token> {
             &ref_token,
             RefType::FullAddress,
         )),
+        DataType::PlaceHolder(placeholder_name) => DataType::PlaceHolder(placeholder_name),
     };
 
     Ok((
@@ -522,6 +554,18 @@ fn parse_data_token(i: &str) -> AsmResult<Token> {
         Token::Data(DataToken {
             size_bytes,
             value: override_value,
+        }),
+    ))
+}
+
+pub fn parse_equ_token(i: &str) -> AsmResult<Token> {
+    let (i, (placeholder_name, value)) = parse_equ(i)?;
+
+    Ok((
+        i,
+        Token::Equ(EquToken {
+            placeholder_name,
+            value,
         }),
     ))
 }
@@ -535,11 +579,14 @@ pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
             parse_instruction_token.context("instruction"),
             parse_label_token.context("label"),
             parse_origin_token.context("origin"),
-            parse_data_token.context("data"),
+            parse_data_token.context("data directive"),
+            parse_equ_token.context("equ directive"),
         )),
         multispace0,
         eof,
     );
 
+    // Consume any extra space at the start
+    let (i, _) = multispace0(i)?;
     parser.parse(i)
 }

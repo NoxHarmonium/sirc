@@ -65,7 +65,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                     condition_flag,
                     additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
                 }),
-                symbol_ref: None,
+                ..Default::default()
             },
         )),
         // Pseudo instruction - add zero to register 1 which does nothing
@@ -80,7 +80,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                     additional_flags: 0x0, // No status register update
                     condition_flag,
                 }),
-                symbol_ref: None,
+                ..Default::default()
             },
         )),
         // Tell the exception module to halt the CPU until an event comes through by passing it 0xFFFF
@@ -94,7 +94,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                     additional_flags: 0x0,
                     condition_flag,
                 }),
-                symbol_ref: None,
+                ..Default::default()
             },
         )),
         // Tell the exception module to return by passing it 0xFFFE
@@ -104,11 +104,11 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::CoprocessorCallImmediate,
                     register: 0x0,
-                    value: 0x0200,
+                    value: 0x1A00,
                     additional_flags: 0x0,
                     condition_flag,
                 }),
-                symbol_ref: None,
+                ..Default::default()
             },
         )),
         _ => {

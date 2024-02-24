@@ -8,9 +8,10 @@ use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, ShortImmediateInstructionData,
-    StatusRegisterUpdateSource,
+    ImmediateInstructionData, Instruction, InstructionData, ShiftOperand, ShiftType,
+    ShortImmediateInstructionData, StatusRegisterUpdateSource,
 };
+use peripheral_cpu::registers::RegisterName;
 
 fn tag_to_instruction_long(tag: &String) -> Instruction {
     match tag.as_str() {
@@ -93,82 +94,131 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((tag, condition_flag), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
 
+    let construct_immediate_instruction = |value: u16, dest_register: &RegisterName| {
+        InstructionData::Immediate(ImmediateInstructionData {
+            op_code: tag_to_instruction_long(&tag),
+            register: dest_register.to_register_index(),
+            value,
+            condition_flag,
+            // TODO: Is this actually parseable?
+            additional_flags: if &tag == "SHFI" {
+                StatusRegisterUpdateSource::Shift.to_flags()
+            } else {
+                StatusRegisterUpdateSource::Alu.to_flags()
+            },
+        })
+    };
+
+    let construct_short_immediate_instruction =
+        |value: u8,
+         dest_register: &RegisterName,
+         shift_operand: ShiftOperand,
+         shift_type: ShiftType,
+         shift_count: u8| {
+            InstructionData::ShortImmediate(ShortImmediateInstructionData {
+                op_code: tag_to_instruction_short(&tag),
+                register: dest_register.to_register_index(),
+                value,
+                condition_flag,
+                // TODO: Is this actually parseable?
+                additional_flags: if &tag == "SHFI" {
+                    StatusRegisterUpdateSource::Shift.to_flags()
+                } else {
+                    StatusRegisterUpdateSource::Alu.to_flags()
+                },
+                shift_operand,
+                shift_type,
+                shift_count,
+            })
+        };
+
     match operands.as_slice() {
         [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
-            if let ImmediateType::Value(value) = immediate_type {
-                Ok((
+            match immediate_type {
+                ImmediateType::Value(value) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: tag_to_instruction_long(&tag),
-                            register: dest_register.to_register_index(),
-                            value: *value,
-                            condition_flag,
-                            additional_flags: if &tag == "SHFI" {
-                                StatusRegisterUpdateSource::Shift.to_flags()
-                            } else {
-                                StatusRegisterUpdateSource::Alu.to_flags()
-                            },
-                        }),
-                        symbol_ref: None,
+                        instruction: construct_immediate_instruction(
+                            value.to_owned(),
+                            dest_register,
+                        ),
+                        ..Default::default()
                     },
-                ))
-            } else {
-                let error_string =
-                    format!("The [{tag}] opcode does not support symbol refs at this time");
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
+                    InstructionToken {
+                        instruction: construct_immediate_instruction(0x0, dest_register),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::SymbolRef(_) => {
+                    let error_string =
+                        format!("The [{tag}] opcode does not support symbol refs at this time");
+                    Err(nom::Err::Failure(ErrorTree::from_external_error(
+                        i,
+                        ErrorKind::Fail,
+                        error_string.as_str(),
+                    )))
+                }
             }
         }
         [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
-            if let ImmediateType::Value(value) = immediate_type {
-                if value > &0xFF {
-                    let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({value} > 0xFF)");
+            match immediate_type {
+                ImmediateType::Value(value) => {
+                    if value > &0xFF {
+                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({value} > 0xFF)");
+                        Err(nom::Err::Failure(ErrorTree::from_external_error(
+                            i,
+                            ErrorKind::Fail,
+                            error_string.as_str(),
+                        )))
+                    } else {
+                        Ok((
+                            i,
+                            InstructionToken {
+                                instruction: construct_short_immediate_instruction(
+                                    (*value).try_into().expect(
+                                        "Value should fit into a u8 as it is filtered above",
+                                    ),
+                                    dest_register,
+                                    shift_operand,
+                                    shift_type,
+                                    shift_count,
+                                ),
+                                symbol_ref: None,
+                                ..Default::default()
+                            },
+                        ))
+                    }
+                }
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: construct_short_immediate_instruction(
+                            0x0,
+                            dest_register,
+                            shift_operand,
+                            shift_type,
+                            shift_count,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::SymbolRef(_) => {
+                    let error_string =
+                        format!("The [{tag}] opcode does not support symbol refs at this time");
                     Err(nom::Err::Failure(ErrorTree::from_external_error(
                         i,
                         ErrorKind::Fail,
                         error_string.as_str(),
                     )))
-                } else {
-                    Ok((
-                        i,
-                        InstructionToken {
-                            instruction: InstructionData::ShortImmediate(
-                                ShortImmediateInstructionData {
-                                    op_code: tag_to_instruction_short(&tag),
-                                    register: dest_register.to_register_index(),
-                                    value: (*value).try_into().expect(
-                                        "Value should fit into a u8 as it is filtered above",
-                                    ),
-                                    condition_flag,
-                                    additional_flags: if &tag == "SHFI" {
-                                        StatusRegisterUpdateSource::Shift.to_flags()
-                                    } else {
-                                        StatusRegisterUpdateSource::Alu.to_flags()
-                                    },
-                                    shift_operand,
-                                    shift_type,
-                                    shift_count,
-                                },
-                            ),
-                            symbol_ref: None,
-                        },
-                    ))
                 }
-            } else {
-                let error_string =
-                    format!("The [{tag}] opcode does not support symbol refs at this time");
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
             }
         }
         _ => {

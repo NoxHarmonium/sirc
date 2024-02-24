@@ -4,13 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-peripheral_mem = { path = "../peripheral-mem" }
-enum_dispatch = "0.3.12"
+peripheral_bus = { path = "../peripheral-bus" }
 num-traits = "0.2"
 num-derive = "0.4"
 num = "0.4"
+log = "0.4.20"
 
 [dev-dependencies]
 quickcheck = "1"
 quickcheck_macros = "1"
 strum = { version = "0.25", features = ["derive"] }
+assert_hex = "0.4"
+stderrlog = "0.5.4"
+ctor = "0.2.6"

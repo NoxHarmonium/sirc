@@ -6,7 +6,9 @@ use crate::coprocessors::processing_unit::encoding::{
     decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
     decode_short_immediate_instruction,
 };
-use crate::registers::Registers;
+use crate::registers::{
+    sr_bit_is_set, RegisterName, Registers, StatusRegisterFields, SR_REDACTION_MASK,
+};
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]
 enum FetchAndDecodeStepInstructionType {
@@ -34,6 +36,16 @@ fn decode_fetch_and_decode_step_instruction_type(
     }
 }
 
+fn get_register_value(registers: &Registers, index: u8) -> u16 {
+    let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
+    let sr_register_index = RegisterName::Sr as u8;
+    if should_redact_sr && index == sr_register_index {
+        registers[index] & SR_REDACTION_MASK
+    } else {
+        registers[index]
+    }
+}
+
 fn do_shift(
     registers: &Registers,
     sr_a_before_shift: u16,
@@ -52,7 +64,8 @@ fn do_shift(
             )
         }
         ShiftOperand::Register => {
-            let dereferenced_shift_count = registers[register_representation.shift_count];
+            let dereferenced_shift_count =
+                get_register_value(registers, register_representation.shift_count);
             perform_shift(
                 sr_a_before_shift,
                 register_representation.shift_type,
@@ -105,8 +118,6 @@ fn do_shift(
 /// assert_eq!(decoded.ad_l_, 0x00CE);
 /// assert_eq!(decoded.ad_h_, 0x00BB);
 /// assert_eq!(decoded.con_, true);
-///
-/// assert_eq!(decoded.sr, registers.sr);
 /// ```
 ///
 #[must_use]
@@ -150,13 +161,17 @@ pub fn decode_and_register_fetch(
     let sr_a = register_representation.r2;
     let sr_b = register_representation.r3;
 
-    let des_ = registers[des];
+    let des_ = get_register_value(registers, des);
 
     let (sr_a_, sr_b_, sr_shift) = match instruction_type {
         FetchAndDecodeStepInstructionType::Register => {
-            let (sr_a_, sr_shift) =
-                do_shift(registers, registers[sr_a], &register_representation, false);
-            (sr_a_, registers[sr_b], sr_shift)
+            let (sr_a_, sr_shift) = do_shift(
+                registers,
+                get_register_value(registers, sr_a),
+                &register_representation,
+                false,
+            );
+            (sr_a_, get_register_value(registers, sr_b), sr_shift)
         }
         FetchAndDecodeStepInstructionType::Immediate => (des_, immediate_representation.value, 0x0),
         FetchAndDecodeStepInstructionType::ShortImmediate => {
@@ -196,7 +211,6 @@ pub fn decode_and_register_fetch(
         ad_l_: registers[ad_l],
         ad_h_: registers[ad_h],
         con_: condition_flag.should_execute(registers),
-        sr: registers.sr,
         npc_l_,
         npc_h_,
     }

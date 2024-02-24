@@ -1,13 +1,14 @@
 use std::ops::Range;
 
+use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
+use peripheral_bus::{new_bus_peripheral, BusPeripheral};
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_cpu::{
-    new_cpu_peripheral, registers::Registers, CpuPeripheral, CYCLES_PER_INSTRUCTION,
-};
-use peripheral_mem::{new_memory_peripheral, MemoryPeripheral};
+use peripheral_cpu::registers::FullAddress;
+use peripheral_cpu::CYCLES_PER_INSTRUCTION;
+use peripheral_cpu::{new_cpu_peripheral, registers::Registers, CpuPeripheral};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
@@ -19,31 +20,79 @@ pub struct TestCpuState {
     pub memory_dump: Vec<u8>,
 }
 
-fn capture_cpu_state(cpu: &CpuPeripheral) -> TestCpuState {
-    TestCpuState {
-        registers: cpu.registers,
-        memory_dump: cpu.memory_peripheral.dump_segment(SCRATCH_SEGMENT),
-    }
-}
-
 #[allow(clippy::cast_lossless)]
 pub fn set_up_instruction_test(
     instruction_data: &InstructionData,
     program_offset: u32,
-) -> MemoryPeripheral {
-    let mut memory_peripheral = new_memory_peripheral();
+) -> BusPeripheral {
+    // TODO TODO I guess give the bus ownership again instead of reference (FACEPALM)
+    let cpu = new_cpu_peripheral(0x0);
+    let mut bus_peripheral = new_bus_peripheral(Box::new(cpu));
 
     let program_data = encode_instruction(instruction_data);
 
-    memory_peripheral.map_segment(PROGRAM_SEGMENT, program_offset, u16::MAX as u32, false);
-    memory_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_data.to_vec());
-    memory_peripheral.map_segment(
+    let mut program_vector = vec![0; ((program_offset & 0xFFFF) * 2) as usize];
+    program_vector.extend(program_data);
+
+    bus_peripheral.map_segment(
+        PROGRAM_SEGMENT,
+        // TODO: This should be passed in already as segment address
+        program_offset,
+        u16::MAX as u32,
+        false,
+        Box::new(new_stub_memory_mapped_device()),
+    );
+    bus_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, &program_vector);
+    bus_peripheral.map_segment(
         SCRATCH_SEGMENT,
         SCRATCH_SEGMENT_BEGIN,
         u16::MAX as u32,
         true,
+        Box::new(new_stub_memory_mapped_device()),
     );
-    memory_peripheral
+    bus_peripheral
+}
+
+pub fn setup_test<F>(bus: &mut BusPeripheral, register_setup: F, program_offset: u32)
+where
+    F: Fn(&mut Registers, &mut BusPeripheral),
+{
+    // TODO: I think this might be the worst code I've ever written
+    let mut registers;
+    {
+        let cpu: &mut CpuPeripheral = bus
+            .bus_master
+            .as_any()
+            .downcast_mut::<CpuPeripheral>()
+            .expect("failed to downcast");
+
+        // TODO: Hack to get tests running again - probably needs a rethink
+        registers = cpu.registers;
+        (registers.ph, registers.pl) = program_offset.to_segmented_address();
+        register_setup(&mut registers, bus);
+    }
+    {
+        let cpu: &mut CpuPeripheral = bus
+            .bus_master
+            .as_any()
+            .downcast_mut::<CpuPeripheral>()
+            .expect("failed to downcast");
+
+        cpu.registers = registers;
+    }
+}
+
+pub fn capture_cpu_state(bus: &mut BusPeripheral) -> TestCpuState {
+    let cpu: &mut CpuPeripheral = bus
+        .bus_master
+        .as_any()
+        .downcast_mut::<CpuPeripheral>()
+        .expect("failed to downcast");
+
+    TestCpuState {
+        registers: cpu.registers,
+        memory_dump: bus.dump_segment(SCRATCH_SEGMENT),
+    }
 }
 
 pub fn run_instruction<F>(
@@ -52,19 +101,14 @@ pub fn run_instruction<F>(
     program_offset: u32,
 ) -> (TestCpuState, TestCpuState)
 where
-    F: Fn(&mut Registers, &MemoryPeripheral),
+    F: Fn(&mut Registers, &mut BusPeripheral),
 {
-    let memory_peripheral = set_up_instruction_test(instruction_data, program_offset);
-    let mut cpu = new_cpu_peripheral(&memory_peripheral, PROGRAM_SEGMENT);
+    let mut bus = set_up_instruction_test(instruction_data, program_offset);
+    setup_test(&mut bus, register_setup, program_offset);
 
-    println!("run_instruction: {instruction_data:#?}");
-
-    register_setup(&mut cpu.registers, &memory_peripheral);
-
-    let previous = capture_cpu_state(&cpu);
-    cpu.run_cpu(CYCLES_PER_INSTRUCTION)
-        .expect("expected CPU to run six cycles successfully");
-    let current = capture_cpu_state(&cpu);
+    let previous = capture_cpu_state(&mut bus);
+    bus.run_full_cycle(CYCLES_PER_INSTRUCTION);
+    let current = capture_cpu_state(&mut bus);
     (previous, current)
 }
 

@@ -48,7 +48,13 @@ jobs:
     strategy:
       matrix:
         example-name:
-          ["boring", "byte-sieve", "software-exception", "store-load"]
+          [
+            "boring",
+            "byte-sieve",
+            "hardware-exception",
+            "software-exception",
+            "store-load",
+          ]
 
     steps:
       - uses: actions/checkout@v3
@@ -57,5 +63,5 @@ jobs:
         run: rustup update stable
 
       - name: Run ${{ matrix.example-name }}
-        run: make check
+        run: make clean check
         working-directory: ./sirc-vm/examples/${{ matrix.example-name }}

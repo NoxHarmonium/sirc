@@ -11,9 +11,12 @@ use crate::{
 use nom::error::FromExternalError;
 use nom::{error::ErrorKind, sequence::tuple};
 use nom_supreme::error::ErrorTree;
-use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
-    ShiftType,
+use peripheral_cpu::{
+    coprocessors::processing_unit::definitions::{
+        ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
+        ShiftOperand, ShiftType,
+    },
+    registers::{AddressRegisterName, RegisterName},
 };
 
 use super::super::shared::AsmResult;
@@ -21,37 +24,67 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
     let (i, ((_, condition_flag), operands)) =
         tuple((parse_instruction_tag("STOR"), parse_instruction_operands1))(i)?;
 
+    let construct_indirect_immediate_instruction =
+        |offset: u16, src_register: &RegisterName, address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::StoreRegisterToIndirectImmediate,
+                register: src_register.to_register_index(),
+                value: offset,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
+
+    let construct_indirect_immediate_pre_increment_instruction =
+        |offset: u16, src_register: &RegisterName, address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
+                register: src_register.to_register_index(),
+                value: offset,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
+
     match operands.as_slice() {
-        [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(src_register)] =>
-        {
+        [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::StoreRegisterToIndirectImmediate,
-                            register: src_register.to_register_index(),
-                            value: offset.to_owned(),
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: None,
+                        instruction: construct_indirect_immediate_instruction(
+                            offset.to_owned(),
+                            src_register,
+                            address_register,
+                        ),
+                        ..Default::default()
                     },
                 )),
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::StoreRegisterToIndirectImmediate,
-                            register: src_register.to_register_index(),
-                            value: 0x0, // placeholder
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
+                        instruction: construct_indirect_immediate_instruction(
+                            0x0,
+                            src_register,
+                            address_register,
+                        ),
                         symbol_ref: Some(override_ref_token_type_if_implied(
                             ref_token,
                             RefType::LowerWord,
                         )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: construct_indirect_immediate_instruction(
+                            0x0,
+                            src_register,
+                            address_register,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
                     },
                 )),
             }
@@ -72,7 +105,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
@@ -94,40 +127,48 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 },
             ))
         }
-        [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] =>
-        {
+        [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
-                            register: src_register.to_register_index(),
-                            value: offset.to_owned(),
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
-                        symbol_ref: None,
+                        instruction: construct_indirect_immediate_pre_increment_instruction(
+                            offset.to_owned(),
+                            src_register,
+                            address_register,
+                        ),
+                        ..Default::default()
                     },
                 )),
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
-                            register: src_register.to_register_index(),
-                            value: 0x0, // placeholder
-                            condition_flag,
-                            additional_flags: address_register.to_register_index(),
-                        }),
+                        instruction: construct_indirect_immediate_pre_increment_instruction(
+                            0x0,
+                            src_register,
+                            address_register,
+                        ),
                         symbol_ref: Some(override_ref_token_type_if_implied(
                             ref_token,
                             RefType::LowerWord,
                         )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        instruction: construct_indirect_immediate_pre_increment_instruction(
+                            0x0,
+                            src_register,
+                            address_register,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
                     },
                 )),
             }
@@ -149,7 +190,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 }
             }))
         }
@@ -173,7 +214,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),
-                    symbol_ref: None,
+                    ..Default::default()
                 }
             }))
         }

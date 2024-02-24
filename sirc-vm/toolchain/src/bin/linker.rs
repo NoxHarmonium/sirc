@@ -61,7 +61,7 @@ fn main() -> io::Result<()> {
         .collect();
 
     // TODO: Support merging (more than one file)!
-    let object_file = object_files.get(0).unwrap();
+    let object_file = object_files.first().unwrap();
 
     let mut linked_program = object_file.program.clone();
     for symbol_ref in &object_file.symbol_refs {
@@ -94,23 +94,6 @@ fn main() -> io::Result<()> {
 
         let full_offset = target_offset_words as i32 - program_offset_words as i32;
 
-        // let calculate_8_bit_value = || match symbol_ref.ref_type {
-        //     RefType::SmallOffset => i8::try_from(full_offset).unwrap_or_else(|_| {
-        //         panic!(
-        //             "Offset {} ({} - {}) does not fit into a 8 bit signed integer ({}-{})",
-        //             full_offset,
-        //             target_offset_words,
-        //             program_offset_words,
-        //             i8::MIN,
-        //             i8::MAX
-        //         )
-        //     }) as u8,
-        //     RefType::Implied => {
-        //         panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
-        //     }
-        //     _ => panic!("Only SmallOffset RefType is supported by the LDMR/STMR instructions"),
-        // };
-
         let calculate_16_bit_value = || match symbol_ref.ref_type {
             RefType::Offset => i16::try_from(full_offset).unwrap_or_else(|_| {
                 panic!(
@@ -126,8 +109,9 @@ fn main() -> io::Result<()> {
                 panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
             }
             // TODO: I think LowerWord and UpperWord should be absolute, not relative?
-            RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
-            RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
+            // Note: I think bytemuck is little endian? so lower is actually offset 0
+            RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
+            RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
             RefType::FullAddress => {
                 panic!("RefType should not be FullAddress when resolving for instructions (try the DQ directive)")
             }

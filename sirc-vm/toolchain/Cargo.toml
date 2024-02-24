@@ -9,7 +9,11 @@ peripheral_cpu = { path = "../peripheral-cpu" }
 nom = "7.1.3"
 nom-supreme = "0.8.0"
 itertools = "0.11.0"
-postcard = { version = "1.0.8", features = ["alloc"] }
-serde = "1.0.188"
+postcard = { version = "1.0.6", features = ["alloc"] }
+serde = "1.0.186"
 bytemuck = "1.14.0"
 num-traits = "0.2"
+
+[dev-dependencies]
+insta = { version = "1.31.0", features = ["yaml"] }
+pretty-hex = "0.2.1"

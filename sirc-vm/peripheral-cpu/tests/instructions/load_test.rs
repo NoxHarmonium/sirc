@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -9,7 +10,6 @@ use peripheral_cpu::{
         SegmentedAddress,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 use quickcheck::{Arbitrary, Gen, TestResult};
 
 use crate::instructions::common;
@@ -64,11 +64,11 @@ fn test_load_indirect_immediate(test_data: LoadTestData) -> TestResult {
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
-            memory.write_address(calculated_address, 0xCAFE);
+        |registers: &mut Registers, bus: &mut BusPeripheral| {
+            bus.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -124,12 +124,12 @@ fn test_load_indirect_register(test_data: LoadTestData) -> TestResult {
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &mut BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
             registers.set_at_index(offset_register_index, offset as u16);
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -140,7 +140,7 @@ fn test_load_indirect_register(test_data: LoadTestData) -> TestResult {
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                    "test_load_indirect_immediate: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+                    "test_load_indirect_register: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
                     expected_registers, current.registers
                 );
     }
@@ -185,12 +185,12 @@ fn test_load_indirect_register_post_increment(test_data: LoadTestData) -> TestRe
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &mut BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
             registers.set_at_index(offset_register_index, offset as u16);
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -201,7 +201,7 @@ fn test_load_indirect_register_post_increment(test_data: LoadTestData) -> TestRe
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                        "test_load_indirect_immediate: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+                        "test_load_indirect_register_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
                         expected_registers, current.registers
                     );
     }
@@ -239,11 +239,11 @@ fn test_load_indirect_immediate_post_increment(test_data: LoadTestData) -> TestR
         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, memory: &MemoryPeripheral| {
+        |registers: &mut Registers, memory: &mut BusPeripheral| {
             memory.write_address(calculated_address, 0xCAFE);
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -253,7 +253,7 @@ fn test_load_indirect_immediate_post_increment(test_data: LoadTestData) -> TestR
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                        "test_load_indirect_immediate: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+                        "test_load_indirect_immediate_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
                         expected_registers, current.registers
                     );
     }

@@ -1,0 +1,8 @@
+[package]
+name = "device_debug"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+peripheral_bus = { path = "../peripheral-bus" }
+log = "0.4.20"

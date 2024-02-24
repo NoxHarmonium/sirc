@@ -1,4 +1,4 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::device::{BusAssertions, BusOperation};
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
@@ -7,7 +7,7 @@ use crate::{
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
 
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
 enum MemoryAccessInstructionType {
     NoOp,
     MemoryLoad,
@@ -44,30 +44,30 @@ impl StageExecutor for MemoryAccessExecutor {
         registers: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        mem: &MemoryPeripheral,
-    ) {
+        _: BusAssertions,
+    ) -> BusAssertions {
         // 5. ====== Memory access/branch completion (MEM): ======
 
         let memory_access_step_instruction_type =
             decode_memory_access_step_instruction_type(decoded.ins, decoded);
 
-        // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
-        // but we might need to think about how this would work in FPGA
-        registers.pl = decoded.npc_l_;
-
         match memory_access_step_instruction_type {
             MemoryAccessInstructionType::NoOp => {}
 
             MemoryAccessInstructionType::MemoryLoad => {
-                intermediate_registers.lmd = mem.read_address(
-                    (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                );
+                return BusAssertions {
+                    address: (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
+                    op: BusOperation::Read,
+                    ..BusAssertions::default()
+                };
             }
             MemoryAccessInstructionType::MemoryStore => {
-                mem.write_address(
-                    (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
-                    decoded.sr_a_,
-                );
+                return BusAssertions {
+                    address: (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
+                    data: decoded.sr_a_,
+                    op: BusOperation::Write,
+                    ..BusAssertions::default()
+                };
             }
 
             MemoryAccessInstructionType::BranchOrJumpSubroutine => {
@@ -77,5 +77,6 @@ impl StageExecutor for MemoryAccessExecutor {
                 registers.lh = decoded.npc_h_;
             }
         }
+        BusAssertions::default()
     }
 }

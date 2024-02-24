@@ -1,0 +1,10 @@
+[package]
+name = "device_terminal"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+peripheral_bus = { path = "../peripheral-bus" }
+log = "0.4.20"

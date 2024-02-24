@@ -1,3 +1,4 @@
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -9,7 +10,6 @@ use peripheral_cpu::{
         Registers, SegmentedAddress,
     },
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -45,12 +45,12 @@ fn test_store_indirect_immediate() {
                     (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, _: &mut BusPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);
                     },
-                    0xFACE,
+                    0xFACE_0000,
                 );
                 let expected_registers =
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -112,7 +112,7 @@ fn test_store_indirect_register() {
                         (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address();
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
+                        |registers: &mut Registers, _: &mut BusPeripheral| {
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
@@ -120,7 +120,7 @@ fn test_store_indirect_register() {
                             registers.set_at_index(offset_register_index, offset as u16);
                             registers.set_at_index(src_register_index, 0xCAFE);
                         },
-                        0xFACE,
+                        0xFACE_0000,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -187,7 +187,7 @@ fn test_store_indirect_register_pre_decrement() {
                             - 1;
                     let (previous, current) = common::run_instruction(
                         &instruction_data,
-                        |registers: &mut Registers, _: &MemoryPeripheral| {
+                        |registers: &mut Registers, _: &mut BusPeripheral| {
                             registers.set_address_register_at_index(
                                 src_address_register_index,
                                 0xFAFA_FAFA,
@@ -195,7 +195,7 @@ fn test_store_indirect_register_pre_decrement() {
                             registers.set_at_index(offset_register_index, offset as u16);
                             registers.set_at_index(src_register_index, 0xCAFE);
                         },
-                        0xFACE,
+                        0xFACE_0000,
                     );
                     let expected_registers =
                         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -243,10 +243,10 @@ fn test_store_indirect_immediate_pre_decrement() {
             ] {
                 let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
-                    // Why doesn't this work??
-                    /// probs the register pre decrement doesnt actually work
-                    /// // it sets dest register to 0x0 which is SR and probs ignored
-                    /// // so the test is broken!
+                    // TODO: Why doesn't this work??
+                    // probs the register pre decrement doesnt actually work
+                    // // it sets dest register to 0x0 which is SR and probs ignored
+                    // // so the test is broken!
                     register: src_register_index,
                     value: offset as u16,
                     condition_flag: ConditionFlags::Always,
@@ -256,12 +256,12 @@ fn test_store_indirect_immediate_pre_decrement() {
                     (0xFAFAu16, 0xFAFAu16.overflowing_add(offset as u16).0).to_full_address() - 1;
                 let (previous, current) = common::run_instruction(
                     &instruction_data,
-                    |registers: &mut Registers, _: &MemoryPeripheral| {
+                    |registers: &mut Registers, _: &mut BusPeripheral| {
                         registers
                             .set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
                         registers.set_at_index(src_register_index, 0xCAFE);
                     },
-                    0xFACE,
+                    0xFACE_0000,
                 );
                 let expected_registers =
                     get_expected_registers(&previous.registers, |registers: &mut Registers| {

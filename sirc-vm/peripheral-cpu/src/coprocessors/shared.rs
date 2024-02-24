@@ -1,18 +1,29 @@
-use peripheral_mem::MemoryPeripheral;
+use peripheral_bus::{device::BusAssertions, BusPeripheral};
 
-use crate::{
-    registers::{ExceptionUnitRegisters, Registers, SegmentedAddress},
-    Error,
-};
+use crate::registers::{ExceptionUnitRegisters, Registers, SegmentedAddress};
+
+#[derive(Default, FromPrimitive, ToPrimitive, Debug, PartialEq, Eq, Copy, Clone)]
+pub enum ExecutionPhase {
+    #[default]
+    InstructionFetchLow = 0x0,
+    InstructionFetchHigh = 0x1,
+    InstructionDecode = 0x2,
+    ExecutionEffectiveAddressExecutor = 0x3,
+    MemoryAccessExecutor = 0x4,
+    WriteBackExecutor = 0x5,
+}
 
 pub trait Executor {
     const COPROCESSOR_ID: u8;
 
     fn step<'a>(
+        &mut self,
+        phase: &ExecutionPhase,
+        cause_register_value: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
-        mem: &MemoryPeripheral,
-    ) -> Result<(&'a Registers, &'a mut ExceptionUnitRegisters, u32), Error>;
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions;
 }
 
 /// Extends an 8 bit value that is signed to a 16 bit value
@@ -43,7 +54,7 @@ pub fn sign_extend_small_offset(small_offset: u8) -> u16 {
 
 // TODO: Rename to something more generic like fetch double word
 #[must_use]
-pub fn fetch_instruction(mem: &MemoryPeripheral, pc: (u16, u16)) -> [u8; 4] {
+pub fn fetch_instruction(mem: &mut BusPeripheral, pc: (u16, u16)) -> [u8; 4] {
     // Only the CPU knows that the address is split into two 16 bit registers
     // Any other peripheral will only see the 24 address lines
     let full_address: u32 = pc.to_full_address();

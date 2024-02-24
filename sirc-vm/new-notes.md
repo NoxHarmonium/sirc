@@ -103,12 +103,12 @@ RETS -> LDEA p, l
 Exception handling is done by a coprocessor
 The operand for the COPI/COPR instructions is made up of the following:
 4 bits cooprocessor ID (0x1 is exception unit)
-4 bits coprocessor opcode (for exception unit 0x0 is WAIT and 0x1 is RETS)
+4 bits coprocessor opcode (for exception unit 0x9 is WAIT and 0xA is RETS)
 8 bits argument (e..g. the trap number for exception handling)
 
-EXCP -> COPI #0x14FF
-WAIT -> COPI #0x1100
-RETE -> COPI #0x1200
+EXCP -> COPI #0x11FF
+WAIT -> COPI #0x1900
+RETE -> COPI #0x1A00
 
 # 0x1X Instructions
 
@@ -136,6 +136,6 @@ Immediate: 0
 
 = 0xC
 
-The second bit is used to distinguish between operations that write to both pairs of an address register, vs ones that only write to the lower register.
+The second bit is used to distinguish between operations that write to both registers in an address register pair, vs ones that only write to the lower register.
 Why do we need instructions that only write to the lower register? Because when the system mode/privileged bit is not set, updating the upper register
 in an address register pair is illegal to prevent escaping the bank/segment and provide a crude memory protection.

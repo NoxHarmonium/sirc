@@ -2,10 +2,12 @@
 
 resolver = "2"
 
-members = [
+members = [ "device-debug",
+    "device-ram",
+    "device-terminal",
+    "peripheral-bus",
     "peripheral-clock",
-    "peripheral-mem",
     "peripheral-cpu",
-    "toolchain",
     "sbrc-vm",
+    "toolchain",
 ]

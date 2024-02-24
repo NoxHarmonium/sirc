@@ -73,6 +73,10 @@ fn parse_number_(i: &str) -> AsmResult<u32> {
     preceded(char('#'), alt((parse_hex, parse_dec)))(i)
 }
 
+fn parse_placeholder_(i: &str) -> AsmResult<String> {
+    map(preceded(char('$'), parse_label_name_), ToOwned::to_owned)(i)
+}
+
 fn parse_comma_sep_(i: &str) -> AsmResult<()> {
     let (i, (_, _)) = pair(char(','), space0)(i)?;
     Ok((i, ()))
@@ -130,6 +134,10 @@ pub fn parse_dec(i: &str) -> AsmResult<u32> {
 
 pub fn parse_number(i: &str) -> AsmResult<u32> {
     lexeme(parse_number_)(i)
+}
+
+pub fn parse_placeholder(i: &str) -> AsmResult<String> {
+    lexeme(parse_placeholder_)(i)
 }
 
 pub fn parse_comma_sep(i: &str) -> AsmResult<()> {

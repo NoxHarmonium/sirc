@@ -1,3 +1,5 @@
+use assert_hex::assert_eq_hex;
+use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
     self,
     coprocessors::processing_unit::definitions::{
@@ -6,7 +8,6 @@ use peripheral_cpu::{
     },
     registers::{set_sr_bit, sr_bit_is_set, RegisterIndexing, Registers, StatusRegisterFields},
 };
-use peripheral_mem::MemoryPeripheral;
 
 use crate::instructions::common;
 
@@ -34,13 +35,13 @@ fn test_immediate_arithmetic_instruction(
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
-        |registers: &mut Registers, _: &MemoryPeripheral| {
+        |registers: &mut Registers, _: &mut BusPeripheral| {
             registers.set_at_index(target_register, register_value);
             for &status_register_field in initial_status_flags {
                 set_sr_bit(status_register_field, registers);
             }
         },
-        0xFACE,
+        0xFACE_0000,
     );
     let expected_registers =
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
@@ -49,7 +50,7 @@ fn test_immediate_arithmetic_instruction(
                 set_sr_bit(status_register_field, registers);
             }
         });
-    assert_eq!(expected_registers, current.registers);
+    assert_eq_hex!(expected_registers, current.registers);
     for &status_register_field in expected_status_flags {
         assert!(sr_bit_is_set(status_register_field, &current.registers));
     }
