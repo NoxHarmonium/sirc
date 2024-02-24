@@ -2,7 +2,7 @@
 .ORG 0x0000
 .DQ @init
 
-.ORG 0x0100
+.ORG 0x0200
 
 :init
 LOAD    r1, #5

@@ -9,7 +9,7 @@
 .DQ @exception_handler
 .DQ @exception_handler_that_should_be_ignored
 
-.ORG 0x0100
+.ORG 0x0200
 :start
 
 ; Reset register
@@ -22,7 +22,7 @@ COPI    r1, #0x1140
 ; Halt CPU
 COPI    r1, #0x14FF
 
-.ORG 0x0200
+.ORG 0x0300
 :exception_handler
 
 ; Load a value to detect if this code runs
@@ -33,7 +33,7 @@ COPI    r1, #0x1141
 ; Return from exception
 COPI    r1, #0x1A00
 
-.ORG 0x0400
+.ORG 0x0500
 :exception_handler_that_should_be_ignored
 
 ; Load a value to detect if this code runs

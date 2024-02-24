@@ -1,4 +1,4 @@
-use log::trace;
+use log::{debug, trace};
 use peripheral_bus::device::{BusAssertions, BusOperation};
 
 use super::{
@@ -76,7 +76,12 @@ pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCod
         )
     });
     let vector = instruction.value;
-    let level = 7 - (vector >> 4);
+    let level = if op_code == ExceptionUnitOpCodes::SoftwareException {
+        1
+    } else {
+        // TODO: Possible overflow?
+        7 - (vector >> 4)
+    };
     // Make this a struct?
     (op_code, vector, level)
 }
@@ -96,7 +101,7 @@ pub fn interrupt_flags_to_exception_level(active_interrupt_bitfield: u8) -> u8 {
     // we should service the highest priority one
     let highest_active_interrupt = find_highest_active_interrupt(active_interrupt_bitfield);
     // +1 because hardware interrupts start at 2 (1 is software exception)
-    (highest_active_interrupt.ilog2()) as u8 + 1
+    (highest_active_interrupt.ilog2()) as u8 + 2
 }
 
 ///
@@ -156,16 +161,32 @@ pub fn get_cause_register_value(
     let exception_level =
         interrupt_flags_to_exception_level(eu_registers.pending_hardware_exceptions);
 
+    trace!(
+        "eu_registers.pending_hardware_exceptions: 0x[{:X}] interrupt exception level: 0x[{exception_level:X}] current mask: 0x[{:X}]",
+        eu_registers.pending_hardware_exceptions,
+        get_interrupt_mask(registers)
+    );
+
     // TODO: Why no fault when L5 interrupt called twice?
     // Probably because its masked
-    if exception_level > get_interrupt_mask(registers) || exception_level == 5 {
+    if exception_level > get_interrupt_mask(registers) || exception_level == 6 {
         trace!("servicing interrupt by injecting cause value. exception_level {exception_level}");
-        let vector = hardware_exception_level_to_vector(exception_level);
+        let vector = hardware_exception_level_to_vector(exception_level - 1);
         // Clear highest interrupt because we will now service it
         eu_registers.pending_hardware_exceptions &=
             !find_highest_active_interrupt(eu_registers.pending_hardware_exceptions);
+
+        debug!(
+            "eu_registers.pending_hardware_exceptions: {}",
+            eu_registers.pending_hardware_exceptions
+        );
         return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
     };
+    trace!(
+        "returning registers.pending_coprocessor_command 0x[{:X}]",
+        registers.pending_coprocessor_command
+    );
+
     registers.pending_coprocessor_command
 }
 
@@ -282,6 +303,8 @@ impl Executor for ExceptionUnitExecutor {
                 self.vector_value |= bus_assertions.data as u32;
                 let vector_address_high = self.vector_address as u8 & u8::MAX;
 
+                debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
+
                 assert!(
                     op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_high >= USER_EXCEPTION_VECTOR_START,
                     "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_high:X}",
@@ -302,6 +325,7 @@ impl Executor for ExceptionUnitExecutor {
                     ExceptionUnitOpCodes::ReturnFromException => {
                         // Store current windowed link register to PC and jump to vector
                         // TODO: Is it safe to use the current_interrupt_mask here? Could that be user editable? Does that matter?
+                        // TODO: Overflow error when current_interrupt_mask is zero. What should actually happen on hardware if you try to RTE when you're not in an exception
                         let ExceptionLinkRegister {
                             return_address,
                             return_status_register,
@@ -318,8 +342,6 @@ impl Executor for ExceptionUnitExecutor {
                         let (register_select, link_register) =
                             extract_transfer_instruction_parameters(&instruction, eu_registers);
 
-                        trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {}", current_interrupt_mask - 1);
-
                         match register_select {
                             0 => {}
                             1 => {
@@ -332,10 +354,19 @@ impl Executor for ExceptionUnitExecutor {
                             }
                             _ => panic!("ETFR register select can only be in the range of 0-3"),
                         };
+
+                        trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]", current_interrupt_mask - 1, registers.get_full_address_address(), registers.r7);
+                        trace!("ALL: {:X?}", eu_registers.link_registers);
                     }
                     ExceptionUnitOpCodes::TransferToRegister => {
                         let (register_select, link_register) =
                             extract_transfer_instruction_parameters(&instruction, eu_registers);
+
+                        trace!(
+                            "B4! Registers: a: [{:X}] r7: [{:X}]",
+                            registers.get_full_address_address(),
+                            registers.r7
+                        );
 
                         match register_select {
                             0 => {}
@@ -350,7 +381,7 @@ impl Executor for ExceptionUnitExecutor {
                             _ => panic!("ETTR register select can only be in the range of 0-3"),
                         };
 
-                        trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {}", current_interrupt_mask - 1);
+                        trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_interrupt_mask - 1, registers.get_full_address_address(), registers.r7);
                     }
                     ExceptionUnitOpCodes::Fault
                     | ExceptionUnitOpCodes::HardwareException
@@ -369,7 +400,6 @@ impl Executor for ExceptionUnitExecutor {
             ExecutionPhase::MemoryAccessExecutor => {}
             ExecutionPhase::WriteBackExecutor => {
                 // TODO: Where should these go?
-                eu_registers.pending_hardware_exceptions = 0x0;
                 eu_registers.pending_fault = None;
 
                 // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything

@@ -124,7 +124,7 @@ impl BusPeripheral {
     ///
     /// # Panics
     /// Will panic if the specified segment is not found, or if the binary data will not fit in the segment
-    pub fn load_binary_data_into_segment(&mut self, label: &str, binary_data: &Vec<u8>) {
+    pub fn load_binary_data_into_segment(&mut self, label: &str, binary_data: &[u8]) {
         let maybe_segment = self.get_segment_for_label(label);
 
         let (segment_size, device) = maybe_segment.map_or_else(

@@ -15,7 +15,7 @@ Registers {
     sh: 0x0,
     sl: 0x0,
     ph: 0x0,
-    pl: 0x106,
+    pl: 0x206,
     system_ram_offset: 0x0,
     pending_coprocessor_command: 0x0,
 }
@@ -25,7 +25,7 @@ ExceptionUnitRegisters {
     pending_fault: None,
     link_registers: [
         ExceptionLinkRegister {
-            return_address: 0x0,
+            return_address: 0x204,
             return_status_register: 0x0,
         },
         ExceptionLinkRegister {
@@ -33,7 +33,7 @@ ExceptionUnitRegisters {
             return_status_register: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x104,
+            return_address: 0x0,
             return_status_register: 0x0,
         },
         ExceptionLinkRegister {

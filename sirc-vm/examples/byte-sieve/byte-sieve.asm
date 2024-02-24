@@ -6,7 +6,7 @@
 .ORG 0x0000
 .DQ @main
 
-.ORG 0x0100
+.ORG 0x0200
 :main
 
 ; File I/O segment
