@@ -27,7 +27,7 @@
 .ORG 0x0020
 .DQ @level_five_interrupt_handler
 
-.ORG 0x0100
+.ORG 0x0200
 :init
 LOAD    r1, #1
 LOAD    r2, #1
@@ -43,7 +43,7 @@ LOAD    al, $DEBUG_DEVICE_BUS_ERROR
 STOR    (#0, a), r1
 
 ; Jumping to an odd address triggers an alignment fault
-LOAD    pl, #0x0101
+LOAD    pl, #0x0201
 
 :after_odd_address
 
@@ -83,6 +83,8 @@ STOR    (#0, a), r7
 
 ; Halt CPU
 COPI    r1, #0x14FF
+
+.ORG 0x0300
 
 :bus_fault_handler
 ADDI    r1, #1

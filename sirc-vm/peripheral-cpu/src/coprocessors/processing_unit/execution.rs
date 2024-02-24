@@ -1,4 +1,4 @@
-use log::trace;
+use log::{debug, trace};
 use num::Integer;
 // use log::trace;
 use peripheral_bus::device::{BusAssertions, BusOperation};
@@ -112,6 +112,12 @@ impl Executor for ProcessingUnitExecutor {
 
                 self.decoded_instruction =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
+
+                debug!(
+                    "0x{:X}: {:?}",
+                    registers.get_full_pc_address(),
+                    self.decoded_instruction.ins
+                );
 
                 trace!("self.decoded_instruction: {:?}", self.decoded_instruction);
 

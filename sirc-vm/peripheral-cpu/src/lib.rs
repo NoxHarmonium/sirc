@@ -33,7 +33,7 @@ pub mod util;
 
 use std::{any::Any, fmt::Write};
 
-use log::{error, trace, warn};
+use log::{debug, error, trace, warn};
 
 use coprocessors::{
     exception_unit::{
@@ -95,6 +95,11 @@ pub fn raise_fault(
         error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
         panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
     }
+
+    debug!(
+        "raise_fault: fault: {fault:?} address: 0x{:X}",
+        bus_assertions.address,
+    );
 
     eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
         return_address: bus_assertions.address,
@@ -236,14 +241,7 @@ impl CpuPeripheral {
         // This level is a bitmask
         if level > 0 {
             trace!("Interrupt level [b{level:b}] raised");
-            // TODO: WHAT AM I DOING
-            // This pending exception level needs to be a combination of every pending interrupt
-            // so this should be an OR I guess
-            // Also it seems like some code treats this as a regular number, when it is actually a bit mask. Fix that so that L5 interrupts actually work
-            // If a lower level interrupt comes in while a higher level is being serviced, it should be set as pending. WHen the higher level exception returns, the CPU will immediately service the next highest level interrupt
-            // (could probably test this in the hardware exception example by queuing up all 5 exception levels)
-            //  TODO: What happens when a software exception is triggered in an interrupt handler? By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-            // I think L2 interrupts were working because they fit into the link register array - it accidently worked. Probably should have tested all the interrupt levels
+            // TODO: What happens when a software exception is triggered in an interrupt handler? By design it should be ignored, or cause a fault. At the moment it might just queue it up?
             // TODO: Use consistent terminology. Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
             self.eu_registers.pending_hardware_exceptions |= level;
             self.eu_registers.waiting_for_exception = false;

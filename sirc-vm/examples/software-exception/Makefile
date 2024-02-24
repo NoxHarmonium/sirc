@@ -9,7 +9,7 @@ software-exception.bin: software-exception.o
 	cargo run --bin linker -- --segment-offset 0 --output-file software-exception.bin software-exception.o
 
 run: software-exception.bin
-	cargo run --bin sbrc_vm -- --program-file ./software-exception.bin --register-dump-file ./software-exception.register-dump
+	cargo run --bin sbrc_vm -- -vv --program-file ./software-exception.bin --register-dump-file ./software-exception.register-dump
 
 check: run
 	diff -u ./software-exception.register-dump ./software-exception.register-dump-expected

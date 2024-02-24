@@ -8,5 +8,5 @@ IFS=$'\n\t'
 MAKEFILES="$(find . -mindepth 2 -maxdepth 2 -type f -name Makefile)";
 
 for MAKEFILE in $MAKEFILES; do \
-    make -C $(dirname "$MAKEFILE") check; \
+    make -C $(dirname "$MAKEFILE") clean check; \
 done

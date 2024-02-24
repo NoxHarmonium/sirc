@@ -33,11 +33,11 @@
 .DQ @start
 
 .ORG 0x0080
-.DQ @exception_handler_p2
+.DQ @exception_handler_p3
 
 ;;;;;;; MAIN CODE SECTION
 
-.ORG 0x0100
+.ORG 0x0200
 :start
 
 ; Setup routines
@@ -134,7 +134,7 @@ COPI    r1, #0x14FF
 ;;;;;;; EXCEPTION HANDLERS
 
 .ORG 0x0400
-:exception_handler_p2
+:exception_handler_p3
 
 ; Save the link register
 LDEA s, (#0, l)
@@ -174,7 +174,7 @@ LOAD    r1, (#0, a)
 
 ; Return early if not (there is already a send pending)
 CMPI    r1, $TRUE
-RETE|==
+RETS|==
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER

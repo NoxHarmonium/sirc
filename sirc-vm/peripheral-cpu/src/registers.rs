@@ -10,6 +10,8 @@ pub const SR_PRIVILEGED_MASK: u16 = 0xFF00;
 // The parts of the status register that non privileged code can "see" (or write to)
 pub const SR_REDACTION_MASK: u16 = 0x00FF;
 
+// Fault metadata is the extra data like what the bus is doing when the fault happened,
+// index 6 stores the actual return address
 // 0 = SW Exception, 1-5 interrupts, 6 = fault, 7 = fault metadata
 pub const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
