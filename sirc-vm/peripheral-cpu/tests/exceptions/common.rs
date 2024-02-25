@@ -159,6 +159,32 @@ pub fn expect_exception_handler(
     ]
 }
 
+pub fn expect_exception_handler_masked(
+    interrupt_assertion: u8,
+    vector: u32,
+    vector_value: (u16, u16),
+) -> Vec<Option<Expectation>> {
+    vec![
+        // EU reads vector and jumps to it
+        Some(expectation(
+            None,
+            Some(interrupt_assertion),
+            Some(vector * 2),
+            None,
+        )),
+        Some(expectation(
+            Some(vector_value.0),
+            None,
+            Some((vector * 2) + 1),
+            None,
+        )),
+        Some(expectation(Some(vector_value.1), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+    ]
+}
+
 pub fn run_return_from_exception(
     interrupt_assertion: u8,
     vector_value: (u16, u16),
