@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 memmap = "0.7.0"
 peripheral_bus = { path = "../peripheral-bus" }
-log = "0.4.20"
+log = "0.4.21"

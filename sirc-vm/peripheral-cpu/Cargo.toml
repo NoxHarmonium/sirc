@@ -8,7 +8,7 @@ peripheral_bus = { path = "../peripheral-bus" }
 num-traits = "0.2"
 num-derive = "0.4"
 num = "0.4"
-log = "0.4.20"
+log = "0.4.21"
 
 [dev-dependencies]
 quickcheck = "1"
