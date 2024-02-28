@@ -9,7 +9,7 @@ clap-verbosity-flag = "2.2.0"
 device_debug = { path = "../device-debug" }
 device_ram = { path = "../device-ram" }
 device_terminal = { path = "../device-terminal" }
-log = "0.4.20"
+log = "0.4.21"
 peripheral_bus = { path = "../peripheral-bus" }
 peripheral_clock = { path = "../peripheral-clock" }
 peripheral_cpu = { path = "../peripheral-cpu" }

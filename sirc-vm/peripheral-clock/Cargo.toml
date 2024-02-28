@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 spin_sleep_util = "0.1.1"
 spin_sleep = "1.2.0"
-log = "0.4.20"
+log = "0.4.21"
