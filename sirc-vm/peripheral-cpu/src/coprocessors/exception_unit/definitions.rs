@@ -29,6 +29,8 @@ pub mod vectors {
     /// an address that overflows, it is probably a stack overflow.
     /// There might be situations where you want address calculations to wrap around
     /// so it is only raised if the `TrapOnAddressOverflow` SR bit is set.
+    /// It is also raised if the program counter overflows, you can tell the difference by reading
+    /// which phase the fault was raised from the fault metadata register
     pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x03;
     /// Raised when a co-processor call is done for a non-existant co-processor
     /// or if the co-processor opcode is invalid.

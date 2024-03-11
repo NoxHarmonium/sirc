@@ -97,7 +97,7 @@ pub fn raise_fault(
     }
 
     debug!(
-        "raise_fault: fault: {fault:?} address: 0x{:X}",
+        "raise_fault: fault: {fault:?} address: 0x{:X} phase: {phase:?}",
         bus_assertions.address,
     );
 

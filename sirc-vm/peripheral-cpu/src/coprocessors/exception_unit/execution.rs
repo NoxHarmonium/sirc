@@ -145,13 +145,13 @@ pub fn get_cause_register_value(
 ) -> u16 {
     if let Some(pending_fault) = eu_registers.pending_fault {
         let vector = match pending_fault {
-            super::definitions::Faults::Bus => BUS_FAULT,
-            super::definitions::Faults::Alignment => ALIGNMENT_FAULT,
-            super::definitions::Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
-            super::definitions::Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
-            super::definitions::Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
-            super::definitions::Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
-            super::definitions::Faults::LevelFiveInterruptConflict => {
+            Faults::Bus => BUS_FAULT,
+            Faults::Alignment => ALIGNMENT_FAULT,
+            Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
+            Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
+            Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
+            Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
+            Faults::LevelFiveInterruptConflict => {
                 LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
             }
         };

@@ -31,20 +31,20 @@ pub fn build_rete_instruction() -> InstructionData {
 
 pub struct Expectation {
     pub bus_data: Option<u16>,
-    pub bus_interrupts: Option<u8>,
+    pub bus_assertions: Option<BusAssertions>,
     pub cpu_address: Option<u32>,
     pub cpu_data: Option<u16>,
 }
 
 pub fn expectation(
     bus_data: Option<u16>,
-    bus_interrupts: Option<u8>,
+    bus_assertions: Option<BusAssertions>,
     cpu_address: Option<u32>,
     cpu_data: Option<u16>,
 ) -> Expectation {
     Expectation {
         bus_data,
-        bus_interrupts,
+        bus_assertions,
         cpu_address,
         cpu_data,
     }
@@ -61,8 +61,7 @@ pub fn run_expectations(
                 .as_ref()
                 .map_or_else(BusAssertions::default, |expectation| BusAssertions {
                     data: expectation.bus_data.unwrap_or(0),
-                    interrupt_assertion: expectation.bus_interrupts.unwrap_or(0),
-                    ..BusAssertions::default() // TODO: should we assert on op?
+                    ..expectation.bus_assertions.unwrap_or_default()
                 });
         let output_bus_assertions = cpu.poll(input_bus_assertions, true);
         if let Some(expectation) = expectation {
@@ -130,7 +129,10 @@ pub fn expect_exception_handler(
         // EU reads vector and jumps to it
         Some(expectation(
             None,
-            Some(interrupt_assertion),
+            Some(BusAssertions {
+                interrupt_assertion,
+                ..BusAssertions::default()
+            }),
             Some(vector * 2),
             None,
         )),
@@ -168,7 +170,10 @@ pub fn expect_exception_handler_masked(
         // EU reads vector and jumps to it
         Some(expectation(
             None,
-            Some(interrupt_assertion),
+            Some(BusAssertions {
+                interrupt_assertion,
+                ..BusAssertions::default()
+            }),
             Some(vector * 2),
             None,
         )),
@@ -191,6 +196,10 @@ pub fn run_return_from_exception(
 ) -> Vec<Option<Expectation>> {
     let return_instruction = bytes_to_words(&encode_instruction(&build_rete_instruction()));
     let masked_vector_value = vector_value.to_full_address() & 0x00FF_FFFF;
+    let interrupt_assertion = BusAssertions {
+        interrupt_assertion,
+        ..BusAssertions::default()
+    };
 
     vec![
         // EU Returns back to main program

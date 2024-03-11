@@ -1,7 +1,6 @@
 use assert_hex::assert_eq_hex;
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
-    self,
     coprocessors::processing_unit::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
         StatusRegisterUpdateSource,

@@ -600,7 +600,7 @@ pub struct ExceptionUnitRegisters {
     // TODO: Capture bus information
     pub pending_hardware_exceptions: u8,
     pub pending_fault: Option<Faults>,
-    // 7 exception levels - one (index 7) to store fault metadata
+    // 8 registers - 7 exception levels + one (index 7) to store fault metadata
     pub link_registers: [ExceptionLinkRegister; 8],
     pub waiting_for_exception: bool,
 }

@@ -1,6 +1,5 @@
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
-    self,
     coprocessors::processing_unit::definitions::{
         ConditionFlags, Instruction, InstructionData, ShiftOperand, ShiftType,
         ShortImmediateInstructionData, StatusRegisterUpdateSource,

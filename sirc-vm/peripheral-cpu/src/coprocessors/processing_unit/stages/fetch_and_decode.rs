@@ -98,7 +98,7 @@ fn do_shift(
 ///
 /// set_sr_bit(StatusRegisterFields::Negative, &mut registers);
 ///
-/// let decoded = decode_and_register_fetch([0x81, 0x32, 0xBF, 0x9C], &registers);
+/// let (decoded, overflow) = decode_and_register_fetch([0x81, 0x32, 0xBF, 0x9C], &registers);
 ///
 /// assert_eq!(decoded.ins, Instruction::AddShortImmediate);
 /// assert_eq!(decoded.des, 0x4);
@@ -118,6 +118,7 @@ fn do_shift(
 /// assert_eq!(decoded.ad_l_, 0x00CE);
 /// assert_eq!(decoded.ad_h_, 0x00BB);
 /// assert_eq!(decoded.con_, true);
+/// assert_eq!(overflow, false);
 /// ```
 ///
 #[must_use]
@@ -129,7 +130,7 @@ fn do_shift(
 pub fn decode_and_register_fetch(
     raw_instruction: [u8; 4],
     registers: &Registers,
-) -> DecodedInstruction {
+) -> (DecodedInstruction, bool) {
     // Why don't we just match of the type of instruction and set all the irrelevant registers to zero?
     // Because we want to match the hardware as closely as possible. In the hardware representation,
     // the instruction bits will be broken up and stored in the intermediate registers the same way
@@ -188,30 +189,34 @@ pub fn decode_and_register_fetch(
     let des_ad_l = 0x9 | immediate_representation.register << 1;
     let des_ad_h = 0x8 | immediate_representation.register << 1;
     let condition_flag = immediate_representation.condition_flag;
-    let npc_l_ = registers.pl.wrapping_add(INSTRUCTION_SIZE_WORDS as u16);
+    let (npc_l_, npc_overflowed) = registers.pl.overflowing_add(INSTRUCTION_SIZE_WORDS as u16);
+
     let npc_h_ = registers.ph;
 
-    DecodedInstruction {
-        ins: implied_representation.op_code,
-        des,
-        sr_a,
-        sr_b,
-        con: condition_flag,
-        adr: immediate_representation.additional_flags,
-        ad_l,
-        ad_h,
-        sr_src: num::FromPrimitive::from_u8(immediate_representation.additional_flags & 0x3)
-            .expect("should fit in two bits"),
-        addr_inc,
-        des_ad_l,
-        des_ad_h,
-        sr_shift,
-        sr_a_,
-        sr_b_,
-        ad_l_: registers[ad_l],
-        ad_h_: registers[ad_h],
-        con_: condition_flag.should_execute(registers),
-        npc_l_,
-        npc_h_,
-    }
+    (
+        DecodedInstruction {
+            ins: implied_representation.op_code,
+            des,
+            sr_a,
+            sr_b,
+            con: condition_flag,
+            adr: immediate_representation.additional_flags,
+            ad_l,
+            ad_h,
+            sr_src: num::FromPrimitive::from_u8(immediate_representation.additional_flags & 0x3)
+                .expect("should fit in two bits"),
+            addr_inc,
+            des_ad_l,
+            des_ad_h,
+            sr_shift,
+            sr_a_,
+            sr_b_,
+            ad_l_: registers[ad_l],
+            ad_h_: registers[ad_h],
+            con_: condition_flag.should_execute(registers),
+            npc_l_,
+            npc_h_,
+        },
+        npc_overflowed,
+    )
 }

@@ -52,6 +52,7 @@ pub struct ProcessingUnitExecutor {
     pub instruction: u32,
     pub decoded_instruction: DecodedInstruction,
     pub intermediate_registers: IntermediateRegisters,
+    pub next_instruction_fetch_is_overflow: bool,
 }
 
 impl Executor for ProcessingUnitExecutor {
@@ -90,6 +91,18 @@ impl Executor for ProcessingUnitExecutor {
             ExecutionPhase::InstructionFetchLow => {
                 trace!("registers.pl: 0x{:X}", registers.pl);
 
+                // PC Overflow check
+                if self.next_instruction_fetch_is_overflow {
+                    eu_registers.pending_fault = raise_fault(
+                        registers,
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        *phase,
+                        &bus_assertions,
+                    );
+                }
+                self.next_instruction_fetch_is_overflow = false;
+
                 BusAssertions {
                     address: registers.get_full_pc_address(),
                     op: BusOperation::Read,
@@ -110,8 +123,16 @@ impl Executor for ProcessingUnitExecutor {
 
                 trace!("self.instruction: {:?}", self.instruction);
 
-                self.decoded_instruction =
+                let (decoded_instruction, next_instruction_fetch_is_overflow) =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
+                self.decoded_instruction = decoded_instruction;
+
+                if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers) {
+                    trace!(
+                        "next_instruction_fetch_is_overflow: {next_instruction_fetch_is_overflow}"
+                    );
+                    self.next_instruction_fetch_is_overflow = next_instruction_fetch_is_overflow;
+                }
 
                 debug!(
                     "0x{:X}: {:?}",
