@@ -3,7 +3,7 @@ use peripheral_bus::{conversion::bytes_to_words, device::BusAssertions};
 use peripheral_cpu::{
     coprocessors::{
         exception_unit::definitions::{
-            vectors::{ALIGNMENT_FAULT, BUS_FAULT, SEGMENT_OVERFLOW_FAULT},
+            vectors::{ALIGNMENT_FAULT, BUS_FAULT, INVALID_OPCODE_FAULT, SEGMENT_OVERFLOW_FAULT},
             Faults,
         },
         processing_unit::{
@@ -32,14 +32,28 @@ pub fn build_load_instruction() -> InstructionData {
     })
 }
 
-pub fn expect_dummy_instruction(address: u32) -> Vec<Option<Expectation>> {
-    let dummy_instruction = bytes_to_words(&encode_instruction(&build_test_instruction()));
+pub fn build_invalid_opcode_instruction() -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0x0, // Unused
+        value: 0xFFFF, // COP ID: F, Opcode: F, Value FF
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0, // unused
+    })
+}
+
+pub fn expect_instruction(
+    instruction_data: &InstructionData,
+    address: u32,
+    abort_fetch: bool,
+) -> Vec<Option<Expectation>> {
+    let dummy_instruction = bytes_to_words(&encode_instruction(instruction_data));
     vec![
         Some(expectation(None, None, Some(address), None)),
         Some(expectation(
             Some(dummy_instruction[0]),
             None,
-            Some(address + 1),
+            Some(if abort_fetch { 0x0 } else { address + 1 }),
             None,
         )),
         Some(expectation(Some(dummy_instruction[1]), None, None, None)),
@@ -47,6 +61,17 @@ pub fn expect_dummy_instruction(address: u32) -> Vec<Option<Expectation>> {
         Some(expectation(None, None, None, None)),
         Some(expectation(None, None, None, None)),
     ]
+}
+
+pub fn expect_dummy_instruction(address: u32, abort_fetch: bool) -> Vec<Option<Expectation>> {
+    expect_instruction(&build_test_instruction(), address, abort_fetch)
+}
+
+pub fn expect_invalid_opcode_instruction(
+    address: u32,
+    abort_fetch: bool,
+) -> Vec<Option<Expectation>> {
+    expect_instruction(&build_invalid_opcode_instruction(), address, abort_fetch)
 }
 
 pub fn expect_load_instruction() -> Vec<Option<Expectation>> {
@@ -142,64 +167,17 @@ pub fn expect_bus_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
     ]
 }
 
-pub fn expect_alignment_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
+pub fn expect_fault(vector: u8, vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
     let dummy_instruction = bytes_to_words(&encode_instruction(&build_test_instruction()));
-    let vector = u32::from(ALIGNMENT_FAULT);
-    let masked_vector_value = vector_value.to_full_address() & 0x00FF_FFFF;
-
-    vec![
-        // Try to read at misaligned address
-        Some(expectation(None, None, Some(0x0000_0001), None)),
-        Some(expectation(
-            Some(dummy_instruction[0]),
-            None,
-            // Instruction fetch aborted
-            Some(0x0000_0000),
-            None,
-        )),
-        Some(expectation(Some(dummy_instruction[1]), None, None, None)),
-        None,
-        None,
-        None,
-        // Handle vector
-        Some(expectation(None, None, Some(vector * 2), None)),
-        Some(expectation(
-            Some(vector_value.0),
-            None,
-            Some((vector * 2) + 1),
-            None,
-        )),
-        Some(expectation(Some(vector_value.1), None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-        // PC should be pointing at contents of vector now
-        Some(expectation(None, None, Some(masked_vector_value), None)),
-        Some(expectation(
-            Some(dummy_instruction[0]),
-            None,
-            Some(masked_vector_value + 1),
-            None,
-        )),
-        Some(expectation(Some(dummy_instruction[1]), None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-    ]
-}
-
-pub fn expect_segment_overflow_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
-    let dummy_instruction = bytes_to_words(&encode_instruction(&build_test_instruction()));
-    let vector = u32::from(SEGMENT_OVERFLOW_FAULT);
     let masked_vector_value = vector_value.to_full_address() & 0x00FF_FFFF;
 
     vec![
         // Handle vector
-        Some(expectation(None, None, Some(vector * 2), None)),
+        Some(expectation(None, None, Some(u32::from(vector) * 2), None)),
         Some(expectation(
             Some(vector_value.0),
             None,
-            Some((vector * 2) + 1),
+            Some((u32::from(vector) * 2) + 1),
             None,
         )),
         Some(expectation(Some(vector_value.1), None, None, None)),
@@ -262,7 +240,13 @@ fn test_alignment_fault() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_alignment_fault((0x00AB, 0xCDE0)),
+        &expect_dummy_instruction(0x1, true),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(ALIGNMENT_FAULT, (0x00AB, 0xCDE0)),
         &mut clocks,
     );
 
@@ -318,7 +302,7 @@ fn test_segment_overflow_fault_with_load() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_segment_overflow_fault((0x00AB, 0xCDE0)),
+        &expect_fault(SEGMENT_OVERFLOW_FAULT, (0x00AB, 0xCDE0)),
         &mut clocks,
     );
 
@@ -346,7 +330,7 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_dummy_instruction(0x0000_FFFE),
+        &expect_dummy_instruction(0x0000_FFFE, false),
         &mut clocks,
     );
 
@@ -366,7 +350,7 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_dummy_instruction(0x0000_FFFE),
+        &expect_dummy_instruction(0x0000_FFFE, false),
         &mut clocks,
     );
 
@@ -399,7 +383,52 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_segment_overflow_fault((0x00AB, 0xCDE0)),
+        &expect_fault(SEGMENT_OVERFLOW_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_invalid_opcode_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_invalid_opcode_instruction(0x0, false),
+        &mut clocks,
+    );
+    // Let the exception executor handle the COP call
+    run_expectations(
+        &mut cpu_peripheral,
+        &vec![None, None, None, None, None, None],
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::InvalidOpCode),
+        "A fault should be raised because F is an invalid coprocessor ID for this CPU model"
+    );
+
+    // Set protected mode to test if the fault flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(INVALID_OPCODE_FAULT, (0x00AB, 0xCDE0)),
         &mut clocks,
     );
 
