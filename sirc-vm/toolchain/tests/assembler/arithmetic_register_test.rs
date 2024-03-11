@@ -1,3 +1,4 @@
+use insta::assert_snapshot;
 use nom_supreme::{
     error::ErrorTree,
     final_parser::{final_parser, Location},
@@ -56,5 +57,5 @@ fn test_assembler_arithmetic_register() {
         };
 
     let object = build_object(tokens);
-    insta::assert_display_snapshot!(config_hex(&object.program.as_slice(), hex_config));
+    assert_snapshot!(config_hex(&object.program.as_slice(), hex_config));
 }
