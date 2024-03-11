@@ -51,6 +51,7 @@ jobs:
           [
             "boring",
             "byte-sieve",
+            "faults",
             "hardware-exception",
             "software-exception",
             "store-load",
