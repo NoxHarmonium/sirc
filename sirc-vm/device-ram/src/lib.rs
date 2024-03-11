@@ -64,6 +64,7 @@ impl MemoryMappedDevice for RamDevice {
             SegmentMemCell::RawMemory(ref mem) => &mem[..],
             SegmentMemCell::FileMapped(_, ref mmap) => &mmap[..],
         };
+
         let byte_pair: [u8; 2] = raw_memory[address_pointer..=address_pointer + 1]
             .try_into()
             .unwrap();
