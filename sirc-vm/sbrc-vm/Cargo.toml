@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.5.1", features = ["derive"] }
+clap = { version = "4.5.2", features = ["derive"] }
 clap-verbosity-flag = "2.2.0"
 device_debug = { path = "../device-debug" }
 device_ram = { path = "../device-ram" }
