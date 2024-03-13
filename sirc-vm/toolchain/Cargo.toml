@@ -11,7 +11,7 @@ nom-supreme = "0.8.0"
 itertools = "0.12.1"
 postcard = { version = "1.0.8", features = ["alloc"] }
 serde = "1.0.197"
-bytemuck = "1.14.3"
+bytemuck = "1.15.0"
 num-traits = "0.2"
 
 [dev-dependencies]
