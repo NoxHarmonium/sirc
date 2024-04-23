@@ -71,7 +71,7 @@ pub mod vectors {
 
     //  0x09-0x0F Reserved
 
-    /// Hardware Exceptions
+    // Hardware Exceptions
 
     // Special level - When level five hardware exception is masked and
     // another one is triggered, it isn't ignored, it triggers a LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
@@ -82,7 +82,7 @@ pub mod vectors {
     pub const LEVEL_TWO_HARDWARE_EXCEPTION: u8 = 0x40; // 7 - 4 = p3
     pub const LEVEL_ONE_HARDWARE_EXCEPTION: u8 = 0x50; // 7 - 5 = p2
 
-    /// User Exceptions
+    // User Exceptions
     // 128 user exception vectors triggered by the EXCP instruction (i.e. a TRAP on the 68k)
 
     pub const USER_EXCEPTION_VECTOR_START: u8 = 0x60; // 7 - 6 = p1 (clamped at p1, nothing is p0 or below)
