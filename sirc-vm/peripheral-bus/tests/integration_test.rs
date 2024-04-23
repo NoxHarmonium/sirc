@@ -253,6 +253,7 @@ fn setup_file_to_load_into_segment(file_to_memory_map: &Path, segment_data: &[u1
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(file_to_memory_map)
         .unwrap();
     file.write_all(&words_to_bytes(segment_data)).unwrap();

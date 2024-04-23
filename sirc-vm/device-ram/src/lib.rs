@@ -30,6 +30,13 @@ pub fn new_ram_device_standard() -> RamDevice {
     }
 }
 
+/**
+ * # Panics
+ *
+ * Will throw if the file can't be opened for whatever reason.
+ * See the open method of `OpenOptions` for possible errors
+ */
+#[must_use]
 pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
     // TODO: Proper error handling?
     let file = OpenOptions::new()

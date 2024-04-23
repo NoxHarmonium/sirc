@@ -15,7 +15,7 @@ pub struct DebugDevice {
 }
 
 #[must_use]
-pub fn new_debug_device() -> DebugDevice {
+pub const fn new_debug_device() -> DebugDevice {
     DebugDevice {
         trigger_bus_error: false,
         trigger_interrupt: 0,
@@ -57,24 +57,13 @@ impl MemoryMappedDevice for DebugDevice {
     fn read_address(&self, address: u32) -> u16 {
         debug!("Reading from address 0x{address:X}");
         match address {
-            0x0 => {
-                if self.trigger_bus_error {
-                    0x1
-                } else {
-                    0x0
-                }
-            }
-            0x1..=0x5 => {
-                if (address as u8) == self.trigger_interrupt {
-                    0x1
-                } else {
-                    0x0
-                }
-            }
+            0x0 => u16::from(self.trigger_bus_error),
+            0x1..=0x5 => u16::from(address == u32::from(self.trigger_interrupt)),
             _ => 0x0,
         }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn write_address(&mut self, address: u32, value: u16) {
         debug!("Writing 0x{value:X} to address 0x{address:X}");
 
@@ -82,7 +71,7 @@ impl MemoryMappedDevice for DebugDevice {
             0x0 => self.trigger_bus_error = value == 0x1,
             0x1..=0x5 => {
                 if value == 0x1 {
-                    self.trigger_interrupt = address as u8
+                    self.trigger_interrupt = address as u8;
                 }
             }
             _ => {}
