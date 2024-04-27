@@ -116,6 +116,10 @@ fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::i
 fn main() {
     let args = Args::parse();
 
+    run_vm(args);
+}
+
+fn run_vm(args: Args) {
     stderrlog::new()
         .module(module_path!())
         // TODO: Is there a way to get this from the dependency list?
