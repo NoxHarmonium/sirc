@@ -5,15 +5,15 @@ edition = "2021"
 
 [dependencies]
 peripheral_bus = { path = "../peripheral-bus" }
-num-traits = "0.2"
-num-derive = "0.4"
-num = "0.4"
+num-traits = "0.2.18"
+num-derive = "0.4.2"
+num = "0.4.2"
 log = "0.4.21"
 
 [dev-dependencies]
-quickcheck = "1"
+quickcheck = "1.0.3"
 quickcheck_macros = "1"
-strum = { version = "0.26", features = ["derive"] }
-assert_hex = "0.4"
+strum = { version = "0.26.2", features = ["derive"] }
+assert_hex = "0.4.1"
 stderrlog = "0.6.0"
 ctor = "0.2.8"
