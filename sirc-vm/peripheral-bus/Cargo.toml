@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 num = "0.4.2"
-num-traits = "0.2.18"
+num-traits = "0.2.19"
 log = "0.4.21"
 
 [dev-dependencies]
