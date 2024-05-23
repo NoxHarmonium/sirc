@@ -49,6 +49,7 @@ fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    // You'll need to compile the byte-sieve example with `make all` for this to work
     let program = fs::read("../examples/byte-sieve/byte-sieve.bin").unwrap();
     let mut group = c.benchmark_group("byte-sieve");
     group.sampling_mode(SamplingMode::Flat);
