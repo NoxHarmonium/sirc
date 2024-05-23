@@ -17,6 +17,8 @@ so that the final product is a physical game console.
 
 However, there is a long way to go until that point.
 
+_Note: It is my first serious project in rust so it will be a bit rough, I'm also trying to get a vertical slice going before I optimise everything. Please don't judge me._
+
 I built a basic CPU using an FPGA board in university about ten years ago so it could be possible...
 
 # Target
@@ -30,10 +32,61 @@ The target FPGA board at the moment is the [ULX3s](https://www.crowdsupply.com/r
 This could change at some point so the design will try to be dev board independent but
 it at least provides a target to hit.
 
+# Usage
+
+A good example of all the components working together is the Makefile in the [byte-sieve example project](https://github.com/NoxHarmonium/sirc/blob/main/sirc-vm/examples/byte-sieve/Makefile).
+
+It involves the assembler, linker and the virtual machine.
+
+You can also use the `--help` command line switch.
+
+```bash
+$ cargo run --bin assembler -- --help
+
+Usage: assembler --input-file <FILE> --output-file <FILE>
+
+Options:
+  -i, --input-file <FILE>   
+  -o, --output-file <FILE>  
+  -h, --help                Print help
+  -V, --version             Print version
+```
+
+```bash
+$ cargo run --bin linker -- --help  
+
+Usage: linker --output-file <FILE> --segment-offset <SEGMENT_OFFSET> [INPUT FILES]...
+
+Arguments:
+  [INPUT FILES]...  
+
+Options:
+  -o, --output-file <FILE>               
+  -s, --segment-offset <SEGMENT_OFFSET>  
+  -h, --help                             Print help
+  -V, --version                          Print version
+```
+
+```bash
+$ cargo run --bin sbrc_vm -- --help
+
+Usage: sbrc_vm [OPTIONS] --program-file <FILE>
+
+Options:
+  -p, --program-file <FILE>        
+  -s, --segment <SEGMENT>          
+  -r, --register-dump-file <FILE>  
+  -v, --verbose...                 Increase logging verbosity
+  -q, --quiet...                   Decrease logging verbosity
+  -h, --help                       Print help
+  -V, --version                    Print version
+
+```
+
 ## CPU
 
 The CPU will be basic (e.g. no superscalar) but it does not need to be as simple as the 6502,
-and can take inspiration from other CPUs available around that time (68k, ARM6, x86).
+and can take inspiration from other CPUs available around that time (68k, ARM6, MIPS, x86, etc.).
 
 It will be strictly 16 bit. One exception is that memory addresses can be 24 bit by synthesising the address by from two 16 bit registers,
 as a 16 bit address space is too limiting (even the SNES has 24 bit addressing).
