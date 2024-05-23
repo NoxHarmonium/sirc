@@ -13,22 +13,23 @@
 )]
 #![deny(warnings)]
 
-use std::{fs::File, io::Write, path::PathBuf, process::exit};
+use std::{cell::RefCell, path::PathBuf, process::exit};
 
 use device_debug::new_debug_device;
-use log::{error, info, Level};
+use log::{info, Level};
 
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
-use peripheral_bus::{device::Device, new_bus_peripheral};
+use peripheral_bus::new_bus_peripheral;
 use peripheral_clock::ClockPeripheral;
-use peripheral_cpu::{new_cpu_peripheral, CpuPeripheral};
+use peripheral_cpu::new_cpu_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
 
 use clap::Parser;
+use sbrc_vm::{run_vm, Vm};
 
 fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
     let segment_args: Vec<_> = s.split(':').collect();
@@ -89,9 +90,9 @@ struct SegmentArg {
     pub writeable: bool,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
-struct Args {
+pub struct Args {
     #[clap(short, long, value_parser, value_name = "FILE")]
     program_file: PathBuf,
 
@@ -103,14 +104,6 @@ struct Args {
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
-}
-
-#[allow(clippy::borrowed_box)]
-fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::io::Error> {
-    let mut handle = File::create(dump_file)?;
-
-    write!(&mut handle, "{}", device.dump_diagnostic())?;
-    Ok(())
 }
 
 fn main() {
@@ -134,6 +127,16 @@ fn main() {
         .init()
         .unwrap();
 
+    let dump_file = args.register_dump_file.clone();
+    let vm = setup_vm(args);
+    run_vm(&vm, dump_file);
+    info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
+    exit(0);
+}
+
+// TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
+#[must_use]
+fn setup_vm(args: Args) -> Vm {
     let master_clock_freq = 8_000_000;
 
     let clock_peripheral = ClockPeripheral {
@@ -195,36 +198,10 @@ fn main() {
         }
     }
 
-    // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
-    let execute = |_| {
-        let merged_assertions = bus_peripheral.poll_all();
-        !merged_assertions.exit_simulation
-    };
-
-    clock_peripheral.start_loop(execute);
-
-    if let Some(register_dump_file) = &args.register_dump_file {
-        // TODO: This is terrible - again
-        let cpu: &CpuPeripheral = bus_peripheral
-            .bus_master
-            .as_any()
-            .downcast_ref::<CpuPeripheral>()
-            .expect("failed to downcast");
-
-        info!(
-                "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
-            );
-        if let Err(error) = dump_registers(register_dump_file, cpu) {
-            error!(
-                "There was an error dumping registers to [{}].\n{}",
-                register_dump_file.display(),
-                error
-            );
-        };
+    Vm {
+        bus_peripheral: RefCell::new(bus_peripheral),
+        clock_peripheral: RefCell::new(clock_peripheral),
     }
-
-    info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
-    exit(0);
 }
 
 // TODO: Probs need to a step debugger

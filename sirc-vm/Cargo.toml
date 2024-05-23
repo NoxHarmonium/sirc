@@ -2,7 +2,8 @@
 
 resolver = "2"
 
-members = [ "device-debug",
+members = [
+    "device-debug",
     "device-ram",
     "device-terminal",
     "peripheral-bus",
