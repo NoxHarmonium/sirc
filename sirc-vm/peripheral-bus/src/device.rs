@@ -25,7 +25,7 @@ pub struct BusAssertions {
 
     /// Simulates the bus connected to the interrupt pins on the CPU
     /// zero is no interrupt, is a bit field
-    /// Interrupt assertions from all devices will be ORed together
+    /// Interrupt assertions from all devices will be merged using additively with the || operator
     pub interrupt_assertion: u8,
     /// Set to true to cause a bus fault in the CPU
     /// Usually used for invalid access on devices etc.
