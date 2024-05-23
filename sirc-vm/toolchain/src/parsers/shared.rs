@@ -18,11 +18,11 @@ use super::instruction::{RefToken, ShiftDefinitionData};
 pub type AsmResult<'a, 'b, O> = IResult<&'a str, O, ErrorTree<&'b str>>;
 
 #[allow(clippy::type_repetition_in_bounds)]
-pub fn lexeme<'a, F: 'a, O, E: ParseError<&'a str>>(
+pub fn lexeme<'a, F, O, E: ParseError<&'a str>>(
     inner: F,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
 where
-    F: FnMut(&'a str) -> IResult<&'a str, O, E>,
+    F: FnMut(&'a str) -> IResult<&'a str, O, E> + 'a,
 {
     terminated(inner, space0)
 }
