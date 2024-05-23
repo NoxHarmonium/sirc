@@ -38,7 +38,7 @@ A good example of all the components working together is the Makefile in the [by
 
 It involves the assembler, linker and the virtual machine.
 
-You can also use the `--help` command line switch.
+You can also use the `--help` command line switches for each component.
 
 ```bash
 $ cargo run --bin assembler -- --help
@@ -131,10 +131,12 @@ The many stages to building this thing:
 - [x] Build a virtual machine
 - [x] Write a basic assembler/linker
 - [x] Run some basic programs
-- [ ] Write and run an extensive test program to shake out any implementation bugs
+- [ ] Write and run an extensive 'real world' test program to shake out any implementation bugs
+- [ ] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also a benchmark)
+- [ ] Optimise the simulator code to make it usable (or add a "low accuracy" mode)
+- [ ] Document the CPU architecture and instruction set in a proper reference manual
 - [ ] (Optional) Write an LLVM backend to write programs in C (or even rust???)
 - [ ] (Optional) Write a language server and asm regex for IDE support (and debugging??)
-- [ ] Write a real world program that interacts with the outside world via memory mapping (a raytracer)
 
 2. Design/Simulate Input
 
