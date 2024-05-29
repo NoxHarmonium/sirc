@@ -48,7 +48,6 @@ impl Segment {
 }
 
 pub struct BusPeripheral {
-    assertions: BusAssertions,
     pub bus_master: Box<dyn Device>,
     segments: Vec<Segment>,
 }
@@ -56,7 +55,6 @@ pub struct BusPeripheral {
 #[must_use]
 pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
     BusPeripheral {
-        assertions: BusAssertions::default(),
         bus_master,
         segments: vec![],
     }
@@ -220,9 +218,7 @@ impl BusPeripheral {
     /// Runs each device, and then combines all their bus assertions into a single one.
     ///
     #[must_use]
-    pub fn poll_all(&mut self) -> BusAssertions {
-        let assertions = self.assertions;
-
+    pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
         // TODO:: Assert no conflicts (e.g. two devices asserting the address or data bus at the same time)
 
         let master_assertions = self.bus_master.poll(assertions, true);
@@ -245,7 +241,6 @@ impl BusPeripheral {
                     ..prev
                 }
             });
-        self.assertions = merged_assertions;
         merged_assertions
     }
 
@@ -255,12 +250,13 @@ impl BusPeripheral {
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     // #[cfg(test)]
     pub fn run_full_cycle(&mut self, max_cycles: u32) -> BusAssertions {
+        let mut bus_assertions = BusAssertions::default();
         let mut cycle_count = 0;
         loop {
-            let result = self.poll_all();
+            bus_assertions = self.poll_all(bus_assertions);
             cycle_count += 1;
             if cycle_count >= max_cycles {
-                return result;
+                return bus_assertions;
             }
         }
     }
