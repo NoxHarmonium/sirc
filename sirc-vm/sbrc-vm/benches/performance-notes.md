@@ -2,8 +2,13 @@
 
 ## Speed Improvement Log
 
+### 29th May 2024
+
 1. Tried inlining common shared instruction decoding functions - no change
 2. Enable LTO - 30% improvement (makes sense due to how modular everything is) - thin LTO doesn't work as well for some reason
+3. Tried rayon to parallelise the bus device processing (poll_all).- It had way too much overhead in a tight loop. The benchmark reported a +91897% time increase
+
+Roughly 1.6220 ms -> 1.0487 ms = 35% speedup!
 
 ## Observations
 
