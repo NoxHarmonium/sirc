@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs, path::PathBuf};
+use std::{cell::RefCell, fs, path::PathBuf, time::Duration};
 
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
@@ -50,9 +50,13 @@ fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
 
 fn criterion_benchmark(c: &mut Criterion) {
     // Originally from compiling the byte-sieve example with `make all`
-    let program = fs::read("../sbrc-vm/benches/byte-sieve.bin").unwrap();
+    let mut binary_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    binary_path.push("benches/byte-sieve.bin");
+    println!("program binary path: [{:?}]", binary_path);
+    let program = fs::read(binary_path).unwrap();
     let mut group = c.benchmark_group("byte-sieve");
     group.sampling_mode(SamplingMode::Flat);
+    group.measurement_time(Duration::from_secs(30));
     group.bench_function("byte sieve", |b| {
         b.iter(|| {
             let mut program_scratch_file = tempfile::NamedTempFile::new().unwrap();
