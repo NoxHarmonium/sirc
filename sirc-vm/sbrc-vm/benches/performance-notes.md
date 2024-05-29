@@ -7,6 +7,7 @@
 1. Tried inlining common shared instruction decoding functions - no change
 2. Enable LTO - 30% improvement (makes sense due to how modular everything is) - thin LTO doesn't work as well for some reason
 3. Tried rayon to parallelise the bus device processing (poll_all).- It had way too much overhead in a tight loop. The benchmark reported a +91897% time increase
+4. Tried changing phase in CpuPeripheral::poll to a simple integer and pass integers around instead of enum references. It didn't affect performance but made it less readable. The optimiser is good!
 
 Roughly 1.6220 ms -> 1.0487 ms = 35% speedup!
 
