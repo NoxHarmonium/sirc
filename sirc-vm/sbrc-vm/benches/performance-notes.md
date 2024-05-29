@@ -3,7 +3,7 @@
 ## Speed Improvement Log
 
 1. Tried inlining common shared instruction decoding functions - no change
-2. Enable LTO - 30% improvement (makes sense due to how modular everything is)
+2. Enable LTO - 30% improvement (makes sense due to how modular everything is) - thin LTO doesn't work as well for some reason
 
 ## Observations
 

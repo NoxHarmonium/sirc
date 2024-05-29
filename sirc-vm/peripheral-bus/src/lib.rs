@@ -224,24 +224,25 @@ impl BusPeripheral {
         let master_assertions = self.bus_master.poll(assertions, true);
 
         let segments = &mut self.segments;
-        let merged_assertions = segments
+        segments
             .iter_mut()
-            .fold(master_assertions, |prev, segment| {
-                let selected = segment.address_is_in_segment_range(prev.address);
+            .map(|segment| {
+                let selected = segment.address_is_in_segment_range(master_assertions.address);
                 let device = &mut segment.device;
-                let assertions = device.poll(prev, selected);
+                device.poll(master_assertions, selected)
+            })
+            .fold(master_assertions, |prev, curr| {
                 BusAssertions {
                     // Interrupts are all merged together
-                    interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
+                    interrupt_assertion: prev.interrupt_assertion | curr.interrupt_assertion,
                     // If at least one device has a bus error, then a fault will be raised
                     // The devices will have to be polled by the program to find the cause of the error at the moment
                     // (I don't really want to implement complex error signalling like the 68k has)
-                    bus_error: prev.bus_error | assertions.bus_error,
-                    data: if selected { assertions.data } else { prev.data },
+                    bus_error: prev.bus_error | curr.bus_error,
+                    data: prev.data | curr.data,
                     ..prev
                 }
-            });
-        merged_assertions
+            })
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
