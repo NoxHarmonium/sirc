@@ -48,7 +48,6 @@ impl Segment {
 }
 
 pub struct BusPeripheral {
-    assertions: BusAssertions,
     pub bus_master: Box<dyn Device>,
     segments: Vec<Segment>,
 }
@@ -56,7 +55,6 @@ pub struct BusPeripheral {
 #[must_use]
 pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
     BusPeripheral {
-        assertions: BusAssertions::default(),
         bus_master,
         segments: vec![],
     }
@@ -220,33 +218,31 @@ impl BusPeripheral {
     /// Runs each device, and then combines all their bus assertions into a single one.
     ///
     #[must_use]
-    pub fn poll_all(&mut self) -> BusAssertions {
-        let assertions = self.assertions;
-
+    pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
         // TODO:: Assert no conflicts (e.g. two devices asserting the address or data bus at the same time)
 
         let master_assertions = self.bus_master.poll(assertions, true);
 
         let segments = &mut self.segments;
-        let merged_assertions = segments
+        segments
             .iter_mut()
-            .fold(master_assertions, |prev, segment| {
-                let selected = segment.address_is_in_segment_range(prev.address);
+            .map(|segment| {
+                let selected = segment.address_is_in_segment_range(master_assertions.address);
                 let device = &mut segment.device;
-                let assertions = device.poll(prev, selected);
+                device.poll(master_assertions, selected)
+            })
+            .fold(master_assertions, |prev, curr| {
                 BusAssertions {
                     // Interrupts are all merged together
-                    interrupt_assertion: prev.interrupt_assertion | assertions.interrupt_assertion,
+                    interrupt_assertion: prev.interrupt_assertion | curr.interrupt_assertion,
                     // If at least one device has a bus error, then a fault will be raised
                     // The devices will have to be polled by the program to find the cause of the error at the moment
                     // (I don't really want to implement complex error signalling like the 68k has)
-                    bus_error: prev.bus_error | assertions.bus_error,
-                    data: if selected { assertions.data } else { prev.data },
+                    bus_error: prev.bus_error | curr.bus_error,
+                    data: prev.data | curr.data,
                     ..prev
                 }
-            });
-        self.assertions = merged_assertions;
-        merged_assertions
+            })
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
@@ -255,12 +251,13 @@ impl BusPeripheral {
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     // #[cfg(test)]
     pub fn run_full_cycle(&mut self, max_cycles: u32) -> BusAssertions {
+        let mut bus_assertions = BusAssertions::default();
         let mut cycle_count = 0;
         loop {
-            let result = self.poll_all();
+            bus_assertions = self.poll_all(bus_assertions);
             cycle_count += 1;
             if cycle_count >= max_cycles {
-                return result;
+                return bus_assertions;
             }
         }
     }

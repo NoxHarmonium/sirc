@@ -17,7 +17,10 @@ use std::{cell::RefCell, fs::File, io::Write, path::PathBuf};
 
 use log::{error, info};
 
-use peripheral_bus::{device::Device, BusPeripheral};
+use peripheral_bus::{
+    device::{BusAssertions, Device},
+    BusPeripheral,
+};
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::CpuPeripheral;
 
@@ -39,10 +42,11 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
     let clock_peripheral = vm.clock_peripheral.borrow();
 
+    let mut bus_assertions = BusAssertions::default();
     // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
     let execute = |_| {
-        let merged_assertions = bus_peripheral.poll_all();
-        !merged_assertions.exit_simulation
+        bus_assertions = bus_peripheral.poll_all(bus_assertions);
+        !bus_assertions.exit_simulation
     };
 
     clock_peripheral.start_loop(execute);
