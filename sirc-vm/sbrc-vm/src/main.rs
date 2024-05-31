@@ -106,6 +106,9 @@ pub struct Args {
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
+
+    #[clap(short, long)]
+    enable_video: bool,
 }
 
 fn main() {
@@ -171,19 +174,22 @@ fn setup_vm(args: Args) -> Vm {
         Box::new(debug_device),
     );
     bus_peripheral.map_segment(
-        VIDEO_SEGMENT,
-        0x000C_0000,
-        0xFFFF,
-        true,
-        Box::new(video_device),
-    );
-    bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         0x0,
         0xFFFF,
         false,
         Box::new(program_ram_device),
     );
+
+    if args.enable_video {
+        bus_peripheral.map_segment(
+            VIDEO_SEGMENT,
+            0x000C_0000,
+            0xFFFF,
+            true,
+            Box::new(video_device),
+        );
+    }
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
