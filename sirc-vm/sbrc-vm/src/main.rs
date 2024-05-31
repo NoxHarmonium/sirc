@@ -143,7 +143,7 @@ fn main() {
 // TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
 fn setup_vm(args: Args) -> Vm {
-    let master_clock_freq = 8_000_000;
+    let master_clock_freq = 4_000_000;
 
     let clock_peripheral = ClockPeripheral {
         master_clock_freq,
