@@ -160,6 +160,13 @@ fn setup_vm(args: Args) -> Vm {
     let video_device = new_video_device();
 
     bus_peripheral.map_segment(
+        PROGRAM_SEGMENT,
+        0x0,
+        0xFFFF,
+        false,
+        Box::new(program_ram_device),
+    );
+    bus_peripheral.map_segment(
         TERMINAL_SEGMENT,
         0x000A_0000,
         0xF,
@@ -172,13 +179,6 @@ fn setup_vm(args: Args) -> Vm {
         0xF,
         true,
         Box::new(debug_device),
-    );
-    bus_peripheral.map_segment(
-        PROGRAM_SEGMENT,
-        0x0,
-        0xFFFF,
-        false,
-        Box::new(program_ram_device),
     );
 
     if args.enable_video {
