@@ -15,11 +15,12 @@
 
 use std::{cell::RefCell, path::PathBuf, process::exit};
 
-use device_debug::new_debug_device;
 use log::{info, Level};
 
+use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
+use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
@@ -27,6 +28,7 @@ use peripheral_cpu::new_cpu_peripheral;
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
+static VIDEO_SEGMENT: &str = "VIDEO";
 
 use clap::Parser;
 use sbrc_vm::{run_vm, Vm};
@@ -116,6 +118,7 @@ fn main() {
             "device_debug",
             "device_ram",
             "device_terminal",
+            "device_video",
             "peripheral_bus",
             "peripheral_clock",
             "peripheral_cpu",
@@ -151,6 +154,7 @@ fn setup_vm(args: Args) -> Vm {
     let program_ram_device = new_ram_device_standard();
     let terminal_device = new_terminal_device(master_clock_freq);
     let debug_device = new_debug_device();
+    let video_device = new_video_device();
 
     bus_peripheral.map_segment(
         TERMINAL_SEGMENT,
@@ -166,7 +170,13 @@ fn setup_vm(args: Args) -> Vm {
         true,
         Box::new(debug_device),
     );
-
+    bus_peripheral.map_segment(
+        VIDEO_SEGMENT,
+        0x000C_0000,
+        0xFFFF,
+        true,
+        Box::new(video_device),
+    );
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         0x0,
@@ -174,6 +184,7 @@ fn setup_vm(args: Args) -> Vm {
         false,
         Box::new(program_ram_device),
     );
+
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {

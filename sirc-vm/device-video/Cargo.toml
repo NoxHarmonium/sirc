@@ -1,0 +1,10 @@
+[package]
+name = "device_video"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+peripheral_bus = { path = "../peripheral-bus" }
+log = "0.4.21"
+pixels = "0.13.0"
+winit = "0.30.0"
