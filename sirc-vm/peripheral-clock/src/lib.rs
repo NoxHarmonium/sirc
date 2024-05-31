@@ -17,7 +17,7 @@
 
 use std::time::{Duration, Instant};
 
-use log::debug;
+use log::{debug, info};
 
 pub struct ClockPeripheral {
     pub master_clock_freq: u32, //hz
@@ -26,10 +26,11 @@ pub struct ClockPeripheral {
 
 impl ClockPeripheral {
     #[allow(clippy::cast_precision_loss)]
-    pub fn start_loop(&self, mut closure: impl FnMut(u32) -> bool) {
+    pub fn start_loop(&self, mut closure: impl FnMut(u32) -> (bool, u32)) {
         let vsync_frequency = 50;
         let clocks_per_vsync = self.master_clock_freq / self.vsync_frequency;
         let mut frame: u64 = 0;
+        let mut executed_frames: f64 = 0.0;
         let start_instant = Instant::now();
         let seconds_per_frame = Duration::from_secs(1) / vsync_frequency;
 
@@ -38,25 +39,26 @@ impl ClockPeripheral {
 
         // 312.5 lines per frame
         loop {
-            frame += 1;
-
             // TODO TODO: Test with something that takes time (bubble sort a whole segment?) (https://stackoverflow.com/a/47366256/1153203)
-            for _ in 0..clocks_per_vsync {
-                if !closure(clocks_per_vsync) {
-                    let elapsed = start_instant.elapsed().as_secs_f64();
-                    let expected_frame = elapsed / seconds_per_frame.as_secs_f64();
+            let (abort, clocks_executed) = closure(clocks_per_vsync);
 
-                    // TODO: Need to get this run_rate actually up to 1.0
-                    let run_rate = frame as f64 / expected_frame;
-                    debug!("Exiting main loop. Actual Duration: {elapsed}s Expected frame: {expected_frame} Actual Frame: {frame} Seconds per frame: {} Run rate: {run_rate}",seconds_per_frame.as_secs_f64());
-                    return;
-                }
+            executed_frames += f64::from(clocks_executed) / f64::from(clocks_per_vsync);
+
+            if abort {
+                let elapsed = start_instant.elapsed().as_secs_f64();
+                let expected_frame = elapsed / seconds_per_frame.as_secs_f64();
+
+                // TODO: Need to get this run_rate actually up to 1.0
+                let run_rate = executed_frames / expected_frame;
+                info!("Exiting main loop. Actual Duration: {elapsed}s Expected frame: {expected_frame} Actual Frame: {executed_frames} Seconds per frame: {} Run rate: {run_rate}",seconds_per_frame.as_secs_f64());
+                break;
             }
 
             if let Some(fps) = reporter.increment_and_report() {
                 debug!("Frame: [{frame}] FPS: [{fps}]");
             }
 
+            frame += 1;
             interval.tick();
         }
     }
