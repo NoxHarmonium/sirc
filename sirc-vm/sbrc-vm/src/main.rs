@@ -157,7 +157,6 @@ fn setup_vm(args: Args) -> Vm {
     let program_ram_device = new_ram_device_standard();
     let terminal_device = new_terminal_device(master_clock_freq);
     let debug_device = new_debug_device();
-    let video_device = new_video_device();
 
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
@@ -182,6 +181,7 @@ fn setup_vm(args: Args) -> Vm {
     );
 
     if args.enable_video {
+        let video_device = new_video_device();
         bus_peripheral.map_segment(
             VIDEO_SEGMENT,
             0x000C_0000,
