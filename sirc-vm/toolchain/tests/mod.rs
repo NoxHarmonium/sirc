@@ -16,3 +16,4 @@
 #![deny(warnings)]
 
 mod assembler;
+mod types;

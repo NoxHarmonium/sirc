@@ -27,7 +27,7 @@ use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use toolchain::types::object::{ObjectDefinition, RefType};
+use toolchain::types::object::{merge_object_definitions, ObjectDefinition, RefType};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -60,10 +60,10 @@ fn main() -> io::Result<()> {
         .map(|file_contents| postcard::from_bytes(&file_contents).unwrap())
         .collect();
 
-    // TODO: Support merging (more than one file)!
-    let object_file = object_files.first().unwrap();
+    let object_file = merge_object_definitions(&object_files);
 
     let mut linked_program = object_file.program.clone();
+
     for symbol_ref in &object_file.symbol_refs {
         // TODO: Don't use unwrap!
         let target_symbol = object_file
