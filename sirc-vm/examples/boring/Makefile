@@ -15,5 +15,5 @@ check: run
 	diff -u ./boring.register-dump ./boring.register-dump-expected
 
 clean:
-	rm -f boring.bin boring.o boring.register-dump
+	rm -f boring.bin boring.o boring.register-dump boring.bin.dbg
 	cargo clean

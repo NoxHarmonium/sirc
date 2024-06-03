@@ -21,13 +21,17 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::coprocessors::processing_unit::encoding::{
     decode_instruction, encode_instruction,
 };
+use toolchain::utils::path::add_extension;
 
 use core::panic;
+use std::collections::BTreeMap;
 use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use toolchain::types::object::{merge_object_definitions, ObjectDefinition, RefType};
+use toolchain::types::object::{
+    merge_object_definitions, ObjectDebugInfo, ObjectDefinition, RefType,
+};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -41,6 +45,20 @@ struct Args {
     // TODO: Can we pass a hex string to this somehow?
     #[clap(short, long, value_parser, value_name = "SEGMENT_OFFSET")]
     segment_offset: u32,
+}
+
+fn write_debug_map(
+    debug_info_map: &BTreeMap<u32, ObjectDebugInfo>,
+    path: PathBuf,
+) -> Result<(), io::Error> {
+    let mut debug_map_path = path;
+    add_extension(&mut debug_map_path, "dbg");
+    let bytes_to_write = match postcard::to_allocvec(&debug_info_map) {
+        Ok(bytes_to_write) => bytes_to_write,
+        Err(error) => panic!("Error encoding debug file: {error}"),
+    };
+    write(debug_map_path, bytes_to_write)?;
+    Ok(())
 }
 
 #[allow(
@@ -60,7 +78,7 @@ fn main() -> io::Result<()> {
         .map(|file_contents| postcard::from_bytes(&file_contents).unwrap())
         .collect();
 
-    let object_file = merge_object_definitions(&object_files);
+    let (object_file, debug_info_map) = merge_object_definitions(&object_files);
 
     let mut linked_program = object_file.program.clone();
 
@@ -184,7 +202,9 @@ fn main() -> io::Result<()> {
         }
     }
 
-    write(args.output_file, linked_program)?;
+    write(args.output_file.clone(), linked_program)?;
+
+    write_debug_map(&debug_info_map, args.output_file)?;
 
     Ok(())
 }

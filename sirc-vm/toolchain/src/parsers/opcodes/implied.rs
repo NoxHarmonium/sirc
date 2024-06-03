@@ -58,6 +58,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         "RETS" => Ok((
             i,
             InstructionToken {
+                input_length: i.len(),
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
                     register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -73,6 +74,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         "NOOP" => Ok((
             i,
             InstructionToken {
+                input_length: i.len(),
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::AddImmediate,
                     register: 0x0,
@@ -87,6 +89,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         "WAIT" => Ok((
             i,
             InstructionToken {
+                input_length: i.len(),
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::CoprocessorCallImmediate,
                     register: 0x0,
@@ -101,6 +104,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         "RETE" => Ok((
             i,
             InstructionToken {
+                input_length: i.len(),
                 instruction: InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::CoprocessorCallImmediate,
                     register: 0x0,

@@ -19,5 +19,5 @@ check: run
 	diff -u ./hardware-exception.register-dump ./hardware-exception.register-dump-expected
 
 clean:
-	rm -f hardware-exception.bin hardware-exception.o data.o hardware-exception.register-dump output.log
+	rm -f hardware-exception.bin hardware-exception.o data.o hardware-exception.register-dump output.log hardware-exception.bin.dbg
 	cargo clean

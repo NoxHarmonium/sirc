@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
@@ -30,54 +32,71 @@ pub struct SymbolRef {
     pub data_only: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Default)]
+pub struct ObjectDebugInfo {
+    pub original_filename: String,
+    pub original_input: String,
+    pub program_to_input_offset_mapping: BTreeMap<usize, usize>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ObjectDefinition {
     // The offset in these definitions is the location of the symbol
     pub symbols: Vec<SymbolDefinition>,
     // The offset in these definitions is the location of the ref in the program
     pub symbol_refs: Vec<SymbolRef>,
     pub program: Vec<u8>,
+    pub debug_info: Option<ObjectDebugInfo>,
 }
 
-pub fn merge_object_definitions(object_definitions: &[ObjectDefinition]) -> ObjectDefinition {
-    let empty_definition: ObjectDefinition = ObjectDefinition {
-        symbols: vec![],
-        symbol_refs: vec![],
-        program: vec![],
-    };
+pub fn merge_object_definitions(
+    object_definitions: &[ObjectDefinition],
+) -> (ObjectDefinition, BTreeMap<u32, ObjectDebugInfo>) {
+    let mut output: ObjectDefinition = ObjectDefinition::default();
 
-    object_definitions
-        .iter()
-        .fold(empty_definition, |prev, curr| -> ObjectDefinition {
-            let prev_offset: u32 = prev
-                .program
-                .len()
-                .try_into()
-                .expect("Program length cannot not be larger than 32 bits");
+    let mut debug_info_map: BTreeMap<u32, ObjectDebugInfo> = BTreeMap::new();
 
-            let offset_symbols: Vec<SymbolDefinition> = curr
-                .symbols
-                .iter()
-                .map(|s| SymbolDefinition {
-                    name: s.name.clone(),
-                    offset: prev_offset + s.offset,
-                })
-                .collect();
+    for object_definition in object_definitions {
+        let prev_offset: u32 = output
+            .program
+            .len()
+            .try_into()
+            .expect("Program length cannot not be larger than 32 bits");
 
-            let offset_symbol_refs: Vec<SymbolRef> = curr
-                .symbol_refs
-                .iter()
-                .map(|s| SymbolRef {
-                    name: s.name.clone(),
-                    offset: prev_offset + s.offset,
-                    ..*s
-                })
-                .collect();
+        let offset_symbols: Vec<SymbolDefinition> = object_definition
+            .symbols
+            .iter()
+            .map(|s| SymbolDefinition {
+                name: s.name.clone(),
+                offset: prev_offset + s.offset,
+            })
+            .collect();
 
-            ObjectDefinition {
-                symbols: [prev.symbols.as_slice(), offset_symbols.as_slice()].concat(),
-                symbol_refs: [prev.symbol_refs.as_slice(), offset_symbol_refs.as_slice()].concat(),
-                program: [prev.program.as_slice(), curr.program.as_slice()].concat(),
+        let offset_symbol_refs: Vec<SymbolRef> = object_definition
+            .symbol_refs
+            .iter()
+            .map(|s| SymbolRef {
+                name: s.name.clone(),
+                offset: prev_offset + s.offset,
+                ..*s
+            })
+            .collect();
+
+        output.symbols.extend(offset_symbols);
+        output.symbol_refs.extend(offset_symbol_refs);
+        output.program.extend(object_definition.program.clone());
+        if let Some(debug_info) = &object_definition.debug_info {
+            let mut offset_mapping = debug_info.program_to_input_offset_mapping.clone();
+            for value in offset_mapping.values_mut() {
+                *value += prev_offset as usize;
             }
-        })
+            let offset_debug_info = ObjectDebugInfo {
+                original_filename: debug_info.original_filename.clone(),
+                original_input: debug_info.original_input.clone(),
+                program_to_input_offset_mapping: offset_mapping,
+            };
+            debug_info_map.insert(prev_offset, offset_debug_info);
+        }
+    }
+    (output, debug_info_map)
 }

@@ -67,6 +67,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_immediate_instruction(
                         offset.to_owned(),
                         address_register,
@@ -77,6 +78,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::SymbolRef(ref_token) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_immediate_instruction(0x0, address_register),
                     symbol_ref: Some(override_ref_token_type_if_implied(
                         ref_token,
@@ -88,6 +90,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::PlaceHolder(placeholder_name) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_immediate_instruction(0x0, address_register),
                     placeholder_name: Some(placeholder_name.clone()),
                     ..Default::default()
@@ -98,6 +101,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -120,6 +124,7 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),

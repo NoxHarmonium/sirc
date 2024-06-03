@@ -93,6 +93,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -116,6 +117,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -144,6 +146,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -171,6 +174,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),

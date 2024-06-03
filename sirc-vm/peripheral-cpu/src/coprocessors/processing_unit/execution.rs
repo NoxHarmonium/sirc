@@ -1,4 +1,4 @@
-use log::{debug, trace};
+use log::trace;
 use num::Integer;
 // use log::trace;
 use peripheral_bus::device::{BusAssertions, BusOperation};
@@ -133,12 +133,6 @@ impl Executor for ProcessingUnitExecutor {
                     );
                     self.next_instruction_fetch_is_overflow = next_instruction_fetch_is_overflow;
                 }
-
-                debug!(
-                    "0x{:X}: {:?}",
-                    registers.get_full_pc_address(),
-                    self.decoded_instruction.ins
-                );
 
                 trace!("self.decoded_instruction: {:?}", self.decoded_instruction);
 

@@ -15,5 +15,5 @@ check: run
 	diff -u ./store-load.register-dump ./store-load.register-dump-expected
 
 clean:
-	rm -f store-load.bin store-load.o store-load.register-dump
+	rm -f store-load.bin store-load.o store-load.register-dump store-load.bin.dbg
 	cargo clean

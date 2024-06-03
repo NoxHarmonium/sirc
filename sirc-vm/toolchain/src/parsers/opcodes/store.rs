@@ -52,6 +52,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_instruction(
                             offset.to_owned(),
                             src_register,
@@ -63,6 +64,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_instruction(
                             0x0,
                             src_register,
@@ -78,6 +80,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_instruction(
                             0x0,
                             src_register,
@@ -94,6 +97,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegister,
                         r1: 0x0, // unused
@@ -116,6 +120,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegister,
                         r1: 0x0, // unused
@@ -136,6 +141,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_pre_increment_instruction(
                             offset.to_owned(),
                             src_register,
@@ -147,6 +153,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_pre_increment_instruction(
                             0x0,
                             src_register,
@@ -162,6 +169,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
                     InstructionToken {
+                        input_length: i.len(),
                         instruction: construct_indirect_immediate_pre_increment_instruction(
                             0x0,
                             src_register,
@@ -179,6 +187,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
         ), AddressingMode::DirectRegister(src_register)] => {
             Ok((i, {
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,
                         r1: 0x0, //Unused
@@ -203,6 +212,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 split_shift_definition_data(shift_definition_data);
             Ok((i, {
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,
                         r1: 0x0, //Unused

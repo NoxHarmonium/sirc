@@ -23,5 +23,5 @@ actual.hex: mem.bin expected.hex
 	diff expected.hex actual.hex
 
 clean:
-	rm -f byte-sieve.bin byte-sieve.o actual.hex mem.bin
+	rm -f byte-sieve.bin byte-sieve.o actual.hex mem.bin byte-sieve.bin.dbg
 	cargo clean

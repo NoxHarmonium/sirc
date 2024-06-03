@@ -5,7 +5,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 
 use crate::parsers::data::DataType;
 use crate::parsers::instruction::{DataToken, Token};
-use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
+use crate::types::object::{ObjectDebugInfo, ObjectDefinition, SymbolDefinition, SymbolRef};
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 
 use std::collections::HashMap;
@@ -97,12 +97,22 @@ fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
     }
 }
 
-pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
+pub fn build_object(
+    tokens: Vec<Token>,
+    original_filename: String,
+    original_input: String,
+) -> ObjectDefinition {
+    let original_input_length = original_input.len();
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut symbol_refs: Vec<SymbolRef> = vec![];
     let mut placeholders: HashMap<String, u32> = HashMap::new();
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
+    let mut debug_info = ObjectDebugInfo {
+        original_filename,
+        original_input,
+        ..Default::default()
+    };
 
     for token in tokens {
         let program_offset: usize = offset as usize / 4;
@@ -125,6 +135,11 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 } else {
                     data.instruction
                 };
+
+                let file_position = original_input_length - data.input_length;
+                debug_info
+                    .program_to_input_offset_mapping
+                    .insert(file_position, program_offset);
 
                 program[program_offset] = encode_instruction(&instruction);
 
@@ -167,5 +182,6 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
         symbols,
         symbol_refs,
         program: bytes,
+        debug_info: Some(debug_info),
     }
 }

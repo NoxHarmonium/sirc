@@ -99,6 +99,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_immediate_instruction(offset.to_owned()),
                     ..Default::default()
                 },
@@ -106,6 +107,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::SymbolRef(ref_token) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_immediate_instruction(0x0), // 0x0 will be replaced by linker
                     symbol_ref: Some(override_ref_token_type_if_implied(
                         ref_token,
@@ -117,6 +119,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::PlaceHolder(placeholder_name) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_immediate_instruction(0x0), // 0x0 will be replaced by linker
                     placeholder_name: Some(placeholder_name.clone()),
                     ..Default::default()
@@ -127,6 +130,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_indirect_immediate_instruction(
                         offset.to_owned(),
                         address_register,
@@ -137,6 +141,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::SymbolRef(ref_token) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_indirect_immediate_instruction(
                         0x0,
                         address_register,
@@ -151,6 +156,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::PlaceHolder(placeholder_name) => Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: construct_branch_indirect_immediate_instruction(
                         0x0,
                         address_register,
@@ -164,6 +170,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction_long_register(tag.as_str()),
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -187,6 +194,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length: i.len(),
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction_long_register(tag.as_str()),
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),

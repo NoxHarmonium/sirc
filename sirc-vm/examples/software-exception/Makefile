@@ -15,5 +15,5 @@ check: run
 	diff -u ./software-exception.register-dump ./software-exception.register-dump-expected
 
 clean:
-	rm -f software-exception.bin software-exception.o software-exception.register-dump
+	rm -f software-exception.bin software-exception.o software-exception.register-dump software-exception.bin.dbg
 	cargo clean
