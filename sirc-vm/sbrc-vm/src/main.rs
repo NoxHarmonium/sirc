@@ -143,7 +143,8 @@ fn main() {
 // TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
 fn setup_vm(args: Args) -> Vm {
-    let master_clock_freq = 4_000_000;
+    // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
+    let master_clock_freq = 8_000_000;
 
     let clock_peripheral = ClockPeripheral {
         master_clock_freq,
