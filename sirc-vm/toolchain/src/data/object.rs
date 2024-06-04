@@ -1,12 +1,15 @@
-use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
-    INSTRUCTION_SIZE_BYTES,
-};
-
 use crate::parsers::data::DataType;
 use crate::parsers::instruction::{DataToken, Token};
-use crate::types::object::{ObjectDebugInfo, ObjectDefinition, SymbolDefinition, SymbolRef};
+use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
+
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
+    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
+    INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
+};
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
+use sbrc_vm::debug_adapter::types::ObjectDebugInfo;
+
+use sha2::{Digest, Sha256};
 
 use std::collections::HashMap;
 
@@ -137,9 +140,11 @@ pub fn build_object(
                 };
 
                 let file_position = original_input_length - data.input_length;
-                debug_info
-                    .program_to_input_offset_mapping
-                    .insert(file_position, program_offset);
+                debug_info.program_to_input_offset_mapping.insert(
+                    // TODO: Yet another unwrap that needs to be handled
+                    (u32::try_from(program_offset).unwrap()) * INSTRUCTION_SIZE_WORDS,
+                    file_position,
+                );
 
                 program[program_offset] = encode_instruction(&instruction);
 
@@ -177,6 +182,11 @@ pub fn build_object(
         .iter()
         .flat_map(std::borrow::ToOwned::to_owned)
         .collect();
+
+    // Calculate hash as a stable way to refer to sources
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    debug_info.checksum = format!("{:X}", hasher.finalize());
 
     ObjectDefinition {
         symbols,

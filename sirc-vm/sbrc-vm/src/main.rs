@@ -11,11 +11,15 @@
     // I have a lot of temporary panics for debugging that will probably be cleaned up
     clippy::missing_panics_doc
 )]
-#![deny(warnings)]
+// #![deny(warnings)]
 
-use std::{cell::RefCell, path::PathBuf, process::exit};
+use std::{cell::RefCell, path::PathBuf, process::exit, thread};
 
-use log::{info, Level};
+use clap::Parser;
+use log::{error, info, Level};
+
+use sbrc_vm::debug_adapter::server::{create_server_channels, read_debug_map, start_server};
+use sbrc_vm::{run_vm, run_vm_debug, Vm};
 
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
@@ -29,9 +33,6 @@ static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
 static VIDEO_SEGMENT: &str = "VIDEO";
-
-use clap::Parser;
-use sbrc_vm::{run_vm, Vm};
 
 fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
     let segment_args: Vec<_> = s.split(':').collect();
@@ -109,6 +110,9 @@ pub struct Args {
 
     #[clap(short, long)]
     enable_video: bool,
+
+    #[clap(short, long)]
+    debug: bool,
 }
 
 fn main() {
@@ -134,15 +138,39 @@ fn main() {
         .unwrap();
 
     let dump_file = args.register_dump_file.clone();
-    let vm = setup_vm(args);
-    run_vm(&vm, dump_file);
+    let vm = setup_vm(&args);
+
+    // TODO Debug Adapter:
+    // 1. Setup channels. VM needs a map of breakpoints (set in PC address) and inits to 0x0 (or whatever the VM starts at)
+    // 1a. Main VM thread will run until condition (e.g. breakpoint hit) and then send message to DAP (paused)
+    // 1b. DAP can send messages to VM (VM stuck in listening loop) until DAP sends continue command where VM will running
+    // VM should only break on cycle zero of execution unit (ignore exception unit for now)
+
+    if args.debug {
+        let channels = create_server_channels();
+
+        let program_debug_info = read_debug_map(args.program_file).unwrap();
+        let debugger_join_handle = thread::spawn(move || {
+            let result = start_server(channels.debugger, &program_debug_info);
+            if let Err(error) = result {
+                error!("Error occurred in debug server: {error:?}");
+            }
+        });
+
+        run_vm_debug(&vm, dump_file, channels.vm);
+        info!("Waiting on debugger thread...");
+        debugger_join_handle.join().unwrap();
+    } else {
+        run_vm(&vm, dump_file);
+    }
+
     info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
     exit(0);
 }
 
 // TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
-fn setup_vm(args: Args) -> Vm {
+fn setup_vm(args: &Args) -> Vm {
     // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
     let master_clock_freq = 8_000_000;
 
@@ -194,7 +222,7 @@ fn setup_vm(args: Args) -> Vm {
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
-    for segment in args.segment {
+    for segment in args.segment.clone() {
         if let Some(mapped_file) = segment.mapped_file {
             let mm_ram_device = new_ram_device_file_mapped(mapped_file);
             bus_peripheral.map_segment(

@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
+use sbrc_vm::debug_adapter::types::ObjectDebugInfo;
 use toolchain::types::object::{
-    merge_object_definitions, ObjectDebugInfo, ObjectDefinition, RefType, SymbolDefinition,
-    SymbolRef,
+    merge_object_definitions, ObjectDefinition, RefType, SymbolDefinition, SymbolRef,
 };
 
 #[test]
@@ -41,7 +41,7 @@ fn test_merge_object_definition_single_definition_untouched() {
     let (merged, merged_debug_info) = merge_object_definitions(&[first_def.clone()]);
 
     assert_eq!(first_def, merged);
-    assert_eq!(0, merged_debug_info.len());
+    assert_eq!(0, merged_debug_info.debug_info_map.len());
 }
 
 #[test]
@@ -78,6 +78,7 @@ fn test_merge_object_definitions_counts() {
             original_filename: "UNIT_TEST_FIRST_DEF".to_string(),
             original_input: "some original input".to_string(),
             program_to_input_offset_mapping: BTreeMap::from([(1, 2), (3, 4)]),
+            checksum: "ABCD".to_string(),
         }),
     };
     let second_def = ObjectDefinition {
@@ -112,6 +113,7 @@ fn test_merge_object_definitions_counts() {
             original_filename: "UNIT_TEST_SECOND_DEF".to_string(),
             original_input: "some original input".to_string(),
             program_to_input_offset_mapping: BTreeMap::from([(6, 7), (8, 9)]),
+            checksum: "ABCD".to_string(),
         }),
     };
     let (merged, merged_debug_info) = merge_object_definitions(&[first_def, second_def]);
@@ -119,5 +121,5 @@ fn test_merge_object_definitions_counts() {
     assert_eq!(4, merged.symbols.len());
     assert_eq!(4, merged.symbol_refs.len());
     assert_eq!(32, merged.program.len());
-    assert_eq!(2, merged_debug_info.keys().len());
+    assert_eq!(2, merged_debug_info.debug_info_map.keys().len());
 }

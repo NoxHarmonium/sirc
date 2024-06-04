@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
+use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_WORDS;
 use serde::{Deserialize, Serialize};
+
+use sbrc_vm::debug_adapter::types::{ObjectDebugInfo, ObjectDebugInfoMap, ProgramDebugInfo};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum RefType {
@@ -33,13 +36,6 @@ pub struct SymbolRef {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Default)]
-pub struct ObjectDebugInfo {
-    pub original_filename: String,
-    pub original_input: String,
-    pub program_to_input_offset_mapping: BTreeMap<usize, usize>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ObjectDefinition {
     // The offset in these definitions is the location of the symbol
     pub symbols: Vec<SymbolDefinition>,
@@ -51,10 +47,10 @@ pub struct ObjectDefinition {
 
 pub fn merge_object_definitions(
     object_definitions: &[ObjectDefinition],
-) -> (ObjectDefinition, BTreeMap<u32, ObjectDebugInfo>) {
+) -> (ObjectDefinition, ProgramDebugInfo) {
     let mut output: ObjectDefinition = ObjectDefinition::default();
 
-    let mut debug_info_map: BTreeMap<u32, ObjectDebugInfo> = BTreeMap::new();
+    let mut debug_info_map: ObjectDebugInfoMap = BTreeMap::new();
 
     for object_definition in object_definitions {
         let prev_offset: u32 = output
@@ -86,17 +82,24 @@ pub fn merge_object_definitions(
         output.symbol_refs.extend(offset_symbol_refs);
         output.program.extend(object_definition.program.clone());
         if let Some(debug_info) = &object_definition.debug_info {
-            let mut offset_mapping = debug_info.program_to_input_offset_mapping.clone();
-            for value in offset_mapping.values_mut() {
-                *value += prev_offset as usize;
-            }
+            let prev_offset_words = prev_offset / INSTRUCTION_SIZE_WORDS;
+            let offset_mapping = debug_info
+                .program_to_input_offset_mapping
+                .iter()
+                .map(|(k, v)| (k + prev_offset_words, *v))
+                .collect();
+            println!(
+                "object: {} prev_offset: {prev_offset}",
+                debug_info.original_filename
+            );
             let offset_debug_info = ObjectDebugInfo {
                 original_filename: debug_info.original_filename.clone(),
                 original_input: debug_info.original_input.clone(),
                 program_to_input_offset_mapping: offset_mapping,
+                checksum: debug_info.checksum.clone(),
             };
-            debug_info_map.insert(prev_offset, offset_debug_info);
+            debug_info_map.insert(prev_offset_words, offset_debug_info);
         }
     }
-    (output, debug_info_map)
+    (output, ProgramDebugInfo { debug_info_map })
 }

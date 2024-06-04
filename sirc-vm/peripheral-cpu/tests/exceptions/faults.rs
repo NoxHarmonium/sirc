@@ -18,6 +18,8 @@ use peripheral_cpu::{
     },
 };
 
+// TODO: Check all tests have the "_test" prefix
+
 use crate::exceptions::common::{build_test_instruction, expectation, run_expectations};
 
 use super::common::Expectation;

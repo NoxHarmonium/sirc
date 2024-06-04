@@ -15,6 +15,11 @@ peripheral_bus = { path = "../peripheral-bus" }
 peripheral_clock = { path = "../peripheral-clock" }
 peripheral_cpu = { path = "../peripheral-cpu" }
 stderrlog = "0.6.0"
+dap = "0.4.1-alpha1"
+thiserror = "1.0.61"
+postcard = { version = "1.0.8", features = ["alloc"] }
+serde = "1.0.200"
+line-col = "0.2.1"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
