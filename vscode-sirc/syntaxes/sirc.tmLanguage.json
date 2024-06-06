@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SIRC Assembly",
+  "patterns": [
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    }
+  ],
+  "repository": {
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.sirc",
+          "match": "\\b(\\.EQU|\\.DQ|\\.DW|\\.DB|\\.ORG|)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.sirc",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.sirc",
+          "match": "\\\\."
+        }
+      ]
+    }
+  },
+  "scopeName": "source.sirc-asm"
+}

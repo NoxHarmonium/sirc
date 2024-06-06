@@ -5,6 +5,9 @@
     },
     {
       "path": ".github"
+    },
+    {
+      "path": "vscode-sirc"
     }
   ],
   "settings": {}
