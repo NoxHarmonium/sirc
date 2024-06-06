@@ -224,7 +224,7 @@ impl BusPeripheral {
         let master_assertions = self.bus_master.poll(assertions, true);
 
         let segments = &mut self.segments;
-        segments
+        let out = segments
             .iter_mut()
             .map(|segment| {
                 let selected = segment.address_is_in_segment_range(master_assertions.address);
@@ -240,9 +240,14 @@ impl BusPeripheral {
                     // (I don't really want to implement complex error signalling like the 68k has)
                     bus_error: prev.bus_error | curr.bus_error,
                     data: prev.data | curr.data,
+                    device_was_activated: prev.device_was_activated | curr.device_was_activated,
                     ..prev
                 }
-            })
+            });
+        if !out.device_was_activated {
+            warn!("No device was mapped for address [0x{:X}]", out.address);
+        }
+        out
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed

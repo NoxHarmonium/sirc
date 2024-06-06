@@ -18,6 +18,7 @@ pub enum BusOperation {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BusAssertions {
     pub address: u32,
     pub data: u16,
@@ -34,6 +35,10 @@ pub struct BusAssertions {
     /// Could be used as a hint to a memory controller that the next fetch will be sequential
     /// At the moment, just used as a checkpoint for the debugger
     pub instruction_fetch: bool,
+    /// Set to true if any device was mapped to the address during polling
+    /// Currently used to warn if no device is mapped for an address range,
+    /// probably wouldn't have an equivalent in hardware
+    pub device_was_activated: bool,
 
     /// Set to true to exit the simulation with no error code
     /// Something that only exists in software and required because the hardware never stops

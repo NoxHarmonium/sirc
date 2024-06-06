@@ -10,6 +10,7 @@ use peripheral_cpu::registers::FullAddress;
 use peripheral_cpu::CYCLES_PER_INSTRUCTION;
 use peripheral_cpu::{new_cpu_peripheral, registers::Registers, CpuPeripheral};
 
+static DUMMY_SEGMENT: &str = "DUMMY";
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static SCRATCH_SEGMENT: &str = "SCRATCH";
 
@@ -34,6 +35,16 @@ pub fn set_up_instruction_test(
     let mut program_vector = vec![0; ((program_offset & 0xFFFF) * 2) as usize];
     program_vector.extend(program_data);
 
+    // TODO: This segment is just to suppress "No device was mapped for address [0x0]" warnings
+    // TODO: Work out why tests are trying to access the address 0x0
+    bus_peripheral.map_segment(
+        DUMMY_SEGMENT,
+        // TODO: This should be passed in already as segment address
+        0x0,
+        u16::MAX as u32,
+        false,
+        Box::new(new_stub_memory_mapped_device()),
+    );
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         // TODO: This should be passed in already as segment address
