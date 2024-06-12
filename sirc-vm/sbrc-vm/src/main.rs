@@ -15,11 +15,12 @@
 
 use std::{cell::RefCell, path::PathBuf, process::exit};
 
-use device_debug::new_debug_device;
 use log::{info, Level};
 
+use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
+use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
@@ -27,6 +28,7 @@ use peripheral_cpu::new_cpu_peripheral;
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
+static VIDEO_SEGMENT: &str = "VIDEO";
 
 use clap::Parser;
 use sbrc_vm::{run_vm, Vm};
@@ -104,6 +106,9 @@ pub struct Args {
 
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
+
+    #[clap(short, long)]
+    enable_video: bool,
 }
 
 fn main() {
@@ -116,6 +121,7 @@ fn main() {
             "device_debug",
             "device_ram",
             "device_terminal",
+            "device_video",
             "peripheral_bus",
             "peripheral_clock",
             "peripheral_cpu",
@@ -137,6 +143,7 @@ fn main() {
 // TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
 fn setup_vm(args: Args) -> Vm {
+    // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
     let master_clock_freq = 8_000_000;
 
     let clock_peripheral = ClockPeripheral {
@@ -153,6 +160,13 @@ fn setup_vm(args: Args) -> Vm {
     let debug_device = new_debug_device();
 
     bus_peripheral.map_segment(
+        PROGRAM_SEGMENT,
+        0x0,
+        0xFFFF,
+        false,
+        Box::new(program_ram_device),
+    );
+    bus_peripheral.map_segment(
         TERMINAL_SEGMENT,
         0x000A_0000,
         0xF,
@@ -167,13 +181,17 @@ fn setup_vm(args: Args) -> Vm {
         Box::new(debug_device),
     );
 
-    bus_peripheral.map_segment(
-        PROGRAM_SEGMENT,
-        0x0,
-        0xFFFF,
-        false,
-        Box::new(program_ram_device),
-    );
+    if args.enable_video {
+        let video_device = new_video_device();
+        bus_peripheral.map_segment(
+            VIDEO_SEGMENT,
+            0x000C_0000,
+            0xFFFF,
+            true,
+            Box::new(video_device),
+        );
+    }
+
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
     for segment in args.segment {

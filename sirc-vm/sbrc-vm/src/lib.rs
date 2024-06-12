@@ -44,9 +44,15 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
 
     let mut bus_assertions = BusAssertions::default();
     // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
-    let execute = |_| {
-        bus_assertions = bus_peripheral.poll_all(bus_assertions);
-        !bus_assertions.exit_simulation
+    let execute = |clocks_until_vsync| {
+        let mut clocks = 0;
+        loop {
+            bus_assertions = bus_peripheral.poll_all(bus_assertions);
+            clocks += 1;
+            if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
+                return (bus_assertions.exit_simulation, clocks);
+            }
+        }
     };
 
     clock_peripheral.start_loop(execute);

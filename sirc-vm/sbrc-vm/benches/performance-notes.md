@@ -11,6 +11,14 @@
 
 Roughly 1.6220 ms -> 1.0487 ms = 35% speedup!
 
+### 30th May 2024
+
+1. Tried to rework the main loop so that the CPU could be polled at the same time as the other devices. I realised this can't work because the CPU is has to output an address for the devices for the devices to output data. In a real system everything would happen at once and then settle and then be latched at the next clock, but in a simulation on a turing machine I don't think this can be done efficiently.
+
+### 31st May 2024
+
+1. Did a refactor to get better reporting on simulation time vs expected time and got 4% performance improvement. I think because the bus polling loop was moved to the CPU module and so the hot path doesn't go over the crate boundary. It might mean that there will be less of a performance hit going to thin LTO now too
+
 ## Observations
 
 ### Byte Sieve

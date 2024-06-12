@@ -6,6 +6,7 @@ members = [
     "device-debug",
     "device-ram",
     "device-terminal",
+    "device-video",
     "peripheral-bus",
     "peripheral-clock",
     "peripheral-cpu",
