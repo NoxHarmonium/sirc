@@ -25,7 +25,7 @@
           "sirc"
         ],
         "label": "SIRC VM Debugger",
-        "program": "./test.js",
+        "program": "./debug-server.js",
         "runtime": "node",
         "initialConfigurations": [
           {
@@ -52,14 +52,16 @@
     "activationEvents": [
       "onDebug",
       "onDebugResolve:sirc",
-      "onDebugDynamicConfigurations:sirc"
+      "onDebugDynamicConfigurations:sirc",
+      "onLanguage:sirc",
+      "workspaceContains:**/*.asm"
     ],
     "languages": [
       {
         "id": "sirc",
         "aliases": [
           "SIRC Assembly",
-          "sirc"
+          "SIRC"
         ],
         "extensions": [
           ".asm"
