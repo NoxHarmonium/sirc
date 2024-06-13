@@ -1,5 +1,6 @@
 .EQU $FALSE                         #0x0
 .EQU $TRUE                          #0x1
+.EQU $MAX_FRAMES                    #60
 
 ;; Segments
 .EQU $PROGRAM_SEGMENT               #0x0000
@@ -39,6 +40,13 @@ BRSR @setup_serial
 
 ; Wait for exception (will spin until interrupted)
 COPI    r1, #0x1900
+
+; Exit when 60 frames have been rendered so it doesn't loop forever
+LOAD    ah, $SCRATCH_SEGMENT
+LOAD    al, $FRAME_COUNTER
+LOAD    r1, (#0, a)
+CMPI    r1, $MAX_FRAMES
+BRAN|>= @finish
 
 ; TODO: Uncomment when program will actually terminate
 BRAN @wait_for_interrupt
