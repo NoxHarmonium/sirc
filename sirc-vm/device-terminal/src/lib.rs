@@ -126,7 +126,7 @@ impl Device for TerminalDevice {
         }
 
         if self.control_registers.send_enabled == REGISTER_TRUE
-            && should_activate
+        // TODO: why does adding `&& should_activate` here make it not print anything with certain clock speeds?
             && self.control_registers.send_pending == REGISTER_TRUE
         {
             print!("{}", char::from(self.control_registers.send_data as u8));
