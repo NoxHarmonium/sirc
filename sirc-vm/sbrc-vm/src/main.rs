@@ -26,7 +26,7 @@ use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
 use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
-use peripheral_clock::ClockPeripheral;
+use peripheral_clock::new_clock_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
@@ -172,12 +172,10 @@ fn main() {
 #[must_use]
 fn setup_vm(args: &Args) -> Vm {
     // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
-    let master_clock_freq = 8_000_000;
+    let master_clock_freq = 25_000_000;
+    let vsync_frequency = 50;
 
-    let clock_peripheral = ClockPeripheral {
-        master_clock_freq,
-        vsync_frequency: 50,
-    };
+    let clock_peripheral = new_clock_peripheral(master_clock_freq, vsync_frequency);
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     // Jump to reset vector
     cpu_peripheral.reset();
@@ -210,7 +208,11 @@ fn setup_vm(args: &Args) -> Vm {
     );
 
     if args.enable_video {
-        let video_device = new_video_device();
+        let video_device = new_video_device(
+            // TODO: why the mix of usize and u32?
+            master_clock_freq as usize,
+            clock_peripheral.vsync_frequency as usize,
+        );
         bus_peripheral.map_segment(
             VIDEO_SEGMENT,
             0x000C_0000,
@@ -249,5 +251,3 @@ fn setup_vm(args: &Args) -> Vm {
         clock_peripheral: RefCell::new(clock_peripheral),
     }
 }
-
-// TODO: Probs need to a step debugger

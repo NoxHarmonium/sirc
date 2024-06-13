@@ -151,9 +151,7 @@ pub fn get_cause_register_value(
             Faults::InvalidOpCode => INVALID_OPCODE_FAULT,
             Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
             Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
-            Faults::LevelFiveInterruptConflict => {
-                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
-            }
+            Faults::LevelFiveInterruptConflict => LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT,
         };
 
         return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
