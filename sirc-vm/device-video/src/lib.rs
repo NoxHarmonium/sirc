@@ -12,6 +12,11 @@ use peripheral_bus::{
 // hsync frequency = 15625hz (64 us) - 12us of hsync/backporch / 52us of colour info
 // 312 lines
 
+// 25_000_000 / (1603 * 312)
+// TODO: This couples the VM to the video device
+// TODO: Should this be calculated?
+pub const VSYNC_FREQUENCY: f64 = 49.986_403_7_f64;
+
 // 64kb = 32kw
 const VRAM_SIZE: usize = 32_000;
 // PAL can have a higher resolution but to keep things simple
@@ -43,7 +48,7 @@ pub struct VideoDevice {
 }
 
 #[must_use]
-pub fn new_video_device(master_clock_freq: usize, vsync_frequency: usize) -> VideoDevice {
+pub fn new_video_device(master_clock_freq: usize, vsync_frequency: f64) -> VideoDevice {
     let mut window = Window::new(
         "SIRC - Video Device",
         WIDTH_PIXELS,
@@ -52,10 +57,11 @@ pub fn new_video_device(master_clock_freq: usize, vsync_frequency: usize) -> Vid
     )
     .unwrap();
 
-    window.set_target_fps(vsync_frequency);
+    window.set_target_fps(vsync_frequency.floor() as usize);
 
     let pixels = WIDTH_PIXELS * HEIGHT_PIXELS;
-    let clocks_per_line = (master_clock_freq / vsync_frequency).div_ceil(TOTAL_LINES);
+    let clocks_per_line =
+        ((master_clock_freq as f64 / vsync_frequency) / TOTAL_LINES as f64).ceil() as usize;
     assert_eq!(
         clocks_per_line, 1603,
         "Only a master frequency of 25mhz and a vsync frequency of 50hz is currently supported."
@@ -109,16 +115,18 @@ impl Device for VideoDevice {
             }
         }
 
-        self.clock += 1;
-
-        BusAssertions {
+        let assertions = BusAssertions {
             interrupt_assertion: if self.clock == 0 {
                 VSYNC_INTERRUPT
             } else {
                 0x0
             },
             ..self.perform_bus_io(bus_assertions, selected)
-        }
+        };
+
+        self.clock += 1;
+
+        assertions
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self

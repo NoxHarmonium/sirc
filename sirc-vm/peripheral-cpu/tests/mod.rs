@@ -25,8 +25,8 @@ fn init() {
             "device_debug",
             "device_ram",
             "device_terminal",
+            "device_video",
             "peripheral_bus",
-            "peripheral_clock",
             "peripheral_cpu",
         ])
         .quiet(false)

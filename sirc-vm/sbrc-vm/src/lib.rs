@@ -28,14 +28,14 @@ use std::{
 use debug_adapter::types::{
     BreakpointRef, DebuggerMessage, ResumeCondition, VmChannels, VmMessage, VmPauseReason, VmState,
 };
-use device_video::VSYNC_INTERRUPT;
+use device_video::{VSYNC_FREQUENCY, VSYNC_INTERRUPT};
 use log::{error, info};
 use peripheral_bus::{
     device::{BusAssertions, Device},
     BusPeripheral,
 };
-use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::{registers::FullAddressRegisterAccess, CpuPeripheral};
+use utils::frame_reporter::start_loop;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -51,7 +51,6 @@ pub struct DebugState {
 
 pub struct Vm {
     pub bus_peripheral: RefCell<BusPeripheral>,
-    pub clock_peripheral: RefCell<ClockPeripheral>,
 }
 
 #[allow(clippy::borrowed_box)]
@@ -183,7 +182,6 @@ pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut Deb
 pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmChannels) {
     // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
-    let clock_peripheral = vm.clock_peripheral.borrow();
 
     let mut debug_state = DebugState {
         breakpoints: HashSet::new(),
@@ -196,7 +194,7 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
 
     let mut bus_assertions = BusAssertions::default();
     // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
-    let execute = |clocks_until_vsync| {
+    let execute = || {
         let mut clocks = 0;
         loop {
             bus_assertions = bus_peripheral.poll_all(bus_assertions);
@@ -206,16 +204,15 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
             }
 
             clocks += 1;
-
-            if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
-                bus_assertions.interrupt_assertion |= VSYNC_INTERRUPT;
-
+            if bus_assertions.interrupt_assertion & VSYNC_INTERRUPT > 0
+                || bus_assertions.exit_simulation
+            {
                 return (bus_assertions.exit_simulation, clocks);
             }
         }
     };
 
-    clock_peripheral.start_loop(execute);
+    start_loop(VSYNC_FREQUENCY, execute);
 
     if let Some(register_dump_file) = register_dump_file {
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
@@ -237,25 +234,23 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
 pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
     // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
-    let clock_peripheral = vm.clock_peripheral.borrow();
-
     let mut bus_assertions = BusAssertions::default();
     // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
-    let execute = |clocks_until_vsync| {
+    let execute = || {
         let mut clocks = 0;
         loop {
             bus_assertions = bus_peripheral.poll_all(bus_assertions);
 
             clocks += 1;
-            if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
-                bus_assertions.interrupt_assertion |= VSYNC_INTERRUPT;
-
+            if bus_assertions.interrupt_assertion & VSYNC_INTERRUPT > 0
+                || bus_assertions.exit_simulation
+            {
                 return (bus_assertions.exit_simulation, clocks);
             }
         }
     };
 
-    clock_peripheral.start_loop(execute);
+    start_loop(VSYNC_FREQUENCY, execute);
 
     if let Some(register_dump_file) = register_dump_file {
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
