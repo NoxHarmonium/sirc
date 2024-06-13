@@ -15,6 +15,8 @@ const VRAM_SIZE: usize = 32_000;
 const WIDTH_PIXELS: usize = 256;
 const HEIGHT_PIXELS: usize = 224;
 
+pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
+
 /// Representation of the application state. In this example, a box will bounce around the screen.
 
 pub struct VideoDevice {
@@ -47,7 +49,7 @@ pub fn new_video_device() -> VideoDevice {
 
 impl Device for VideoDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        if self.window.is_open() {
+        if self.window.is_open() && bus_assertions.interrupt_assertion == VSYNC_INTERRUPT {
             for i in self.buffer.iter_mut() {
                 *i += 1; // write something more funny here!
             }

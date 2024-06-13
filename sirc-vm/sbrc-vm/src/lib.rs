@@ -28,6 +28,7 @@ use std::{
 use debug_adapter::types::{
     BreakpointRef, DebuggerMessage, ResumeCondition, VmChannels, VmMessage, VmPauseReason, VmState,
 };
+use device_video::VSYNC_INTERRUPT;
 use log::{error, info};
 use peripheral_bus::{
     device::{BusAssertions, Device},
@@ -203,7 +204,10 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
             }
 
             clocks += 1;
+
             if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
+                bus_assertions.interrupt_assertion |= VSYNC_INTERRUPT;
+
                 return (bus_assertions.exit_simulation, clocks);
             }
         }
@@ -242,6 +246,8 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
 
             clocks += 1;
             if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
+                bus_assertions.interrupt_assertion |= VSYNC_INTERRUPT;
+
                 return (bus_assertions.exit_simulation, clocks);
             }
         }

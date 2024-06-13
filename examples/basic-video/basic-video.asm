@@ -19,7 +19,7 @@
 .ORG 0x0000
 .DQ @start
 
-; v_sync interrupt (p5)
+; v_sync interrupt (l4/p5)
 .ORG 0x0040
 .DQ @exception_handler_p5
 
@@ -41,7 +41,7 @@ BRSR @setup_serial
 COPI    r1, #0x1900
 
 ; TODO: Uncomment when program will actually terminate
-; BRAN @wait_for_interrupt
+BRAN @wait_for_interrupt
 
 :finish
 
