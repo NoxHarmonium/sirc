@@ -28,5 +28,5 @@ check: run
 	diff -u ./faults.register-dump ./faults.register-dump-expected
 
 clean:
-	rm -f faults.bin faults.o faults-high.bin faults-high.o faults.register-dump faults.bin.dbg
+	rm -f faults.bin faults.o faults-high.bin faults-high.o faults.register-dump faults.bin.dbg faults-high.bin.dbg
 	cargo clean ${CARGO_ARGS}
