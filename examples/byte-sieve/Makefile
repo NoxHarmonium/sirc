@@ -1,11 +1,10 @@
 # Makes the "byte-sieve" example binary file to be executed by the VM
 
 CARGO_ARGS="--manifest-path=../../sirc-vm/Cargo.toml"
+RUN_ARGS=-vv --program-file ./byte-sieve.bin --segment file:00F00000:FFFF:./mem.bin
 
 all: byte-sieve.bin
 
-run: mem.bin
-check: actual.hex
 
 byte-sieve.o: byte-sieve.asm
 	cargo run ${CARGO_ARGS} --bin assembler -- --input-file byte-sieve.asm --output-file byte-sieve.o
@@ -13,12 +12,17 @@ byte-sieve.o: byte-sieve.asm
 byte-sieve.bin: byte-sieve.o
 	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file byte-sieve.bin byte-sieve.o
 
-mem.bin: byte-sieve.bin
+run: byte-sieve.bin
 	rm -f ./mem.bin
 	truncate -s 131070 ./mem.bin
-	cargo run ${CARGO_ARGS} --bin sbrc_vm -- -vv --program-file ./byte-sieve.bin --segment file:00F00000:FFFF:./mem.bin
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS}
 
-actual.hex: mem.bin expected.hex
+debug: byte-sieve.bin
+	rm -f ./mem.bin
+	truncate -s 131070 ./mem.bin
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS} --debug
+
+check: run expected.hex
 	hexdump -C  ./mem.bin > actual.hex
 	diff expected.hex actual.hex
 

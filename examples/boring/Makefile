@@ -1,6 +1,7 @@
 # Makes the "boring" example binary file to be executed by the VM
 
 CARGO_ARGS="--manifest-path=../../sirc-vm/Cargo.toml"
+RUN_ARGS=-vv --program-file ./boring.bin --register-dump-file ./boring.register-dump
 
 all: boring.bin
 
@@ -11,7 +12,10 @@ boring.bin: boring.o
 	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file boring.bin boring.o
 
 run: boring.bin
-	cargo run ${CARGO_ARGS} --bin sbrc_vm -- -vv --program-file ./boring.bin --register-dump-file ./boring.register-dump
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS}
+
+debug: boring.bin
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./boring.register-dump ./boring.register-dump-expected

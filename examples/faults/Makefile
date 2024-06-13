@@ -1,6 +1,7 @@
 # Makes the "faults" example binary file to be executed by the VM
 
 CARGO_ARGS="--manifest-path=../../sirc-vm/Cargo.toml"
+RUN_ARGS=-vv --program-file ./faults.bin --segment SCRATCH:00010000:FFFF --segment FAULTS_HIGH:00020000:FFFF:./faults-high.bin --register-dump-file ./faults.register-dump
 
 all: faults.bin
 
@@ -18,7 +19,10 @@ faults-high.bin: faults-high.o
 	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file faults-high.bin faults-high.o
 
 run: faults.bin faults-high.bin
-	cargo run ${CARGO_ARGS} --bin sbrc_vm -- -vvv --program-file ./faults.bin --segment SCRATCH:00010000:FFFF --segment FAULTS_HIGH:00020000:FFFF:./faults-high.bin --register-dump-file ./faults.register-dump
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS}
+
+debug: faults.bin faults-high.bin
+	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./faults.register-dump ./faults.register-dump-expected
