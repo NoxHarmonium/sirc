@@ -513,6 +513,7 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
 
 fn parse_comment_(i: &str) -> AsmResult<Token> {
     // TODO: Should there be a more flexible parser for eol?
+    // TODO: Comments with nothing after the semicolon currently fail
     map(pair(char(';'), cut(is_not("\n\r"))), |_| Token::Comment)(i)
 }
 

@@ -65,4 +65,4 @@ jobs:
 
       - name: Run ${{ matrix.example-name }}
         run: make clean check
-        working-directory: ./sirc-vm/examples/${{ matrix.example-name }}
+        working-directory: ./examples/${{ matrix.example-name }}
