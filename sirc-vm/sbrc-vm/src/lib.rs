@@ -96,27 +96,29 @@ pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugSta
 pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut DebugState) {
     let cpu = cpu_from_bus(bus_peripheral);
     let pc = cpu.registers.get_full_pc_address();
-    let vm_state = VmState {
-        pc,
-        // TODO: More variables and move this somewhere
-        variables: BTreeMap::from([
-            ("sr".to_string(), format!("0x{:X}", cpu.registers.sr)),
-            ("r1".to_string(), format!("0x{:X}", cpu.registers.r1)),
-            ("r2".to_string(), format!("0x{:X}", cpu.registers.r2)),
-            ("r3".to_string(), format!("0x{:X}", cpu.registers.r3)),
-            ("r4".to_string(), format!("0x{:X}", cpu.registers.r4)),
-            ("r5".to_string(), format!("0x{:X}", cpu.registers.r5)),
-            ("r6".to_string(), format!("0x{:X}", cpu.registers.r6)),
-            ("r7".to_string(), format!("0x{:X}", cpu.registers.r7)),
-            ("lh".to_string(), format!("0x{:X}", cpu.registers.lh)),
-            ("ll".to_string(), format!("0x{:X}", cpu.registers.ll)),
-            ("ah".to_string(), format!("0x{:X}", cpu.registers.ah)),
-            ("al".to_string(), format!("0x{:X}", cpu.registers.al)),
-            ("sh".to_string(), format!("0x{:X}", cpu.registers.sh)),
-            ("sl".to_string(), format!("0x{:X}", cpu.registers.sl)),
-            ("ph".to_string(), format!("0x{:X}", cpu.registers.ph)),
-            ("pl".to_string(), format!("0x{:X}", cpu.registers.pl)),
-        ]),
+    let capture_vm_state = || {
+        VmState {
+            pc,
+            // TODO: More variables and move this somewhere
+            variables: BTreeMap::from([
+                ("sr".to_string(), format!("0x{:X}", cpu.registers.sr)),
+                ("r1".to_string(), format!("0x{:X}", cpu.registers.r1)),
+                ("r2".to_string(), format!("0x{:X}", cpu.registers.r2)),
+                ("r3".to_string(), format!("0x{:X}", cpu.registers.r3)),
+                ("r4".to_string(), format!("0x{:X}", cpu.registers.r4)),
+                ("r5".to_string(), format!("0x{:X}", cpu.registers.r5)),
+                ("r6".to_string(), format!("0x{:X}", cpu.registers.r6)),
+                ("r7".to_string(), format!("0x{:X}", cpu.registers.r7)),
+                ("lh".to_string(), format!("0x{:X}", cpu.registers.lh)),
+                ("ll".to_string(), format!("0x{:X}", cpu.registers.ll)),
+                ("ah".to_string(), format!("0x{:X}", cpu.registers.ah)),
+                ("al".to_string(), format!("0x{:X}", cpu.registers.al)),
+                ("sh".to_string(), format!("0x{:X}", cpu.registers.sh)),
+                ("sl".to_string(), format!("0x{:X}", cpu.registers.sl)),
+                ("ph".to_string(), format!("0x{:X}", cpu.registers.ph)),
+                ("pl".to_string(), format!("0x{:X}", cpu.registers.pl)),
+            ]),
+        }
     };
 
     // Check for pending messages (e.g. update breakpoints)
@@ -143,7 +145,7 @@ pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut Deb
             .tx
             .send(VmMessage::Paused(
                 VmPauseReason::Breakpoint(breakpoint.clone()),
-                vm_state,
+                capture_vm_state(),
             ))
             .unwrap();
         debug_state.paused = true;
@@ -151,7 +153,7 @@ pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut Deb
         debug_state
             .channels
             .tx
-            .send(VmMessage::Paused(VmPauseReason::Init, vm_state))
+            .send(VmMessage::Paused(VmPauseReason::Init, capture_vm_state()))
             .unwrap();
         debug_state.paused = true;
         debug_state.should_pause_for_init = false;
@@ -159,7 +161,7 @@ pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut Deb
         debug_state
             .channels
             .tx
-            .send(VmMessage::Paused(VmPauseReason::Step, vm_state))
+            .send(VmMessage::Paused(VmPauseReason::Step, capture_vm_state()))
             .unwrap();
         debug_state.paused = true;
         debug_state.is_stepping = false;
