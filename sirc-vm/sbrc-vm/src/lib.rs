@@ -76,7 +76,8 @@ pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugSta
             debug_state.breakpoints = breakpoints;
         }
         DebuggerMessage::PauseVm => {
-            debug_state.paused = true;
+            // TODO: This naming is confusing
+            debug_state.is_stepping = true;
         }
         DebuggerMessage::ResumeVm(condition) => {
             debug_state.paused = false;

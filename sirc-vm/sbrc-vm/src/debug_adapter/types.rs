@@ -38,11 +38,13 @@ pub struct ProgramDebugInfo {
     pub debug_info_map: ObjectDebugInfoMap,
 }
 
+#[derive(Debug)]
 pub enum ResumeCondition {
     None,
     UntilNextStep,
 }
 
+#[derive(Debug)]
 pub enum DebuggerMessage {
     UpdateBreakpoints(HashSet<BreakpointRef>),
     PauseVm,
