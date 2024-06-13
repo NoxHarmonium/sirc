@@ -13,23 +13,17 @@ const PORT = 9090;
 const client = new net.Socket();
 
 client.connect(PORT, HOST, () => {
-  log(`Connected to ${HOST}:${PORT}`);
+  console.log(`Connected to ${HOST}:${PORT}`);
   process.stdin.pipe(client);
   client.pipe(process.stdout);
 });
 
-// Handle socket events
-client.on("data", (data) => {
-  log(`Received: ${data}`);
-  console.log(data.toString());
-});
-
 client.on("close", () => {
-  log("Connection closed");
-  process.exit(1);
+  console.log("Connection closed");
+  process.exit(0);
 });
 
 client.on("error", (err) => {
-  log(`Socket error: ${err.message}`);
+  console.error(`Socket error: ${err.message}`);
   process.exit(1);
 });
