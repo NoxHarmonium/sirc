@@ -21,7 +21,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::coprocessors::processing_unit::encoding::{
     decode_instruction, encode_instruction,
 };
-use sbrc_vm::debug_adapter::server::write_debug_map;
+use sbrc_vm::debug_adapter::debug_map::write_debug_map;
 
 use core::panic;
 use std::fs::{read, write};

@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use std::fs::{read, write};
-use std::io;
 use std::io::{BufReader, BufWriter};
 use std::net::TcpListener;
-use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::vec;
@@ -25,7 +22,6 @@ use crate::debug_adapter::types::{
     BreakpointRef, ResumeCondition, ServerState, VmPauseReason, VmState,
 };
 use crate::utils::lines::{translate_line_column_to_pc, translate_pc_to_line_column};
-use crate::utils::path::add_extension;
 
 use super::types::{
     DebuggerChannels, DebuggerMessage, ProgramDebugInfo, ServerChannels, VmChannels, VmMessage,
@@ -66,28 +62,6 @@ pub fn parse_instruction_ref(instruction_ref: &str) -> u32 {
     let prefix_length = INSTRUCTION_REF_PREFIX.len();
     // TODO: Better error handling
     u32::from_str_radix(&instruction_ref[prefix_length..], 16).unwrap()
-}
-
-pub fn write_debug_map(debug_info_map: &ProgramDebugInfo, path: PathBuf) -> Result<(), io::Error> {
-    let mut debug_map_path = path;
-    add_extension(&mut debug_map_path, "dbg");
-    let bytes_to_write = match postcard::to_allocvec(&debug_info_map) {
-        Ok(bytes_to_write) => bytes_to_write,
-        Err(error) => panic!("Error encoding debug file: {error}"),
-    };
-    write(debug_map_path, bytes_to_write)?;
-    Ok(())
-}
-
-pub fn read_debug_map(path: PathBuf) -> Result<ProgramDebugInfo, io::Error> {
-    let mut debug_map_path = path;
-    add_extension(&mut debug_map_path, "dbg");
-    let bytes = read(debug_map_path)?;
-    let debug_map = match postcard::from_bytes(&bytes) {
-        Ok(bytes_to_write) => bytes_to_write,
-        Err(error) => panic!("Error decoding debug file: {error}"),
-    };
-    Ok(debug_map)
 }
 
 #[must_use]
