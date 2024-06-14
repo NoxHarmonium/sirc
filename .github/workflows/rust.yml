@@ -34,12 +34,12 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run tests
-        run: cargo llvm-cov --verbose --all-targets --all-features --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --verbose --all-targets --all-features --workspace --codecov --output-path codecov-main.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: lcov-main
-          path: ./sirc-vm/lcov.info
+          name: codecov-main
+          path: ./sirc-vm/codecov-main.json
           if-no-files-found: error
 
   examples:
@@ -72,13 +72,13 @@ jobs:
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           source <(cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml show-env --export-prefix)
           make clean check
-          cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --lcov --output-path lcov-${{ matrix.example-name }}.info
+          cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --codecov --output-path codecov-${{ matrix.example-name }}.json
         working-directory: ./examples/${{ matrix.example-name }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: lcov-${{ matrix.example-name }}
-          path: ./examples/${{ matrix.example-name }}/lcov-${{ matrix.example-name }}.info
+          path: ./examples/${{ matrix.example-name }}/codecov-${{ matrix.example-name }}.json
           if-no-files-found: error
 
   upload-to-codecov:
@@ -94,5 +94,5 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: lcov-*.info
+          files: codecov-*.json
           fail_ci_if_error: true
