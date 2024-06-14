@@ -67,11 +67,13 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run ${{ matrix.example-name }} and capture coverage
-        run: |
-          source <(cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml show-env --export-prefix)
-          make clean check
-          cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --lcov --output-path lcov-${{ matrix.example-name }}.info
-        working-directory: ./examples/${{ matrix.example-name }}
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: |
+            source <(cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml show-env --export-prefix)
+            make clean check
+            cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --lcov --output-path lcov-${{ matrix.example-name }}.info
+          working-directory: ./examples/${{ matrix.example-name }}
 
       - uses: actions/upload-artifact@v4
         with:
