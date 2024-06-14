@@ -6,16 +6,18 @@ use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
 
-// Some reference: https://www.raphnet.net/divers/retro_challenge_2019_03/qsnesdoc.html#Reg2115
+// Some reference:
+// https://www.raphnet.net/divers/retro_challenge_2019_03/qsnesdoc.html#Reg2115
 // https://martin.hinner.info/vga/pal.html#:~:text=PAL%20details&text=CCIR%2FPAL%20standard%20video%20signal,Thus%20field%20rate%20is%2050.
+// https://www.nesdev.org/wiki/NTSC_video
+// 262 lines
 
-// hsync frequency = 15625hz (64 us) - 12us of hsync/backporch / 52us of colour info
-// 312 lines
+// 25_000_000 / (x * 262) = 60
+// 25_000_000 = 60 * x * 262
+// 25_000_000 / 262 / 60 = x
+// x= 1590
 
-// 25_000_000 / (1603 * 312)
-// TODO: This couples the VM to the video device
-// TODO: Should this be calculated?
-pub const VSYNC_FREQUENCY: f64 = 49.986_403_7_f64;
+// 25_000_000 / (1590 * 262) = 60._____
 
 // 64kb = 32kw
 const VRAM_SIZE: usize = 32_000;
@@ -24,7 +26,7 @@ const VRAM_SIZE: usize = 32_000;
 const WIDTH_PIXELS: usize = 256;
 const HEIGHT_PIXELS: usize = 224;
 
-const TOTAL_LINES: usize = 312; // PAL
+const TOTAL_LINES: usize = 262; // NTSC
                                 // This just refers to the lines the TV can technically display
                                 // the console will output less than this
                                 // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
@@ -45,10 +47,13 @@ pub struct VideoDevice {
     clocks_per_pixel: usize,
     line_preamble_clocks: usize,
     line_visible_clocks: usize,
+
+    // Public
+    pub vsync_frequency: f64,
 }
 
 #[must_use]
-pub fn new_video_device(master_clock_freq: usize, vsync_frequency: f64) -> VideoDevice {
+pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
     let mut window = Window::new(
         "SIRC - Video Device",
         WIDTH_PIXELS,
@@ -57,17 +62,16 @@ pub fn new_video_device(master_clock_freq: usize, vsync_frequency: f64) -> Video
     )
     .unwrap();
 
+    let clocks_per_line = 1590;
+    let vsync_frequency = master_clock_freq as f64 / (clocks_per_line * TOTAL_LINES) as f64;
+
     window.set_target_fps(vsync_frequency.floor() as usize);
 
     let pixels = WIDTH_PIXELS * HEIGHT_PIXELS;
     let clocks_per_line =
         ((master_clock_freq as f64 / vsync_frequency) / TOTAL_LINES as f64).ceil() as usize;
-    assert_eq!(
-        clocks_per_line, 1603,
-        "Only a master frequency of 25mhz and a vsync frequency of 50hz is currently supported."
-    );
-    let line_preable_clocks = 228; // ~9us
-    let line_postable_clocks = 95; // ~4us
+    let line_preable_clocks = 217; // 70%
+    let line_postable_clocks = 93; // 30%
     let line_visible_clocks = clocks_per_line - (line_preable_clocks + line_postable_clocks);
     assert_eq!(
         (line_visible_clocks as f64 / WIDTH_PIXELS as f64).fract(),
@@ -75,7 +79,7 @@ pub fn new_video_device(master_clock_freq: usize, vsync_frequency: f64) -> Video
         "Only a round number of clocks per pixel is supported at this time"
     );
 
-    info!("Total pixels: {pixels} Clocks Per Line: {clocks_per_line} Visible Clocks Per Line: {line_visible_clocks}");
+    info!("Total pixels: {pixels} Clocks Per Line: {clocks_per_line} Visible Clocks Per Line: {line_visible_clocks} vsync_frequency: {vsync_frequency}");
 
     VideoDevice {
         buffer: vec![0; pixels],
@@ -86,6 +90,7 @@ pub fn new_video_device(master_clock_freq: usize, vsync_frequency: f64) -> Video
         clocks_per_pixel: line_visible_clocks / WIDTH_PIXELS,
         line_preamble_clocks: line_preable_clocks,
         line_visible_clocks,
+        vsync_frequency,
     }
 }
 

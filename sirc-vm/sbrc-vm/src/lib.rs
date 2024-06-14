@@ -28,7 +28,7 @@ use std::{
 use debug_adapter::types::{
     BreakpointRef, DebuggerMessage, ResumeCondition, VmChannels, VmMessage, VmPauseReason, VmState,
 };
-use device_video::{VSYNC_FREQUENCY, VSYNC_INTERRUPT};
+use device_video::VSYNC_INTERRUPT;
 use log::{error, info};
 use peripheral_bus::{
     device::{BusAssertions, Device},
@@ -51,6 +51,7 @@ pub struct DebugState {
 
 pub struct Vm {
     pub bus_peripheral: RefCell<BusPeripheral>,
+    pub vsync_frequency: f64,
 }
 
 #[allow(clippy::borrowed_box)]
@@ -212,7 +213,7 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
         }
     };
 
-    start_loop(VSYNC_FREQUENCY, execute);
+    start_loop(vm.vsync_frequency, execute);
 
     if let Some(register_dump_file) = register_dump_file {
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
@@ -250,7 +251,7 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
         }
     };
 
-    start_loop(VSYNC_FREQUENCY, execute);
+    start_loop(vm.vsync_frequency, execute);
 
     if let Some(register_dump_file) = register_dump_file {
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);

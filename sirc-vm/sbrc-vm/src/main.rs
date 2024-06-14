@@ -24,7 +24,7 @@ use sbrc_vm::{run_vm, run_vm_debug, Vm};
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
-use device_video::{new_video_device, VSYNC_FREQUENCY};
+use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
 
@@ -203,12 +203,12 @@ fn setup_vm(args: &Args) -> Vm {
         Box::new(debug_device),
     );
 
-    if args.enable_video {
+    let vsync_frequency = if args.enable_video {
         let video_device = new_video_device(
             // TODO: why the mix of usize and u32?
             master_clock_freq as usize,
-            VSYNC_FREQUENCY,
         );
+        let vsync_frequency = video_device.vsync_frequency;
         bus_peripheral.map_segment(
             VIDEO_SEGMENT,
             0x000C_0000,
@@ -216,7 +216,12 @@ fn setup_vm(args: &Args) -> Vm {
             true,
             Box::new(video_device),
         );
-    }
+        vsync_frequency
+    } else {
+        // If there isn't a video device, there is no need to limit the VM to a specific FPS
+        // but to keep things simple for now, lets default to 60 FPS
+        60f64
+    };
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
@@ -244,5 +249,6 @@ fn setup_vm(args: &Args) -> Vm {
 
     Vm {
         bus_peripheral: RefCell::new(bus_peripheral),
+        vsync_frequency,
     }
 }

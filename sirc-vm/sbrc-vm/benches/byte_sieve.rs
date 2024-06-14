@@ -37,6 +37,7 @@ fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
 
     Vm {
         bus_peripheral: RefCell::new(bus_peripheral),
+        vsync_frequency: 60f64,
     }
 }
 
