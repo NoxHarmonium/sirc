@@ -46,23 +46,23 @@ $ cargo run --bin assembler -- --help
 Usage: assembler --input-file <FILE> --output-file <FILE>
 
 Options:
-  -i, --input-file <FILE>   
-  -o, --output-file <FILE>  
+  -i, --input-file <FILE>
+  -o, --output-file <FILE>
   -h, --help                Print help
   -V, --version             Print version
 ```
 
 ```bash
-$ cargo run --bin linker -- --help  
+$ cargo run --bin linker -- --help
 
 Usage: linker --output-file <FILE> --segment-offset <SEGMENT_OFFSET> [INPUT FILES]...
 
 Arguments:
-  [INPUT FILES]...  
+  [INPUT FILES]...
 
 Options:
-  -o, --output-file <FILE>               
-  -s, --segment-offset <SEGMENT_OFFSET>  
+  -o, --output-file <FILE>
+  -s, --segment-offset <SEGMENT_OFFSET>
   -h, --help                             Print help
   -V, --version                          Print version
 ```
@@ -73,13 +73,13 @@ $ cargo run --bin sbrc_vm -- --help
 Usage: sbrc_vm [OPTIONS] --program-file <FILE>
 
 Options:
-  -p, --program-file <FILE>        
-  -s, --segment <SEGMENT>          
-  -r, --register-dump-file <FILE>  
+  -p, --program-file <FILE>
+  -s, --segment <SEGMENT>
+  -r, --register-dump-file <FILE>
   -v, --verbose...                 Increase logging verbosity
   -q, --quiet...                   Decrease logging verbosity
-  -e, --enable-video               
-  -d, --debug                      
+  -e, --enable-video
+  -d, --debug
   -h, --help                       Print help
   -V, --version                    Print version
 
@@ -134,8 +134,8 @@ The many stages to building this thing:
 - [x] Write a basic assembler/linker
 - [x] Run some basic programs
 - [x] Add a debugger to allow stepping through programs
-- [ ] Write and run an extensive 'real world' test program to shake out any implementation bugs
-- [ ] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also a benchmark)
+- [x] Write and run an extensive 'real world' test program to shake out any implementation bugs
+- [x] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also a benchmark)
 - [ ] Optimise the simulator code to make it usable (or add a "low accuracy" mode)
 - [ ] Document the CPU architecture and instruction set in a proper reference manual
 - [ ] (Optional) Write an LLVM backend to write programs in C (or even rust???)
@@ -163,4 +163,3 @@ The many stages to building this thing:
 
 - [ ] Implement Verilog based on ULX3S FPGA board
 - [ ] Run the basic game on real hardware!
-
