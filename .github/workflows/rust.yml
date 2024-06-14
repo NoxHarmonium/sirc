@@ -77,7 +77,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: lcov-${{ matrix.example-name }}
+          name: codecov-${{ matrix.example-name }}
           path: ./examples/${{ matrix.example-name }}/codecov-${{ matrix.example-name }}.json
           if-no-files-found: error
 
