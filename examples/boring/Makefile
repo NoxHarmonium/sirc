@@ -13,10 +13,10 @@ boring.bin: boring.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file boring.bin boring.o
 
 run: boring.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
 
 debug: boring.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./boring.register-dump ./boring.register-dump-expected

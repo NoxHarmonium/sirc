@@ -20,10 +20,10 @@ faults-high.bin: faults-high.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file faults-high.bin faults-high.o
 
 run: faults.bin faults-high.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
 
 debug: faults.bin faults-high.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./faults.register-dump ./faults.register-dump-expected

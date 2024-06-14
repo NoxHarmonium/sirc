@@ -18,9 +18,9 @@ use std::{cell::RefCell, path::PathBuf, process::exit, thread};
 use clap::Parser;
 use log::{error, info, Level};
 
-use sbrc_vm::debug_adapter::debug_map::read_debug_map;
-use sbrc_vm::debug_adapter::server::{create_server_channels, start_server};
-use sbrc_vm::{run_vm, run_vm_debug, Vm};
+use sirc_vm::debug_adapter::debug_map::read_debug_map;
+use sirc_vm::debug_adapter::server::{create_server_channels, start_server};
+use sirc_vm::{run_vm, run_vm_debug, Vm};
 
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};

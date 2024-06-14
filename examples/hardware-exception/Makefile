@@ -16,10 +16,10 @@ hardware-exception.bin: hardware-exception.o data.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file hardware-exception.bin hardware-exception.o data.o
 
 run: hardware-exception.bin
-	echo "test input that should end with the letter a" | cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} > output.log
+	echo "test input that should end with the letter a" | cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} > output.log
 
 debug: hardware-exception.bin
-	echo "test input that should end with the letter a" | cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} --debug > output.log
+	echo "test input that should end with the letter a" | cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug > output.log
 
 check: run
 	diff -u ./output.log ./output.log.expected

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use sbrc_vm::debug_adapter::types::ObjectDebugInfo;
+use sirc_vm::debug_adapter::types::ObjectDebugInfo;
 use toolchain::types::object::{
     merge_object_definitions, ObjectDefinition, RefType, SymbolDefinition, SymbolRef,
 };

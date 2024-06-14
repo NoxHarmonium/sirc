@@ -9,7 +9,7 @@ members = [
     "device-video",
     "peripheral-bus",
     "peripheral-cpu",
-    "sbrc-vm",
+    "sirc-vm",
     "toolchain",
 ]
 

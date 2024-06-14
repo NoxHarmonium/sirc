@@ -16,12 +16,12 @@ byte-sieve.bin: byte-sieve.o
 run: byte-sieve.bin
 	rm -f ./mem.bin
 	truncate -s 131070 ./mem.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
 
 debug: byte-sieve.bin
 	rm -f ./mem.bin
 	truncate -s 131070 ./mem.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug
 
 check: run expected.hex
 	hexdump -C  ./mem.bin > actual.hex

@@ -15,10 +15,10 @@ basic-video.bin: basic-video.o serial-handler.o
 	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file basic-video.bin basic-video.o serial-handler.o
 
 run: basic-video.bin
-	cargo run ${CARGO_ARGS} --bin sbrc_vm --release -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --bin sirc_vm --release -- ${RUN_ARGS}
 
 debug: basic-video.bin
-	cargo run ${CARGO_ARGS} --bin sbrc_vm -- ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --bin sirc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./basic-video.register-dump ./basic-video.register-dump-expected
