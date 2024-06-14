@@ -10,19 +10,12 @@ use peripheral_bus::{
 // https://www.raphnet.net/divers/retro_challenge_2019_03/qsnesdoc.html#Reg2115
 // https://martin.hinner.info/vga/pal.html#:~:text=PAL%20details&text=CCIR%2FPAL%20standard%20video%20signal,Thus%20field%20rate%20is%2050.
 // https://www.nesdev.org/wiki/NTSC_video
-// 262 lines
-
-// 25_000_000 / (x * 262) = 60
-// 25_000_000 = 60 * x * 262
-// 25_000_000 / 262 / 60 = x
-// x= 1590
-
-// 25_000_000 / (1590 * 262) = 60._____
 
 // 64kb = 32kw
 const VRAM_SIZE: usize = 32_000;
 // PAL can have a higher resolution but to keep things simple
 // the renderer size can be static and PAL can have black bars
+// 8 pixels less than 256 so the the PPU pixel is a round number of master clocks at 25 Mhz
 const WIDTH_PIXELS: usize = 238;
 const HEIGHT_PIXELS: usize = 224;
 
@@ -89,7 +82,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
     // 12090 ns of preamble
     // 47616 ns of visible
     // 3720 ns of postamble
-    // = 63426 total which is the NTSC hsync time
+    // = 63426ns total which is the NTSC hsync time
     // https://www.nesdev.org/wiki/NTSC_video
 
     let preamble_time = Duration::from_nanos(12090);

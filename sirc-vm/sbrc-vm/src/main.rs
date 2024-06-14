@@ -138,12 +138,6 @@ fn main() {
     let dump_file = args.register_dump_file.clone();
     let vm = setup_vm(&args);
 
-    // TODO Debug Adapter:
-    // 1. Setup channels. VM needs a map of breakpoints (set in PC address) and inits to 0x0 (or whatever the VM starts at)
-    // 1a. Main VM thread will run until condition (e.g. breakpoint hit) and then send message to DAP (paused)
-    // 1b. DAP can send messages to VM (VM stuck in listening loop) until DAP sends continue command where VM will running
-    // VM should only break on cycle zero of execution unit (ignore exception unit for now)
-
     if args.debug {
         let channels = create_server_channels();
 
