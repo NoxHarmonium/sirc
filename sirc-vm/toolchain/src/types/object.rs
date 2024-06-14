@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_WORDS;
 use serde::{Deserialize, Serialize};
 
-use sbrc_vm::debug_adapter::types::{ObjectDebugInfo, ObjectDebugInfoMap, ProgramDebugInfo};
+use sirc_vm::debug_adapter::types::{ObjectDebugInfo, ObjectDebugInfoMap, ProgramDebugInfo};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum RefType {

@@ -13,10 +13,10 @@ store-load.bin: store-load.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file store-load.bin store-load.o
 
 run: store-load.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
 
 debug: store-load.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./store-load.register-dump ./store-load.register-dump-expected

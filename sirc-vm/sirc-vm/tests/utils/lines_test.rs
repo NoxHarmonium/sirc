@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use sbrc_vm::{
+use sirc_vm::{
     debug_adapter::types::{ObjectDebugInfo, ProgramDebugInfo},
     utils::lines::{translate_line_column_to_pc, translate_pc_to_line_column},
 };

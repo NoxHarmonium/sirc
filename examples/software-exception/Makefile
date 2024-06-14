@@ -13,10 +13,10 @@ software-exception.bin: software-exception.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file software-exception.bin software-exception.o
 
 run: software-exception.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- ${RUN_ARGS}
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
 
 debug: software-exception.bin
-	cargo run ${CARGO_ARGS} --no-default-features --bin sbrc_vm -- -vv ${RUN_ARGS} --debug
+	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- -vv ${RUN_ARGS} --debug
 
 check: run
 	diff -u ./software-exception.register-dump ./software-exception.register-dump-expected

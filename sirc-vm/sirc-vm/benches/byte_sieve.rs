@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
-use sbrc_vm::{run_vm, Vm};
+use sirc_vm::{run_vm, Vm};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static FILE_SEGMENT: &str = "FILE";

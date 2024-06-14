@@ -7,7 +7,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use sbrc_vm::debug_adapter::types::ObjectDebugInfo;
+use sirc_vm::debug_adapter::types::ObjectDebugInfo;
 
 use sha2::{Digest, Sha256};
 

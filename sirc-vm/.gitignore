@@ -10,7 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 # Check these binaries in in to simplify benchmark tests
-!sbrc-vm/benches/byte-sieve.bin
+!sirc-vm/benches/byte-sieve.bin
 
 # Code coverage
 *.profraw
