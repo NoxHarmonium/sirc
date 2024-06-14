@@ -3,13 +3,17 @@ name = "sbrc_vm"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["video"]
+video = ["dep:device_video"]
+
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
 clap-verbosity-flag = "2.2.0"
 device_debug = { path = "../device-debug" }
 device_ram = { path = "../device-ram" }
 device_terminal = { path = "../device-terminal" }
-device_video = { path = "../device-video" }
+device_video = { path = "../device-video", optional = true }
 log = "0.4.21"
 peripheral_bus = { path = "../peripheral-bus" }
 peripheral_cpu = { path = "../peripheral-cpu" }

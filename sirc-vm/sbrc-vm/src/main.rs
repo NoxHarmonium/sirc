@@ -24,9 +24,11 @@ use sbrc_vm::{run_vm, run_vm_debug, Vm};
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
-use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
+
+#[cfg(feature = "video")]
+use device_video::new_video_device;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
@@ -107,6 +109,7 @@ pub struct Args {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
 
+    #[cfg(feature = "video")]
     #[clap(short, long)]
     enable_video: bool,
 
@@ -197,6 +200,7 @@ fn setup_vm(args: &Args) -> Vm {
         Box::new(debug_device),
     );
 
+    #[cfg(feature = "video")]
     let vsync_frequency = if args.enable_video {
         let video_device = new_video_device(
             // TODO: why the mix of usize and u32?
@@ -216,6 +220,9 @@ fn setup_vm(args: &Args) -> Vm {
         // but to keep things simple for now, lets default to 60 FPS
         60f64
     };
+
+    #[cfg(not(feature = "video"))]
+    let vsync_frequency = 60f64;
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
