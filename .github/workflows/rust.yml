@@ -48,6 +48,7 @@ jobs:
       matrix:
         example-name:
           [
+            "basic-video",
             "boring",
             "byte-sieve",
             "faults",
