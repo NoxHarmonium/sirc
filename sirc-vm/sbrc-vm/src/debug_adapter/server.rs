@@ -41,7 +41,7 @@ static INSTRUCTION_REF_PREFIX: &str = "pc:";
 // TODO: Should the DAP be moved to a separate module?
 
 #[derive(Error, Debug)]
-enum MyAdapterError {
+enum DebugAdapterError {
     #[error("Missing command")]
     MissingCommandError,
 }
@@ -192,7 +192,7 @@ pub fn start_server(
 
     loop {
         let Some(req) = server.poll_request()? else {
-            return Err(Box::new(MyAdapterError::MissingCommandError));
+            return Err(Box::new(DebugAdapterError::MissingCommandError));
         };
 
         match req.command {
