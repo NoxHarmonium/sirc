@@ -29,3 +29,4 @@ check: run expected.hex
 clean:
 	rm -f byte-sieve.bin byte-sieve.o actual.hex mem.bin byte-sieve.bin.dbg
 	cargo clean ${CARGO_ARGS}
+	cargo llvm-cov clean ${CARGO_ARGS} --workspace

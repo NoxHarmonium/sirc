@@ -27,3 +27,4 @@ check: run
 clean:
 	rm -f hardware-exception.bin hardware-exception.o data.o hardware-exception.register-dump output.log hardware-exception.bin.dbg
 	cargo clean ${CARGO_ARGS}
+	cargo llvm-cov clean ${CARGO_ARGS} --workspace

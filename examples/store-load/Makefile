@@ -23,3 +23,4 @@ check: run
 clean:
 	rm -f store-load.bin store-load.o store-load.register-dump store-load.bin.dbg
 	cargo clean ${CARGO_ARGS}
+	cargo llvm-cov clean ${CARGO_ARGS} --workspace

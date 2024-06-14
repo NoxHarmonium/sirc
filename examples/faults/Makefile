@@ -30,3 +30,4 @@ check: run
 clean:
 	rm -f faults.bin faults.o faults-high.bin faults-high.o faults.register-dump faults.bin.dbg faults-high.bin.dbg
 	cargo clean ${CARGO_ARGS}
+	cargo llvm-cov clean ${CARGO_ARGS} --workspace
