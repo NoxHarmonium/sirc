@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, time::Duration};
 
 use log::{debug, info};
 use minifb::{Window, WindowOptions};
@@ -23,7 +23,7 @@ use peripheral_bus::{
 const VRAM_SIZE: usize = 32_000;
 // PAL can have a higher resolution but to keep things simple
 // the renderer size can be static and PAL can have black bars
-const WIDTH_PIXELS: usize = 256;
+const WIDTH_PIXELS: usize = 238;
 const HEIGHT_PIXELS: usize = 224;
 
 const TOTAL_LINES: usize = 262; // NTSC
@@ -32,6 +32,28 @@ const TOTAL_LINES: usize = 262; // NTSC
                                 // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
 
 pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
+
+fn hsv_to_rgb(h: f32) -> (u8, u8, u8) {
+    let i = (h * 6.0).floor() as u32;
+    let f = h * 6.0 - i as f32;
+    let q = 1.0 - f;
+
+    let (r, g, b) = match i % 6 {
+        0 => (1.0, f, 0.0),
+        1 => (q, 1.0, 0.0),
+        2 => (0.0, 1.0, f),
+        3 => (0.0, q, 1.0),
+        4 => (f, 0.0, 1.0),
+        5 => (1.0, 0.0, q),
+        _ => unreachable!(),
+    };
+
+    ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+}
+
+fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
+    ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
+}
 
 pub struct VideoDevice {
     // Video stuff
@@ -42,7 +64,8 @@ pub struct VideoDevice {
     vram: Vec<u16>,
 
     // Other
-    clock: usize,
+    frame_count: usize,
+    frame_clock: usize,
     clocks_per_line: usize,
     clocks_per_pixel: usize,
     line_preamble_clocks: usize,
@@ -62,56 +85,84 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
     )
     .unwrap();
 
-    let clocks_per_line = 1590;
-    let vsync_frequency = master_clock_freq as f64 / (clocks_per_line * TOTAL_LINES) as f64;
+    // For reference - the SNES NTSC scanline timing is:
+    // 12090 ns of preamble
+    // 47616 ns of visible
+    // 3720 ns of postamble
+    // = 63426 total which is the NTSC hsync time
+    // https://www.nesdev.org/wiki/NTSC_video
+
+    let preamble_time = Duration::from_nanos(12090);
+    let visible_time = Duration::from_nanos(47616);
+    let postamble_time = Duration::from_nanos(3720);
+
+    let line_time = preamble_time + visible_time + postamble_time;
+    let frame_time = line_time * TOTAL_LINES as u32;
+
+    let preamble_clocks = (master_clock_freq as f64 * preamble_time.as_secs_f64()).floor() as usize;
+    let visible_clocks = (master_clock_freq as f64 * visible_time.as_secs_f64()).floor() as usize;
+    let postamble_clocks =
+        (master_clock_freq as f64 * postamble_time.as_secs_f64()).floor() as usize;
+
+    // This is fixed, everything else can change based on PAL/NTSC
+    let clocks_per_line = preamble_clocks + visible_clocks + postamble_clocks;
+    let vsync_frequency = 1f64 / frame_time.as_secs_f64();
 
     window.set_target_fps(vsync_frequency.floor() as usize);
 
-    let pixels = WIDTH_PIXELS * HEIGHT_PIXELS;
-    let clocks_per_line =
-        ((master_clock_freq as f64 / vsync_frequency) / TOTAL_LINES as f64).ceil() as usize;
-    let line_preable_clocks = 217; // 70%
-    let line_postable_clocks = 93; // 30%
-    let line_visible_clocks = clocks_per_line - (line_preable_clocks + line_postable_clocks);
+    let total_pixels = WIDTH_PIXELS * HEIGHT_PIXELS;
+    let clocks_per_pixel = visible_clocks / WIDTH_PIXELS;
+
+    info!("
+        preamble_time: {preamble_time:?} visible_time: {visible_time:?}  postamble_time: {postamble_time:?}
+        line_time: {line_time:?} frame_time: {frame_time:?} '
+        preamble_clocks: {preamble_clocks} visible_clocks: {visible_clocks} postamble_clocks: {postamble_clocks}
+        clocks_per_line: {clocks_per_line} vsync_frequency: {vsync_frequency} total_pixels: {total_pixels}
+        clocks_per_pixel: {clocks_per_pixel}
+    ");
+
     assert_eq!(
-        (line_visible_clocks as f64 / WIDTH_PIXELS as f64).fract(),
+        (visible_clocks as f64 / WIDTH_PIXELS as f64).fract(),
         0f64,
         "Only a round number of clocks per pixel is supported at this time"
     );
 
-    info!("Total pixels: {pixels} Clocks Per Line: {clocks_per_line} Visible Clocks Per Line: {line_visible_clocks} vsync_frequency: {vsync_frequency}");
-
     VideoDevice {
-        buffer: vec![0; pixels],
+        buffer: vec![0; total_pixels],
         window,
         vram: vec![0; VRAM_SIZE],
-        clock: 0,
+        frame_count: 0,
+        frame_clock: 0,
         clocks_per_line,
-        clocks_per_pixel: line_visible_clocks / WIDTH_PIXELS,
-        line_preamble_clocks: line_preable_clocks,
-        line_visible_clocks,
+        clocks_per_pixel: visible_clocks / WIDTH_PIXELS,
+        line_preamble_clocks: preamble_clocks,
+        line_visible_clocks: visible_clocks,
         vsync_frequency,
     }
 }
 
 impl Device for VideoDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        let line = self.clock / self.clocks_per_line;
-        let first_visible_line = TOTAL_LINES - HEIGHT_PIXELS;
+        let line = self.frame_clock / self.clocks_per_line;
 
-        let line_clock = self.clock % self.clocks_per_line;
-        if line >first_visible_line // First lines are vsync
-            && self.clock % self.clocks_per_pixel == 0 // There are 5 clocks available for each pixel
+        let line_clock = self.frame_clock % self.clocks_per_line;
+        if line < HEIGHT_PIXELS // Lines below the rendered height are vsync
+            && self.frame_clock % self.clocks_per_pixel == 0 // Only update for each PPU pixel, not for each master clock
             && line_clock >= self.line_preamble_clocks // No drawing happens in the pre/postable
             && line_clock < self.line_preamble_clocks + self.line_visible_clocks
         {
-            let v = (line - first_visible_line) * WIDTH_PIXELS;
+            let v = line * WIDTH_PIXELS;
             let h = (line_clock - self.line_preamble_clocks) / self.clocks_per_pixel;
-            self.buffer[v + h] += (self.clock % 0xFFFFFF) as u32;
+            let pixel = v + h;
+            let hue = ((self.frame_count as f32 + (line_clock as f32 / 400.0)) / 200.0) % 1.0;
+            let (r, g, b) = hsv_to_rgb(hue);
+            let color = pack_rgb(r, g, b);
+            self.buffer[pixel] = color;
         }
 
         if line >= TOTAL_LINES {
-            self.clock = 0;
+            self.frame_clock = 0;
+            self.frame_count += 1;
             if self.window.is_open() {
                 // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
                 self.window
@@ -121,7 +172,7 @@ impl Device for VideoDevice {
         }
 
         let assertions = BusAssertions {
-            interrupt_assertion: if self.clock == 0 {
+            interrupt_assertion: if self.frame_clock == 0 {
                 VSYNC_INTERRUPT
             } else {
                 0x0
@@ -129,7 +180,7 @@ impl Device for VideoDevice {
             ..self.perform_bus_io(bus_assertions, selected)
         };
 
-        self.clock += 1;
+        self.frame_clock += 1;
 
         assertions
     }
