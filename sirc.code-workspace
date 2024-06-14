@@ -5,6 +5,30 @@
     },
     {
       "path": ".github"
+    },
+    {
+      "path": "vscode-sirc"
+    },
+    {
+      "path": "examples/store-load"
+    },
+    {
+      "path": "examples/software-exception"
+    },
+    {
+      "path": "examples/hardware-exception"
+    },
+    {
+      "path": "examples/faults"
+    },
+    {
+      "path": "examples/byte-sieve"
+    },
+    {
+      "path": "examples/boring"
+    },
+    {
+      "path": "examples/basic-video"
     }
   ],
   "settings": {}

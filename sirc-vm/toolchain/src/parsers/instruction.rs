@@ -39,6 +39,8 @@ pub struct RefToken {
 
 #[derive(Debug)]
 pub struct InstructionToken {
+    /// The length of the parser input at the time of parsing, used to work out where the parser is in the file
+    pub input_length: usize,
     pub instruction: InstructionData,
     pub symbol_ref: Option<RefToken>,
     pub placeholder_name: Option<String>,
@@ -47,6 +49,7 @@ pub struct InstructionToken {
 impl Default for InstructionToken {
     fn default() -> Self {
         Self {
+            input_length: 0,
             instruction: InstructionData::Immediate(ImmediateInstructionData {
                 op_code: Instruction::AddImmediate,
                 register: 0x0,
@@ -510,6 +513,7 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
 
 fn parse_comment_(i: &str) -> AsmResult<Token> {
     // TODO: Should there be a more flexible parser for eol?
+    // TODO: Comments with nothing after the semicolon currently fail
     map(pair(char(';'), cut(is_not("\n\r"))), |_| Token::Comment)(i)
 }
 

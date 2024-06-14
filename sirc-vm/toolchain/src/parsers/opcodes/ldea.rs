@@ -23,6 +23,7 @@ use peripheral_cpu::{
 
 use super::super::shared::AsmResult;
 pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
+    let input_length = i.len();
     let (i, ((_, condition_flag), operands)) =
         tuple((parse_instruction_tag("LDEA"), parse_instruction_operands1))(i)?;
 
@@ -46,6 +47,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::Value(offset) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_load_effective_address_instruction(
                             offset.to_owned(),
                             dest_register,
@@ -57,6 +59,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::SymbolRef(ref_token) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_load_effective_address_instruction(
                             0x0, // Will be replaced by linker
                             dest_register,
@@ -72,6 +75,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_load_effective_address_instruction(
                             0x0, // Will be replaced by linker
                             dest_register,
@@ -88,6 +92,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: dest_register.to_register_index(),
@@ -110,6 +115,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: dest_register.to_register_index(),

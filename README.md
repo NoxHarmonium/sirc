@@ -78,6 +78,8 @@ Options:
   -r, --register-dump-file <FILE>  
   -v, --verbose...                 Increase logging verbosity
   -q, --quiet...                   Decrease logging verbosity
+  -e, --enable-video               
+  -d, --debug                      
   -h, --help                       Print help
   -V, --version                    Print version
 
@@ -131,6 +133,7 @@ The many stages to building this thing:
 - [x] Build a virtual machine
 - [x] Write a basic assembler/linker
 - [x] Run some basic programs
+- [x] Add a debugger to allow stepping through programs
 - [ ] Write and run an extensive 'real world' test program to shake out any implementation bugs
 - [ ] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also a benchmark)
 - [ ] Optimise the simulator code to make it usable (or add a "low accuracy" mode)
@@ -160,3 +163,4 @@ The many stages to building this thing:
 
 - [ ] Implement Verilog based on ULX3S FPGA board
 - [ ] Run the basic game on real hardware!
+

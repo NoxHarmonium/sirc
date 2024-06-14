@@ -8,7 +8,6 @@ members = [
     "device-terminal",
     "device-video",
     "peripheral-bus",
-    "peripheral-clock",
     "peripheral-cpu",
     "sbrc-vm",
     "toolchain",

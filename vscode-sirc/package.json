@@ -1,0 +1,83 @@
+{
+  "name": "sirc",
+  "displayName": "sirc",
+  "description": "VS Code support for the SIRC ecosystem",
+  "version": "0.0.1",
+  "publisher": "noxharmonium",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": "^20.14.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers"
+  ],
+  "contributes": {
+    "breakpoints": [
+      {
+        "language": "sirc"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "sirc",
+        "languages": [
+          "sirc"
+        ],
+        "label": "SIRC VM Debugger",
+        "program": "./debug-server.js",
+        "runtime": "node",
+        "initialConfigurations": [
+          {
+            "type": "sirc",
+            "request": "attach",
+            "name": "Attach to VM",
+            "port": 9090
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "SIRC: Attach",
+            "description": "A new configuration for attaching to the SIRC VM",
+            "body": {
+              "type": "sirc",
+              "request": "attach",
+              "name": "Attach to VM",
+              "port": 9090
+            }
+          }
+        ]
+      }
+    ],
+    "activationEvents": [
+      "onDebug",
+      "onDebugResolve:sirc",
+      "onDebugDynamicConfigurations:sirc",
+      "onLanguage:sirc",
+      "workspaceContains:**/*.asm"
+    ],
+    "languages": [
+      {
+        "id": "sirc",
+        "aliases": [
+          "SIRC Assembly",
+          "SIRC"
+        ],
+        "extensions": [
+          ".asm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sirc",
+        "scopeName": "source.sirc-asm",
+        "path": "./syntaxes/sirc.tmLanguage.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2"
+  }
+}

@@ -13,20 +13,38 @@
 )]
 #![deny(warnings)]
 
-use std::{cell::RefCell, fs::File, io::Write, path::PathBuf};
+pub mod debug_adapter;
+mod debugger;
+pub mod utils;
 
+use std::{cell::RefCell, collections::HashSet, fs::File, io::Write, path::PathBuf};
+
+use debug_adapter::types::{BreakpointRef, VmChannels};
+use debugger::yield_to_debugger;
+use device_video::VSYNC_INTERRUPT;
 use log::{error, info};
-
 use peripheral_bus::{
     device::{BusAssertions, Device},
     BusPeripheral,
 };
-use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::CpuPeripheral;
+use utils::{cpu_from_bus::cpu_from_bus, frame_reporter::start_loop};
+
+#[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct DebugState {
+    pub channels: VmChannels,
+    pub breakpoints: HashSet<BreakpointRef>,
+    pub disconnected: bool,
+    // TODO: some sort of enum state machine type thing
+    pub paused: bool,
+    pub should_pause_for_init: bool,
+    pub is_stepping: bool,
+}
 
 pub struct Vm {
     pub bus_peripheral: RefCell<BusPeripheral>,
-    pub clock_peripheral: RefCell<ClockPeripheral>,
+    pub vsync_frequency: f64,
 }
 
 #[allow(clippy::borrowed_box)]
@@ -37,33 +55,83 @@ fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::i
     Ok(())
 }
 
-pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
+// Separate from run_vm so that performance is not affected in non-debug mode
+// TODO: Come up with a way to have less duplicated
+pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmChannels) {
     // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
-    let clock_peripheral = vm.clock_peripheral.borrow();
+
+    let mut debug_state = DebugState {
+        breakpoints: HashSet::new(),
+        channels,
+        disconnected: false,
+        paused: false,
+        should_pause_for_init: true,
+        is_stepping: false,
+    };
 
     let mut bus_assertions = BusAssertions::default();
     // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
-    let execute = |clocks_until_vsync| {
+    let execute = || {
         let mut clocks = 0;
         loop {
             bus_assertions = bus_peripheral.poll_all(bus_assertions);
+
+            if !debug_state.disconnected && bus_assertions.instruction_fetch {
+                yield_to_debugger(&mut bus_peripheral, &mut debug_state);
+            }
+
             clocks += 1;
-            if clocks >= clocks_until_vsync || bus_assertions.exit_simulation {
+            if bus_assertions.interrupt_assertion & VSYNC_INTERRUPT > 0
+                || bus_assertions.exit_simulation
+            {
                 return (bus_assertions.exit_simulation, clocks);
             }
         }
     };
 
-    clock_peripheral.start_loop(execute);
+    start_loop(vm.vsync_frequency, execute);
 
     if let Some(register_dump_file) = register_dump_file {
-        // TODO: This is terrible - again
-        let cpu: &CpuPeripheral = bus_peripheral
-            .bus_master
-            .as_any()
-            .downcast_ref::<CpuPeripheral>()
-            .expect("failed to downcast");
+        let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
+
+        info!(
+                "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
+            );
+        if let Err(error) = dump_registers(&register_dump_file, cpu) {
+            error!(
+                "There was an error dumping registers to [{}].\n{}",
+                register_dump_file.display(),
+                error
+            );
+        };
+    }
+}
+
+// TODO: Deduplicate stuff with run_vm_debug
+pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
+    // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
+    let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
+    let mut bus_assertions = BusAssertions::default();
+    // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
+    let execute = || {
+        let mut clocks = 0;
+        loop {
+            bus_assertions = bus_peripheral.poll_all(bus_assertions);
+
+            clocks += 1;
+            if bus_assertions.interrupt_assertion & VSYNC_INTERRUPT > 0
+                || bus_assertions.exit_simulation
+            {
+                return (bus_assertions.exit_simulation, clocks);
+            }
+        }
+    };
+
+    start_loop(vm.vsync_frequency, execute);
+
+    if let Some(register_dump_file) = register_dump_file {
+        let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
 
         info!(
                 "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."

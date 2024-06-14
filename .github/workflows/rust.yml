@@ -36,12 +36,11 @@ jobs:
       - name: Run tests
         run: cargo llvm-cov --verbose --all-targets --all-features --workspace --lcov --output-path lcov.info
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: lcov.info
-          fail_ci_if_error: true
+          name: lcov-main
+          path: ./sirc-vm/lcov.info
+          if-no-files-found: error
 
   examples:
     runs-on: ubuntu-latest
@@ -49,6 +48,7 @@ jobs:
       matrix:
         example-name:
           [
+            "basic-video",
             "boring",
             "byte-sieve",
             "faults",
@@ -63,6 +63,36 @@ jobs:
       - name: Install Rust
         run: rustup update stable
 
-      - name: Run ${{ matrix.example-name }}
-        run: make clean check
-        working-directory: ./sirc-vm/examples/${{ matrix.example-name }}
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Run ${{ matrix.example-name }} and capture coverage
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          source <(cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml show-env --export-prefix)
+          make clean check
+          cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --lcov --output-path lcov-${{ matrix.example-name }}.info
+        working-directory: ./examples/${{ matrix.example-name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lcov-${{ matrix.example-name }}
+          path: ./examples/${{ matrix.example-name }}/lcov-${{ matrix.example-name }}.info
+          if-no-files-found: error
+
+  upload-to-codecov:
+    runs-on: ubuntu-latest
+    needs: [examples, build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: List artifacts
+        run: ls -la
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: lcov-*.info
+          fail_ci_if_error: true

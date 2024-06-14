@@ -3,7 +3,6 @@ use std::{cell::RefCell, fs, path::PathBuf, time::Duration};
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use peripheral_bus::new_bus_peripheral;
-use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
 use sbrc_vm::{run_vm, Vm};
 
@@ -11,12 +10,6 @@ static PROGRAM_SEGMENT: &str = "PROGRAM";
 static FILE_SEGMENT: &str = "FILE";
 
 fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
-    let master_clock_freq = 8_000_000;
-
-    let clock_peripheral = ClockPeripheral {
-        master_clock_freq,
-        vsync_frequency: 50,
-    };
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     // Jump to reset vector
     cpu_peripheral.reset();
@@ -44,7 +37,7 @@ fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
 
     Vm {
         bus_peripheral: RefCell::new(bus_peripheral),
-        clock_peripheral: RefCell::new(clock_peripheral),
+        vsync_frequency: 60f64,
     }
 }
 

@@ -11,27 +11,30 @@
     // I have a lot of temporary panics for debugging that will probably be cleaned up
     clippy::missing_panics_doc
 )]
-#![deny(warnings)]
+// #![deny(warnings)]
 
-use std::{cell::RefCell, path::PathBuf, process::exit};
+use std::{cell::RefCell, path::PathBuf, process::exit, thread};
 
-use log::{info, Level};
+use clap::Parser;
+use log::{error, info, Level};
+
+use sbrc_vm::debug_adapter::debug_map::read_debug_map;
+use sbrc_vm::debug_adapter::server::{create_server_channels, start_server};
+use sbrc_vm::{run_vm, run_vm_debug, Vm};
 
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use device_terminal::new_terminal_device;
-use device_video::new_video_device;
 use peripheral_bus::new_bus_peripheral;
-use peripheral_clock::ClockPeripheral;
 use peripheral_cpu::new_cpu_peripheral;
+
+#[cfg(feature = "video")]
+use device_video::new_video_device;
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
 static VIDEO_SEGMENT: &str = "VIDEO";
-
-use clap::Parser;
-use sbrc_vm::{run_vm, Vm};
 
 fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
     let segment_args: Vec<_> = s.split(':').collect();
@@ -107,8 +110,12 @@ pub struct Args {
     #[command(flatten)]
     verbose: clap_verbosity_flag::Verbosity,
 
+    #[cfg(feature = "video")]
     #[clap(short, long)]
     enable_video: bool,
+
+    #[clap(short, long)]
+    debug: bool,
 }
 
 fn main() {
@@ -123,7 +130,6 @@ fn main() {
             "device_terminal",
             "device_video",
             "peripheral_bus",
-            "peripheral_clock",
             "peripheral_cpu",
         ])
         .quiet(args.verbose.is_silent())
@@ -134,22 +140,36 @@ fn main() {
         .unwrap();
 
     let dump_file = args.register_dump_file.clone();
-    let vm = setup_vm(args);
-    run_vm(&vm, dump_file);
+    let vm = setup_vm(&args);
+
+    if args.debug {
+        let channels = create_server_channels();
+
+        let program_debug_info = read_debug_map(args.program_file).unwrap();
+        let debugger_join_handle = thread::spawn(move || {
+            let result = start_server(channels.debugger, &program_debug_info);
+            if let Err(error) = result {
+                error!("Error occurred in debug server: {error:?}");
+            }
+        });
+
+        run_vm_debug(&vm, dump_file, channels.vm);
+        info!("Waiting on debugger thread...");
+        debugger_join_handle.join().unwrap();
+    } else {
+        run_vm(&vm, dump_file);
+    }
+
     info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
     exit(0);
 }
 
 // TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
-fn setup_vm(args: Args) -> Vm {
+fn setup_vm(args: &Args) -> Vm {
     // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
-    let master_clock_freq = 8_000_000;
+    let master_clock_freq = 25_000_000;
 
-    let clock_peripheral = ClockPeripheral {
-        master_clock_freq,
-        vsync_frequency: 50,
-    };
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     // Jump to reset vector
     cpu_peripheral.reset();
@@ -181,8 +201,13 @@ fn setup_vm(args: Args) -> Vm {
         Box::new(debug_device),
     );
 
-    if args.enable_video {
-        let video_device = new_video_device();
+    #[cfg(feature = "video")]
+    let vsync_frequency = if args.enable_video {
+        let video_device = new_video_device(
+            // TODO: why the mix of usize and u32?
+            master_clock_freq as usize,
+        );
+        let vsync_frequency = video_device.vsync_frequency;
         bus_peripheral.map_segment(
             VIDEO_SEGMENT,
             0x000C_0000,
@@ -190,11 +215,19 @@ fn setup_vm(args: Args) -> Vm {
             true,
             Box::new(video_device),
         );
-    }
+        vsync_frequency
+    } else {
+        // If there isn't a video device, there is no need to limit the VM to a specific FPS
+        // but to keep things simple for now, lets default to 60 FPS
+        60f64
+    };
+
+    #[cfg(not(feature = "video"))]
+    let vsync_frequency = 60f64;
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
-    for segment in args.segment {
+    for segment in args.segment.clone() {
         if let Some(mapped_file) = segment.mapped_file {
             let mm_ram_device = new_ram_device_file_mapped(mapped_file);
             bus_peripheral.map_segment(
@@ -218,8 +251,6 @@ fn setup_vm(args: Args) -> Vm {
 
     Vm {
         bus_peripheral: RefCell::new(bus_peripheral),
-        clock_peripheral: RefCell::new(clock_peripheral),
+        vsync_frequency,
     }
 }
-
-// TODO: Probs need to a step debugger

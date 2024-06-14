@@ -117,12 +117,6 @@ pub fn raise_fault(
 ///
 #[must_use]
 pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
-    // let program_segment = memory_peripheral.get_segment_for_label(program_segment_label);
-    // let (ph, pl) = program_segment.map_or_else(
-    //     || panic!("Could not find '{program_segment_label}' segment in memory peripheral"),
-    //     |s| s.address.to_segmented_address(),
-    // );
-
     CpuPeripheral {
         registers: Registers {
             system_ram_offset,

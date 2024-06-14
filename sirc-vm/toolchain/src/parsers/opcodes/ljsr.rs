@@ -42,6 +42,7 @@ use super::super::shared::AsmResult;
 /// assert_eq!(additional_flags, 1);
 /// ```
 pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
+    let input_length = i.len();
     let (i, ((_, condition_flag), operands)) =
         tuple((parse_instruction_tag("LJSR"), parse_instruction_operands1))(i)?;
 
@@ -60,6 +61,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: construct_immediate_instruction(
                         offset.to_owned(),
                         address_register,
@@ -70,6 +72,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::SymbolRef(ref_token) => Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: construct_immediate_instruction(0x0, address_register),
                     symbol_ref: Some(override_ref_token_type_if_implied(
                         ref_token,
@@ -81,6 +84,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ImmediateType::PlaceHolder(placeholder_name) => Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: construct_immediate_instruction(0x0, address_register),
                     placeholder_name: Some(placeholder_name.clone()),
                     ..Default::default()
@@ -91,6 +95,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
                         r1: displacement_register.to_register_index(),
@@ -113,6 +118,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
                         r1: displacement_register.to_register_index(),

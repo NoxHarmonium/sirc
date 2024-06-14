@@ -77,6 +77,7 @@ use super::super::shared::AsmResult;
 ///
 /// ```
 pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
+    let input_length = i.len();
     let instructions = alt((
         parse_instruction_tag("ADDI"),
         parse_instruction_tag("ADCI"),
@@ -138,6 +139,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::Value(value) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_immediate_instruction(
                             value.to_owned(),
                             dest_register,
@@ -148,6 +150,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_immediate_instruction(0x0, dest_register),
                         placeholder_name: Some(placeholder_name.clone()),
                         ..Default::default()
@@ -181,6 +184,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         Ok((
                             i,
                             InstructionToken {
+                                input_length,
                                 instruction: construct_short_immediate_instruction(
                                     (*value).try_into().expect(
                                         "Value should fit into a u8 as it is filtered above",
@@ -199,6 +203,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,
                     InstructionToken {
+                        input_length,
                         instruction: construct_short_immediate_instruction(
                             0x0,
                             dest_register,

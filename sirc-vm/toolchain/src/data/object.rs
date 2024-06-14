@@ -1,12 +1,15 @@
-use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
-    INSTRUCTION_SIZE_BYTES,
-};
-
 use crate::parsers::data::DataType;
 use crate::parsers::instruction::{DataToken, Token};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
+
+use peripheral_cpu::coprocessors::processing_unit::definitions::{
+    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
+    INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
+};
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
+use sbrc_vm::debug_adapter::types::ObjectDebugInfo;
+
+use sha2::{Digest, Sha256};
 
 use std::collections::HashMap;
 
@@ -97,12 +100,22 @@ fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
     }
 }
 
-pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
+pub fn build_object(
+    tokens: Vec<Token>,
+    original_filename: String,
+    original_input: String,
+) -> ObjectDefinition {
+    let original_input_length = original_input.len();
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut symbol_refs: Vec<SymbolRef> = vec![];
     let mut placeholders: HashMap<String, u32> = HashMap::new();
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
+    let mut debug_info = ObjectDebugInfo {
+        original_filename,
+        original_input,
+        ..Default::default()
+    };
 
     for token in tokens {
         let program_offset: usize = offset as usize / 4;
@@ -125,6 +138,13 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
                 } else {
                     data.instruction
                 };
+
+                let file_position = original_input_length - data.input_length;
+                debug_info.program_to_input_offset_mapping.insert(
+                    // TODO: Yet another unwrap that needs to be handled
+                    (u32::try_from(program_offset).unwrap()) * INSTRUCTION_SIZE_WORDS,
+                    file_position,
+                );
 
                 program[program_offset] = encode_instruction(&instruction);
 
@@ -163,9 +183,15 @@ pub fn build_object(tokens: Vec<Token>) -> ObjectDefinition {
         .flat_map(std::borrow::ToOwned::to_owned)
         .collect();
 
+    // Calculate hash as a stable way to refer to sources
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    debug_info.checksum = format!("{:X}", hasher.finalize());
+
     ObjectDefinition {
         symbols,
         symbol_refs,
         program: bytes,
+        debug_info: Some(debug_info),
     }
 }

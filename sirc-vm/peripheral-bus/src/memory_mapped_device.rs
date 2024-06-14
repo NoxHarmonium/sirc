@@ -45,11 +45,15 @@ pub trait MemoryMappedDevice: Device {
             match bus_assertions.op {
                 BusOperation::Read => BusAssertions {
                     data: self.read_address(address),
+                    device_was_activated: true,
                     ..BusAssertions::default()
                 },
                 BusOperation::Write => {
                     self.write_address(address, bus_assertions.data);
-                    BusAssertions::default()
+                    BusAssertions {
+                        device_was_activated: true,
+                        ..BusAssertions::default()
+                    }
                 }
             }
         } else {

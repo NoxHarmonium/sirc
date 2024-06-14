@@ -69,6 +69,7 @@ use super::super::shared::AsmResult;
 /// assert_eq!(condition_flag, ConditionFlags::GreaterOrEqual);
 /// ```
 pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
+    let input_length = i.len();
     let instructions = alt((
         parse_instruction_tag("ADDR"),
         parse_instruction_tag("ADCR"),
@@ -93,6 +94,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -116,6 +118,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -144,6 +147,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
@@ -171,6 +175,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: tag_to_instruction(tag.as_str()),
                         r1: dest_register.to_register_index(),
