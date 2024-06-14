@@ -14,28 +14,21 @@
 #![deny(warnings)]
 
 pub mod debug_adapter;
+mod debugger;
 pub mod utils;
 
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashSet},
-    fs::File,
-    io::Write,
-    path::PathBuf,
-    sync::mpsc::TryRecvError,
-};
+use std::{cell::RefCell, collections::HashSet, fs::File, io::Write, path::PathBuf};
 
-use debug_adapter::types::{
-    BreakpointRef, DebuggerMessage, ResumeCondition, VmChannels, VmMessage, VmPauseReason, VmState,
-};
+use debug_adapter::types::{BreakpointRef, VmChannels};
+use debugger::yield_to_debugger;
 use device_video::VSYNC_INTERRUPT;
 use log::{error, info};
 use peripheral_bus::{
     device::{BusAssertions, Device},
     BusPeripheral,
 };
-use peripheral_cpu::{registers::FullAddressRegisterAccess, CpuPeripheral};
-use utils::frame_reporter::start_loop;
+use peripheral_cpu::CpuPeripheral;
+use utils::{cpu_from_bus::cpu_from_bus, frame_reporter::start_loop};
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -62,122 +55,6 @@ fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::i
     Ok(())
 }
 
-pub fn cpu_from_bus(bus_peripheral: &mut BusPeripheral) -> &CpuPeripheral {
-    // TODO: This is weird. Is there a better way?
-    bus_peripheral
-        .bus_master
-        .as_any()
-        .downcast_ref::<CpuPeripheral>()
-        .expect("failed to downcast")
-}
-
-pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugState) {
-    match message {
-        DebuggerMessage::UpdateBreakpoints(breakpoints) => {
-            debug_state.breakpoints = breakpoints;
-        }
-        DebuggerMessage::PauseVm => {
-            // TODO: This naming is confusing
-            debug_state.is_stepping = true;
-        }
-        DebuggerMessage::ResumeVm(condition) => {
-            debug_state.paused = false;
-            match condition {
-                ResumeCondition::UntilNextStep => {
-                    debug_state.is_stepping = true;
-                }
-                ResumeCondition::None => {}
-            }
-        }
-        DebuggerMessage::Disconnect => debug_state.disconnected = true,
-    };
-}
-
-pub fn notify_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut DebugState) {
-    let cpu = cpu_from_bus(bus_peripheral);
-    let pc = cpu.registers.get_full_pc_address();
-    let capture_vm_state = || {
-        VmState {
-            pc,
-            // TODO: More variables and move this somewhere
-            variables: BTreeMap::from([
-                ("sr".to_string(), format!("0x{:X}", cpu.registers.sr)),
-                ("r1".to_string(), format!("0x{:X}", cpu.registers.r1)),
-                ("r2".to_string(), format!("0x{:X}", cpu.registers.r2)),
-                ("r3".to_string(), format!("0x{:X}", cpu.registers.r3)),
-                ("r4".to_string(), format!("0x{:X}", cpu.registers.r4)),
-                ("r5".to_string(), format!("0x{:X}", cpu.registers.r5)),
-                ("r6".to_string(), format!("0x{:X}", cpu.registers.r6)),
-                ("r7".to_string(), format!("0x{:X}", cpu.registers.r7)),
-                ("lh".to_string(), format!("0x{:X}", cpu.registers.lh)),
-                ("ll".to_string(), format!("0x{:X}", cpu.registers.ll)),
-                ("ah".to_string(), format!("0x{:X}", cpu.registers.ah)),
-                ("al".to_string(), format!("0x{:X}", cpu.registers.al)),
-                ("sh".to_string(), format!("0x{:X}", cpu.registers.sh)),
-                ("sl".to_string(), format!("0x{:X}", cpu.registers.sl)),
-                ("ph".to_string(), format!("0x{:X}", cpu.registers.ph)),
-                ("pl".to_string(), format!("0x{:X}", cpu.registers.pl)),
-            ]),
-        }
-    };
-
-    // Check for pending messages (e.g. update breakpoints)
-    loop {
-        match debug_state.channels.rx.try_recv() {
-            Ok(data) => {
-                handle_debug_message(data, debug_state);
-            }
-            Err(TryRecvError::Empty) => {
-                // No more messages
-                break;
-            }
-            Err(TryRecvError::Disconnected) => {
-                debug_state.disconnected = true;
-                return;
-            }
-        }
-    }
-
-    // Check if any conditions are met
-    if let Some(breakpoint) = debug_state.breakpoints.iter().find(|b| b.pc == pc) {
-        debug_state
-            .channels
-            .tx
-            .send(VmMessage::Paused(
-                VmPauseReason::Breakpoint(breakpoint.clone()),
-                capture_vm_state(),
-            ))
-            .unwrap();
-        debug_state.paused = true;
-    } else if debug_state.should_pause_for_init {
-        debug_state
-            .channels
-            .tx
-            .send(VmMessage::Paused(VmPauseReason::Init, capture_vm_state()))
-            .unwrap();
-        debug_state.paused = true;
-        debug_state.should_pause_for_init = false;
-    } else if debug_state.is_stepping {
-        debug_state
-            .channels
-            .tx
-            .send(VmMessage::Paused(VmPauseReason::Step, capture_vm_state()))
-            .unwrap();
-        debug_state.paused = true;
-        debug_state.is_stepping = false;
-    }
-
-    // Block waiting for debug adapter to resume
-    while !debug_state.disconnected && debug_state.paused {
-        if let Ok(data) = debug_state.channels.rx.recv() {
-            handle_debug_message(data, debug_state);
-        } else {
-            debug_state.disconnected = true;
-            return;
-        }
-    }
-}
-
 // Separate from run_vm so that performance is not affected in non-debug mode
 // TODO: Come up with a way to have less duplicated
 pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmChannels) {
@@ -201,7 +78,7 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
             bus_assertions = bus_peripheral.poll_all(bus_assertions);
 
             if !debug_state.disconnected && bus_assertions.instruction_fetch {
-                notify_debugger(&mut bus_peripheral, &mut debug_state);
+                yield_to_debugger(&mut bus_peripheral, &mut debug_state);
             }
 
             clocks += 1;
