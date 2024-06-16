@@ -34,7 +34,8 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
     }
 }
 
-// TODO: Clean up this match and remove this warning
+// TODO: Clean up `clippy::match_same_arms` violation in `WriteBackExecutor`
+// category=Refactoring
 #[allow(clippy::match_same_arms)]
 fn decode_write_back_step_instruction_type(
     instruction: Instruction,
@@ -68,9 +69,16 @@ fn update_status_flags(
     registers: &mut Registers,
     intermediate_registers: &IntermediateRegisters,
 ) {
-    // TODO: Should this be done with an instruction type?
+    // TODO: Investigate whether `update_status_flags` could be cleaned up
+    // category=Refactoring
+    // Should this be done with an instruction type?
+    // Not sure what this was referring to but worth a second look
     registers.sr = match decoded.sr_src {
-        // TODO: Define assembly syntax to define this explicitly if required and make sure it is tested
+        // TODO: Allow specifying explicit status register update source via assembly
+        // category=Features
+        // Currently it is set implicitly by the assembler but it could be handy in
+        // some cases to specify it explicitly (especially if you don't want to
+        // the existing value in blat the SR)
         StatusRegisterUpdateSource::Alu => {
             // Do not allow updates to the privileged byte of the SR via the ALU!
             (registers.sr & SR_PRIVILEGED_MASK)
@@ -109,9 +117,13 @@ impl StageExecutor for WriteBackExecutor {
                 registers[decoded.des_ad_l] = intermediate_registers.alu_output;
             }
             WriteBackInstructionType::AddressWriteLoadPostDecrement => {
-                // TODO: Is there a smarter way to do this that doesn't duplicate MemoryLoad and AddressWriteStorePreIncrement branch
+                // TODO: Reduce code duplication in `WriteBackExecutor`
+                // category=Refactoring
+                // Is there a smarter way to do this that doesn't duplicate MemoryLoad and AddressWriteStorePreIncrement branch
                 // also make sure that this is ok to do in hardware
-                // TODO: The order of operations matters here which probably doesn't bode well for the hardware
+                // TODO: Clarify how AddressWriteLoadPostDecrement will work in hardware
+                // category=Hardware
+                // The order of operations matters here which probably doesn't bode well for the hardware
                 // implementation. What happens if the destination register is the same as the address source register?
                 // I guess the destination register should take precedence
                 registers[decoded.ad_h] = decoded.ad_h_;

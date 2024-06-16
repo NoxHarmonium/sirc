@@ -20,7 +20,9 @@ pub enum DataType {
 
 pub fn parse_data_type(i: &str) -> AsmResult<DataType> {
     alt((
-        // TODO: Add hash before number!
+        // TODO: Make sure that numbers are defined consistently in SIRC Asm
+        // category=Toolchain
+        // There should probably be a hash before the number here. (Also check .ORG)
         map(parse_number, DataType::Value).context("number"),
         map(parse_symbol_reference, |ref_token| {
             DataType::SymbolRef(ref_token)

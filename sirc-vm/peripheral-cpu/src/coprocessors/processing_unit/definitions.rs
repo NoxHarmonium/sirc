@@ -113,7 +113,9 @@ impl StatusRegisterUpdateSource {
     }
 }
 
-// TODO: Define trait and move somewhere else?
+// TODO: Find a better place for `ConditionFlags` implementation
+// category=Refactoring
+// Define trait and move somewhere else?
 impl ConditionFlags {
     #[must_use]
     pub fn should_execute(&self, registers: &Registers) -> bool {
@@ -163,8 +165,6 @@ impl ConditionFlags {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImpliedInstructionData {
     pub op_code: Instruction,
-    // TODO: Do we need anything more than DecodedInstruction
-    // for these *InstructionData structs?
     pub condition_flag: ConditionFlags,
 }
 
@@ -212,7 +212,6 @@ pub enum InstructionData {
     Register(RegisterInstructionData),
 }
 
-// TODO: Rename to OpCode or something?
 #[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive, Default, Clone, Hash, Copy)]
 #[cfg_attr(test, derive(strum::EnumIter))]
 pub enum Instruction {

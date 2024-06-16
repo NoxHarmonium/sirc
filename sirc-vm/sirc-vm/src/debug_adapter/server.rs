@@ -27,7 +27,9 @@ use super::types::{
     DebuggerChannels, DebuggerMessage, ProgramDebugInfo, ServerChannels, VmChannels, VmMessage,
 };
 
-// TODO: Make this configurable
+// TODO: Make debug server options configurable with args or environment variables
+// category=Debugging
+// E.g. listener address
 static LISTENER_ADDRESS: &str = "0.0.0.0:9090";
 /// The thread ID for the program running in the VM, not an actual thread on the
 /// system the VM is running on
@@ -38,7 +40,8 @@ const DEFAULT_VARIABLES_ID: i64 = 1;
 
 static INSTRUCTION_REF_PREFIX: &str = "pc:";
 
-// TODO: Should the DAP be moved to a separate module?
+// TODO: Consider moving the DAP to a separate module?
+// category=Debugging
 
 #[derive(Error, Debug)]
 enum DebugAdapterError {
@@ -60,7 +63,9 @@ pub fn parse_instruction_ref(instruction_ref: &str) -> u32 {
         "Cannot decode instruction ref without prefix."
     );
     let prefix_length = INSTRUCTION_REF_PREFIX.len();
-    // TODO: Better error handling
+    // Better error handling in debug server
+    // category=Refactoring
+    // See also: the unwraps below
     u32::from_str_radix(&instruction_ref[prefix_length..], 16).unwrap()
 }
 
@@ -87,7 +92,8 @@ pub fn start_server(
     info!("Waiting for socket connection on [{LISTENER_ADDRESS}]...");
     let listener = TcpListener::bind(LISTENER_ADDRESS)?;
 
-    // TODO: What happens if more than one connection?
+    // TODO: Work out what happens if there is more than one connection attempt to the debug server
+    // category=Debugging
     let (stream, addr) = listener.accept()?;
 
     info!("Connection established with {addr:?}");
@@ -98,7 +104,8 @@ pub fn start_server(
     let mut server_state = ServerState {
         breakpoints: vec![],
     };
-    // TODO: This feels like a bad idea
+    // TODO: Investigate whether there is a better way to share the VM state than a mutex
+    // category=Refactoring
     // Maybe channels would be better?
     let vm_state: Arc<Mutex<Option<VmState>>> = Arc::new(Mutex::new(None));
     let mut next_id: i64 = 1;
@@ -123,7 +130,6 @@ pub fn start_server(
                         origin: None,
                         sources: None,
                         adapter_data: None,
-                        // TODO: Checksum is probably a better more stable way to refer to sources
                         checksums: Some(vec![Checksum {
                             algorithm: types::ChecksumAlgorithm::SHA256,
                             checksum: d.checksum.clone(),
@@ -178,7 +184,9 @@ pub fn start_server(
             }
         } else {
             // The VM has closed it side so we should terminate the debug session
-            // TODO: Why Error occurred in debug server: SendError { .. } is logged when this happens?
+            // TODO: Fix up behaviour when debug server connection closes
+            // category=Debugger
+            // Why Error occurred in debug server: SendError { .. } is logged when this happens?
             server_output
                 .lock()
                 .unwrap()
@@ -197,7 +205,7 @@ pub fn start_server(
 
         match req.command {
             Command::Attach(_) => {
-                // TODO: It is always attached. Maybe in the future there could be some more sophisticated launch vs attach behaviour
+                // It is always attached. Maybe in the future there could be some more sophisticated launch vs attach behaviour
                 let rsp = req.success(ResponseBody::Attach);
                 server.respond(rsp)?;
             }
@@ -241,7 +249,7 @@ pub fn start_server(
                 server.send_event(Event::Initialized)?;
             }
             Command::Launch(_) => {
-                // TODO: It is always attached so launch doesn't make sense.
+                // It is always attached so launch doesn't make sense.
                 let rsp = req.success(ResponseBody::Launch);
                 server.respond(rsp)?;
             }
@@ -303,7 +311,6 @@ pub fn start_server(
                                 let pc = args.source.name.as_ref().and_then(|c| {
                                     translate_line_column_to_pc(
                                         program_debug_info,
-                                        // TODO: Missing source path?
                                         c.as_str(),
                                         (b.line, b.column.unwrap_or(1)),
                                     )
@@ -332,7 +339,6 @@ pub fn start_server(
                     breakpoints
                         .iter()
                         .map(|b| BreakpointRef {
-                            // TODO: Better error handling with these unwraps
                             breakpoint_id: b.id.unwrap(),
                             pc: parse_instruction_ref(
                                 b.instruction_reference.as_ref().unwrap().as_str(),
@@ -348,7 +354,6 @@ pub fn start_server(
             }
             Command::SetDataBreakpoints(_) => todo!(),
             Command::SetExceptionBreakpoints(_) => {
-                // TODO: Does this need to be supported?
                 let rsp = req.success(ResponseBody::SetExceptionBreakpoints(
                     SetExceptionBreakpointsResponse { breakpoints: None },
                 ));
@@ -373,14 +378,10 @@ pub fn start_server(
                 server.respond(rsp)?;
             }
             Command::StackTrace(_) => {
-                // TODO: Could we try and work out a stack trace by keeping track of subroutine calls and the link registers?
-
-                // TODO: Can we combine these two 'if lets' so we don't need a continue below
                 if let Some(vm_state) = vm_state.lock().unwrap().as_ref() {
                     if let Some((line, column, original_filename)) =
                         translate_pc_to_line_column(program_debug_info, vm_state.pc)
                     {
-                        // TODO: Use name here
                         let source = sources
                             .get(&original_filename)
                             .map(|(source, _)| source.to_owned());

@@ -28,7 +28,6 @@ fn test_immediate_branch_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -62,6 +61,9 @@ fn test_immediate_branch_instruction(
     );
 }
 
+// TODO: Check naming of ljmp_test tests (and probably other tests too)
+// category=Testing
+// Seems to be some copy/paste issues
 #[allow(
     clippy::cast_sign_loss,
     clippy::cast_lossless,
@@ -75,7 +77,6 @@ fn test_immediate_branch_with_subroutine_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -506,5 +507,8 @@ fn test_register_branch_with_subroutine_overflow() {
     );
 }
 
-// TODO: Test ShiftOperand::Register
-// TODO: deduplicate test functions
+// TODO: Improve unit test coverage for jump instructions
+// category=Testing
+// - Test ShiftOperand::Register
+// - Deduplicate test functions
+// - Check for misaligned jumps (should fault when that is implemented)

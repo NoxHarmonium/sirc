@@ -12,7 +12,6 @@ pub const ADDRESS_MASK: u32 = 0x0000_FFFF;
 
 #[allow(clippy::cast_possible_truncation)]
 pub trait MemoryMappedDevice: Device {
-    /// TODO: Eventually maybe we should simulate a bus with address/data/control lines
     fn read_address(&self, address: u32) -> u16;
     fn write_address(&mut self, address: u32, value: u16);
 

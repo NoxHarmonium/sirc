@@ -17,7 +17,8 @@ enum MemoryAccessInstructionType {
 
 pub struct MemoryAccessExecutor;
 
-// TODO: Clean up match and remove this warning
+// TODO: Clean up `clippy::match_same_arms` violation in `MemoryAccessExecutor`
+// category=Refactoring
 #[allow(clippy::match_same_arms)]
 fn decode_memory_access_step_instruction_type(
     instruction: Instruction,
@@ -72,7 +73,9 @@ impl StageExecutor for MemoryAccessExecutor {
 
             MemoryAccessInstructionType::BranchOrJumpSubroutine => {
                 // Also store next instruction in link registers so RETS can jump back to after the branch/jump
-                // TODO: This should probably be in the write back stage
+                // TODO: Clarify if link registers should be set in the memory access phase or not
+                // category=Hardware
+                // This should probably be in the write back stage?
                 registers.ll = decoded.npc_l_;
                 registers.lh = decoded.npc_h_;
             }

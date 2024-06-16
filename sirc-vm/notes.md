@@ -103,8 +103,6 @@ Source operands are on the right side of the arguments. Destination operands are
 | STOR |         |           |                 |                | 0x26               | 0x27              |
 | STMR |         |           |                 |                |                    |                   | 0x28           |
 
-# TODO LOAD/STORE/LDMY/STMN PRE POST INCRE
-
 42 Total Opcodes
 
 #### NEW Valid Source Operands
@@ -234,14 +232,6 @@ Max 0x3F instruction ID
 | EXCP |        |        |        |       |        |       |                 | 0x3E |
 | RETE |        |        |        |       |        |       |                 | 0x3F |
 
-# TODO: Make sure privileged/ non privileged SP bits are in separate bytes for easier checks
-
-# TODO: How to propagate carry (new instruction or just 6502 it and only provide ADD with carry)
-
-# TODO: address register can be target for lea only
-
-# TODO: Load/store single byte?
-
 ## Execution Steps
 
 Based on https://www.cs.umd.edu/users/meesh/cmsc411/website/handouts/Simple_Operation_of_MIPS.htm
@@ -266,7 +256,6 @@ SrB = Source Operand B
 Con = Condition Flags
 imm = Immediate value (from instruction)
 Adr = Source Address Register
-; TODO: What to do in commands on whole address register (e.g. long jump which is effectively copy from address register to PC)
 AdrL = The index of the lower source address register (in the VM register indexes)
 AdrH = The index of the higher source address register (in the VM register indexes)
 Sr = Value of status register
@@ -384,12 +373,9 @@ d. Else:
 
 NOP
 
-// TODO: TODO: Post increment and PC increment
-
 
 ```
 
-TODO: Short/long jumps, LEA etc.
 Removing LDEA because the displacements are easy to calculate (it could be done with a meta instruction)
 Adding address register direct to load to allow atomic transfer between address registers (required to set up stack without it getting corrupted by an interrupt half way through)
 

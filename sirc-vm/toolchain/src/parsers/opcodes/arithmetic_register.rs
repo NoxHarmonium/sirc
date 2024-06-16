@@ -44,7 +44,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::AddRegister);
 /// assert_eq!(r1, 1);
 /// assert_eq!(r2, 1);
@@ -60,7 +59,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::AddRegister);
 /// assert_eq!(r1, 1);
 /// assert_eq!(r2, 2);

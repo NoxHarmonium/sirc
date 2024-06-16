@@ -56,7 +56,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::BranchWithRegisterDisplacement);
 /// assert_eq!(r1, 0x03);
 /// assert_eq!(r2, 0x03);
@@ -181,7 +180,10 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
+                        // TODO: Clamp/validate additional_flags to 10 bits in parser
+                        // category=Toolchain
+                        // See also under IndirectRegisterDisplacement branch below
+                        // See also the load/store parsers (probably safer to just do a search)
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()
@@ -205,7 +207,6 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()

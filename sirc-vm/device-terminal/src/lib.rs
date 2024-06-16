@@ -23,6 +23,7 @@ use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 // TODO: Could use a trait on u16 for this?
+// category=Refactoring
 const REGISTER_FALSE: u16 = 0x0;
 const REGISTER_TRUE: u16 = 0x1;
 
@@ -91,7 +92,6 @@ impl Device for TerminalDevice {
         if !self.reading_finished {
             match self.stdin_channel.try_recv() {
                 Ok(data) => {
-                    // TODO: Write the result somewhere and flag exception
                     debug!("Received: [{:X?}]", data.as_bytes());
                     self.stdin_buffer.extend(data.as_bytes());
                 }
@@ -127,14 +127,13 @@ impl Device for TerminalDevice {
 
         if self.control_registers.send_enabled == REGISTER_TRUE
         // TODO: why does adding `&& should_activate` here make it not print anything with certain clock speeds?
+        // category=Bugs
             && self.control_registers.send_pending == REGISTER_TRUE
         {
             print!("{}", char::from(self.control_registers.send_data as u8));
             self.control_registers.send_pending = REGISTER_FALSE;
         }
 
-        // TODO: Maybe this should disable when send AND recv are both disabled
-        // but it doesn't have to be too accurate for now
         if should_activate {
             self.clock_counter = 0;
         } else {

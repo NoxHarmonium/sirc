@@ -187,7 +187,8 @@ impl MemoryMappedDevice for VideoDevice {
         debug!("Reading from address 0x{address:X}");
         match address {
             // First FF addresses are control registers
-            // TODO: Actually implement some control registers
+            // TODO: Design and implement PPU control registers
+            // category=Features
             0x0000..=0x00FF => 0x0,
             // After that range
             _ => self.vram[(address as usize) - 0x00FF],
@@ -199,7 +200,6 @@ impl MemoryMappedDevice for VideoDevice {
         debug!("Writing 0x{value:X} to address 0x{address:X}");
         match address {
             // First FF addresses are control registers
-            // TODO: Actually implement some control registers
             0x0000..=0x00FF => {
                 // TODO
             }

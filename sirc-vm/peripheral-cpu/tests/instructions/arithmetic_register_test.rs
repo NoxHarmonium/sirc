@@ -11,8 +11,6 @@ use crate::instructions::common;
 
 use super::common::{get_expected_registers, get_register_index_range};
 
-// TODO: Point taken from clippy about having too many arguments.
-// will fix up ASAP if possible
 #[allow(clippy::too_many_arguments)]
 fn test_register_arithmetic_instruction(
     instruction: Instruction,
@@ -952,8 +950,10 @@ fn test_arithmetic_shift_right_register() {
     }
 }
 
-// TODO: Test ShiftOperand::Register
-// TODO: Test first operand register not being destination register
-// TODO: Test conditionals
-// TODO: Test COPR
-// TODO: Test CMPI/TSAI/TSXI etc.
+// TODO: Improve unit test coverage for arithmetic register instructions
+// category=Testing
+// - Test ShiftOperand::Register
+// - Test first operand register not being destination register
+// - Test conditionals
+// - Test COPR
+// - Test CMPI/TSAI/TSXI etc.

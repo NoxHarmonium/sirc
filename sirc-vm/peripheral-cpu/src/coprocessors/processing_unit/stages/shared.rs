@@ -68,7 +68,10 @@ pub trait StageExecutor {
 }
 
 pub enum ExecutionStage {
-    // TODO: Work out a cleaner way to specify the data in each stage
+    // TODO: Ensure `ExecutionStage` is defined in the best way
+    // category=Refactoring
+    // Work out a cleaner way to specify the data in each stage
+    // Not sure what I was referring to here but worth going over to see if it is the best way to do it
     Execution,
     MemoryAccessAndBranchCompletion,
     WriteBack,

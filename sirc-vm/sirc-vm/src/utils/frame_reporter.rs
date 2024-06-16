@@ -18,7 +18,6 @@ pub fn start_loop(vsync_frequency: f64, mut closure: impl FnMut() -> (bool, u32)
             let elapsed = start_instant.elapsed().as_secs_f64();
             let expected_frame = elapsed / seconds_per_frame.as_secs_f64();
 
-            // TODO: Need to get this run_rate actually up to 1.0
             let run_rate = frame / expected_frame;
             info!("Exiting main loop. Actual Duration: {elapsed}s Expected frame: {expected_frame} Actual Frame: {frame} Seconds per frame: {} Run rate: {run_rate}",seconds_per_frame.as_secs_f64());
             break;

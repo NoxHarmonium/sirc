@@ -17,7 +17,8 @@ enum FetchAndDecodeStepInstructionType {
     ShortImmediate,
 }
 
-// TODO: Clean up this match and remove this exclusion
+// TODO: Clean up `clippy::match_same_arms` violation in fetch_and_decode module
+// category=Refactoring
 #[allow(clippy::match_same_arms)]
 fn decode_fetch_and_decode_step_instruction_type(
     instruction: Instruction,
@@ -50,7 +51,7 @@ fn do_shift(
     registers: &Registers,
     sr_a_before_shift: u16,
     register_representation: &RegisterInstructionData,
-    short_immediate: bool, // TODO: Find a smarter solution to this
+    short_immediate: bool,
 ) -> (u16, u16) {
     let shift_operand = register_representation.shift_operand;
     match shift_operand {

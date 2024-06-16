@@ -35,11 +35,11 @@ pub fn set_up_instruction_test(
     let mut program_vector = vec![0; ((program_offset & 0xFFFF) * 2) as usize];
     program_vector.extend(program_data);
 
-    // TODO: This segment is just to suppress "No device was mapped for address [0x0]" warnings
     // TODO: Work out why tests are trying to access the address 0x0
+    // category=Testing
+    // This segment is just to suppress "No device was mapped for address [0x0]" warnings
     bus_peripheral.map_segment(
         DUMMY_SEGMENT,
-        // TODO: This should be passed in already as segment address
         0x0,
         u16::MAX as u32,
         false,
@@ -47,7 +47,6 @@ pub fn set_up_instruction_test(
     );
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
-        // TODO: This should be passed in already as segment address
         program_offset,
         u16::MAX as u32,
         false,
@@ -68,7 +67,10 @@ pub fn setup_test<F>(bus: &mut BusPeripheral, register_setup: F, program_offset:
 where
     F: Fn(&mut Registers, &mut BusPeripheral),
 {
-    // TODO: I think this might be the worst code I've ever written
+    // TODO: Clean up `setup_test` function`
+    // category=Testing
+    // - Hack to get tests running again - probably needs a rethink
+    // - I think this might be the worst code I've ever written
     let mut registers;
     {
         let cpu: &mut CpuPeripheral = bus
@@ -77,7 +79,6 @@ where
             .downcast_mut::<CpuPeripheral>()
             .expect("failed to downcast");
 
-        // TODO: Hack to get tests running again - probably needs a rethink
         registers = cpu.registers;
         (registers.ph, registers.pl) = program_offset.to_segmented_address();
         register_setup(&mut registers, bus);

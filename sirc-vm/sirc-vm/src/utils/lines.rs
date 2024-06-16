@@ -26,7 +26,10 @@ pub fn translate_pc_to_line_column(
         .map(|(_, f)| f)?;
 
     // Then the matching line
-    // TODO: Cache the lookup somewhere?
+    // TODO: Improve the performance of the PC <-> Line/Column lookups in the debugger
+    // category=Debugging
+    // - Should probably cache the lookup more
+    // - See also the function that translates the other direction
     let lookup = LineColLookup::new(debug_info.original_input.as_str());
     debug_info
         .program_to_input_offset_mapping
@@ -53,7 +56,6 @@ pub fn translate_line_column_to_pc(
         .values()
         .find(|d| d.original_filename == original_filename)?;
     // Then the matching line
-    // TODO: Cache this
     let input_offset_to_program_mapping = flip_map(&debug_info.program_to_input_offset_mapping);
     let mut lines_to_find = line - 1;
     let mut offset: usize = 0;

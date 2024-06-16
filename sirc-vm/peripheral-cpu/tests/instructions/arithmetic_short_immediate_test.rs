@@ -11,8 +11,6 @@ use crate::instructions::common;
 
 use super::common::{get_expected_registers, get_register_index_range};
 
-// TODO: Point taken from clippy about having too many arguments.
-// will fix up ASAP if possible
 #[allow(clippy::too_many_arguments)]
 fn test_short_immediate_arithmetic_instruction(
     instruction: Instruction,
@@ -908,8 +906,10 @@ fn test_arithmetic_shift_right_immediate() {
     }
 }
 
-// TODO: Test ShiftOperand::Register
-// TODO: Test Rotates
-// TODO: Test conditionals
-// TODO: Test COPR
-// TODO: Test CMPI/TSAI/TSXI etc.
+// TODO: Improve unit test coverage for arithmetic short immediate instructions
+// category=Testing
+// - Test ShiftOperand::Register
+// - Test Rotates
+// - Test conditionals
+// - Test COPI
+// - Test CMPI/TSAI/TSXI etc.

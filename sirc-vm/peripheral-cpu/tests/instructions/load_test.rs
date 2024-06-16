@@ -43,8 +43,6 @@ fn test_load_indirect_immediate(test_data: LoadTestData) -> TestResult {
         offset,
         ..
     } = test_data;
-    // TODO: Handle PC writes/reads etc.
-    // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
     if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
         || dest_register_index == RegisterName::Pl.to_register_index()
         || dest_register_index == RegisterName::Ph.to_register_index()
@@ -95,10 +93,7 @@ fn test_load_indirect_register(test_data: LoadTestData) -> TestResult {
         offset,
     } = test_data;
 
-    if
-    // TODO: Handle PC writes/reads etc.
-    // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-    src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
+    if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
         || dest_register_index == RegisterName::Pl.to_register_index()
         || dest_register_index == RegisterName::Ph.to_register_index()
         || offset_register_index == RegisterName::Pl.to_register_index()
@@ -155,10 +150,7 @@ fn test_load_indirect_register_post_increment(test_data: LoadTestData) -> TestRe
         offset_register_index,
         offset,
     } = test_data;
-    if
-    // TODO: Handle PC writes/reads etc.
-    // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-    src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
+    if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
         || dest_register_index == RegisterName::Pl.to_register_index()
         || dest_register_index == RegisterName::Ph.to_register_index()
         || offset_register_index == RegisterName::Pl.to_register_index()
@@ -168,7 +160,10 @@ fn test_load_indirect_register_post_increment(test_data: LoadTestData) -> TestRe
         return TestResult::discard();
     }
 
-    // TODO: Deduplicate this with the non post-increment version
+    // TODO: Try to deduplicate common code in `load_test.rs`
+    // category=Testing
+    // - Deduplicate this with the non post-increment version
+    // - See also test_load_indirect_immediate_post_increment
     let instruction_data = InstructionData::Register(RegisterInstructionData {
         op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
         r1: dest_register_index,
@@ -216,17 +211,13 @@ fn test_load_indirect_immediate_post_increment(test_data: LoadTestData) -> TestR
         offset,
         ..
     } = test_data;
-    if
-    // TODO: Handle PC writes/reads etc.
-    // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-    src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
+    if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
         || dest_register_index == RegisterName::Pl.to_register_index()
         || dest_register_index == RegisterName::Ph.to_register_index()
     {
         return TestResult::discard();
     }
 
-    // TODO: Deduplicate this with the non post-increment version
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadRegisterFromIndirectImmediatePostIncrement,
         register: dest_register_index,

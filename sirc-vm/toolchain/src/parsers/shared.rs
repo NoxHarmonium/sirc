@@ -49,7 +49,6 @@ fn parse_hex_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     )
 }
 
-// TODO: Allow u32 decimal
 #[allow(clippy::cast_sign_loss)]
 fn parse_dec_(i: &str) -> AsmResult<u32> {
     map_res(
@@ -58,7 +57,9 @@ fn parse_dec_(i: &str) -> AsmResult<u32> {
             sign.map_or_else(
                 || str::parse::<u32>(number_string),
                 |sign_value| {
-                    // TODO: Re-concatenating the original string seems bad
+                    // TODO: Fix strangeness in number parsing
+                    // category=Toolchain
+                    // Re-concatenating the original string seems bad
                     // We should probably just get the original value or something
                     let full_number = format!("{sign_value}{number_string}");
                     // Signed numbers represented in parser as unsigned for simplicity
@@ -102,7 +103,9 @@ pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> 
                 ".r" => Some(RefType::Offset),
                 ".u" => Some(RefType::UpperWord),
                 ".l" => Some(RefType::LowerWord),
-                // TODO: Proper error handling again
+                // TODO: Error handling in shared parsers
+                // category=Refactoring
+                // Return of the panic!
                 _ => panic!("Unknown postamble {parsed_value}"),
             },
         )(i),
@@ -163,14 +166,17 @@ pub fn parse_symbol_reference(i: &str) -> AsmResult<RefToken> {
 /// In this case of instructions, the "`shift_count`" is either the index of the register,
 /// or a constant depending on the value of `ShiftOperand`.
 ///
-/// TODO: Should shift be stored as an enum in the instruction structs? then it could be reused
-/// by the parser and avoid this function
-///
+// TODO: Consider storing shift as an enum
+// category=Refactoring
+// Not sure if still valid, needs looking in to
+// Should shift be stored as an enum in the instruction structs? then it could be reused by the parser and avoid this function
 pub fn split_shift_definition_data(
     shift_definition_data: &ShiftDefinitionData,
 ) -> (ShiftOperand, ShiftType, u8) {
     match shift_definition_data {
-        // TODO: Probably can avoid this wrapping/unwrapping by using one type or something?
+        // TODO: More clean up in shared parser code
+        // category=Refactoring
+        // Probably can avoid this wrapping/unwrapping by using one type or something?
         crate::parsers::instruction::ShiftDefinitionData::Immediate(shift_type, shift_count) => {
             (ShiftOperand::Immediate, *shift_type, *shift_count)
         }

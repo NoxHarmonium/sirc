@@ -45,7 +45,10 @@ fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
     }
     match segment_args.as_slice() {
         [label, offset_str, length_str] => {
-            // TODO: Surely there is a cleaner idomatic way to do this
+            // TODO: Clean up `segment_arg_parser`
+            // category=Refactor
+            // - Surely there is a cleaner idomatic way to do these guards
+            // - Also see the match arm below
             let offset = match u32::from_str_radix(offset_str, 16) {
                 Ok(x) => x,
                 Err(error) => return Err(error.to_string()),
@@ -64,7 +67,6 @@ fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
             })
         }
         [label, offset_str, length_str, file] => {
-            // TODO: Surely there is a cleaner idomatic way to do this
             let offset = match u32::from_str_radix(offset_str, 16) {
                 Ok(x) => x,
                 Err(error) => return Err(error.to_string()),
@@ -123,7 +125,6 @@ fn main() {
 
     stderrlog::new()
         .module(module_path!())
-        // TODO: Is there a way to get this from the dependency list?
         .modules(vec![
             "device_debug",
             "device_ram",
@@ -164,10 +165,11 @@ fn main() {
     exit(0);
 }
 
-// TODO: Maybe make a public version of this that isn't coupled to command line argument parsing
+// TODO: Consider making a generic VM setup function that isn't coupled to command line args
+// category=Refactoring
+// Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
 fn setup_vm(args: &Args) -> Vm {
-    // TODO: Why does changing the master clock from 8_000_000 -> 4_000_000 cause the hardware exception example to hang?
     let master_clock_freq = 25_000_000;
 
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
@@ -204,7 +206,8 @@ fn setup_vm(args: &Args) -> Vm {
     #[cfg(feature = "video")]
     let vsync_frequency = if args.enable_video {
         let video_device = new_video_device(
-            // TODO: why the mix of usize and u32?
+            // TODO: Check mix of u32 and usize for the clock and video device
+            // category=Refactoring
             master_clock_freq as usize,
         );
         let vsync_frequency = video_device.vsync_frequency;

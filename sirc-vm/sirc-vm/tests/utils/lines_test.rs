@@ -27,7 +27,8 @@ NOOP
 ; Halt CPU
 COPI    r1, #0x14FF";
 
-// TODO: Add tests for multiple source files
+// TODO: Add tests for multiple source files for PC <-> Line/Column translation
+// category=Testing
 
 fn get_debug_info() -> ProgramDebugInfo {
     ProgramDebugInfo {

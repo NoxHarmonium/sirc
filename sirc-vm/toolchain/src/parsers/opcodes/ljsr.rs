@@ -34,7 +34,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::LongJumpToSubroutineWithImmediateDisplacement);
 /// assert_eq!(register, 0x0);
 /// assert_eq!(value, 0xFFFC);

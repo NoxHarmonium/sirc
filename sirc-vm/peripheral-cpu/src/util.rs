@@ -16,8 +16,9 @@
 /// assert_eq_hex!(0x80, find_highest_active_bit(0xFF));
 /// ```
 pub fn find_highest_active_bit(bit_field: u8) -> u8 {
-    // TODO: It seems like a common operation that would have an efficient algorithm
-    // but for now this will do and it can be improved later
+    // TODO: Confirm `find_highest_active_bit` is using the best algorithm
+    // category=Performance
+    // It seems like a common operation that would have an efficient algorithm but for now this will do and it can be improved later
 
     let mut last_value = 0x0;
     let mut mask: u8 = 0xFE;

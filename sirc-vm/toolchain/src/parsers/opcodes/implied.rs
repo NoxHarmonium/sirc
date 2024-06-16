@@ -29,7 +29,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::CoprocessorCallImmediate);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
 /// ```
@@ -55,7 +54,9 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
 
     match tag.as_str() {
         // Returning from a subroutine is just loading the link register into the PC again
-        // TODO: Double check this doesn't provide a way for code running in non system mode to change the program segment (ph)
+        // TODO: Double check that RETS instruction doesn't have security flaw
+        // category=Hardware
+        // Double check this doesn't provide a way for code running in non system mode to change the program segment (ph)
         "RETS" => Ok((
             i,
             InstructionToken {
