@@ -18,7 +18,8 @@ use peripheral_cpu::{
     },
 };
 
-// TODO: Check all tests have the "_test" prefix
+// TODO: Make sure that all test files have the same suffix
+// category=Testing
 
 use crate::exceptions::common::{build_test_instruction, expectation, run_expectations};
 
@@ -442,17 +443,10 @@ fn test_invalid_opcode_fault() {
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
 }
 
-// TODO: Test metadata LR
-// TODO: What happens if try to raise hardware exception directly with COP? Is it allowed in privileged mode or should it be ignored?
-// TODO: Double fault
-
-// pub enum Faults {
-//     #[default]
-//     Bus = 0x1,
-//     Alignment = 0x2,
-//     SegmentOverflow = 0x3,
-//     InvalidOpCode = 0x4,
-//     PrivilegeViolation = 0x5,
-//     InstructionTrace = 0x6,
-//     LevelFiveInterruptConflict = 0x7,
-// }
+// TODO: Test the metadata part of the exception link register
+// category=Testing
+// TODO: Clarify what happens if hardware exception is raised via COP instruction
+// category=Hardware
+// Is it allowed in privileged mode or should it be ignored?
+// TODO: Clarify how double faults work
+// category=Hardware

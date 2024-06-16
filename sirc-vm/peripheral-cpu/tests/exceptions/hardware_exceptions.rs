@@ -194,4 +194,6 @@ fn test_hardware_exception_higher_priority_interrupts_handler() {
     assert_eq_hex!(0x6D6, cpu_peripheral.registers.r1);
 }
 
-// TODO: Test fault priorities
+// TODO: Unit test hardware exception priorities
+// category=Testing
+// It is currently tested by the faults example project but there isn't unit test coverage

@@ -25,7 +25,9 @@ extern crate quickcheck;
 #[macro_use(quickcheck)]
 extern crate quickcheck_macros;
 
-// TODO: Can we expose the Executor trait here without exposing the implementations?
+// TODO: Try to hide more implementation details of the CPU module
+// category: Refactoring
+// Can we expose the Executor trait here without exposing the implementations?
 // OR can we keep everything private and somehow enable tests to reach inside?
 pub mod coprocessors;
 pub mod registers;
@@ -86,7 +88,9 @@ pub fn raise_fault(
     // Disabled during refactor
 
     if let Some(pending_fault) = eu_registers.pending_fault {
-        // TODO: Is this possible in hardware? If so, what would happen?
+        // TODO: What would happen in hardware if a fault was raised when one was already pending
+        // category=Hardware
+        // Is this possible in hardware? If so, what would happen?
         panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
     }
 
@@ -103,7 +107,10 @@ pub fn raise_fault(
 
     eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
         return_address: bus_assertions.address,
-        return_status_register: phase as u16, // TODO: phase only takes up u8 (or less), could fit more data in here - what is useful?
+        // TODO: Find a use for unused bits in `return_status_register`
+        // category=Hardware
+        // phase only takes up u8 (or less), could fit more data in here - what is useful?
+        return_status_register: phase as u16,
     };
 
     Some(fault)
@@ -137,7 +144,9 @@ impl Device for CpuPeripheral {
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
 
         if bus_assertions.bus_error {
-            // TODO: Can we do this without have a mut ref to eu_registers?
+            // TODO: Reduce number of mutable references in `CpuPeripheral` poll
+            // category=Refactoring
+            // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
             self.eu_registers.pending_fault = raise_fault(
                 &self.registers,
                 &mut self.eu_registers,
@@ -152,7 +161,6 @@ impl Device for CpuPeripheral {
 
         if phase == ExecutionPhase::InstructionFetchLow {
             // Only reset the cause register every full instruction cycle
-            // TODO: Can we do this without have a mut ref to eu_registers?
             self.cause_register_value =
                 get_cause_register_value(&self.registers, &mut self.eu_registers);
         }
@@ -164,7 +172,6 @@ impl Device for CpuPeripheral {
             self.eu_registers.pending_fault
         );
 
-        // TODO: Do something with error results, instead of unwrap
         let result = match coprocessor_id {
             ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
                 &phase,
@@ -182,7 +189,9 @@ impl Device for CpuPeripheral {
             ),
             _ => {
                 warn!("Invalid op code detected");
-                // TODO: This doesn't seem to line up with how the other faults are handled
+                // TODO: Double check invalid op code fault handling
+                // category=Hardware
+                // This doesn't seem to line up with how the other faults are handled
                 // because of this check. We need it because the cause register is currently
                 // only set on the first phase of the CPU cycles, so this gets run each cycle
                 let should_fault = self.eu_registers.pending_fault != Some(Faults::InvalidOpCode);
@@ -202,6 +211,8 @@ impl Device for CpuPeripheral {
             }
         };
 
+        // TODO: Investigate performance impact of unrolling the six CPU phases
+        // category=Performance
         self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
 
         result
@@ -235,8 +246,12 @@ impl CpuPeripheral {
         // This level is a bitmask
         if level > 0 {
             trace!("Interrupt level [b{level:b}] raised");
-            // TODO: What happens when a software exception is triggered in an interrupt handler? By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-            // TODO: Use consistent terminology. Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+            // TODO: Clarify what happens when software exception is triggered in interrupt handler
+            // category=Hardware
+            // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+            // TODO: Use consistent terminology for exceptions
+            // category=Refactoring
+            // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
             self.eu_registers.pending_hardware_exceptions |= level;
             self.eu_registers.waiting_for_exception = false;
         }
@@ -254,11 +269,13 @@ impl CpuPeripheral {
     /// Will panic if a coprocessor instruction is executed with a COP ID of neither 0 or 1
     #[cfg(test)]
     pub fn run_cpu(&mut self) {
-        // TODO: Remove this function and do the polling via the bus
-        // TODO: It isn't ideal to spin the cpu when waiting for exception. Should probably come up with something more clever
+        // TODO: Remove `run_cpu` function and do the polling via the bus
+        // category=Testing
+        // It was created as an interim to make refactoring easier but there is probably a better way to do it
+        // TODO: Investigate if spinning is the best way to wait for exception
+        // category=Performance
         if !self.eu_registers.waiting_for_exception {
             for _ in 0..CYCLES_PER_INSTRUCTION {
-                // TODO: this needs a bus
                 self.poll(BusAssertions::default(), true);
             }
         }

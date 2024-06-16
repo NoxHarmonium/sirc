@@ -58,7 +58,9 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .set_len(0xFFFF * 2)
                 .unwrap();
 
-            // TODO: Can we do the setup once and just reset the CPU on every iteration? Time to setup the test is less important than execution time
+            // TODO: Cache VM setup in benchmark code
+            // category=Performance
+            // Can we do the setup once and just reset the CPU on every iteration? Time to setup the test is less important than execution time
             let vm = setup_vm(
                 program.as_slice(),
                 program_scratch_file.into_temp_path().to_path_buf(),

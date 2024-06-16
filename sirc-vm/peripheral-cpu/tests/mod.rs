@@ -20,7 +20,10 @@
 fn init() {
     stderrlog::new()
         .module(module_path!())
-        // TODO: Is there a way to get this from the dependency list?
+        // TODO: Find a way to populate the `stderrlog` module list automatically
+        // category=refactor
+        // Is there a way to get this from the dependency list?
+        // - See also in sirc_vm main function
         .modules(vec![
             "device_debug",
             "device_ram",

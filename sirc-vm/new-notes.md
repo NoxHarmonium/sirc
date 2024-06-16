@@ -139,3 +139,5 @@ Immediate: 0
 The second bit is used to distinguish between operations that write to both registers in an address register pair, vs ones that only write to the lower register.
 Why do we need instructions that only write to the lower register? Because when the system mode/privileged bit is not set, updating the upper register
 in an address register pair is illegal to prevent escaping the bank/segment and provide a crude memory protection.
+
+<!-- TODO: Merge with notes.md and actually bring up to date -->

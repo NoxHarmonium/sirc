@@ -34,20 +34,24 @@ pub enum StatusRegisterFields {
     /// Mainly just for control circuits, there shouldn't be a way to read this in a program
     WaitingForInterrupt = 0b0001_0000 << u8::BITS,
     /// Set to one when the CPU is halted (stopped until reset)
-    /// TODO: I think this is getting dropped, a CPU usually doesn't halt, unless from external pin like when the bus is busy
-    /// during a DMA transfer or something but in that case we wouldn't be able to read the status bit anyway
+    // TODO: Double check if CpuHalted status bit makes sense
+    // category=Hardware
+    // I think this should be dropped, a CPU usually doesn't halt, unless from external pin like when the bus is busy
+    // during a DMA transfer or something but in that case we wouldn't be able to read the status bit anyway
     CpuHalted = 0b0010_0000 << u8::BITS,
     /// During memory effective address calcs, if the address wraps around with either and overflow or underflow
     /// and this bit is set, an exception will be thrown to detect an invalid access
-    /// TODO: Implement this
     TrapOnAddressOverflow = 0b0100_0000 << u8::BITS,
     /// When enabled, causes an exception every instruction to facilitate debuggers
-    /// TODO: Implement this
+    // TODO: Implement TraceMode in CPU simulator
+    // category=Features
+    // Useful when debugging programs with other programs running on the CPU (e.g. if you have an OS)
     TraceMode = 0b1000_0000 << u8::BITS,
 }
 
 /// Should map 1:1 with the Registers struct
-/// TODO: Can we enforce that the two data structures line up?
+// TODO: Ensure that `RegisterName` enum and `Registers` struct are in alignment
+// category=Refactoring
 #[derive(FromPrimitive, ToPrimitive, Debug)]
 pub enum RegisterName {
     Sr = 0,
@@ -224,7 +228,9 @@ impl IndexMut<u8> for Registers {
     }
 }
 
-// TODO: Deprecate and remove this in favour of just using the Index/IndexMut traits
+// TODO: Remove RegisterIndexing trait
+// category=Refactoring
+// Deprecate and remove this in favour of just using the Index/IndexMut traits
 impl RegisterIndexing for Registers {
     fn get_at_index(&self, index: u8) -> u16 {
         self[index]
@@ -488,7 +494,9 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
         | StatusRegisterFields::InterruptMaskMed as u16
         | StatusRegisterFields::InterruptMaskLow as u16;
     let masked_bits = registers.sr & bit_mask;
-    // TODO: Can we work out this shift based on the fields position?
+    // TODO: Remove magic number in `get_interrupt_mask`
+    // category=Refactoring
+    // Can we work out this shift based on the fields position? See also `set_interrupt_mask`
     (masked_bits >> 9) as u8
 }
 
@@ -521,7 +529,6 @@ pub fn get_interrupt_mask(registers: &Registers) -> u8 {
 /// assert_eq!(0b0001_1111 << u8::BITS, registers.sr);
 /// ```
 pub fn set_interrupt_mask(registers: &mut Registers, interrupt_mask: u8) {
-    // TODO: Can we work out this shift based on the fields position?
     let shifted_value = u16::from(interrupt_mask.clamp(0, 7)) << 9;
     let bit_mask = !(StatusRegisterFields::InterruptMaskHigh as u16
         | StatusRegisterFields::InterruptMaskMed as u16
@@ -563,7 +570,9 @@ pub fn register_name_to_index(name: &str) -> u8 {
         // [ph, pl]
         "ph" => 14, // Program counter high
         "pl" => 15, // Program counter low
-        // TODO: Should this panic or just return None or something?
+        // TODO: Investigate best way to handle missing register mapping
+        // category=Refactoring
+        // Should this panic or just return None or something?
         _ => panic!("Fatal: No register mapping for name [{name}]"),
     }
 }
@@ -584,7 +593,9 @@ pub fn register_name_to_index(name: &str) -> u8 {
 /// ```
 #[must_use]
 pub fn is_valid_register_range(start_index: u8, end_index: u8) -> bool {
-    // TODO: Use std::mem::variant_count::<RegisterName>() when it stabilises https://stackoverflow.com/a/73543241/1153203
+    // TODO: Derive register count automatically in `is_valid_register_range`
+    // category=Refactoring
+    // Use std::mem::variant_count::<RegisterName>() when it stabilises https://stackoverflow.com/a/73543241/1153203
     let register_count = 16;
     start_index < register_count && end_index < register_count && end_index > start_index
 }
@@ -597,7 +608,8 @@ pub struct ExceptionLinkRegister {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Copy)]
 pub struct ExceptionUnitRegisters {
-    // TODO: Capture bus information
+    // TODO: Consider capturing bus information when exception occurs
+    // category=Hardware
     pub pending_hardware_exceptions: u8,
     pub pending_fault: Option<Faults>,
     // 8 registers - 7 exception levels + one (index 7) to store fault metadata

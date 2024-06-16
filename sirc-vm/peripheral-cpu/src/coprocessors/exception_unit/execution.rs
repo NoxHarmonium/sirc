@@ -68,7 +68,9 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 
 
 pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCodes, u8, u8) {
     let instruction = decode_exception_unit_instruction(cause_register_value);
-    // TODO: Real CPU can't panic. Work out what should actually happen here (probably nothing)
+    // TODO: Define what happens when exception CoP gets an unimplemented opcode
+    // category=Hardware
+    // Real CPU can't panic. Work out what should actually happen here (probably nothing)
     let op_code = num::FromPrimitive::from_u8(instruction.op_code).unwrap_or_else(|| {
         panic!(
             "Unimplemented op code [{:X}] for exception co-processor",

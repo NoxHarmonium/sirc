@@ -229,7 +229,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 }
             }))
         }
-        // TODO: Better error message without being too verbose?
+        // TODO: Investigate ways of improving parse failure error messages
+        // category=Toolchain
+        // Better error message without being too verbose?
         modes => {
             let error_string = format!("Invalid addressing mode for STOR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(

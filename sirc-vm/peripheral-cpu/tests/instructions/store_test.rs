@@ -16,16 +16,15 @@ use super::common::{
     get_address_register_index_range, get_expected_registers, get_non_address_register_index_range,
 };
 
-// TODO: These long running LOAD/STORE tests with lots of permutations could probably be property based tests
+// TODO: Consider using property based testing for LOAD/STORE tests
+// category=Testing
+// These long running LOAD/STORE tests with lots of permutations could probably be property based tests
 
 #[allow(clippy::cast_sign_loss)]
 #[test]
 fn test_store_indirect_immediate() {
     for src_address_register_index in get_address_register_index_range() {
-        if
-        // TODO: Handle PC writes/reads etc.
-        // It _should_ be valid to store a memory address offset from the PC but it breaks the test
-        src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index() {
+        if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index() {
             continue;
         }
 
@@ -79,10 +78,7 @@ fn test_store_indirect_register() {
     for src_address_register_index in get_address_register_index_range() {
         for src_register_index in get_non_address_register_index_range() {
             for offset_register_index in get_non_address_register_index_range() {
-                if
-                // TODO: Handle PC writes/reads etc.
-                // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-                src_address_register_index
+                if src_address_register_index
                     == AddressRegisterName::ProgramCounter.to_register_index()
                     || src_register_index == RegisterName::Pl.to_register_index()
                     || src_register_index == RegisterName::Ph.to_register_index()
@@ -153,10 +149,7 @@ fn test_store_indirect_register_pre_decrement() {
     for src_address_register_index in get_address_register_index_range() {
         for src_register_index in get_non_address_register_index_range() {
             for offset_register_index in get_non_address_register_index_range() {
-                if
-                // TODO: Handle PC writes/reads etc.
-                // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-                src_address_register_index
+                if src_address_register_index
                     == AddressRegisterName::ProgramCounter.to_register_index()
                     || src_register_index == RegisterName::Pl.to_register_index()
                     || src_register_index == RegisterName::Ph.to_register_index()
@@ -227,10 +220,7 @@ fn test_store_indirect_register_pre_decrement() {
 fn test_store_indirect_immediate_pre_decrement() {
     for src_address_register_index in get_address_register_index_range() {
         for src_register_index in get_non_address_register_index_range() {
-            if
-            // TODO: Handle PC writes/reads etc.
-            // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
-            src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
+            if src_address_register_index == AddressRegisterName::ProgramCounter.to_register_index()
                 || src_register_index == RegisterName::Pl.to_register_index()
                 || src_register_index == RegisterName::Ph.to_register_index()
             {
@@ -242,10 +232,6 @@ fn test_store_indirect_immediate_pre_decrement() {
             ] {
                 let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
                     op_code: Instruction::StoreRegisterToIndirectImmediatePreDecrement,
-                    // TODO: Why doesn't this work??
-                    // probs the register pre decrement doesnt actually work
-                    // // it sets dest register to 0x0 which is SR and probs ignored
-                    // // so the test is broken!
                     register: src_register_index,
                     value: offset as u16,
                     condition_flag: ConditionFlags::Always,

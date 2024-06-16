@@ -117,5 +117,8 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
     assert_eq!(0x00CD_AB06, cpu_peripheral.registers.get_full_pc_address());
 }
 
-// TODO: Test fault priorities
-// TODO: Test SW exception out of range?
+// TODO: Unit test software exception priorities
+// category=Testing
+// It is currently tested by the some example projects but there isn't unit test coverage
+// TODO: Test software exception being out of range
+// category=Testing

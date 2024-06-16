@@ -1031,6 +1031,9 @@ fn test_tsxi_immediate() {
     }
 }
 
-// TODO: Test ShiftOperand::Register
-// TODO: Test Rotates
-// TODO: Test COPI
+// TODO: Improve unit test coverage for arithmetic immediate instructions
+// category=Testing
+// - Test ShiftOperand::Register
+// - Test Rotates
+// - Test COPI
+// - Test CMPR/TSAR/TSXR etc.

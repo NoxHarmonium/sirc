@@ -20,6 +20,7 @@ pub enum SegmentMemCell {
 
 pub struct RamDevice {
     // TODO: Does this still need to be RefCell?
+    // category=Refactoring
     pub mem_cell: RefCell<SegmentMemCell>,
 }
 
@@ -38,13 +39,13 @@ pub fn new_ram_device_standard() -> RamDevice {
  */
 #[must_use]
 pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
-    // TODO: Proper error handling?
+    // TODO: Remove `unwrap` statements
+    // category=Refactoring
     let file = OpenOptions::new()
         .read(true)
         .write(true)
         .open(file_path)
         .unwrap();
-    // TODO: Proper error handling here too?
     let mmap = unsafe { MmapOptions::new().map_mut(&file).unwrap() };
 
     RamDevice {
@@ -100,6 +101,7 @@ impl MemoryMappedDevice for RamDevice {
         };
 
         // TODO: Is this efficient in rust? Does it get optimised?
+        // category=Performance
         raw_memory
             .iter()
             .take(limit as usize * 2)

@@ -105,7 +105,6 @@ pub fn override_ref_token_type_if_implied(
             name: ref_token.name.clone(),
             ref_type: override_ref_type,
         },
-        // TODO: Should try to do this without copying
         _ => RefToken {
             name: ref_token.name.clone(),
             ref_type: ref_token.ref_type,
@@ -174,7 +173,9 @@ pub enum AddressingMode {
 #[allow(clippy::cast_possible_truncation)]
 pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
     alt((
-        // TODO: Check this cast down to u16?
+        // TODO: Make sure that cast in parser is not going to cause issues
+        // category=Toolchain
+        // Check this cast down to u16
         map(parse_number, |n| ImmediateType::Value(n as u16)).context("number"),
         map(parse_symbol_reference, |ref_token| {
             ImmediateType::SymbolRef(ref_token)
@@ -420,7 +421,9 @@ pub fn parse_instruction_tag(
             (i, ConditionFlags::Always)
         };
 
-        // TODO: Get lexeme working with this function to avoid this
+        // TODO: Fix case in parser where lexeme doesn't work
+        // category=Toolchain
+        // Get lexeme working with this function to avoid this
         let (i, _) = space0(i)?;
 
         Ok((i, (String::from(tag), condition_code)))
@@ -431,7 +434,6 @@ pub fn parse_instruction_tag(
 
 // OR should these refer to some constant in the shared crate?
 // what happens if the order changes or things are added?
-// TODO: use a function to build this up
 pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
     // Nested alts are to avoid hitting the maximum number of parsers that can be parsed in a single alt statement
     let (i, instruction_token) = alt((
@@ -513,7 +515,9 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
 
 fn parse_comment_(i: &str) -> AsmResult<Token> {
     // TODO: Should there be a more flexible parser for eol?
+    // category=Toolchain
     // TODO: Comments with nothing after the semicolon currently fail
+    // category=Toolchain
     map(pair(char(';'), cut(is_not("\n\r"))), |_| Token::Comment)(i)
 }
 
@@ -544,7 +548,9 @@ fn parse_data_token(i: &str) -> AsmResult<Token> {
     let (i, (size_bytes, value)) = parse_data(i)?;
 
     let override_value = match value {
-        // TODO: Is there a better way to do this without the ugly unwrap/wrap
+        // TODO: Clean up in instruction parsing code
+        // category=Refactoring
+        // Is there a better way to do this without the ugly unwrap/wrap
         DataType::Value(value) => DataType::Value(value),
         DataType::SymbolRef(ref_token) => DataType::SymbolRef(override_ref_token_type_if_implied(
             &ref_token,
@@ -574,7 +580,6 @@ pub fn parse_equ_token(i: &str) -> AsmResult<Token> {
     ))
 }
 
-// TODO: Create object file struct and serialize with serde
 // Addresses are replaced with indexes to object table and resolved by linker
 pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
     let mut parser = collect_separated_terminated(

@@ -39,7 +39,6 @@ pub struct Segment {
 
 impl Segment {
     fn address_is_in_segment_range(&self, address: u32) -> bool {
-        // TODO: Warn about address masking?
         let masked_segment_address = self.address & ADDRESS_MASK;
         let masked_input_address = address & ADDRESS_MASK;
         masked_input_address >= masked_segment_address
@@ -68,7 +67,9 @@ impl BusPeripheral {
 
     #[must_use]
     pub fn get_segment_for_address(&mut self, address: u32) -> Option<&mut Segment> {
-        // TODO: More efficient way to simulate memory mapping? E.g. range map
+        // TODO: Use a faster lookup for segments
+        // category=Performance
+        // I guess a `BTreeMap` would be ideal, but maybe overkill depending on number of segments
         self.segments
             .iter_mut()
             .find(|s| s.address_is_in_segment_range(address))
@@ -219,7 +220,8 @@ impl BusPeripheral {
     ///
     #[must_use]
     pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
-        // TODO:: Assert no conflicts (e.g. two devices asserting the address or data bus at the same time)
+        // TODO: Assert there are no bus conflicts (e.g. two devices asserting the address or data bus at the same time)
+        // category=Refactoring
 
         let master_assertions = self.bus_master.poll(assertions, true);
 

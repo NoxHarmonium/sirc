@@ -21,7 +21,11 @@ fn test_ldea_indirect_immediate() {
     for src_address_register_index in get_address_register_index_range() {
         for dest_address_register_index in get_address_register_index_range() {
             if src_address_register_index == dest_address_register_index
-            // TODO: Handle PC writes/reads etc.
+            // TODO: Remove exemption for PC registers
+            // category=Testing
+            // Currently disabled because it messes with the test execution
+            // It _should_ be valid to load a memory address into the PC and jump, but it breaks the test
+            // - There are a heap of other examples of this that can be searched for
                 || src_address_register_index
                     == AddressRegisterName::ProgramCounter.to_register_index()
                 || dest_address_register_index
@@ -74,7 +78,6 @@ fn test_ldea_indirect_register() {
     for src_address_register_index in get_address_register_index_range() {
         for dest_address_register_index in get_address_register_index_range() {
             if src_address_register_index == dest_address_register_index
-            // TODO: Handle PC writes/reads etc.
                 || src_address_register_index
                     == AddressRegisterName::ProgramCounter.to_register_index()
                 || dest_address_register_index
@@ -133,5 +136,5 @@ fn test_ldea_indirect_register() {
     }
 }
 
-// TODO: Test PC offsets
-// TODO: Can PC be written to with LDEA?
+// TODO: Clarify whether PC be written to with LDEA
+// category=Hardware

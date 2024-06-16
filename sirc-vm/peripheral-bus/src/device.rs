@@ -1,6 +1,7 @@
 use std::any::Any;
 
 // TODO: Make sure at some point to not have duplicate exception level definitions
+// category=Refactoring
 // The CPU is technically the source of truth because it exposes the pins that the bus connects to
 // and does the actual exception handling. However the bus does not depend on the CPU so it can't
 // use constants from there. Will have to figure something out.
@@ -48,13 +49,13 @@ pub struct BusAssertions {
 
 pub trait Device {
     /// Called every clock so the device can do work and raise interrupts etc.
-    /// TODO: Allow device to return a value(s) to assert bus lines (e.g. interrupts)
-    ///       A return value will avoid having to pass in the parent pmem/bus and cause circular dependencies
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions;
     fn dump_diagnostic(&self) -> String {
         String::from("TODO")
     }
-    // TODO: This is a hopefully temporary hack that should only be used for testing - remove once a proper way to access CPU registers has been found
+    // TODO: Refactor bus device interfaces to not need `Any`
+    // category=Refactoring
+    // This is a hopefully temporary hack that should only be used for testing - remove once a proper way to access CPU registers has been found
     fn as_any(&mut self) -> &mut dyn Any;
 }
 

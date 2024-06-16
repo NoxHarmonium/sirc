@@ -24,7 +24,8 @@ enum ExecutionStepInstructionType {
 
 pub struct ExecutionEffectiveAddressExecutor;
 
-// TODO: Clean up this match and remove this exclusion
+// TODO: Clean up `clippy::match_same_arms` violation in `ExecutionEffectiveAddressExecutor`
+// category=Refactoring
 #[allow(clippy::match_same_arms)]
 fn decode_execution_step_instruction_type(
     instruction: Instruction,
@@ -51,12 +52,16 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         intermediate_registers: &mut IntermediateRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
-        // TODO: Replace unwrap with something better
+        // TODO: Clean up `ExecutionEffectiveAddressExecutor`
+        // category=Refactoring
+        // These refer to below
+        // - Could this decoding be done ahead of time and stored in struct?
+        // - Replace unwrap with better error handling
+        // - Make 0x7 a constant or put in function
+        // - Make 0x8 a constant or put in function
         let alu_code = num::ToPrimitive::to_u8(&decoded.ins).unwrap() & 0x0F;
-        // TODO: Should this be unwrap? - clean this up - make 0x7 a constant or put in function
         // Only the first 3 bits are used to determine the ALU operation, the fourth bit determines whether the result is stored or not
         let alu_op: AluOp = num::FromPrimitive::from_u8(alu_code & 0x7).unwrap();
-        // TODO : Clean this up - make 0x8 a constant or put in function
         // bit 3 determines whether the ALU output is used or not
         // e.g. CMPI is a SUBI without storing ALU output
         // 0xF is special (co processor call) which needs the value to be written

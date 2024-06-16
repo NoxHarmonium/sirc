@@ -1,4 +1,5 @@
-// TODO: Make this clippy config global somehow
+// TODO: Find a way to not have to copy/paste all the clippy config around to each crate root
+// category=Refactoring
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(
     // I don't like this rule
@@ -39,7 +40,6 @@ struct Args {
     #[clap(short, long, value_parser, value_name = "FILE")]
     output_file: PathBuf,
 
-    // TODO: Can we pass a hex string to this somehow?
     #[clap(short, long, value_parser, value_name = "SEGMENT_OFFSET")]
     segment_offset: u32,
 }
@@ -56,7 +56,8 @@ fn main() -> io::Result<()> {
     let object_files: Vec<ObjectDefinition> = args
         .input_files
         .iter()
-        // TODO: Don't use unwrap here!
+        // TODO: Handle IO errors in linker
+        // category=Refactoring
         .map(|object_file_path| read(object_file_path).unwrap())
         .map(|file_contents| postcard::from_bytes(&file_contents).unwrap())
         .collect();
@@ -66,7 +67,8 @@ fn main() -> io::Result<()> {
     let mut linked_program = object_file.program.clone();
 
     for symbol_ref in &object_file.symbol_refs {
-        // TODO: Don't use unwrap!
+        // TODO: Better error handling when target symbol is not found in linker
+        // category=Refactoring
         let target_symbol = object_file
             .symbols
             .iter()
@@ -78,14 +80,18 @@ fn main() -> io::Result<()> {
                 );
             });
 
-        // TODO: Clear up confusion between byte addressing and instruction addressing
+        // TODO: Clear up confusion between byte addressing and instruction addressing in linker
+        // category=Refactoring
+        // Sometimes we use words, sometimes bytes, sometimes even double words (see also debug info etc.)
         let target_offset_words =
             (target_symbol.offset / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
         let program_offset_bytes = symbol_ref.offset as usize;
         let program_offset_words =
             (program_offset_bytes as u32 / INSTRUCTION_SIZE_WORDS) + args.segment_offset;
 
-        // TODO: Surely there is a better way to do this 🤦‍♀️
+        // TODO: Find a more elegant way to extract instruction in linker
+        // category=Refactoring
+        // Surely there is a better way to do this 🤦‍♀️
         let raw_instruction: [u8; 4] = [
             linked_program[program_offset_bytes],
             linked_program[program_offset_bytes + 1],
@@ -109,7 +115,9 @@ fn main() -> io::Result<()> {
             RefType::SmallOffset => {
                 panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
             }
-            // TODO: I think LowerWord and UpperWord should be absolute, not relative?
+            // TODO: Check that the linker RefTypes are correct
+            // category=Toolchain
+            // I think LowerWord and UpperWord should be absolute, not relative?
             // Note: I think bytemuck is little endian? so lower is actually offset 0
             RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
             RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
@@ -122,8 +130,10 @@ fn main() -> io::Result<()> {
         };
 
         let calculate_32_bit_value = || match symbol_ref.ref_type {
-            // TODO: Support other ref types
-            // TODO: Support DB and DW
+            // TODO: Support other RefType options in Linker
+            // category=Toolchain
+            // TODO: Support DB and DW in Linker
+            // category=Toolchain
             RefType::FullAddress => target_offset_words,
             _ => {
                 panic!("Only FullAddress ref type currectly supported for data directives")
@@ -131,10 +141,8 @@ fn main() -> io::Result<()> {
         };
 
         if symbol_ref.data_only {
-            // TODO: Allow 32 bit values here
             let value_to_insert = calculate_32_bit_value();
             let value_to_insert_bytes = u32::to_be_bytes(value_to_insert);
-            // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
             linked_program[program_offset_bytes..=program_offset_bytes + 3]
                 .copy_from_slice(&value_to_insert_bytes);
         } else {
@@ -179,7 +187,6 @@ fn main() -> io::Result<()> {
 
             let raw_patched_instruction = encode_instruction(&patched_instruction);
 
-            // TODO: How do we keep track of this? The assembler should do it but the offset will need to be in bytes
             linked_program[program_offset_bytes..=program_offset_bytes + 3]
                 .copy_from_slice(&raw_patched_instruction);
         }

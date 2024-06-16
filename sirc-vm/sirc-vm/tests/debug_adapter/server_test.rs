@@ -1,6 +1,7 @@
 use sirc_vm::debug_adapter::server::{format_instruction_ref, parse_instruction_ref};
 
-// TODO: Make these unit tests
+// TODO: Convert the debug server instruction ref tests to unit tests (or doc tests)
+// category=Testing
 // https://doc.rust-lang.org/book/ch11-03-test-organization.html#testing-private-functions
 
 #[test]

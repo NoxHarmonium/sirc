@@ -24,7 +24,15 @@ fn test_immediate_branch_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
+    // TODO: Add testing for upper byte of PC register(s)
+    // category=Testing
+    // Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
+    // See also:
+    // - test_immediate_branch_with_subroutine_instruction
+    // - test_register_branch_instruction
+    // - test_register_branch_with_subroutine_instruction
+    // - Tests in ljmp_test.rs
+
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::BranchWithImmediateDisplacement,
@@ -72,7 +80,6 @@ fn test_immediate_branch_with_subroutine_instruction(
     condition_flag: ConditionFlags,
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
-    // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
     let default_ph: u16 = 0x00FE;
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
@@ -124,7 +131,6 @@ fn test_register_branch_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
     for src_register_index in get_register_index_range() {
-        // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
         let default_ph: u16 = 0x00FE;
         let instruction_data = InstructionData::Register(RegisterInstructionData {
             op_code: Instruction::BranchWithRegisterDisplacement,
@@ -180,7 +186,6 @@ fn test_register_branch_with_subroutine_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
     for src_register_index in get_non_address_register_index_range() {
-        // TODO: Test what happens if high 8 bits are filled in (spoiler alert, the segment mapping fails)
         let default_ph: u16 = 0x00FE;
         let instruction_data = InstructionData::Register(RegisterInstructionData {
             op_code: Instruction::BranchToSubroutineWithRegisterDisplacement,
@@ -462,7 +467,8 @@ fn test_register_branch_with_subroutine_overflow() {
     );
 }
 
-// TODO: Test ShiftOperand::Register
-// TODO: deduplicate test functions
-
-// TODO: Check for misaligned jumps (should fault when that is implemented)
+// TODO: Improve unit test coverage for branching instructions
+// category=Testing
+// - Test ShiftOperand::Register
+// - Deduplicate test functions
+// - Check for misaligned jumps (should fault when that is implemented)

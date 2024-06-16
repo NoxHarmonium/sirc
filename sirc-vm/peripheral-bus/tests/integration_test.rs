@@ -90,7 +90,8 @@ fn readonly_segment_test() {
     assert_eq!(0x0, mem.read_address(in_bounds_address));
 }
 
-// TODO: Move to ram device
+// TODO: Uncomment test and move to `RamDevice` where it belongs
+// category=Testing
 // #[test]
 // fn memory_mapped_segment_test() {
 //     let segment_size: u32 = 0xF;

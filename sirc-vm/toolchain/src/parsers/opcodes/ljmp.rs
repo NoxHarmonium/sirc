@@ -34,7 +34,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectRegister);
 /// assert_eq!(r1, 0x03);
 /// assert_eq!(r2, 0x03);
@@ -60,7 +59,9 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
     };
 
     match operands.as_slice() {
-        // TODO: It is confusing that a LJMP uses the indirect address syntax when it isn't indirect
+        // TODO: Confirm that LJMP syntax makes sense
+        // category=Toolchain
+        // It is confusing that a LJMP uses the indirect address syntax when it isn't indirect
         // It isn't fetching anything from memory, it is just using the value in the register which means its direct and
         // the brackets are confusing because they imply indirectness.
         // I'll let it slide for now in the interest of getting something working but I should revisit this

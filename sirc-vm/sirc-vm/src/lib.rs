@@ -36,7 +36,10 @@ pub struct DebugState {
     pub channels: VmChannels,
     pub breakpoints: HashSet<BreakpointRef>,
     pub disconnected: bool,
-    // TODO: some sort of enum state machine type thing
+    // TODO: Collapse multiple bools in DebugState into an enum
+    // category=Refactor
+    // - Could do some sort of enum state machine type thing
+    // - Also while here, `is_stepping` is kind of named in a confusing way, it is set to true when the debugger pauses
     pub paused: bool,
     pub should_pause_for_init: bool,
     pub is_stepping: bool,
@@ -56,9 +59,12 @@ fn dump_registers(dump_file: &PathBuf, device: &dyn Device) -> Result<(), std::i
 }
 
 // Separate from run_vm so that performance is not affected in non-debug mode
-// TODO: Come up with a way to have less duplicated
+// TODO: Deduplicate `run_vm` functions
+// category=Refactoring
 pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmChannels) {
-    // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
+    // TODO: Check if RefCell is required for VM state
+    // category=Refactoring
+    // Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
 
     let mut debug_state = DebugState {
@@ -71,7 +77,6 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
     };
 
     let mut bus_assertions = BusAssertions::default();
-    // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
     let execute = || {
         let mut clocks = 0;
         loop {
@@ -90,6 +95,9 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
         }
     };
 
+    // TODO: CPU should clock every n master clocks
+    // category=Hardware
+    // E.g. in the SNES the CPU ran 6 times slower than the master clock
     start_loop(vm.vsync_frequency, execute);
 
     if let Some(register_dump_file) = register_dump_file {
@@ -108,12 +116,9 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
     }
 }
 
-// TODO: Deduplicate stuff with run_vm_debug
 pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
-    // TODO: Can we avoid RefCell if we know that `run_vm` is the only consumer of VM?
     let mut bus_peripheral = vm.bus_peripheral.borrow_mut();
     let mut bus_assertions = BusAssertions::default();
-    // TODO: Profile and make this actually performant (currently is ,less than 1 fps in a tight loop)
     let execute = || {
         let mut clocks = 0;
         loop {

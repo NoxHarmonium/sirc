@@ -25,6 +25,10 @@ const SHIFT_ALL_LENGTH: u32 =
 const CONDITION_FLAGS_LENGTH: u32 = 4; // bits
 const CONDITION_FLAGS_MASK: u32 = 0x0000_000F;
 
+// TODO: Consider using bytemuck instead of hand written byte manipulation
+// category=Refactoring
+// We already use bytemuck in the toolchain crate so we may as well pull it in here too
+
 ///
 /// Extracts the instruction ID from a full 32 bit instruction.
 /// This is the same for every instruction type
@@ -108,7 +112,8 @@ pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructio
 
     // No args are used at this point (reserved for more complex instructions)
     ImpliedInstructionData {
-        // TODO: Handle better than unwrap
+        // TODO: Improve error handling in `decode_implied_instruction`
+        // category=Refactoring
         op_code: num::FromPrimitive::from_u8(op_code)
             .expect("instruction ID to to map to instruction enum"),
         condition_flag,
@@ -154,7 +159,8 @@ pub fn decode_immediate_instruction(raw_instruction: [u8; 4]) -> ImmediateInstru
     ) & ADDRESS_REGISTER_ARGS_MASK;
     // No args are used at this point (reserved for more complex instructions)
     ImmediateInstructionData {
-        // TODO: Handle better than unwrap
+        // TODO: Improve error handling in `decode_immediate_instruction`
+        // category=Refactoring
         op_code: num::FromPrimitive::from_u8(op_code)
             .expect("instruction ID should map to instruction enum"),
         register: register as u8,
@@ -214,11 +220,10 @@ pub fn decode_short_immediate_instruction(
             + ADDRESS_REGISTER_ARGS_LENGTH,
     ) & ADDRESS_REGISTER_ARGS_MASK;
 
-    // TODO TODO: Adjust al these offsets because shift operand messed them p
-
     // No args are used at this point (reserved for more complex instructions)
     ShortImmediateInstructionData {
-        // TODO: Handle better than unwrap
+        // TODO: Improve error handling in `decode_short_immediate_instruction`
+        // category=Refactoring
         op_code: num::FromPrimitive::from_u8(op_code)
             .expect("instruction ID should map to instruction enum"),
         register: register as u8,
@@ -273,7 +278,8 @@ pub fn decode_register_instruction(raw_instruction: [u8; 4]) -> RegisterInstruct
         (initial_offset + REGISTER_ID_LENGTH * 3) + SHIFT_ALL_LENGTH + ADDRESS_REGISTER_ARGS_LENGTH,
     ) & ADDRESS_REGISTER_ARGS_MASK;
     RegisterInstructionData {
-        // TODO: Handle better than unwrap
+        // TODO: Improve error handling in `decode_register_instruction`
+        // category=Refactoring
         op_code: num::FromPrimitive::from_u8(op_code)
             .expect("instruction ID to to map to instruction enum"),
         r1: r1 as u8,
@@ -406,7 +412,8 @@ pub fn encode_implied_instruction(
         condition_flag,
     }: &ImpliedInstructionData,
 ) -> [u8; 4] {
-    // TODO: Unwrap?
+    // TODO: Improve error handling in `encode_implied_instruction`
+    // category=Refactoring
     let op_code_raw = num::ToPrimitive::to_u32(op_code).unwrap();
     let a = (op_code_raw & INSTRUCTION_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH);
     let b = encode_condition_flags(condition_flag);

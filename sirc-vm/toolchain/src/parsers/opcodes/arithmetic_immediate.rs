@@ -66,7 +66,6 @@ use super::super::shared::AsmResult;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// // TODO: Make a helper function or something to make these asserts smaller
 /// assert_eq!(op_code, Instruction::AddShortImmediate);
 /// assert_eq!(register, 2);
 /// assert_eq!(value, 123);
@@ -101,7 +100,6 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             register: dest_register.to_register_index(),
             value,
             condition_flag,
-            // TODO: Is this actually parseable?
             additional_flags: if &tag == "SHFI" {
                 StatusRegisterUpdateSource::Shift.to_flags()
             } else {
@@ -121,7 +119,6 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 register: dest_register.to_register_index(),
                 value,
                 condition_flag,
-                // TODO: Is this actually parseable?
                 additional_flags: if &tag == "SHFI" {
                     StatusRegisterUpdateSource::Shift.to_flags()
                 } else {

@@ -62,9 +62,11 @@ fn inject_data_value(
 ) {
     match data.value {
         DataType::Value(value) => {
-            // TODO: Make packing smaller data sizes more efficient
+            // TODO: Make packing smaller data sizes in assembled binaries more efficient
+            // category=Toolchain
             // E.g. put 4 DBs in one 32 bit chunk
-            // TODO: Clean up this mess
+            // TODO: Clean up the data packing code in the Assembler
+            // category=Refactoring
             let bytes: [u8; 4] = match data.size_bytes {
                 1 => [0x0, 0x0, 0x0, value as u8],
                 2 => {
@@ -141,7 +143,9 @@ pub fn build_object(
 
                 let file_position = original_input_length - data.input_length;
                 debug_info.program_to_input_offset_mapping.insert(
-                    // TODO: Yet another unwrap that needs to be handled
+                    // TODO: Improve error handling in assembler
+                    // category=Refactoring
+                    // Maybe remove this unwrap
                     (u32::try_from(program_offset).unwrap()) * INSTRUCTION_SIZE_WORDS,
                     file_position,
                 );

@@ -13,7 +13,6 @@ pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugSta
             debug_state.breakpoints = breakpoints;
         }
         DebuggerMessage::PauseVm => {
-            // TODO: This naming is confusing
             debug_state.is_stepping = true;
         }
         DebuggerMessage::ResumeVm(condition) => {
@@ -35,7 +34,9 @@ pub fn yield_to_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut D
     let capture_vm_state = || {
         VmState {
             pc,
-            // TODO: More variables and move this somewhere
+            // TODO: Expose more CPU state to debugger
+            // category=Debugging
+            // There is a heap more state than just registers that we could expose to help debug
             variables: BTreeMap::from([
                 ("sr".to_string(), format!("0x{:X}", cpu.registers.sr)),
                 ("r1".to_string(), format!("0x{:X}", cpu.registers.r1)),

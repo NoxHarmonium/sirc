@@ -177,7 +177,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()
@@ -201,7 +200,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
+                        //  Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()
@@ -225,7 +224,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()
@@ -251,7 +249,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        // TODO: Clamp/validate additional_flags to 10 bits
                         additional_flags: address_register.to_register_index(),
                     }),
                     ..Default::default()

@@ -40,8 +40,6 @@ pub enum AluOp {
 
 // Arithmetic
 
-// TODO: Surely there is a way to extract common logic from all the ALU executors
-
 ///
 /// Executes an addition operation on two registers, storing the result in
 /// the first operand.
@@ -325,9 +323,11 @@ pub fn perform_shift(
     operand: u16,
     shift_type: ShiftType,
     shift_count: u16,
-    short_immediate: bool, // TODO: Find a smarter solution to this
+    short_immediate: bool,
 ) -> (u16, u16) {
-    // TODO: This is terrible. It needs a proper refactor, but in the interest of time at the moment
+    // TODO: Clean up `perform_shift` function
+    // category=Refactoring
+    //This is terrible. It needs a proper refactor, but in the interest of time at the moment
     // we will conform to the current interface and fix it later
     let mut intermediate_registers = IntermediateRegisters::default();
 
@@ -457,10 +457,12 @@ fn perform_arithmetic_right_shift(
     a: u16,
     b: u16,
     intermediate_registers: &mut IntermediateRegisters,
-    short_immediate: bool, // TODO: Find a smarter solution to this
+    short_immediate: bool,
 ) {
     // Same as LSR but preserves the sign bit
-    let sign_bit = u32::from(a) & if short_immediate { 0x80 } else { 0x8000 }; // TODO: Find a smarter solution to this
+    // TODO: Boolean `short_immediate` argument in ALU shift code is code smell
+    // category=Refactoring
+    let sign_bit = u32::from(a) & if short_immediate { 0x80 } else { 0x8000 };
 
     let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
@@ -487,8 +489,9 @@ fn perform_arithmetic_right_shift(
 fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
     let result: u16 = a.rotate_left(u32::from(b));
     // Bit shifted out goes into carry (that's what the 68k does :shrug:)
-    // TODO: Extract bit checking to function
-    // TODO: Check the purpose of bit shifted out going to carry
+    // TODO: Check the purpose of bit shifted of ROL out going to carry
+    // category=Hardware
+    // See also `perform_rotate_right`
     let carry = result & 1 == 1;
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
@@ -502,8 +505,9 @@ fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut Intermediate
 fn perform_rotate_right(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
     let result: u16 = a.rotate_right(u32::from(b));
     // Bit shifted out goes into carry (that's what the 68k does :shrug:)
-    // TODO: Extract bit checking to function
-    // TODO: Check the purpose of bit shifted out going to carry
+    // TODO: Extract bit checking in ALU shifting to function
+    // category=Refactoring
+    // See also `perform_rotate_left`
     let carry = (result >> 15) & 1 == 1;
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
@@ -541,7 +545,9 @@ pub fn perform_alu_operation(
 
     if simulate {
         // Alu op from 0x8-0xF don't actually store the ALU result, just the status code
-        // TODO: Do this in a cleaner way, probably without passing boolean as function param
+        // TODO: Clean up perform_alu_operation "simulate" behaviour that seems like a code smell
+        // category=Refactoring
+        // Do this in a cleaner way, probably without passing boolean as function param
         intermediate_registers.alu_output = 0x0;
     }
 }
@@ -553,7 +559,8 @@ pub fn set_alu_bits(
     carry: bool,
     inputs_and_result: Option<(u16, u16, u16)>,
 ) {
-    // TODO: REFACTOR this monstrosity to be sensible
+    // TODO: Clean up ALU `set_alu_bits` function
+    // category=Refactoring
     // I just hacked in a temporary register to avoid refactoring and get
     // the tests done faster. Once the tests are done, refactoring will be easier.
 
@@ -584,8 +591,9 @@ pub fn set_alu_bits(
         if sign(i1) == sign(i2) && sign(result) != sign(i1) {
             set_sr_bit(StatusRegisterFields::Overflow, &mut registers);
         } else {
-            // TODO: Can we collapse this if statement so we only have one else?
-            // The double clear seems redundant
+            // TODO: Can potentially remove double call to `clear_sr_bit` in ALU `set_alu_bits`
+            // category=Refactoring
+            // Can we collapse this if statement so we only have one else? The double clear seems redundant
             clear_sr_bit(StatusRegisterFields::Overflow, &mut registers);
         }
     } else {

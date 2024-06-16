@@ -32,16 +32,19 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
     }
 
     let writing_to_privileged_registers = PRIVILEGED_REGISTERS.contains(&instruction.des);
-    // TODO: Extract mask
+    // TODO: Magic numbers in `check_privilege`
+    // category=Refactoring
     let cop_opcode = instruction.sr_b_ & 0x0F00;
-    // TODO: Is this brittle? Should we use the writeback decoder to determine if the instruction will write
+    // TODO: Double check privileged op code logic
+    // category=Hardware
+    // Is this brittle? Should we use the writeback decoder to determine if the instruction will write
     // to the pending cop register? Mainly worried about undefined instructions will inadvertently write to that
     // register and allow for privilege escalation
+    // Should `CompareShortImmediate` be in this list?
     let is_cop_instruction = instruction.ins == Instruction::CoprocessorCallImmediate
         || instruction.ins == Instruction::CoprocessorCallRegister
         || instruction.ins == Instruction::CompareShortImmediate;
     // Top half of the COP opcodes are privileged
-    // TODO: Fix magic constant
     let calling_privileged_cop_opcode = is_cop_instruction && (cop_opcode > 0x0700);
 
     writing_to_privileged_registers || calling_privileged_cop_opcode
@@ -129,6 +132,11 @@ impl Executor for ProcessingUnitExecutor {
                 self.decoded_instruction = decoded_instruction;
 
                 if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers) {
+                    // TODO: Remove all the verbose trace statements in the CPU code
+                    // category=Refactoring
+                    // It _might_ be impacting performance slightly in hot code paths and it isn't very useful, especially now we have a debugger
+                    // TODO: Investigate exposing CPU internals in debugger (e.g. decoded instruction components)
+                    // category=Debugging
                     trace!(
                         "next_instruction_fetch_is_overflow: {next_instruction_fetch_is_overflow}"
                     );
@@ -148,7 +156,9 @@ impl Executor for ProcessingUnitExecutor {
                     );
                 }
 
-                // TODO: I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
+                // TODO: Define how PC will be incremented in hardware
+                // category=Hardware
+                // I think this works, because branch will overwrite the PC anyway, otherwise we want to advance.
                 // but we might need to think about how this would work in FPGA
                 registers.pl = self.decoded_instruction.npc_l_;
 
