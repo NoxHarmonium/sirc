@@ -26,7 +26,6 @@ pub fn set_up_instruction_test(
     instruction_data: &InstructionData,
     program_offset: u32,
 ) -> BusPeripheral {
-    // TODO TODO I guess give the bus ownership again instead of reference (FACEPALM)
     let cpu = new_cpu_peripheral(0x0);
     let mut bus_peripheral = new_bus_peripheral(Box::new(cpu));
 
