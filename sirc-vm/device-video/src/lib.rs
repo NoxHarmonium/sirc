@@ -1,3 +1,20 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Not sure what this is, will have to revisit
+    clippy::must_use_candidate,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn,
+    // I have a lot of temporary panics for debugging that will probably be cleaned up
+    clippy::missing_panics_doc
+)]
+#![deny(warnings)]
+
 use std::{any::Any, time::Duration};
 
 use log::{debug, info};
@@ -5,6 +22,9 @@ use minifb::{Window, WindowOptions};
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
+use types::VideoRegisters;
+
+mod types;
 
 // Some reference:
 // https://www.raphnet.net/divers/retro_challenge_2019_03/qsnesdoc.html#Reg2115
@@ -54,7 +74,8 @@ pub struct VideoDevice {
     window: Window,
 
     // Native
-    vram: Vec<u16>,
+    vram: Box<[u16; VRAM_SIZE]>,
+    registers: VideoRegisters,
 
     // Other
     frame_count: usize,
