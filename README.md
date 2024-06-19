@@ -87,41 +87,9 @@ Options:
 
 ## CPU
 
-The CPU will be basic (e.g. no superscalar) but it does not need to be as simple as the 6502,
-and can take inspiration from other CPUs available around that time (68k, ARM6, MIPS, x86, etc.).
+See the wiki for information on the CPU and PPU design!
 
-It will be strictly 16 bit. One exception is that memory addresses can be 24 bit by synthesising the address by from two 16 bit registers,
-as a 16 bit address space is too limiting (even the SNES has 24 bit addressing).
-
-Instructions are strictly 32 bit for instruction decoder simplicity reasons.
-
-The current high level design goals are:
-
-### RISC
-
-Prioritise a design that is simple and fast to execute, over complex instructions.
-
-The advantages here are:
-
-- Simpler CPU design (easier for me define in Verilog)
-- Allows for performance improvements in future revisions
-
-The disadvantages:
-
-- Poor ergonomics for developers writing straight assembler code without a compiler
-- Larger binary sizes (could be an issue with the limited RAM/ROM available at the target generation)
-- More instruction fetches (2x16 bit fetches for each instruction)
-
-### Load/Store Architecture
-
-Simplifies the CPU design by restricting the ALU to only operating on registers.
-This is taken to the extreme by not even providing any immediate addressing modes for arithmetic/logic instructions.
-
-A special pair of instructions will be provided for loading/storing multiple registers at once.
-This increases the speed that data can get in/out of the CPU and will probably avoid the need for a DMA controller.
-
-The CPU will be designed on the assumption that the connected RAM module will support bursting
-and that memory reads can be pipelined (e.g. reading n words takes 1+n cycles)
+https://github.com/NoxHarmonium/sirc/wiki
 
 # Project Status
 
