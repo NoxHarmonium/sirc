@@ -1,4 +1,4 @@
-#include "imageprocessor.h"
+#include "sircimage.h"
 #include <QtLogging>
 #include <cassert>
 
@@ -34,10 +34,10 @@ QColor qRgbFromSircColor(u_int16_t color) {
   return qColor;
 }
 
-ImageProcessor::ImageProcessor() = default;
+SircImage::SircImage() = default;
 
-ImageProcessor ImageProcessor::fromQPixmap(const QPixmap &qPixmap) {
-  auto imageProcessor = ImageProcessor();
+SircImage SircImage::fromQPixmap(const QPixmap &qPixmap) {
+  auto imageProcessor = SircImage();
   auto image = qPixmap.toImage();
 
   assert(image.width() >= WIDTH_PIXELS && image.height() >= HEIGHT_PIXELS);
@@ -67,7 +67,7 @@ ImageProcessor ImageProcessor::fromQPixmap(const QPixmap &qPixmap) {
   return imageProcessor;
 }
 
-QPixmap ImageProcessor::toQPixmap() const {
+QPixmap SircImage::toQPixmap() const {
   auto image = QImage(WIDTH_PIXELS, HEIGHT_PIXELS, QImage::Format_RGB32);
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
@@ -82,7 +82,7 @@ QPixmap ImageProcessor::toQPixmap() const {
   return QPixmap::fromImage(image);
 }
 
-std::vector<QColor> ImageProcessor::getPaletteColors() const {
+std::vector<QColor> SircImage::getPaletteColors() const {
   auto convertedPalette = std::vector<QColor>();
 
   std::vector<QColor> output;

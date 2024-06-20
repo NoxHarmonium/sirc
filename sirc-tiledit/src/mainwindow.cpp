@@ -2,7 +2,7 @@
 
 #include "./ui_mainwindow.h"
 #include "aboutdialog.h"
-#include "imageprocessor.h"
+#include "sircimage.h"
 #include <mainwindow.h>
 
 const int PALLETE_VIEW_ITEM_HEIGHT = 40;
@@ -28,7 +28,7 @@ void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   sourceScene->addPixmap(scaledPixmap);
   ui->sourceImageGraphicsView->setScene(sourceScene);
 }
-void MainWindow::setupTargetImageView(const ImageProcessor &imageProcessor) {
+void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
 
   auto targetPixmap = imageProcessor.toQPixmap();
   auto targetScene = new QGraphicsScene();
@@ -36,7 +36,7 @@ void MainWindow::setupTargetImageView(const ImageProcessor &imageProcessor) {
   ui->targetImageGraphicsView->setScene(targetScene);
 }
 
-void MainWindow::setupPaletteView(const ImageProcessor &imageProcessor) {
+void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
   int paletteIndex = 0;
@@ -75,7 +75,7 @@ void MainWindow::on_actionOpen_triggered() {
                     Qt::FastTransformation);
 
   setupSourceImageView(scaledPixmap);
-  auto imageProcessor = ImageProcessor::fromQPixmap(scaledPixmap);
+  auto imageProcessor = SircImage::fromQPixmap(scaledPixmap);
   setupTargetImageView(imageProcessor);
   setupPaletteView(imageProcessor);
 }

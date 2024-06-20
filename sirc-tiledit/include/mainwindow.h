@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 
-class ImageProcessor;
+class SircImage;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -36,8 +36,8 @@ private slots:
 private:
   // UI Setup
   void setupSourceImageView(const QPixmap &scaledPixmap);
-  void setupTargetImageView(const ImageProcessor &imageProcessor);
-  void setupPaletteView(const ImageProcessor &imageProcessor);
+  void setupTargetImageView(const SircImage &imageProcessor);
+  void setupPaletteView(const SircImage &imageProcessor);
 
   Ui::MainWindow *ui;
   QString openedSourceFilename;
