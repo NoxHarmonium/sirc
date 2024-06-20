@@ -1,3 +1,5 @@
 ---
-Checks: 'clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,-modernize-use-trailing-return-type'
+Checks: 'clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory'
 FormatStyle:  llvm
+
+# cppcoreguidelines-owning-memory is disabled because it doesn't really fit with the memory model of QT where the caller doesn't own the widget
