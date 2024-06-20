@@ -41,7 +41,6 @@ ImageProcessor ImageProcessor::fromQPixmap(QPixmap *const qPixmap) {
   auto image = qPixmap->toImage();
 
   assert(image.width() >= WIDTH_PIXELS && image.height() >= HEIGHT_PIXELS);
-  unsigned int nextPaletteIndex = 0;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
@@ -53,15 +52,15 @@ ImageProcessor ImageProcessor::fromQPixmap(QPixmap *const qPixmap) {
           existingPaletteIndex != imageProcessor.paletteLookup.end()) {
         imageProcessor.pixelData[x][y] = existingPaletteIndex->second;
       } else {
-        imageProcessor.palette[nextPaletteIndex] = paletteColor;
-        imageProcessor.paletteLookup.insert({paletteColor, nextPaletteIndex});
-        imageProcessor.pixelData[x][y] = nextPaletteIndex;
-        ++nextPaletteIndex;
+        imageProcessor.palette.push_back(paletteColor);
+        auto paletteIndex = imageProcessor.palette.size() - 1;
+        imageProcessor.paletteLookup.insert({paletteColor, paletteIndex});
+        imageProcessor.pixelData[x][y] = paletteIndex;
       }
     }
   }
 
-  qDebug("Total palette entries: %d", nextPaletteIndex);
+  qDebug("Total palette entries: %zu", imageProcessor.palette.size());
 
   return imageProcessor;
 }
@@ -78,4 +77,14 @@ QPixmap ImageProcessor::toQPixmap() const {
     }
   }
   return QPixmap::fromImage(image);
+}
+
+std::vector<QColor> ImageProcessor::getPaletteColors() const {
+  auto convertedPalette = std::vector<QColor>();
+
+  std::vector<QColor> output;
+  std::transform(this->palette.begin(), this->palette.end(),
+                 std::back_inserter(output),
+                 [](SircColor c) { return qRgbFromSircColor(c); });
+  return output;
 }

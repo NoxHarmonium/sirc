@@ -41,6 +41,31 @@ void MainWindow::on_actionOpen_triggered() {
   auto targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
+
+  // TODO: Why can't I set this alignment in the UI?
+  ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
+  auto paletteColors = imageProcessor.getPaletteColors();
+  for (size_t i = 0; i < paletteColors.size(); i++) {
+    auto color = paletteColors[i];
+
+    auto hWidget = new QWidget();
+    hWidget->setMaximumHeight(40);
+
+    auto hLayout = new QHBoxLayout();
+    hWidget->setLayout(hLayout);
+
+    auto label = new QLabel(QString("%1: ").arg(i));
+    auto colorIndicator = new QFrame();
+
+    QPalette pal = QPalette();
+    pal.setColor(QPalette::Window, color);
+    colorIndicator->setAutoFillBackground(true);
+    colorIndicator->setPalette(pal);
+
+    hLayout->addWidget(label);
+    hLayout->addWidget(colorIndicator);
+    ui->paletteScrollLayout->addWidget(hWidget);
+  }
 }
 
 void MainWindow::on_actionAbout_triggered() {
