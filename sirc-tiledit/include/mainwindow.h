@@ -1,9 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "sircimage.h"
 #include <QMainWindow>
-
-class SircImage;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -34,7 +33,10 @@ private slots:
   void on_actionAbout_triggered();
 
 private:
+  PaletteReductionBpp getPaletteReductionBpp() const;
+
   // UI Setup
+  void setupPaletteReductionOptions();
   void setupSourceImageView(const QPixmap &scaledPixmap);
   void setupTargetImageView(const SircImage &imageProcessor);
   void setupPaletteView(const SircImage &imageProcessor);

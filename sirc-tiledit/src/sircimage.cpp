@@ -18,12 +18,12 @@ u_int16_t sircColorFromQRgb(const QColor qColor) {
          b;
 }
 
-QColor qRgbFromSircColor(u_int16_t color) {
+QColor qRgbFromSircColor(const u_int16_t sircColor) {
   const unsigned int sircR =
-      (color >> (SIRC_COLOR_COMPONENT_BITS * 2)) & SIRC_COLOR_RANGE;
+      (sircColor >> (SIRC_COLOR_COMPONENT_BITS * 2)) & SIRC_COLOR_RANGE;
   const unsigned int sircG =
-      (color >> SIRC_COLOR_COMPONENT_BITS) & SIRC_COLOR_RANGE;
-  const unsigned int sircB = color & SIRC_COLOR_RANGE;
+      (sircColor >> SIRC_COLOR_COMPONENT_BITS) & SIRC_COLOR_RANGE;
+  const unsigned int sircB = sircColor & SIRC_COLOR_RANGE;
 
   QColor qColor;
 
@@ -32,6 +32,18 @@ QColor qRgbFromSircColor(u_int16_t color) {
   qColor.setBlue((int)(sircB * Q_TO_SIRC_COLOR_RATIO));
 
   return qColor;
+}
+
+QColor qRgbFromSircColorWithReduction(const u_int16_t sircColor,
+                                      const PaletteReductionBpp bpp) {
+  switch (bpp) {
+  case PaletteReductionBpp::None:
+    return qRgbFromSircColor(sircColor);
+  case PaletteReductionBpp::FourBpp:
+  case PaletteReductionBpp::TwoBpp:
+    // TODO: PaletteReduction
+    return {};
+  }
 }
 
 SircImage::SircImage() = default;
@@ -67,7 +79,7 @@ SircImage SircImage::fromQPixmap(const QPixmap &qPixmap) {
   return imageProcessor;
 }
 
-QPixmap SircImage::toQPixmap() const {
+QPixmap SircImage::toQPixmap(const PaletteReductionBpp bpp) const {
   auto image = QImage(WIDTH_PIXELS, HEIGHT_PIXELS, QImage::Format_RGB32);
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
@@ -76,18 +88,19 @@ QPixmap SircImage::toQPixmap() const {
       auto paletteColor = this->pixelData[x][y];
       auto sircColor = this->palette[paletteColor];
 
-      image.setPixelColor(x, y, qRgbFromSircColor(sircColor));
+      image.setPixelColor(x, y, qRgbFromSircColorWithReduction(sircColor, bpp));
     }
   }
   return QPixmap::fromImage(image);
 }
 
-std::vector<QColor> SircImage::getPaletteColors() const {
+std::vector<QColor>
+SircImage::getPaletteColors(const PaletteReductionBpp bpp) const {
   auto convertedPalette = std::vector<QColor>();
 
   std::vector<QColor> output;
-  std::transform(this->palette.begin(), this->palette.end(),
-                 std::back_inserter(output),
-                 [](SircColor c) { return qRgbFromSircColor(c); });
+  std::transform(
+      this->palette.begin(), this->palette.end(), std::back_inserter(output),
+      [&bpp](SircColor c) { return qRgbFromSircColorWithReduction(c, bpp); });
   return output;
 }

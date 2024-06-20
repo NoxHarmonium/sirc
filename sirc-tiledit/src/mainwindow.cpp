@@ -2,7 +2,6 @@
 
 #include "./ui_mainwindow.h"
 #include "aboutdialog.h"
-#include "sircimage.h"
 #include <mainwindow.h>
 
 const int PALLETE_VIEW_ITEM_HEIGHT = 40;
@@ -10,6 +9,7 @@ const int PALLETE_VIEW_ITEM_HEIGHT = 40;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  setupPaletteReductionOptions();
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -21,7 +21,25 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
 }
 #endif // QT_NO_CONTEXTMENU
 
+PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
+  auto currentItem = ui->paletteReductionOptions->currentData();
+  if (currentItem.isNull() || !currentItem.isValid()) {
+    return PaletteReductionBpp::None;
+  }
+  return currentItem.value<PaletteReductionBpp>();
+}
+
 // UI Setup
+
+void MainWindow::setupPaletteReductionOptions() {
+  ui->paletteReductionOptions->addItem(
+      "1:1", QVariant::fromValue(PaletteReductionBpp::None));
+  ui->paletteReductionOptions->addItem(
+      "4bpp", QVariant::fromValue(PaletteReductionBpp::FourBpp));
+  ui->paletteReductionOptions->addItem(
+      "2bpp", QVariant::fromValue(PaletteReductionBpp::TwoBpp));
+  ui->paletteReductionOptions->setCurrentIndex(0);
+}
 
 void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   auto sourceScene = new QGraphicsScene();
@@ -29,8 +47,8 @@ void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   ui->sourceImageGraphicsView->setScene(sourceScene);
 }
 void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
-
-  auto targetPixmap = imageProcessor.toQPixmap();
+  auto paletteReductionBpp = getPaletteReductionBpp();
+  auto targetPixmap = imageProcessor.toQPixmap(paletteReductionBpp);
   auto targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
@@ -39,8 +57,9 @@ void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
 void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
+  auto paletteReductionBpp = getPaletteReductionBpp();
   int paletteIndex = 0;
-  for (auto color : imageProcessor.getPaletteColors()) {
+  for (auto color : imageProcessor.getPaletteColors(paletteReductionBpp)) {
     auto hWidget = new QWidget();
     hWidget->setMaximumHeight(PALLETE_VIEW_ITEM_HEIGHT);
 
@@ -75,6 +94,7 @@ void MainWindow::on_actionOpen_triggered() {
                     Qt::FastTransformation);
 
   setupSourceImageView(scaledPixmap);
+
   auto imageProcessor = SircImage::fromQPixmap(scaledPixmap);
   setupTargetImageView(imageProcessor);
   setupPaletteView(imageProcessor);
