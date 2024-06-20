@@ -1,0 +1,27 @@
+name: SIRC Tiledit
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+defaults:
+  run:
+    working-directory: ./sirc-tiledit
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v1
+      - uses: BSFishy/meson-build@v1.0.3
+        with:
+          action: build
+      - uses: BSFishy/meson-build@v1.0.3
+        with:
+          action: tidy
+
+  
