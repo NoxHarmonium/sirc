@@ -12,6 +12,7 @@ qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
 project_source_files = [
   'src/mainwindow.cpp',
   'src/aboutdialog.cpp',
+  'src/imageprocessor.cpp',
   'src/main.cpp'
 ]
 

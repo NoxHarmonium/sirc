@@ -2,9 +2,8 @@
 
 #include "./ui_mainwindow.h"
 #include "aboutdialog.h"
+#include "imageprocessor.h"
 #include <mainwindow.h>
-
-const int SOURCE_IMAGE_PADDING = 10;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -28,16 +27,20 @@ void MainWindow::on_actionOpen_triggered() {
   auto pixmap = QPixmap::fromImageReader(&reader);
 
   auto scaledPixmap =
-      pixmap.scaled(ui->sourceImageGraphicsView->size().shrunkBy(
-                        QMargins(SOURCE_IMAGE_PADDING, SOURCE_IMAGE_PADDING,
-                                 SOURCE_IMAGE_PADDING, SOURCE_IMAGE_PADDING)),
-                    Qt::KeepAspectRatio, Qt::FastTransformation);
+      pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS, Qt::KeepAspectRatioByExpanding,
+                    Qt::FastTransformation);
 
   // TODO: clang-tidy cppcoreguidelines-owning-memory false positive?
   // NOLINTNEXTLINE
-  auto scene = new QGraphicsScene();
-  scene->addPixmap(scaledPixmap);
-  ui->sourceImageGraphicsView->setScene(scene);
+  auto sourceScene = new QGraphicsScene();
+  sourceScene->addPixmap(scaledPixmap);
+  ui->sourceImageGraphicsView->setScene(sourceScene);
+
+  auto imageProcessor = ImageProcessor::fromQPixmap(&scaledPixmap);
+  auto targetPixmap = imageProcessor.toQPixmap();
+  auto targetScene = new QGraphicsScene();
+  targetScene->addPixmap(targetPixmap);
+  ui->targetImageGraphicsView->setScene(targetScene);
 }
 
 void MainWindow::on_actionAbout_triggered() {
