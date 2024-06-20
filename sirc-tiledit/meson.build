@@ -11,6 +11,7 @@ qt6_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
 
 project_source_files = [
   'src/mainwindow.cpp',
+  'src/aboutdialog.cpp',
   'src/main.cpp'
 ]
 
@@ -20,17 +21,17 @@ project_dependencies = [
   qt6_dep
 ]
 
-moc_files = qt6.compile_moc(headers : 'include/mainwindow.h',
+moc_files = qt6.compile_moc(headers : ['include/mainwindow.h', 'include/aboutdialog.h'],
   include_directories: project_include_files,
   dependencies: qt6_dep
 )
 
-compiled_ui_files = qt6.compile_ui(sources: ['ui/mainwindow.ui'])
+compiled_ui_files = qt6.compile_ui(sources: ['ui/mainwindow.ui', 'ui/aboutdialog.ui'])
 
 build_args = [
   '-DPROJECT_NAME=' + meson.project_name(),
   '-DPROJECT_VERSION=' + meson.project_version(),
-  '-std=c++17',
+  '-std=c++20',
   '-Wall',
   '-Werror',
   '-Wshadow',
