@@ -50,11 +50,13 @@ ImageProcessor ImageProcessor::fromQPixmap(const QPixmap &qPixmap) {
       if (auto existingPaletteIndex =
               imageProcessor.paletteLookup.find(paletteColor);
           existingPaletteIndex != imageProcessor.paletteLookup.end()) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         imageProcessor.pixelData[x][y] = existingPaletteIndex->second;
       } else {
         imageProcessor.palette.push_back(paletteColor);
         auto paletteIndex = imageProcessor.palette.size() - 1;
         imageProcessor.paletteLookup.insert({paletteColor, paletteIndex});
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         imageProcessor.pixelData[x][y] = paletteIndex;
       }
     }
@@ -70,6 +72,7 @@ QPixmap ImageProcessor::toQPixmap() const {
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       auto paletteColor = this->pixelData[x][y];
       auto sircColor = this->palette[paletteColor];
 

@@ -3,11 +3,12 @@
 
 #include <QImage>
 #include <QPixmap>
+#include <array>
 #include <map>
 #include <vector>
 
-typedef u_int16_t SircColor;
-typedef u_int8_t PaletteReference;
+using SircColor = u_int16_t;
+using PaletteReference = u_int8_t;
 
 const int WIDTH_PIXELS = 256;
 const int HEIGHT_PIXELS = 256;
@@ -18,11 +19,12 @@ class ImageProcessor {
 
 public:
   static ImageProcessor fromQPixmap(const QPixmap &pixmap);
-  QPixmap toQPixmap() const;
-  std::vector<QColor> getPaletteColors() const;
+  [[nodiscard]] QPixmap toQPixmap() const;
+  [[nodiscard]] std::vector<QColor> getPaletteColors() const;
 
 private:
-  PaletteReference pixelData[WIDTH_PIXELS][HEIGHT_PIXELS] = {};
+  std::array<std::array<PaletteReference, HEIGHT_PIXELS>, WIDTH_PIXELS>
+      pixelData = {};
   std::vector<SircColor> palette = {};
   std::map<SircColor, size_t> paletteLookup;
 

@@ -12,7 +12,12 @@ class AboutDialog : public QDialog {
 
 public:
   explicit AboutDialog(QWidget *parent = nullptr);
-  ~AboutDialog();
+  ~AboutDialog() override;
+
+  AboutDialog(const AboutDialog &) = delete;
+  AboutDialog &operator=(const AboutDialog &) = delete;
+  AboutDialog(AboutDialog &&) noexcept = delete;
+  AboutDialog &operator=(AboutDialog &&) noexcept = delete;
 
 private:
   Ui::AboutDialog *ui;

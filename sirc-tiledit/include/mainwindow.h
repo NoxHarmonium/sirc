@@ -16,7 +16,12 @@ class MainWindow : public QMainWindow {
 
 public:
   MainWindow(QWidget *parent = nullptr);
-  ~MainWindow();
+  ~MainWindow() override;
+
+  MainWindow(const MainWindow &) = delete;
+  MainWindow &operator=(const MainWindow &) = delete;
+  MainWindow(MainWindow &&) noexcept = delete;
+  MainWindow &operator=(MainWindow &&) noexcept = delete;
 
 protected:
 #ifndef QT_NO_CONTEXTMENU
