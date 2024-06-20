@@ -36,9 +36,9 @@ QColor qRgbFromSircColor(u_int16_t color) {
 
 ImageProcessor::ImageProcessor() = default;
 
-ImageProcessor ImageProcessor::fromQPixmap(QPixmap *const qPixmap) {
+ImageProcessor ImageProcessor::fromQPixmap(const QPixmap &qPixmap) {
   auto imageProcessor = ImageProcessor();
-  auto image = qPixmap->toImage();
+  auto image = qPixmap.toImage();
 
   assert(image.width() >= WIDTH_PIXELS && image.height() >= HEIGHT_PIXELS);
 

@@ -5,6 +5,8 @@
 #include "imageprocessor.h"
 #include <mainwindow.h>
 
+const int PALLETE_VIEW_ITEM_HEIGHT = 40;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
@@ -19,42 +21,33 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
 }
 #endif // QT_NO_CONTEXTMENU
 
-void MainWindow::on_actionOpen_triggered() {
-  openedSourceFilename = QFileDialog::getOpenFileName(
-      this, tr("Open source file"), "/home",
-      tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
-  auto reader = QImageReader(openedSourceFilename);
-  auto pixmap = QPixmap::fromImageReader(&reader);
+// UI Setup
 
-  auto scaledPixmap =
-      pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS, Qt::KeepAspectRatioByExpanding,
-                    Qt::FastTransformation);
-
-  // TODO: clang-tidy cppcoreguidelines-owning-memory false positive?
-  // NOLINTNEXTLINE
+void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   auto sourceScene = new QGraphicsScene();
   sourceScene->addPixmap(scaledPixmap);
   ui->sourceImageGraphicsView->setScene(sourceScene);
+}
+void MainWindow::setupTargetImageView(const ImageProcessor &imageProcessor) {
 
-  auto imageProcessor = ImageProcessor::fromQPixmap(&scaledPixmap);
   auto targetPixmap = imageProcessor.toQPixmap();
   auto targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
+}
 
+void MainWindow::setupPaletteView(const ImageProcessor &imageProcessor) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
-  auto paletteColors = imageProcessor.getPaletteColors();
-  for (size_t i = 0; i < paletteColors.size(); i++) {
-    auto color = paletteColors[i];
-
+  int paletteIndex = 0;
+  for (auto color : imageProcessor.getPaletteColors()) {
     auto hWidget = new QWidget();
-    hWidget->setMaximumHeight(40);
+    hWidget->setMaximumHeight(PALLETE_VIEW_ITEM_HEIGHT);
 
     auto hLayout = new QHBoxLayout();
     hWidget->setLayout(hLayout);
 
-    auto label = new QLabel(QString("%1: ").arg(i));
+    auto label = new QLabel(QString("%1: ").arg(paletteIndex++));
     auto colorIndicator = new QFrame();
 
     QPalette pal = QPalette();
@@ -68,9 +61,26 @@ void MainWindow::on_actionOpen_triggered() {
   }
 }
 
+// Menu Actions
+
+void MainWindow::on_actionOpen_triggered() {
+  openedSourceFilename = QFileDialog::getOpenFileName(
+      this, tr("Open source file"), "/home",
+      tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
+  auto reader = QImageReader(openedSourceFilename);
+  auto pixmap = QPixmap::fromImageReader(&reader);
+
+  auto scaledPixmap =
+      pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS, Qt::KeepAspectRatioByExpanding,
+                    Qt::FastTransformation);
+
+  setupSourceImageView(scaledPixmap);
+  auto imageProcessor = ImageProcessor::fromQPixmap(scaledPixmap);
+  setupTargetImageView(imageProcessor);
+  setupPaletteView(imageProcessor);
+}
+
 void MainWindow::on_actionAbout_triggered() {
-  // TODO: clang-tidy cppcoreguidelines-owning-memory false positive?
-  // NOLINTNEXTLINE
   auto aboutDialog = new AboutDialog(this);
   aboutDialog->setModal(true);
   aboutDialog->show();

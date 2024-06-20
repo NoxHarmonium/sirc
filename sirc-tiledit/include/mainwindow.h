@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class ImageProcessor;
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -22,11 +24,16 @@ protected:
 #endif // QT_NO_CONTEXTMENU
 
 private slots:
+  // Menu Actions
   void on_actionOpen_triggered();
-
   void on_actionAbout_triggered();
 
 private:
+  // UI Setup
+  void setupSourceImageView(const QPixmap &scaledPixmap);
+  void setupTargetImageView(const ImageProcessor &imageProcessor);
+  void setupPaletteView(const ImageProcessor &imageProcessor);
+
   Ui::MainWindow *ui;
   QString openedSourceFilename;
 };

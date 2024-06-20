@@ -17,7 +17,7 @@ const int MAX_PALETTE_SIZE = 256;
 class ImageProcessor {
 
 public:
-  static ImageProcessor fromQPixmap(QPixmap *const qPixmap);
+  static ImageProcessor fromQPixmap(const QPixmap &pixmap);
   QPixmap toQPixmap() const;
   std::vector<QColor> getPaletteColors() const;
 
