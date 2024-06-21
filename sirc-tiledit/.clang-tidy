@@ -1,0 +1,6 @@
+---
+Checks: 'clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory,-cppcoreguidelines-pro-type-vararg'
+FormatStyle:  llvm
+
+# cppcoreguidelines-owning-memory is disabled because it doesn't really fit with the memory model of QT where the caller doesn't own the widget
+# cppcoreguidelines-pro-type-vararg can be useful sometimes, I'll try to use it sparingly
