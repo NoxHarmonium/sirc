@@ -24,6 +24,7 @@ paletteAsSingleChannel(const std::vector<SircColor> &palette,
                    case ImageChannel::B:
                      return sircColor & SIRC_COLOR_RANGE;
                    }
+                   throw std::runtime_error("Invalid ImageChannel value");
                  });
   return paletteAsSingleChannel;
 }
@@ -75,6 +76,7 @@ sortPaletteByChannel(const std::vector<SircColor> &palette,
           return a < b;
         }
         }
+        throw std::runtime_error("Invalid ImageChannel value");
       });
   return output;
 }
