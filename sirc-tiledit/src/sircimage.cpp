@@ -2,13 +2,6 @@
 #include <QtLogging>
 #include <cassert>
 
-// QColor uses standard 32 bit colour ARGB (8bpp)
-const unsigned int Q_COLOR_RANGE = 0xFF;
-// SIRC uses a packed 16 bit color RGB (5bpp)
-const unsigned int SIRC_COLOR_COMPONENT_BITS = 5;
-const unsigned int SIRC_COLOR_RANGE = (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
-const unsigned int Q_TO_SIRC_COLOR_RATIO = Q_COLOR_RANGE / SIRC_COLOR_RANGE;
-
 u_int16_t sircColorFromQRgb(const QColor qColor) {
   const unsigned int r = qColor.red() / Q_TO_SIRC_COLOR_RATIO;
   const unsigned int g = qColor.green() / Q_TO_SIRC_COLOR_RATIO;
@@ -62,7 +55,7 @@ SircImage SircImage::fromQPixmap(const QPixmap &qPixmap) {
     }
   }
 
-  qDebug("Total palette entries: %zu", sircImage.imageData.palette.size());
+  qInfo("Total palette entries: %zu", sircImage.imageData.palette.size());
 
   return sircImage;
 }
@@ -77,7 +70,7 @@ SircImage SircImage::fromSircImageData(const SircImageData &imageData) {
     sircImage.paletteLookup.insert({paletteColor, i++});
   }
 
-  qDebug("Total palette entries: %zu", sircImage.imageData.palette.size());
+  qInfo("Total palette entries: %zu", sircImage.imageData.palette.size());
 
   return sircImage;
 }
@@ -97,6 +90,7 @@ QPixmap SircImage::toQPixmap() const {
   return QPixmap::fromImage(image);
 }
 
+// TODO: Make it more obvious this is QColor colors
 std::vector<QColor> SircImage::getPaletteColors() const {
   auto convertedPalette = std::vector<QColor>();
 
@@ -106,3 +100,7 @@ std::vector<QColor> SircImage::getPaletteColors() const {
                  [](SircColor c) { return qRgbFromSircColor(c); });
   return output;
 }
+
+// TODO: This breaks encapsulation I suppose, possibly making this class kind of
+// pointless. Might need to revisit
+SircImageData SircImage::getImageData() const { return this->imageData; }

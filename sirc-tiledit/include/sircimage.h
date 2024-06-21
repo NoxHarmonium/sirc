@@ -13,6 +13,13 @@ const int HEIGHT_PIXELS = 256;
 // The number of palette slots in the SIRC PPU
 const int MAX_PALETTE_SIZE = 256;
 
+// QColor uses standard 32 bit colour ARGB (8bpp)
+const unsigned int Q_COLOR_RANGE = 0xFF;
+// SIRC uses a packed 16 bit color RGB (5bpp)
+const unsigned int SIRC_COLOR_COMPONENT_BITS = 5;
+const unsigned int SIRC_COLOR_RANGE = (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
+const unsigned int Q_TO_SIRC_COLOR_RATIO = Q_COLOR_RANGE / SIRC_COLOR_RANGE;
+
 using SircColor = uint16_t;
 using PaletteReference = uint8_t;
 using PixelData =
@@ -39,6 +46,7 @@ public:
   // TODO: Avoid doing palette reduction in each of the following functions
   [[nodiscard]] QPixmap toQPixmap() const;
   [[nodiscard]] std::vector<QColor> getPaletteColors() const;
+  [[nodiscard]] SircImageData getImageData() const;
 
 private:
   SircImageData imageData = {};

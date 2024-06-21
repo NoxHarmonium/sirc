@@ -57,6 +57,10 @@ void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
 void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
+  auto children = ui->paletteScrollContents->findChildren<QWidget *>();
+  for (auto child : children) {
+    child->deleteLater();
+  }
 
   int paletteIndex = 0;
   for (auto color : imageProcessor.getPaletteColors()) {
@@ -96,6 +100,8 @@ void MainWindow::on_actionOpen_triggered() {
   setupSourceImageView(scaledPixmap);
 
   auto sircImage = SircImage::fromQPixmap(scaledPixmap);
+
+  qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
 
   auto paletteReductionBpp = getPaletteReductionBpp();
   auto quantizer = MedianCutQuantizer();

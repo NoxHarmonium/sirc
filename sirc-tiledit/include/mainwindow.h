@@ -34,7 +34,7 @@ private slots:
   void on_actionAbout_triggered();
 
 private:
-  PaletteReductionBpp getPaletteReductionBpp() const;
+  [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
 
   // UI Setup
   void setupPaletteReductionOptions();
