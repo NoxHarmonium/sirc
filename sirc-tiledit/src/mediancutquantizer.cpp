@@ -177,9 +177,8 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     return sircImage;
   }
 
-  // TODO: What to do if palette isn't power of two?
-  // Round down to next number power of two below maxPaletteSize?
-  const unsigned short maxBucketSize = originalPalette.size() / maxPaletteSize;
+  const unsigned short maxBucketSize =
+      (originalPalette.size() + maxPaletteSize - 1) / maxPaletteSize;
 
   auto quantizedPalettePairs = quantizeRecurse(originalPalette, maxBucketSize);
 
