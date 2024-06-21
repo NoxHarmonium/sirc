@@ -10,9 +10,16 @@ defaults:
   run:
     working-directory: ./sirc-tiledit
 
+# Source: https://github.com/mesonbuild/meson/blob/master/docs/markdown/Continuous-Integration.md
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build and Test on ${{ matrix.os }} with Meson v${{ matrix.meson_version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        meson_version: ["1.4.1"]
 
     steps:
       - name: Checkout code
