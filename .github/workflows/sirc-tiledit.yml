@@ -48,5 +48,6 @@ jobs:
           meson compile
       - name: Lint Project
         run: |
+          cd build
           ninja clang-tidy
           ninja clang-format-check
