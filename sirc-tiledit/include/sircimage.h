@@ -4,18 +4,24 @@
 #include <QImage>
 #include <QPixmap>
 #include <array>
+#include <cstdint>
 #include <map>
 #include <vector>
-
-using SircColor = u_int16_t;
-using PaletteReference = u_int8_t;
 
 const int WIDTH_PIXELS = 256;
 const int HEIGHT_PIXELS = 256;
 // The number of palette slots in the SIRC PPU
 const int MAX_PALETTE_SIZE = 256;
 
-enum class PaletteReductionBpp { None, FourBpp, TwoBpp };
+using SircColor = uint16_t;
+using PaletteReference = uint8_t;
+using PixelData =
+    std::array<std::array<PaletteReference, HEIGHT_PIXELS>, WIDTH_PIXELS>;
+
+struct SircImageData {
+  std::vector<SircColor> palette;
+  PixelData pixelData;
+};
 
 /**
  * @brief Represents an image in the format supported by the SIRC PPU
@@ -28,15 +34,14 @@ class SircImage {
 
 public:
   static SircImage fromQPixmap(const QPixmap &pixmap);
+  static SircImage fromSircImageData(const SircImageData &imageData);
+
   // TODO: Avoid doing palette reduction in each of the following functions
-  [[nodiscard]] QPixmap toQPixmap(const PaletteReductionBpp bpp) const;
-  [[nodiscard]] std::vector<QColor>
-  getPaletteColors(const PaletteReductionBpp bpp) const;
+  [[nodiscard]] QPixmap toQPixmap() const;
+  [[nodiscard]] std::vector<QColor> getPaletteColors() const;
 
 private:
-  std::array<std::array<PaletteReference, HEIGHT_PIXELS>, WIDTH_PIXELS>
-      pixelData = {};
-  std::vector<SircColor> palette = {};
+  SircImageData imageData = {};
   std::map<SircColor, size_t> paletteLookup;
 
   SircImage();

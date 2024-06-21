@@ -34,22 +34,10 @@ QColor qRgbFromSircColor(const u_int16_t sircColor) {
   return qColor;
 }
 
-QColor qRgbFromSircColorWithReduction(const u_int16_t sircColor,
-                                      const PaletteReductionBpp bpp) {
-  switch (bpp) {
-  case PaletteReductionBpp::None:
-    return qRgbFromSircColor(sircColor);
-  case PaletteReductionBpp::FourBpp:
-  case PaletteReductionBpp::TwoBpp:
-    // TODO: PaletteReduction
-    return {};
-  }
-}
-
 SircImage::SircImage() = default;
 
 SircImage SircImage::fromQPixmap(const QPixmap &qPixmap) {
-  auto imageProcessor = SircImage();
+  auto sircImage = SircImage();
   auto image = qPixmap.toImage();
 
   assert(image.width() >= WIDTH_PIXELS && image.height() >= HEIGHT_PIXELS);
@@ -60,47 +48,61 @@ SircImage SircImage::fromQPixmap(const QPixmap &qPixmap) {
       auto paletteColor = sircColorFromQRgb(pixel);
 
       if (auto existingPaletteIndex =
-              imageProcessor.paletteLookup.find(paletteColor);
-          existingPaletteIndex != imageProcessor.paletteLookup.end()) {
+              sircImage.paletteLookup.find(paletteColor);
+          existingPaletteIndex != sircImage.paletteLookup.end()) {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-        imageProcessor.pixelData[x][y] = existingPaletteIndex->second;
+        sircImage.imageData.pixelData[x][y] = existingPaletteIndex->second;
       } else {
-        imageProcessor.palette.push_back(paletteColor);
-        auto paletteIndex = imageProcessor.palette.size() - 1;
-        imageProcessor.paletteLookup.insert({paletteColor, paletteIndex});
+        sircImage.imageData.palette.push_back(paletteColor);
+        auto paletteIndex = sircImage.imageData.palette.size() - 1;
+        sircImage.paletteLookup.insert({paletteColor, paletteIndex});
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-        imageProcessor.pixelData[x][y] = paletteIndex;
+        sircImage.imageData.pixelData[x][y] = paletteIndex;
       }
     }
   }
 
-  qDebug("Total palette entries: %zu", imageProcessor.palette.size());
+  qDebug("Total palette entries: %zu", sircImage.imageData.palette.size());
 
-  return imageProcessor;
+  return sircImage;
 }
 
-QPixmap SircImage::toQPixmap(const PaletteReductionBpp bpp) const {
+SircImage SircImage::fromSircImageData(const SircImageData &imageData) {
+  auto sircImage = SircImage();
+  // TODO: Check if this is a copy
+  sircImage.imageData = imageData;
+
+  int i = 0;
+  for (auto paletteColor : sircImage.imageData.palette) {
+    sircImage.paletteLookup.insert({paletteColor, i++});
+  }
+
+  qDebug("Total palette entries: %zu", sircImage.imageData.palette.size());
+
+  return sircImage;
+}
+
+QPixmap SircImage::toQPixmap() const {
   auto image = QImage(WIDTH_PIXELS, HEIGHT_PIXELS, QImage::Format_RGB32);
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-      auto paletteColor = this->pixelData[x][y];
-      auto sircColor = this->palette[paletteColor];
+      auto paletteColor = this->imageData.pixelData[x][y];
+      auto sircColor = this->imageData.palette[paletteColor];
 
-      image.setPixelColor(x, y, qRgbFromSircColorWithReduction(sircColor, bpp));
+      image.setPixelColor(x, y, qRgbFromSircColor(sircColor));
     }
   }
   return QPixmap::fromImage(image);
 }
 
-std::vector<QColor>
-SircImage::getPaletteColors(const PaletteReductionBpp bpp) const {
+std::vector<QColor> SircImage::getPaletteColors() const {
   auto convertedPalette = std::vector<QColor>();
 
   std::vector<QColor> output;
-  std::transform(
-      this->palette.begin(), this->palette.end(), std::back_inserter(output),
-      [&bpp](SircColor c) { return qRgbFromSircColorWithReduction(c, bpp); });
+  std::transform(this->imageData.palette.begin(), this->imageData.palette.end(),
+                 std::back_inserter(output),
+                 [](SircColor c) { return qRgbFromSircColor(c); });
   return output;
 }

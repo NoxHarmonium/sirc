@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "quantizer.h"
 #include "sircimage.h"
 #include <QMainWindow>
 

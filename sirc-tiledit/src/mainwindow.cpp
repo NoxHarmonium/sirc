@@ -2,6 +2,7 @@
 
 #include "./ui_mainwindow.h"
 #include "aboutdialog.h"
+#include "mediancutquantizer.h"
 #include <mainwindow.h>
 
 const int PALLETE_VIEW_ITEM_HEIGHT = 40;
@@ -47,8 +48,7 @@ void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   ui->sourceImageGraphicsView->setScene(sourceScene);
 }
 void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
-  auto paletteReductionBpp = getPaletteReductionBpp();
-  auto targetPixmap = imageProcessor.toQPixmap(paletteReductionBpp);
+  auto targetPixmap = imageProcessor.toQPixmap();
   auto targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
@@ -57,9 +57,9 @@ void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
 void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
-  auto paletteReductionBpp = getPaletteReductionBpp();
+
   int paletteIndex = 0;
-  for (auto color : imageProcessor.getPaletteColors(paletteReductionBpp)) {
+  for (auto color : imageProcessor.getPaletteColors()) {
     auto hWidget = new QWidget();
     hWidget->setMaximumHeight(PALLETE_VIEW_ITEM_HEIGHT);
 
@@ -95,9 +95,14 @@ void MainWindow::on_actionOpen_triggered() {
 
   setupSourceImageView(scaledPixmap);
 
-  auto imageProcessor = SircImage::fromQPixmap(scaledPixmap);
-  setupTargetImageView(imageProcessor);
-  setupPaletteView(imageProcessor);
+  auto sircImage = SircImage::fromQPixmap(scaledPixmap);
+
+  auto paletteReductionBpp = getPaletteReductionBpp();
+  auto quantizer = MedianCutQuantizer();
+  auto quantizedImage = quantizer.quantize(sircImage, paletteReductionBpp);
+
+  setupTargetImageView(quantizedImage);
+  setupPaletteView(quantizedImage);
 }
 
 void MainWindow::on_actionAbout_triggered() {

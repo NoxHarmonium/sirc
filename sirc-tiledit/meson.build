@@ -13,6 +13,7 @@ project_source_files = [
   'src/mainwindow.cpp',
   'src/aboutdialog.cpp',
   'src/sircimage.cpp',
+  'src/mediancutquantizer.cpp',
   'src/main.cpp'
 ]
 
