@@ -46,8 +46,8 @@ jobs:
         run: >
           meson setup build/
         env:
-          CC: clang
-          CXX: clang++
+          CC: clang-18
+          CXX: clang++-18
       - name: Compile Project
         run: |
           cd build
