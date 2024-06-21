@@ -27,12 +27,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.6.*
       - name: Install dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
       - name: Configure Project
         run: meson setup build/
         env:
           CC: gcc
-
-  
