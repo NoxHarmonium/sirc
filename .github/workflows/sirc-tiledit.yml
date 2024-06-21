@@ -54,5 +54,7 @@ jobs:
       - name: Lint Project
         run: |
           cd build
+          clang-tidy --version
           ninja clang-tidy
-          ninja clang-format-check
+          clang-format --version
+          ninja clang-format
