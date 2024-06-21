@@ -33,13 +33,12 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: 6.6.*
-      - name: Install ubuntu dependencies
-        run: sudo apt-get install clang-format clang-tidy
       - name: Install up-to-date clang
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 18
+          sudo apt-get install clang-format-18 clang-tidy-18
       - name: Install python based dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
       - name: Configure Project
