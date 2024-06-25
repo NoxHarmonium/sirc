@@ -1,10 +1,7 @@
 #ifndef PIXMAPADAPTER_H
 #define PIXMAPADAPTER_H
 
-#include <QImage>
 #include <QPixmap>
-#include <array>
-#include <cstdint>
 #include <map>
 #include <vector>
 
