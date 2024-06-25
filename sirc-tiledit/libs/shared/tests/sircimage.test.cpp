@@ -6,8 +6,8 @@
 
 TEST_CASE("Image data is untouched but palette map is populated",
           "[fromSircImageData]") {
-  const SircImageData imageData = {.pixelData = {{{0, 1, 0, 2, 1}}},
-                                   .palette = {1, 2, 3}};
+  const SircImageData imageData = {.palette = {1, 2, 3},
+                                   .pixelData = {{{0, 1, 0, 2, 1}}}};
   const auto sircImage = SircImage::fromSircImageData(imageData);
 
   REQUIRE(imageData == sircImage.getImageData());

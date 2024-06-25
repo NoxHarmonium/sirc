@@ -8,8 +8,8 @@
 
 TEST_CASE("Reduces palette size to 2bpp", "[quantize]") {
   const SircImageData imageData = {
-      .pixelData = {{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}},
-      .palette = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}};
+      .palette = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+      .pixelData = {{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}}};
   const auto sircImage = SircImage::fromSircImageData(imageData);
 
   const auto quantizer = MedianCutQuantizer();
