@@ -77,5 +77,6 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
+          name: build artifacts
           path: ./sirc-tiledit/build/meson-dist/*
           if-no-files-found: error
