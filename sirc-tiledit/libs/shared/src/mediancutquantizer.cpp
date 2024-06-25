@@ -1,6 +1,8 @@
-#include "mediancutquantizer.h"
+#include <mediancutquantizer.hpp>
 
 #include <algorithm>
+#include <cassert>
+#include <numeric>
 #include <ranges>
 #include <set>
 
@@ -172,8 +174,8 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   const auto originalPixelData = sircImage.getImageData().pixelData;
   const auto originalPalette = sircImage.getImageData().palette;
 
-  qInfo("Quantizing image with palette size %zu to maxPaletteSize: %hu",
-        originalPalette.size(), maxPaletteSize);
+  // qInfo("Quantizing image with palette size %zu to maxPaletteSize: %hu",
+  //       originalPalette.size(), maxPaletteSize);
 
   if (originalPalette.size() <= maxPaletteSize) {
     return sircImage;

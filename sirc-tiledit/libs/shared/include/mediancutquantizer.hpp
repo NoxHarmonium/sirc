@@ -1,7 +1,7 @@
 #ifndef MEDIANCUTQUANTIZER_H
 #define MEDIANCUTQUANTIZER_H
 
-#include "quantizer.h"
+#include "quantizer.hpp"
 
 /**
  * @brief A simple quantizer that can only reduce the palette in multiples of

@@ -1,9 +1,10 @@
 #include <QtWidgets>
 
 #include "./ui_mainwindow.h"
-#include "aboutdialog.h"
-#include "mediancutquantizer.h"
-#include <mainwindow.h>
+#include "aboutdialog.hpp"
+#include "mainwindow.hpp"
+#include "pixmapadapter.hpp"
+#include <mediancutquantizer.hpp>
 
 const int PALLETE_VIEW_ITEM_HEIGHT = 40;
 
@@ -47,14 +48,14 @@ void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
   sourceScene->addPixmap(scaledPixmap);
   ui->sourceImageGraphicsView->setScene(sourceScene);
 }
-void MainWindow::setupTargetImageView(const SircImage &imageProcessor) {
-  auto targetPixmap = imageProcessor.toQPixmap();
+void MainWindow::setupTargetImageView(const SircImage &sircImage) {
+  auto targetPixmap = PixmapAdapter::sircImageToPixmap(sircImage);
   auto targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
 }
 
-void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
+void MainWindow::setupPaletteView(const SircImage &sircImage) {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
   auto children = ui->paletteScrollContents->findChildren<QWidget *>();
@@ -63,7 +64,7 @@ void MainWindow::setupPaletteView(const SircImage &imageProcessor) {
   }
 
   int paletteIndex = 0;
-  for (auto color : imageProcessor.getPaletteColors()) {
+  for (auto color : PixmapAdapter::getPaletteColors(sircImage)) {
     auto hWidget = new QWidget();
     hWidget->setMaximumHeight(PALLETE_VIEW_ITEM_HEIGHT);
 
@@ -99,7 +100,7 @@ void MainWindow::on_actionOpen_triggered() {
 
   setupSourceImageView(scaledPixmap);
 
-  auto sircImage = SircImage::fromQPixmap(scaledPixmap);
+  auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
 
   qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
 

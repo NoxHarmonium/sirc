@@ -59,5 +59,7 @@ build.ninja
 # Misc
 compile_commands.json
 
+# clangd
+.cache
 
 # End of https://www.toptal.com/developers/gitignore/api/meson,c++

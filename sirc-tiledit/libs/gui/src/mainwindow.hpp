@@ -1,9 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "quantizer.h"
-#include "sircimage.h"
 #include <QMainWindow>
+#include <quantizer.hpp>
+#include <sircimage.hpp>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

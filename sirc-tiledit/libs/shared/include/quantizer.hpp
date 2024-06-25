@@ -1,7 +1,7 @@
 #ifndef QUANTIZER_H
 #define QUANTIZER_H
 
-#include "sircimage.h"
+#include "sircimage.hpp"
 
 enum class PaletteReductionBpp { None, FourBpp, TwoBpp };
 
