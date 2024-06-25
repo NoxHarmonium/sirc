@@ -50,7 +50,7 @@ jobs:
         run: python -m pip install meson==${{ matrix.meson_version }} ninja gcovr
 
       - name: Configure Project
-        run: >
+        run: |
           meson setup -Db_coverage=true --buildtype debug build-debug/
           meson setup --buildtype release build-release/
         env:
