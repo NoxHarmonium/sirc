@@ -57,7 +57,7 @@ jobs:
       - name: Compile Project
         run: |
           cd build
-          meson compile
+          meson compile -v
       - name: Lint Project
         run: |
           cd build
