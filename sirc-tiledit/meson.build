@@ -12,7 +12,7 @@ gui_source_files = [
     'libs/gui/src/pixmapadapter.cpp',
 ]
 
-test_dependencies = [dependency('catch2-with-main', version : '>=3.6.0')]
+test_dependencies = [dependency('catch2-with-main', fallback : ['catch2', 'catch2_with_main_dep'])]
 
 shared_library_source_files = ['libs/shared/src/sircimage.cpp', 'libs/shared/src/mediancutquantizer.cpp']
 shared_library_include_files = include_directories('libs/shared/include')
