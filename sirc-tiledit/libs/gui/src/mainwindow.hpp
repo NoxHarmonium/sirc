@@ -8,14 +8,14 @@
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
-}
+} // namespace Ui
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  MainWindow(QWidget *parent = nullptr);
+  explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow() override;
 
   MainWindow(const MainWindow &) = delete;
@@ -37,10 +37,10 @@ private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
 
   // UI Setup
-  void setupPaletteReductionOptions();
-  void setupSourceImageView(const QPixmap &scaledPixmap);
-  void setupTargetImageView(const SircImage &imageProcessor);
-  void setupPaletteView(const SircImage &imageProcessor);
+  void setupPaletteReductionOptions() const;
+  void setupSourceImageView(const QPixmap &scaledPixmap) const;
+  void setupTargetImageView(const SircImage &sircImage) const;
+  void setupPaletteView(const SircImage &sircImage) const;
 
   Ui::MainWindow *ui;
   QString openedSourceFilename;

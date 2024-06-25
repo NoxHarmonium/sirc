@@ -7,14 +7,15 @@
 #include <map>
 #include <vector>
 
-const int WIDTH_PIXELS = 256;
-const int HEIGHT_PIXELS = 256;
+constexpr int WIDTH_PIXELS = 256;
+constexpr int HEIGHT_PIXELS = 256;
 // The number of palette slots in the SIRC PPU
-const int MAX_PALETTE_SIZE = 256;
+constexpr int MAX_PALETTE_SIZE = 256;
 
 // SIRC uses a packed 16 bit color RGB (5bpp)
-const unsigned int SIRC_COLOR_COMPONENT_BITS = 5;
-const unsigned int SIRC_COLOR_RANGE = (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
+constexpr unsigned int SIRC_COLOR_COMPONENT_BITS = 5;
+constexpr unsigned int SIRC_COLOR_RANGE =
+    (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
 
 using SircColor = uint16_t;
 using ArgbColor = uint32_t;
@@ -27,6 +28,7 @@ using IndexedPixelData =
 struct SircImageData {
   std::vector<SircColor> palette;
   IndexedPixelData pixelData;
+  bool operator==(const SircImageData &) const = default;
 };
 
 /**
@@ -41,10 +43,14 @@ class SircImage {
 public:
   static SircImage fromPixelData(const PackedPixelData &pixelData);
   static SircImage fromSircImageData(const SircImageData &imageData);
+
   [[nodiscard]] SircImageData getImageData() const;
+  [[nodiscard]] PaletteReference paletteIndexForColor(SircColor color) const;
 
 private:
   SircImageData imageData = {};
+  // This isn't doing anything at the moment because we are part way through a
+  // refactor
   std::map<SircColor, size_t> paletteLookup;
 
   SircImage();

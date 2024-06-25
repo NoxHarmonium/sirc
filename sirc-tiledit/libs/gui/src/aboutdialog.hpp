@@ -5,7 +5,7 @@
 
 namespace Ui {
 class AboutDialog;
-}
+} // namespace Ui
 
 class AboutDialog : public QDialog {
   Q_OBJECT

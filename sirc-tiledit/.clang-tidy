@@ -1,6 +1,10 @@
 ---
-Checks: 'clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory,-cppcoreguidelines-pro-type-vararg'
-FormatStyle:  llvm
-
+Checks: "clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,bugprone-*,llvm-*,performance-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory,-cppcoreguidelines-pro-type-vararg,-bugprone-macro-parentheses,-llvm-header-guard"
+FormatStyle: llvm
+CheckOptions:
+  cppcoreguidelines-avoid-do-while.IgnoreMacros: "true"
+# Reasons:
 # cppcoreguidelines-owning-memory is disabled because it doesn't really fit with the memory model of QT where the caller doesn't own the widget
 # cppcoreguidelines-pro-type-vararg can be useful sometimes, I'll try to use it sparingly
+# bugprone-macro-parentheses because it will cause too many changes right now with all the guards for double header inclusion
+# llvm-header-guard because I couldn't get auto fix to work and it is a pretty trivial rule
