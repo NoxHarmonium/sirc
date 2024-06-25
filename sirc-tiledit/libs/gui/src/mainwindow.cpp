@@ -6,7 +6,7 @@
 #include "pixmapadapter.hpp"
 #include <mediancutquantizer.hpp>
 
-const int PALLETE_VIEW_ITEM_HEIGHT = 40;
+constexpr int PALLETE_VIEW_ITEM_HEIGHT = 40;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -24,7 +24,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
 #endif // QT_NO_CONTEXTMENU
 
 PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
-  auto currentItem = ui->paletteReductionOptions->currentData();
+  const auto currentItem = ui->paletteReductionOptions->currentData();
   if (currentItem.isNull() || !currentItem.isValid()) {
     return PaletteReductionBpp::None;
   }
@@ -33,7 +33,7 @@ PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
 
 // UI Setup
 
-void MainWindow::setupPaletteReductionOptions() {
+void MainWindow::setupPaletteReductionOptions() const {
   ui->paletteReductionOptions->addItem(
       "1:1", QVariant::fromValue(PaletteReductionBpp::None));
   ui->paletteReductionOptions->addItem(
@@ -43,38 +43,38 @@ void MainWindow::setupPaletteReductionOptions() {
   ui->paletteReductionOptions->setCurrentIndex(0);
 }
 
-void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) {
-  auto sourceScene = new QGraphicsScene();
+void MainWindow::setupSourceImageView(const QPixmap &scaledPixmap) const {
+  auto *sourceScene = new QGraphicsScene();
   sourceScene->addPixmap(scaledPixmap);
   ui->sourceImageGraphicsView->setScene(sourceScene);
 }
-void MainWindow::setupTargetImageView(const SircImage &sircImage) {
-  auto targetPixmap = PixmapAdapter::sircImageToPixmap(sircImage);
-  auto targetScene = new QGraphicsScene();
+void MainWindow::setupTargetImageView(const SircImage &sircImage) const {
+  const auto targetPixmap = PixmapAdapter::sircImageToPixmap(sircImage);
+  auto *targetScene = new QGraphicsScene();
   targetScene->addPixmap(targetPixmap);
   ui->targetImageGraphicsView->setScene(targetScene);
 }
 
-void MainWindow::setupPaletteView(const SircImage &sircImage) {
+void MainWindow::setupPaletteView(const SircImage &sircImage) const {
   // TODO: Why can't I set this alignment in the UI?
   ui->paletteScrollLayout->setAlignment(Qt::AlignTop);
-  auto children = ui->paletteScrollContents->findChildren<QWidget *>();
-  for (auto child : children) {
+  for (auto children = ui->paletteScrollContents->findChildren<QWidget *>();
+       auto *child : children) {
     child->deleteLater();
   }
 
   int paletteIndex = 0;
   for (auto color : PixmapAdapter::getPaletteColors(sircImage)) {
-    auto hWidget = new QWidget();
+    auto *hWidget = new QWidget();
     hWidget->setMaximumHeight(PALLETE_VIEW_ITEM_HEIGHT);
 
-    auto hLayout = new QHBoxLayout();
+    auto *hLayout = new QHBoxLayout();
     hWidget->setLayout(hLayout);
 
-    auto label = new QLabel(QString("%1: ").arg(paletteIndex++));
-    auto colorIndicator = new QFrame();
+    auto *label = new QLabel(QString("%1: ").arg(paletteIndex++));
+    auto *colorIndicator = new QFrame();
 
-    QPalette pal = QPalette();
+    auto pal = QPalette();
     pal.setColor(QPalette::Window, color);
     colorIndicator->setAutoFillBackground(true);
     colorIndicator->setPalette(pal);
@@ -92,28 +92,29 @@ void MainWindow::on_actionOpen_triggered() {
       this, tr("Open source file"), "/home",
       tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
   auto reader = QImageReader(openedSourceFilename);
-  auto pixmap = QPixmap::fromImageReader(&reader);
+  const auto pixmap = QPixmap::fromImageReader(&reader);
 
-  auto scaledPixmap =
+  const auto scaledPixmap =
       pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS, Qt::KeepAspectRatioByExpanding,
                     Qt::FastTransformation);
 
   setupSourceImageView(scaledPixmap);
 
-  auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
+  const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
 
   qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
 
-  auto paletteReductionBpp = getPaletteReductionBpp();
-  auto quantizer = MedianCutQuantizer();
-  auto quantizedImage = quantizer.quantize(sircImage, paletteReductionBpp);
+  const auto paletteReductionBpp = getPaletteReductionBpp();
+  const auto quantizer = MedianCutQuantizer();
+  const auto quantizedImage =
+      quantizer.quantize(sircImage, paletteReductionBpp);
 
   setupTargetImageView(quantizedImage);
   setupPaletteView(quantizedImage);
 }
 
 void MainWindow::on_actionAbout_triggered() {
-  auto aboutDialog = new AboutDialog(this);
+  auto *aboutDialog = new AboutDialog(this);
   aboutDialog->setModal(true);
   aboutDialog->show();
 }

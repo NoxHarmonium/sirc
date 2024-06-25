@@ -14,9 +14,8 @@ class MedianCutQuantizer : public Quantizer {
 public:
   MedianCutQuantizer() = default;
 
-  [[nodiscard]] SircImage
-  quantize(const SircImage &sircImage,
-           const PaletteReductionBpp bpp) const override;
+  [[nodiscard]] SircImage quantize(const SircImage &sircImage,
+                                   PaletteReductionBpp bpp) const override;
 };
 
 #endif // MEDIANCUTQUANTIZER_H

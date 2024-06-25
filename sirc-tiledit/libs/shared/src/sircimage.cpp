@@ -1,4 +1,3 @@
-#include <cassert>
 #include <sircimage.hpp>
 
 SircImage::SircImage() = default;
@@ -42,6 +41,14 @@ SircImage SircImage::fromSircImageData(const SircImageData &imageData) {
   // qInfo("Total palette entries: %zu", sircImage.imageData.palette.size());
 
   return sircImage;
+}
+
+PaletteReference SircImage::paletteIndexForColor(const SircColor color) const {
+  const auto iterator = this->paletteLookup.find(color);
+  if (iterator == this->paletteLookup.end()) {
+    return -1;
+  }
+  return iterator->second;
 }
 
 // TODO: This breaks encapsulation I suppose, possibly making this class kind of

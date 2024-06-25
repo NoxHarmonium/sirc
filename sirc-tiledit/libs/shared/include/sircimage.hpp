@@ -27,6 +27,7 @@ using IndexedPixelData =
 struct SircImageData {
   std::vector<SircColor> palette;
   IndexedPixelData pixelData;
+  bool operator==(const SircImageData &) const = default;
 };
 
 /**
@@ -41,10 +42,14 @@ class SircImage {
 public:
   static SircImage fromPixelData(const PackedPixelData &pixelData);
   static SircImage fromSircImageData(const SircImageData &imageData);
+
   [[nodiscard]] SircImageData getImageData() const;
+  [[nodiscard]] PaletteReference paletteIndexForColor(SircColor color) const;
 
 private:
   SircImageData imageData = {};
+  // This isn't doing anything at the moment because we are part way through a
+  // refactor
   std::map<SircColor, size_t> paletteLookup;
 
   SircImage();
