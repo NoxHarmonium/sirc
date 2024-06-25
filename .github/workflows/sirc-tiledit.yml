@@ -65,3 +65,13 @@ jobs:
           ninja clang-tidy
           clang-format --version
           ninja clang-format-check
+      - name: Create release
+        run: |
+          cd build
+          meson dist
+      - name: Archive release
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./build/sirc-tiledit-*.tar.xz
+          if-no-files-found: error
