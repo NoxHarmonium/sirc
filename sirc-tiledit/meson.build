@@ -67,3 +67,15 @@ test(
         link_with : shared_lib,
     ),
 )
+
+test(
+    'MedianCutQuantizer',
+    executable(
+        'mediancutquantizer',
+        'libs/shared/tests/mediancutquantizer.test.cpp',
+        dependencies : test_dependencies,
+        include_directories : shared_library_include_files,
+        cpp_args : build_args,
+        link_with : shared_lib,
+    ),
+)
