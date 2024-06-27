@@ -3,7 +3,6 @@
 #include "sircimage.hpp"
 
 #include <cassert>
-#include <limits>
 
 SircColor sircColorFromRgba(const RgbaPixel rgbaColor) {
   const RgbaComponent r = rgbaColor >> 24 & 0xFF;
@@ -21,7 +20,7 @@ SircColor sircColorFromRgba(const RgbaPixel rgbaColor) {
   const unsigned int scaledG = g / RGBA_TO_SIRC_COLOR_RATIO;
   const unsigned int scaledB = b / RGBA_TO_SIRC_COLOR_RATIO;
 
-  return scaledR << (SIRC_COLOR_COMPONENT_BITS * 2) |
+  return scaledR << SIRC_COLOR_COMPONENT_BITS * 2 |
          scaledG << SIRC_COLOR_COMPONENT_BITS | scaledB;
 }
 
@@ -48,6 +47,7 @@ SircImage RgbaAdapter::rgbaToSircImage(const RgbaPixelData &pixelData) {
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       const auto pixel = pixelData[x][y];
       const auto convertedPixel = sircColorFromRgba(pixel);
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -69,6 +69,7 @@ RgbaPixelData RgbaAdapter::sircImageToRgba(const SircImage &sircImage) {
       const auto paletteColor = pixelData[x][y];
       assert(paletteColor < palette.size());
       const auto sircColor = palette[paletteColor];
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       output[x][y] = rgbaFromSircColor(sircColor);
     }
   }

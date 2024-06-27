@@ -3,3 +3,7 @@
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++20
+
+# Stop the formatter from breaking up clang-tidy nolint comments
+CommentPragmas: '^NOLINTNEXTLINE|^NOLINTBEGIN|^NOLINTEND'
+InsertBraces: true

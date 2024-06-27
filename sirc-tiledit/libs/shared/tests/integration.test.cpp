@@ -16,6 +16,8 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
                         const std::filesystem::path &referencePath,
                         const PaletteReductionBpp &bpp) {
   const std::filesystem::path testRootPath(TEST_ROOT);
+  auto fullOutputPath = testRootPath / outputPath;
+  auto fullReferencePath = (testRootPath / referencePath);
 
   const auto inputPixelData =
       ImageLoader::loadImageFromPng((testRootPath / inputPath).c_str());
@@ -23,9 +25,9 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage = quantizer.quantize(sircImage, bpp);
   const auto outputImage = RgbaAdapter::sircImageToRgba(quantizedImage);
-  ImageLoader::saveImageToPng((testRootPath / outputPath).c_str(), outputImage);
+  ImageLoader::saveImageToPng(fullOutputPath.c_str(), outputImage);
 
-  REQUIRE(compare_files(outputPath.c_str(), referencePath.c_str()));
+  REQUIRE(compare_files(fullReferencePath.string(), fullOutputPath.string()));
 }
 
 TEST_CASE("Quantizes a real test image correctly (pixel_art_background/2bpp)",
@@ -74,7 +76,8 @@ TEST_CASE("Quantizes a real test image correctly (red_flowering_gum/2bpp)",
       std::filesystem::path("resources/red_flowering_gum.png"),
       std::filesystem::path(
           "resources/red_flowering_gum_output_actual_2bpp.png"),
-      std::filesystem::path("resources/gradient_output_expected_4bpp.png"),
+      std::filesystem::path(
+          "resources/red_flowering_gum_output_expected_2bpp.png"),
       PaletteReductionBpp::TwoBpp);
 }
 
