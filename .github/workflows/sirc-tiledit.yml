@@ -40,7 +40,7 @@ jobs:
           ln -s $(which clang-format-18) /usr/local/bin/clang-format
       - name: Install ubuntu dependencies
         run: |
-          sudo apt-get install catch2
+          sudo apt-get install catch2 libpng-dev
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
