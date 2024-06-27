@@ -4,6 +4,7 @@
 #include <png.h>
 
 #include <cassert>
+#include <cstdlib>
 
 // Thanks to https://gist.github.com/niw/5963798 for the original code for this
 // file

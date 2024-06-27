@@ -25,7 +25,7 @@ SircColor sircColorFromRgba(const RgbaPixel rgbaColor) {
          scaledG << SIRC_COLOR_COMPONENT_BITS | scaledB;
 }
 
-RgbaPixel rgbaFromSircColor(const u_int16_t sircColor) {
+RgbaPixel rgbaFromSircColor(const SircColor sircColor) {
   const unsigned int sircR =
       sircColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
   const unsigned int sircG =

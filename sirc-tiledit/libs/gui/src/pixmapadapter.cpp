@@ -4,7 +4,7 @@
 
 #include <miscadapter.hpp>
 
-u_int16_t sircColorFromQRgb(const QColor qColor) {
+SircColor sircColorFromQRgb(const QColor qColor) {
   const unsigned int r = qColor.red() / Q_TO_SIRC_COLOR_RATIO;
   const unsigned int g = qColor.green() / Q_TO_SIRC_COLOR_RATIO;
   const unsigned int b = qColor.blue() / Q_TO_SIRC_COLOR_RATIO;
@@ -13,7 +13,7 @@ u_int16_t sircColorFromQRgb(const QColor qColor) {
          b;
 }
 
-QColor qRgbFromSircColor(const u_int16_t sircColor) {
+QColor qRgbFromSircColor(const SircColor sircColor) {
   const unsigned int sircR =
       sircColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
   const unsigned int sircG =

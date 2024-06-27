@@ -5,9 +5,10 @@
 #include "constants.hpp"
 
 #include <array>
+#include <cstdint>
 #include <limits>
 
-using RgbaComponent = u_int8_t;
+using RgbaComponent = uint8_t;
 using RgbaPixel = uint32_t;
 using RgbaPixelData =
     std::array<std::array<RgbaPixel, HEIGHT_PIXELS>, WIDTH_PIXELS>;
