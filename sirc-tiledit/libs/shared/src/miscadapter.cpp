@@ -1,9 +1,10 @@
 
 #include "miscadapter.hpp"
 
-SircImage MiscAdapter::fromPixelData(const PackedPixelData &pixelData) {
+SircImage MiscAdapter::packedSircPixelDataToSircImage(
+    const PackedSircPixelData &pixelData) {
 
-  SircImageData imageData = {};
+  SircImage imageData = {};
   std::map<SircColor, size_t> paletteLookup;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
@@ -25,9 +26,5 @@ SircImage MiscAdapter::fromPixelData(const PackedPixelData &pixelData) {
     }
   }
 
-  return SircImage(imageData);
-}
-
-SircImage MiscAdapter::fromSircImageData(const SircImageData &imageData) {
-  return SircImage(imageData);
+  return imageData;
 }

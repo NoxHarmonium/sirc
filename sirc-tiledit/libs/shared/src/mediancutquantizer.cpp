@@ -171,8 +171,8 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     break;
   }
 
-  const auto originalPixelData = sircImage.getImageData().pixelData;
-  const auto originalPalette = sircImage.getImageData().palette;
+  const auto originalPixelData = sircImage.pixelData;
+  const auto originalPalette = sircImage.palette;
 
   // qInfo("Quantizing image with palette size %zu to maxPaletteSize: %hu",
   //       originalPalette.size(), maxPaletteSize);
@@ -195,8 +195,8 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   auto paletteMapping = buildPaletteMapping(
       quantizedPalettePairs, originalPalette, quantizedPaletteWithoutDupes);
 
-  SircImageData quantizedImage = {.palette = quantizedPaletteWithoutDupes,
-                                  .pixelData = {}};
+  SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
+                              .pixelData = {}};
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
@@ -205,5 +205,5 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     }
   }
 
-  return MiscAdapter::fromSircImageData(quantizedImage);
+  return quantizedImage;
 }

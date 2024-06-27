@@ -8,15 +8,14 @@
 #include <sircimage.hpp>
 
 TEST_CASE("Reduces palette size to 2bpp", "[quantize]") {
-  const SircImageData imageData = {
+  const SircImage sircImage = {
       .palette = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
       .pixelData = {{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}}};
-  const auto sircImage = MiscAdapter::fromSircImageData(imageData);
 
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage =
       quantizer.quantize(sircImage, PaletteReductionBpp::TwoBpp);
-  const auto [palette, pixelData] = quantizedImage.getImageData();
+  const auto [palette, pixelData] = quantizedImage;
 
   REQUIRE(4 == palette.size());
   REQUIRE(std::vector<SircColor>{1, 4, 7, 10} == palette);

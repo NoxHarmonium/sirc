@@ -14,18 +14,6 @@ shared_test_source_files = [
 # Tests
 
 test(
-    'SircImage',
-    executable(
-        'sircimage',
-        'sircimage.test.cpp',
-        shared_test_source_files,
-        dependencies : test_dependencies,
-        include_directories : shared_library_include_files,
-        link_with : shared_lib,
-    ),
-)
-
-test(
     'MedianCutQuantizer',
     executable(
         'mediancutquantizer',

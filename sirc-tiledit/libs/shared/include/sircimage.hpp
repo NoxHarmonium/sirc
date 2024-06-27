@@ -19,16 +19,10 @@ constexpr unsigned int SIRC_COLOR_RANGE =
 
 using SircColor = uint16_t;
 using PaletteReference = size_t;
-using PackedPixelData =
+using PackedSircPixelData =
     std::array<std::array<SircColor, HEIGHT_PIXELS>, WIDTH_PIXELS>;
 using IndexedPixelData =
     std::array<std::array<PaletteReference, HEIGHT_PIXELS>, WIDTH_PIXELS>;
-
-struct SircImageData {
-  std::vector<SircColor> palette;
-  IndexedPixelData pixelData;
-  bool operator==(const SircImageData &) const = default;
-};
 
 /**
  * @brief Represents an image in the format supported by the SIRC PPU
@@ -37,15 +31,10 @@ struct SircImageData {
  * The palette can store 256 colors but usually tile data will
  * only support max 4bpp (16 colors).
  */
-class SircImage {
-
-public:
-  explicit SircImage(SircImageData imageData);
-
-  [[nodiscard]] SircImageData getImageData() const;
-
-private:
-  SircImageData imageData = {};
+struct SircImage {
+  std::vector<SircColor> palette;
+  IndexedPixelData pixelData;
+  bool operator==(const SircImage &) const = default;
 };
 
 #endif // IMAGEPROCESSOR_H

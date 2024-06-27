@@ -44,7 +44,7 @@ RgbaPixel rgbaFromSircColor(const u_int16_t sircColor) {
 }
 
 SircImage RgbaAdapter::rgbaToSircImage(const RgbaPixelData &pixelData) {
-  PackedPixelData convertedPixelData;
+  PackedSircPixelData convertedPixelData;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
@@ -55,14 +55,15 @@ SircImage RgbaAdapter::rgbaToSircImage(const RgbaPixelData &pixelData) {
       convertedPixelData[x][y] = convertedPixel;
     }
   }
-  auto sircImage = MiscAdapter::fromPixelData(convertedPixelData);
+  auto sircImage =
+      MiscAdapter::packedSircPixelDataToSircImage(convertedPixelData);
 
   return sircImage;
 }
 
 RgbaPixelData RgbaAdapter::sircImageToRgba(const SircImage &sircImage) {
   RgbaPixelData output;
-  auto [palette, pixelData] = sircImage.getImageData();
+  auto [palette, pixelData] = sircImage;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {

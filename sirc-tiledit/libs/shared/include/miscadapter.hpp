@@ -4,13 +4,10 @@
 
 #include "sircimage.hpp"
 
-
 class MiscAdapter {
 public:
-  static SircImage fromPixelData(const PackedPixelData &pixelData);
-  static SircImage fromSircImageData(const SircImageData &imageData);
+  static SircImage
+  packedSircPixelDataToSircImage(const PackedSircPixelData &pixelData);
 };
 
-
-
-#endif //MISCADAPTER_HPP
+#endif // MISCADAPTER_HPP
