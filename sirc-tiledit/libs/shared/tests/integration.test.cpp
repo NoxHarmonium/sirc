@@ -16,8 +16,8 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
                         const std::filesystem::path &referencePath,
                         const PaletteReductionBpp &bpp) {
   const std::filesystem::path testRootPath(TEST_ROOT);
-  auto fullOutputPath = testRootPath / outputPath;
-  auto fullReferencePath = (testRootPath / referencePath);
+  const auto fullOutputPath = testRootPath / outputPath;
+  const auto fullReferencePath = (testRootPath / referencePath);
 
   const auto inputPixelData =
       ImageLoader::loadImageFromPng((testRootPath / inputPath).c_str());
