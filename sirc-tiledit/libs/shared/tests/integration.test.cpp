@@ -25,9 +25,20 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage = quantizer.quantize(sircImage, bpp);
   const auto outputImage = RgbaAdapter::sircImageToRgba(quantizedImage);
+
+  // Save the data to a PNG for visual comparison when debugging
   ImageLoader::saveImageToPng(fullOutputPath.c_str(), outputImage);
 
-  REQUIRE(compare_files(fullReferencePath.string(), fullOutputPath.string()));
+  const auto referencePixelData =
+      ImageLoader::loadImageFromPng(fullReferencePath.c_str());
+
+  bool allPixelsMatch = true;
+  for (size_t y = 0; y < HEIGHT_PIXELS; y++) {
+    for (size_t x = 0; x < WIDTH_PIXELS; x++) {
+      allPixelsMatch &= (referencePixelData[x][y] == outputImage[x][y]);
+    }
+  }
+  REQUIRE(allPixelsMatch);
 }
 
 TEST_CASE("Quantizes a real test image correctly (pixel_art_background/2bpp)",
