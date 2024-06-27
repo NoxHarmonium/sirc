@@ -4,13 +4,14 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <mediancutquantizer.hpp>
+#include <miscadapter.hpp>
 #include <sircimage.hpp>
 
 TEST_CASE("Reduces palette size to 2bpp", "[quantize]") {
   const SircImageData imageData = {
       .palette = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
       .pixelData = {{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}}};
-  const auto sircImage = SircImage::fromSircImageData(imageData);
+  const auto sircImage = MiscAdapter::fromSircImageData(imageData);
 
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage =

@@ -3,6 +3,7 @@
 #include "sircimage.hpp"
 
 #include <cassert>
+#include <miscadapter.hpp>
 
 SircColor sircColorFromRgba(const RgbaPixel rgbaColor) {
   const RgbaComponent r = rgbaColor >> 24 & 0xFF;
@@ -54,7 +55,7 @@ SircImage RgbaAdapter::rgbaToSircImage(const RgbaPixelData &pixelData) {
       convertedPixelData[x][y] = convertedPixel;
     }
   }
-  auto sircImage = SircImage::fromPixelData(convertedPixelData);
+  auto sircImage = MiscAdapter::fromPixelData(convertedPixelData);
 
   return sircImage;
 }

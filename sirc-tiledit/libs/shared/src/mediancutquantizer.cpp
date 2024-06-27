@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <miscadapter.hpp>
 #include <numeric>
 #include <ranges>
 #include <set>
@@ -204,5 +205,5 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     }
   }
 
-  return SircImage::fromSircImageData(quantizedImage);
+  return MiscAdapter::fromSircImageData(quantizedImage);
 }

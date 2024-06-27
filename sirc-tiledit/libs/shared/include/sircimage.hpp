@@ -40,17 +40,12 @@ struct SircImageData {
 class SircImage {
 
 public:
-  static SircImage fromPixelData(const PackedPixelData &pixelData);
-  static SircImage fromSircImageData(const SircImageData &imageData);
+  explicit SircImage(SircImageData imageData);
 
   [[nodiscard]] SircImageData getImageData() const;
-  [[nodiscard]] PaletteReference paletteIndexForColor(SircColor color) const;
 
 private:
   SircImageData imageData = {};
-  std::map<SircColor, size_t> paletteLookup;
-
-  SircImage();
 };
 
 #endif // IMAGEPROCESSOR_H

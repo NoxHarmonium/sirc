@@ -20,7 +20,7 @@ gui_source_files = [
     'libs/gui/src/pixmapadapter.cpp',
 ]
 
-shared_library_source_files = ['libs/shared/src/sircimage.cpp', 'libs/shared/src/mediancutquantizer.cpp', 'libs/shared/src/imageloader.cpp', 'libs/shared/src/rgbaadapter.cpp', ]
+shared_library_source_files = ['libs/shared/src/sircimage.cpp', 'libs/shared/src/mediancutquantizer.cpp', 'libs/shared/src/imageloader.cpp', 'libs/shared/src/rgbaadapter.cpp', 'libs/shared/src/miscadapter.cpp', ]
 shared_library_include_files = include_directories('libs/shared/include')
 shared_library_dependencies = [dependency('libpng')]
 
