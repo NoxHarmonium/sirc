@@ -1,5 +1,5 @@
 ---
-Checks: "clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,bugprone-*,llvm-*,performance-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory,-cppcoreguidelines-pro-type-vararg,-bugprone-macro-parentheses,-llvm-header-guard"
+Checks: "clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,modernize-*,bugprone-*,llvm-*,performance-*,-modernize-use-trailing-return-type,-cppcoreguidelines-owning-memory,-cppcoreguidelines-pro-type-vararg,-bugprone-macro-parentheses,-llvm-header-guard,-readability-magic-numbers,-cppcoreguidelines-avoid-magic-numbers"
 FormatStyle: llvm
 CheckOptions:
   cppcoreguidelines-avoid-do-while.IgnoreMacros: "true"
@@ -8,3 +8,4 @@ CheckOptions:
 # cppcoreguidelines-pro-type-vararg can be useful sometimes, I'll try to use it sparingly
 # bugprone-macro-parentheses because it will cause too many changes right now with all the guards for double header inclusion
 # llvm-header-guard because I couldn't get auto fix to work and it is a pretty trivial rule
+# readability-magic-numbers because sometimes magic numbers are more readable, and this isn't really something I need a machine to detect

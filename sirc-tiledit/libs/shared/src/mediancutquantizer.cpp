@@ -1,18 +1,22 @@
+#include "sircimage.hpp"
+#include <cstdio>
 #include <mediancutquantizer.hpp>
 
 #include <algorithm>
 #include <cassert>
+#include <map>
+#include <miscadapter.hpp>
 #include <numeric>
 #include <ranges>
 #include <set>
 
 enum class ImageChannel : std::uint8_t { R, G, B };
 
-std::vector<SircColor>
+std::vector<SircColorComponent>
 paletteAsSingleChannel(const std::vector<SircColor> &palette,
                        const ImageChannel channel) {
 
-  std::vector<SircColor> paletteAsSingleChannel;
+  std::vector<SircColorComponent> paletteAsSingleChannel;
   std::ranges::transform(
       palette, std::back_inserter(paletteAsSingleChannel),
       [channel](const SircColor sircColor) {
@@ -30,48 +34,64 @@ paletteAsSingleChannel(const std::vector<SircColor> &palette,
 }
 
 SircColor averageColors(const std::vector<SircColor> &palette) {
-  std::vector<SircColor> r = paletteAsSingleChannel(palette, ImageChannel::R);
-  std::vector<SircColor> g = paletteAsSingleChannel(palette, ImageChannel::G);
-  std::vector<SircColor> b = paletteAsSingleChannel(palette, ImageChannel::B);
+  const std::vector<SircColorComponent> r =
+      paletteAsSingleChannel(palette, ImageChannel::R);
+  const std::vector<SircColorComponent> g =
+      paletteAsSingleChannel(palette, ImageChannel::G);
+  const std::vector<SircColorComponent> b =
+      paletteAsSingleChannel(palette, ImageChannel::B);
 
-  const auto rAverage = std::accumulate(r.begin(), r.end(), 0) / r.size();
-  const auto gAverage = std::accumulate(g.begin(), g.end(), 0) / g.size();
-  const auto bAverage = std::accumulate(b.begin(), b.end(), 0) / b.size();
+  auto const count = static_cast<float>(r.size());
+  auto const averageOfComponent =
+      [&count](std::vector<SircColorComponent> component) {
+        auto const result =
+            std::reduce(component.begin(), component.end(), 0ul) /
+            static_cast<unsigned long>(count);
+        assert(result <= SIRC_COLOR_RANGE);
+        return static_cast<SircColorComponent>(result);
+      };
+
+  const SircColorComponent rAverage = averageOfComponent(r);
+  const SircColorComponent gAverage = averageOfComponent(g);
+  const SircColorComponent bAverage = averageOfComponent(b);
 
   return rAverage << SIRC_COLOR_COMPONENT_BITS * 2 |
          gAverage << SIRC_COLOR_COMPONENT_BITS | bAverage;
 }
 
-unsigned short findRangeOfChannel(const std::vector<SircColor> &palette,
-                                  const ImageChannel channel) {
+SircColorComponent findRangeOfChannel(const std::vector<SircColor> &palette,
+                                      const ImageChannel channel) {
 
-  std::vector<SircColor> p = paletteAsSingleChannel(palette, channel);
+  std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
   auto [min, max] = minmax_element(p.begin(), p.end());
-  return max - min;
+  return *max - *min;
 }
 
 std::vector<SircColor>
 sortPaletteByChannel(const std::vector<SircColor> &palette,
                      const ImageChannel channel) {
   auto output = palette;
-  std::ranges::sort(output, [channel](const SircColor leftColor,
-                                      const SircColor rightColor) {
+  std::ranges::stable_sort(output, [channel](const SircColor leftColor,
+                                             const SircColor rightColor) {
     switch (channel) {
     case ImageChannel::R: {
       const auto a =
           leftColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
       const auto b =
           rightColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     case ImageChannel::G: {
       const auto a = leftColor >> SIRC_COLOR_COMPONENT_BITS & SIRC_COLOR_RANGE;
       const auto b = rightColor >> SIRC_COLOR_COMPONENT_BITS & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     case ImageChannel::B: {
       const auto a = leftColor & SIRC_COLOR_RANGE;
       const auto b = rightColor & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     }
@@ -87,11 +107,12 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
   const auto bRange = findRangeOfChannel(originalPalette, ImageChannel::B);
 
   const auto maxRange = std::max({rRange, gRange, bRange});
+  assert(maxRange <= SIRC_COLOR_RANGE);
 
   if (maxRange == rRange) {
     return ImageChannel::R;
   }
-  if (maxRange == rRange) {
+  if (maxRange == gRange) {
     return ImageChannel::G;
   }
   return ImageChannel::B;
@@ -103,7 +124,7 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
 std::vector<std::pair<SircColor, SircColor>>
 // NOLINTNEXTLINE(misc-no-recursion)
 quantizeRecurse(const std::vector<SircColor> &originalPalette,
-                const unsigned short maxBucketSize) {
+                const size_t maxBucketSize) {
   if (originalPalette.size() <= maxBucketSize) {
     auto average = averageColors(originalPalette);
     std::vector<std::pair<SircColor, SircColor>> paired;
@@ -119,7 +140,7 @@ quantizeRecurse(const std::vector<SircColor> &originalPalette,
   auto sortedPalette =
       sortPaletteByChannel(originalPalette, channelWithMostRange);
 
-  const unsigned short halfSize = sortedPalette.size() / 2;
+  const long halfSize = static_cast<long>(sortedPalette.size() / 2);
   const std::vector lowerPalette(sortedPalette.begin(),
                                  sortedPalette.begin() + halfSize);
   const std::vector upperPalette(sortedPalette.begin() + halfSize,
@@ -139,12 +160,14 @@ std::map<PaletteReference, PaletteReference> buildPaletteMapping(
     std::vector<SircColor> quantizedPalette) {
   std::map<PaletteReference, PaletteReference> out;
   for (const auto &[originalColor, quantizedColor] : quantizedColorPairs) {
-    auto originalIndexIt = std::ranges::find(originalPalette, originalColor);
-    auto newIndexIt = std::ranges::find(quantizedPalette, quantizedColor);
+    const auto originalIndexIt =
+        std::ranges::find(originalPalette, originalColor);
+    const auto newIndexIt = std::ranges::find(quantizedPalette, quantizedColor);
     assert(originalIndexIt != originalPalette.end() &&
            newIndexIt != quantizedPalette.end());
 
-    PaletteReference originalIndex = originalIndexIt - originalPalette.begin();
+    const PaletteReference originalIndex =
+        originalIndexIt - originalPalette.begin();
     const PaletteReference newIndex = newIndexIt - quantizedPalette.begin();
 
     out[originalIndex] = newIndex;
@@ -154,7 +177,7 @@ std::map<PaletteReference, PaletteReference> buildPaletteMapping(
 
 SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
                                        const PaletteReductionBpp bpp) const {
-  unsigned short maxPaletteSize = {};
+  size_t maxPaletteSize = {};
   switch (bpp) {
   case PaletteReductionBpp::None:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
@@ -170,17 +193,14 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     break;
   }
 
-  const auto originalPixelData = sircImage.getImageData().pixelData;
-  const auto originalPalette = sircImage.getImageData().palette;
-
-  // qInfo("Quantizing image with palette size %zu to maxPaletteSize: %hu",
-  //       originalPalette.size(), maxPaletteSize);
+  const auto originalPixelData = sircImage.pixelData;
+  const auto originalPalette = sircImage.palette;
 
   if (originalPalette.size() <= maxPaletteSize) {
     return sircImage;
   }
 
-  const unsigned short maxBucketSize =
+  const size_t maxBucketSize =
       (originalPalette.size() + maxPaletteSize - 1) / maxPaletteSize;
 
   auto quantizedPalettePairs = quantizeRecurse(originalPalette, maxBucketSize);
@@ -194,8 +214,8 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   auto paletteMapping = buildPaletteMapping(
       quantizedPalettePairs, originalPalette, quantizedPaletteWithoutDupes);
 
-  SircImageData quantizedImage = {.palette = quantizedPaletteWithoutDupes,
-                                  .pixelData = {}};
+  SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
+                              .pixelData = {}};
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
@@ -204,5 +224,5 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     }
   }
 
-  return SircImage::fromSircImageData(quantizedImage);
+  return quantizedImage;
 }

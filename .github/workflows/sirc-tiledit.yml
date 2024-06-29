@@ -40,7 +40,7 @@ jobs:
           ln -s $(which clang-format-18) /usr/local/bin/clang-format
       - name: Install ubuntu dependencies
         run: |
-          sudo apt-get install catch2
+          sudo apt-get install libpng-dev
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -66,13 +66,16 @@ jobs:
       - name: Test Project
         run: |
           cd build-debug
-          meson test
+          meson test --print-errorlogs
           ninja coverage-xml
       - name: Archive test coverage
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: codecov-tiledit
-          path: ./sirc-tiledit/build-debug/meson-logs/coverage.xml
+          path: |
+            ./sirc-tiledit/build-debug/meson-logs/coverage.xml
+            ./sirc-tiledit/libs/shared/tests/resources/*actual*.png
           if-no-files-found: error
       - name: Lint Project
         run: |

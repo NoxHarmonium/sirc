@@ -2,7 +2,9 @@
 #include "pixmapadapter.hpp"
 #include "sircimage.hpp"
 
-u_int16_t sircColorFromQRgb(const QColor qColor) {
+#include <miscadapter.hpp>
+
+SircColor sircColorFromQRgb(const QColor qColor) {
   const unsigned int r = qColor.red() / Q_TO_SIRC_COLOR_RATIO;
   const unsigned int g = qColor.green() / Q_TO_SIRC_COLOR_RATIO;
   const unsigned int b = qColor.blue() / Q_TO_SIRC_COLOR_RATIO;
@@ -11,7 +13,7 @@ u_int16_t sircColorFromQRgb(const QColor qColor) {
          b;
 }
 
-QColor qRgbFromSircColor(const u_int16_t sircColor) {
+QColor qRgbFromSircColor(const SircColor sircColor) {
   const unsigned int sircR =
       sircColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
   const unsigned int sircG =
@@ -29,7 +31,7 @@ QColor qRgbFromSircColor(const u_int16_t sircColor) {
 
 SircImage PixmapAdapter::pixmapToSircImage(const QPixmap &qPixmap) {
   const auto image = qPixmap.toImage();
-  PackedPixelData pixelData;
+  PackedSircPixelData pixelData;
   assert(image.width() >= WIDTH_PIXELS && image.height() >= HEIGHT_PIXELS);
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
@@ -40,14 +42,14 @@ SircImage PixmapAdapter::pixmapToSircImage(const QPixmap &qPixmap) {
       pixelData[x][y] = convertedPixel;
     }
   }
-  auto sircImage = SircImage::fromPixelData(pixelData);
+  auto sircImage = MiscAdapter::packedSircPixelDataToSircImage(pixelData);
 
   return sircImage;
 }
 
 QPixmap PixmapAdapter::sircImageToPixmap(const SircImage &sircImage) {
   auto image = QImage(WIDTH_PIXELS, HEIGHT_PIXELS, QImage::Format_RGB32);
-  auto [palette, pixelData] = sircImage.getImageData();
+  auto [palette, pixelData] = sircImage;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
@@ -65,7 +67,7 @@ QPixmap PixmapAdapter::sircImageToPixmap(const SircImage &sircImage) {
 std::vector<QColor>
 PixmapAdapter::getPaletteColors(const SircImage &sircImage) {
   auto convertedPalette = std::vector<QColor>();
-  const auto [palette, pixelData] = sircImage.getImageData();
+  const auto [palette, pixelData] = sircImage;
 
   std::vector<QColor> output;
   std::ranges::transform(
