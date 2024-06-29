@@ -29,13 +29,11 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
   beforeQuantPath.replace(beforeQuantPath.find(replaceMe), replaceMe.length(),
                           "______");
 
-
   ImageLoader::saveImageToPng(beforeQuantPath.c_str(), outputImageBeforeQuant);
 
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage = quantizer.quantize(sircImage, bpp);
   const auto outputImage = RgbaAdapter::sircImageToRgba(quantizedImage);
-
 
   // Save the data to a PNG for visual comparison when debugging
   ImageLoader::saveImageToPng(fullOutputPath.c_str(), outputImage);

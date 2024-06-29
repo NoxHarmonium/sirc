@@ -92,7 +92,7 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
   if (maxRange == rRange) {
     return ImageChannel::R;
   }
-  if (maxRange == rRange) {
+  if (maxRange == gRange) {
     return ImageChannel::G;
   }
   return ImageChannel::B;
