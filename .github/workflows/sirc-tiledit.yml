@@ -70,9 +70,12 @@ jobs:
           ninja coverage-xml
       - name: Archive test coverage
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: codecov-tiledit
-          path: ./sirc-tiledit/build-debug/meson-logs/coverage.xml
+          path: |
+            ./sirc-tiledit/build-debug/meson-logs/coverage.xml
+            ./sirc-tiledit/libs/shared/tests/resources/*actual*.png
           if-no-files-found: error
       - name: Lint Project
         run: |
