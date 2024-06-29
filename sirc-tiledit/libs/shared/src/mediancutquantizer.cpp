@@ -43,8 +43,8 @@ SircColor averageColors(const std::vector<SircColor> &palette) {
          gAverage << SIRC_COLOR_COMPONENT_BITS | bAverage;
 }
 
-unsigned short findRangeOfChannel(const std::vector<SircColor> &palette,
-                                  const ImageChannel channel) {
+SircColor findRangeOfChannel(const std::vector<SircColor> &palette,
+                             const ImageChannel channel) {
 
   std::vector<SircColor> p = paletteAsSingleChannel(palette, channel);
   auto [min, max] = minmax_element(p.begin(), p.end());
@@ -104,7 +104,7 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
 std::vector<std::pair<SircColor, SircColor>>
 // NOLINTNEXTLINE(misc-no-recursion)
 quantizeRecurse(const std::vector<SircColor> &originalPalette,
-                const unsigned short maxBucketSize) {
+                const size_t maxBucketSize) {
   if (originalPalette.size() <= maxBucketSize) {
     auto average = averageColors(originalPalette);
     std::vector<std::pair<SircColor, SircColor>> paired;
@@ -120,9 +120,10 @@ quantizeRecurse(const std::vector<SircColor> &originalPalette,
   auto sortedPalette =
       sortPaletteByChannel(originalPalette, channelWithMostRange);
 
-  const unsigned short halfSize = sortedPalette.size() / 2;
+  const long halfSize =  static_cast<long>(sortedPalette.size() / 2);
   const std::vector lowerPalette(sortedPalette.begin(),
-                                 sortedPalette.begin() + halfSize);
+                                 sortedPalette.begin() +
+                                    halfSize);
   const std::vector upperPalette(sortedPalette.begin() + halfSize,
                                  sortedPalette.end());
   auto lowerQuantized = quantizeRecurse(lowerPalette, maxBucketSize);
@@ -155,7 +156,7 @@ std::map<PaletteReference, PaletteReference> buildPaletteMapping(
 
 SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
                                        const PaletteReductionBpp bpp) const {
-  unsigned short maxPaletteSize = {};
+  size_t maxPaletteSize = {};
   switch (bpp) {
   case PaletteReductionBpp::None:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers)
@@ -181,7 +182,7 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     return sircImage;
   }
 
-  const unsigned short maxBucketSize =
+  const size_t maxBucketSize =
       (originalPalette.size() + maxPaletteSize - 1) / maxPaletteSize;
 
   auto quantizedPalettePairs = quantizeRecurse(originalPalette, maxBucketSize);
