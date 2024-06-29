@@ -38,12 +38,17 @@ SircColor averageColors(const std::vector<SircColor> &palette) {
   std::vector<SircColorComponent> b =
       paletteAsSingleChannel(palette, ImageChannel::B);
 
-  const SircColorComponent rAverage =
-      std::accumulate(r.begin(), r.end(), 0) / r.size();
-  const SircColorComponent gAverage =
-      std::accumulate(g.begin(), g.end(), 0) / g.size();
-  const SircColorComponent bAverage =
-      std::accumulate(b.begin(), b.end(), 0) / b.size();
+  auto const count = static_cast<float>(r.size());
+  auto const averageOfComponent =
+      [&count](std::vector<SircColorComponent> component) {
+        return static_cast<SircColorComponent>(
+            std::reduce(component.begin(), component.end(), 0.0l) /
+            static_cast<double>(count));
+      };
+
+  const SircColorComponent rAverage = averageOfComponent(r);
+  const SircColorComponent gAverage = averageOfComponent(g);
+  const SircColorComponent bAverage = averageOfComponent(b);
 
   return rAverage << SIRC_COLOR_COMPONENT_BITS * 2 |
          gAverage << SIRC_COLOR_COMPONENT_BITS | bAverage;
