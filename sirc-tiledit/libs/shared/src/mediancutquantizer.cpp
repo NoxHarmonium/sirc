@@ -9,11 +9,11 @@
 
 enum class ImageChannel : std::uint8_t { R, G, B };
 
-std::vector<SircColor>
+std::vector<SircColorComponent>
 paletteAsSingleChannel(const std::vector<SircColor> &palette,
                        const ImageChannel channel) {
 
-  std::vector<SircColor> paletteAsSingleChannel;
+  std::vector<SircColorComponent> paletteAsSingleChannel;
   std::ranges::transform(
       palette, std::back_inserter(paletteAsSingleChannel),
       [channel](const SircColor sircColor) {
@@ -31,22 +31,28 @@ paletteAsSingleChannel(const std::vector<SircColor> &palette,
 }
 
 SircColor averageColors(const std::vector<SircColor> &palette) {
-  std::vector<SircColor> r = paletteAsSingleChannel(palette, ImageChannel::R);
-  std::vector<SircColor> g = paletteAsSingleChannel(palette, ImageChannel::G);
-  std::vector<SircColor> b = paletteAsSingleChannel(palette, ImageChannel::B);
+  std::vector<SircColorComponent> r =
+      paletteAsSingleChannel(palette, ImageChannel::R);
+  std::vector<SircColorComponent> g =
+      paletteAsSingleChannel(palette, ImageChannel::G);
+  std::vector<SircColorComponent> b =
+      paletteAsSingleChannel(palette, ImageChannel::B);
 
-  const auto rAverage = std::accumulate(r.begin(), r.end(), 0) / r.size();
-  const auto gAverage = std::accumulate(g.begin(), g.end(), 0) / g.size();
-  const auto bAverage = std::accumulate(b.begin(), b.end(), 0) / b.size();
+  const SircColorComponent rAverage =
+      std::accumulate(r.begin(), r.end(), 0) / r.size();
+  const SircColorComponent gAverage =
+      std::accumulate(g.begin(), g.end(), 0) / g.size();
+  const SircColorComponent bAverage =
+      std::accumulate(b.begin(), b.end(), 0) / b.size();
 
   return rAverage << SIRC_COLOR_COMPONENT_BITS * 2 |
          gAverage << SIRC_COLOR_COMPONENT_BITS | bAverage;
 }
 
-SircColor findRangeOfChannel(const std::vector<SircColor> &palette,
-                             const ImageChannel channel) {
+SircColorComponent findRangeOfChannel(const std::vector<SircColor> &palette,
+                                      const ImageChannel channel) {
 
-  std::vector<SircColor> p = paletteAsSingleChannel(palette, channel);
+  std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
   auto [min, max] = minmax_element(p.begin(), p.end());
   return max - min;
 }
@@ -120,10 +126,9 @@ quantizeRecurse(const std::vector<SircColor> &originalPalette,
   auto sortedPalette =
       sortPaletteByChannel(originalPalette, channelWithMostRange);
 
-  const long halfSize =  static_cast<long>(sortedPalette.size() / 2);
+  const long halfSize = static_cast<long>(sortedPalette.size() / 2);
   const std::vector lowerPalette(sortedPalette.begin(),
-                                 sortedPalette.begin() +
-                                    halfSize);
+                                 sortedPalette.begin() + halfSize);
   const std::vector upperPalette(sortedPalette.begin() + halfSize,
                                  sortedPalette.end());
   auto lowerQuantized = quantizeRecurse(lowerPalette, maxBucketSize);
@@ -141,12 +146,14 @@ std::map<PaletteReference, PaletteReference> buildPaletteMapping(
     std::vector<SircColor> quantizedPalette) {
   std::map<PaletteReference, PaletteReference> out;
   for (const auto &[originalColor, quantizedColor] : quantizedColorPairs) {
-    auto originalIndexIt = std::ranges::find(originalPalette, originalColor);
-    auto newIndexIt = std::ranges::find(quantizedPalette, quantizedColor);
+    const auto originalIndexIt =
+        std::ranges::find(originalPalette, originalColor);
+    const auto newIndexIt = std::ranges::find(quantizedPalette, quantizedColor);
     assert(originalIndexIt != originalPalette.end() &&
            newIndexIt != quantizedPalette.end());
 
-    PaletteReference originalIndex = originalIndexIt - originalPalette.begin();
+    const PaletteReference originalIndex =
+        originalIndexIt - originalPalette.begin();
     const PaletteReference newIndex = newIndexIt - quantizedPalette.begin();
 
     out[originalIndex] = newIndex;

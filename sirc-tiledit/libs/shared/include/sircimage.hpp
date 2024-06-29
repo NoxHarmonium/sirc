@@ -18,6 +18,7 @@ constexpr unsigned int SIRC_COLOR_RANGE =
     (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
 
 using SircColor = uint16_t;
+using SircColorComponent = uint8_t;
 using PaletteReference = size_t;
 using PackedSircPixelData =
     std::array<std::array<SircColor, HEIGHT_PIXELS>, WIDTH_PIXELS>;
