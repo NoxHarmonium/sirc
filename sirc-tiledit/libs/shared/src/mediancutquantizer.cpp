@@ -41,9 +41,11 @@ SircColor averageColors(const std::vector<SircColor> &palette) {
   auto const count = static_cast<float>(r.size());
   auto const averageOfComponent =
       [&count](std::vector<SircColorComponent> component) {
-        return static_cast<SircColorComponent>(
-            std::reduce(component.begin(), component.end(), 0.0l) /
-            static_cast<double>(count));
+        auto const result = static_cast<SircColorComponent>(
+            std::reduce(component.begin(), component.end(), 0l) /
+            static_cast<unsigned long>(count));
+        assert(result <= SIRC_COLOR_RANGE);
+        return result;
       };
 
   const SircColorComponent rAverage = averageOfComponent(r);
