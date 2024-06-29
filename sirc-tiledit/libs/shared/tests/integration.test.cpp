@@ -22,9 +22,20 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
   const auto inputPixelData =
       ImageLoader::loadImageFromPng((testRootPath / inputPath).c_str());
   const auto sircImage = RgbaAdapter::rgbaToSircImage(inputPixelData);
+  const auto outputImageBeforeQuant = RgbaAdapter::sircImageToRgba(sircImage);
+
+  auto beforeQuantPath = fullOutputPath.string();
+  auto replaceMe = std::string("output");
+  beforeQuantPath.replace(beforeQuantPath.find(replaceMe), replaceMe.length(),
+                          "______");
+
+
+  ImageLoader::saveImageToPng(beforeQuantPath.c_str(), outputImageBeforeQuant);
+
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage = quantizer.quantize(sircImage, bpp);
   const auto outputImage = RgbaAdapter::sircImageToRgba(quantizedImage);
+
 
   // Save the data to a PNG for visual comparison when debugging
   ImageLoader::saveImageToPng(fullOutputPath.c_str(), outputImage);
@@ -35,6 +46,7 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
   bool allPixelsMatch = true;
   for (size_t y = 0; y < HEIGHT_PIXELS; y++) {
     for (size_t x = 0; x < WIDTH_PIXELS; x++) {
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       allPixelsMatch &= (referencePixelData[x][y] == outputImage[x][y]);
     }
   }
