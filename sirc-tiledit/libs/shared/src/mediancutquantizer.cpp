@@ -1,7 +1,10 @@
+#include "sircimage.hpp"
+#include <cstdio>
 #include <mediancutquantizer.hpp>
 
 #include <algorithm>
 #include <cassert>
+#include <map>
 #include <miscadapter.hpp>
 #include <numeric>
 #include <ranges>
@@ -41,11 +44,11 @@ SircColor averageColors(const std::vector<SircColor> &palette) {
   auto const count = static_cast<float>(r.size());
   auto const averageOfComponent =
       [&count](std::vector<SircColorComponent> component) {
-        auto const result = static_cast<SircColorComponent>(
-            std::reduce(component.begin(), component.end(), 0l) /
-            static_cast<unsigned long>(count));
+        auto const result =
+            std::reduce(component.begin(), component.end(), 0ul) /
+            static_cast<unsigned long>(count);
         assert(result <= SIRC_COLOR_RANGE);
-        return result;
+        return static_cast<SircColorComponent>(result);
       };
 
   const SircColorComponent rAverage = averageOfComponent(r);
@@ -61,31 +64,34 @@ SircColorComponent findRangeOfChannel(const std::vector<SircColor> &palette,
 
   std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
   auto [min, max] = minmax_element(p.begin(), p.end());
-  return max - min;
+  return *max - *min;
 }
 
 std::vector<SircColor>
 sortPaletteByChannel(const std::vector<SircColor> &palette,
                      const ImageChannel channel) {
   auto output = palette;
-  std::ranges::sort(output, [channel](const SircColor leftColor,
-                                      const SircColor rightColor) {
+  std::ranges::stable_sort(output, [channel](const SircColor leftColor,
+                                             const SircColor rightColor) {
     switch (channel) {
     case ImageChannel::R: {
       const auto a =
           leftColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
       const auto b =
           rightColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     case ImageChannel::G: {
       const auto a = leftColor >> SIRC_COLOR_COMPONENT_BITS & SIRC_COLOR_RANGE;
       const auto b = rightColor >> SIRC_COLOR_COMPONENT_BITS & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     case ImageChannel::B: {
       const auto a = leftColor & SIRC_COLOR_RANGE;
       const auto b = rightColor & SIRC_COLOR_RANGE;
+      assert(a <= SIRC_COLOR_RANGE && b <= SIRC_COLOR_RANGE);
       return a < b;
     }
     }
@@ -101,6 +107,7 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
   const auto bRange = findRangeOfChannel(originalPalette, ImageChannel::B);
 
   const auto maxRange = std::max({rRange, gRange, bRange});
+  assert(maxRange <= SIRC_COLOR_RANGE);
 
   if (maxRange == rRange) {
     return ImageChannel::R;

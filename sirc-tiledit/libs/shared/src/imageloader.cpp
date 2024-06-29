@@ -11,8 +11,7 @@
 
 //NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr png_byte emptyPixel[] = {0, 0, 0, 0xFF};
-const auto *const emptyPixelPtr =
-    static_cast<const png_byte *const>(emptyPixel);
+const auto *const emptyPixelPtr = static_cast<const png_byte *>(emptyPixel);
 
 RgbaPixelData ImageLoader::loadImageFromPng(const char *filename) {
   RgbaPixelData output = {};

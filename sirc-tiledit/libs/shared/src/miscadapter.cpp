@@ -1,5 +1,6 @@
-
 #include "miscadapter.hpp"
+
+#include <map>
 
 SircImage MiscAdapter::packedSircPixelDataToSircImage(
     const PackedSircPixelData &pixelData) {

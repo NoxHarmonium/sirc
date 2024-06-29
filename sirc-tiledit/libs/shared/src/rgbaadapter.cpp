@@ -31,7 +31,8 @@ RgbaPixel rgbaFromSircColor(const SircColor sircColor) {
   const unsigned int sircB = sircColor & SIRC_COLOR_RANGE;
 
   return static_cast<RgbaPixel>(
-  // Thanks https://threadlocalmutex.com/?p=48 for fast dept conversion
+             // Thanks https://threadlocalmutex.com/?p=48 for fast dept
+             // conversion
              static_cast<RgbaComponent>((sircR * 527 + 23) >> 6) << 24 |
              static_cast<RgbaComponent>((sircG * 527 + 23) >> 6) << 16 |
              static_cast<RgbaComponent>((sircB * 527 + 23) >> 6) << 8) |
