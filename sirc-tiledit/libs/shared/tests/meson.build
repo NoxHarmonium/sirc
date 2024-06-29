@@ -1,5 +1,3 @@
-test_dependencies = [dependency('catch2-with-main', version : '>=3.0.0')]
-
 conf = configuration_data()
 conf.set_quoted('TEST_ROOT', meson.source_root() / 'libs/shared/tests')
 configure_file(
@@ -9,6 +7,7 @@ configure_file(
 
 shared_test_source_files = [
     './utils.cpp',
+    './catch2/catch_amalgamated.cpp'
 ]
 
 # Tests
@@ -19,7 +18,6 @@ test(
         'mediancutquantizer',
         'mediancutquantizer.test.cpp',
         shared_test_source_files,
-        dependencies : test_dependencies,
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
@@ -31,7 +29,6 @@ test(
         'integration',
         'integration.test.cpp',
         shared_test_source_files,
-        dependencies : test_dependencies,
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),

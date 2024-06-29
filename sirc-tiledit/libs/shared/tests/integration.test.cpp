@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
+#include "catch2/catch_amalgamated.hpp"
 
 #include "testconfig.h"
 #include "utils.hpp"

@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
+#include "catch2/catch_amalgamated.hpp"
 
 #include <mediancutquantizer.hpp>
 #include <miscadapter.hpp>
