@@ -31,11 +31,11 @@ paletteAsSingleChannel(const std::vector<SircColor> &palette,
 }
 
 SircColor averageColors(const std::vector<SircColor> &palette) {
-  std::vector<SircColorComponent> r =
+  const std::vector<SircColorComponent> r =
       paletteAsSingleChannel(palette, ImageChannel::R);
-  std::vector<SircColorComponent> g =
+  const std::vector<SircColorComponent> g =
       paletteAsSingleChannel(palette, ImageChannel::G);
-  std::vector<SircColorComponent> b =
+  const std::vector<SircColorComponent> b =
       paletteAsSingleChannel(palette, ImageChannel::B);
 
   auto const count = static_cast<float>(r.size());
@@ -188,9 +188,6 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
 
   const auto originalPixelData = sircImage.pixelData;
   const auto originalPalette = sircImage.palette;
-
-  // qInfo("Quantizing image with palette size %zu to maxPaletteSize: %hu",
-  //       originalPalette.size(), maxPaletteSize);
 
   if (originalPalette.size() <= maxPaletteSize) {
     return sircImage;

@@ -14,12 +14,10 @@ SircColor sircColorFromRgba(const RgbaPixel rgbaColor) {
   if (a < RGBA_COMPONENT_MAX) {
     return 0x0;
   }
-  // TODO: Consider using "fast and accurate color depth conversion"
-  // category=tiledit
-  // Should probably do a comparison first - see https://threadlocalmutex.com/
-  const unsigned int scaledR = r / RGBA_TO_SIRC_COLOR_RATIO;
-  const unsigned int scaledG = g / RGBA_TO_SIRC_COLOR_RATIO;
-  const unsigned int scaledB = b / RGBA_TO_SIRC_COLOR_RATIO;
+  // Thanks https://threadlocalmutex.com/?p=48 for fast dept conversion
+  const SircColorComponent scaledR = (r * 249 + 1024) >> 11;
+  const SircColorComponent scaledG = (g * 249 + 1024) >> 11;
+  const SircColorComponent scaledB = (b * 249 + 1024) >> 11;
 
   return scaledR << SIRC_COLOR_COMPONENT_BITS * 2 |
          scaledG << SIRC_COLOR_COMPONENT_BITS | scaledB;
@@ -33,12 +31,10 @@ RgbaPixel rgbaFromSircColor(const SircColor sircColor) {
   const unsigned int sircB = sircColor & SIRC_COLOR_RANGE;
 
   return static_cast<RgbaPixel>(
-             static_cast<RgbaComponent>(sircR * RGBA_TO_SIRC_COLOR_RATIO)
-                 << 24 |
-             static_cast<RgbaComponent>(sircG * RGBA_TO_SIRC_COLOR_RATIO)
-                 << 16 |
-             static_cast<RgbaComponent>(sircB * RGBA_TO_SIRC_COLOR_RATIO)
-                 << 8) |
+  // Thanks https://threadlocalmutex.com/?p=48 for fast dept conversion
+             static_cast<RgbaComponent>((sircR * 527 + 23) >> 6) << 24 |
+             static_cast<RgbaComponent>((sircG * 527 + 23) >> 6) << 16 |
+             static_cast<RgbaComponent>((sircB * 527 + 23) >> 6) << 8) |
          // Alpha is always 100% for now
          RGBA_COMPONENT_MAX;
 }
