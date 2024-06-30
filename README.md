@@ -21,6 +21,29 @@ _Note: It is my first serious project in rust so it will be a bit rough, I'm als
 
 I built a basic CPU using an FPGA board in university about ten years ago so it could be possible...
 
+# Components
+
+### sirc-vm
+
+The simulator/virtual machine written in Rust that allows for designs to be tested and programs to be simulated before comitting to hardware designs.
+
+It is written to favour correctness over speed, and probably will never simulate in real time.
+There are plans at some stage to make a "low accuracy" mode or a separate emulator that favours performance.
+
+### vscode-sirc
+
+The vscode extension that provides syntax highlighting for SIRC flavoured assembly, as well as the interface to the debug server
+to allow for program debugging.
+
+### sirc-tiledit
+
+A cross platform GUI (QT/C++) to make it a bit easier to process images into tile data, tilemaps and sprite definitions.
+Will quantize images into the limited palette available on the SIRC and export assembly snippets that can be used in programs.
+
+### examples
+
+Lots of real world programs that test the sirc-vm but could also be run on the real hardware in the future.
+
 # Target
 
 The console will be a "fourth generation" console and will be roughly targeting the power/graphics quality of a [SNES](https://en.wikipedia.org/wiki/Super_Nintendo_Entertainment_System).
