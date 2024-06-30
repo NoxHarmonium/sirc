@@ -29,6 +29,9 @@
     },
     {
       "path": "examples/basic-video"
+    },
+    {
+      "path": "sirc-tiledit"
     }
   ],
   "settings": {}
