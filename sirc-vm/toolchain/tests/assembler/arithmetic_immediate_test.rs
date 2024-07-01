@@ -64,7 +64,7 @@ fn test_assembler_arithmetic_immediate() {
     )(PARSER_INPUT)
     {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file:\n{}", error),
+        Err(error) => panic!("Error parsing file:\n{error}"),
     };
 
     let object = build_object(tokens, "UNIT_TEST".to_string(), PARSER_INPUT.to_string());

@@ -44,7 +44,7 @@ pub fn print_data_token(data_token: &DataToken) -> String {
         DataType::PlaceHolder(placeholder_name) => format!("${placeholder_name}"),
     };
 
-    return format!("{token_string} {value_string}");
+    format!("{token_string} {value_string}")
 }
 
 /// Prints the AST representation of an `EquToken` to a string
@@ -63,9 +63,9 @@ pub fn print_data_token(data_token: &DataToken) -> String {
 /// assert_eq!(String::from(".EQU $FOO #0xCAFE"), printed);
 /// ```
 pub fn print_equ_token(equ_token: &EquToken) -> String {
-    return format!(
+    format!(
         "{EQU_TOKEN} ${} {}",
         equ_token.placeholder_name,
         print_number_token(&equ_token.number_token)
-    );
+    )
 }

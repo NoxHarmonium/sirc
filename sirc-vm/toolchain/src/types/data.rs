@@ -2,11 +2,11 @@ use crate::types::object::RefType;
 use crate::types::shared::NumberToken;
 use serde::Serialize;
 
-pub const DB_TOKEN: &'static str = ".DB";
-pub const DW_TOKEN: &'static str = ".DW";
-pub const DQ_TOKEN: &'static str = ".DQ";
+pub const DB_TOKEN: &str = ".DB";
+pub const DW_TOKEN: &str = ".DW";
+pub const DQ_TOKEN: &str = ".DQ";
 
-pub const EQU_TOKEN: &'static str = ".EQU";
+pub const EQU_TOKEN: &str = ".EQU";
 
 pub const DB_VALUE: u8 = 1;
 pub const DW_VALUE: u8 = 2;

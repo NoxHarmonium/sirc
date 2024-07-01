@@ -50,10 +50,10 @@ pub fn print_ref_token(ref_token: &RefToken) -> String {
         RefType::Offset => String::from(REF_TOKEN_OFFSET_SUFFIX),
         RefType::LowerWord => String::from(REF_TOKEN_LOWER_WORD_SUFFIX),
         RefType::UpperWord => String::from(REF_TOKEN_UPPER_WORD_SUFFIX),
-        _ => String::from(""),
+        _ => String::new(),
     };
 
-    return format!("@{}{}", ref_token.name, optional_postamble);
+    format!("@{}{}", ref_token.name, optional_postamble)
 }
 
 /// Prints an AST `Token` to a string
@@ -94,7 +94,7 @@ pub fn print_token(token: &Token) -> String {
 /// use toolchain::types::data::{EquToken, RefToken};
 /// use toolchain::types::object::RefType;
 /// use toolchain::types::shared::{NumberToken, NumberType, Token};
-/// let printed = print_tokens(vec![
+/// let printed = print_tokens(&vec![
 ///    Token::Equ(
 ///        EquToken {
 ///            placeholder_name: String::from("FOO"),
@@ -118,9 +118,9 @@ pub fn print_token(token: &Token) -> String {
 ///.EQU $BAR #0xCAFE
 ///", printed);
 /// ```
-pub fn print_tokens(tokens: Vec<Token>) -> String {
+pub fn print_tokens(tokens: &[Token]) -> String {
     // TODO: Don't discard whitespace when printing
     // category=Toolchain
     // If you parse a file and then print it out again, you lose all the vertical whitespace
-    tokens.iter().map(|token| print_token(token)).join("\n") + "\n"
+    tokens.iter().map(print_token).join("\n") + "\n"
 }

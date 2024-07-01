@@ -36,10 +36,10 @@ fn test_printing_round_trip() {
     )(PARSER_INPUT)
     {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file:\n{}", error),
+        Err(error) => panic!("Error parsing file:\n{error}"),
     };
 
-    let printed = print_tokens(tokens);
+    let printed = print_tokens(&tokens);
 
     assert_snapshot!(printed);
 }
