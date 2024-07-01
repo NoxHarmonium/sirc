@@ -14,9 +14,6 @@ static PARSER_INPUT: &str = r"
 
 :some_label
 
-; Setup routines
-BRSR @setup_serial
-
 ; Data Tests
 .DB #0xFF
 .DW #0xFFFF
