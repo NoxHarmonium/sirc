@@ -27,7 +27,9 @@ I built a basic CPU using an FPGA board in university about ten years ago so it 
 
 The simulator/virtual machine written in Rust that allows for designs to be tested and programs to be simulated before comitting to hardware designs.
 
-It is written to favour correctness over speed, and probably will never simulate in real time.
+Also contains the toolchain (assembler/linker) that prepares programs for the CPU.
+
+The simulator is written to favour correctness over speed, and probably will never simulate in real time.
 There are plans at some stage to make a "low accuracy" mode or a separate emulator that favours performance.
 
 ### vscode-sirc
