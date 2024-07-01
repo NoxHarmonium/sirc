@@ -17,9 +17,10 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 use serde::Serialize;
 
-use crate::types::object::{RefType, SymbolDefinition};
+use crate::types::data::{DataToken, EquToken};
+use crate::types::object::SymbolDefinition;
 
-use super::data::{parse_data, parse_equ, DataType};
+use super::data::{parse_data_token, parse_equ_token, RefToken};
 use super::opcodes;
 use super::shared::{
     lexeme, parse_comma_sep, parse_label, parse_number, parse_origin, parse_placeholder,
@@ -29,12 +30,6 @@ use super::shared::{
 #[derive(Debug, Serialize)]
 pub struct LabelToken {
     pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct RefToken {
-    pub name: String,
-    pub ref_type: RefType,
 }
 
 #[derive(Debug)]
@@ -68,18 +63,6 @@ pub struct OriginToken {
     pub offset: u32,
 }
 
-#[derive(Debug, Serialize)]
-pub struct DataToken {
-    pub size_bytes: u8,
-    pub value: DataType,
-}
-
-#[derive(Debug, Serialize)]
-pub struct EquToken {
-    pub placeholder_name: String,
-    pub value: u32,
-}
-
 #[derive(Debug)]
 pub enum Address {
     Value(u32),
@@ -94,22 +77,6 @@ pub enum Token {
     Origin(OriginToken),
     Data(DataToken),
     Equ(EquToken),
-}
-
-pub fn override_ref_token_type_if_implied(
-    ref_token: &RefToken,
-    override_ref_type: RefType,
-) -> RefToken {
-    match ref_token.ref_type {
-        RefType::Implied => RefToken {
-            name: ref_token.name.clone(),
-            ref_type: override_ref_type,
-        },
-        _ => RefToken {
-            name: ref_token.name.clone(),
-            ref_type: ref_token.ref_type,
-        },
-    }
 }
 
 pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinition>) {
@@ -542,42 +509,6 @@ fn parse_label_token(i: &str) -> AsmResult<Token> {
 fn parse_origin_token(i: &str) -> AsmResult<Token> {
     let (i, offset) = parse_origin(i)?;
     Ok((i, Token::Origin(OriginToken { offset })))
-}
-
-fn parse_data_token(i: &str) -> AsmResult<Token> {
-    let (i, (size_bytes, value)) = parse_data(i)?;
-
-    let override_value = match value {
-        // TODO: Clean up in instruction parsing code
-        // category=Refactoring
-        // Is there a better way to do this without the ugly unwrap/wrap
-        DataType::Value(value) => DataType::Value(value),
-        DataType::SymbolRef(ref_token) => DataType::SymbolRef(override_ref_token_type_if_implied(
-            &ref_token,
-            RefType::FullAddress,
-        )),
-        DataType::PlaceHolder(placeholder_name) => DataType::PlaceHolder(placeholder_name),
-    };
-
-    Ok((
-        i,
-        Token::Data(DataToken {
-            size_bytes,
-            value: override_value,
-        }),
-    ))
-}
-
-pub fn parse_equ_token(i: &str) -> AsmResult<Token> {
-    let (i, (placeholder_name, value)) = parse_equ(i)?;
-
-    Ok((
-        i,
-        Token::Equ(EquToken {
-            placeholder_name,
-            value,
-        }),
-    ))
 }
 
 // Addresses are replaced with indexes to object table and resolved by linker

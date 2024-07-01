@@ -13,7 +13,8 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{ShiftOperand, S
 
 use crate::types::object::RefType;
 
-use super::instruction::{RefToken, ShiftDefinitionData};
+use super::data::RefToken;
+use super::instruction::ShiftDefinitionData;
 
 pub type AsmResult<'a, 'b, O> = IResult<&'a str, O, ErrorTree<&'b str>>;
 

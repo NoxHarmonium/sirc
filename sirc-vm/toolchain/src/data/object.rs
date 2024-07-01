@@ -1,5 +1,5 @@
-use crate::parsers::data::DataType;
-use crate::parsers::instruction::{DataToken, Token};
+use crate::parsers::instruction::Token;
+use crate::types::data::{DataToken, DataType};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{

@@ -1,6 +1,7 @@
+use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
-    override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
-    AddressingMode, ImmediateType, InstructionToken,
+    parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+    InstructionToken,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::object::RefType;
