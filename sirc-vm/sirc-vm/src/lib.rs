@@ -21,7 +21,6 @@ use std::{cell::RefCell, collections::HashSet, fs::File, io::Write, path::PathBu
 
 use debug_adapter::types::{BreakpointRef, VmChannels};
 use debugger::yield_to_debugger;
-use device_video::VSYNC_INTERRUPT;
 use log::{error, info};
 use peripheral_bus::{
     device::{BusAssertions, Device},
@@ -29,6 +28,11 @@ use peripheral_bus::{
 };
 use peripheral_cpu::CpuPeripheral;
 use utils::{cpu_from_bus::cpu_from_bus, frame_reporter::start_loop};
+
+#[cfg(feature = "video")]
+use device_video::VSYNC_INTERRUPT;
+#[cfg(not(feature = "video"))]
+const VSYNC_INTERRUPT: u8 = 0x0;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
