@@ -1,12 +1,11 @@
 use nom::branch::alt;
-use nom::bytes::complete::is_not;
-use nom::character::complete::{char, multispace0, one_of, space0, space1};
-use nom::combinator::{cut, eof, map, map_res, opt};
+use nom::character::complete::{char, space0, space1};
+use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
-use nom::sequence::{delimited, pair, separated_pair};
+use nom::multi::separated_list1;
+use nom::sequence::{delimited, separated_pair};
 use nom::Parser;
 use nom_supreme::error::ErrorTree;
-use nom_supreme::multi::collect_separated_terminated;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
@@ -15,31 +14,15 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     MAX_SHIFT_COUNT,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
-use serde::Serialize;
 
-use crate::types::data::{DataToken, EquToken};
-use crate::types::object::SymbolDefinition;
-
-use super::data::{parse_data_token, parse_equ_token, RefToken};
 use super::opcodes;
 use super::shared::{
-    lexeme, parse_comma_sep, parse_label, parse_number, parse_origin, parse_placeholder,
-    parse_symbol_reference, AsmResult,
+    lexeme, parse_comma_sep, parse_number, parse_placeholder, parse_symbol_reference, AsmResult,
 };
-
-#[derive(Debug, Serialize)]
-pub struct LabelToken {
-    pub name: String,
-}
-
-#[derive(Debug)]
-pub struct InstructionToken {
-    /// The length of the parser input at the time of parsing, used to work out where the parser is in the file
-    pub input_length: usize,
-    pub instruction: InstructionData,
-    pub symbol_ref: Option<RefToken>,
-    pub placeholder_name: Option<String>,
-}
+use crate::types::data::RefToken;
+use crate::types::instruction::InstructionToken;
+use crate::types::object::SymbolDefinition;
+use crate::types::shared::{NumberToken, Token};
 
 impl Default for InstructionToken {
     fn default() -> Self {
@@ -58,25 +41,10 @@ impl Default for InstructionToken {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct OriginToken {
-    pub offset: u32,
-}
-
 #[derive(Debug)]
 pub enum Address {
     Value(u32),
     SymbolRef(String),
-}
-
-#[derive(Debug)]
-pub enum Token {
-    Comment,
-    Label(LabelToken),
-    Instruction(InstructionToken),
-    Origin(OriginToken),
-    Data(DataToken),
-    Equ(EquToken),
 }
 
 pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinition>) {
@@ -143,7 +111,10 @@ pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
         // TODO: Make sure that cast in parser is not going to cause issues
         // category=Toolchain
         // Check this cast down to u16
-        map(parse_number, |n| ImmediateType::Value(n as u16)).context("number"),
+        map(parse_number, |NumberToken { value, .. }| {
+            ImmediateType::Value(value as u16)
+        })
+        .context("number"),
         map(parse_symbol_reference, |ref_token| {
             ImmediateType::SymbolRef(ref_token)
         })
@@ -229,25 +200,30 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
         ShiftDefinitionData::Register(shift_type, register_name)
     });
 
-    let parse_immediate_shift_definition = map_res(parse_number, |shift_count| {
-        if shift_count > MAX_SHIFT_COUNT {
-            let error_string = format!(
+    let parse_immediate_shift_definition = map_res(
+        parse_number,
+        |NumberToken {
+             value: shift_count, ..
+         }| {
+            if shift_count > MAX_SHIFT_COUNT {
+                let error_string = format!(
                 "Shift definitions can only be in the range of 0-{MAX_SHIFT_COUNT}, got {shift_count}"
             );
-            Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i.to_owned(),
-                ErrorKind::Fail,
-                error_string.as_str(),
-            )))
-        } else {
-            Ok(ShiftDefinitionData::Immediate(
-                shift_type,
-                shift_count
-                    .try_into()
-                    .expect("shift_count should fit into MAX_SHIFT_COUNT as it is checked above"),
-            ))
-        }
-    });
+                Err(nom::Err::Failure(ErrorTree::from_external_error(
+                    i.to_owned(),
+                    ErrorKind::Fail,
+                    error_string.as_str(),
+                )))
+            } else {
+                Ok(ShiftDefinitionData::Immediate(
+                    shift_type,
+                    shift_count.try_into().expect(
+                        "shift_count should fit into MAX_SHIFT_COUNT as it is checked above",
+                    ),
+                ))
+            }
+        },
+    );
 
     let result = alt((
         parse_immediate_shift_definition,
@@ -304,8 +280,7 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
 
 pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {
     let mut parser =
-        collect_separated_terminated(parse_addressing_mode, parse_comma_sep, one_of("\n\r"))
-            .context("addressing modes");
+        separated_list1(parse_comma_sep, parse_addressing_mode).context("addressing modes");
     parser.parse(i)
 }
 
@@ -480,53 +455,6 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
     })(i)
 }
 
-fn parse_comment_(i: &str) -> AsmResult<Token> {
-    // TODO: Should there be a more flexible parser for eol?
-    // category=Toolchain
-    // TODO: Comments with nothing after the semicolon currently fail
-    // category=Toolchain
-    map(pair(char(';'), cut(is_not("\n\r"))), |_| Token::Comment)(i)
-}
-
-fn parse_comment(i: &str) -> AsmResult<Token> {
-    lexeme(parse_comment_)(i)
-}
-
-fn parse_instruction_token(i: &str) -> AsmResult<Token> {
+pub fn parse_instruction_token(i: &str) -> AsmResult<Token> {
     lexeme(parse_instruction_token_)(i)
-}
-
-fn parse_label_token(i: &str) -> AsmResult<Token> {
-    let (i, name) = parse_label(i)?;
-    Ok((
-        i,
-        Token::Label(LabelToken {
-            name: String::from(name),
-        }),
-    ))
-}
-
-fn parse_origin_token(i: &str) -> AsmResult<Token> {
-    let (i, offset) = parse_origin(i)?;
-    Ok((i, Token::Origin(OriginToken { offset })))
-}
-
-// Addresses are replaced with indexes to object table and resolved by linker
-pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
-    let mut parser = collect_separated_terminated(
-        alt((
-            parse_comment.context("comment"),
-            parse_instruction_token.context("instruction"),
-            parse_label_token.context("label"),
-            parse_origin_token.context("origin"),
-            parse_data_token.context("data directive"),
-            parse_equ_token.context("equ directive"),
-        )),
-        multispace0,
-        eof,
-    );
-
-    // Consume any extra space at the start
-    let (i, _) = multispace0(i)?;
-    parser.parse(i)
 }

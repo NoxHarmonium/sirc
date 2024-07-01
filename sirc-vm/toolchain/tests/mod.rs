@@ -16,4 +16,5 @@
 #![deny(warnings)]
 
 mod assembler;
+mod printers;
 mod types;

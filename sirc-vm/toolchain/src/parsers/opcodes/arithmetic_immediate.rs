@@ -1,8 +1,8 @@
 use crate::parsers::instruction::{
     parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
-    InstructionToken,
 };
 use crate::parsers::shared::split_shift_definition_data;
+use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;

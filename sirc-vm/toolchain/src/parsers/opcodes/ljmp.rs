@@ -1,9 +1,10 @@
+use super::super::shared::AsmResult;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
     parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
-    InstructionToken,
 };
 use crate::parsers::shared::split_shift_definition_data;
+use crate::types::instruction::InstructionToken;
 use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
 use nom::sequence::tuple;
@@ -13,8 +14,6 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ShiftType,
 };
 use peripheral_cpu::registers::AddressRegisterName;
-
-use super::super::shared::AsmResult;
 
 ///
 /// Parses a long jump meta instruction (LDEA with p implied as the destination)

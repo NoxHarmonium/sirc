@@ -32,6 +32,3 @@
 .DW #33
 .DW #10
 .DW #0
-
-; TODO: Why do I need this here to make this file parse???
-NOOP

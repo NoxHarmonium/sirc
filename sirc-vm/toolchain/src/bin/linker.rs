@@ -112,9 +112,6 @@ fn main() -> io::Result<()> {
                     i16::MAX
                 )
             }) as u16,
-            RefType::SmallOffset => {
-                panic!("SmallOffset RefType is only supported by the LDMR/STMR instructions")
-            }
             // TODO: Check that the linker RefTypes are correct
             // category=Toolchain
             // I think LowerWord and UpperWord should be absolute, not relative?

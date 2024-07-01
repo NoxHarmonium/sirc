@@ -4,10 +4,8 @@ use nom_supreme::{
     final_parser::{final_parser, Location},
 };
 use pretty_hex::{config_hex, HexConfig};
-use toolchain::{
-    data::object::build_object,
-    parsers::instruction::{parse_tokens, Token},
-};
+use toolchain::types::shared::Token;
+use toolchain::{data::object::build_object, parsers::shared::parse_tokens};
 
 static PARSER_INPUT: &str = r"
 ; Two argument - destination and source register the same
@@ -55,7 +53,7 @@ fn test_assembler_arithmetic_register() {
     )(PARSER_INPUT)
     {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file:\n{error}"),
+        Err(error) => panic!("Error parsing file:\n{}", error),
     };
 
     let object = build_object(tokens, "UNIT_TEST".to_string(), PARSER_INPUT.to_string());

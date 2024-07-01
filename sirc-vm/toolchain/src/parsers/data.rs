@@ -6,23 +6,16 @@ use nom::{
 use nom_supreme::error::ErrorTree;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
-use serde::Serialize;
 
+use super::shared::{lexeme, parse_number, parse_placeholder, parse_symbol_reference, AsmResult};
+use crate::types::data::{
+    RefToken, DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE, EQU_TOKEN,
+};
+use crate::types::shared::{NumberToken, Token};
 use crate::types::{
     data::{DataToken, DataType, EquToken},
     object::RefType,
 };
-
-use super::{
-    instruction::Token,
-    shared::{lexeme, parse_number, parse_placeholder, parse_symbol_reference, AsmResult},
-};
-
-#[derive(Debug, Clone, Serialize)]
-pub struct RefToken {
-    pub name: String,
-    pub ref_type: RefType,
-}
 
 pub fn override_ref_token_type_if_implied(
     ref_token: &RefToken,
@@ -54,15 +47,17 @@ fn parse_data_type(i: &str) -> AsmResult<DataType> {
 }
 
 fn parse_data_(i: &str) -> AsmResult<(u8, DataType)> {
-    let (i, tag) = lexeme(alt((tag(".DB"), tag(".DW"), tag(".DQ"))))(i)?;
+    let (i, tag) = lexeme(alt((tag(DB_TOKEN), tag(DW_TOKEN), tag(DQ_TOKEN))))(i)?;
     let (i, value) = parse_data_type(i)?;
 
     let size = match tag {
-        ".DB" => Ok(1),
-        ".DW" => Ok(2),
-        ".DQ" => Ok(4),
+        DB_TOKEN => Ok(DB_VALUE),
+        DW_TOKEN => Ok(DW_VALUE),
+        DQ_TOKEN => Ok(DQ_VALUE),
         _ => {
-            let error_string = format!("Only DB (byte), DW (word) or DQ (quad) data directives are supported. Got [{tag}] ");
+            let error_string = format!(
+                "Only DB (byte), DW (word) or DQ (quad) data directives are supported. Got [{tag}]"
+            );
             Err(nom::Err::Error(ErrorTree::from_external_error(
                 i,
                 ErrorKind::Fail,
@@ -78,19 +73,19 @@ fn parse_data(i: &str) -> AsmResult<(u8, DataType)> {
     lexeme(parse_data_)(i)
 }
 
-fn parse_equ_(i: &str) -> AsmResult<(String, u32)> {
-    let (i, _) = lexeme(tag(".EQU"))(i)?;
+fn parse_equ_(i: &str) -> AsmResult<(String, NumberToken)> {
+    let (i, _) = lexeme(tag(EQU_TOKEN))(i)?;
     let (i, placeholder_name) = parse_placeholder(i)?;
     let (i, value) = parse_number(i)?;
 
     Ok((i, (placeholder_name, value)))
 }
 
-fn parse_equ(i: &str) -> AsmResult<(String, u32)> {
+fn parse_equ(i: &str) -> AsmResult<(String, NumberToken)> {
     lexeme(parse_equ_)(i)
 }
 
-pub fn parse_data_token(i: &str) -> AsmResult<Token> {
+pub fn parse_data_token_(i: &str) -> AsmResult<Token> {
     let (i, (size_bytes, value)) = parse_data(i)?;
 
     let override_value = if let DataType::SymbolRef(ref_token) = value {
@@ -111,14 +106,22 @@ pub fn parse_data_token(i: &str) -> AsmResult<Token> {
     ))
 }
 
-pub fn parse_equ_token(i: &str) -> AsmResult<Token> {
+pub fn parse_data_token(i: &str) -> AsmResult<Token> {
+    lexeme(parse_data_token_)(i)
+}
+
+pub fn parse_equ_token_(i: &str) -> AsmResult<Token> {
     let (i, (placeholder_name, value)) = parse_equ(i)?;
 
     Ok((
         i,
         Token::Equ(EquToken {
             placeholder_name,
-            value,
+            number_token: value,
         }),
     ))
+}
+
+pub fn parse_equ_token(i: &str) -> AsmResult<Token> {
+    lexeme(parse_equ_token_)(i)
 }

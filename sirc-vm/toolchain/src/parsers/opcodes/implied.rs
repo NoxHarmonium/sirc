@@ -1,4 +1,6 @@
-use crate::parsers::instruction::{parse_instruction_tag, InstructionToken};
+use super::super::shared::AsmResult;
+use crate::parsers::instruction::parse_instruction_tag;
+use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
 use nom::character::complete::one_of;
 use nom::error::{ErrorKind, FromExternalError};
@@ -7,8 +9,6 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData,
 };
 use peripheral_cpu::registers::AddressRegisterName;
-
-use super::super::shared::AsmResult;
 
 ///
 /// Parses immediate arithmetic/logic opcodes

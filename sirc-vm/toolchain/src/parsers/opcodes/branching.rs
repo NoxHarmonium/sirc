@@ -1,9 +1,9 @@
+use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
             parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
-            InstructionToken,
         },
         shared::split_shift_definition_data,
     },
