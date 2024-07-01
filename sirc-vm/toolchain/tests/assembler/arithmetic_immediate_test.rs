@@ -4,10 +4,9 @@ use nom_supreme::{
     final_parser::{final_parser, Location},
 };
 use pretty_hex::{config_hex, HexConfig};
-use toolchain::{
-    data::object::build_object,
-    parsers::instruction::{parse_tokens, Token},
-};
+use toolchain::data::object::build_object;
+use toolchain::parsers::shared::parse_tokens;
+use toolchain::types::shared::Token;
 
 static PARSER_INPUT: &str = r"
 ; Two argument - destination and source register the same

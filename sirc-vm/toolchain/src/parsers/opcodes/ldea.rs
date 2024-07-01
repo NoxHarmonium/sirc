@@ -1,8 +1,10 @@
+use super::super::shared::AsmResult;
+use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
+        data::override_ref_token_type_if_implied,
         instruction::{
-            override_ref_token_type_if_implied, parse_instruction_operands1, parse_instruction_tag,
-            AddressingMode, ImmediateType, InstructionToken,
+            parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
         },
         shared::split_shift_definition_data,
     },
@@ -20,8 +22,6 @@ use peripheral_cpu::{
     },
     registers::AddressRegisterName,
 };
-
-use super::super::shared::AsmResult;
 pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let (i, ((_, condition_flag), operands)) =

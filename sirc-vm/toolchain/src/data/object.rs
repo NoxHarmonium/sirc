@@ -1,6 +1,6 @@
-use crate::parsers::data::DataType;
-use crate::parsers::instruction::{DataToken, Token};
+use crate::types::data::{DataToken, DataType, DB_VALUE, DQ_VALUE, DW_VALUE};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
+use crate::types::shared::Token;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
@@ -11,6 +11,7 @@ use sirc_vm::debug_adapter::types::ObjectDebugInfo;
 
 use sha2::{Digest, Sha256};
 
+use crate::types::shared::NumberToken;
 use std::collections::HashMap;
 
 fn resolve_placeholder(
@@ -61,19 +62,19 @@ fn inject_data_value(
     placeholders: &HashMap<String, u32>,
 ) {
     match data.value {
-        DataType::Value(value) => {
+        DataType::Value(NumberToken { value, .. }) => {
             // TODO: Make packing smaller data sizes in assembled binaries more efficient
             // category=Toolchain
             // E.g. put 4 DBs in one 32 bit chunk
             // TODO: Clean up the data packing code in the Assembler
             // category=Refactoring
             let bytes: [u8; 4] = match data.size_bytes {
-                1 => [0x0, 0x0, 0x0, value as u8],
-                2 => {
+                DB_VALUE => [0x0, 0x0, 0x0, value as u8],
+                DW_VALUE => {
                     let word_bytes = u16::to_be_bytes(value as u16);
                     [0x0, 0x0, word_bytes[0], word_bytes[1]]
                 }
-                4 => u32::to_be_bytes(value),
+                DQ_VALUE => u32::to_be_bytes(value),
                 _ => panic!("Unsupported data size bytes {}", data.size_bytes),
             };
 
@@ -158,7 +159,7 @@ pub fn build_object(
                 name: data.name,
                 offset,
             }),
-            Token::Comment => {
+            Token::Comment(_) => {
                 // Do nothing.
             }
             Token::Origin(data) => {
@@ -177,7 +178,7 @@ pub fn build_object(
                 offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Equ(data) => {
-                placeholders.insert(data.placeholder_name, data.value);
+                placeholders.insert(data.placeholder_name, data.number_token.value);
             }
         }
     }

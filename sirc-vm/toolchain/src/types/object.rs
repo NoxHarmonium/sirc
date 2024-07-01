@@ -9,8 +9,6 @@ use sirc_vm::debug_adapter::types::{ObjectDebugInfo, ObjectDebugInfoMap, Program
 pub enum RefType {
     /// A 16-bit signed offset from the current PC
     Offset,
-    /// An 8 bit signed offset from the current PC (used for short immediate instructions)
-    SmallOffset,
     /// The lower 16 bits of a full 24-bit address of the target
     LowerWord,
     /// The upper 8 bits of a full 24-bit address of the target (8 bits are ignored)

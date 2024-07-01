@@ -19,12 +19,13 @@ use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::{final_parser, Location};
 
 use toolchain::data::object::build_object;
-use toolchain::parsers::instruction::{parse_tokens, Token};
 
 use core::panic;
 use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
+use toolchain::parsers::shared::parse_tokens;
+use toolchain::types::shared::Token;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

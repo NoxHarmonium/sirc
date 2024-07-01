@@ -1,0 +1,18 @@
+---
+source: toolchain/tests/printers/round_trip.rs
+expression: printed
+---
+; EQU Tests
+.EQU $SOME_PLACEHOLDER #0xCAFE
+.EQU $SOME_OTHER_PLACEHOLDER #1234
+:some_label
+; Data Tests
+.DB #0x00FF
+.DW #0xFFFF
+.DQ #0xFFFFFFFF
+.DB #255
+.DB #65535
+.DQ #4294967295
+.DB @some_label
+.DW @some_label
+.DQ @some_label
