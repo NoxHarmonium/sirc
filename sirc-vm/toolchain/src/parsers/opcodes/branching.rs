@@ -43,7 +43,7 @@ use super::super::shared::AsmResult;
 ///
 /// ```
 /// use toolchain::parsers::opcodes::branching::branching;
-/// use toolchain::parsers::instruction::InstructionToken;
+/// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};

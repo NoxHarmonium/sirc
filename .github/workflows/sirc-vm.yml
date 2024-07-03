@@ -33,6 +33,12 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+      # Currently separate until llvm-cov supports them
+      - name: Run doctests
+        run: cargo test --doc --verbose --all-features --workspace 
+
+      # TODO: Include doc tests in coverage once it is stabilised
+      # https://github.com/taiki-e/cargo-llvm-cov/issues/2
       - name: Run tests
         run: cargo llvm-cov --verbose --all-targets --all-features --workspace --codecov --output-path codecov-main.json
 
