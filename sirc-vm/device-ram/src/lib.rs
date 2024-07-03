@@ -6,6 +6,7 @@ use std::{
 };
 
 use memmap::{MmapMut, MmapOptions};
+use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
@@ -61,7 +62,7 @@ impl Device for RamDevice {
     }
 }
 
-impl MemoryMappedDevice for RamDevice {
+impl MemoryMapped for RamDevice {
     fn read_address(&self, address: u32) -> u16 {
         let address_pointer = address as usize * 2;
 
@@ -91,7 +92,9 @@ impl MemoryMappedDevice for RamDevice {
         raw_memory[address_pointer] = byte_pair[0];
         raw_memory[address_pointer + 1] = byte_pair[1];
     }
+}
 
+impl MemoryMappedDevice for RamDevice {
     fn read_raw_bytes(&self, limit: u32) -> Vec<u8> {
         let cell = self.mem_cell.borrow();
 

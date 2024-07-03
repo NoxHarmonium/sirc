@@ -10,11 +10,13 @@ use crate::{
 // The first word is generally used as a "chip select" and the second word is the address used by the device
 pub const ADDRESS_MASK: u32 = 0x0000_FFFF;
 
-#[allow(clippy::cast_possible_truncation)]
-pub trait MemoryMappedDevice: Device {
+pub trait MemoryMapped {
     fn read_address(&self, address: u32) -> u16;
     fn write_address(&mut self, address: u32, value: u16);
+}
 
+#[allow(clippy::cast_possible_truncation)]
+pub trait MemoryMappedDevice: MemoryMapped + Device {
     /// Shortcut to get data out of the device fast for testing/debugging
     /// Does not represent anything in hardware
     fn read_raw_bytes(&self, limit: u32) -> Vec<u8> {
@@ -74,7 +76,7 @@ impl Device for StubMemoryMappedDevice {
     }
 }
 
-impl MemoryMappedDevice for StubMemoryMappedDevice {
+impl MemoryMapped for StubMemoryMappedDevice {
     fn read_address(&self, address: u32) -> u16 {
         self.data[address as usize]
     }
@@ -82,7 +84,9 @@ impl MemoryMappedDevice for StubMemoryMappedDevice {
     fn write_address(&mut self, address: u32, value: u16) {
         self.data[address as usize] = value;
     }
+}
 
+impl MemoryMappedDevice for StubMemoryMappedDevice {
     fn read_raw_bytes(&self, limit: u32) -> Vec<u8> {
         let words = &self.data[..limit as usize];
         words_to_bytes(words)

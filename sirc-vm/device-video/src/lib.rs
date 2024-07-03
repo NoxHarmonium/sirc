@@ -1,11 +1,14 @@
+mod types;
+
 use std::{any::Any, time::Duration};
 
+use crate::types::PpuRegisters;
 use log::{debug, info};
 use minifb::{Window, WindowOptions};
+use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
-
 // Some reference:
 // https://www.raphnet.net/divers/retro_challenge_2019_03/qsnesdoc.html#Reg2115
 // https://martin.hinner.info/vga/pal.html#:~:text=PAL%20details&text=CCIR%2FPAL%20standard%20video%20signal,Thus%20field%20rate%20is%2050.
@@ -55,6 +58,7 @@ pub struct VideoDevice {
 
     // Native
     vram: Vec<u16>,
+    ppu_registers: PpuRegisters,
 
     // Other
     frame_count: usize,
@@ -124,6 +128,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         buffer: vec![0; total_pixels],
         window,
         vram: vec![0; VRAM_SIZE],
+        ppu_registers: PpuRegisters::default(),
         frame_count: 0,
         frame_clock: 0,
         clocks_per_line,
@@ -182,14 +187,12 @@ impl Device for VideoDevice {
     }
 }
 
-impl MemoryMappedDevice for VideoDevice {
+impl MemoryMapped for VideoDevice {
     fn read_address(&self, address: u32) -> u16 {
         debug!("Reading from address 0x{address:X}");
         match address {
             // First FF addresses are control registers
-            // TODO: Design and implement PPU control registers
-            // category=Features
-            0x0000..=0x00FF => 0x0,
+            0x0000..=0x00FF => self.ppu_registers.read_address(address),
             // After that range
             _ => self.vram[(address as usize) - 0x00FF],
         }
@@ -201,10 +204,12 @@ impl MemoryMappedDevice for VideoDevice {
         match address {
             // First FF addresses are control registers
             0x0000..=0x00FF => {
-                // TODO
+                self.ppu_registers.write_address(address, value);
             }
             // After that range
             _ => self.vram[(address as usize) - 0x00FF] = value,
         }
     }
 }
+
+impl MemoryMappedDevice for VideoDevice {}
