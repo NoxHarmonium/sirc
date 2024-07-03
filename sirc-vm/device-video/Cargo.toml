@@ -7,3 +7,4 @@ edition = "2021"
 peripheral_bus = { path = "../peripheral-bus" }
 log = "0.4.21"
 minifb = "0.27"
+modular-bitfield = "0.11.2"

@@ -236,7 +236,7 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     // Immediate can have absolute label references (default lower 16 bit) (@label) or (@label.l explicit lower or @label.h higher (segment))
     // PC/SP relative can have relative label references (16 bit signed) (@label)
 
-    let mut addressing_mode_parser = alt((
+    let addressing_mode_parser = alt((
         map(parse_immediate_addressing, AddressingMode::Immediate)
             .context("immediate value (e.g. #3)"),
         map(parse_direct_register, AddressingMode::DirectRegister).context("register (e.g. x1)"),
@@ -275,7 +275,7 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
         .context("shift definition (e.g. ASR #4)"),
     ));
 
-    addressing_mode_parser(i)
+    lexeme(addressing_mode_parser)(i)
 }
 
 pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {

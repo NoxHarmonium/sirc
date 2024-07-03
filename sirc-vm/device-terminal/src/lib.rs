@@ -12,7 +12,7 @@ use log::error;
 
 use peripheral_bus::device::BusAssertions;
 use peripheral_bus::device::Device;
-use peripheral_bus::memory_mapped_device::MemoryMappedDevice;
+use peripheral_bus::memory_mapped_device::{MemoryMapped, MemoryMappedDevice};
 
 use std::any::Any;
 use std::collections::VecDeque;
@@ -157,8 +157,7 @@ impl Device for TerminalDevice {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
-impl MemoryMappedDevice for TerminalDevice {
+impl MemoryMapped for TerminalDevice {
     fn read_address(&self, address: u32) -> u16 {
         match address {
             0x0 => self.control_registers.baud,
@@ -186,3 +185,5 @@ impl MemoryMappedDevice for TerminalDevice {
         }
     }
 }
+
+impl MemoryMappedDevice for TerminalDevice {}

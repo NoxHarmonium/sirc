@@ -56,7 +56,7 @@ use super::super::shared::AsmResult;
 ///
 /// ```
 /// use toolchain::parsers::opcodes::arithmetic_immediate::arithmetic_immediate;
-/// use toolchain::parsers::instruction::InstructionToken;
+/// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, ImmediateInstructionData, ShiftType};
 ///
 ///

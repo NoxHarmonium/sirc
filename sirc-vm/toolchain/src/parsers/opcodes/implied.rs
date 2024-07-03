@@ -15,7 +15,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 ///
 /// ```
 /// use toolchain::parsers::opcodes::implied::implied;
-/// use toolchain::parsers::instruction::InstructionToken;
+/// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData};
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};

@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use log::debug;
+use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
@@ -53,7 +54,7 @@ impl Device for DebugDevice {
     }
 }
 
-impl MemoryMappedDevice for DebugDevice {
+impl MemoryMapped for DebugDevice {
     fn read_address(&self, address: u32) -> u16 {
         debug!("Reading from address 0x{address:X}");
         match address {
@@ -78,3 +79,5 @@ impl MemoryMappedDevice for DebugDevice {
         }
     }
 }
+
+impl MemoryMappedDevice for DebugDevice {}

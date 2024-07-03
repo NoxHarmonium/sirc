@@ -36,7 +36,7 @@ use super::super::shared::AsmResult;
 ///
 /// ```
 /// use toolchain::parsers::opcodes::arithmetic_register::arithmetic_register;
-/// use toolchain::parsers::instruction::InstructionToken;
+/// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData, ShiftType};
 ///
 /// let (_, parsed_instruction) = arithmetic_register("ADDR|>= r1, r3, RTL #4\n").unwrap();
