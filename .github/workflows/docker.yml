@@ -4,6 +4,10 @@ name: Build Docker image
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - sirc-tiledit/docker/**
   pull_request:
     branches: ["main"]
     paths:
