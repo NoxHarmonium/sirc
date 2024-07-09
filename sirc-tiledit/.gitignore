@@ -44,6 +44,8 @@
 meson-logs
 meson-private
 build
+build-debug
+build-release
 
 # Meson Files
 meson_benchmark_setup.dat
