@@ -5,6 +5,7 @@ on:
     - main
 jobs:
   build:
+    name: Convert TODOs to Issues
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
