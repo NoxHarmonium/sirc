@@ -5,7 +5,6 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "testconfig.h"
-#include "utils.hpp"
 #include <imageloader.hpp>
 #include <mediancutquantizer.hpp>
 #include <rgbaadapter.hpp>
@@ -113,13 +112,13 @@ TEST_CASE("Quantizes a real test image correctly (red_flowering_gum/4bpp)",
       PaletteReductionBpp::FourBpp);
 }
 
-TEST_CASE("Quantizes a real test image correctly (red_flowering_gum/256bpp)",
+TEST_CASE("Quantizes a real test image correctly (red_flowering_gum/8bpp)",
           "[integration]") {
   runIntegrationTest(
       std::filesystem::path("resources/red_flowering_gum.png"),
       std::filesystem::path(
-          "resources/red_flowering_gum_output_actual_256bpp.png"),
+          "resources/red_flowering_gum_output_actual_8bpp.png"),
       std::filesystem::path(
-          "resources/red_flowering_gum_output_expected_256bpp.png"),
+          "resources/red_flowering_gum_output_expected_8bpp.png"),
       PaletteReductionBpp::None);
 }

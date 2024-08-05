@@ -1,1 +1,2 @@
 libs/shared/tests/catch2/*
+libs/shared/benchmarks/nanobench/*

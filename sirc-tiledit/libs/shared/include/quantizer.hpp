@@ -3,7 +3,11 @@
 
 #include "sircimage.hpp"
 
-enum class PaletteReductionBpp : std::uint8_t { None, FourBpp, TwoBpp };
+enum class PaletteReductionBpp : std::uint16_t {
+  None = MAX_PALETTE_SIZE,
+  FourBpp = 1 << 4,
+  TwoBpp = 1 << 2
+};
 
 class Quantizer {
 public:
