@@ -4,9 +4,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 #include "constants.hpp"
+
+enum class ImageChannel : std::uint8_t { R, G, B };
 
 // The number of palette slots in the SIRC PPU
 constexpr int MAX_PALETTE_SIZE = 256;
@@ -21,8 +24,7 @@ using SircColorComponent = uint8_t;
 using PaletteReference = size_t;
 using PackedSircPixelData =
     std::array<std::array<SircColor, HEIGHT_PIXELS>, WIDTH_PIXELS>;
-using IndexedPixelData =
-    std::array<std::array<PaletteReference, HEIGHT_PIXELS>, WIDTH_PIXELS>;
+using IndexedPixelData = std::array<PaletteReference, TOTAL_PIXELS>;
 
 /**
  * @brief Represents an image in the format supported by the SIRC PPU
@@ -36,5 +38,31 @@ struct SircImage {
   IndexedPixelData pixelData;
   bool operator==(const SircImage &) const = default;
 };
+
+inline SircColorComponent componentFromColor(const SircColor sircColor,
+                                             const ImageChannel channel) {
+  switch (channel) {
+  case ImageChannel::R:
+    return sircColor >> SIRC_COLOR_COMPONENT_BITS * 2 & SIRC_COLOR_RANGE;
+  case ImageChannel::G:
+    return sircColor >> SIRC_COLOR_COMPONENT_BITS & SIRC_COLOR_RANGE;
+  case ImageChannel::B:
+    return sircColor & SIRC_COLOR_RANGE;
+  }
+  throw std::runtime_error("Invalid ImageChannel value");
+}
+
+inline SircColor colorFromComponent(const SircColorComponent component,
+                                    const ImageChannel channel) {
+  switch (channel) {
+  case ImageChannel::R:
+    return component << SIRC_COLOR_COMPONENT_BITS * 2;
+  case ImageChannel::G:
+    return component << SIRC_COLOR_COMPONENT_BITS;
+  case ImageChannel::B:
+    return component;
+  }
+  throw std::runtime_error("Invalid ImageChannel value");
+}
 
 #endif // IMAGEPROCESSOR_H

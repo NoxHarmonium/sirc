@@ -75,11 +75,16 @@ jobs:
       - name: Configure Project
         run: |
           meson --version
-          meson setup --buildtype release build-release/
+          meson setup --buildtype release build-release/ -Db_lto=true
       - name: Compile Project (Release)
         run: |
           cd build-release
           meson compile -v
+      # The results won't be very useful but it will ensure the benchmarks still compile and run
+      - name: Run Benchmark (Release)
+        run: |
+          cd build-release
+          ninja benchmark
       - name: Create release
         run: |
           cd build-release

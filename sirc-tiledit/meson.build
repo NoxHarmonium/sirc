@@ -53,3 +53,4 @@ executable(
 )
 
 subdir('libs/shared/tests')
+subdir('libs/shared/benchmarks')
