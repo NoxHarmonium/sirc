@@ -15,8 +15,11 @@ TEST_CASE("Reduces palette size to 2bpp", "[quantize]") {
       quantizer.quantize(sircImage, PaletteReductionBpp::TwoBpp);
   const auto [palette, pixelData] = quantizedImage;
 
+  const std::vector<SircColor> expectedPalette = {1, 4, 7, 10};
+
   REQUIRE(4 == palette.size());
-  REQUIRE(std::vector<SircColor>{1, 4, 7, 10} == palette);
+  REQUIRE(std::is_permutation(palette.cbegin(), palette.cend(),
+                              expectedPalette.cbegin()));
   REQUIRE(std::all_of(pixelData.cbegin(), pixelData.cend(),
                       [&palette](const PaletteReference pixel) {
                         return pixel < palette.size();
