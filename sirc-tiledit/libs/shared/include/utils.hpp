@@ -3,7 +3,9 @@
 #define UTILS_HPP
 
 #include <algorithm>
-#include <unordered_map>
+#include <map>
+#include <ranges>
+#include <type_traits>
 #include <vector>
 
 template <typename T>
@@ -14,31 +16,27 @@ std::vector<T> concatVecs(const std::vector<T> first,
   return out;
 }
 
-template <typename T, typename U>
-std::vector<std::pair<T, U>> pairWithValue(const std::vector<T> &originalVec,
-                                           U valueToPairWith) {
-  std::vector<std::pair<T, U>> paired;
-  paired.reserve(originalVec.size());
-  std::ranges::transform(originalVec, std::back_inserter(paired),
-                         [valueToPairWith](T originalValue) {
-                           return std::pair(originalValue, valueToPairWith);
-                         });
-  return paired;
-}
-
-#include <type_traits>
-
 template <typename E> constexpr auto to_underlying(E e) noexcept {
   return static_cast<std::underlying_type_t<E>>(e);
 }
 
 template <typename T, typename U>
-U findOrDefault(const std::unordered_map<T, U> &map, const T key) {
+U findOrDefault(const std::map<const T, U> &map, const T key) {
   const auto result = map.find(key);
   if (result == map.end()) {
     return U();
   }
   return result->second;
+}
+
+template <typename U, typename T>
+std::map<const T, U> spanToMapOfIndexes(const std::span<T> &items) {
+  static_assert(std::is_integral_v<U>, "Indexes can only be numbers");
+  std::map<T, U> out;
+  std::ranges::transform(
+      items, std::inserter(out, out.end()),
+      [i = 0](T item) mutable { return std::pair(item, static_cast<U>(i++)); });
+  return out;
 }
 
 #endif // UTILS_HPP

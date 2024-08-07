@@ -5,13 +5,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <map>
 #include <numeric>
 #include <ranges>
 #include <set>
-#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 std::vector<SircColorComponent>
-paletteAsSingleChannel(const std::vector<SircColor> &palette,
+paletteAsSingleChannel(const std::span<const SircColor> &palette,
                        const ImageChannel channel) {
 
   std::vector<SircColorComponent> paletteAsSingleChannel;
@@ -24,7 +26,7 @@ paletteAsSingleChannel(const std::vector<SircColor> &palette,
 }
 
 SircColor
-componentWiseAverageOfAllColors(const std::vector<SircColor> &palette) {
+componentWiseAverageOfAllColors(const std::span<const SircColor> &palette) {
   const std::vector<SircColorComponent> r =
       paletteAsSingleChannel(palette, ImageChannel::R);
   const std::vector<SircColorComponent> g =
@@ -47,7 +49,7 @@ componentWiseAverageOfAllColors(const std::vector<SircColor> &palette) {
          colorFromComponent(averageOfComponent(b), ImageChannel::B);
 }
 
-SircColorComponent findRangeOfChannel(const std::vector<SircColor> &palette,
+SircColorComponent findRangeOfChannel(const std::span<const SircColor> &palette,
                                       const ImageChannel channel) {
 
   std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
@@ -56,9 +58,9 @@ SircColorComponent findRangeOfChannel(const std::vector<SircColor> &palette,
 }
 
 std::vector<SircColor>
-paletteSortedByChannel(const std::vector<SircColor> &palette,
+paletteSortedByChannel(const std::span<const SircColor> &palette,
                        const ImageChannel channel) {
-  std::vector output(palette);
+  std::vector output(palette.begin(), palette.end());
   std::ranges::stable_sort(
       output, [channel](const SircColor leftColor, const SircColor rightColor) {
         return std::less<SircColorComponent>{}(
@@ -69,7 +71,7 @@ paletteSortedByChannel(const std::vector<SircColor> &palette,
 }
 
 ImageChannel
-findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
+findChannelWithMostRange(const std::span<const SircColor> &originalPalette) {
   const auto rRange = findRangeOfChannel(originalPalette, ImageChannel::R);
   const auto gRange = findRangeOfChannel(originalPalette, ImageChannel::G);
   const auto bRange = findRangeOfChannel(originalPalette, ImageChannel::B);
@@ -85,22 +87,22 @@ findChannelWithMostRange(const std::vector<SircColor> &originalPalette) {
   return ImageChannel::B;
 }
 
-std::unordered_map<PaletteReference, PaletteReference> buildPaletteMapping(
+std::vector<PaletteReference> buildPaletteMapping(
     const std::vector<std::pair<SircColor, SircColor>> &quantizedColorPairs,
-    std::vector<SircColor> originalPalette,
-    std::vector<SircColor> quantizedPalette) {
-  std::unordered_map<PaletteReference, PaletteReference> out;
+    const std::span<const SircColor> &originalPalette,
+    const std::span<const SircColor> &quantizedPalette) {
+  std::vector<PaletteReference> out(originalPalette.size());
+
+  const auto originalPaletteMap =
+      spanToMapOfIndexes<PaletteReference>(originalPalette);
+  const auto quantizedPaletteMap =
+      spanToMapOfIndexes<PaletteReference>(quantizedPalette);
+
   for (const auto &[originalColor, quantizedColor] : quantizedColorPairs) {
-    const auto originalIndexIt =
-        std::ranges::find(originalPalette, originalColor);
-    const auto newIndexIt = std::ranges::find(quantizedPalette, quantizedColor);
-    assert(originalIndexIt != originalPalette.end() &&
-           newIndexIt != quantizedPalette.end());
-
     const PaletteReference originalIndex =
-        originalIndexIt - originalPalette.begin();
-    const PaletteReference newIndex = newIndexIt - quantizedPalette.begin();
-
+        findOrDefault(originalPaletteMap, originalColor);
+    const PaletteReference newIndex =
+        findOrDefault(quantizedPaletteMap, quantizedColor);
     out[originalIndex] = newIndex;
   }
   return out;
@@ -108,35 +110,38 @@ std::unordered_map<PaletteReference, PaletteReference> buildPaletteMapping(
 
 std::vector<SircColor> deduplicatePalette(
     std::vector<std::pair<SircColor, SircColor>> quantizedPalettePairs) {
-  auto quantizedPaletteWithDupes = std::views::values(quantizedPalettePairs);
-  auto quantizedPaletteSet = std::set(quantizedPaletteWithDupes.begin(),
-                                      quantizedPaletteWithDupes.end());
+  const auto quantizedPaletteValues = std::views::values(quantizedPalettePairs);
+  const auto quantizedPaletteSet = std::unordered_set(
+      quantizedPaletteValues.begin(), quantizedPaletteValues.end());
   return {quantizedPaletteSet.begin(), quantizedPaletteSet.end()};
 }
 
-std::vector<std::pair<SircColor, SircColor>>
 // NOLINTNEXTLINE(misc-no-recursion)
-splitPaletteIntoBucketsAndAverage(const std::vector<SircColor> &palette,
-                                  const size_t maxBucketSize) {
+void splitPaletteIntoBucketsAndAverage(
+    const std::span<const SircColor> &palette,
+    const std::span<std::pair<SircColor, SircColor>> &results,
+    const size_t maxBucketSize) {
   if (palette.size() <= maxBucketSize) {
-    const auto average = componentWiseAverageOfAllColors(palette);
-    return pairWithValue(palette, average);
+    const auto averageColor = componentWiseAverageOfAllColors(palette);
+    std::ranges::transform(palette.begin(), palette.end(), results.begin(),
+                           [averageColor](SircColor originalValue) {
+                             return std::pair(originalValue, averageColor);
+                           });
+    return;
   }
 
   const auto channelWithMostRange = findChannelWithMostRange(palette);
 
   const auto sortedPalette =
       paletteSortedByChannel(palette, channelWithMostRange);
+  const auto sortedPaletteSpan = std::span(sortedPalette);
 
   const long halfSize = static_cast<long>(sortedPalette.size() / 2);
-  const std::vector lowerPalette(sortedPalette.begin(),
-                                 sortedPalette.begin() + halfSize);
-  const std::vector upperPalette(sortedPalette.begin() + halfSize,
-                                 sortedPalette.end());
-
-  return concatVecs(
-      splitPaletteIntoBucketsAndAverage(lowerPalette, maxBucketSize),
-      splitPaletteIntoBucketsAndAverage(upperPalette, maxBucketSize));
+  splitPaletteIntoBucketsAndAverage(sortedPaletteSpan.subspan(0, halfSize),
+                                    results.subspan(0, halfSize),
+                                    maxBucketSize);
+  splitPaletteIntoBucketsAndAverage(sortedPaletteSpan.subspan(halfSize),
+                                    results.subspan(halfSize), maxBucketSize);
 }
 
 SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
@@ -148,15 +153,18 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
     return sircImage;
   }
 
+  // Note: ceiling integer division
   const size_t maxBucketSize =
       (existingPalette.size() + maxPaletteSize - 1) / maxPaletteSize;
 
-  const auto quantizedPalettePairs =
-      splitPaletteIntoBucketsAndAverage(existingPalette, maxBucketSize);
-  const auto quantizedPaletteWithoutDupes =
-      deduplicatePalette(quantizedPalettePairs);
-  const auto paletteMapping = buildPaletteMapping(
-      quantizedPalettePairs, existingPalette, quantizedPaletteWithoutDupes);
+  auto results =
+      std::vector<std::pair<SircColor, SircColor>>(existingPalette.size());
+  splitPaletteIntoBucketsAndAverage(existingPalette, results, maxBucketSize);
+  const auto quantizedPaletteWithoutDupes = deduplicatePalette(results);
+
+  const auto paletteMapping =
+      buildPaletteMapping(results, std::span(existingPalette),
+                          std::span(quantizedPaletteWithoutDupes));
 
   SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
                               .pixelData = {}};
@@ -164,7 +172,7 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   std::ranges::transform(
       pixelData.cbegin(), pixelData.cend(), quantizedImage.pixelData.begin(),
       [paletteMapping](const PaletteReference &oldPaletteRef) {
-        return findOrDefault(paletteMapping, oldPaletteRef);
+        return paletteMapping[oldPaletteRef];
       });
   return quantizedImage;
 }
