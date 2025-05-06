@@ -13,7 +13,7 @@ log = "0.4.21"
 [dev-dependencies]
 quickcheck = "1.0.3"
 quickcheck_macros = "1"
-strum = { version = "0.26.2", features = ["derive"] }
+strum = { version = "0.27.0", features = ["derive"] }
 assert_hex = "0.4.1"
 stderrlog = "0.6.0"
-ctor = "0.2.8"
+ctor = "0.4.0"
