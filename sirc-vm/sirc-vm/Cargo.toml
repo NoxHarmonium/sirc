@@ -9,7 +9,7 @@ video = ["dep:device_video"]
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-clap-verbosity-flag = "2.2.0"
+clap-verbosity-flag = "3.0.0"
 device_debug = { path = "../device-debug" }
 device_ram = { path = "../device-ram" }
 device_terminal = { path = "../device-terminal" }
