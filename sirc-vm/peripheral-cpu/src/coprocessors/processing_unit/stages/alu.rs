@@ -368,7 +368,7 @@ pub fn perform_shift(
         ShiftType::Reserved => {
             intermediate_registers.alu_output = operand;
         }
-    };
+    }
 
     (
         intermediate_registers.alu_output,

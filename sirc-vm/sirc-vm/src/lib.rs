@@ -116,7 +116,7 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
                 register_dump_file.display(),
                 error
             );
-        };
+        }
     }
 }
 
@@ -151,6 +151,6 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
                 register_dump_file.display(),
                 error
             );
-        };
+        }
     }
 }

@@ -12,20 +12,23 @@ pub mod vectors {
 
     // Privileged Abort Exceptions (0x00-0x07) (all priority 7)
 
-    /// An external device raised an error via a CPU pin
+    /// Raised when an external device raised an error via a CPU pin
+    ///
     /// This could happen, for example, if a unmapped address is presented by the CPU
     /// and another chip detects this and raises an error.
     /// It could also be used to implement virtual memory as the instrtuction is aborted
     /// and pl is not incremented for a bus fault.
     pub const BUS_FAULT: u8 = 0x01;
     /// Raised when fetching instructions if pl points to an odd address
+    ///
     /// This is to simplify fetching as the second word of an instruction is always at pl | 0x1
     /// and ensures that we never have to worry about instructions overflowing segments
     /// (e.g. if the first word is at 0xFFFF and the second word at 0x0000)
     /// which is a weird edge case that might complicate fetching.
     pub const ALIGNMENT_FAULT: u8 = 0x02;
-    /// Raised with some instructions if the computed address would go outside the current
-    /// segment. E.g. if you are accessing data in the stack segment, and then compute
+    /// Raised with some instructions if the computed address would go outside the current segment.
+    ///
+    /// E.g. if you are accessing data in the stack segment, and then compute
     /// an address that overflows, it is probably a stack overflow.
     /// There might be situations where you want address calculations to wrap around
     /// so it is only raised if the `TrapOnAddressOverflow` SR bit is set.
@@ -34,6 +37,7 @@ pub mod vectors {
     pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x03;
     /// Raised when a co-processor call is done for a non-existant co-processor
     /// or if the co-processor opcode is invalid.
+    ///
     /// Can be used for forward compatibility.
     /// For example, if the next iteration of the CPU included a floating point co-processor
     /// programs written for that co-processor would trap on the older iteration of the CPU
@@ -60,6 +64,7 @@ pub mod vectors {
 
     /// Raised when a level five hardware exception is raised
     /// when one is already being handled
+    ///
     /// We don't use a stack for handling exceptions, so there
     /// is nowhere to store the return address past level five.
     /// We could just ignore any level five HW exceptions while it is

@@ -181,7 +181,7 @@ pub fn get_cause_register_value(
             eu_registers.pending_hardware_exceptions
         );
         return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
-    };
+    }
     trace!(
         "returning registers.pending_coprocessor_command 0x[{:X}]",
         registers.pending_coprocessor_command
@@ -353,7 +353,7 @@ impl Executor for ExceptionUnitExecutor {
                                 registers.r7 = link_register.return_status_register;
                             }
                             _ => panic!("ETFR register select can only be in the range of 0-3"),
-                        };
+                        }
 
                         trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]", current_interrupt_mask - 1, registers.get_full_address_address(), registers.r7);
                         trace!("ALL: {:X?}", eu_registers.link_registers);
@@ -379,7 +379,7 @@ impl Executor for ExceptionUnitExecutor {
                                 link_register.return_status_register = registers.r7;
                             }
                             _ => panic!("ETTR register select can only be in the range of 0-3"),
-                        };
+                        }
 
                         trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_interrupt_mask - 1, registers.get_full_address_address(), registers.r7);
                     }

@@ -1,6 +1,8 @@
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::CpuPeripheral;
 
+/// Gets a reference to the CPU from the Bus
+///
 /// Since the bus only knows about device interfaces, and not the concrete
 /// `CpuPeripheral` type (which would introduce a circular dependency)
 /// This is a roundabout way to cast it, since we know the bus master

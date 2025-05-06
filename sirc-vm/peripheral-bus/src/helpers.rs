@@ -41,9 +41,9 @@ pub fn write_bytes(memory_peripheral: &mut BusPeripheral, start_address: u32, by
         .iter()
         .enumerate()
         .for_each(|(index, decoded)| {
-            let truncated_index: u32 = index
-                .try_into()
-                .expect("Expected index {index} to fit within a u32 address space");
+            let truncated_index: u32 = index.try_into().unwrap_or_else(|_| {
+                panic!("Expected index {index} to fit within a u32 address space")
+            });
             let calculated_address = start_address
                 .checked_add(truncated_index)
                 .expect("Bytes do not fit into a u32 address space when offset by start_address");

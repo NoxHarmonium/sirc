@@ -352,7 +352,7 @@ fn parse_shift_type(i: &str) -> AsmResult<ShiftType> {
 
 pub fn parse_instruction_tag(
     instruction_tag: &'static str,
-) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + '_ {
+) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + 'static {
     move |i: &str| {
         let tag_parser = tag(instruction_tag);
         let (i, tag) = tag_parser(i)?;

@@ -25,7 +25,7 @@ pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugSta
             }
         }
         DebuggerMessage::Disconnect => debug_state.disconnected = true,
-    };
+    }
 }
 
 pub fn yield_to_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut DebugState) {
