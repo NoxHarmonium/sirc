@@ -25,13 +25,13 @@ pub struct BaseConfigRegister {
     pub reserved_3: B3,
 }
 
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(Specifier, Debug)]
 pub enum TileSize {
     EightByEight,
     SixteenBySixteen,
 }
 
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(Specifier, Debug)]
 pub enum TilemapSize {
     Single,
     Double,
@@ -80,7 +80,7 @@ pub struct ScrollRegister {
     pub reserved: B6,
 }
 
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(Specifier, Debug)]
 pub enum OutputMode {
     Ntsc,
     Pal,
