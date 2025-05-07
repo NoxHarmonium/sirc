@@ -5,10 +5,7 @@ use modular_bitfield::prelude::*;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 
 const READONLY_STATUS_REGISTER_ADDR: u32 = 0x0013;
-// TODO: Use exclusive range in match when rust 1.80 is released
-// category=Refactoring
-// Then we can get rid of this. See also: https://github.com/rust-lang/rust/issues/37854
-const READONLY_STATUS_REGISTER_ADDR_MINUS_ONE: u32 = READONLY_STATUS_REGISTER_ADDR - 1;
+
 #[bitfield(bytes = 2)]
 #[derive(Debug, Default)]
 pub struct BaseConfigRegister {
@@ -190,7 +187,7 @@ mod tests {
             ppu_registers.write_address(addr, sentinel_value);
             let stored_value = ppu_registers.read_address(addr);
             match addr {
-                0x0..=READONLY_STATUS_REGISTER_ADDR_MINUS_ONE => {
+                0x0..READONLY_STATUS_REGISTER_ADDR => {
                     assert_eq!(sentinel_value, stored_value)
                 }
                 _ => assert_eq!(0x0, stored_value),
