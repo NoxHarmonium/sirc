@@ -7,9 +7,14 @@ project('sirc-tiledit',
 add_global_arguments(['-DPROJECT_NAME=' + meson.project_name(),
                       '-DPROJECT_VERSION=' + meson.project_version(),
                       '-Wshadow',
-		      # TODO: disable error on hash warnings until meson releases https://github.com/mesonbuild/meson/issues/14440
-		      '-Wno-error=#warnings'
                      ], language : ['cpp'])
+
+# TODO: disable error on hash warnings until meson releases https://github.com/mesonbuild/meson/issues/14440
+cc = meson.get_compiler ('cpp')
+if (cc.has_argument ('-Wno-error=#warnings'))
+    # On GCC the argument is -Wno-error=cpp instead, but we don't need it in that case anyway, its a Mac/clang issue
+    add_global_arguments(['-Wno-error=#warnings'], language : ['cpp'])
+endif
 
 qt6 = import('qt6')
 qt6_dep = dependency('qt6', modules : ['Core', 'Gui', 'Widgets'])
