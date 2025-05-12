@@ -7,6 +7,8 @@ project('sirc-tiledit',
 add_global_arguments(['-DPROJECT_NAME=' + meson.project_name(),
                       '-DPROJECT_VERSION=' + meson.project_version(),
                       '-Wshadow',
+		      # TODO: disable error on hash warnings until meson releases https://github.com/mesonbuild/meson/issues/14440
+		      '-Wno-error=#warnings'
                      ], language : ['cpp'])
 
 qt6 = import('qt6')
