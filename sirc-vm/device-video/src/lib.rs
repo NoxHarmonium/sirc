@@ -143,6 +143,32 @@ impl Device for VideoDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
         let line = self.frame_clock / self.clocks_per_line;
 
+        // https://wiki.superfamicom.org/timing#detailed-renderer-timing-200
+        // 1. In front porch, load data for 32 sprites
+        // 2. Read BG data on the fly
+
+        // We have ~5 master clocks per pixel? That isn't even one CPU clock?
+        // We have to read three background tiles on the fly (the sprites have already been stored in internal registers during front porch)
+        // We can read 16 bits at a time
+        // It takes one CPU cycle to read from memory?
+
+        //     VMDATAH     VMDATAL
+        //     $4119       $4118
+        //  15  bit  8   7  bit  0
+        //   ---- ----   ---- ----
+        //   VHPC CCTT   TTTT TTTT
+        //   |||| ||||   |||| ||||
+        //   |||| ||++---++++-++++- Tile index
+        //   |||+-++--------------- Palette selection
+        //   ||+------------------- Priority
+        //   ++-------------------- Flip vertical (V) or horizontal (H)
+
+        //     Each tilemap entry is a 16-bit word in VRAM. Each row is 32 tiles, left to right, and the rows are top to bottom.
+        // Tile index - 10 bits selecting one of 1024 tiles from VRAM relative to the base address given at: BG12NBA or BG34NBA.
+        // Palette selection - 0-7 selects one of up to 8 palettes from CGRAM, depending on the background mode.
+        // Priority - tilemaps are separated into background (0) and foreground (1) layers which can allow sprites to appear between these layers. See backgrounds.
+        // Flip - each tile can be flipped horizontally or vertically.
+
         let line_clock = self.frame_clock % self.clocks_per_line;
         if line < HEIGHT_PIXELS // Lines below the rendered height are vsync
             && self.frame_clock % self.clocks_per_pixel == 0 // Only update for each PPU pixel, not for each master clock

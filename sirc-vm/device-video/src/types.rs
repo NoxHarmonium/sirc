@@ -96,11 +96,11 @@ pub struct StatusRegister {
 pub struct PpuRegisters {
     pub base_config: BaseConfigRegister,
     pub tile_size: TileSizeRegister,
-    pub b1_tilemap_addr: u16,
+    pub b1_tilemap_addr: u16, // Base address to read the tilemap from (the tile definitions)
     pub b2_tilemap_addr: u16,
     pub b3_tilemap_addr: u16,
     pub reserved: u16,
-    pub b1_tile_addr: u16,
+    pub b1_tile_addr: u16, // Base address to read the actual tile data from
     pub b2_tile_addr: u16,
     pub b3_tile_addr: u16,
     pub reserved2: u16,

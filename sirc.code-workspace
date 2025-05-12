@@ -34,5 +34,7 @@
       "path": "sirc-tiledit"
     }
   ],
-  "settings": {}
+  "settings": {
+    "cSpell.words": ["tilemap"]
+  }
 }
