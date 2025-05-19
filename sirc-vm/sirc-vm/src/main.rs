@@ -121,6 +121,13 @@ pub struct Args {
 }
 
 fn main() {
+    assert!(
+        !cfg!(target_endian = "big"),
+        "This simulator is only compatible with little endian CPUs. \
+        Which is ironic because the device it is simulating is big endian.\
+        It might work, but it hasn't been tested and there is a lot of bit swizzling."
+    );
+
     let args = Args::parse();
 
     stderrlog::new()
@@ -170,7 +177,7 @@ fn main() {
 // Maybe make a public version of this that isn't coupled to command line argument parsing
 #[must_use]
 fn setup_vm(args: &Args) -> Vm {
-    let master_clock_freq = 25_000_000;
+    let master_clock_freq = 21_477_272;
 
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     // Jump to reset vector
