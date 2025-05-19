@@ -8,6 +8,51 @@ const READONLY_STATUS_REGISTER_ADDR: u32 = 0x0013;
 
 #[bitfield(bytes = 2)]
 #[derive(Debug, Default)]
+pub struct TilemapEntry {
+    pub flip_vertical: B1,
+    pub flip_horizontal: B1,
+    pub priority: B1,
+    pub palette_select: B3,
+    pub tile_index: B10,
+}
+
+#[bitfield(bytes = 2)]
+#[derive(Debug, Default)]
+pub struct TileLine {
+    pub p1: B4,
+    pub p2: B4,
+    pub p3: B4,
+    pub p4: B4,
+}
+
+#[derive(Debug, Default)]
+pub struct TileLineRgb {
+    pub p1: u16,
+    pub p2: u16,
+    pub p3: u16,
+    pub p4: u16,
+}
+
+// 0
+// 1
+// 2
+// 3-5
+// 6-F
+// Flip Vertical
+// Flip Horizontal
+// Priority
+// Palette Selection
+// Tile index
+
+#[derive(Debug)]
+pub enum Backgrounds {
+    Bg1,
+    Bg2,
+    Bg3,
+}
+
+#[bitfield(bytes = 2)]
+#[derive(Debug, Default)]
 pub struct BaseConfigRegister {
     pub graphics_disable: B1,
     pub b1_disable: B1,
