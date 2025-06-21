@@ -43,7 +43,7 @@ pub struct TileLine {
     pub p1: B4,
 }
 
-pub const PIXEL_BUFFER_SIZE: usize = 4;
+pub const PIXEL_BUFFER_SIZE: u16 = 4;
 #[derive(Debug, Default)]
 pub struct PixelBuffer {
     pub p1: PpuPixel,
@@ -262,12 +262,13 @@ mod tests {
     fn test_address_round_trip() {
         let mut ppu_registers = PpuRegisters::default();
         for addr in 0..=0xFF {
-            let sentinel_value = 0xFF - addr as u16;
+            let sentinel_value =
+                u16::try_from(0xFF - addr).expect("sentinel_value should fit into 16 bits");
             ppu_registers.write_address(addr, sentinel_value);
             let stored_value = ppu_registers.read_address(addr);
             match addr {
                 0x0..READONLY_STATUS_REGISTER_ADDR => {
-                    assert_eq!(sentinel_value, stored_value)
+                    assert_eq!(sentinel_value, stored_value);
                 }
                 _ => assert_eq!(0x0, stored_value),
             }

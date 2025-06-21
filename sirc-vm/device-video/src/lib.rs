@@ -1,3 +1,17 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(
+    // I don't like this rule
+    clippy::module_name_repetitions,
+    // Will tackle this at the next clean up
+    clippy::too_many_lines,
+    // Might be good practice but too much work for now
+    clippy::missing_errors_doc,
+    // Not stable yet - try again later
+    clippy::missing_const_for_fn,
+    // I have a lot of temporary panics for debugging that will probably be cleaned up
+    clippy::missing_panics_doc
+)]
+
 mod types;
 
 use crate::types::{PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
@@ -22,19 +36,20 @@ const VRAM_SIZE: usize = 32_000;
 const PALETTE_SIZE: usize = 256;
 // PAL can have a higher resolution but to keep things simple
 // the renderer size can be static and PAL can have black bars
-const WIDTH_PIXELS: usize = 256;
-const HEIGHT_PIXELS: usize = 224;
+const WIDTH_PIXELS: u16 = 256;
+const HEIGHT_PIXELS: u16 = 224;
 
-const TOTAL_LINES: usize = 262; // NTSC
-                                // This just refers to the lines the TV can technically display
-                                // the console will output less than this
-                                // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
+const TOTAL_LINES: u16 = 262; // NTSC
+                              // This just refers to the lines the TV can technically display
+                              // the console will output less than this
+                              // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
 
 pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
 fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
-    (u32::from(r) << 16) | ((g as u32) << 8) | (b as u32)
+    (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)
 }
 
+#[must_use]
 pub fn unpack_rgb(packed: u32) -> (u8, u8, u8) {
     let r = ((packed >> 16) & 0xFF) as u8;
     let g = ((packed >> 8) & 0xFF) as u8;
@@ -96,7 +111,7 @@ impl Renderer for MiniFbWindow {
         self.window.update_with_buffer(buffer, width, height)
     }
     fn set_target_fps(&mut self, fps: usize) {
-        self.window.set_target_fps(fps)
+        self.window.set_target_fps(fps);
     }
     fn is_open(&self) -> bool {
         self.window.is_open()
@@ -141,12 +156,13 @@ pub struct VideoDevice {
 
     // Other
     pub frame_count: usize,
-    pub frame_clock: usize,
-    pub clocks_per_line: usize,
-    pub clocks_per_pixel: usize,
-    pub line_preamble_clocks: usize,
-    pub line_postamble_clocks: usize,
-    pub line_visible_clocks: usize,
+    pub line_clock: u16,
+    pub line: u16,
+    pub clocks_per_line: u16,
+    pub clocks_per_pixel: u16,
+    pub line_preamble_clocks: u16,
+    pub line_postamble_clocks: u16,
+    pub line_visible_clocks: u16,
 
     // Public
     pub vsync_frequency: f64,
@@ -220,8 +236,8 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         Box::new(MiniFbWindow {
             window: minifb::Window::new(
                 "SIRC - Video Device",
-                WIDTH_PIXELS,
-                HEIGHT_PIXELS,
+                WIDTH_PIXELS as usize,
+                HEIGHT_PIXELS as usize,
                 WindowOptions::default(),
             )
             .unwrap(),
@@ -246,8 +262,9 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
 
     // This is fixed, everything else can change based on PAL/NTSC
     let clocks_per_line = preamble_clocks + visible_clocks + postamble_clocks;
+    #[allow(clippy::cast_precision_loss)]
     let vsync_frequency =
-        master_clock_freq as f64 / (total_clocks_per_line as f64 * TOTAL_LINES as f64);
+        master_clock_freq as f64 / (f64::from(total_clocks_per_line) * f64::from(TOTAL_LINES));
 
     let total_pixels = WIDTH_PIXELS * HEIGHT_PIXELS;
     let clocks_per_pixel = visible_clocks / WIDTH_PIXELS;
@@ -258,16 +275,19 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         clocks_per_pixel: {clocks_per_pixel}
     ");
 
-    assert_eq!(
-        (visible_clocks as f64 / WIDTH_PIXELS as f64).fract(),
-        0f64,
+    let visible_clock_into_width_remainder = (f64::from(visible_clocks) / f64::from(WIDTH_PIXELS))
+        .fract()
+        .abs();
+    assert!(
+        visible_clock_into_width_remainder < f64::EPSILON,
         "Only a round number of clocks per pixel is supported at this time"
     );
 
+    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     window.set_target_fps(vsync_frequency.floor() as usize);
 
     VideoDevice {
-        buffer: vec![0; total_pixels],
+        buffer: vec![0; total_pixels as usize],
         window,
         vram: vec![0; VRAM_SIZE],
         palette: vec![PpuPixel::new(); PALETTE_SIZE],
@@ -275,7 +295,8 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         pixel_mux_buffer_register: PixelBuffer::default(),
         ppu_registers: PpuRegisters::default(),
         frame_count: 0,
-        frame_clock: 0,
+        line_clock: 0,
+        line: 0,
         clocks_per_line,
         clocks_per_pixel: visible_clocks / WIDTH_PIXELS,
         line_preamble_clocks: preamble_clocks,
@@ -288,8 +309,6 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
 
 impl Device for VideoDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        let line = self.frame_clock / self.clocks_per_line;
-
         // https://wiki.superfamicom.org/timing#detailed-renderer-timing-200
         // 1. In front porch, load data for 32 sprites
         // 2. Read BG data on the fly
@@ -327,12 +346,7 @@ impl Device for VideoDevice {
         // Fetch BG3 tile
         // Mux
 
-        let line_clock = self.frame_clock % self.clocks_per_line;
-        let pixel_clock: u16 = if line_clock < self.line_preamble_clocks {
-            0
-        } else {
-            (line_clock - self.line_preamble_clocks).try_into().unwrap()
-        };
+        let pixel_clock: u16 = self.line_clock.saturating_sub(self.line_preamble_clocks);
 
         // Two things happening at once:
         // The PPU has four pixels (20 clocks) to read the tile data and mux it and latch it to the output buffer
@@ -352,13 +366,13 @@ impl Device for VideoDevice {
                 // No drawing happens in the pre/postable TODO: (should load sprite data out of memory here) and cache it in registers
                 // TODO: Also the tilemap fetching should start before the first pixel
                 // TODO: The PPU  should get a head start accessing accessing 2-3 tiles ahead of the pixel output.
-                if line_clock >= self.line_preamble_clocks {
-                    self.state = RenderStateMachine::FetchTilemapEntry(Backgrounds::Bg1)
+                if self.line_clock >= self.line_preamble_clocks {
+                    self.state = RenderStateMachine::FetchTilemapEntry(Backgrounds::Bg1);
                 }
             }
             RenderStateMachine::FetchTilemapEntry(background) => {
                 let tilemap_x = pixel_clock / clocks_per_tile; // 32 ppu cycles per tile
-                let tilemap_y = (line / tile_size as usize) as u16 * tilemap_size; // 32 x 32 tile map
+                let tilemap_y = (self.line / tile_size) * tilemap_size; // 32 x 32 tile map
                 let base_address = match background {
                     Backgrounds::Bg1 => self.ppu_registers.b1_tilemap_addr,
                     Backgrounds::Bg2 => self.ppu_registers.b2_tilemap_addr,
@@ -415,7 +429,7 @@ impl Device for VideoDevice {
                     }
                 };
                 let tile_x = ((pixel_clock - 8) / (tile_size * 2)) % 2; // minus 8 for the cycles to load the tile maps
-                let tile_y = (line as u16 % tile_size) * read_cycles_per_tile_line;
+                let tile_y = (self.line % tile_size) * read_cycles_per_tile_line;
                 let tile_data: TileLine =
                     self.vram[(tile_address + tile_x + tile_y) as usize].into();
                 match background {
@@ -423,11 +437,11 @@ impl Device for VideoDevice {
                         // TODO: Pixel offset per line (e.g. scrolling) (tiles are 8x8, we read one line at a time)
                         // TODO: We probably should read the full 8 pixels at once, which is two reads for the 32 bits
                         self.vram_fetch_register.bg1_tile = tile_data;
-                        self.state = RenderStateMachine::FetchTile(Backgrounds::Bg2)
+                        self.state = RenderStateMachine::FetchTile(Backgrounds::Bg2);
                     }
                     Backgrounds::Bg2 => {
                         self.vram_fetch_register.bg2_tile = tile_data;
-                        self.state = RenderStateMachine::FetchTile(Backgrounds::Bg3)
+                        self.state = RenderStateMachine::FetchTile(Backgrounds::Bg3);
                     }
                     Backgrounds::Bg3 => {
                         self.vram_fetch_register.bg3_tile = tile_data;
@@ -441,9 +455,9 @@ impl Device for VideoDevice {
             }
             RenderStateMachine::FetchSpriteTile => {
                 // TODO: Sprites
-                if line_clock >= self.line_preamble_clocks + self.line_visible_clocks {
+                if self.line_clock >= self.line_preamble_clocks + self.line_visible_clocks {
                     // Line is done, finish displaying pixels
-                    self.state = RenderStateMachine::BackPorch
+                    self.state = RenderStateMachine::BackPorch;
                 } else {
                     // Output next pixel
                     self.state = RenderStateMachine::FetchTilemapEntry(Backgrounds::Bg1);
@@ -451,8 +465,8 @@ impl Device for VideoDevice {
             }
             RenderStateMachine::BackPorch => {
                 // No pixels rendering, can do some preparation
-                if line_clock == 0 {
-                    self.state = RenderStateMachine::FrontPorch
+                if self.line_clock == 0 {
+                    self.state = RenderStateMachine::FrontPorch;
                 }
             }
         }
@@ -462,29 +476,18 @@ impl Device for VideoDevice {
         // E.g. (black bars below and above) but should check
         if self.state != RenderStateMachine::BackPorch
             && self.state != RenderStateMachine::FrontPorch
-            && line < HEIGHT_PIXELS
+            && self.line < HEIGHT_PIXELS
         {
-            let x = pixel_clock as usize / PIXEL_BUFFER_SIZE;
-            let y = line * WIDTH_PIXELS;
+            let x = pixel_clock / PIXEL_BUFFER_SIZE;
+            let y = self.line * WIDTH_PIXELS;
 
-            self.buffer[x + y] = ppu_colour_to_minifb_rgb(
+            self.buffer[(x + y) as usize] = ppu_colour_to_minifb_rgb(
                 self.pixel_mux_buffer_register[(x % PIXEL_BUFFER_SIZE) as u8],
             );
         }
 
-        if line >= TOTAL_LINES {
-            self.frame_clock = 0;
-            self.frame_count += 1;
-            if self.window.is_open() {
-                // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-                self.window
-                    .update_with_buffer(&self.buffer, WIDTH_PIXELS, HEIGHT_PIXELS)
-                    .unwrap();
-            }
-        }
-
         let assertions = BusAssertions {
-            interrupt_assertion: if self.frame_clock == 0 {
+            interrupt_assertion: if self.line_clock == 0 && self.line == 0 {
                 VSYNC_INTERRUPT
             } else {
                 0x0
@@ -493,7 +496,21 @@ impl Device for VideoDevice {
         };
 
         // PPU runs at half the master clock rate
-        self.frame_clock += 2;
+        self.line_clock += 2;
+        if self.line_clock >= self.clocks_per_line {
+            self.line_clock = 0;
+            self.line += 1;
+        }
+
+        if self.line >= TOTAL_LINES {
+            self.frame_count += 1;
+            if self.window.is_open() {
+                // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+                self.window
+                    .update_with_buffer(&self.buffer, WIDTH_PIXELS as usize, HEIGHT_PIXELS as usize)
+                    .unwrap();
+            }
+        }
 
         assertions
     }
@@ -558,7 +575,7 @@ mod tests {
 
     // Assume orig_digit_tiles: [[u16; 64]; 10] where each u16 is a palette index (0..15)
     // THIS IS SUCH A HACK, need to restructure the constant data to match what we need
-    fn convert_digit_tiles(orig_digit_tiles: &[[u16; 64]; 10]) -> [[TileLine; 16]; 10] {
+    fn convert_digit_tiles(orig_digit_tiles: &[[u8; 64]; 10]) -> [[TileLine; 16]; 10] {
         let mut result = [[TileLine::new(); 16]; 10];
 
         for (digit_idx, tile) in orig_digit_tiles.iter().enumerate() {
@@ -566,10 +583,10 @@ mod tests {
             for i in 0..16 {
                 // Each line in output: 4 pixels per TileLine, so two TileLines per row
                 let base = i * 4;
-                let px0 = tile[base] as u8;
-                let px1 = tile[base + 1] as u8;
-                let px2 = tile[base + 2] as u8;
-                let px3 = tile[base + 3] as u8;
+                let px0 = tile[base];
+                let px1 = tile[base + 1];
+                let px2 = tile[base + 2];
+                let px3 = tile[base + 3];
                 let tl = TileLine::new()
                     .with_p1(px0)
                     .with_p2(px1)
@@ -625,7 +642,7 @@ mod tests {
 
         let x: u16 = tilemap_from_constructor.into();
         assert_eq!(tilemap_from_hex, x);
-        assert_eq!(tilemap_bytes, x.to_be_bytes())
+        assert_eq!(tilemap_bytes, x.to_be_bytes());
     }
 
     #[test]
@@ -697,11 +714,10 @@ mod tests {
             }
         }
 
-        let mut imgbuf = image::ImageBuffer::new(WIDTH_PIXELS as u32, HEIGHT_PIXELS as u32);
+        let mut imgbuf = image::ImageBuffer::new(u32::from(WIDTH_PIXELS), u32::from(HEIGHT_PIXELS));
         for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-            let packed_pixel = video_device.buffer[(x + y * WIDTH_PIXELS as u32) as usize];
-            let (r, g, b) = unpack_rgb(packed_pixel);
-            *pixel = image::Rgb::from([r, g, b]);
+            let packed_pixel = video_device.buffer[(x + y * u32::from(WIDTH_PIXELS)) as usize];
+            *pixel = image::Rgb::from(<[u8; 3]>::from(unpack_rgb(packed_pixel)));
         }
 
         let mut png_buffer = Cursor::new(Vec::new());

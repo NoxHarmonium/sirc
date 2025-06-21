@@ -5,41 +5,41 @@ pub const PALETTE_1: [PpuPixel; 16] = [
     // The simulator hosts are little endian (or at least the library that provides
     // the from_bytes function is.)
     // Legend of which bits are for which colour: [gggbbbbb, xrrrrrgg]
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), //    (TRANSP_aren
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // ███ (BLACK__)
-    PpuPixel::from_bytes([0b11111111, 0b01111111]), // ███ (WHITE__)
-    PpuPixel::from_bytes([0b00000000, 0b01111100]), // ███ (RED____)
-    PpuPixel::from_bytes([0b11100000, 0b00000011]), // ███ (GREEN__)
-    PpuPixel::from_bytes([0b00011111, 0b00000000]), // ███ (BLUE___)
-    PpuPixel::from_bytes([0b11100000, 0b01111111]), // ███ (YELLOW_)
-    PpuPixel::from_bytes([0b11111111, 0b00000011]), // ███ (CYAN___)
-    PpuPixel::from_bytes([0b00011111, 0b01111100]), // ███ (magenta)
-    PpuPixel::from_bytes([0b10000000, 0b01111101]), // ███ (ORANGE_)
-    PpuPixel::from_bytes([0b00001100, 0b00110000]), // Purple
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // Reserved
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // Reserved
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // Reserved
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // Reserved
-    PpuPixel::from_bytes([0b00000000, 0b00000000]), // Reserved
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), //    (TRANSP_aren
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // ███ (BLACK__)
+    PpuPixel::from_bytes([0b1111_1111, 0b0111_1111]), // ███ (WHITE__)
+    PpuPixel::from_bytes([0b0000_0000, 0b0111_1100]), // ███ (RED____)
+    PpuPixel::from_bytes([0b1110_0000, 0b0000_0011]), // ███ (GREEN__)
+    PpuPixel::from_bytes([0b0001_1111, 0b0000_0000]), // ███ (BLUE___)
+    PpuPixel::from_bytes([0b1110_0000, 0b0111_1111]), // ███ (YELLOW_)
+    PpuPixel::from_bytes([0b1111_1111, 0b0000_0011]), // ███ (CYAN___)
+    PpuPixel::from_bytes([0b0001_1111, 0b0111_1100]), // ███ (magenta)
+    PpuPixel::from_bytes([0b1000_0000, 0b0111_1101]), // ███ (ORANGE_)
+    PpuPixel::from_bytes([0b0000_1100, 0b0011_0000]), // Purple
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // Reserved
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // Reserved
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // Reserved
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // Reserved
+    PpuPixel::from_bytes([0b0000_0000, 0b0000_0000]), // Reserved
 ];
 
-// Indexes into PALLETE_1
-pub const TRANSP_: u16 = 0;
-pub const BLACK__: u16 = 1;
-pub const WHITE__: u16 = 2;
-pub const RED____: u16 = 3;
-pub const GREEN__: u16 = 4;
-pub const BLUE___: u16 = 5;
-pub const YELLOW_: u16 = 6;
-pub const CYAN___: u16 = 7;
-pub const MAGENTA: u16 = 8;
-pub const ORANGE_: u16 = 9;
-pub const PURPLE_: u16 = 10;
+// Indexes into PALLETE_1 (should be 0-15)
+pub const TRANSP_: u8 = 0;
+pub const BLACK__: u8 = 1;
+pub const WHITE__: u8 = 2;
+pub const RED____: u8 = 3;
+pub const GREEN__: u8 = 4;
+pub const BLUE___: u8 = 5;
+pub const YELLOW_: u8 = 6;
+pub const CYAN___: u8 = 7;
+pub const MAGENTA: u8 = 8;
+pub const ORANGE_: u8 = 9;
+pub const PURPLE_: u8 = 10;
 
 /// 8x8 tiles for digits 0-9 (64 pixels each in big-endian 15-bit RGB)
 /// TODO: This is wrong! Each pixel is actually 4 bits so it should be a 8x8 array of u4 _OR_
 /// a 2x2 array of u16 with 4 pixels packed into each value? Anyway, fix this!
-pub const DIGIT_TILES: [[u16; 64]; 10] = [
+pub const DIGIT_TILES: [[u8; 64]; 10] = [
     // Digit 0 (WHITE__ on BLUE___)
     [
         WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__,
@@ -143,7 +143,7 @@ pub const DIGIT_TILES: [[u16; 64]; 10] = [
 ];
 
 /// Test patterns (8x8 tiles)
-pub const TEST_PATTERNS: [[u16; 64]; 10] = [
+pub const TEST_PATTERNS: [[u8; 64]; 10] = [
     // Checkerboard (B/W)
     [
         WHITE__, BLACK__, WHITE__, BLACK__, WHITE__, BLACK__, WHITE__, BLACK__, BLACK__, WHITE__,
