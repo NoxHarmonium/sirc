@@ -19,3 +19,7 @@ lto = true
 [profile.bench]
 inherits = "release"
 debug = true
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3

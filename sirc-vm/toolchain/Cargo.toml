@@ -20,7 +20,3 @@ sha2 = "0.10.8"
 [dev-dependencies]
 insta = { version = "1.43.1", features = ["yaml"] }
 pretty-hex = "0.4.1"
-
-[profile.dev.package]
-insta.opt-level = 3
-similar.opt-level = 3
