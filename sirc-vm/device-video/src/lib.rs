@@ -504,6 +504,7 @@ impl Device for VideoDevice {
 
         if self.line >= TOTAL_LINES {
             self.frame_count += 1;
+            self.line = 0;
             if self.window.is_open() {
                 // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
                 self.window
