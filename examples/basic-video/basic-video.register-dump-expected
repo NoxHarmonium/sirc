@@ -41,7 +41,7 @@ ExceptionUnitRegisters {
             return_status_register: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x20a,
+            return_address: 0x20e,
             return_status_register: 0x6,
         },
         ExceptionLinkRegister {
