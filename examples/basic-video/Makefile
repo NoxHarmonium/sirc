@@ -1,6 +1,6 @@
 # Makes the "basic-video" example binary file to be executed by the VM
 
-CARGO_ARGS=--manifest-path=../../sirc-vm/Cargo.toml --release
+CARGO_ARGS=--manifest-path=../../sirc-vm/Cargo.toml
 RUN_ARGS=-vv --program-file ./basic-video.bin --register-dump-file ./basic-video.register-dump --segment SCRATCH:00010000:FFFF --enable-video
 
 all: basic-video.bin
