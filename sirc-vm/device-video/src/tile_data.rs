@@ -130,16 +130,17 @@ pub const DIGIT_TILES: [[u8; 64]; 10] = [
         BLACK__, BLACK__, BLACK__, RED____, RED____, BLACK__, BLACK__, RED____, RED____, RED____,
         RED____, RED____, BLACK__, BLACK__,
     ],
-    // Digit 9 (GREEN__-Checker)
+    // Digit 9 (WHITE__ on BLACK__)
     [
-        BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__,
-        GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__,
-        BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__,
-        GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__,
-        GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__,
-        BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__,
-        GREEN__, BLACK__, GREEN__, BLACK__,
-    ],
+        TRANSP_, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, TRANSP_,
+        WHITE__, TRANSP_, TRANSP_, BLACK__, TRANSP_, TRANSP_, WHITE__, TRANSP_,
+        WHITE__, WHITE__, BLACK__, BLACK__, TRANSP_, TRANSP_, WHITE__, TRANSP_,
+        TRANSP_, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, BLACK__, TRANSP_,
+        TRANSP_, TRANSP_, TRANSP_, TRANSP_, TRANSP_, BLACK__, WHITE__, TRANSP_,
+        TRANSP_, TRANSP_, TRANSP_, TRANSP_, BLACK__, WHITE__, TRANSP_, TRANSP_,
+        TRANSP_, WHITE__, WHITE__, WHITE__, WHITE__, WHITE__, TRANSP_, TRANSP_,
+        TRANSP_, TRANSP_, TRANSP_, TRANSP_, TRANSP_, TRANSP_, TRANSP_, TRANSP_,
+    ]
 ];
 
 /// Test patterns (8x8 tiles)
@@ -204,15 +205,15 @@ pub const TEST_PATTERNS: [[u8; 64]; 10] = [
         BLACK__, BLACK__, BLACK__, BLACK__, GREEN__, BLACK__, RED____, BLACK__, BLACK__, BLACK__,
         BLACK__, BLACK__, BLACK__, RED____,
     ],
-    // Unused
+    // GREEN Checker
     [
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__, BLACK__,
-        BLACK__, BLACK__, BLACK__, BLACK__,
+        BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__,
+        GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__,
+        BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__,
+        GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__,
+        GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__,
+        BLACK__, GREEN__, BLACK__, GREEN__, BLACK__, BLACK__, GREEN__, BLACK__, GREEN__, BLACK__,
+        GREEN__, BLACK__, GREEN__, BLACK__,
     ],
     // Unused
     [
