@@ -34,6 +34,9 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
       # Currently separate until llvm-cov supports them
       - name: Run doctests
         run: cargo test --doc --verbose --all-features --workspace

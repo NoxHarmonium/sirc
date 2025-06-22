@@ -1,0 +1,6 @@
+---
+source: device-video/src/lib.rs
+expression: result
+extension: png
+snapshot_kind: binary
+---

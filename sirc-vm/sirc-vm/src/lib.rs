@@ -108,8 +108,9 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
 
         info!(
-                "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
-            );
+            "Register dump file argument provided. Dumping registers to [{}]...",
+            register_dump_file.display()
+        );
         if let Err(error) = dump_registers(&register_dump_file, cpu) {
             error!(
                 "There was an error dumping registers to [{}].\n{}",
@@ -143,8 +144,9 @@ pub fn run_vm(vm: &Vm, register_dump_file: Option<PathBuf>) {
         let cpu: &CpuPeripheral = cpu_from_bus(&mut bus_peripheral);
 
         info!(
-                "Register dump file argument provided. Dumping registers to [{register_dump_file:?}]..."
-            );
+            "Register dump file argument provided. Dumping registers to [{}]...",
+            register_dump_file.display()
+        );
         if let Err(error) = dump_registers(&register_dump_file, cpu) {
             error!(
                 "There was an error dumping registers to [{}].\n{}",
