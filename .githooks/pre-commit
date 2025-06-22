@@ -5,6 +5,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 pushd sirc-vm
+cargo fmt --all
 cargo build --release
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --verbose
