@@ -85,12 +85,8 @@ void MainWindow::setupPaletteView(const SircImage &sircImage) const {
   }
 }
 
-// Menu Actions
-
-void MainWindow::on_actionOpen_triggered() {
-  openedSourceFilename = QFileDialog::getOpenFileName(
-      this, tr("Open source file"), "/home",
-      tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
+void MainWindow::loadCurrentImage() const {
+  qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
   auto reader = QImageReader(openedSourceFilename);
   const auto pixmap = QPixmap::fromImageReader(&reader);
 
@@ -99,10 +95,7 @@ void MainWindow::on_actionOpen_triggered() {
                     Qt::FastTransformation);
 
   setupSourceImageView(scaledPixmap);
-
   const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
-
-  qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
 
   const auto paletteReductionBpp = getPaletteReductionBpp();
   const auto quantizer = MedianCutQuantizer();
@@ -113,8 +106,29 @@ void MainWindow::on_actionOpen_triggered() {
   setupPaletteView(quantizedImage);
 }
 
+// Menu Actions
+
+void MainWindow::on_actionOpen_triggered() {
+  openedSourceFilename = QFileDialog::getOpenFileName(
+      this, tr("Open source file"), "/home",
+      tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
+
+  auto *item = new QListWidgetItem(QFileInfo(openedSourceFilename).fileName());
+  item->setData(Qt::UserRole, openedSourceFilename);
+  ui->fileList->addItem(item);
+}
+
 void MainWindow::on_actionAbout_triggered() {
   auto *aboutDialog = new AboutDialog(this);
   aboutDialog->setModal(true);
   aboutDialog->show();
+}
+
+void MainWindow::on_fileList_itemSelectionChanged(
+    QListWidgetItem *current, [[maybe_unused]] QListWidgetItem *previous) {
+  if (current == nullptr) {
+    return;
+  }
+  openedSourceFilename = current->data(Qt::UserRole).toString();
+  loadCurrentImage();
 }

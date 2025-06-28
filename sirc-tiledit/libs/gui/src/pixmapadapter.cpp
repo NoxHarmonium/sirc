@@ -28,6 +28,7 @@ QColor qRgbFromSircColor(const SircColor sircColor) {
 
   return qColor;
 }
+// TODO: Export assembly
 
 SircImage PixmapAdapter::pixmapToSircImage(const QPixmap &qPixmap) {
   const auto image = qPixmap.toImage();

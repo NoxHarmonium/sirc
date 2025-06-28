@@ -6,7 +6,7 @@ A QT based GUI for manipulating tile data.
 
 I've been using Qt Creator to work on this project
 but it should be able to work in other IDEs that
-support clangd (although you wouldn't get the 
+support clangd (although you wouldn't get the
 UI editor)
 
 ```
