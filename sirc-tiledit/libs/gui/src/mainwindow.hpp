@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QListWidgetItem>
 #include <QMainWindow>
 #include <quantizer.hpp>
 #include <sircimage.hpp>
@@ -33,6 +34,9 @@ private slots:
   void on_actionOpen_triggered();
   void on_actionAbout_triggered();
 
+  void on_fileList_itemSelectionChanged(QListWidgetItem *current,
+                                        QListWidgetItem *previous);
+
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
 
@@ -41,6 +45,7 @@ private:
   void setupSourceImageView(const QPixmap &scaledPixmap) const;
   void setupTargetImageView(const SircImage &sircImage) const;
   void setupPaletteView(const SircImage &sircImage) const;
+  void loadCurrentImage() const;
 
   Ui::MainWindow *ui;
   QString openedSourceFilename;
