@@ -3,6 +3,8 @@
 #include "./ui_mainwindow.h"
 #include "aboutdialog.hpp"
 #include "mainwindow.hpp"
+
+#include "inputimage.hpp"
 #include "pixmapadapter.hpp"
 #include <mediancutquantizer.hpp>
 
@@ -86,6 +88,12 @@ void MainWindow::setupPaletteView(const SircImage &sircImage) const {
 }
 
 void MainWindow::loadCurrentImage() const {
+  if (openedImage.isNull()) {
+    return;
+  }
+
+  const auto openedSourceFilename = openedImage->file_info().filePath();
+
   qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
   auto reader = QImageReader(openedSourceFilename);
   const auto pixmap = QPixmap::fromImageReader(&reader);
@@ -97,6 +105,7 @@ void MainWindow::loadCurrentImage() const {
   setupSourceImageView(scaledPixmap);
   const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
 
+  // TODO: palette reduction BPP per item (associate struct with list item??)
   const auto paletteReductionBpp = getPaletteReductionBpp();
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage =
@@ -109,12 +118,16 @@ void MainWindow::loadCurrentImage() const {
 // Menu Actions
 
 void MainWindow::on_actionOpen_triggered() {
-  openedSourceFilename = QFileDialog::getOpenFileName(
+  auto openedSourceFilename = QFileDialog::getOpenFileName(
       this, tr("Open source file"), "/home",
       tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
 
-  auto *item = new QListWidgetItem(QFileInfo(openedSourceFilename).fileName());
-  item->setData(Qt::UserRole, openedSourceFilename);
+  const auto fileInfo = QFileInfo(openedSourceFilename);
+  const auto inputImage = QSharedPointer<InputImage>(
+      new InputImage(fileInfo, PaletteReductionBpp::None)
+      );
+  auto *item = new QListWidgetItem(fileInfo.fileName());
+  item->setData(Qt::UserRole, QVariant::fromValue(inputImage));
   ui->fileList->addItem(item);
 }
 
@@ -129,6 +142,6 @@ void MainWindow::on_fileList_itemSelectionChanged(
   if (current == nullptr) {
     return;
   }
-  openedSourceFilename = current->data(Qt::UserRole).toString();
+  openedImage = current->data(Qt::UserRole).value<QSharedPointer<InputImage>>();
   loadCurrentImage();
 }

@@ -1,12 +1,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "inputimage.hpp"
+
 #include <QListWidgetItem>
 #include <QMainWindow>
 #include <quantizer.hpp>
 #include <sircimage.hpp>
 
 QT_BEGIN_NAMESPACE
+
 namespace Ui {
 class MainWindow;
 } // namespace Ui
@@ -48,6 +51,6 @@ private:
   void loadCurrentImage() const;
 
   Ui::MainWindow *ui;
-  QString openedSourceFilename;
+  QSharedPointer<InputImage> openedImage;
 };
 #endif // MAINWINDOW_H
