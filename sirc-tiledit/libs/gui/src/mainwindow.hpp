@@ -40,6 +40,8 @@ private slots:
 
   void on_fileList_selectedItemChanged();
 
+  void on_paletteReductionOptions_currentIndexChanged(int index) const;
+
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
 

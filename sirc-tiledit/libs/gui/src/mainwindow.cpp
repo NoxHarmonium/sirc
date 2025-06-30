@@ -109,8 +109,7 @@ void MainWindow::loadCurrentImages() const {
     setupSourceImageView(scaledPixmap);
     const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
 
-    // TODO: palette reduction BPP per item (associate struct with list item??)
-    const auto paletteReductionBpp = getPaletteReductionBpp();
+    const auto paletteReductionBpp = openedImage->output_palette_reduction();
     const auto quantizer = MedianCutQuantizer();
     const auto quantizedImage =
         quantizer.quantize(sircImage, paletteReductionBpp);
@@ -160,4 +159,17 @@ void MainWindow::on_fileList_selectedItemChanged() {
         selectedItem->data(Qt::UserRole).value<QSharedPointer<InputImage>>());
     loadCurrentImages();
   }
+}
+
+void MainWindow::on_paletteReductionOptions_currentIndexChanged(
+    [[maybe_unused]] int index) const {
+  const auto selectedBpp = getPaletteReductionBpp();
+
+  for (auto openedImage : openedImages) {
+    if (openedImage == nullptr) {
+      continue;
+    }
+    openedImage->set_output_palette_reduction(selectedBpp);
+  }
+  loadCurrentImages();
 }
