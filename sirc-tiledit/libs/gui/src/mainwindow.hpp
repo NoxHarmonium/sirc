@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <quantizer.hpp>
 #include <sircimage.hpp>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
 
@@ -37,8 +38,7 @@ private slots:
   void on_actionOpen_triggered();
   void on_actionAbout_triggered();
 
-  void on_fileList_itemSelectionChanged(QListWidgetItem *current,
-                                        QListWidgetItem *previous);
+  void on_fileList_selectedItemChanged();
 
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
@@ -48,9 +48,9 @@ private:
   void setupSourceImageView(const QPixmap &scaledPixmap) const;
   void setupTargetImageView(const SircImage &sircImage) const;
   void setupPaletteView(const SircImage &sircImage) const;
-  void loadCurrentImage() const;
+  void loadCurrentImages() const;
 
   Ui::MainWindow *ui;
-  QSharedPointer<InputImage> openedImage;
+  std::vector<QSharedPointer<InputImage>> openedImages;
 };
 #endif // MAINWINDOW_H

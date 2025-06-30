@@ -4,8 +4,10 @@
 #include "aboutdialog.hpp"
 #include "mainwindow.hpp"
 
+#include "imagemerger.hpp"
 #include "inputimage.hpp"
 #include "pixmapadapter.hpp"
+#include <algorithm>
 #include <mediancutquantizer.hpp>
 
 constexpr int PALLETE_VIEW_ITEM_HEIGHT = 40;
@@ -87,32 +89,39 @@ void MainWindow::setupPaletteView(const SircImage &sircImage) const {
   }
 }
 
-void MainWindow::loadCurrentImage() const {
-  if (openedImage.isNull()) {
-    return;
+void MainWindow::loadCurrentImages() const {
+  auto quantizedImages = std::vector<SircImage>();
+  for (const auto &openedImage : openedImages) {
+    if (openedImage.isNull()) {
+      return;
+    }
+
+    const auto openedSourceFilename = openedImage->file_info().filePath();
+
+    qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
+    auto reader = QImageReader(openedSourceFilename);
+    const auto pixmap = QPixmap::fromImageReader(&reader);
+
+    const auto scaledPixmap =
+        pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS,
+                      Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
+
+    setupSourceImageView(scaledPixmap);
+    const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
+
+    // TODO: palette reduction BPP per item (associate struct with list item??)
+    const auto paletteReductionBpp = getPaletteReductionBpp();
+    const auto quantizer = MedianCutQuantizer();
+    const auto quantizedImage =
+        quantizer.quantize(sircImage, paletteReductionBpp);
+
+    quantizedImages.push_back(quantizedImage);
   }
 
-  const auto openedSourceFilename = openedImage->file_info().filePath();
+  auto mergedImage = ImageMerger::merge(quantizedImages);
 
-  qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
-  auto reader = QImageReader(openedSourceFilename);
-  const auto pixmap = QPixmap::fromImageReader(&reader);
-
-  const auto scaledPixmap =
-      pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS, Qt::KeepAspectRatioByExpanding,
-                    Qt::FastTransformation);
-
-  setupSourceImageView(scaledPixmap);
-  const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
-
-  // TODO: palette reduction BPP per item (associate struct with list item??)
-  const auto paletteReductionBpp = getPaletteReductionBpp();
-  const auto quantizer = MedianCutQuantizer();
-  const auto quantizedImage =
-      quantizer.quantize(sircImage, paletteReductionBpp);
-
-  setupTargetImageView(quantizedImage);
-  setupPaletteView(quantizedImage);
+  setupTargetImageView(mergedImage);
+  setupPaletteView(mergedImage);
 }
 
 // Menu Actions
@@ -124,8 +133,7 @@ void MainWindow::on_actionOpen_triggered() {
 
   const auto fileInfo = QFileInfo(openedSourceFilename);
   const auto inputImage = QSharedPointer<InputImage>(
-      new InputImage(fileInfo, PaletteReductionBpp::None)
-      );
+      new InputImage(fileInfo, PaletteReductionBpp::None));
   auto *item = new QListWidgetItem(fileInfo.fileName());
   item->setData(Qt::UserRole, QVariant::fromValue(inputImage));
   ui->fileList->addItem(item);
@@ -137,11 +145,19 @@ void MainWindow::on_actionAbout_triggered() {
   aboutDialog->show();
 }
 
-void MainWindow::on_fileList_itemSelectionChanged(
-    QListWidgetItem *current, [[maybe_unused]] QListWidgetItem *previous) {
-  if (current == nullptr) {
-    return;
+void MainWindow::on_fileList_selectedItemChanged() {
+  openedImages = std::vector<QSharedPointer<InputImage>>();
+  auto selectedItems = ui->fileList->selectedItems();
+  std::ranges::sort(selectedItems, [this](const QListWidgetItem *a,
+                                          const QListWidgetItem *b) {
+    return ui->fileList->indexFromItem(a) > ui->fileList->indexFromItem(b);
+  });
+  for (auto &selectedItem : selectedItems) {
+    if (selectedItem == nullptr) {
+      continue;
+    }
+    openedImages.push_back(
+        selectedItem->data(Qt::UserRole).value<QSharedPointer<InputImage>>());
+    loadCurrentImages();
   }
-  openedImage = current->data(Qt::UserRole).value<QSharedPointer<InputImage>>();
-  loadCurrentImage();
 }
