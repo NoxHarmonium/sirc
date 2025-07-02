@@ -4,6 +4,8 @@
 #include <png.h>
 
 #include <cassert>
+// ReSharper disable once CppUnusedIncludeDirective - needed for abort()
+#include <cstdlib>
 
 // Thanks to https://gist.github.com/niw/5963798 for the original code for this
 // file
