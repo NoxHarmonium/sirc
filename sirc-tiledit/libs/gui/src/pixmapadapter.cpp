@@ -56,8 +56,8 @@ QPixmap PixmapAdapter::sircImageToPixmap(const SircImage &sircImage) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       const auto paletteColor = pixelData[(x * WIDTH_PIXELS) + y];
-      assert(paletteColor < palette.size());
-      const auto sircColor = palette[paletteColor];
+      assert(paletteColor <= palette.size());
+      const auto sircColor = palette.size() == 0 ? 0 : palette[paletteColor];
 
       image.setPixelColor(x, y, qRgbFromSircColor(sircColor));
     }

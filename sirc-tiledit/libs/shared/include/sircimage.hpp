@@ -34,8 +34,7 @@ using IndexedPixelData = std::array<PaletteReference, TOTAL_PIXELS>;
  * only support max 4bpp (16 colors).
  */
 struct SircImage {
-  // Even an empty image needs a single palette entry
-  std::vector<SircColor> palette = {0};
+  std::vector<SircColor> palette;
   IndexedPixelData pixelData;
   bool operator==(const SircImage &) const = default;
 };
