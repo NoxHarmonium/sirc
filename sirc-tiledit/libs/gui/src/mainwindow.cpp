@@ -9,6 +9,7 @@
 #include "pixmapadapter.hpp"
 #include <algorithm>
 #include <mediancutquantizer.hpp>
+#include <ranges>
 
 constexpr int PALLETE_VIEW_ITEM_HEIGHT = 40;
 
@@ -98,7 +99,6 @@ void MainWindow::loadCurrentImages() const {
 
     const auto openedSourceFilename = openedImage->file_info().filePath();
 
-    qWarning("Opening file: %s", openedSourceFilename.toStdString().c_str());
     auto reader = QImageReader(openedSourceFilename);
     const auto pixmap = QPixmap::fromImageReader(&reader);
 
@@ -123,19 +123,60 @@ void MainWindow::loadCurrentImages() const {
   setupPaletteView(mergedImage);
 }
 
+// UI Manipulation
+void MainWindow::moveSelectedItems(const int offset) const {
+
+  auto selectedItems =
+      sortedSelectedItems(offset >= 0 ? Qt::SortOrder::AscendingOrder
+                                      : Qt::SortOrder::DescendingOrder);
+  for (QListWidgetItem *selectedItem : selectedItems) {
+    if (selectedItem == nullptr) {
+      continue;
+    }
+    const auto currentIndex = ui->fileList->indexFromItem(selectedItem);
+    const auto row = currentIndex.row();
+    if (const auto newRow = row + offset;
+        newRow < 0 || newRow >= ui->fileList->count()) {
+      return;
+    }
+    ui->fileList->takeItem(row);
+    ui->fileList->insertItem(row + offset, selectedItem);
+    selectedItem->setSelected(true);
+  }
+}
+
+QList<QListWidgetItem *> MainWindow::sortedSelectedItems() const {
+  return sortedSelectedItems(Qt::SortOrder::AscendingOrder);
+}
+
+QList<QListWidgetItem *>
+MainWindow::sortedSelectedItems(Qt::SortOrder sortOrder) const {
+  auto selectedItems = ui->fileList->selectedItems();
+  std::ranges::sort(selectedItems, [this, sortOrder](const QListWidgetItem *a,
+                                                     const QListWidgetItem *b) {
+    return sortOrder == Qt::SortOrder::AscendingOrder
+               ? ui->fileList->indexFromItem(a) > ui->fileList->indexFromItem(b)
+               : ui->fileList->indexFromItem(a) <
+                     ui->fileList->indexFromItem(b);
+  });
+  return selectedItems;
+}
+
 // Menu Actions
 
 void MainWindow::on_actionOpen_triggered() {
-  auto openedSourceFilename = QFileDialog::getOpenFileName(
+  auto openedSourceFilenames = QFileDialog::getOpenFileNames(
       this, tr("Open source file"), "/home",
       tr("Images (*.png *.xpm *.jpg *.gif *.tif)"));
 
-  const auto fileInfo = QFileInfo(openedSourceFilename);
-  const auto inputImage = QSharedPointer<InputImage>(
-      new InputImage(fileInfo, PaletteReductionBpp::None));
-  auto *item = new QListWidgetItem(fileInfo.fileName());
-  item->setData(Qt::UserRole, QVariant::fromValue(inputImage));
-  ui->fileList->addItem(item);
+  for (const auto &openedSourceFilename : openedSourceFilenames) {
+    const auto fileInfo = QFileInfo(openedSourceFilename);
+    const auto inputImage = QSharedPointer<InputImage>(
+        new InputImage(fileInfo, PaletteReductionBpp::None));
+    auto *item = new QListWidgetItem(fileInfo.fileName());
+    item->setData(Qt::UserRole, QVariant::fromValue(inputImage));
+    ui->fileList->addItem(item);
+  }
 }
 
 void MainWindow::on_actionAbout_triggered() {
@@ -144,21 +185,19 @@ void MainWindow::on_actionAbout_triggered() {
   aboutDialog->show();
 }
 
-void MainWindow::on_fileList_selectedItemChanged() {
+// Input Image Configuration
+
+void MainWindow::on_fileList_itemSelectionChanged() {
   openedImages = std::vector<QSharedPointer<InputImage>>();
-  auto selectedItems = ui->fileList->selectedItems();
-  std::ranges::sort(selectedItems, [this](const QListWidgetItem *a,
-                                          const QListWidgetItem *b) {
-    return ui->fileList->indexFromItem(a) > ui->fileList->indexFromItem(b);
-  });
+  auto selectedItems = sortedSelectedItems();
   for (auto &selectedItem : selectedItems) {
     if (selectedItem == nullptr) {
       continue;
     }
     openedImages.push_back(
         selectedItem->data(Qt::UserRole).value<QSharedPointer<InputImage>>());
-    loadCurrentImages();
   }
+  loadCurrentImages();
 }
 
 void MainWindow::on_paletteReductionOptions_currentIndexChanged(
@@ -172,4 +211,12 @@ void MainWindow::on_paletteReductionOptions_currentIndexChanged(
     openedImage->set_output_palette_reduction(selectedBpp);
   }
   loadCurrentImages();
+}
+
+void MainWindow::on_moveFileListSelectionUp_clicked() const {
+  moveSelectedItems(-1);
+}
+
+void MainWindow::on_moveFileListSelectionDown_clicked() const {
+  moveSelectedItems(1);
 }

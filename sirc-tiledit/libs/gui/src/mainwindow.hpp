@@ -38,9 +38,11 @@ private slots:
   void on_actionOpen_triggered();
   void on_actionAbout_triggered();
 
-  void on_fileList_selectedItemChanged();
-
+  // Input Image Configuration
+  void on_fileList_itemSelectionChanged();
   void on_paletteReductionOptions_currentIndexChanged(int index) const;
+  void on_moveFileListSelectionUp_clicked() const;
+  void on_moveFileListSelectionDown_clicked() const;
 
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
@@ -51,6 +53,11 @@ private:
   void setupTargetImageView(const SircImage &sircImage) const;
   void setupPaletteView(const SircImage &sircImage) const;
   void loadCurrentImages() const;
+
+  // UI Manipulation
+  QList<QListWidgetItem *> sortedSelectedItems() const;
+  QList<QListWidgetItem *> sortedSelectedItems(Qt::SortOrder sortOrder) const;
+  void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
   std::vector<QSharedPointer<InputImage>> openedImages;
