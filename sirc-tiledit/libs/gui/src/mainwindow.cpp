@@ -154,10 +154,10 @@ MainWindow::sortedSelectedItems(Qt::SortOrder sortOrder) const {
   auto selectedItems = ui->fileList->selectedItems();
   std::ranges::sort(selectedItems, [this, sortOrder](const QListWidgetItem *a,
                                                      const QListWidgetItem *b) {
-    return sortOrder == Qt::SortOrder::AscendingOrder
-               ? ui->fileList->indexFromItem(a) > ui->fileList->indexFromItem(b)
-               : ui->fileList->indexFromItem(a) <
-                     ui->fileList->indexFromItem(b);
+    const int rowA = ui->fileList->row(a);
+    const int rowB = ui->fileList->row(b);
+    return sortOrder == Qt::SortOrder::AscendingOrder ? rowA > rowB
+                                                      : rowA < rowB;
   });
   return selectedItems;
 }
