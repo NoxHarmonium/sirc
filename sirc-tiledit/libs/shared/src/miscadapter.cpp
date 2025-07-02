@@ -16,14 +16,14 @@ SircImage MiscAdapter::packedSircPixelDataToSircImage(
       if (auto existingPaletteIndex = paletteLookup.find(pixel);
           existingPaletteIndex != paletteLookup.end()) {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-        imageData.pixelData[(x * WIDTH_PIXELS) + y] =
+        imageData.pixelData[x * WIDTH_PIXELS + y] =
             existingPaletteIndex->second;
       } else {
         imageData.palette.push_back(pixel);
         auto paletteIndex = imageData.palette.size() - 1;
         paletteLookup.insert({pixel, paletteIndex});
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-        imageData.pixelData[(x * WIDTH_PIXELS) + y] = paletteIndex;
+        imageData.pixelData[x * WIDTH_PIXELS + y] = paletteIndex;
       }
     }
   }

@@ -4,7 +4,6 @@
 #include <png.h>
 
 #include <cassert>
-#include <cstdlib>
 
 // Thanks to https://gist.github.com/niw/5963798 for the original code for this
 // file
@@ -129,8 +128,8 @@ RgbaPixelData ImageLoader::loadImageFromPng(const char *filename) {
     const auto *const row = y >= HEIGHT_PIXELS ? nullptr : row_pointers[y];
 
     for (size_t x = 0; x < width; x++) {
-      auto const *px = row == nullptr || x >= WIDTH_PIXELS ? &(emptyPixelPtr[0])
-                                                           : &(row[x * 4]);
+      auto const *px =
+          row == nullptr || x >= WIDTH_PIXELS ? &emptyPixelPtr[0] : &row[x * 4];
       output[x][y] =
           static_cast<uint32_t>(px[0] << 24 | px[1] << 16 | px[2] << 8 | px[3]);
     }
@@ -209,7 +208,7 @@ void ImageLoader::saveImageToPng(const char *filename,
     auto *const row = row_pointers[y];
     for (size_t x = 0; x < WIDTH_PIXELS; x++) {
       const auto pixel = data[x][y];
-      auto *const bytes = &(row[x * 4]);
+      auto *const bytes = &row[x * 4];
       bytes[0] = pixel >> 24 & 0xFF;
       bytes[1] = pixel >> 16 & 0xFF;
       bytes[2] = pixel >> 8 & 0xFF;

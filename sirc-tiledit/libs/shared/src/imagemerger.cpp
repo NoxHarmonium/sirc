@@ -1,7 +1,3 @@
-//
-// Created by Sean Dawson on 29/6/2025.
-//
-
 #include <imagemerger.hpp>
 
 #include <algorithm>
@@ -14,7 +10,7 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
   if (inputImages.empty()) {
     return result;
   }
-  auto firstImageSize = inputImages.front().pixelData.size();
+  const auto firstImageSize = inputImages.front().pixelData.size();
 
   for (auto sourceImage : inputImages) {
     if (sourceImage.pixelData.size() != firstImageSize) {
@@ -28,14 +24,15 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
                    sourceImage.pixelData.cbegin(), result.pixelData.begin(),
                    [result, sourceImage, paletteOffset](
                        const SircColor &current, const SircColor &candidate) {
-                     auto resolvedCurrent = result.palette[current];
-                     auto resolvedCandidate = sourceImage.palette[candidate];
+                     const auto resolvedCurrent = result.palette[current];
+                     const auto resolvedCandidate =
+                         sourceImage.palette[candidate];
                      // Only update if current pixel is transparent (0)
                      // and candidate is non-transparent
                      if (resolvedCurrent == 0 && resolvedCandidate != 0) {
                        return static_cast<SircColor>(candidate + paletteOffset);
                      }
-                     return current; // Keep existing valu
+                     return current; // Keep existing value
                    });
   }
 

@@ -2,7 +2,6 @@
 #define IMAGEPROCESSOR_H
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
@@ -16,8 +15,7 @@ constexpr int MAX_PALETTE_SIZE = 256;
 
 // SIRC uses a packed 16 bit color RGB (5bpp)
 constexpr unsigned int SIRC_COLOR_COMPONENT_BITS = 5;
-constexpr unsigned int SIRC_COLOR_RANGE =
-    (1 << (SIRC_COLOR_COMPONENT_BITS)) - 1;
+constexpr unsigned int SIRC_COLOR_RANGE = (1 << SIRC_COLOR_COMPONENT_BITS) - 1;
 
 using SircColor = uint16_t;
 using SircColorComponent = uint8_t;

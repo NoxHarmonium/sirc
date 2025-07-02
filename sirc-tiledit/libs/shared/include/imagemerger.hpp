@@ -1,7 +1,3 @@
-//
-// Created by Sean Dawson on 29/6/2025.
-//
-
 #ifndef IMAGEMERGER_HPP
 #define IMAGEMERGER_HPP
 
