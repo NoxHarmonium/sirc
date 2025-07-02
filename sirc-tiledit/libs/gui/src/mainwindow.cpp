@@ -139,9 +139,11 @@ void MainWindow::moveSelectedItems(const int offset) const {
         newRow < 0 || newRow >= ui->fileList->count()) {
       return;
     }
-    ui->fileList->takeItem(row);
-    ui->fileList->insertItem(row + offset, selectedItem);
-    selectedItem->setSelected(true);
+    auto *const taken = ui->fileList->takeItem(row);
+    if (taken) {
+      ui->fileList->insertItem(row + offset, selectedItem);
+      selectedItem->setSelected(true);
+    }
   }
 }
 
