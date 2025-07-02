@@ -13,6 +13,17 @@ shared_test_source_files = [
 # Tests
 
 test(
+    'ImageMerger',
+    executable(
+        'imagemerger',
+        'imagemerger.test.cpp',
+        shared_test_source_files,
+        include_directories : shared_library_include_files,
+        link_with : shared_lib,
+    ),
+)
+
+test(
     'MedianCutQuantizer',
     executable(
         'mediancutquantizer',

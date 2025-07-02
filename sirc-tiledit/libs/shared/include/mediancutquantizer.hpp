@@ -10,7 +10,7 @@
  * @see
  * https://gowtham000.hashnode.dev/median-cut-a-popular-colour-quantization-strategy
  */
-class MedianCutQuantizer : public Quantizer {
+class MedianCutQuantizer final : public Quantizer {
 public:
   MedianCutQuantizer() = default;
 

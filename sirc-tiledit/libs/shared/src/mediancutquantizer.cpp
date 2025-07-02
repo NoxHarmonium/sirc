@@ -53,7 +53,7 @@ SircColorComponent findRangeOfChannel(const std::span<const SircColor> &palette,
                                       const ImageChannel channel) {
 
   std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
-  auto [min, max] = minmax_element(p.begin(), p.end());
+  auto [min, max] = std::ranges::minmax_element(p.begin(), p.end());
   return *max - *min;
 }
 

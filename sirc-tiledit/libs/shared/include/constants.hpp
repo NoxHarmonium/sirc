@@ -1,9 +1,3 @@
-#include <cstddef>
-
-//
-// Created by Sean Dawson on 27/6/2024.
-//
-
 #ifndef CONSTANTS_HPP
 #define CONSTANTS_HPP
 
