@@ -24,17 +24,19 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
     result.palette.insert(result.palette.cend(), sourceImage.palette.cbegin(),
                           sourceImage.palette.cend());
 
-    std::transform(
-        result.pixelData.cbegin(), result.pixelData.cend(),
-        sourceImage.pixelData.cbegin(), result.pixelData.begin(),
-        [paletteOffset](const SircColor &current, const SircColor &candidate) {
-          // Only update if current pixel is transparent (0)
-          // and candidate is non-transparent
-          if (current == 0 && candidate != 0) {
-            return static_cast<SircColor>(candidate + paletteOffset);
-          }
-          return current; // Keep existing valu
-        });
+    std::transform(result.pixelData.cbegin(), result.pixelData.cend(),
+                   sourceImage.pixelData.cbegin(), result.pixelData.begin(),
+                   [result, sourceImage, paletteOffset](
+                       const SircColor &current, const SircColor &candidate) {
+                     auto resolvedCurrent = result.palette[current];
+                     auto resolvedCandidate = sourceImage.palette[candidate];
+                     // Only update if current pixel is transparent (0)
+                     // and candidate is non-transparent
+                     if (resolvedCurrent == 0 && resolvedCandidate != 0) {
+                       return static_cast<SircColor>(candidate + paletteOffset);
+                     }
+                     return current; // Keep existing valu
+                   });
   }
 
   return result;
