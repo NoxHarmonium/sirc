@@ -45,7 +45,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     // Originally from compiling the byte-sieve example with `make all`
     let mut binary_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     binary_path.push("benches/byte-sieve.bin");
-    println!("program binary path: [{:?}]", binary_path);
+    println!("program binary path: [{}]", binary_path.display());
     let program = fs::read(binary_path).unwrap();
     let mut group = c.benchmark_group("byte-sieve");
     group.sampling_mode(SamplingMode::Flat);
