@@ -12,28 +12,34 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
   }
   const auto firstImageSize = inputImages.front().pixelData.size();
 
-  for (auto sourceImage : inputImages) {
-    if (sourceImage.pixelData.size() != firstImageSize) {
+  for (const auto &[palette, pixelData] : inputImages) {
+    if (pixelData.size() != firstImageSize) {
       throw std::invalid_argument("All input images must be the same size");
     }
-    auto paletteOffset = result.palette.size();
-    result.palette.insert(result.palette.cend(), sourceImage.palette.cbegin(),
-                          sourceImage.palette.cend());
 
-    std::transform(result.pixelData.cbegin(), result.pixelData.cend(),
-                   sourceImage.pixelData.cbegin(), result.pixelData.begin(),
-                   [result, sourceImage, paletteOffset](
-                       const SircColor &current, const SircColor &candidate) {
-                     const auto resolvedCurrent = result.palette[current];
-                     const auto resolvedCandidate =
-                         sourceImage.palette[candidate];
-                     // Only update if current pixel is transparent (0)
-                     // and candidate is non-transparent
-                     if (resolvedCurrent == 0 && resolvedCandidate != 0) {
-                       return static_cast<SircColor>(candidate + paletteOffset);
-                     }
-                     return current; // Keep existing value
-                   });
+    auto const resultPalette = result.palette;
+    auto const sourceImagePalette = palette;
+    // TODO: Do some benchmarking around this function to see what the optimum
+    // order of operations is
+    //       (E.g. maybe iterating over each input images at once could be
+    //       faster than a pass for each input image)
+    std::transform(
+        result.pixelData.cbegin(), result.pixelData.cend(), pixelData.cbegin(),
+        result.pixelData.begin(),
+        [resultPalette, sourceImagePalette](const PaletteReference &current,
+                                            const PaletteReference &candidate) {
+          // Only update if candidate is non-transparent
+          if (const auto resolvedCandidate = sourceImagePalette[candidate];
+              resolvedCandidate != 0) {
+            const auto paletteOffset = resultPalette.size();
+            return candidate + paletteOffset;
+          }
+          return current; // Keep existing value
+        });
+
+    // Insert the palette after
+    result.palette.insert(result.palette.cend(), palette.cbegin(),
+                          palette.cend());
   }
 
   return result;
