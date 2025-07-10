@@ -1,11 +1,16 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "inputimage.hpp"
+
+#include <QListWidgetItem>
 #include <QMainWindow>
 #include <quantizer.hpp>
 #include <sircimage.hpp>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
+
 namespace Ui {
 class MainWindow;
 } // namespace Ui
@@ -33,6 +38,12 @@ private slots:
   void on_actionOpen_triggered();
   void on_actionAbout_triggered();
 
+  // Input Image Configuration
+  void on_fileList_itemSelectionChanged();
+  void on_paletteReductionOptions_currentIndexChanged(int index) const;
+  void on_moveFileListSelectionUp_clicked() const;
+  void on_moveFileListSelectionDown_clicked() const;
+
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
 
@@ -41,8 +52,14 @@ private:
   void setupSourceImageView(const QPixmap &scaledPixmap) const;
   void setupTargetImageView(const SircImage &sircImage) const;
   void setupPaletteView(const SircImage &sircImage) const;
+  void loadCurrentImages() const;
+
+  // UI Manipulation
+  QList<QListWidgetItem *> sortedSelectedItems() const;
+  QList<QListWidgetItem *> sortedSelectedItems(Qt::SortOrder sortOrder) const;
+  void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
-  QString openedSourceFilename;
+  std::vector<QSharedPointer<InputImage>> openedImages;
 };
 #endif // MAINWINDOW_H

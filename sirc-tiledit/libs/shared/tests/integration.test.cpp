@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <filesystem>
-#include <vector>
 
 #include "catch2/catch_amalgamated.hpp"
 
