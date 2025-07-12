@@ -16,6 +16,7 @@
         <option name="profiles">
           <MesonProfile>
             <option name="buildDir" value="build" />
+            <option name="mesonExecutable" value="$USER_HOME$/.asdf/installs/meson/1.4.1/bin/meson" />
             <option name="toolchainName" value="Default" />
           </MesonProfile>
         </option>
