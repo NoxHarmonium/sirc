@@ -37,7 +37,7 @@ pub fn print_data_token(data_token: &DataToken) -> String {
         DataType::SymbolRef(ref_token) => match ref_token.ref_type {
             RefType::FullAddress => print_ref_token(ref_token),
             _ => panic!(
-                "Only FullAddress reference type is valid for data tokens. Got [{:?}]",
+                "Only the FullAddress reference type is valid for data tokens. Got [{:?}]",
                 ref_token.ref_type
             ),
         },
