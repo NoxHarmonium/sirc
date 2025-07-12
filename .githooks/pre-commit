@@ -4,9 +4,20 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-pushd sirc-vm
-cargo fmt --all
-cargo build --release
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --verbose
-popd
+function pre_commit_sirc_vm {
+    pushd sirc-vm
+    cargo fmt --all
+    cargo build --release
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo test --verbose
+    popd
+}
+
+CHANGED_FILES=$(git diff --cached --name-only)
+
+echo "$CHANGED_FILES"
+
+if echo "$CHANGED_FILES" | grep --quiet "^sirc-vm"
+then
+    pre_commit_sirc_vm
+fi
