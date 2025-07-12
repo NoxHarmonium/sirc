@@ -10,10 +10,16 @@ support clangd (although you wouldn't get the
 UI editor)
 
 ```
+# or ./setup-macos.sh if you want to use homebrew llvm
 $ meson setup build
+
 $ cd build
 $ meson compile
 $ meson test
+
+# You need to compile before these steps, otherwise the qt generated headers won't be there
+$ ninja clang-tidy
+$ ninja clang-format-check
 ```
 
 # Roadmap
