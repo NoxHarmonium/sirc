@@ -8,3 +8,6 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 toolchain = { path = "../toolchain" }
+
+[build-dependencies]
+cbindgen = "0.29.0"
