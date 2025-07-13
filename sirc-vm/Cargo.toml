@@ -11,6 +11,7 @@ members = [
     "peripheral-cpu",
     "sirc-vm",
     "toolchain",
+    "toolchain-interop",
 ]
 
 [profile.release]
