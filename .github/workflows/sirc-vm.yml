@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: cargo build --verbose --release
 
+      - name: Check if changes to toolchain-interop header
+        run: git diff --quiet toolchain-interop/include/sirc_toolchain_interop.h
+
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
