@@ -16,6 +16,8 @@
       <sourceFolder url="file://$MODULE_DIR$/toolchain/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/toolchain/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/device-video/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/toolchain-interop/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/toolchain-interop/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

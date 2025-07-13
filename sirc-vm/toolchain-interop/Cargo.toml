@@ -1,0 +1,13 @@
+[package]
+name = "toolchain_interop"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+toolchain = { path = "../toolchain" }
+
+[build-dependencies]
+cbindgen = "0.29.0"

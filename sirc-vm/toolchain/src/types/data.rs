@@ -18,20 +18,20 @@ pub struct RefToken {
     pub ref_type: RefType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum DataType {
     Value(NumberToken),
     SymbolRef(RefToken),
     PlaceHolder(String),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DataToken {
     pub size_bytes: u8,
     pub value: DataType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EquToken {
     pub placeholder_name: String,
     pub number_token: NumberToken,
