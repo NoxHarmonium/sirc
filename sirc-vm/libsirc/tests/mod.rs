@@ -15,7 +15,7 @@
 )]
 #![deny(warnings)]
 
-use toolchain_interop::{CTilemap, free_str, tilemap_to_str};
+use libsirc::{CTilemap, free_str, tilemap_to_str};
 
 #[test]
 fn test_tilemap_to_str() {

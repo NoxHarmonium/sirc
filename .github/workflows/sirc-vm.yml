@@ -32,8 +32,8 @@ jobs:
         run: cargo build --verbose --release
 
       # If this step fails, just run cargo build and make sure you check that file into git
-      - name: Check if changes to toolchain-interop header
-        run: git diff --quiet toolchain-interop/include/sirc_toolchain_interop.h
+      - name: Check if changes to libsirc header
+        run: git diff --quiet libsirc/include/libsirc.h
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
