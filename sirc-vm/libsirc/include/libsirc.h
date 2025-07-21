@@ -28,7 +28,14 @@ extern "C" {
 ///
 /// Useful when you want to embed tilemap data in a program, which is probably the simplest way to
 /// do it at the moment (although it might be possible to just link in a raw binary file).
-char *tilemap_to_str(CTilemap tilemap);
+///
+/// # Safety
+///
+/// The arguments passed to this function should be properly initialised and point to valid memory
+/// They will not be modified by this function.
+/// The string returned by this function is owned by the rust code and must be freed by the free_str function.
+char *tilemap_to_str(const char *label_name,
+                     CTilemap tilemap);
 
 /// Frees a string returned by one of the rust functions in this file.
 ///

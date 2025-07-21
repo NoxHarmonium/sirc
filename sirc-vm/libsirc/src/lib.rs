@@ -1,9 +1,9 @@
 /// This crate isolates FFI functions from the rest of the workspace to keep everything tidy
-use std::ffi::c_char;
+use std::ffi::{c_char, CStr};
 use std::slice;
 use toolchain::printers::shared::print_tokens;
 use toolchain::types::data::{DataToken, DataType};
-use toolchain::types::shared::{NumberToken, NumberType, Token};
+use toolchain::types::shared::{LabelToken, NumberToken, NumberType, Token};
 
 #[repr(C)]
 pub struct CTilemap {
@@ -33,16 +33,25 @@ fn slice_to_data_tokens(x: &[u16]) -> Vec<Token> {
 ///
 /// Useful when you want to embed tilemap data in a program, which is probably the simplest way to
 /// do it at the moment (although it might be possible to just link in a raw binary file).
+///
+/// # Safety
+///
+/// The arguments passed to this function should be properly initialised and point to valid memory
+/// They will not be modified by this function.
+/// The string returned by this function is owned by the rust code and must be freed by the free_str function.
 #[unsafe(no_mangle)]
-pub extern "C" fn tilemap_to_str(tilemap: CTilemap) -> *mut c_char {
+pub unsafe extern "C" fn tilemap_to_str(label_name: *const c_char, tilemap: CTilemap) -> *mut c_char {
+    assert!(!label_name.is_null());
+    let owned_label_name = unsafe { CStr::from_ptr(label_name).to_string_lossy().into_owned() };
     let packed_pixel_data = if tilemap.packed_pixel_data.is_null() {
         &[]
     } else {
         unsafe { slice::from_raw_parts(tilemap.packed_pixel_data, tilemap.packed_pixel_data_len) }
     };
+
     let pixel_tokens = slice_to_data_tokens(packed_pixel_data);
     let palette_tokens = slice_to_data_tokens(&tilemap.palette);
-    let all_tokens = [pixel_tokens, palette_tokens].concat();
+    let all_tokens = [vec![Token::Label(LabelToken { name: owned_label_name })], pixel_tokens, palette_tokens].concat();
     let output_string = print_tokens(&all_tokens);
 
     let c_str = std::ffi::CString::new(output_string).unwrap();
