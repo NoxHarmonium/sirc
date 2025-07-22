@@ -32,7 +32,10 @@ if fs.is_dir('third-party/libsirc/include')
 endif
 libsirc_dep = declare_dependency(dependencies : cc.find_library(
                                      'sirc',
-                                     dirs : [join_paths(meson.project_source_root(), 'third-party/libsirc/lib')],
+                                     dirs : [
+                                        join_paths(meson.project_source_root(), 'third-party/libsirc/lib'),
+                                        join_paths(meson.project_source_root(), 'third-party/libsirc/lib/x86_64-linux-gnu'),
+                                        ],
                                      required : false
                                  ),
                                  include_directories : libsirc_inc)
