@@ -2,10 +2,6 @@ name: SIRC Tiledit
 
 # TODO: Only run when sirc-tiledit directory has changes
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
   workflow_call:
 
 defaults:

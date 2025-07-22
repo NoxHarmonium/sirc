@@ -11,14 +11,12 @@ env:
   RUSTFLAGS: "--deny warnings"
 
 jobs:
-  sirc-vm:
-    uses: ./.github/workflows/sirc-vm.yml
   sirc-tiledit:
     uses: ./.github/workflows/sirc-tiledit.yml
   upload-to-codecov:
     name: Upload Coverage
     runs-on: ubuntu-latest
-    needs: [sirc-vm, sirc-tiledit]
+    needs: [sirc-tiledit]
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
