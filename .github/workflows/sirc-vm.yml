@@ -34,10 +34,6 @@ jobs:
       - name: Build
         run: cargo build --verbose --release
 
-      # If this step fails, just run cargo build and make sure you check that file into git
-      - name: Check if changes to libsirc header
-        run: git diff --quiet libsirc/include/libsirc.h
-
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
@@ -53,10 +49,19 @@ jobs:
       - name: Run tests
         run: cargo llvm-cov --verbose --all-targets --all-features --workspace --codecov --output-path codecov-main.json
 
+      - name: Generate libsirc
+        run: cargo cinstall --meson-paths --prefix=/ --destdir=./libsirc-out
+
       - uses: actions/upload-artifact@v4
         with:
           name: codecov-main
           path: ./sirc-vm/codecov-main.json
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libsirc
+          path: ./libsirc-out
           if-no-files-found: error
 
   examples:
