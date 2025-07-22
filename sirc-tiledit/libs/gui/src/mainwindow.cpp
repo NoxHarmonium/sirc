@@ -8,7 +8,6 @@
 #include "imagemerger.hpp"
 #include "inputimage.hpp"
 #include "pixmapadapter.hpp"
-#include "third-party/libsirc/include/libsirc/libsirc.h"
 
 #include <algorithm>
 #include <iostream>
