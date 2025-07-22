@@ -30,15 +30,23 @@ libsirc_inc = []
 if fs.is_dir('third-party/libsirc/include')
     libsirc_inc += include_directories('third-party/libsirc/include')
 endif
+if fs.is_dir('/usr/local/include/libsirc')
+    libsirc_inc += include_directories('/usr/local/include/libsirc')
+endif
 libsirc_dep = declare_dependency(dependencies : cc.find_library(
                                      'sirc',
                                      dirs : [
-                                        join_paths(meson.project_source_root(), 'third-party/libsirc/lib'),
-                                        join_paths(meson.project_source_root(), 'third-party/libsirc/lib/x86_64-linux-gnu'),
+                                        join_paths(meson.global_source_root(), 'third-party/libsirc/lib'),
+                                        join_paths(meson.global_source_root(), 'third-party/libsirc/lib/x86_64-linux-gnu'),
+                                        '/usr/local/lib/x86_64-linux-gnu',  # Debian/Ubuntu multiarch
+                                        '/usr/local/lib',                    # Standard Unix
+                                        '/usr/lib/x86_64-linux-gnu',         # System-wide multiarch
+                                        '/usr/lib'                           # System-wide
                                         ],
                                      required : false
                                  ),
                                  include_directories : libsirc_inc)
+
 
 gui_project_dependencies = [qt6_dep, libsirc_dep]
 gui_source_files = [
