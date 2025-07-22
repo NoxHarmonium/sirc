@@ -27,14 +27,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: >
-            codecov-basic-video/codecov-*.json,
-            codecov-boring/codecov-*.json,
-            codecov-byte-sieve/codecov-*.json,
-            codecov-faults/codecov-*.json,
-            codecov-hardware-exception/codecov-*.json,
-            codecov-main/codecov-*.json,
-            codecov-software-exception/codecov-*.json,
-            codecov-store-load/codecov-*.json,
-            coverage.xml
+          files: codecov-*.json,coverage.xml
           fail_ci_if_error: true
