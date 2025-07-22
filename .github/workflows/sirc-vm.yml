@@ -35,7 +35,7 @@ jobs:
           path: ./sirc-vm/libsirc-out
           if-no-files-found: error
   lint:
-    name: sirc-vm - Build libsirc
+    name: sirc-vm - Linting
     runs-on: ubuntu-latest
 
     steps:
