@@ -61,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: libsirc
-          path: ./libsirc-out
+          path: ./sirc-vm/libsirc-out
           if-no-files-found: error
 
   examples:
