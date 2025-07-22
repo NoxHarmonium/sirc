@@ -268,9 +268,6 @@ impl Executor for ExceptionUnitExecutor {
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
-        // TODO: Implement faults
-        // TODO: P5 interrupts should be edge triggered and if one is triggered while another is being serviced, it should be a fault
-
         trace!(
             "PHASE '{phase:?}' :: FAULT '{:?}'",
             eu_registers.pending_fault
