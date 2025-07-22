@@ -3,15 +3,15 @@
 resolver = "2"
 
 members = [
+    "libsirc",
+    "toolchain",
+    "sirc-vm",
+    "peripheral-bus",
+    "peripheral-cpu",
     "device-debug",
     "device-ram",
     "device-terminal",
     "device-video",
-    "peripheral-bus",
-    "peripheral-cpu",
-    "sirc-vm",
-    "toolchain",
-    "libsirc",
 ]
 
 [profile.release]

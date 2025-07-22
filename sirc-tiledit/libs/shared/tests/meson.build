@@ -1,5 +1,5 @@
 conf = configuration_data()
-conf.set_quoted('TEST_ROOT', meson.source_root() / 'libs/shared/tests')
+conf.set_quoted('TEST_ROOT', meson.global_source_root() / 'libs/shared/tests')
 configure_file(
     output : 'testconfig.h',
     configuration : conf

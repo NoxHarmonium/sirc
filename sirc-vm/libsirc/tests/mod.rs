@@ -15,8 +15,8 @@
 )]
 #![deny(warnings)]
 
-use std::ffi::{CString};
-use libsirc::{CTilemap, free_str, tilemap_to_str};
+use libsirc::capi::{CTilemap, free_str, tilemap_to_str};
+use std::ffi::CString;
 
 #[test]
 fn test_tilemap_to_str() {

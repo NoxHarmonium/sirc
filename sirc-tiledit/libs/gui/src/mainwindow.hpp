@@ -37,6 +37,7 @@ private slots:
   // Menu Actions
   void on_actionOpen_triggered();
   void on_actionAbout_triggered();
+  void on_actionExportAsm_triggered();
 
   // Input Image Configuration
   void on_fileList_itemSelectionChanged();

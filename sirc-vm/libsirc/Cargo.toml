@@ -1,13 +1,37 @@
 [package]
 name = "libsirc"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [lib]
-crate-type = ["lib", "cdylib"]
+name = "libsirc"
+
+[features]
+capi = []
 
 [dependencies]
 toolchain = { path = "../toolchain" }
 
 [build-dependencies]
 cbindgen = "0.29.0"
+
+[package.metadata.capi]
+# Configures the minimum required cargo-c version. Trying to run with an
+# older version causes an error.
+min_version = "0.10.14"
+[package.metadata.capi.header]
+# Used as header file name. By default this is equal to the crate name.
+# The name can be with or without the header filename extension `.h`
+name = "libsirc"
+[package.metadata.capi.pkg_config]
+# Used as the package name in the pkg-config file and defaults to the crate name.
+name = "libsirc"
+# Used as the package description in the pkg-config file and defaults to the crate description.
+description = "Public FFI interface for the SIRC toolchain and simulator."
+[package.metadata.capi.library]
+# Used as the library name and defaults to the crate name. This might get
+# prefixed with `lib` depending on the target platform.
+name = "sirc"
+# Add `-Cpanic=abort` to the RUSTFLAGS automatically, it may be useful in case
+# something might panic in the crates used by the library.
+rustflags = "-Cpanic=abort"

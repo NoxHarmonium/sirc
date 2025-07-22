@@ -9,6 +9,12 @@ add_global_arguments(['-DPROJECT_NAME=' + meson.project_name(),
                       '-Wshadow',
                      ], language : ['cpp'])
 
+env = environment()
+env.set('DYLD_LIBRARY_PATH', '../third-party/libsirc/lib/')
+env.set('LD_LIBRARY_PATH', '../third-party/libsirc/lib/')
+
+fs = import('fs')
+
 # TODO: disable error on hash warnings until meson releases https://github.com/mesonbuild/meson/issues/14440
 cc = meson.get_compiler ('cpp')
 if (cc.has_argument ('-Wno-error=#warnings'))
@@ -19,7 +25,19 @@ endif
 qt6 = import('qt6')
 qt6_dep = dependency('qt6', modules : ['Core', 'Gui', 'Widgets'])
 
-gui_project_dependencies = [qt6_dep]
+# TODO: If libsirc isn't found, should it disable any related features but still build?
+libsirc_inc = []
+if fs.is_dir('third-party/libsirc/include')
+    libsirc_inc += include_directories('third-party/libsirc/include')
+endif
+libsirc_dep = declare_dependency(dependencies : cc.find_library(
+                                     'sirc',
+                                     dirs : [join_paths(meson.project_source_root(), 'third-party/libsirc/lib')],
+                                     required : false
+                                 ),
+                                 include_directories : libsirc_inc)
+
+gui_project_dependencies = [qt6_dep, libsirc_dep]
 gui_source_files = [
     'libs/gui/src/mainwindow.cpp',
     'libs/gui/src/aboutdialog.cpp',
@@ -34,8 +52,8 @@ shared_library_source_files = [
     'libs/shared/src/miscadapter.cpp',
     'libs/shared/src/rgbaadapter.cpp',
 ]
-shared_library_include_files = include_directories('libs/shared/include')
-shared_library_dependencies = [dependency('libpng')]
+shared_library_include_files = [include_directories('libs/shared/include'), libsirc_inc]
+shared_library_dependencies = [dependency('libpng'), libsirc_dep]
 
 moc_files = qt6.compile_moc(
     headers : ['libs/gui/src/mainwindow.hpp', 'libs/gui/src/aboutdialog.hpp'],
