@@ -1,5 +1,5 @@
 // Suppress warnings caused by macro code
-#![allow(redundant_semicolons, dead_code)]
+#![allow(redundant_semicolons, dead_code, unused_parens)]
 
 use modular_bitfield::prelude::*;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
