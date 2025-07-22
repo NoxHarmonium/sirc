@@ -9,7 +9,7 @@ function pre_commit_sirc_vm {
     cargo fmt --all
     cargo build --release
     cargo clippy --all-targets --all-features -- -D warnings
-    cargo nextest run
+    cargo nextest run --release
     popd
 }
 
