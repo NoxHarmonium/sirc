@@ -1,4 +1,5 @@
 #include <QtWidgets>
+#include <libsirc/libsirc.h>
 
 #include "./ui_mainwindow.h"
 #include "aboutdialog.hpp"
@@ -7,7 +8,9 @@
 #include "imagemerger.hpp"
 #include "inputimage.hpp"
 #include "pixmapadapter.hpp"
+
 #include <algorithm>
+#include <iostream>
 #include <mediancutquantizer.hpp>
 #include <ranges>
 
@@ -185,6 +188,14 @@ void MainWindow::on_actionAbout_triggered() {
   auto *aboutDialog = new AboutDialog(this);
   aboutDialog->setModal(true);
   aboutDialog->show();
+}
+
+void MainWindow::on_actionExportAsm_triggered() {
+  // Just print out an empty tilemap/palette for now to check that FFI works
+  char *asmChar = libsirc::tilemap_to_str("test", libsirc::CTilemap());
+  std::string asmOutputStr(asmChar);
+  std::cout << asmOutputStr << std::endl;
+  libsirc::free_str(asmChar);
 }
 
 // Input Image Configuration

@@ -1,10 +1,7 @@
 name: SIRC VM
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+  workflow_call:
 
 defaults:
   run:
@@ -16,24 +13,23 @@ env:
 
 jobs:
   build:
-    name: Quality Checks
+    name: sirc-vm - Quality Check and Build libsirc
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        run: rustup update stable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-c
+        run: cargo install cargo-c@0.10.14+cargo-0.89.0
 
       - name: Build
         run: cargo build --verbose --release
-
-      # If this step fails, just run cargo build and make sure you check that file into git
-      - name: Check if changes to toolchain-interop header
-        run: git diff --quiet toolchain-interop/include/sirc_toolchain_interop.h
 
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -41,14 +37,16 @@ jobs:
       - name: Formatting
         run: cargo fmt --all -- --check
 
-      # Currently separate until llvm-cov supports them
-      - name: Run doctests
-        run: cargo test --doc --verbose --all-features --workspace
-
       # TODO: Include doc tests in coverage once it is stabilised
       # https://github.com/taiki-e/cargo-llvm-cov/issues/2
       - name: Run tests
-        run: cargo llvm-cov --verbose --all-targets --all-features --workspace --codecov --output-path codecov-main.json
+        run: |
+          cargo llvm-cov --verbose  --no-report nextest --all-targets --all-features --workspace
+          cargo +nightly llvm-cov --verbose --no-report --doc --all-features --workspace
+          cargo +nightly llvm-cov report --doctests --codecov --output-path codecov-main.json
+
+      - name: Generate libsirc
+        run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose
 
       - uses: actions/upload-artifact@v4
         with:
@@ -56,7 +54,14 @@ jobs:
           path: ./sirc-vm/codecov-main.json
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libsirc
+          path: ./sirc-vm/libsirc-out
+          if-no-files-found: error
+
   examples:
+    name: sirc-vm - Examples
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -94,27 +99,3 @@ jobs:
           name: codecov-${{ matrix.example-name }}
           path: ./examples/${{ matrix.example-name }}/codecov-${{ matrix.example-name }}.json
           if-no-files-found: error
-
-  upload-to-codecov:
-    runs-on: ubuntu-latest
-    needs: [examples, build]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-      - name: List artifacts
-        run: ls -la
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: >
-            codecov-basic-video/codecov-*.json,
-            codecov-boring/codecov-*.json,
-            codecov-byte-sieve/codecov-*.json,
-            codecov-faults/codecov-*.json,
-            codecov-hardware-exception/codecov-*.json,
-            codecov-main/codecov-*.json,
-            codecov-software-exception/codecov-*.json,
-            codecov-store-load/codecov-*.json
-          fail_ci_if_error: true

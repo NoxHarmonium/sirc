@@ -1,0 +1,32 @@
+name: Upload Coverage
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "--deny warnings"
+
+jobs:
+  sirc-tiledit:
+    uses: ./.github/workflows/sirc-tiledit.yml
+  upload-to-codecov:
+    name: Upload Coverage
+    runs-on: ubuntu-latest
+    needs: [sirc-tiledit]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: List artifacts
+        run: find .
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: codecov-basic-video/codecov-basic-video.json,codecov-boring/codecov-boring.json,codecov-byte-sieve/codecov-byte-sieve.json,codecov-faults/codecov-faults.json,codecov-hardware-exception/codecov-hardware-exception.json,codecov-main/codecov-main.json,codecov-software-exception/codecov-software-exception.json,codecov-store-load/codecov-store-load.json,codecov-tiledit/build-debug/meson-logs/coverage.xml
+          fail_ci_if_error: true
+          disable_search: true

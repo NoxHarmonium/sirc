@@ -22,6 +22,26 @@ $ ninja clang-tidy
 $ ninja clang-format-check
 ```
 
+If you have the libsirc libraries at third-party/libsirc/lib
+(recommended during development), you'll need to make sure you're
+setting the library search path at runtime.
+
+E.g. on MacOS
+
+```shell
+DYLD_LIBRARY_PATH=./third-party/libsirc/lib/ ./build/sirc-tiledit-gui
+```
+
+or Linux
+
+```shell
+LD_LIBRARY_PATH=./third-party/libsirc/lib/ ./build/sirc-tiledit-gui
+```
+
+If you're not actively working on both libsirc (sirc-vm) and this project
+at the same time, you can probably install libsirc into your system library
+directories to avoid having to do this.
+
 # Roadmap
 
 - [x] Get a boilerplate QT app running

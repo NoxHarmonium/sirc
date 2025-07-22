@@ -13,6 +13,11 @@
     // I have a lot of temporary panics for debugging that will probably be cleaned up
     clippy::missing_panics_doc
 )]
+// TODO: mismatched_lifetime_syntaxes is a new lint that is in nightly rust and causes tons of errors
+// need to fix it properly when I have time
+#![allow(unknown_lints)] // The lint is unknown to stable rust, so suppress the warning
+#![allow(mismatched_lifetime_syntaxes)]
+#![deny(unknown_lints)]
 #![deny(warnings)]
 
 pub mod data;

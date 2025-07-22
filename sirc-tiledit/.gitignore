@@ -183,3 +183,6 @@ fabric.properties
 .idea/**/azureSettings.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/clion
+
+third-party/libsirc
+!third-party/libsirc/README.md

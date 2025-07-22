@@ -15,7 +15,8 @@
 )]
 #![deny(warnings)]
 
-use toolchain_interop::{CTilemap, free_str, tilemap_to_str};
+use libsirc::capi::{CTilemap, free_str, tilemap_to_str};
+use std::ffi::CString;
 
 #[test]
 fn test_tilemap_to_str() {
@@ -31,12 +32,14 @@ fn test_tilemap_to_str() {
     };
 
     // Run
-    let str = tilemap_to_str(tilemap);
+    let label_name = CString::new("some_label").unwrap();
+    let str = unsafe { tilemap_to_str(label_name.as_ptr(), tilemap) };
     let c_str = unsafe { std::ffi::CString::from_raw(str) };
 
     // Assert
     let actual_str = c_str.to_str().unwrap();
     let expected_str = "\
+        :some_label\n\
         .DW #0x0001\n\
         .DW #0x0002\n\
         .DW #0x0003\n\
@@ -77,7 +80,8 @@ fn test_free_str() {
     };
 
     // Run
-    let raw_str = tilemap_to_str(tilemap);
+    let label_name = CString::new("some_label").unwrap();
+    let raw_str = unsafe { tilemap_to_str(label_name.as_ptr(), tilemap) };
     unsafe { free_str(raw_str) }
 
     // Not sure how to assert here. It will panic on double frees or anything like that though

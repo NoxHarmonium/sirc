@@ -1,5 +1,5 @@
 conf = configuration_data()
-conf.set_quoted('BENCHMARK_ROOT', meson.source_root() / 'libs/shared/benchmarks')
+conf.set_quoted('BENCHMARK_ROOT', meson.global_source_root() / 'libs/shared/benchmarks')
 configure_file(
     output : 'testconfig.h',
     configuration : conf

@@ -1,6 +1,6 @@
 # An optional name to use as an include guard
 # default: doesn't emit an include guard
-include_guard = "sirc_toolchain_interop_h"
+include_guard = "libsirc_h"
 
 # Whether to add a `#pragma once` guard
 # default: doesn't emit a `#pragma once`
@@ -18,4 +18,4 @@ include_version = true
 
 # An optional namespace to output around the generated bindings
 # default: doesn't emit a namespace
-namespace = "sirc_toolchain_interop"
+namespace = "libsirc"
