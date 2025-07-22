@@ -29,7 +29,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: libsirc
-          path: ./sirc-tiledit/third-party/libsirc
+          path: /
       - name: Set ownership
         run: |
           # Workaround for https://github.com/actions/runner/issues/2033
@@ -37,7 +37,7 @@ jobs:
           git config --global --add safe.directory /__w/sirc/sirc
       - name: Configure Project
         run: |
-          find third-party/libsirc
+          find /usr/local/ -name "*libsirc*"
           meson --version
           meson setup -Db_coverage=true --buildtype debug build-debug/
       - name: Compile Project (Debug)
@@ -73,13 +73,14 @@ jobs:
     container:
       image: ghcr.io/noxharmonium/sirc-tiledit-build:main
       options: --user root
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: libsirc
-          path: ./sirc-tiledit/third-party/libsirc
+          path: /
       - name: Set ownership
         run: |
           # Workaround for https://github.com/actions/runner/issues/2033
@@ -87,8 +88,9 @@ jobs:
           git config --global --add safe.directory /__w/sirc/sirc
       - name: Configure Project
         run: |
+          find /usr/local/ -name "*libsirc*"
           meson --version
-          meson setup --buildtype release build-release/ -Db_lto=true
+          meson setup  -Db_lto=true --buildtype release build-release/
       - name: Compile Project (Release)
         run: |
           cd build-release

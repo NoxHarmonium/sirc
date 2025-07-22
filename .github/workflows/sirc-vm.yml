@@ -54,7 +54,7 @@ jobs:
           cargo llvm-cov report --doctests --codecov --output-path codecov-main.json
 
       - name: Generate libsirc
-        run: cargo cinstall --meson-paths --prefix=/ --destdir=./libsirc-out --verbose
+        run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose
 
       - uses: actions/upload-artifact@v4
         with:
