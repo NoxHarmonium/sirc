@@ -104,28 +104,3 @@ jobs:
           name: codecov-${{ matrix.example-name }}
           path: ./examples/${{ matrix.example-name }}/codecov-${{ matrix.example-name }}.json
           if-no-files-found: error
-
-  upload-to-codecov:
-    name: sirc-vm - Upload Coverage
-    runs-on: ubuntu-latest
-    needs: [examples, build]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-      - name: List artifacts
-        run: ls -la
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: >
-            codecov-basic-video/codecov-*.json,
-            codecov-boring/codecov-*.json,
-            codecov-byte-sieve/codecov-*.json,
-            codecov-faults/codecov-*.json,
-            codecov-hardware-exception/codecov-*.json,
-            codecov-main/codecov-*.json,
-            codecov-software-exception/codecov-*.json,
-            codecov-store-load/codecov-*.json
-          fail_ci_if_error: true

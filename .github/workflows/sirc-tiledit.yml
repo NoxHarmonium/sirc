@@ -6,6 +6,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_call:
 
 defaults:
   run:
@@ -109,22 +110,3 @@ jobs:
           name: build artifacts
           path: ./sirc-tiledit/build-release/meson-dist/*
           if-no-files-found: error
-
-  upload-to-codecov:
-    name: sirc-tiledit - Upload Coverage
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: codecov-tiledit
-      - name: List artifacts
-        run: ls -la
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: coverage.xml
-          fail_ci_if_error: true
