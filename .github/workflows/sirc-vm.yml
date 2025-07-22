@@ -41,17 +41,13 @@ jobs:
       - name: Formatting
         run: cargo fmt --all -- --check
 
-      # Currently separate until llvm-cov supports them
-      - name: Run doctests
-        run: cargo test --doc --verbose --all-features --workspace
-
       # TODO: Include doc tests in coverage once it is stabilised
       # https://github.com/taiki-e/cargo-llvm-cov/issues/2
       - name: Run tests
         run: |
           cargo llvm-cov --verbose  --no-report nextest --all-targets --all-features --workspace
-          cargo llvm-cov --verbose --no-report --doc --all-features --workspace
-          cargo llvm-cov report --doctests --codecov --output-path codecov-main.json
+          cargo +nightly llvm-cov --verbose --no-report --doc --all-features --workspace
+          cargo +nightly llvm-cov report --doctests --codecov --output-path codecov-main.json
 
       - name: Generate libsirc
         run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose
