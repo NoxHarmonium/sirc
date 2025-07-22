@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    name: sirc-vm - Quality Check and Build libsirc
+    name: sirc-vm - Build libsirc
     runs-on: ubuntu-latest
 
     steps:
@@ -22,42 +22,65 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: taiki-e/install-action@nextest
-
-      - name: Install cargo-c
-        run: cargo install cargo-c@0.10.14+cargo-0.89.0
-
-      - name: Build
-        run: cargo build --verbose --release
-
-      - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: Formatting
-        run: cargo fmt --all -- --check
-
-      # TODO: Include doc tests in coverage once it is stabilised
-      # https://github.com/taiki-e/cargo-llvm-cov/issues/2
-      - name: Run tests
-        run: |
-          cargo llvm-cov --verbose  --no-report nextest --all-targets --all-features --workspace
-          cargo +nightly llvm-cov --verbose --no-report --doc --all-features --workspace
-          cargo +nightly llvm-cov report --doctests --codecov --output-path codecov-main.json
+      - uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-c@0.10.14+cargo-0.89.0
 
       - name: Generate libsirc
         run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose
 
       - uses: actions/upload-artifact@v4
         with:
-          name: codecov-main
-          path: ./sirc-vm/codecov-main.json
+          name: libsirc
+          path: ./sirc-vm/libsirc-out
           if-no-files-found: error
+  lint:
+    name: sirc-vm - Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      # Not really linting but we should check that all targets build in release
+      - name: Build
+        run: cargo build --verbose --release --all-targets --all-features --workspace
+
+      - name: Clippy
+        run: cargo clippy --verbose --release --all-targets --all-features --workspace -- -D warnings
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+  test:
+    name: sirc-vm - Run Tests (nightly)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
+
+      # TODO: Include doc tests in coverage once it is stabilised
+      # https://github.com/taiki-e/cargo-llvm-cov/issues/2
+      - name: Run nextest
+        run: cargo +nightly llvm-cov --verbose --all-targets --all-features --workspace --no-report nextest
+      - name: Run doctests
+        run: cargo +nightly llvm-cov --verbose --all-features --workspace --no-report --doc
+      - name: Generate coverage file
+        run: cargo +nightly llvm-cov report --doctests --codecov --output-path codecov-main.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: libsirc
-          path: ./sirc-vm/libsirc-out
+          name: codecov-main
+          path: ./sirc-vm/codecov-main.json
           if-no-files-found: error
 
   examples:
@@ -79,11 +102,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        run: rustup update stable
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run ${{ matrix.example-name }} and capture coverage
         run: |
