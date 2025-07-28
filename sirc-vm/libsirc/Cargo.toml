@@ -12,8 +12,8 @@ capi = []
 [dependencies]
 toolchain = { path = "../toolchain" }
 
-[build-dependencies]
-cbindgen = "0.29.0"
+[dev-dependencies]
+insta = { version = "1.43.1", features = ["yaml"] }
 
 [package.metadata.capi]
 # Configures the minimum required cargo-c version. Trying to run with an
