@@ -191,8 +191,29 @@ void MainWindow::on_actionAbout_triggered() {
 }
 
 void MainWindow::on_actionExportAsm_triggered() {
-  // Just print out an empty tilemap/palette for now to check that FFI works
-  char *asmChar = libsirc::tilemap_to_str("test", libsirc::CTilemap());
+  std::array<uint16_t, 4> pixel_data = {0, 1, 2, 3};
+
+  auto tilemap = libsirc::CTilemap{.label = "some_label",
+                                   .comment = "some_comment",
+                                   .palette_index = 0,
+                                   .packed_pixel_data = pixel_data.data(),
+                                   .packed_pixel_data_len = pixel_data.size()};
+
+  std::array<libsirc::CTilemap, 1> tilemaps = {tilemap};
+
+  libsirc::CPalette palette = {
+      .comment = "palette comment",
+      .data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
+
+  auto export_data = libsirc::CTilemapExport{
+      .tilemaps = tilemaps.data(),
+      .tilemaps_len = tilemaps.size(),
+      .palette_label = "some_label",
+      .palettes = {palette, palette, palette, palette, palette, palette,
+                   palette, palette, palette, palette, palette, palette,
+                   palette, palette, palette, palette}};
+
+  char *asmChar = libsirc::tilemap_to_str(libsirc::CTilemapExport(export_data));
   std::string asmOutputStr(asmChar);
   std::cout << asmOutputStr << std::endl;
   libsirc::free_str(asmChar);

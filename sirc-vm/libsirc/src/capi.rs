@@ -6,10 +6,48 @@ use toolchain::types::data::{DataToken, DataType};
 use toolchain::types::shared::{LabelToken, NumberToken, NumberType, Token};
 
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct CTilemap {
+    /// The label printed above this tilemap data for humans to read
+    pub label: *const c_char,
+    /// The comment printed above this tilemap data, so it can be referenced in assembly routines
+    pub comment: *const c_char,
+    /// Which palette this tilemap uses
+    pub palette_index: u16, // Only for reference, doesn't affect the tilemap
+    /// The tilemap pixel data packed so there are four 4bpp pixels per word
     pub packed_pixel_data: *const u16,
+    /// The length of the packed pixel data in words
     pub packed_pixel_data_len: usize,
-    pub palette: [u16; 16],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct CPalette {
+    /// The comment printed above this palette for humans to read
+    pub comment: *const c_char,
+    /// The 16 entries of the palette.
+    pub data: [u16; 16],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct CTilemapExport {
+    /// Pointer to the first tilemap
+    /// We could have any number of tilemaps (whatever fits in the PPU ram), so we use a pointer
+    /// and size combo, so it can be dynamic
+    pub tilemaps: *const CTilemap,
+    /// The number of tilemaps that have been passed in
+    pub tilemaps_len: usize,
+    /// The label printed above the palette data, so it can be referenced in assembly routines
+    pub palette_label: *const c_char,
+    /// The palettes that the tilemaps refer to.
+    /// The palette size in the PPU is 16x16 colour palettes (only 16 colours can be addressable at once with 4bpp)
+    /// We may as well represent this as a fixed size array to keep it simple
+    pub palettes: [CPalette; 16],
+}
+
+fn c_str_to_comment_token(x: *const c_char) -> Token {
+    Token::Comment(String::from_utf8_lossy(unsafe { CStr::from_ptr(x).to_bytes() }).into_owned())
 }
 
 fn u16_to_data_token(x: u16) -> Token {
@@ -40,25 +78,56 @@ fn slice_to_data_tokens(x: &[u16]) -> Vec<Token> {
 /// They will not be modified by this function.
 /// The string returned by this function is owned by the rust code and must be freed by the free_str function.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tilemap_to_str(
-    label_name: *const c_char,
-    tilemap: CTilemap,
-) -> *mut c_char {
-    assert!(!label_name.is_null());
-    let owned_label_name = unsafe { CStr::from_ptr(label_name).to_string_lossy().into_owned() };
-    let packed_pixel_data = if tilemap.packed_pixel_data.is_null() {
-        &[]
-    } else {
-        unsafe { slice::from_raw_parts(tilemap.packed_pixel_data, tilemap.packed_pixel_data_len) }
-    };
+pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut c_char {
+    assert!(!tilemap_export.tilemaps.is_null());
+    let tilemaps =
+        unsafe { slice::from_raw_parts(tilemap_export.tilemaps, tilemap_export.tilemaps_len) };
+    let tilemap_tokens = tilemaps
+        .iter()
+        .flat_map(|tilemap| {
+            let packed_pixel_data = if tilemap.packed_pixel_data.is_null() {
+                &[]
+            } else {
+                unsafe {
+                    slice::from_raw_parts(tilemap.packed_pixel_data, tilemap.packed_pixel_data_len)
+                }
+            };
+            let owned_tilemap_label =
+                unsafe { CStr::from_ptr(tilemap.label).to_string_lossy().into_owned() };
 
-    let pixel_tokens = slice_to_data_tokens(packed_pixel_data);
-    let palette_tokens = slice_to_data_tokens(&tilemap.palette);
+            [
+                vec![c_str_to_comment_token(tilemap.comment)],
+                vec![Token::Label(LabelToken {
+                    name: owned_tilemap_label,
+                })],
+                slice_to_data_tokens(packed_pixel_data),
+            ]
+            .concat()
+        })
+        .collect();
+
+    let palette_tokens = tilemap_export
+        .palettes
+        .iter()
+        .flat_map(|palette| {
+            [
+                vec![c_str_to_comment_token(palette.comment)],
+                slice_to_data_tokens(palette.data.as_slice()),
+            ]
+            .concat()
+        })
+        .collect();
+
+    let owned_palette_label = unsafe {
+        CStr::from_ptr(tilemap_export.palette_label)
+            .to_string_lossy()
+            .into_owned()
+    };
     let all_tokens = [
+        tilemap_tokens,
         vec![Token::Label(LabelToken {
-            name: owned_label_name,
+            name: owned_palette_label,
         })],
-        pixel_tokens,
         palette_tokens,
     ]
     .concat();
