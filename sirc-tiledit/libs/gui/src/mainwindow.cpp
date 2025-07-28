@@ -191,17 +191,18 @@ void MainWindow::on_actionAbout_triggered() {
 }
 
 void MainWindow::on_actionExportAsm_triggered() {
-  std::array<uint16_t, 4> pixel_data = {0, 1, 2, 3};
+  constexpr std::array<uint16_t, 4> pixel_data = {0, 1, 2, 3};
 
-  auto tilemap = libsirc::CTilemap{.label = "some_label",
-                                   .comment = "some_comment",
-                                   .palette_index = 0,
-                                   .packed_pixel_data = pixel_data.data(),
-                                   .packed_pixel_data_len = pixel_data.size()};
+  const auto tilemap =
+      libsirc::CTilemap{.label = "some_label",
+                        .comment = "some_comment",
+                        .palette_index = 0,
+                        .packed_pixel_data = pixel_data.data(),
+                        .packed_pixel_data_len = pixel_data.size()};
 
-  std::array<libsirc::CTilemap, 1> tilemaps = {tilemap};
+  const std::array tilemaps = {tilemap};
 
-  libsirc::CPalette palette = {
+  const libsirc::CPalette palette = {
       .comment = "palette comment",
       .data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
 
