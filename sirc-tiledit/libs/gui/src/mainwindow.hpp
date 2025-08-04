@@ -49,6 +49,8 @@ private slots:
 
 private:
   [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
+  [[nodiscard]] std::unordered_map<InputImageId, SircImage>
+  getOpenedImagesQuantizedById() const;
 
   // UI Setup
   void setupPaletteReductionOptions() const;
