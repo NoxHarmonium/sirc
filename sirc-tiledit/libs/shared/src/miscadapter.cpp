@@ -5,7 +5,7 @@
 SircImage MiscAdapter::packedSircPixelDataToSircImage(
     const PackedSircPixelData &pixelData) {
 
-  SircImage imageData = {};
+  SircImage imageData = SircImage::empty();
   std::map<SircColor, size_t> paletteLookup;
 
   for (int x = 0; x < WIDTH_PIXELS; x++) {
@@ -19,8 +19,8 @@ SircImage MiscAdapter::packedSircPixelDataToSircImage(
         imageData.pixelData[x * WIDTH_PIXELS + y] =
             existingPaletteIndex->second;
       } else {
-        imageData.palette.push_back(pixel);
-        auto paletteIndex = imageData.palette.size() - 1;
+        imageData.palette->push_back(pixel);
+        auto paletteIndex = imageData.palette->size() - 1;
         paletteLookup.insert({pixel, paletteIndex});
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         imageData.pixelData[x * WIDTH_PIXELS + y] = paletteIndex;

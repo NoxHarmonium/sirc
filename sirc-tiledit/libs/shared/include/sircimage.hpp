@@ -32,10 +32,16 @@ using IndexedPixelData = std::array<PaletteReference, TOTAL_PIXELS>;
  * only support max 4bpp (16 colors).
  */
 struct SircImage {
-  // TODO: Poor data modelling, why does each image get its own palette?
-  std::vector<SircColor> palette;
-  IndexedPixelData pixelData;
+  std::shared_ptr<std::vector<SircColor>> palette;
+  IndexedPixelData pixelData{};
   bool operator==(const SircImage &) const = default;
+
+  static SircImage empty() {
+    return {
+        .palette = std::make_shared<std::vector<SircColor>>(),
+        .pixelData = {},
+    };
+  };
 };
 
 inline SircColorComponent componentFromColor(const SircColor sircColor,

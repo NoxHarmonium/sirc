@@ -66,8 +66,8 @@ RgbaPixelData RgbaAdapter::sircImageToRgba(const SircImage &sircImage) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       const auto paletteColor = pixelData[x * WIDTH_PIXELS + y];
-      assert(paletteColor < palette.size());
-      const auto sircColor = palette[paletteColor];
+      assert(paletteColor < palette->size());
+      const auto sircColor = palette->at(paletteColor);
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
       output[x][y] = rgbaFromSircColor(sircColor);
     }
