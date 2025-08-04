@@ -3,19 +3,21 @@
 #include <mediancutquantizer.hpp>
 #include <utils.hpp>
 
+#include <__ostream/basic_ostream.h>
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <map>
 #include <numeric>
 #include <ranges>
 #include <set>
 #include <unordered_set>
 #include <utility>
+#include <valarray>
 
 std::vector<SircColorComponent>
 paletteAsSingleChannel(const std::span<const SircColor> &palette,
                        const ImageChannel channel) {
-
   std::vector<SircColorComponent> paletteAsSingleChannel;
   paletteAsSingleChannel.reserve(palette.size());
   std::ranges::transform(palette, std::back_inserter(paletteAsSingleChannel),
@@ -25,33 +27,50 @@ paletteAsSingleChannel(const std::span<const SircColor> &palette,
   return paletteAsSingleChannel;
 }
 
+std::vector<std::valarray<SircColorComponent>>
+paletteAsSingleChannels(const std::span<const SircColor> &palette) {
+  std::vector<std::valarray<SircColorComponent>> paletteAsSingleChannelsOut;
+  paletteAsSingleChannelsOut.reserve(palette.size());
+  std::ranges::transform(
+      palette, std::back_inserter(paletteAsSingleChannelsOut),
+      [](const SircColor sircColor) -> std::valarray<SircColorComponent> {
+        return {componentFromColor(sircColor, ImageChannel::R),
+                componentFromColor(sircColor, ImageChannel::G),
+                componentFromColor(sircColor, ImageChannel::B)};
+      });
+  return paletteAsSingleChannelsOut;
+}
+
 SircColor
 componentWiseAverageOfAllColors(const std::span<const SircColor> &palette) {
-  const std::vector<SircColorComponent> r =
-      paletteAsSingleChannel(palette, ImageChannel::R);
-  const std::vector<SircColorComponent> g =
-      paletteAsSingleChannel(palette, ImageChannel::G);
-  const std::vector<SircColorComponent> b =
-      paletteAsSingleChannel(palette, ImageChannel::B);
+  auto const channels = paletteAsSingleChannels(palette);
 
-  auto const count = static_cast<float>(r.size());
-  auto const averageOfComponent =
-      [&count](std::vector<SircColorComponent> component) {
-        auto const result =
-            std::reduce(component.begin(), component.end(), 0ul) /
-            static_cast<unsigned long>(count);
-        assert(result <= SIRC_COLOR_RANGE);
-        return static_cast<SircColorComponent>(result);
-      };
+  const std::valarray initial = {0ul, 0ul, 0ul};
+  auto const sum = std::reduce(channels.cbegin(), channels.cend(), initial,
+                               [](const std::valarray<unsigned long> &acc,
+                                  const std::valarray<SircColorComponent> &v)
+                                   -> std::valarray<unsigned long> {
+                                 auto const casted = std::valarray{
+                                     static_cast<unsigned long>(v[0]),
+                                     static_cast<unsigned long>(v[1]),
+                                     static_cast<unsigned long>(v[2])};
+                                 return acc + casted;
+                               });
 
-  return colorFromComponent(averageOfComponent(r), ImageChannel::R) |
-         colorFromComponent(averageOfComponent(g), ImageChannel::G) |
-         colorFromComponent(averageOfComponent(b), ImageChannel::B);
+  auto const average = sum / channels.size();
+
+  assert(average[0] <= SIRC_COLOR_RANGE && average[1] <= SIRC_COLOR_RANGE &&
+         average[2] <= SIRC_COLOR_RANGE);
+
+  return colorFromComponent(average[0], ImageChannel::R) |
+         colorFromComponent(average[1], ImageChannel::G) |
+         colorFromComponent(average[2], ImageChannel::B);
 }
 
 SircColorComponent findRangeOfChannel(const std::span<const SircColor> &palette,
                                       const ImageChannel channel) {
-
+  // Future work: maybe we could have a `findRangeOfChannels` that does all
+  // three channels in one iteration, theoretically that would be faster
   std::vector<SircColorComponent> p = paletteAsSingleChannel(palette, channel);
   auto [min, max] = std::ranges::minmax_element(p.begin(), p.end());
   return *max - *min;
@@ -110,7 +129,8 @@ std::vector<PaletteReference> buildPaletteMapping(
 
 std::vector<SircColor> deduplicatePalette(
     std::vector<std::pair<SircColor, SircColor>> quantizedPalettePairs) {
-  const auto quantizedPaletteValues = std::views::values(quantizedPalettePairs);
+  const auto quantizedPaletteValues =
+      quantizedPalettePairs | std::views::values;
   const auto quantizedPaletteSet = std::unordered_set(
       quantizedPaletteValues.begin(), quantizedPaletteValues.end());
   return {quantizedPaletteSet.begin(), quantizedPaletteSet.end()};
@@ -145,40 +165,32 @@ void splitPaletteIntoBucketsAndAverage(
 }
 
 /**
- * Takes a span of n palettes, each being associated with a different SircImage
- * struct, merges/de-duplicates all of them into a single palette and returns
- * a mapping that converts from each of the old palette indexes to index in the
- * new merged palette.
+ * Takes a span of n SircImage structs and merges/de-duplicates all of their
+ * palettes into a single palette and returns a mapping that converts from each
+ * of the old palette indexes to index in the new merged palette.
  *
- * @param palettes the span of palettes to merge
- * @return a pair where the first value is the new merged palette and the second
- * value is a vector of index mappings, where the indexes align with the
- * palettes provides in the palettes parameter.
+ * @param sircImages the span of SircImage structs with palettes to merge
+ * @return a pair where the first element is the merged/deduplicated palette and
+ * the second element is a mapping between the old palette index and the new
+ * palette indexes
  */
 std::pair<std::vector<SircColor>, std::vector<std::vector<PaletteReference>>>
-mergePalettesAndDeduplicate(
-    const std::vector<std::vector<SircColor>> &palettes) {
-  // TODO: Clean up this function
-  // TODO: Should I use spans for the parameters?
-  // TODO: Could I use spans for the return type (or would that cause issues
-  // with ownership)
-  // TODO: Is it wasteful to preallocate the vectors with empty values?
-  //       Probably not since it probably just allocates a big chunk of empty
-  //       memory
-  auto results = std::vector<std::vector<PaletteReference>>(palettes.size());
+mergePalettesAndDeduplicate(const std::vector<SircImage> &sircImages) {
+  auto results = std::vector<std::vector<PaletteReference>>(sircImages.size());
   std::set<SircColor> mergedPalette;
 
   // Add all the palettes into a single set
   // All the palettes need to be inserted into the set in a single loop
   // before doing the remapping because the ordering would not be stable
   // between loop iterations
-  for (auto const &palette : palettes) {
+  for (auto const &[palette, _] : sircImages) {
     // Insert the whole palette into the mergedPalette set to remove any
     // duplicates
     mergedPalette.insert(palette.begin(), palette.end());
   }
 
-  for (auto [index, palette] : enumerate(palettes)) {
+  for (auto const &[index, sircImage] : enumerate(sircImages)) {
+    auto const &[palette, _] = sircImage;
     // Allocate the inner vector
     results[index] = std::vector<PaletteReference>(palette.size());
 
@@ -199,9 +211,10 @@ mergePalettesAndDeduplicate(
 }
 
 std::tuple<std::vector<SircColor>, std::vector<PaletteReference>>
-quantize_palette_and_generate_mapping(
+quantizePaletteAndGenerateMapping(
     const std::span<const SircColor> &existingPalette,
     const size_t maxPaletteSize) {
+  assert(maxPaletteSize > 0);
 
   // Note: ceiling integer division
   const size_t maxBucketSize =
@@ -217,9 +230,7 @@ quantize_palette_and_generate_mapping(
                               std::span(quantizedPaletteWithoutDupes))};
 }
 
-// TODO: use consistent casing for things (I think camelCase is the norm in
-// this project)
-SircImage transform_sirc_image_pixels_with_mapping(
+SircImage transformSircImagePixelsWithMapping(
     const SircImage &sircImage,
     const std::vector<SircColor> &quantizedPaletteWithoutDupes,
     const std::vector<PaletteReference> &paletteMapping) {
@@ -240,9 +251,11 @@ mergePaletteMappings(const std::vector<PaletteReference> &paletteMapping,
                      const std::vector<PaletteReference> &paletteMapping2) {
   std::vector<PaletteReference> mergedPaletteMapping;
   mergedPaletteMapping.reserve(paletteMapping.size());
-  for (auto const [index, colour] : enumerate(paletteMapping)) {
-    mergedPaletteMapping.push_back(paletteMapping2.at(colour));
-  }
+  std::ranges::transform(paletteMapping,
+                         std::back_inserter(mergedPaletteMapping),
+                         [&paletteMapping2](const PaletteReference &color) {
+                           return paletteMapping2.at(color);
+                         });
 
   return mergedPaletteMapping;
 }
@@ -257,32 +270,22 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   }
 
   const auto [quantizedPaletteWithoutDupes, paletteMapping] =
-      quantize_palette_and_generate_mapping(existingPalette, maxPaletteSize);
+      quantizePaletteAndGenerateMapping(existingPalette, maxPaletteSize);
 
-  return transform_sirc_image_pixels_with_mapping(
+  return transformSircImagePixelsWithMapping(
       sircImage, quantizedPaletteWithoutDupes, paletteMapping);
 }
 
 std::vector<SircImage>
-MedianCutQuantizer::quantize_all(const std::vector<SircImage> &sircImages,
-                                 const PaletteReductionBpp bpp) const {
+MedianCutQuantizer::quantizeAll(const std::vector<SircImage> &sircImages,
+                                const PaletteReductionBpp bpp) const {
   const auto maxPaletteSize = to_underlying(bpp);
 
-  std::vector<SircColor> existingPalette;
-
-  // TODO: Extract this somewhere or use a view?
-  std::vector<std::vector<SircColor>> palettes;
-  palettes.reserve(sircImages.size());
-  for (const auto &[palette, _] : sircImages) {
-    palettes.push_back(palette);
-  }
-
-  // TODO: Can we make the palette const? Nothing passed in will be modified
   const auto [mergedPalette, mergedPaletteMappings] =
-      mergePalettesAndDeduplicate(palettes);
+      mergePalettesAndDeduplicate(sircImages);
 
   const auto [quantizedPalette, quantizedPaletteMapping] =
-      quantize_palette_and_generate_mapping(mergedPalette, maxPaletteSize);
+      quantizePaletteAndGenerateMapping(mergedPalette, maxPaletteSize);
 
   std::vector<SircImage> output;
   output.reserve(sircImages.size());
@@ -290,7 +293,7 @@ MedianCutQuantizer::quantize_all(const std::vector<SircImage> &sircImages,
     const auto mergedPaletteMapping = mergePaletteMappings(
         mergedPaletteMappings[index], quantizedPaletteMapping);
 
-    SircImage quantizedImage = transform_sirc_image_pixels_with_mapping(
+    SircImage quantizedImage = transformSircImagePixelsWithMapping(
         sircImage, quantizedPalette, mergedPaletteMapping);
     output.push_back(quantizedImage);
   }

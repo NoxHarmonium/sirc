@@ -35,8 +35,8 @@ public:
    * @return a copy of the image with the palette remapped
    */
   [[nodiscard]] virtual std::vector<SircImage>
-  quantize_all(const std::vector<SircImage> &sircImages,
-               PaletteReductionBpp bpp) const = 0;
+  quantizeAll(const std::vector<SircImage> &sircImages,
+              PaletteReductionBpp bpp) const = 0;
 
   Quantizer(const Quantizer &) = default;
   Quantizer &operator=(const Quantizer &) = default;

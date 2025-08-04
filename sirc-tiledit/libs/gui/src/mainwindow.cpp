@@ -128,7 +128,7 @@ void MainWindow::loadCurrentImages() const {
 
     const auto quantizer = MedianCutQuantizer();
     const auto quantizedImages =
-        quantizer.quantize_all(imagesToQuantize, paletteReduction);
+        quantizer.quantizeAll(imagesToQuantize, paletteReduction);
 
     for (auto const [index, quantizedImage] : enumerate(quantizedImages)) {
       const auto selectedImage = paletteGroup.at(index);

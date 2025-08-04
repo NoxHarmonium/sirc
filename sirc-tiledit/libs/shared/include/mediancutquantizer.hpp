@@ -17,8 +17,8 @@ public:
   [[nodiscard]] SircImage quantize(const SircImage &sircImage,
                                    PaletteReductionBpp bpp) const override;
   [[nodiscard]] std::vector<SircImage>
-  quantize_all(const std::vector<SircImage> &sircImages,
-               PaletteReductionBpp bpp) const override;
+  quantizeAll(const std::vector<SircImage> &sircImages,
+              PaletteReductionBpp bpp) const override;
 };
 
 #endif // MEDIANCUTQUANTIZER_H
