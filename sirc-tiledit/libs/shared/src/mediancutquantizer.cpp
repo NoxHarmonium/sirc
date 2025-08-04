@@ -144,14 +144,10 @@ void splitPaletteIntoBucketsAndAverage(
                                     results.subspan(halfSize), maxBucketSize);
 }
 
-SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
-                                       const PaletteReductionBpp bpp) const {
-  const auto maxPaletteSize = to_underlying(bpp);
-  const auto [existingPalette, pixelData] = sircImage;
-
-  if (existingPalette.size() <= maxPaletteSize) {
-    return sircImage;
-  }
+std::tuple<std::vector<SircColor>, std::vector<PaletteReference>>
+quantize_palette_and_generate_mapping(
+    const std::span<const SircColor> &existingPalette,
+    const size_t maxPaletteSize) {
 
   // Note: ceiling integer division
   const size_t maxBucketSize =
@@ -162,10 +158,16 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   splitPaletteIntoBucketsAndAverage(existingPalette, results, maxBucketSize);
   const auto quantizedPaletteWithoutDupes = deduplicatePalette(results);
 
-  const auto paletteMapping =
-      buildPaletteMapping(results, std::span(existingPalette),
-                          std::span(quantizedPaletteWithoutDupes));
+  return {quantizedPaletteWithoutDupes,
+          buildPaletteMapping(results, std::span(existingPalette),
+                              std::span(quantizedPaletteWithoutDupes))};
+}
 
+SircImage transform_sirc_image_pixels_with_mapping(
+    const SircImage &sircImage,
+    const std::vector<SircColor> &quantizedPaletteWithoutDupes,
+    const std::vector<PaletteReference> &paletteMapping) {
+  const auto [existingPalette, pixelData] = sircImage;
   SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
                               .pixelData = {}};
 
@@ -175,4 +177,44 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
         return paletteMapping[oldPaletteRef];
       });
   return quantizedImage;
+}
+
+SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
+                                       const PaletteReductionBpp bpp) const {
+  const auto maxPaletteSize = to_underlying(bpp);
+  const auto [existingPalette, pixelData] = sircImage;
+
+  if (existingPalette.size() <= maxPaletteSize) {
+    return sircImage;
+  }
+
+  const auto [quantizedPaletteWithoutDupes, paletteMapping] =
+      quantize_palette_and_generate_mapping(existingPalette, maxPaletteSize);
+
+  return transform_sirc_image_pixels_with_mapping(
+      sircImage, quantizedPaletteWithoutDupes, paletteMapping);
+}
+
+std::vector<SircImage>
+MedianCutQuantizer::quantize_all(const std::vector<SircImage> &sircImages,
+                                 const PaletteReductionBpp bpp) const {
+  const auto maxPaletteSize = to_underlying(bpp);
+
+  std::vector<SircColor> existingPalette;
+  for (const auto &[palette, _] : sircImages) {
+    existingPalette.insert(existingPalette.begin(), palette.cbegin(),
+                           palette.cend());
+  }
+
+  const auto [quantizedPaletteWithoutDupes, paletteMapping] =
+      quantize_palette_and_generate_mapping(existingPalette, maxPaletteSize);
+
+  std::vector<SircImage> output;
+  for (const auto &sircImage : sircImages) {
+    SircImage quantizedImage = transform_sirc_image_pixels_with_mapping(
+        sircImage, quantizedPaletteWithoutDupes, paletteMapping);
+    output.push_back(quantizedImage);
+  }
+
+  return output;
 }
