@@ -263,22 +263,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>paletteReductionOptions</sender>
-   <signal>currentIndexChanged(int)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>on_paletteReductionOptions_currentIndexChanged(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>367</x>
-     <y>156</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>809</x>
-     <y>-12</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>on_fileList_itemSelectionChanged()</slot>
