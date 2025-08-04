@@ -101,8 +101,9 @@ void MainWindow::loadCurrentImages() const {
   // Step 1: Group up images by palettes
   std::unordered_map<size_t, std::vector<InputImage>> paletteGroups;
   for (const auto &openedImage : openedImages | std::views::values) {
-    auto &imagesInPaletteGroup = paletteGroups[openedImage.getPaletteIndex()];
-    imagesInPaletteGroup.push_back(openedImage);
+    auto &imagesInPaletteGroup = paletteGroups[openedImage->getPaletteIndex()];
+    // Future work: Can we avoid this copy?
+    imagesInPaletteGroup.push_back(*openedImage);
   }
 
   // Step 2: Quantize images that share a palette
@@ -197,10 +198,14 @@ void MainWindow::on_actionOpen_triggered() {
 
   for (const auto &openedSourceFilename : openedSourceFilenames) {
     const auto fileInfo = QFileInfo(openedSourceFilename);
-    const auto inputImage = InputImage(fileInfo, PaletteReductionBpp::None);
-    openedImages.insert_or_assign(inputImage.id(), inputImage);
+    // Future work: pass this into InputImage or share implementation somehow
+    // (static method?)
+    const auto hash = std::hash<QString>{}(fileInfo.absoluteFilePath());
     auto *item = new QListWidgetItem(fileInfo.fileName());
-    item->setData(Qt::UserRole, QVariant::fromValue(inputImage.id()));
+    item->setData(Qt::UserRole, QVariant::fromValue(hash));
+    openedImages.emplace(hash, std::make_unique<InputImage>(
+                                   fileInfo, PaletteReductionBpp::None));
+
     ui->fileList->addItem(item);
   }
 }
@@ -261,16 +266,14 @@ void MainWindow::on_paletteReductionOptions_currentIndexChanged(
   const auto selectedBpp = getPaletteReductionBpp();
 
   for (const auto &openedImageId : selectedImages) {
-    auto selectedImage = openedImages.at(openedImageId);
-    selectedImage.setOutputPaletteReduction(selectedBpp);
+    openedImages.at(openedImageId)->setOutputPaletteReduction(selectedBpp);
   }
   loadCurrentImages();
 }
 
 void MainWindow::on_paletteIndexSelection_valueChanged(int value) const {
   for (const auto &openedImageId : selectedImages) {
-    auto selectedImage = openedImages.at(openedImageId);
-    selectedImage.setPaletteIndex(value);
+    openedImages.at(openedImageId)->setPaletteIndex(value);
   }
   loadCurrentImages();
 }
