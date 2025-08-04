@@ -1,19 +1,20 @@
 #include <QtWidgets>
 #include <libsirc/libsirc.h>
 
-#include "./ui_mainwindow.h"
-#include "aboutdialog.hpp"
-#include "mainwindow.hpp"
-
-#include "imagemerger.hpp"
-#include "inputimage.hpp"
-#include "libs/shared/tests/catch2/catch_amalgamated.hpp"
-#include "pixmapadapter.hpp"
-
 #include <algorithm>
 #include <iostream>
-#include <mediancutquantizer.hpp>
 #include <ranges>
+
+#include "./ui_mainwindow.h"
+
+#include "aboutdialog.hpp"
+#include "imagemerger.hpp"
+#include "inputimage.hpp"
+#include "mainwindow.hpp"
+#include "pixmapadapter.hpp"
+
+#include <mediancutquantizer.hpp>
+#include <utils.hpp>
 
 constexpr int PALLETE_VIEW_ITEM_HEIGHT = 40;
 
@@ -129,11 +130,8 @@ void MainWindow::loadCurrentImages() const {
     const auto quantizedImages =
         quantizer.quantize_all(imagesToQuantize, paletteReduction);
 
-    for (auto it = quantizedImages.cbegin(); it != quantizedImages.cend();
-         ++it) {
-      const auto index = std::distance(quantizedImages.begin(), it);
+    for (auto const [index, quantizedImage] : enumerate(quantizedImages)) {
       const auto selectedImage = paletteGroup.at(index);
-      const auto &quantizedImage = quantizedImages.at(index);
       quantizedImagesById[selectedImage.id()] = quantizedImage;
     }
   }
