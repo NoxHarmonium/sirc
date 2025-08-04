@@ -6,7 +6,7 @@
 #include <QString>
 #include <qfileinfo.h>
 
-typedef size_t InputImageId;
+using InputImageId = size_t;
 
 class InputImage {
 public:

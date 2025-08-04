@@ -172,25 +172,18 @@ mergePalettesAndDeduplicate(
   // All the palettes need to be inserted into the set in a single loop
   // before doing the remapping because the ordering would not be stable
   // between loop iterations
-  for (auto it = palettes.begin(); it != palettes.end(); ++it) {
-    const auto index = std::distance(palettes.begin(), it);
-    auto const &palette = palettes[index];
+  for (auto const &palette : palettes) {
     // Insert the whole palette into the mergedPalette set to remove any
     // duplicates
     mergedPalette.insert(palette.begin(), palette.end());
   }
 
-  // Map the old palettes to the new merged palette
-  for (auto it = palettes.begin(); it != palettes.end(); ++it) {
-    const auto index = std::distance(palettes.begin(), it);
-    auto const &palette = palettes[index];
+  for (auto [index, palette] : enumerate(palettes)) {
     // Allocate the inner vector
     results[index] = std::vector<PaletteReference>(palette.size());
 
     // Iterate through every colour in the palette to generate the mapping
-    for (auto it2 = palette.begin(); it2 != palette.end(); ++it2) {
-      const auto oldPaletteIndex = std::distance(palette.begin(), it2);
-      const auto paletteEntry = palette[oldPaletteIndex];
+    for (auto const [oldPaletteIndex, paletteEntry] : enumerate(palette)) {
       // Find where the colour is situated in the set (to map the old index to
       // the new index)
       auto it3 = mergedPalette.find(paletteEntry);
@@ -247,11 +240,8 @@ mergePaletteMappings(const std::vector<PaletteReference> &paletteMapping,
                      const std::vector<PaletteReference> &paletteMapping2) {
   std::vector<PaletteReference> mergedPaletteMapping;
   mergedPaletteMapping.reserve(paletteMapping.size());
-  for (auto it = paletteMapping.begin(); it != paletteMapping.end(); ++it) {
-    const auto index = std::distance(paletteMapping.begin(), it);
-
-    mergedPaletteMapping.push_back(
-        paletteMapping2.at(paletteMapping.at(index)));
+  for (auto const [index, colour] : enumerate(paletteMapping)) {
+    mergedPaletteMapping.push_back(paletteMapping2.at(colour));
   }
 
   return mergedPaletteMapping;
@@ -296,11 +286,7 @@ MedianCutQuantizer::quantize_all(const std::vector<SircImage> &sircImages,
 
   std::vector<SircImage> output;
   output.reserve(sircImages.size());
-  // TODO: Is there a nice way to iterate a vector with index that doesn't need
-  // std::distance?
-  for (auto it = sircImages.begin(); it != sircImages.end(); ++it) {
-    const auto index = std::distance(sircImages.begin(), it);
-    const auto &sircImage = sircImages[index];
+  for (auto const [index, sircImage] : enumerate(sircImages)) {
     const auto mergedPaletteMapping = mergePaletteMappings(
         mergedPaletteMappings[index], quantizedPaletteMapping);
 
