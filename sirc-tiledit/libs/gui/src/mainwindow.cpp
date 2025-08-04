@@ -41,6 +41,51 @@ PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
   return currentItem.value<PaletteReductionBpp>();
 }
 
+std::unordered_map<InputImageId, SircImage>
+MainWindow::getOpenedImagesQuantizedById() const {
+  std::unordered_map<InputImageId, SircImage> quantizedImagesById;
+
+  // Step 1: Group up images by palettes
+  std::unordered_map<size_t, std::vector<InputImage>> paletteGroups;
+  for (const auto &openedImage : openedImages | std::views::values) {
+    auto &imagesInPaletteGroup = paletteGroups[openedImage->getPaletteIndex()];
+    // Future work: Can we avoid this copy?
+    imagesInPaletteGroup.push_back(*openedImage);
+  }
+
+  // Step 2: Quantize images that share a palette
+  for (const auto &paletteGroup : paletteGroups | std::views::values) {
+    std::vector<SircImage> imagesToQuantize;
+    // TODO: Validate that the palette reduction is the same for the whole
+    // group? Does it make sense for different members of the group to have a
+    // different reduction value?
+    const auto paletteReduction =
+        paletteGroup.at(0).getOutputPaletteReduction();
+    for (const auto &selectedImage : paletteGroup) {
+      const auto openedSourceFilename = selectedImage.getFileInfo().filePath();
+      auto reader = QImageReader(openedSourceFilename);
+      const auto pixmap = QPixmap::fromImageReader(&reader);
+
+      const auto scaledPixmap =
+          pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS,
+                        Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
+
+      const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
+      imagesToQuantize.push_back(sircImage);
+    }
+
+    const auto quantizer = MedianCutQuantizer();
+    const auto quantizedImages =
+        quantizer.quantizeAll(imagesToQuantize, paletteReduction);
+
+    for (auto const [index, quantizedImage] : enumerate(quantizedImages)) {
+      const auto selectedImage = paletteGroup.at(index);
+      quantizedImagesById[selectedImage.id()] = quantizedImage;
+    }
+  }
+  return quantizedImagesById;
+}
+
 // UI Setup
 
 void MainWindow::setupPaletteReductionOptions() const {
@@ -96,46 +141,7 @@ void MainWindow::setupPaletteView(const SircImage &sircImage) const {
 }
 
 void MainWindow::loadCurrentImages() const {
-  auto quantizedImagesById = std::unordered_map<InputImageId, SircImage>();
-
-  // Step 1: Group up images by palettes
-  std::unordered_map<size_t, std::vector<InputImage>> paletteGroups;
-  for (const auto &openedImage : openedImages | std::views::values) {
-    auto &imagesInPaletteGroup = paletteGroups[openedImage->getPaletteIndex()];
-    // Future work: Can we avoid this copy?
-    imagesInPaletteGroup.push_back(*openedImage);
-  }
-
-  // Step 2: Quantize images that share a palette
-  for (const auto &paletteGroup : paletteGroups | std::views::values) {
-    std::vector<SircImage> imagesToQuantize;
-    // TODO: Validate that the palette reduction is the same for the whole
-    // group? Does it make sense for different members of the group to have a
-    // different reduction value?
-    const auto paletteReduction =
-        paletteGroup.at(0).getOutputPaletteReduction();
-    for (const auto &selectedImage : paletteGroup) {
-      const auto openedSourceFilename = selectedImage.getFileInfo().filePath();
-      auto reader = QImageReader(openedSourceFilename);
-      const auto pixmap = QPixmap::fromImageReader(&reader);
-
-      const auto scaledPixmap =
-          pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS,
-                        Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
-
-      const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
-      imagesToQuantize.push_back(sircImage);
-    }
-
-    const auto quantizer = MedianCutQuantizer();
-    const auto quantizedImages =
-        quantizer.quantizeAll(imagesToQuantize, paletteReduction);
-
-    for (auto const [index, quantizedImage] : enumerate(quantizedImages)) {
-      const auto selectedImage = paletteGroup.at(index);
-      quantizedImagesById[selectedImage.id()] = quantizedImage;
-    }
-  }
+  auto const quantizedImagesById = this->getOpenedImagesQuantizedById();
 
   std::vector<SircImage> selectedQuantizedImages;
   selectedQuantizedImages.reserve(selectedImages.size());
