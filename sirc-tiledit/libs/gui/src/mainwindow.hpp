@@ -64,7 +64,7 @@ private:
   void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
-  std::unordered_map<InputImageId, InputImage> openedImages;
+  std::unordered_map<InputImageId, std::unique_ptr<InputImage>> openedImages;
   std::vector<InputImageId> selectedImages;
 };
 #endif // MAINWINDOW_H
