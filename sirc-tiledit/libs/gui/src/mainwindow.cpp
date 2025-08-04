@@ -120,7 +120,7 @@ void MainWindow::loadCurrentImages() const {
     quantizedImages.push_back(quantizedImage);
   }
 
-  auto mergedImage = ImageMerger::merge(quantizedImages);
+  const auto mergedImage = ImageMerger::merge(quantizedImages);
 
   setupTargetImageView(mergedImage);
   setupPaletteView(mergedImage);
@@ -215,8 +215,8 @@ void MainWindow::on_actionExportAsm_triggered() {
                    palette, palette, palette, palette}};
 
   char *asmChar = libsirc::tilemap_to_str(libsirc::CTilemapExport(export_data));
-  std::string asmOutputStr(asmChar);
-  std::cout << asmOutputStr << std::endl;
+  const std::string asmOutputStr(asmChar);
+  std::cout << asmOutputStr << '\n';
   libsirc::free_str(asmChar);
 }
 
@@ -225,7 +225,7 @@ void MainWindow::on_actionExportAsm_triggered() {
 void MainWindow::on_fileList_itemSelectionChanged() {
   openedImages = std::vector<QSharedPointer<InputImage>>();
   auto selectedItems = sortedSelectedItems();
-  for (auto &selectedItem : selectedItems) {
+  for (const auto &selectedItem : selectedItems) {
     if (selectedItem == nullptr) {
       continue;
     }
@@ -239,7 +239,7 @@ void MainWindow::on_paletteReductionOptions_currentIndexChanged(
     [[maybe_unused]] int index) const {
   const auto selectedBpp = getPaletteReductionBpp();
 
-  for (auto openedImage : openedImages) {
+  for (const auto &openedImage : openedImages) {
     if (openedImage == nullptr) {
       continue;
     }

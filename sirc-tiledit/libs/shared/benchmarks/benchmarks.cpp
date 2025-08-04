@@ -5,6 +5,7 @@
 
 #include "testconfig.h"
 #include <imageloader.hpp>
+#include <iostream>
 #include <mediancutquantizer.hpp>
 #include <rgbaadapter.hpp>
 #include <sircimage.hpp>
@@ -17,7 +18,7 @@ SircImage setupBenchmark(const std::filesystem::path &inputPath) {
   return RgbaAdapter::rgbaToSircImage(inputPixelData);
 }
 
-int main() {
+void benchmark() {
   const auto pixelArtBackgroundImage = setupBenchmark(
       std::filesystem::path("resources/pixel_art_background.png"));
   const auto gradientImage =
@@ -102,4 +103,17 @@ int main() {
            })
       .render(ankerl::nanobench::templates::pyperf(),
               redFloweringGum8BppPyPerf);
+}
+
+int main() {
+  try {
+    benchmark();
+  } catch (const std::exception &e) {
+    std::cerr << "Caught an exception: " << e.what() << '\n';
+    return 1;
+  } catch (...) {
+    std::cerr << "Caught an unknown exception." << '\n';
+    return 1;
+  }
+  return 0;
 }

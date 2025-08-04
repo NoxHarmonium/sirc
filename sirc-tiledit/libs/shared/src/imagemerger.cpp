@@ -23,9 +23,8 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
     // order of operations is
     //       (E.g. maybe iterating over each input images at once could be
     //       faster than a pass for each input image)
-    std::transform(
-        result.pixelData.cbegin(), result.pixelData.cend(), pixelData.cbegin(),
-        result.pixelData.begin(),
+    std::ranges::transform(
+        result.pixelData, pixelData, result.pixelData.begin(),
         [resultPalette, sourceImagePalette](const PaletteReference &current,
                                             const PaletteReference &candidate) {
           // Only update if candidate is non-transparent

@@ -20,10 +20,10 @@ TEST_CASE("Single Image - Reduces palette size to 2bpp", "[quantize]") {
   REQUIRE(4 == palette.size());
   REQUIRE(std::is_permutation(palette.cbegin(), palette.cend(),
                               expectedPalette.cbegin()));
-  REQUIRE(std::all_of(pixelData.cbegin(), pixelData.cend(),
-                      [&palette](const PaletteReference pixel) {
-                        return pixel < palette.size();
-                      }));
+  REQUIRE(
+      std::ranges::all_of(pixelData, [&palette](const PaletteReference pixel) {
+        return pixel < palette.size();
+      }));
 }
 
 TEST_CASE("Multiple Images - Reduces palette size to 2bpp", "[quantize]") {
@@ -45,9 +45,9 @@ TEST_CASE("Multiple Images - Reduces palette size to 2bpp", "[quantize]") {
     REQUIRE(4 == palette.size());
     REQUIRE(std::is_permutation(palette.cbegin(), palette.cend(),
                                 expectedPalette.cbegin()));
-    REQUIRE(std::all_of(pixelData.cbegin(), pixelData.cend(),
-                        [&palette](const PaletteReference pixel) {
-                          return pixel < palette.size();
-                        }));
+    REQUIRE(std::ranges::all_of(pixelData,
+                                [&palette](const PaletteReference pixel) {
+                                  return pixel < palette.size();
+                                }));
   }
 }

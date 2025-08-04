@@ -16,7 +16,7 @@ class MainWindow;
 } // namespace Ui
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow {
+class MainWindow final : public QMainWindow {
   Q_OBJECT
 
 public:
@@ -56,8 +56,9 @@ private:
   void loadCurrentImages() const;
 
   // UI Manipulation
-  QList<QListWidgetItem *> sortedSelectedItems() const;
-  QList<QListWidgetItem *> sortedSelectedItems(Qt::SortOrder sortOrder) const;
+  [[nodiscard]] QList<QListWidgetItem *> sortedSelectedItems() const;
+  [[nodiscard]] QList<QListWidgetItem *>
+  sortedSelectedItems(Qt::SortOrder sortOrder) const;
   void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
