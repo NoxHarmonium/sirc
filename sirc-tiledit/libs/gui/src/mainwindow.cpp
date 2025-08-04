@@ -198,9 +198,7 @@ void MainWindow::on_actionOpen_triggered() {
 
   for (const auto &openedSourceFilename : openedSourceFilenames) {
     const auto fileInfo = QFileInfo(openedSourceFilename);
-    // Future work: pass this into InputImage or share implementation somehow
-    // (static method?)
-    const auto hash = std::hash<QString>{}(fileInfo.absoluteFilePath());
+    const auto hash = InputImage::generateHash(fileInfo);
     auto *item = new QListWidgetItem(fileInfo.fileName());
     item->setData(Qt::UserRole, QVariant::fromValue(hash));
     openedImages.emplace(hash, std::make_unique<InputImage>(

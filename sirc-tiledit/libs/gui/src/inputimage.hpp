@@ -20,9 +20,14 @@ private:
   int paletteIndex = 0;
 
 public:
-  [[nodiscard]] InputImageId id() const {
+  [[nodiscard]] static InputImageId generateHash(const QFileInfo &fileInfo) {
     // An absolute file path should be unique in a given file system
     return std::hash<QString>{}(fileInfo.absoluteFilePath());
+  }
+
+  [[nodiscard]] InputImageId id() const {
+    // An absolute file path should be unique in a given file system
+    return InputImage::generateHash(fileInfo);
   }
   [[nodiscard]] QFileInfo getFileInfo() const { return fileInfo; }
   [[nodiscard]] PaletteReductionBpp getOutputPaletteReduction() const {
