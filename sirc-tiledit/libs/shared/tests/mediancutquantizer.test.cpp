@@ -7,8 +7,10 @@
 #include <sircimage.hpp>
 
 TEST_CASE("Single Image - Reduces palette size to 2bpp", "[quantize]") {
-  const SircImage sircImage = {.palette = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
-                               .pixelData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
+  const SircImage sircImage = {
+      .palette = std::make_shared<std::vector<SircColor>>(
+          std::initializer_list<SircColor>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
+      .pixelData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
 
   const auto quantizer = MedianCutQuantizer();
   const auto quantizedImage =
@@ -17,21 +19,24 @@ TEST_CASE("Single Image - Reduces palette size to 2bpp", "[quantize]") {
 
   const std::vector<SircColor> expectedPalette = {1, 4, 7, 10};
 
-  REQUIRE(4 == palette.size());
-  REQUIRE(std::is_permutation(palette.cbegin(), palette.cend(),
+  REQUIRE(4 == palette->size());
+  REQUIRE(std::is_permutation(palette->cbegin(), palette->cend(),
                               expectedPalette.cbegin()));
   REQUIRE(
       std::ranges::all_of(pixelData, [&palette](const PaletteReference pixel) {
-        return pixel < palette.size();
+        return pixel < palette->size();
       }));
 }
 
 TEST_CASE("Multiple Images - Reduces palette size to 2bpp", "[quantize]") {
   const SircImage sircImage1 = {
-      .palette = {7, 8, 9, 10, 11, 7, 8, 9, 10, 11, 12},
+      .palette = std::make_shared<std::vector<SircColor>>(
+          std::initializer_list<SircColor>{7, 8, 9, 10, 11, 7, 8, 9, 10, 11,
+                                           12}),
       .pixelData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
   const SircImage sircImage2 = {
-      .palette = {1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6},
+      .palette = std::make_shared<std::vector<SircColor>>(
+          std::initializer_list<SircColor>{1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6}),
       .pixelData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
 
   const auto quantizer = MedianCutQuantizer();
@@ -42,12 +47,12 @@ TEST_CASE("Multiple Images - Reduces palette size to 2bpp", "[quantize]") {
     const auto [palette, pixelData] = quantizedImage;
     const std::vector<SircColor> expectedPalette = {11, 8, 5, 2};
 
-    REQUIRE(4 == palette.size());
-    REQUIRE(std::is_permutation(palette.cbegin(), palette.cend(),
+    REQUIRE(4 == palette->size());
+    REQUIRE(std::is_permutation(palette->cbegin(), palette->cend(),
                                 expectedPalette.cbegin()));
     REQUIRE(std::ranges::all_of(pixelData,
                                 [&palette](const PaletteReference pixel) {
-                                  return pixel < palette.size();
+                                  return pixel < palette->size();
                                 }));
   }
 }

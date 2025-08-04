@@ -4,7 +4,7 @@
 #include <format>
 
 SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
-  SircImage result = {};
+  SircImage result = SircImage::empty();
 
   if (inputImages.empty()) {
     return result;
@@ -15,7 +15,7 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
   result.palette = firstPalette;
 
   for (const auto &[palette, pixelData] : inputImages) {
-    if (palette != firstPalette) {
+    if (*palette != *firstPalette) {
       throw std::invalid_argument("All palettes must match");
     }
     if (pixelData.size() != firstImageSize) {
@@ -34,12 +34,12 @@ SircImage ImageMerger::merge(const std::vector<SircImage> &inputImages) {
         [firstPalette](const PaletteReference &current,
                        const PaletteReference &candidate) {
           // Only update if candidate is non-transparent
-          if (candidate >= firstPalette.size()) {
+          if (candidate >= firstPalette->size()) {
             throw std::invalid_argument(std::format(
                 "Pixel value {} is out of bounds of the palette of size {}",
-                candidate, firstPalette.size()));
+                candidate, firstPalette->size()));
           }
-          if (const auto resolvedCandidate = firstPalette[candidate];
+          if (const auto resolvedCandidate = firstPalette->at(candidate);
               resolvedCandidate != 0) {
             return candidate;
           }

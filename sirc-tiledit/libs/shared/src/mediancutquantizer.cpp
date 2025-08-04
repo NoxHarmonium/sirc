@@ -186,16 +186,16 @@ mergePalettesAndDeduplicate(const std::vector<SircImage> &sircImages) {
   for (auto const &[palette, _] : sircImages) {
     // Insert the whole palette into the mergedPalette set to remove any
     // duplicates
-    mergedPalette.insert(palette.begin(), palette.end());
+    mergedPalette.insert(palette->begin(), palette->end());
   }
 
   for (auto const &[index, sircImage] : enumerate(sircImages)) {
     auto const &[palette, _] = sircImage;
     // Allocate the inner vector
-    results[index] = std::vector<PaletteReference>(palette.size());
+    results[index] = std::vector<PaletteReference>(palette->size());
 
     // Iterate through every colour in the palette to generate the mapping
-    for (auto const [oldPaletteIndex, paletteEntry] : enumerate(palette)) {
+    for (auto const [oldPaletteIndex, paletteEntry] : enumerate(*palette)) {
       // Find where the colour is situated in the set (to map the old index to
       // the new index)
       auto it3 = mergedPalette.find(paletteEntry);
@@ -235,8 +235,12 @@ SircImage transformSircImagePixelsWithMapping(
     const std::vector<SircColor> &quantizedPaletteWithoutDupes,
     const std::vector<PaletteReference> &paletteMapping) {
   const auto [existingPalette, pixelData] = sircImage;
-  SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
-                              .pixelData = {}};
+  SircImage quantizedImage = {
+      .palette = std::make_shared<std::vector<SircColor>>(
+          quantizedPaletteWithoutDupes),
+      .pixelData = {},
+
+  };
 
   std::ranges::transform(
       pixelData.cbegin(), pixelData.cend(), quantizedImage.pixelData.begin(),
@@ -265,12 +269,12 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   const auto maxPaletteSize = to_underlying(bpp);
   const auto [existingPalette, pixelData] = sircImage;
 
-  if (existingPalette.size() <= maxPaletteSize) {
+  if (existingPalette->size() <= maxPaletteSize) {
     return sircImage;
   }
 
   const auto [quantizedPaletteWithoutDupes, paletteMapping] =
-      quantizePaletteAndGenerateMapping(existingPalette, maxPaletteSize);
+      quantizePaletteAndGenerateMapping(*existingPalette, maxPaletteSize);
 
   return transformSircImagePixelsWithMapping(
       sircImage, quantizedPaletteWithoutDupes, paletteMapping);
