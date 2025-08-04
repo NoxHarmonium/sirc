@@ -6,6 +6,8 @@
 #include <QString>
 #include <qfileinfo.h>
 
+typedef size_t InputImageId;
+
 class InputImage {
 public:
   InputImage(const QFileInfo &file_info,
@@ -15,15 +17,29 @@ public:
 private:
   QFileInfo fileInfo;
   PaletteReductionBpp outputPaletteReduction = PaletteReductionBpp::None;
+  int paletteIndex = 0;
 
 public:
-  [[nodiscard]] QFileInfo file_info() const { return fileInfo; }
-  [[nodiscard]] PaletteReductionBpp output_palette_reduction() const {
+  [[nodiscard]] InputImageId id() const {
+    // An absolute file path should be unique in a given file system
+    return std::hash<QString>{}(fileInfo.absoluteFilePath());
+  }
+  [[nodiscard]] QFileInfo getFileInfo() const { return fileInfo; }
+  [[nodiscard]] PaletteReductionBpp getOutputPaletteReduction() const {
     return outputPaletteReduction;
   }
-  void set_output_palette_reduction(
-      const PaletteReductionBpp output_palette_reduction) {
-    outputPaletteReduction = output_palette_reduction;
+  [[nodiscard]] int getPaletteIndex() const { return paletteIndex; }
+
+  void setOutputPaletteReduction(const PaletteReductionBpp value) {
+    outputPaletteReduction = value;
+  }
+  void setPaletteIndex(const int value) { paletteIndex = value; }
+
+  friend bool operator==(const InputImage &lhs, const InputImage &rhs) {
+    return lhs.fileInfo == rhs.fileInfo;
+  }
+  friend bool operator!=(const InputImage &lhs, const InputImage &rhs) {
+    return !(lhs == rhs);
   }
 };
 

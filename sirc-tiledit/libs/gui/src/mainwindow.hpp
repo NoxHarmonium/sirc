@@ -12,6 +12,7 @@
 QT_BEGIN_NAMESPACE
 
 namespace Ui {
+
 class MainWindow;
 } // namespace Ui
 QT_END_NAMESPACE
@@ -42,6 +43,7 @@ private slots:
   // Input Image Configuration
   void on_fileList_itemSelectionChanged();
   void on_paletteReductionOptions_currentIndexChanged(int index) const;
+  void on_paletteIndexSelection_valueChanged(int value) const;
   void on_moveFileListSelectionUp_clicked() const;
   void on_moveFileListSelectionDown_clicked() const;
 
@@ -62,6 +64,7 @@ private:
   void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
-  std::vector<QSharedPointer<InputImage>> openedImages;
+  std::unordered_map<InputImageId, InputImage> openedImages;
+  std::vector<InputImageId> selectedImages;
 };
 #endif // MAINWINDOW_H

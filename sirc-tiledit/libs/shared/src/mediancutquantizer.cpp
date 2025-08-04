@@ -144,6 +144,67 @@ void splitPaletteIntoBucketsAndAverage(
                                     results.subspan(halfSize), maxBucketSize);
 }
 
+/**
+ * Takes a span of n palettes, each being associated with a different SircImage
+ * struct, merges/de-duplicates all of them into a single palette and returns
+ * a mapping that converts from each of the old palette indexes to index in the
+ * new merged palette.
+ *
+ * @param palettes the span of palettes to merge
+ * @return a pair where the first value is the new merged palette and the second
+ * value is a vector of index mappings, where the indexes align with the
+ * palettes provides in the palettes parameter.
+ */
+std::pair<std::vector<SircColor>, std::vector<std::vector<PaletteReference>>>
+mergePalettesAndDeduplicate(
+    const std::vector<std::vector<SircColor>> &palettes) {
+  // TODO: Clean up this function
+  // TODO: Should I use spans for the parameters?
+  // TODO: Could I use spans for the return type (or would that cause issues
+  // with ownership)
+  // TODO: Is it wasteful to preallocate the vectors with empty values?
+  //       Probably not since it probably just allocates a big chunk of empty
+  //       memory
+  auto results = std::vector<std::vector<PaletteReference>>(palettes.size());
+  std::set<SircColor> mergedPalette;
+
+  // Add all the palettes into a single set
+  // All the palettes need to be inserted into the set in a single loop
+  // before doing the remapping because the ordering would not be stable
+  // between loop iterations
+  for (auto it = palettes.begin(); it != palettes.end(); ++it) {
+    const auto index = std::distance(palettes.begin(), it);
+    auto const &palette = palettes[index];
+    // Insert the whole palette into the mergedPalette set to remove any
+    // duplicates
+    mergedPalette.insert(palette.begin(), palette.end());
+  }
+
+  // Map the old palettes to the new merged palette
+  for (auto it = palettes.begin(); it != palettes.end(); ++it) {
+    const auto index = std::distance(palettes.begin(), it);
+    auto const &palette = palettes[index];
+    // Allocate the inner vector
+    results[index] = std::vector<PaletteReference>(palette.size());
+
+    // Iterate through every colour in the palette to generate the mapping
+    for (auto it2 = palette.begin(); it2 != palette.end(); ++it2) {
+      const auto oldPaletteIndex = std::distance(palette.begin(), it2);
+      const auto paletteEntry = palette[oldPaletteIndex];
+      // Find where the colour is situated in the set (to map the old index to
+      // the new index)
+      auto it3 = mergedPalette.find(paletteEntry);
+      // The colour will always be in the set, unless there is a coding error,
+      // so an assertion is probably good enough here
+      assert(it3 != mergedPalette.end());
+      auto const newIndex = std::distance(mergedPalette.begin(), it3);
+      // Map the old palette index to the new palette index
+      results[index][oldPaletteIndex] = newIndex;
+    }
+  }
+  return {std::vector(mergedPalette.cbegin(), mergedPalette.cend()), results};
+}
+
 std::tuple<std::vector<SircColor>, std::vector<PaletteReference>>
 quantize_palette_and_generate_mapping(
     const std::span<const SircColor> &existingPalette,
@@ -163,6 +224,8 @@ quantize_palette_and_generate_mapping(
                               std::span(quantizedPaletteWithoutDupes))};
 }
 
+// TODO: use consistent casing for things (I think camelCase is the norm in
+// this project)
 SircImage transform_sirc_image_pixels_with_mapping(
     const SircImage &sircImage,
     const std::vector<SircColor> &quantizedPaletteWithoutDupes,
@@ -177,6 +240,21 @@ SircImage transform_sirc_image_pixels_with_mapping(
         return paletteMapping[oldPaletteRef];
       });
   return quantizedImage;
+}
+
+std::vector<PaletteReference>
+mergePaletteMappings(const std::vector<PaletteReference> &paletteMapping,
+                     const std::vector<PaletteReference> &paletteMapping2) {
+  std::vector<PaletteReference> mergedPaletteMapping;
+  mergedPaletteMapping.reserve(paletteMapping.size());
+  for (auto it = paletteMapping.begin(); it != paletteMapping.end(); ++it) {
+    const auto index = std::distance(paletteMapping.begin(), it);
+
+    mergedPaletteMapping.push_back(
+        paletteMapping2.at(paletteMapping.at(index)));
+  }
+
+  return mergedPaletteMapping;
 }
 
 SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
@@ -201,18 +279,33 @@ MedianCutQuantizer::quantize_all(const std::vector<SircImage> &sircImages,
   const auto maxPaletteSize = to_underlying(bpp);
 
   std::vector<SircColor> existingPalette;
+
+  // TODO: Extract this somewhere or use a view?
+  std::vector<std::vector<SircColor>> palettes;
+  palettes.reserve(sircImages.size());
   for (const auto &[palette, _] : sircImages) {
-    existingPalette.insert(existingPalette.begin(), palette.cbegin(),
-                           palette.cend());
+    palettes.push_back(palette);
   }
 
-  const auto [quantizedPaletteWithoutDupes, paletteMapping] =
-      quantize_palette_and_generate_mapping(existingPalette, maxPaletteSize);
+  // TODO: Can we make the palette const? Nothing passed in will be modified
+  const auto [mergedPalette, mergedPaletteMappings] =
+      mergePalettesAndDeduplicate(palettes);
+
+  const auto [quantizedPalette, quantizedPaletteMapping] =
+      quantize_palette_and_generate_mapping(mergedPalette, maxPaletteSize);
 
   std::vector<SircImage> output;
-  for (const auto &sircImage : sircImages) {
+  output.reserve(sircImages.size());
+  // TODO: Is there a nice way to iterate a vector with index that doesn't need
+  // std::distance?
+  for (auto it = sircImages.begin(); it != sircImages.end(); ++it) {
+    const auto index = std::distance(sircImages.begin(), it);
+    const auto &sircImage = sircImages[index];
+    const auto mergedPaletteMapping = mergePaletteMappings(
+        mergedPaletteMappings[index], quantizedPaletteMapping);
+
     SircImage quantizedImage = transform_sirc_image_pixels_with_mapping(
-        sircImage, quantizedPaletteWithoutDupes, paletteMapping);
+        sircImage, quantizedPalette, mergedPaletteMapping);
     output.push_back(quantizedImage);
   }
 
