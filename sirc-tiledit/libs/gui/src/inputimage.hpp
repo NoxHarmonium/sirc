@@ -9,7 +9,7 @@
 class InputImage {
 public:
   InputImage(const QFileInfo &file_info,
-             PaletteReductionBpp output_palette_reduction)
+             const PaletteReductionBpp output_palette_reduction)
       : fileInfo(file_info), outputPaletteReduction(output_palette_reduction) {}
 
 private:
@@ -21,12 +21,14 @@ public:
   [[nodiscard]] PaletteReductionBpp output_palette_reduction() const {
     return outputPaletteReduction;
   }
-  void
-  set_output_palette_reduction(PaletteReductionBpp output_palette_reduction) {
+  void set_output_palette_reduction(
+      const PaletteReductionBpp output_palette_reduction) {
     outputPaletteReduction = output_palette_reduction;
   }
 };
 
+//NOLINTBEGIN
 Q_DECLARE_METATYPE(QSharedPointer<InputImage>)
+//NOLINTEND
 
 #endif // INPUTIMAGE_HPP
