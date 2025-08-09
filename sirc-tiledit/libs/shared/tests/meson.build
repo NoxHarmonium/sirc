@@ -9,6 +9,10 @@ shared_test_source_files = [
     './test_utils.cpp',
     './catch2/catch_amalgamated.cpp'
 ]
+gui_project_dependencies = [libsirc_dep]
+
+test_env = ['DYLD_LIBRARY_PATH=' + join_paths(meson.global_source_root(), 'third-party/libsirc/lib/'),
+            'LD_LIBRARY_PATH=' + join_paths(meson.global_source_root(), 'third-party/libsirc/lib/')]
 
 # Tests
 
@@ -21,6 +25,7 @@ test(
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
+    env : test_env
 )
 
 
@@ -33,6 +38,7 @@ test(
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
+    env : test_env
 )
 
 test(
@@ -44,6 +50,7 @@ test(
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
+    env : test_env
 )
 
 test(
@@ -55,6 +62,7 @@ test(
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
+    env : test_env
 )
 
 test(
@@ -66,4 +74,5 @@ test(
         include_directories : shared_library_include_files,
         link_with : shared_lib,
     ),
+    env : test_env
 )
