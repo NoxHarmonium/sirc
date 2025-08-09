@@ -50,7 +50,7 @@ libsirc_dep = declare_dependency(dependencies : cc.find_library(
                                  include_directories : libsirc_inc)
 
 
-gui_project_dependencies = [qt6_dep, libsirc_dep]
+gui_project_dependencies = [qt6_dep]
 gui_source_files = [
     'libs/gui/src/mainwindow.cpp',
     'libs/gui/src/aboutdialog.cpp',
