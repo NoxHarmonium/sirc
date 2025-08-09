@@ -36,13 +36,13 @@ endif
 libsirc_dep = declare_dependency(dependencies : cc.find_library(
                                      'sirc',
                                      dirs : [
-                                        join_paths(meson.global_source_root(), 'third-party/libsirc/lib'),
-                                        join_paths(meson.global_source_root(), 'third-party/libsirc/lib/x86_64-linux-gnu'),
-                                        '/usr/local/lib/x86_64-linux-gnu',  # Debian/Ubuntu multiarch
-                                        '/usr/local/lib',                    # Standard Unix
-                                        '/usr/lib/x86_64-linux-gnu',         # System-wide multiarch
-                                        '/usr/lib'                           # System-wide
-                                        ],
+                                         join_paths(meson.global_source_root(), 'third-party/libsirc/lib'),
+                                         join_paths(meson.global_source_root(), 'third-party/libsirc/lib/x86_64-linux-gnu'),
+                                         '/usr/local/lib/x86_64-linux-gnu', # Debian/Ubuntu multiarch
+                                         '/usr/local/lib', # Standard Unix
+                                         '/usr/lib/x86_64-linux-gnu', # System-wide multiarch
+                                         '/usr/lib'                           # System-wide
+                                     ],
                                      required : false
                                  ),
                                  include_directories : libsirc_inc)
@@ -59,6 +59,7 @@ gui_source_files = [
 shared_library_source_files = [
     'libs/shared/src/imageloader.cpp',
     'libs/shared/src/imagemerger.cpp',
+    'libs/shared/src/imageexporter.cpp',
     'libs/shared/src/mediancutquantizer.cpp',
     'libs/shared/src/miscadapter.cpp',
     'libs/shared/src/rgbaadapter.cpp',

@@ -3,6 +3,11 @@
   <component name="CMakePythonSetting">
     <option name="pythonIntegrationState" value="YES" />
   </component>
+  <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/third-party/libsirc" />
+    </sourceRoots>
+  </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="MesonSettings">
     <option name="linkedExternalProjectsSettings">
