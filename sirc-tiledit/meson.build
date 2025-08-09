@@ -10,8 +10,10 @@ add_global_arguments(['-DPROJECT_NAME=' + meson.project_name(),
                      ], language : ['cpp'])
 
 env = environment()
-env.set('DYLD_LIBRARY_PATH', '../third-party/libsirc/lib/')
-env.set('LD_LIBRARY_PATH', '../third-party/libsirc/lib/')
+env.set('DYLD_LIBRARY_PATH', join_paths(meson.global_source_root(), 'third-party/libsirc/lib/'))
+env.set('LD_LIBRARY_PATH', join_paths(meson.global_source_root(), 'third-party/libsirc/lib/'))
+
+message(join_paths(meson.global_source_root(), 'third-party/libsirc/lib/'))
 
 fs = import('fs')
 
