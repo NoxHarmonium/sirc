@@ -235,12 +235,10 @@ SircImage transformSircImagePixelsWithMapping(
     const std::vector<SircColor> &quantizedPaletteWithoutDupes,
     const std::vector<PaletteReference> &paletteMapping) {
   const auto [existingPalette, pixelData] = sircImage;
-  SircImage quantizedImage = {
-      .palette = std::make_shared<std::vector<SircColor>>(
-          quantizedPaletteWithoutDupes),
-      .pixelData = {},
-
-  };
+  SircImage quantizedImage = {.palette =
+                                  std::make_shared<std::vector<SircColor>>(
+                                      quantizedPaletteWithoutDupes),
+                              .pixelData = {}};
 
   std::ranges::transform(
       pixelData.cbegin(), pixelData.cend(), quantizedImage.pixelData.begin(),

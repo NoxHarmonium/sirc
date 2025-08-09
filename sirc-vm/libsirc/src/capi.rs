@@ -47,6 +47,9 @@ pub struct CTilemapExport {
 }
 
 fn c_str_to_comment_token(x: *const c_char) -> Token {
+    if x.is_null() {
+        return Token::Comment(String::new());
+    }
     Token::Comment(String::from_utf8_lossy(unsafe { CStr::from_ptr(x).to_bytes() }).into_owned())
 }
 
@@ -80,6 +83,7 @@ fn slice_to_data_tokens(x: &[u16]) -> Vec<Token> {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut c_char {
     assert!(!tilemap_export.tilemaps.is_null());
+    assert!(!tilemap_export.palette_label.is_null());
     let tilemaps =
         unsafe { slice::from_raw_parts(tilemap_export.tilemaps, tilemap_export.tilemaps_len) };
     let tilemap_tokens = tilemaps
@@ -109,6 +113,7 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
     let palette_tokens = tilemap_export
         .palettes
         .iter()
+        .filter(|palette| !palette.comment.is_null())
         .flat_map(|palette| {
             [
                 vec![c_str_to_comment_token(palette.comment)],

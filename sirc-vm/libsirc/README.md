@@ -72,10 +72,10 @@ libsirc.pc
 #### For sirc-tiledit development
 
 So we don't need to install the libraries into the system directories during development, you can export the files
-directly to the sirc-tiledit project.
+directly to the sirc-tiledit project. (Make sure you run it from this directory or adjust the output paths accordingly)
 
 ```shell
-$ cargo cinstall --meson-paths --prefix=/ --destdir=../../sirc-tiledit/third-party/libsirc
+$ cargo cinstall --meson-paths --prefix=/ --destdir=../../sirc-tiledit/third-party/libsirc --debug
 ```
 
 Then when you run `meson setup` it should find the include/library files from that directory.

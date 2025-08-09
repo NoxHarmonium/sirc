@@ -3,6 +3,7 @@
 #define UTILS_HPP
 
 #include <algorithm>
+#include <concepts>
 #include <map>
 #include <ranges>
 #include <type_traits>
@@ -65,6 +66,21 @@ constexpr auto enumerate(Range &&range) {
   };
 
   return view{std::forward<Range>(range)};
+}
+
+template <std::integral T, std::integral U>
+std::vector<T> safeCastIntVector(const std::span<U> &in) {
+  std::vector<T> out;
+  out.reserve(in.size());
+  std::ranges::transform(in, std::back_inserter(out), [](const auto &val) {
+    if (val < static_cast<U>(std::numeric_limits<T>::min()) ||
+        val > static_cast<U>(std::numeric_limits<T>::max())) {
+      throw std::invalid_argument(
+          "Integer value out of range when converting vector");
+    }
+    return static_cast<T>(val);
+  });
+  return out;
 }
 
 #endif // UTILS_HPP

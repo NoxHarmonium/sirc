@@ -19,6 +19,7 @@ constexpr unsigned int SIRC_COLOR_RANGE = (1 << SIRC_COLOR_COMPONENT_BITS) - 1;
 
 using SircColor = uint16_t;
 using SircColorComponent = uint8_t;
+using SircPalette = std::shared_ptr<std::vector<SircColor>>;
 using PaletteReference = size_t;
 using PackedSircPixelData =
     std::array<std::array<SircColor, HEIGHT_PIXELS>, WIDTH_PIXELS>;
@@ -32,7 +33,7 @@ using IndexedPixelData = std::array<PaletteReference, TOTAL_PIXELS>;
  * only support max 4bpp (16 colors).
  */
 struct SircImage {
-  std::shared_ptr<std::vector<SircColor>> palette;
+  SircPalette palette;
   IndexedPixelData pixelData{};
   bool operator==(const SircImage &) const = default;
 
