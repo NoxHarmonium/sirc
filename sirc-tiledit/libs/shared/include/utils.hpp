@@ -3,7 +3,9 @@
 #define UTILS_HPP
 
 #include <algorithm>
+#include <assert.h>
 #include <concepts>
+#include <format>
 #include <map>
 #include <ranges>
 #include <type_traits>
@@ -80,6 +82,63 @@ std::vector<T> safeCastIntVector(const std::span<U> &in) {
     }
     return static_cast<T>(val);
   });
+  return out;
+}
+
+/**
+ * Takes a span of integers and packs them into a smaller number of integers.
+ *
+ * @tparam T the output type
+ * @tparam U the input type
+ * @param in the span to pack into the output vector
+ * @param bits the number of bits each value in the input span will be packed to
+ * @return a vector of packed integers.
+ */
+template <std::integral T, std::integral U>
+std::vector<T> packIntVector(const std::span<U> &in, const uint bits) {
+
+  // Basic check that the number of bits for each value fits in the output type
+  if (bits > std::numeric_limits<T>::digits) {
+    throw std::invalid_argument(
+        std::format("The number of specified bits ({}) does not fit inside the "
+                    "output type ({})",
+                    bits, typeid(T).name()));
+  }
+  // Check that the number of bits for each value divides evenly into the output
+  if (std::numeric_limits<T>::digits % bits != 0) {
+    throw std::invalid_argument(
+        std::format("The number of specified bits ({}) does not fit "
+                    "evenly into the number bits in the output type ({})",
+                    bits, std::numeric_limits<T>::digits));
+  }
+  auto const valuesPerOutput = std::numeric_limits<T>::digits / bits;
+  if (in.size() % valuesPerOutput != 0) {
+    // We don't do any padding, each n input values must pack into a single
+    // output value
+    throw std::invalid_argument(std::format(
+        "The number of values in the input ({}) does not divide evenly by the "
+        "number of values that will be packed into the output ({})",
+        in.size(), valuesPerOutput));
+  }
+
+  std::vector<T> out;
+  out.reserve(in.size() / valuesPerOutput);
+
+  for (uint index = 0; index < in.size(); index += valuesPerOutput) {
+    T outValue = static_cast<T>(0);
+    for (uint i = 0; i < valuesPerOutput; ++i) {
+      const auto val = in[index + i];
+
+      // Shift the most significant "chunk" first so that they don't interfere
+      // with each other
+      auto const shift = (valuesPerOutput - 1 - i) * bits;
+      auto const shifted = val << shift;
+      outValue |= shifted;
+    }
+
+    out.push_back(static_cast<T>(outValue));
+  }
+
   return out;
 }
 
