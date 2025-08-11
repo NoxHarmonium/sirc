@@ -229,8 +229,9 @@ void MainWindow::on_actionExportAsm_triggered() {
     quantizedImagesByPalette[quantizedImage.palette].push_back(quantizedImage);
   }
 
+  const auto bpp = static_cast<std::uint16_t>(getPaletteReductionBpp());
   const auto asmOutputStr =
-      ImageExporter::exportToAsm(quantizedImagesByPalette);
+      ImageExporter::exportToAsm(quantizedImagesByPalette, bpp);
   std::cout << asmOutputStr << '\n';
 }
 

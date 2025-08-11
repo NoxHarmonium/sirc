@@ -12,7 +12,8 @@ public:
 
   [[nodiscard]] static std::string
   exportToAsm(const std::unordered_map<SircPalette, std::vector<SircImage>>
-                  &quantizedImagesByPalette);
+                  &quantizedImagesByPalette,
+              uint bpp);
 };
 
 #endif // IMAGEXPORTER_HPP
