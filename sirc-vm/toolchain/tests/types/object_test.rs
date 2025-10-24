@@ -38,7 +38,7 @@ fn test_merge_object_definition_single_definition_untouched() {
         debug_info: None,
     };
 
-    let (merged, merged_debug_info) = merge_object_definitions(&[first_def.clone()]);
+    let (merged, merged_debug_info) = merge_object_definitions(std::slice::from_ref(&first_def));
 
     assert_eq!(first_def, merged);
     assert_eq!(0, merged_debug_info.debug_info_map.len());
