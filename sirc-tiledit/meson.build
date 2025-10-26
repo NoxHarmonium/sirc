@@ -2,12 +2,12 @@ project('sirc-tiledit',
         'cpp',
         version : '1.0.0',
         license : 'AGPL-3.0-only',
-        default_options : ['cpp_std=c++20', 'warning_level=3', 'werror=true']
 )
 add_global_arguments(['-DPROJECT_NAME=' + meson.project_name(),
                       '-DPROJECT_VERSION=' + meson.project_version(),
-                      '-Wshadow',
                      ], language : ['cpp'])
+
+cpp_args = ['-Wall', '-Wextra', '-Werror', '-Wshadow', '-std=c++20']
 
 env = environment()
 env.set('DYLD_LIBRARY_PATH', join_paths(meson.global_source_root(), 'third-party/libsirc/lib/'))
@@ -25,7 +25,7 @@ if (cc.has_argument ('-Wno-error=#warnings'))
 endif
 
 qt6 = import('qt6')
-qt6_dep = dependency('qt6', modules : ['Core', 'Gui', 'Widgets'])
+qt6_dep = dependency('qt6', modules : ['Core', 'Gui', 'Widgets'], include_type : 'system')
 
 # TODO: If libsirc isn't found, should it disable any related features but still build?
 libsirc_inc = []
@@ -82,6 +82,7 @@ shared_lib = library(
     version : meson.project_version(),
     dependencies : shared_library_dependencies,
     include_directories : shared_library_include_files,
+    cpp_args : cpp_args
 )
 
 executable(
@@ -92,6 +93,7 @@ executable(
     dependencies : gui_project_dependencies,
     include_directories : shared_library_include_files,
     link_with : shared_lib,
+    cpp_args : cpp_args
 )
 
 subdir('libs/shared/tests')

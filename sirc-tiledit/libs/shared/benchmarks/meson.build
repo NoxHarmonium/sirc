@@ -19,6 +19,7 @@ benchmark(
         ['benchmarks.cpp'],
         include_directories : shared_library_include_files,
         link_with : [nanobench_lib, shared_lib],
+        cpp_args : cpp_args
     ),
 )
 
