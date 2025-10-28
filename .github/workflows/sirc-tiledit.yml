@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: libsirc
           path: /
@@ -46,7 +46,7 @@ jobs:
           meson test --print-errorlogs
           ninja coverage-xml
       - name: Archive test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: codecov-tiledit
@@ -73,7 +73,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: libsirc
           path: /
@@ -103,7 +103,7 @@ jobs:
           meson dist
       - name: Archive release
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build artifacts
           path: ./sirc-tiledit/build-release/meson-dist/*
