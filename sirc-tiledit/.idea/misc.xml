@@ -3,6 +3,11 @@
   <component name="CMakePythonSetting">
     <option name="pythonIntegrationState" value="YES" />
   </component>
+  <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/third-party/libsirc" />
+    </sourceRoots>
+  </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="MesonSettings">
     <option name="linkedExternalProjectsSettings">
@@ -15,13 +20,8 @@
         </option>
         <option name="profiles">
           <MesonProfile>
-            <option name="buildDir" value="build" />
-            <option name="mesonExecutable" value="$USER_HOME$/.asdf/installs/meson/1.8.2/bin/meson" />
-            <option name="setupOptions">
-              <list>
-                <option value="--native-file=./native-macos-llvm.ini" />
-              </list>
-            </option>
+            <option name="buildDir" value="build-clion" />
+            <option name="mesonExecutable" value="$USER_HOME$/.asdf/installs/meson/1.9.1/bin/meson" />
             <option name="toolchainName" value="Default" />
           </MesonProfile>
         </option>
