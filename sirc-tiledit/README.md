@@ -41,6 +41,31 @@ If you're not actively working on both libsirc (sirc-vm) and this project
 at the same time, you can probably install libsirc into your system library
 directories to avoid having to do this.
 
+## IDE Setup
+
+### CLion
+
+The Meson project type should automatically detect all targets.
+
+The targets will be under "Native Application". I can't seem to get tests to run via the Catch2 target,
+you currently just to have to run the generated target.
+
+The "sirc-tiledit-gui" target is the main application.
+The targets prefixed with "test_" will run the test suites.
+The "benchmark" target will run the benchmarks.
+The other targets are shared libraries and will just error out if you try to run them.
+
+You'll have to edit some of them to add the DYLD_LIBRARY_PATH/LD_LIBRARY_PATH environment variables (see above)
+The library path is relative to the target so for example:
+
+sirc-tiledit-gui will need:
+
+`DYLD_LIBRARY_PATH=../third-party/libsirc/lib/;LD_LIBRARY_PATH=../third-party/libsirc/lib/`
+
+but test_integration will need:
+
+`DYLD_LIBRARY_PATH=../../../../third-party/libsirc/lib/;LD_LIBRARY_PATH=../../../../third-party/libsirc/lib/`
+
 # Roadmap
 
 - [x] Get a boilerplate QT app running
