@@ -9,6 +9,7 @@ nanobench_lib = library(
     'nanobench',
     ['./nanobench/nanobench.cpp'],
     version : '4.3.11',
+    cpp_args : cpp_args
 )
 
 
