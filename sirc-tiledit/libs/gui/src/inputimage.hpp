@@ -48,8 +48,4 @@ public:
   }
 };
 
-//NOLINTBEGIN
-Q_DECLARE_METATYPE(QSharedPointer<InputImage>)
-//NOLINTEND
-
 #endif // INPUTIMAGE_HPP
