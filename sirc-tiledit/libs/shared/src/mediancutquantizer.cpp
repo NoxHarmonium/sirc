@@ -3,7 +3,6 @@
 #include <mediancutquantizer.hpp>
 #include <utils.hpp>
 
-#include <__ostream/basic_ostream.h>
 #include <algorithm>
 #include <cassert>
 #include <iostream>

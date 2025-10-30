@@ -1,5 +1,5 @@
-#ifndef IMAGEXPORTER_HPP
-#define IMAGEXPORTER_HPP
+#ifndef IMAGEEXPORTER_HPP
+#define IMAGEEXPORTER_HPP
 
 #include "sircimage.hpp"
 #include <string>
@@ -16,4 +16,4 @@ public:
               uint bpp);
 };
 
-#endif // IMAGEXPORTER_HPP
+#endif // IMAGEEXPORTER_HPP

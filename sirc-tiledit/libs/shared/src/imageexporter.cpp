@@ -3,6 +3,7 @@
 //
 
 #include "imageexporter.hpp"
+#include "sircimage.hpp"
 
 #include "utils.hpp"
 

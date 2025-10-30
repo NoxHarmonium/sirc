@@ -14,7 +14,7 @@ TEST_CASE("safeCastIntVector: Converts vector correctly") {
   REQUIRE(output == std::vector<uint16_t>({1, 2, 3, 4, 5}));
 }
 
-TEST_CASE("safeCastIntVector:Converts array correctly") {
+TEST_CASE("safeCastIntVector: Converts array correctly") {
   const std::array<size_t, 5> input = {1, 2, 3, 4, 5};
 
   const auto output =
