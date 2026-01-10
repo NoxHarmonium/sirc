@@ -234,7 +234,19 @@ void MainWindow::on_actionExportAsm_triggered() {
 
   const auto asmOutputStr =
       ImageExporter::exportToAsm(quantizedImagesByPalette);
-  std::cout << asmOutputStr << '\n';
+
+  auto filenameToSave = QFileDialog::getSaveFileName(
+      this, tr("Save file"), "/home", tr("Assembly File (*.asm)"));
+
+  QFile file(filenameToSave);
+  if (file.open(QIODevice::ReadWrite)) {
+    QTextStream stream(&file);
+    stream << QString(
+                  ";; Warning: Exported by sirc-tiledit. Don't edit manually.")
+           << Qt::endl
+           << QString::fromStdString(asmOutputStr) << Qt::endl;
+  }
+  file.close();
 }
 
 // Input Image Configuration
