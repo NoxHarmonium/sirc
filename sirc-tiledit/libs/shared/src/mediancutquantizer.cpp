@@ -231,12 +231,10 @@ quantizePaletteAndGenerateMapping(
 
 SircImage transformSircImagePixelsWithMapping(
     const SircImage &sircImage,
-    const std::vector<SircColor> &quantizedPaletteWithoutDupes,
+    const std::shared_ptr<std::vector<SircColor>> &quantizedPaletteWithoutDupes,
     const std::vector<PaletteReference> &paletteMapping) {
   const auto [existingPalette, pixelData] = sircImage;
-  SircImage quantizedImage = {.palette =
-                                  std::make_shared<std::vector<SircColor>>(
-                                      quantizedPaletteWithoutDupes),
+  SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
                               .pixelData = {}};
 
   std::ranges::transform(
@@ -273,8 +271,11 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   const auto [quantizedPaletteWithoutDupes, paletteMapping] =
       quantizePaletteAndGenerateMapping(*existingPalette, maxPaletteSize);
 
-  return transformSircImagePixelsWithMapping(
-      sircImage, quantizedPaletteWithoutDupes, paletteMapping);
+  const auto shared_palette =
+      std::make_shared<std::vector<SircColor>>(quantizedPaletteWithoutDupes);
+
+  return transformSircImagePixelsWithMapping(sircImage, shared_palette,
+                                             paletteMapping);
 }
 
 std::vector<SircImage>
@@ -288,6 +289,8 @@ MedianCutQuantizer::quantizeAll(const std::vector<SircImage> &sircImages,
   const auto [quantizedPalette, quantizedPaletteMapping] =
       quantizePaletteAndGenerateMapping(mergedPalette, maxPaletteSize);
 
+  const auto shared_palette =
+      std::make_shared<std::vector<SircColor>>(quantizedPalette);
   std::vector<SircImage> output;
   output.reserve(sircImages.size());
   for (auto const [index, sircImage] : enumerate(sircImages)) {
@@ -295,7 +298,7 @@ MedianCutQuantizer::quantizeAll(const std::vector<SircImage> &sircImages,
         mergedPaletteMappings[index], quantizedPaletteMapping);
 
     SircImage quantizedImage = transformSircImagePixelsWithMapping(
-        sircImage, quantizedPalette, mergedPaletteMapping);
+        sircImage, shared_palette, mergedPaletteMapping);
     output.push_back(quantizedImage);
   }
 

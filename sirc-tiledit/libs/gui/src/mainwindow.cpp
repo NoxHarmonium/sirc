@@ -239,6 +239,7 @@ void MainWindow::on_actionExportAsm_triggered() {
       this, tr("Save file"), "/home", tr("Assembly File (*.asm)"));
 
   QFile file(filenameToSave);
+  // TODO: Error handling
   if (file.open(QIODevice::ReadWrite)) {
     QTextStream stream(&file);
     stream << QString(
