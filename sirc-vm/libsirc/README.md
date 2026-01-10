@@ -35,7 +35,7 @@ Which is everything we need to package it up and distribute it.
 You need to install c-build to use this crate.
 
 ```shell
-$ cargo install cargo-c@0.10.14+cargo-0.89.0
+$ cargo install cargo-c@0.10.19+cargo-0.93.0
 ```
 
 ### Building

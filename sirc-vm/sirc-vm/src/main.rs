@@ -121,12 +121,14 @@ pub struct Args {
 }
 
 fn main() {
-    assert!(
-        !cfg!(target_endian = "big"),
-        "This simulator is only compatible with little endian CPUs. \
+    const {
+        assert!(
+            !cfg!(target_endian = "big"),
+            "This simulator is only compatible with little endian CPUs. \
         Which is ironic because the device it is simulating is big endian.\
         It might work, but it hasn't been tested and there is a lot of bit swizzling."
-    );
+        );
+    };
 
     let args = Args::parse();
 

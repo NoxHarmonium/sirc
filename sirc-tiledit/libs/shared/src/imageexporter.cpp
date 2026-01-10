@@ -21,17 +21,13 @@ std::string ImageExporter::exportToAsm(
       tileMapStorage; // Store our actual CTilemap structs
   std::vector<std::unique_ptr<std::string>>
       stringStorage; // Store strings to keep them alive
-  // TODO: It doesn't look like the PPU has a way to set BPP yet?
-  // Palette select is 3 bits so there can only be 8 palettes at the moment
-  // The palette storage is 256 colours so that means we can only reference 8
-  // palettes of 32 colours. That is a bit limiting I suppose. We might want
-  // have more palettes with less colours in them.
-  // If we can offset the palette index, we can use smaller palettes i.e. we
-  // don't need to use all 3 bits of the select, and we can overlap palettes I
-  // think we need to implement some sort of palette offset in the PPU registers
+
+  // TODO: WAIT A MINUTE
+  // Is this exporting raw pixel data, not tiles?
+  // :FACEPALM:
+  // TODO: Chop up into tiles
 
   uint16_t currentPaletteIndex = 0;
-  uint16_t currentPaletteOffset = 0;
   std::vector<libsirc::CPalette> palettes;
   const auto maxPaletteCount = quantizedImagesByPalette.size();
 
@@ -49,9 +45,16 @@ std::string ImageExporter::exportToAsm(
     }
 
     stringStorage.push_back(std::make_unique<std::string>(std::format(
-        "Palette {} (offset {})", currentPaletteIndex, currentPaletteOffset)));
-    const libsirc::CPalette cPalette = {.comment =
-                                            stringStorage.back()->c_str(),
+        "palette__{}_{}", currentPaletteIndex, tileMapStorage.size())));
+    auto *const paletteLabel = stringStorage.back()->c_str();
+
+    stringStorage.push_back(std::make_unique<std::string>(
+        std::format("Palette {} (number of values: {})", currentPaletteIndex,
+                    palette->size())));
+    auto *const paletteComment = stringStorage.back()->c_str();
+
+    const libsirc::CPalette cPalette = {.label = paletteLabel,
+                                        .comment = paletteComment,
                                         .data = palette->data(),
                                         .data_len = palette->size()};
 
@@ -64,33 +67,41 @@ std::string ImageExporter::exportToAsm(
           packIntVector<uint16_t, const size_t>(std::span(pixelData), 4)));
       const auto *const pixelData16 = allPixelData.back().get();
 
-      stringStorage.push_back(std::make_unique<std::string>(
-          std::format("tilemap_{}", currentPaletteIndex)));
+      stringStorage.push_back(std::make_unique<std::string>(std::format(
+          "tilemap__{}_{}", currentPaletteIndex, tileMapStorage.size())));
       auto *const tileLabel = stringStorage.back()->c_str();
 
-      stringStorage.push_back(
-          std::make_unique<std::string>(std::format("Tilemap for {}", name)));
+      stringStorage.push_back(std::make_unique<std::string>(
+          std::format("Tilemap for {} (number of packed 16-bit values: {})",
+                      name, pixelData16->size())));
       auto *const tileComment = stringStorage.back()->c_str();
 
       // Create and store the tilemap
       tileMapStorage.push_back(
           libsirc::CTilemap{.label = tileLabel,
                             .comment = tileComment,
-                            .palette_index = currentPaletteIndex,
-                            .packed_pixel_data = pixelData16->data(),
-                            .packed_pixel_data_len = pixelData16->size()});
+                            .data = pixelData16->data(),
+                            .data_len = pixelData16->size()});
     }
 
-    currentPaletteOffset += palette->size();
     currentPaletteIndex++;
   }
 
   // Create the export structure
-  stringStorage.push_back(std::make_unique<std::string>("palettes"));
-  const auto *const paletteLabel = stringStorage.back()->c_str();
-  libsirc::CTilemapExport export_data = {.tilemaps = tileMapStorage.data(),
+  stringStorage.push_back(std::make_unique<std::string>("Tileset Section"));
+  const auto *const tilesetsComment = stringStorage.back()->c_str();
+  stringStorage.push_back(std::make_unique<std::string>("Tilemap Section"));
+  const auto *const tilemapsComment = stringStorage.back()->c_str();
+  stringStorage.push_back(std::make_unique<std::string>("Palette Section"));
+  const auto *const palettesComment = stringStorage.back()->c_str();
+  libsirc::CTilemapExport export_data = {.tilesets_comment = tilesetsComment,
+                                         // TODO: Implement tile generation
+                                         .tilesets = nullptr,
+                                         .tilesets_len = 0,
+                                         .tilemaps_comment = tilemapsComment,
+                                         .tilemaps = tileMapStorage.data(),
                                          .tilemaps_len = tileMapStorage.size(),
-                                         .palette_label = paletteLabel,
+                                         .palettes_comment = palettesComment,
                                          .palettes = palettes.data(),
                                          .palettes_len = palettes.size()};
 

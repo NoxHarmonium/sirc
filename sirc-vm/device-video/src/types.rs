@@ -218,7 +218,6 @@ pub struct PpuRegisters {
     pub reserved5: u16,
     pub s_tile_addr: u16,
     pub status: StatusRegister,
-
 }
 
 impl MemoryMapped for PpuRegisters {

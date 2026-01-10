@@ -193,17 +193,31 @@ fn resolve_palette_addr(palette_select: u8, palette_register: PaletteRegister) -
     // We can overflow when adding the offset; in that case, the result will wrap, which is the
     // simplest way to do it in hardware.
     // assert_eq!(palette_select, 0, "palette_select: {} shift: {} palette_offset:{} result: {}", palette_select, shift, palette_register.palette_offset(), palette_select.unbounded_shl(shift).wrapping_add(palette_register.palette_offset()));
-    palette_select.unbounded_shl(shift).wrapping_add(palette_register.palette_offset())
+    palette_select
+        .unbounded_shl(shift)
+        .wrapping_add(palette_register.palette_offset())
 }
 
 #[allow(clippy::cast_possible_truncation)]
-fn resolve_tile_line(fetch_registers: &FetchRegisters, ppu_registers: &PpuRegisters) -> (u8, u8, u8, u8) {
+fn resolve_tile_line(
+    fetch_registers: &FetchRegisters,
+    ppu_registers: &PpuRegisters,
+) -> (u8, u8, u8, u8) {
     // TODO: This will be efficient in hardware but not sure how well this code will optimise
     // Would be good to check since it will be in a hot loop
     let palette_offsets = [
-        resolve_palette_addr(fetch_registers.bg3_tilemap.palette_select(), ppu_registers.b3_palette_config),
-        resolve_palette_addr(fetch_registers.bg2_tilemap.palette_select(), ppu_registers.b2_palette_config),
-        resolve_palette_addr(fetch_registers.bg1_tilemap.palette_select(), ppu_registers.b1_palette_config),
+        resolve_palette_addr(
+            fetch_registers.bg3_tilemap.palette_select(),
+            ppu_registers.b3_palette_config,
+        ),
+        resolve_palette_addr(
+            fetch_registers.bg2_tilemap.palette_select(),
+            ppu_registers.b2_palette_config,
+        ),
+        resolve_palette_addr(
+            fetch_registers.bg1_tilemap.palette_select(),
+            ppu_registers.b1_palette_config,
+        ),
     ];
     let p1 = resolve_first_visible_pixel(
         [
@@ -396,7 +410,8 @@ impl Device for VideoDevice {
                     Backgrounds::Bg1 => {
                         if tilemap_x > 0 {
                             // First clock muxes the result from the last cycle (it is pipelined, needs an entire cycle to fill the buffer)
-                            let (p1, p2, p3, p4) = resolve_tile_line(&self.vram_fetch_register, &self.ppu_registers);
+                            let (p1, p2, p3, p4) =
+                                resolve_tile_line(&self.vram_fetch_register, &self.ppu_registers);
                             self.pixel_mux_buffer_register = PixelBuffer {
                                 p1: self.palette[p1 as usize],
                                 p2: self.palette[p2 as usize],
@@ -593,6 +608,7 @@ mod tests {
 
         for (digit_idx, tile) in orig_digit_tiles.iter().enumerate() {
             // 2x8 = 16
+            #[allow(clippy::needless_range_loop)]
             for i in 0..16 {
                 // Each line in output: 4 pixels per TileLine, so two TileLines per row
                 let base = i * 4;
@@ -685,9 +701,15 @@ mod tests {
         video_device.ppu_registers.b1_tile_addr = 0x1000;
         video_device.ppu_registers.b2_tile_addr = 0x2000;
         video_device.ppu_registers.b3_tile_addr = 0x3000;
-        video_device.ppu_registers.b1_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
-        video_device.ppu_registers.b2_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
-        video_device.ppu_registers.b3_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
+        video_device.ppu_registers.b1_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
+        video_device.ppu_registers.b2_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
+        video_device.ppu_registers.b3_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
 
         for line in 0..TOTAL_LINES {
             // Clocks are divided by two to turn master clocks into PPU clocks
