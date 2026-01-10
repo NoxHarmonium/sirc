@@ -48,7 +48,7 @@ private slots:
   void on_moveFileListSelectionDown_clicked() const;
 
 private:
-  [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
+  [[nodiscard]] PaletteReductionBpp getPaletteSize() const;
   [[nodiscard]] std::unordered_map<InputImageId, SircImage>
   getOpenedImagesQuantizedById() const;
 

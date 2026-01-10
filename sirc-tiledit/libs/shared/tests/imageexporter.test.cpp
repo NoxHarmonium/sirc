@@ -23,17 +23,19 @@ TEST_CASE("Exports images correctly") {
   const SircImage sircImage3 = {.palette = palette2,
                                 .pixelData = {6, 6, 6, 6, 7}};
 
-  const std::unordered_map<SircPalette, std::vector<SircImage>>
-      quantizedImagesByPalette = {{palette1, {sircImage1, sircImage2}},
-                                  {palette2, {sircImage3}}};
+  const std::unordered_map<SircPalette,
+                           std::vector<std::pair<std::string, SircImage>>>
+      quantizedImagesByPalette = {
+          {palette1, {{"sircImage1", sircImage1}, {"sircImage2", sircImage2}}},
+          {palette2, {{"sircImage3", sircImage3}}}};
 
   auto const asmOutput =
-      ImageExporter::exportToAsm(quantizedImagesByPalette, 4).substr(0, 98);
+      ImageExporter::exportToAsm(quantizedImagesByPalette).substr(0, 98);
 
   std::cout << asmOutput << "\n";
 
   // TODO: A better test
   REQUIRE(asmOutput.starts_with(
-      ";some_comment\n:some_label\n.DW #0x6666\n.DW #0x7000\n.DW #0x0000\n.DW "
-      "#0x0000\n.DW #0x0000\n"));
+      ";Tilemap for sircImage3\n:tilemap_0\n.DW #0x6666\n.DW #0x7000\n.DW "
+      "#0x0000\n.DW #0x0000\n.DW #0x0000\n.DW"));
 }

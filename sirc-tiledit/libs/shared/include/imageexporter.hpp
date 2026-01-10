@@ -10,10 +10,11 @@ class ImageExporter {
 public:
   ImageExporter() = default;
 
-  [[nodiscard]] static std::string
-  exportToAsm(const std::unordered_map<SircPalette, std::vector<SircImage>>
-                  &quantizedImagesByPalette,
-              uint bpp);
+  [[nodiscard]] static std::string exportToAsm(
+      // TODO: Should the std::pair be given a type alias or something?
+      const std::unordered_map<SircPalette,
+                               std::vector<std::pair<std::string, SircImage>>>
+          &quantizedImagesByPalette);
 };
 
 #endif // IMAGEEXPORTER_HPP

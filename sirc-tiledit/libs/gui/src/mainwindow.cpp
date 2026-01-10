@@ -33,7 +33,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
 }
 #endif // QT_NO_CONTEXTMENU
 
-PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
+PaletteReductionBpp MainWindow::getPaletteSize() const {
   const auto currentItem = ui->paletteReductionOptions->currentData();
   if (currentItem.isNull() || !currentItem.isValid()) {
     return PaletteReductionBpp::None;
@@ -222,16 +222,18 @@ void MainWindow::on_actionAbout_triggered() {
 
 void MainWindow::on_actionExportAsm_triggered() {
   const auto quantizedImagesById = this->getOpenedImagesQuantizedById();
-  const auto allQuantizedImages = quantizedImagesById | std::views::values;
-  std::unordered_map<SircPalette, std::vector<SircImage>>
+  std::unordered_map<SircPalette,
+                     std::vector<std::pair<std::string, SircImage>>>
       quantizedImagesByPalette;
-  for (const auto &quantizedImage : allQuantizedImages) {
-    quantizedImagesByPalette[quantizedImage.palette].push_back(quantizedImage);
+  for (const auto &[id, quantizedImage] : quantizedImagesById) {
+    const auto &image = this->openedImages.at(id);
+    const std::string name = image->getFileInfo().fileName().toStdString();
+    quantizedImagesByPalette[quantizedImage.palette].emplace_back(
+        name, quantizedImage);
   }
 
-  const auto bpp = static_cast<std::uint16_t>(getPaletteReductionBpp());
   const auto asmOutputStr =
-      ImageExporter::exportToAsm(quantizedImagesByPalette, bpp);
+      ImageExporter::exportToAsm(quantizedImagesByPalette);
   std::cout << asmOutputStr << '\n';
 }
 
@@ -252,7 +254,7 @@ void MainWindow::on_fileList_itemSelectionChanged() {
 
 void MainWindow::on_paletteReductionOptions_currentIndexChanged(
     [[maybe_unused]] int index) const {
-  const auto selectedBpp = getPaletteReductionBpp();
+  const auto selectedBpp = getPaletteSize();
 
   for (const auto &openedImageId : selectedImages) {
     openedImages.at(openedImageId)->setOutputPaletteReduction(selectedBpp);

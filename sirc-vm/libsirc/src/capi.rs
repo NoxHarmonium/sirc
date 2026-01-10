@@ -25,8 +25,10 @@ pub struct CTilemap {
 pub struct CPalette {
     /// The comment printed above this palette for humans to read
     pub comment: *const c_char,
-    /// The 16 entries of the palette.
-    pub data: [u16; 16],
+    /// The entries of the palette.
+    pub data: *const u16,
+    /// The number of entries in the palette,
+    pub data_len: usize,
 }
 
 #[repr(C)]
@@ -41,9 +43,9 @@ pub struct CTilemapExport {
     /// The label printed above the palette data, so it can be referenced in assembly routines
     pub palette_label: *const c_char,
     /// The palettes that the tilemaps refer to.
-    /// The palette size in the PPU is 16x16 colour palettes (only 16 colours can be addressable at once with 4bpp)
-    /// We may as well represent this as a fixed size array to keep it simple
-    pub palettes: [CPalette; 16],
+    pub palettes: *const CPalette,
+    /// The number of palettes that have been passed in
+    pub palettes_len: usize,
 }
 
 fn c_str_to_comment_token(x: *const c_char) -> Token {
@@ -84,6 +86,7 @@ fn slice_to_data_tokens(x: &[u16]) -> Vec<Token> {
 pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut c_char {
     assert!(!tilemap_export.tilemaps.is_null());
     assert!(!tilemap_export.palette_label.is_null());
+    assert!(!tilemap_export.palettes.is_null());
     let tilemaps =
         unsafe { slice::from_raw_parts(tilemap_export.tilemaps, tilemap_export.tilemaps_len) };
     let tilemap_tokens = tilemaps
@@ -110,14 +113,21 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
         })
         .collect();
 
-    let palette_tokens = tilemap_export
-        .palettes
+    let palettes = if tilemap_export.palettes.is_null() {
+        &[]
+    } else {
+        unsafe { slice::from_raw_parts(tilemap_export.palettes, tilemap_export.palettes_len) }
+    };
+
+    let palette_tokens = palettes
         .iter()
-        .filter(|palette| !palette.comment.is_null())
+        .filter(|palette| !palette.comment.is_null() && !palette.data.is_null())
         .flat_map(|palette| {
+            let palette_data = unsafe { slice::from_raw_parts(palette.data, palette.data_len) };
+
             [
                 vec![c_str_to_comment_token(palette.comment)],
-                slice_to_data_tokens(palette.data.as_slice()),
+                slice_to_data_tokens(palette_data),
             ]
             .concat()
         })

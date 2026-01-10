@@ -14,7 +14,7 @@
 
 mod types;
 
-use crate::types::{PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
+use crate::types::{PaletteRegister, PaletteSize, PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
 use log::{debug, info};
 use minifb::WindowOptions;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
@@ -40,9 +40,9 @@ const WIDTH_PIXELS: u16 = 256;
 const HEIGHT_PIXELS: u16 = 224;
 
 const TOTAL_LINES: u16 = 262; // NTSC
-                              // This just refers to the lines the TV can technically display
-                              // the console will output less than this
-                              // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
+// This just refers to the lines the TV can technically display
+// the console will output less than this
+// Number of vsync lines = TOTAL_LINES - VSYNC_LINE
 
 pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
 fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
@@ -149,7 +149,7 @@ pub struct VideoDevice {
 
     // Native
     vram: Vec<u16>,
-    palette: Vec<PpuPixel>,
+    palette: [PpuPixel; PALETTE_SIZE],
     ppu_registers: PpuRegisters,
     vram_fetch_register: FetchRegisters,
     pixel_mux_buffer_register: PixelBuffer,
@@ -180,13 +180,30 @@ fn resolve_first_visible_pixel(pixel_values: [u8; 3], palette_offsets: [u8; 3]) 
     0
 }
 
-fn resolve_tile_line(fetch_registers: &FetchRegisters) -> TileLine {
+fn resolve_palette_addr(palette_select: u8, palette_register: PaletteRegister) -> u8 {
+    let shift: u32 = match palette_register.palette_size() {
+        PaletteSize::Four => 2,
+        PaletteSize::Eight => 3,
+        PaletteSize::Sixteen => 4,
+        PaletteSize::ThirtyTwo => 5,
+    };
+    // Use shift to keep hardware simple - we shouldn't need to handle overflow when shifting
+    // Max value is palette_select = 7 and palette_register.palette_size() = ThirtyTwo) which result
+    // in 0b0000_0111 shifted left by 5 => 0b1110_0000 = 224 which is still in bounds.
+    // We can overflow when adding the offset; in that case, the result will wrap, which is the
+    // simplest way to do it in hardware.
+    // assert_eq!(palette_select, 0, "palette_select: {} shift: {} palette_offset:{} result: {}", palette_select, shift, palette_register.palette_offset(), palette_select.unbounded_shl(shift).wrapping_add(palette_register.palette_offset()));
+    palette_select.unbounded_shl(shift).wrapping_add(palette_register.palette_offset())
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn resolve_tile_line(fetch_registers: &FetchRegisters, ppu_registers: &PpuRegisters) -> (u8, u8, u8, u8) {
     // TODO: This will be efficient in hardware but not sure how well this code will optimise
     // Would be good to check since it will be in a hot loop
     let palette_offsets = [
-        fetch_registers.bg3_tilemap.palette_select(),
-        fetch_registers.bg2_tilemap.palette_select(),
-        fetch_registers.bg1_tilemap.palette_select(),
+        resolve_palette_addr(fetch_registers.bg3_tilemap.palette_select(), ppu_registers.b3_palette_config),
+        resolve_palette_addr(fetch_registers.bg2_tilemap.palette_select(), ppu_registers.b2_palette_config),
+        resolve_palette_addr(fetch_registers.bg1_tilemap.palette_select(), ppu_registers.b1_palette_config),
     ];
     let p1 = resolve_first_visible_pixel(
         [
@@ -220,12 +237,7 @@ fn resolve_tile_line(fetch_registers: &FetchRegisters) -> TileLine {
         ],
         palette_offsets,
     );
-    let mut out = TileLine::new();
-    out.set_p1(p1);
-    out.set_p2(p2);
-    out.set_p3(p3);
-    out.set_p4(p4);
-    out
+    (p1, p2, p3, p4)
 }
 
 #[must_use]
@@ -240,7 +252,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
                 HEIGHT_PIXELS as usize,
                 WindowOptions::default(),
             )
-            .unwrap(),
+                .unwrap(),
         })
     };
 
@@ -290,7 +302,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         buffer: vec![0; total_pixels as usize],
         window,
         vram: vec![0; VRAM_SIZE],
-        palette: vec![PpuPixel::new(); PALETTE_SIZE],
+        palette: [PpuPixel::new(); PALETTE_SIZE],
         vram_fetch_register: FetchRegisters::default(),
         pixel_mux_buffer_register: PixelBuffer::default(),
         ppu_registers: PpuRegisters::default(),
@@ -384,12 +396,12 @@ impl Device for VideoDevice {
                     Backgrounds::Bg1 => {
                         if tilemap_x > 0 {
                             // First clock muxes the result from the last cycle (it is pipelined, needs an entire cycle to fill the buffer)
-                            let resolved_line = resolve_tile_line(&self.vram_fetch_register);
+                            let (p1, p2, p3, p4) = resolve_tile_line(&self.vram_fetch_register, &self.ppu_registers);
                             self.pixel_mux_buffer_register = PixelBuffer {
-                                p1: self.palette[resolved_line.p1() as usize],
-                                p2: self.palette[resolved_line.p2() as usize],
-                                p3: self.palette[resolved_line.p3() as usize],
-                                p4: self.palette[resolved_line.p4() as usize],
+                                p1: self.palette[p1 as usize],
+                                p2: self.palette[p2 as usize],
+                                p3: self.palette[p3 as usize],
+                                p4: self.palette[p4 as usize],
                             };
                         } else {
                             // Flush buffer so the last chunk of the line doesn't end up on the next line
@@ -563,8 +575,8 @@ mod tile_data;
 
 #[cfg(test)]
 mod tests {
-    use crate::tile_data::{DIGIT_TILES, PALETTE_1, TEST_PATTERNS, TEST_TILEMAP};
-    use crate::types::{Backgrounds, TileLine, TilemapEntry};
+    use crate::tile_data::{DIGIT_TILES, PALETTE_1, PALETTE_2, TEST_PATTERNS, TEST_TILEMAP};
+    use crate::types::{Backgrounds, PaletteRegister, PaletteSize, TileLine, TilemapEntry};
     use crate::{
         new_video_device, unpack_rgb, RenderStateMachine, VideoDevice, HEIGHT_PIXELS, TOTAL_LINES,
         WIDTH_PIXELS,
@@ -601,6 +613,7 @@ mod tests {
 
     fn copy_palettes_to_vram(video_device: &mut VideoDevice) {
         video_device.palette[0x0..0x10].copy_from_slice(PALETTE_1.as_slice());
+        video_device.palette[0x10..0x20].copy_from_slice(PALETTE_2.as_slice());
     }
 
     fn copy_tiles_to_vram(video_device: &mut VideoDevice) {
@@ -632,13 +645,13 @@ mod tests {
 
     #[test]
     fn test_parsing_tilemap() {
-        let tilemap_bytes = [0x83, 0xFF];
-        let tilemap_from_hex: u16 = u16::from_be_bytes([0x83, 0xFF]);
+        let tilemap_bytes = [0x87, 0xFF];
+        let tilemap_from_hex: u16 = u16::from_be_bytes([0x87, 0xFF]);
         let tilemap_from_constructor = TilemapEntry::new()
             .with_flip_vertical(1)
             .with_flip_horizontal(0)
             .with_priority(0)
-            .with_palette_select(0)
+            .with_palette_select(1)
             .with_tile_index(0x3FF);
 
         let x: u16 = tilemap_from_constructor.into();
@@ -672,6 +685,9 @@ mod tests {
         video_device.ppu_registers.b1_tile_addr = 0x1000;
         video_device.ppu_registers.b2_tile_addr = 0x2000;
         video_device.ppu_registers.b3_tile_addr = 0x3000;
+        video_device.ppu_registers.b1_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
+        video_device.ppu_registers.b2_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
+        video_device.ppu_registers.b3_palette_config = PaletteRegister::new().with_palette_size(PaletteSize::Sixteen).with_palette_offset(0);
 
         for line in 0..TOTAL_LINES {
             // Clocks are divided by two to turn master clocks into PPU clocks
@@ -735,7 +751,7 @@ mod tests {
                 ..Options::default()
             },
         )
-        .expect("Failed to optimize PNG");
+            .expect("Failed to optimize PNG");
         insta::assert_binary_snapshot!("last_frame.png", result);
     }
 }

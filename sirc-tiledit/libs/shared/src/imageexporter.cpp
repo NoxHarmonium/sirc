@@ -10,24 +10,34 @@
 #include <libsirc/libsirc.h>
 
 std::string ImageExporter::exportToAsm(
-    const std::unordered_map<SircPalette, std::vector<SircImage>>
-        &quantizedImagesByPalette,
-    const uint bpp) {
+    const std::unordered_map<SircPalette,
+                             std::vector<std::pair<std::string, SircImage>>>
+        &quantizedImagesByPalette) {
   // Important: These must be declared BEFORE tilemaps and palettes to avoid
   // dangling pointers
-  std::vector<std::vector<uint16_t>>
+  std::vector<std::unique_ptr<std::vector<uint16_t>>>
       allPixelData; // Store vectors to keep pixel data alive
   std::vector<libsirc::CTilemap>
       tileMapStorage; // Store our actual CTilemap structs
-  const uint paletteSize = 1 << bpp;
-  const uint maxPaletteCount = MAX_PALETTE_SIZE / paletteSize;
+  std::vector<std::unique_ptr<std::string>>
+      stringStorage; // Store strings to keep them alive
+  // TODO: It doesn't look like the PPU has a way to set BPP yet?
+  // Palette select is 3 bits so there can only be 8 palettes at the moment
+  // The palette storage is 256 colours so that means we can only reference 8
+  // palettes of 32 colours. That is a bit limiting I suppose. We might want
+  // have more palettes with less colours in them.
+  // If we can offset the palette index, we can use smaller palettes i.e. we
+  // don't need to use all 3 bits of the select, and we can overlap palettes I
+  // think we need to implement some sort of palette offset in the PPU registers
 
   uint16_t currentPaletteIndex = 0;
+  uint16_t currentPaletteOffset = 0;
   std::vector<libsirc::CPalette> palettes;
+  const auto maxPaletteCount = quantizedImagesByPalette.size();
 
-  static auto defaultPaletteComment = "";
-  const libsirc::CPalette defaultPalette = {.comment = defaultPaletteComment,
-                                            .data = {}};
+  static const auto *defaultPaletteComment = "";
+  const libsirc::CPalette defaultPalette = {
+      .comment = defaultPaletteComment, .data = nullptr, .data_len = 0};
   palettes.resize(maxPaletteCount, defaultPalette);
 
   for (const auto &[palette, images] : quantizedImagesByPalette) {
@@ -38,55 +48,51 @@ std::string ImageExporter::exportToAsm(
                       currentPaletteIndex, maxPaletteCount));
     }
 
-    static const char *paletteComment = "palette comment";
-    libsirc::CPalette cPalette = {.comment = paletteComment, .data = {}};
-    if (palette->size() > paletteSize) {
-      throw std::runtime_error(std::format(
-          "Provided palette has {} colors, but only {} colors can fit in "
-          "{} bpp",
-          palette->size(), paletteSize, bpp));
-    }
-
-    std::copy_n(palette->begin(),
-                std::min(palette->size(), static_cast<size_t>(paletteSize)),
-                cPalette.data);
+    stringStorage.push_back(std::make_unique<std::string>(std::format(
+        "Palette {} (offset {})", currentPaletteIndex, currentPaletteOffset)));
+    const libsirc::CPalette cPalette = {.comment =
+                                            stringStorage.back()->c_str(),
+                                        .data = palette->data(),
+                                        .data_len = palette->size()};
 
     palettes[currentPaletteIndex] = cPalette;
 
-    for (const auto &[_, pixelData] : images) {
+    for (const auto &[name, sircImage] : images) {
+      const auto &pixelData = sircImage.pixelData;
       // Create persistent storage for pixel data
-      allPixelData.emplace_back(
-          packIntVector<uint16_t, const size_t>(std::span(pixelData), 4));
-      const auto &pixelData16 = allPixelData.back();
+      allPixelData.push_back(std::make_unique<std::vector<uint16_t>>(
+          packIntVector<uint16_t, const size_t>(std::span(pixelData), 4)));
+      const auto *const pixelData16 = allPixelData.back().get();
 
-      // Static strings for labels/comments
-      static const char *tileLabel = "some_label";
-      static const char *tileComment = "some_comment";
+      stringStorage.push_back(std::make_unique<std::string>(
+          std::format("tilemap_{}", currentPaletteIndex)));
+      auto *const tileLabel = stringStorage.back()->c_str();
+
+      stringStorage.push_back(
+          std::make_unique<std::string>(std::format("Tilemap for {}", name)));
+      auto *const tileComment = stringStorage.back()->c_str();
 
       // Create and store the tilemap
       tileMapStorage.push_back(
           libsirc::CTilemap{.label = tileLabel,
                             .comment = tileComment,
                             .palette_index = currentPaletteIndex,
-                            .packed_pixel_data = pixelData16.data(),
-                            .packed_pixel_data_len = pixelData16.size()});
+                            .packed_pixel_data = pixelData16->data(),
+                            .packed_pixel_data_len = pixelData16->size()});
     }
 
+    currentPaletteOffset += palette->size();
     currentPaletteIndex++;
   }
 
   // Create the export structure
-  static const char *palLabel = "some_label";
+  stringStorage.push_back(std::make_unique<std::string>("palettes"));
+  const auto *const paletteLabel = stringStorage.back()->c_str();
   libsirc::CTilemapExport export_data = {.tilemaps = tileMapStorage.data(),
                                          .tilemaps_len = tileMapStorage.size(),
-                                         .palette_label = palLabel,
-                                         .palettes = {}};
-
-  // Copy palettes into the export structure
-  std::copy_n(
-      palettes.begin(),
-      std::min(currentPaletteIndex, static_cast<uint16_t>(maxPaletteCount)),
-      export_data.palettes);
+                                         .palette_label = paletteLabel,
+                                         .palettes = palettes.data(),
+                                         .palettes_len = palettes.size()};
 
   char *asmChar = libsirc::tilemap_to_str(export_data);
 

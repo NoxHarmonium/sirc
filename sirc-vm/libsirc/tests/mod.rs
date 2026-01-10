@@ -26,13 +26,14 @@ struct TestHarness {
     tilemap_comment: CString,
     tilemap_label_name: CString,
     palette_label_name: CString,
+    palette_data: Vec<[u16; 16]>,
     palettes: [CPalette; 16],
     tilemap: CTilemap,
     tilemaps: Vec<CTilemap>,
     export: CTilemapExport,
 }
 
-fn create_test_export() -> TestHarness {
+fn create_test_export() -> Box<TestHarness> {
     let pixels = &[1u16, 2u16, 3u16, 4u16];
 
     let tilemap_comment = CString::new("tilemap 1 comment").unwrap();
@@ -44,11 +45,9 @@ fn create_test_export() -> TestHarness {
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();
-
-    let palettes: [CPalette; 16] = (0..16)
-        .map(|i: u16| CPalette {
-            comment: palette_comments[i as usize].as_ptr(),
-            data: [
+    let palette_data = (0..16)
+        .map(|i: u16| {
+            [
                 i,
                 1 + i,
                 2 + i,
@@ -65,39 +64,65 @@ fn create_test_export() -> TestHarness {
                 13 + i,
                 14 + i,
                 15 + i,
-            ],
+            ]
         })
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap();
+        .collect::<Vec<_>>();
 
-    let tilemap: CTilemap = CTilemap {
-        label: tilemap_label_name.as_ptr(),
-        comment: tilemap_comment.as_ptr(),
+    let mut harness = Box::new(TestHarness {
+        palette_comments,
+        tilemap_comment,
+        tilemap_label_name,
+        palette_label_name,
+        palette_data,
+        palettes: [CPalette {
+            comment: std::ptr::null(),
+            data: std::ptr::null(),
+            data_len: 0,
+        }; 16],
+        tilemap: CTilemap {
+            label: std::ptr::null(),
+            comment: std::ptr::null(),
+            palette_index: 0,
+            packed_pixel_data: std::ptr::null(),
+            packed_pixel_data_len: 0,
+        },
+        tilemaps: Vec::new(),
+        export: CTilemapExport {
+            tilemaps: std::ptr::null(),
+            tilemaps_len: 0,
+            palette_label: std::ptr::null(),
+            palettes: std::ptr::null(),
+            palettes_len: 0,
+        },
+    });
+
+    for (i, palette_datum) in harness.palette_data.iter().enumerate() {
+        harness.palettes[i] = CPalette {
+            comment: harness.palette_comments[i].as_ptr(),
+            data: palette_datum.as_ptr(),
+            data_len: palette_datum.len(),
+        };
+    }
+
+    harness.tilemap = CTilemap {
+        label: harness.tilemap_label_name.as_ptr(),
+        comment: harness.tilemap_comment.as_ptr(),
         packed_pixel_data: pixels.as_ptr(),
         packed_pixel_data_len: pixels.len(),
         palette_index: 0,
     };
 
-    let tilemaps = vec![tilemap];
+    harness.tilemaps.push(harness.tilemap);
 
-    let export = CTilemapExport {
-        tilemaps: tilemaps.as_ptr(),
-        tilemaps_len: 1,
-        palette_label: palette_label_name.as_ptr(),
-        palettes,
+    harness.export = CTilemapExport {
+        tilemaps: harness.tilemaps.as_ptr(),
+        tilemaps_len: harness.tilemaps.len(),
+        palette_label: harness.palette_label_name.as_ptr(),
+        palettes: harness.palettes.as_ptr(),
+        palettes_len: harness.palettes.len(),
     };
 
-    TestHarness {
-        palette_comments,
-        tilemap_comment,
-        tilemap_label_name,
-        palette_label_name,
-        palettes,
-        tilemap,
-        tilemaps,
-        export,
-    }
+    harness
 }
 
 #[test]

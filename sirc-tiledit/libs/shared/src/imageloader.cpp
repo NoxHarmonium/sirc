@@ -124,9 +124,6 @@ RgbaPixelData ImageLoader::loadImageFromPng(const char *filename) {
   // TODO: Add image processing options for image import
   // category=tiledit
   for (size_t y = 0; y < height; y++) {
-    // const png_byte * const
-    // const png_byte * const
-
     const auto *const row = y >= HEIGHT_PIXELS ? nullptr : row_pointers[y];
 
     for (size_t x = 0; x < width; x++) {
