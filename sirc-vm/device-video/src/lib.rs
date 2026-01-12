@@ -30,8 +30,8 @@ use types::{Backgrounds, PixelBuffer, TileLine, TilemapEntry};
 // https://forums.nesdev.org/viewtopic.php?f=12&t=14467&p=211380 -- sprite calculations in hardware
 // https://retrocomputing.stackexchange.com/questions/30570/snes-sprites-are-they-rendered-using-shift-registers-or-with-a-line-buffer sprites again
 
-// 64kb = 32kw
-const VRAM_SIZE: usize = 32_000;
+// 128kb = 64kw
+const VRAM_SIZE: usize = 32_768;
 // 256 RGB words - fast access
 const PALETTE_SIZE: usize = 256;
 // PAL can have a higher resolution but to keep things simple
