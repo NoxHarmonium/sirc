@@ -40,9 +40,9 @@ const WIDTH_PIXELS: u16 = 256;
 const HEIGHT_PIXELS: u16 = 224;
 
 const TOTAL_LINES: u16 = 262; // NTSC
-// This just refers to the lines the TV can technically display
-// the console will output less than this
-// Number of vsync lines = TOTAL_LINES - VSYNC_LINE
+                              // This just refers to the lines the TV can technically display
+                              // the console will output less than this
+                              // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
 
 pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
 fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
@@ -266,7 +266,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
                 HEIGHT_PIXELS as usize,
                 WindowOptions::default(),
             )
-                .unwrap(),
+            .unwrap(),
         })
     };
 
@@ -773,7 +773,7 @@ mod tests {
                 ..Options::default()
             },
         )
-            .expect("Failed to optimize PNG");
+        .expect("Failed to optimize PNG");
         insta::assert_binary_snapshot!("last_frame.png", result);
     }
 }

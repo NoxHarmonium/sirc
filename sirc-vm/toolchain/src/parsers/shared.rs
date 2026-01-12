@@ -101,30 +101,19 @@ pub fn parse_origin_(i: &str) -> AsmResult<NumberToken> {
 }
 
 pub fn parse_symbol_reference_postamble_(i: &str) -> AsmResult<Option<RefType>> {
-    // TODO: Investigate why label reference suffixes aren't parsing
-    // category=Toolchain
-    // E.g. ".DW @some_label.l" is not parsing
-    let (i, dot_parsed) = opt(tag("."))(i)?;
-
-    match dot_parsed {
-        Some(_) => map(
-            alt((
-                tag(REF_TOKEN_OFFSET_SUFFIX),
-                tag(REF_TOKEN_UPPER_WORD_SUFFIX),
-                tag(REF_TOKEN_LOWER_WORD_SUFFIX),
-            )),
-            |parsed_value| match parsed_value {
-                REF_TOKEN_OFFSET_SUFFIX => Some(RefType::Offset),
-                REF_TOKEN_UPPER_WORD_SUFFIX => Some(RefType::UpperWord),
-                REF_TOKEN_LOWER_WORD_SUFFIX => Some(RefType::LowerWord),
-                // TODO: Error handling in shared parsers
-                // category=Refactoring
-                // Return of the panic!
-                _ => panic!("Unknown postamble {parsed_value}"),
-            },
-        )(i),
-        None => Ok((i, None)),
-    }
+    opt(map(
+        alt((
+            tag(REF_TOKEN_OFFSET_SUFFIX),
+            tag(REF_TOKEN_UPPER_WORD_SUFFIX),
+            tag(REF_TOKEN_LOWER_WORD_SUFFIX),
+        )),
+        |parsed_value| match parsed_value {
+            REF_TOKEN_OFFSET_SUFFIX => RefType::Offset,
+            REF_TOKEN_UPPER_WORD_SUFFIX => RefType::UpperWord,
+            REF_TOKEN_LOWER_WORD_SUFFIX => RefType::LowerWord,
+            _ => panic!("Unknown postamble {parsed_value}"),
+        },
+    ))(i)
 }
 
 pub fn parse_symbol_reference_(i: &str) -> AsmResult<RefToken> {

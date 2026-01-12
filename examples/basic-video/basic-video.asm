@@ -1,6 +1,6 @@
 .EQU $FALSE                         #0x0
 .EQU $TRUE                          #0x1
-.EQU $MAX_FRAMES                    #120
+.EQU $MAX_FRAMES                    #600
 
 ;; Segments
 .EQU $PROGRAM_SEGMENT               #0x0000
@@ -10,9 +10,32 @@
 
 ; Video
 .EQU $VIDEO_DEVICE_SEGMENT         #0x000C
+; Video device mapping
+; 0x0000..0x00FF => ppu_registers
+; 0x6000..0x6100 => palette (256 entries of CGRAM)
+; 0x8000..0xFFFF => VRAM (32767 words / 65534 bytes / 262136 pixels)
+
+; PPU Registers (Offsets in segment 0x000C)
+.EQU $PPU_BASE_CONFIG              #0x0000
+.EQU $PPU_TILE_SIZE                #0x0001
+.EQU $PPU_BG1_TILEMAP_ADDR         #0x0002
+.EQU $PPU_BG2_TILEMAP_ADDR         #0x0003
+.EQU $PPU_BG3_TILEMAP_ADDR         #0x0004
+.EQU $PPU_BG1_TILE_ADDR            #0x0006
+.EQU $PPU_BG2_TILE_ADDR            #0x0007
+.EQU $PPU_BG3_TILE_ADDR            #0x0008
+.EQU $PPU_BG1_PALETTE_CONFIG       #0x0012
+.EQU $PPU_BG2_PALETTE_CONFIG       #0x0013
+.EQU $PPU_BG3_PALETTE_CONFIG       #0x0014
+
+; VRAM Layout
+.EQU $VRAM_BG1_TILEMAP_BASE        #0x0000
+.EQU $VRAM_BG2_TILEMAP_BASE        #0x0400
+.EQU $VRAM_BG3_TILEMAP_BASE        #0x0800
+.EQU $VRAM_TILESET_BASE            #0x8000
+.EQU $CGRAM_PALETTE_BASE           #0x6000
 
 ;; Scratch Variables
-; TODO: Add way to share global constants between asm files
 .EQU $FRAME_COUNTER                 #0x0002
 
 ;; Exception Vectors
@@ -35,20 +58,20 @@
 
 ; Setup routines
 BRSR @setup_serial
+BRSR @setup_video
 
 :wait_for_interrupt
 
 ; Wait for exception (will spin until interrupted)
 COPI    r1, #0x1900
 
-; Exit when 60 frames have been rendered so it doesn't loop forever
+; Exit when MAX_FRAMES have been rendered so it doesn't loop forever
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $FRAME_COUNTER
 LOAD    r1, (#0, a)
 CMPI    r1, $MAX_FRAMES
 BRAN|>= @finish
 
-; TODO: Uncomment when program will actually terminate
 BRAN @wait_for_interrupt
 
 :finish
@@ -81,6 +104,143 @@ STOR    (#0, a), r1
 LDEA l, (#0, s)
 
 RETE
+
+;;;;;;; Subroutines
+
+:setup_video
+; Save link register
+LDEA s, (#0, l)
+
+; 1. Copy Tileset (6176 words)
+LOAD r1, @tileset_1.l
+LOAD r2, @tileset_1.u
+LOAD r3, $VRAM_TILESET_BASE
+LOAD r4, $VIDEO_DEVICE_SEGMENT
+LOAD r5, #6176
+BRSR @memcpy
+
+; 2. Copy Tilemaps (1024 words each)
+; BG1
+LOAD r1, @tilemap__0_0.l
+LOAD r2, @tilemap__0_0.u
+LOAD r3, $VRAM_BG1_TILEMAP_BASE
+LOAD r4, $VIDEO_DEVICE_SEGMENT
+LOAD r5, #1024
+BRSR @memcpy
+
+; BG2
+LOAD r1, @tilemap__0_1.l
+LOAD r2, @tilemap__0_1.u
+LOAD r3, $VRAM_BG2_TILEMAP_BASE
+LOAD r4, $VIDEO_DEVICE_SEGMENT
+LOAD r5, #1024
+BRSR @memcpy
+
+; BG3
+LOAD r1, @tilemap__0_2.l
+LOAD r2, @tilemap__0_2.u
+LOAD r3, $VRAM_BG3_TILEMAP_BASE
+LOAD r4, $VIDEO_DEVICE_SEGMENT
+LOAD r5, #1024
+BRSR @memcpy
+
+; 3. Copy Palette (9 words)
+LOAD r1, @palette__0_0.l
+LOAD r2, @palette__0_0.u
+LOAD r3, $CGRAM_PALETTE_BASE
+LOAD r4, $VIDEO_DEVICE_SEGMENT
+LOAD r5, #9
+BRSR @memcpy
+
+; 4. Setup PPU Registers
+LOAD ah, $VIDEO_DEVICE_SEGMENT
+
+; Tile Size (all 8x8, all Single tilemap size)
+LOAD al, $PPU_TILE_SIZE
+LOAD r1, #0
+STOR (#0, a), r1
+
+; BG Tilemap Addresses
+LOAD al, $PPU_BG1_TILEMAP_ADDR
+LOAD r1, $VRAM_BG1_TILEMAP_BASE
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG2_TILEMAP_ADDR
+LOAD r1, $VRAM_BG2_TILEMAP_BASE
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG3_TILEMAP_ADDR
+LOAD r1, $VRAM_BG3_TILEMAP_BASE
+STOR (#0, a), r1
+
+; BG Tile Data Addresses
+LOAD al, $PPU_BG1_TILE_ADDR
+LOAD r1, $VRAM_TILESET_BASE
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG2_TILE_ADDR
+LOAD r1, $VRAM_TILESET_BASE
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG3_TILE_ADDR
+LOAD r1, $VRAM_TILESET_BASE
+STOR (#0, a), r1
+
+; pub struct PaletteRegister {
+;    pub palette_size: PaletteSize, // Bits 0-1
+;    pub reserved: B6,              // Bits 2-7
+;    pub palette_offset: u8,        // Bits 8-15
+; }
+; Size 16 is 2. (0 << 8) | 2 = 0x0002
+LOAD r1, #0x0002
+
+LOAD al, $PPU_BG1_PALETTE_CONFIG
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG2_PALETTE_CONFIG
+STOR (#0, a), r1
+
+LOAD al, $PPU_BG3_PALETTE_CONFIG
+STOR (#0, a), r1
+
+; Base Config (Enable all BG and Sprites, Brightness 15)
+; Brightness 15 = 0xF << 3 = 0x0078
+; All disable bits = 0
+LOAD al, $PPU_BASE_CONFIG
+LOAD r1, #0x0078
+STOR (#0, a), r1
+
+; Restore link register
+LDEA l, (#0, s)
+RETS
+
+; r1 = source address (offset)
+; r2 = source segment
+; r3 = destination address (offset)
+; r4 = destination segment
+; r5 = length (words)
+:memcpy
+    CMPI r5, #0
+    RETS|==
+
+:memcpy_loop
+    ; Load from source
+    LOAD ah, r2
+    LOAD al, r1
+    LOAD r6, (#0, a)
+
+    ; Store to destination
+    LOAD ah, r4
+    LOAD al, r3
+    STOR (#0, a), r6
+
+    ; Increment pointers
+    ADDI r1, #1
+    ADDI r3, #1
+    SUBI r5, #1
+    BRAN|>> @memcpy_loop
+
+    RETS
 
 ;;;;;;; DATA
 

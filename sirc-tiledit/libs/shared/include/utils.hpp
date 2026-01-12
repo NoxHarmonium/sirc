@@ -86,6 +86,26 @@ std::vector<T> safeCastIntVector(const std::span<U> &in) {
 }
 
 /**
+ * Takes a span of integers and combines the hash of each value to provide a
+ * hash for the whole span.
+ *
+ * @tparam T the input type
+ * @param span the span to hash
+ * @return the hash value
+ */
+template <std::integral T> size_t hash_vector(const std::span<T> &span) {
+  // Thanks: https://stackoverflow.com/a/72073933
+  std::size_t seed = span.size();
+  for (auto x : span) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    seed ^= x + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  }
+  return seed;
+}
+
+/**
  * Takes a span of integers and packs them into a smaller number of integers.
  *
  * @tparam T the output type

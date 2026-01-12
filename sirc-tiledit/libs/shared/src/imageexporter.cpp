@@ -3,6 +3,8 @@
 //
 
 #include "imageexporter.hpp"
+
+#include "imagetileslicer.hpp"
 #include "sircimage.hpp"
 
 #include "utils.hpp"
@@ -15,26 +17,18 @@ std::string ImageExporter::exportToAsm(
         &quantizedImagesByPalette) {
   // Important: These must be declared BEFORE tilemaps and palettes to avoid
   // dangling pointers
-  std::vector<std::unique_ptr<std::vector<uint16_t>>>
-      allPixelData; // Store vectors to keep pixel data alive
+  // TODO: Hardcoded 16 values for 8x8 tiles (64 pixels / 4 bpp)
+  // Will need to be 64 for 16x16 tiles
+  std::vector<uint16_t>
+      tileDataStorage; // Store vectors to keep pixel data alive
   std::vector<libsirc::CTilemap>
       tileMapStorage; // Store our actual CTilemap structs
   std::vector<std::unique_ptr<std::string>>
       stringStorage; // Store strings to keep them alive
 
-  // TODO: WAIT A MINUTE
-  // Is this exporting raw pixel data, not tiles?
-  // :FACEPALM:
-  // TODO: Chop up into tiles
-
   uint16_t currentPaletteIndex = 0;
   std::vector<libsirc::CPalette> palettes;
   const auto maxPaletteCount = quantizedImagesByPalette.size();
-
-  static const auto *defaultPaletteComment = "";
-  const libsirc::CPalette defaultPalette = {
-      .comment = defaultPaletteComment, .data = nullptr, .data_len = 0};
-  palettes.resize(maxPaletteCount, defaultPalette);
 
   for (const auto &[palette, images] : quantizedImagesByPalette) {
     if (currentPaletteIndex >= maxPaletteCount) {
@@ -57,47 +51,70 @@ std::string ImageExporter::exportToAsm(
                                         .comment = paletteComment,
                                         .data = palette->data(),
                                         .data_len = palette->size()};
-
-    palettes[currentPaletteIndex] = cPalette;
+      // TODO: Pad palette to 16 pixels?
+    palettes.push_back(cPalette);
 
     for (const auto &[name, sircImage] : images) {
-      const auto &pixelData = sircImage.pixelData;
-      // Create persistent storage for pixel data
-      allPixelData.push_back(std::make_unique<std::vector<uint16_t>>(
-          packIntVector<uint16_t, const size_t>(std::span(pixelData), 4)));
-      const auto *const pixelData16 = allPixelData.back().get();
+      auto [tileMapWithHashes, uniqueTiles] =
+          ImageTileSlicer::slice(sircImage, TileSize::EightByEight);
 
       stringStorage.push_back(std::make_unique<std::string>(std::format(
           "tilemap__{}_{}", currentPaletteIndex, tileMapStorage.size())));
       auto *const tileLabel = stringStorage.back()->c_str();
 
       stringStorage.push_back(std::make_unique<std::string>(
-          std::format("Tilemap for {} (number of packed 16-bit values: {})",
-                      name, pixelData16->size())));
+          std::format("Tilemap for {} (number of unique tiles: {})", name,
+                      uniqueTiles.size())));
       auto *const tileComment = stringStorage.back()->c_str();
 
-      // Create and store the tilemap
-      tileMapStorage.push_back(
-          libsirc::CTilemap{.label = tileLabel,
-                            .comment = tileComment,
-                            .data = pixelData16->data(),
-                            .data_len = pixelData16->size()});
-    }
+      std::unordered_map<TileReference, uint16_t> hashToIndex;
+      auto tileIndex = 0u;
+      for (auto &[tileHash, tileData] : uniqueTiles) {
+        tileDataStorage.insert(std::end(tileDataStorage), std::begin(tileData),
+                               std::end(tileData));
+        hashToIndex[tileHash] = tileIndex;
+        ++tileIndex;
+      }
 
-    currentPaletteIndex++;
+      auto tileMap = libsirc::CTilemap{
+          .label = tileLabel,
+          .comment = tileComment,
+          .data = {},
+      };
+
+      // TODO: Rewrite with std::transform?
+      // TODO: Assert bounds?
+      for (size_t i = 0; i < tileMapWithHashes.size(); ++i) {
+        tileMap.data[i] = hashToIndex.at(tileMapWithHashes[i]);
+      }
+      // Create and store the tilemap
+      tileMapStorage.push_back(tileMap);
+    }
   }
 
   // Create the export structure
-  stringStorage.push_back(std::make_unique<std::string>("Tileset Section"));
+  stringStorage.push_back(std::make_unique<std::string>("Tilesets Section"));
   const auto *const tilesetsComment = stringStorage.back()->c_str();
-  stringStorage.push_back(std::make_unique<std::string>("Tilemap Section"));
+  stringStorage.push_back(std::make_unique<std::string>("Tilemaps Section"));
   const auto *const tilemapsComment = stringStorage.back()->c_str();
-  stringStorage.push_back(std::make_unique<std::string>("Palette Section"));
+  stringStorage.push_back(std::make_unique<std::string>("Palettes Section"));
   const auto *const palettesComment = stringStorage.back()->c_str();
+
+  // Only one tileset for now (can store 1024 tiles which is probably enough for
+  // anyone)
+  stringStorage.push_back(std::make_unique<std::string>("tileset_1"));
+  const auto *const tilesetLabel = stringStorage.back()->c_str();
+  stringStorage.push_back(std::make_unique<std::string>("Tileset 1"));
+  const auto *const tilesetComment = stringStorage.back()->c_str();
+  auto tileSet = libsirc::CTileSet{.label = tilesetLabel,
+                                   .comment = tilesetComment,
+                                   .data = tileDataStorage.data(),
+                                   .data_len = tileDataStorage.size()};
+  auto tileSets = std::vector{tileSet};
+
   libsirc::CTilemapExport export_data = {.tilesets_comment = tilesetsComment,
-                                         // TODO: Implement tile generation
-                                         .tilesets = nullptr,
-                                         .tilesets_len = 0,
+                                         .tilesets = tileSets.data(),
+                                         .tilesets_len = tileSets.size(),
                                          .tilemaps_comment = tilemapsComment,
                                          .tilemaps = tileMapStorage.data(),
                                          .tilemaps_len = tileMapStorage.size(),

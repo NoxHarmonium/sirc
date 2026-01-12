@@ -74,6 +74,20 @@ test(
 )
 
 test(
+    'ImageTileSlicer',
+    executable(
+        'test_imagetileslicer',
+        'imagetileslicer.test.cpp',
+        shared_test_source_files,
+        include_directories : shared_library_include_files,
+        link_with : shared_lib,
+        cpp_args : cpp_args
+
+    ),
+    env : test_env
+)
+
+test(
     'Integration',
     executable(
         'test_integration',

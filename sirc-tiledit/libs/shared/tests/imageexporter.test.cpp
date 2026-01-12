@@ -36,6 +36,6 @@ TEST_CASE("Exports images correctly") {
 
   // TODO: A better test
   REQUIRE(asmOutput.starts_with(
-      ";Tilemap for sircImage3\n:tilemap_0\n.DW #0x6666\n.DW #0x7000\n.DW "
-      "#0x0000\n.DW #0x0000\n.DW #0x0000\n.DW"));
+      ";Tilesets Section\n;Tileset 1\n:tileset_1\n.DW #0x6666\n.DW "
+      "#0x7000\n.DW #0x0000\n.DW #0x0000\n.DW #0x000"));
 }

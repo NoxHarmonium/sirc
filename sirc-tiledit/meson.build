@@ -74,6 +74,7 @@ gui_source_files = [
 shared_library_source_files = [
     'libs/shared/src/imageloader.cpp',
     'libs/shared/src/imagemerger.cpp',
+    'libs/shared/src/imagetileslicer.cpp',
     'libs/shared/src/imageexporter.cpp',
     'libs/shared/src/mediancutquantizer.cpp',
     'libs/shared/src/miscadapter.cpp',

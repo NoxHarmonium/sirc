@@ -16,7 +16,9 @@
 #![deny(warnings)]
 
 use insta::assert_snapshot;
-use libsirc::capi::{CPalette, CTileSet, CTilemap, CTilemapExport, free_str, tilemap_to_str};
+use libsirc::capi::{
+    CPalette, CTileSet, CTilemap, CTilemapExport, TILEMAP_SIZE, free_str, tilemap_to_str,
+};
 use std::ffi::CString;
 
 /// Just exists to make sure nothing goes out of scope and invaldates pointers
@@ -32,7 +34,7 @@ struct TestHarness {
     tilemap_comments: [CString; 16],
     tilemap_labels: [CString; 16],
     tilemaps: Vec<CTilemap>,
-    tilemap_data: Vec<[u16; 8]>,
+    tilemap_data: Vec<[u16; TILEMAP_SIZE]>,
 
     palettes_comment: CString,
     palette_comments: [CString; 16],
@@ -77,7 +79,15 @@ fn create_test_export() -> Box<TestHarness> {
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();
-    let tilemap_data = (0..16).map(|_| *tilemap_entries).collect::<Vec<[u16; 8]>>();
+    let tilemap_data = (0..16)
+        .map(|_| {
+            std::iter::repeat_n(*tilemap_entries, TILEMAP_SIZE / tilemap_entries.len())
+                .flatten()
+                .collect::<Vec<u16>>()
+                .try_into()
+                .unwrap()
+        })
+        .collect::<Vec<[u16; TILEMAP_SIZE]>>();
 
     let palettes_comment = CString::new("Palettes Section").unwrap();
     let palette_comments: [CString; 16] = (0..16)
@@ -158,8 +168,7 @@ fn create_test_export() -> Box<TestHarness> {
         harness.tilemaps.push(CTilemap {
             label: harness.tilemap_labels[i].as_ptr(),
             comment: harness.tilemap_comments[i].as_ptr(),
-            data: tilemap_datum.as_ptr(),
-            data_len: tilemap_datum.len(),
+            data: *tilemap_datum,
         });
     }
 

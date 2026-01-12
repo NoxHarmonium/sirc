@@ -5,6 +5,10 @@ use toolchain::printers::shared::print_tokens;
 use toolchain::types::data::{DataToken, DataType};
 use toolchain::types::shared::{LabelToken, NumberToken, NumberType, Token};
 
+pub const TILEMAP_WIDTH: usize = 32;
+pub const TILEMAP_HEIGHT: usize = 32;
+pub const TILEMAP_SIZE: usize = TILEMAP_WIDTH * TILEMAP_HEIGHT;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct CTilemap {
@@ -18,9 +22,8 @@ pub struct CTilemap {
     ///     pub priority: B1, // 1 bit
     ///     pub flip_horizontal: B1, // 1 bit
     ///     pub flip_vertical: B1, // 1 bit
-    pub data: *const u16,
-    /// The length of the tilemap entries array
-    pub data_len: usize,
+    /// A tilemap is always 32x32 tiles
+    pub data: [u16; TILEMAP_SIZE],
 }
 
 #[repr(C)]
@@ -157,15 +160,8 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
 
     let tilemap_tokens = tilemaps
         .iter()
-        .filter(|tilemap| {
-            !tilemap.label.is_null() && !tilemap.comment.is_null() && !tilemap.data.is_null()
-        })
+        .filter(|tilemap| !tilemap.label.is_null() && !tilemap.comment.is_null())
         .flat_map(|tilemap| {
-            let tile_map_entries = if tilemap.data.is_null() {
-                &[]
-            } else {
-                unsafe { slice::from_raw_parts(tilemap.data, tilemap.data_len) }
-            };
             let owned_tilemap_label =
                 unsafe { CStr::from_ptr(tilemap.label).to_string_lossy().into_owned() };
 
@@ -174,7 +170,7 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
                 vec![Token::Label(LabelToken {
                     name: owned_tilemap_label,
                 })],
-                slice_to_data_tokens(tile_map_entries),
+                slice_to_data_tokens(&tilemap.data),
             ]
             .concat()
         })
