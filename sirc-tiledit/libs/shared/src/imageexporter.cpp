@@ -51,7 +51,7 @@ std::string ImageExporter::exportToAsm(
                                         .comment = paletteComment,
                                         .data = palette->data(),
                                         .data_len = palette->size()};
-      // TODO: Pad palette to 16 pixels?
+    // TODO: Pad palette to 16 pixels?
     palettes.push_back(cPalette);
 
     for (const auto &[name, sircImage] : images) {
@@ -63,8 +63,8 @@ std::string ImageExporter::exportToAsm(
       auto *const tileLabel = stringStorage.back()->c_str();
 
       stringStorage.push_back(std::make_unique<std::string>(
-          std::format("Tilemap for {} (number of unique tiles: {})", name,
-                      uniqueTiles.size())));
+          std::format("Tilemap for {} (number of tiles: {} (unique: {})", name,
+                      tileMapWithHashes.size(), uniqueTiles.size())));
       auto *const tileComment = stringStorage.back()->c_str();
 
       std::unordered_map<TileReference, uint16_t> hashToIndex;
@@ -104,7 +104,8 @@ std::string ImageExporter::exportToAsm(
   // anyone)
   stringStorage.push_back(std::make_unique<std::string>("tileset_1"));
   const auto *const tilesetLabel = stringStorage.back()->c_str();
-  stringStorage.push_back(std::make_unique<std::string>("Tileset 1"));
+  stringStorage.push_back(std::make_unique<std::string>(std::format(
+      "Tileset 1 (number of values: {}) ", tileDataStorage.size())));
   const auto *const tilesetComment = stringStorage.back()->c_str();
   auto tileSet = libsirc::CTileSet{.label = tilesetLabel,
                                    .comment = tilesetComment,

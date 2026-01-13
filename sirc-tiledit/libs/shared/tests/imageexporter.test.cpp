@@ -36,6 +36,6 @@ TEST_CASE("Exports images correctly") {
 
   // TODO: A better test
   REQUIRE(asmOutput.starts_with(
-      ";Tilesets Section\n;Tileset 1\n:tileset_1\n.DW #0x6666\n.DW "
-      "#0x7000\n.DW #0x0000\n.DW #0x0000\n.DW #0x000"));
+      ";Tilesets Section\n;Tileset 1 (number of values: 96) \n:tileset_1\n.DW "
+      "#0x6666\n.DW #0x7000\n.DW #0x000"));
 }
