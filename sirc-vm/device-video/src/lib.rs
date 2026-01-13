@@ -460,10 +460,12 @@ impl Device for VideoDevice {
                             + self.vram_fetch_register.bg3_tilemap.tile_index() * tile_size_words
                     }
                 };
+
                 let tile_x = ((pixel_clock - 8) / (tile_size * 2)) % 2; // minus 8 for the cycles to load the tile maps
                 let tile_y = (self.line % tile_size) * read_cycles_per_tile_line;
-                let tile_data: TileLine =
-                    self.vram[(tile_address + tile_x + tile_y) as usize].into();
+                let tile_data: TileLine = self
+                    .read_address(u32::from(tile_address + tile_x + tile_y))
+                    .into();
                 match background {
                     Backgrounds::Bg1 => {
                         // TODO: Pixel offset per line (e.g. scrolling) (tiles are 8x8, we read one line at a time)
@@ -559,9 +561,8 @@ impl MemoryMapped for VideoDevice {
             0x0000..=0x00FF => self.ppu_registers.read_address(address),
             // 256 palette entries (CGRAM, fast access)
             0x6000..=0x6100 => self.palette[(address - 0x6000) as usize].into(),
-            // TODO: Sprite Data
             // After that range
-            VRAM_OFFSET..=0xFFFF => self.vram[(address as usize) - VRAM_OFFSET as usize],
+            VRAM_OFFSET..=0xFFFF => self.vram[(address - VRAM_OFFSET) as usize],
             // Else - open bus
             _ => 0x0, // Not sure how real hardware will work. Could be garbage?
         }
@@ -577,9 +578,8 @@ impl MemoryMapped for VideoDevice {
             0x6000..=0x6100 => {
                 self.palette[(address - 0x6000) as usize] = PpuPixel::from(value);
             }
-            // TODO: Sprite Data
             // After that range
-            VRAM_OFFSET..=0xFFFF => self.vram[(address as usize) - VRAM_OFFSET as usize] = value,
+            VRAM_OFFSET..=0xFFFF => self.vram[(address - VRAM_OFFSET) as usize] = value,
             // Else - open bus
             _ => {}
         }
