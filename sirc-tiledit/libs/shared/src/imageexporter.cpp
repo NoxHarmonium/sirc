@@ -21,6 +21,7 @@ std::string ImageExporter::exportToAsm(
   // Will need to be 64 for 16x16 tiles
   std::vector<uint16_t>
       tileDataStorage; // Store vectors to keep pixel data alive
+  auto tileIndex = 0u;
   std::vector<libsirc::CTilemap>
       tileMapStorage; // Store our actual CTilemap structs
   std::vector<std::unique_ptr<std::string>>
@@ -68,7 +69,6 @@ std::string ImageExporter::exportToAsm(
       auto *const tileComment = stringStorage.back()->c_str();
 
       std::unordered_map<TileReference, uint16_t> hashToIndex;
-      auto tileIndex = 0u;
       for (auto &[tileHash, tileData] : uniqueTiles) {
         tileDataStorage.insert(std::end(tileDataStorage), std::begin(tileData),
                                std::end(tileData));
