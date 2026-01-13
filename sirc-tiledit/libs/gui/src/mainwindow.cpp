@@ -240,7 +240,7 @@ void MainWindow::on_actionExportAsm_triggered() {
 
   QFile file(filenameToSave);
   // TODO: Error handling
-  if (file.open(QIODevice::ReadWrite)) {
+  if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
     QTextStream stream(&file);
     stream << QString(
                   ";; Warning: Exported by sirc-tiledit. Don't edit manually.")
