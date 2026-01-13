@@ -65,17 +65,30 @@ RETS
 
 :exception_handler_p3
 
-; Save the link register
-LDEA s, (#0, l)
+; Save the used registers
+STOR -(#0, s), lh
+STOR -(#0, s), ll
+STOR -(#0, s), ah
+STOR -(#0, s), al
+STOR -(#0, s), r1
+STOR -(#0, s), r2
+STOR -(#0, s), r3
 
 BRSR @write_pending_byte
 
-; Restore the link register
-LDEA l, (#0, s)
+; Restore the used registers
+LOAD r3, (#0, s)+
+LOAD r2, (#0, s)+
+LOAD r1, (#0, s)+
+LOAD al, (#0, s)+
+LOAD ah, (#0, s)+
+LOAD ll, (#0, s)+
+LOAD lh, (#0, s)+
 
 RETE
 
 :write_pending_byte
+
 ; Check if the device is ready to write
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING

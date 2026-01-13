@@ -30,10 +30,12 @@
 
 ; VRAM Layout
 .EQU $CGRAM_PALETTE_BASE           #0x6000
+; Start tileset at the bottom of the VRAM to allow room to grow
 .EQU $VRAM_TILESET_BASE            #0x8000
-.EQU $VRAM_BG1_TILEMAP_BASE        #0xA000
-.EQU $VRAM_BG2_TILEMAP_BASE        #0xA400
-.EQU $VRAM_BG3_TILEMAP_BASE        #0xA800
+; Tilemaps can live in 0xF000-0xFFFF to give the tilesets some breathing room
+.EQU $VRAM_BG1_TILEMAP_BASE        #0xF000
+.EQU $VRAM_BG2_TILEMAP_BASE        #0xF400
+.EQU $VRAM_BG3_TILEMAP_BASE        #0xF800
 
 ;; Scratch Variables
 .EQU $FRAME_COUNTER                 #0x0002
@@ -55,6 +57,10 @@
 
 .ORG 0x0200
 :start
+
+; Setup stack frame - stack works backwards from end of segment
+LOAD sh, $SCRATCH_SEGMENT
+LOAD sl, #0xFFFF
 
 ; Setup routines
 BRSR @setup_serial
@@ -86,12 +92,25 @@ COPI    r1, #0x14FF
 LOAD    r1, @exit_message
 BRAN    @print
 
+
+:print_delimiter
+
+LOAD    r1, @delimiter
+BRAN    @print
+
+
 ;;; EXCEPTIONS
 
 :exception_handler_p5
 
-; Save the link register
-LDEA s, (#0, l)
+; Save the used registers
+STOR -(#0, s), lh
+STOR -(#0, s), ll
+STOR -(#0, s), ah
+STOR -(#0, s), al
+STOR -(#0, s), r1
+
+; TODO: Make sure exception handlers don't stomp all over the registers
 
 ; Increment frame count
 LOAD    ah, $SCRATCH_SEGMENT
@@ -100,8 +119,12 @@ LOAD    r1, (#0, a)
 ADDI    r1, #1
 STOR    (#0, a), r1
 
-; Restore the link register
-LDEA l, (#0, s)
+; Restore the used registers
+LOAD r1, (#0, s)+
+LOAD al, (#0, s)+
+LOAD ah, (#0, s)+
+LOAD ll, (#0, s)+
+LOAD lh, (#0, s)+
 
 RETE
 
@@ -111,23 +134,27 @@ RETE
 ; Save link register
 LDEA s, (#0, l)
 
-; 1. Copy Tileset (6176 words)
-LOAD r1, @tileset_1
+; 1. Copy Tileset (10224 words)
+LOAD r1, @tileset_1.l
 LOAD r2, @tileset_1.u
 LOAD r3, $VRAM_TILESET_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 ; TODO: Embed the number of words in the generated data
-LOAD r5, #6176
+LOAD r5, #10224
 BRSR @memcpy
+
+BRSR @print_delimiter
 
 ; 2. Copy Tilemaps (1024 words each)
 ; BG1
-LOAD r1, @tilemap__0_2.l
-LOAD r2, @tilemap__0_2.u
+LOAD r1, @tilemap__0_0.l
+LOAD r2, @tilemap__0_0.u
 LOAD r3, $VRAM_BG1_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
 BRSR @memcpy
+
+BRSR @print_delimiter
 
 ; BG2
 LOAD r1, @tilemap__0_1.l
@@ -137,21 +164,27 @@ LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
 BRSR @memcpy
 
+BRSR @print_delimiter
+
 ; BG3
-LOAD r1, @tilemap__0_0.l
-LOAD r2, @tilemap__0_0.u
+LOAD r1, @tilemap__0_2.l
+LOAD r2, @tilemap__0_2.u
 LOAD r3, $VRAM_BG3_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
 BRSR @memcpy
+
+BRSR @print_delimiter
 
 ; 3. Copy Palette (9 words)
 LOAD r1, @palette__0_0.l
 LOAD r2, @palette__0_0.u
 LOAD r3, $CGRAM_PALETTE_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
-LOAD r5, #9
+LOAD r5, #14
 BRSR @memcpy
+
+BRSR @print_delimiter
 
 ; 4. Setup PPU Registers
 LOAD ah, $VIDEO_DEVICE_SEGMENT
@@ -228,6 +261,9 @@ RETS
     ; A fix for that is in the works
     ; The destination pointer doesn't need the same treatment
     ADDI r1, #1
+    ; Set lower byte to zero and use register displacement addressing to reduce number of instructions
+    LOAD al, #0
+
 
 :memcpy_loop
     ; Load from source
@@ -263,6 +299,17 @@ RETS
 .DW #101
 .DW #33
 .DW #10
+.DW #0
+
+
+:delimiter
+.DW #61
+.DW #61
+.DW #61
+.DW #61
+.DW #61
+.DW #61
+.DW #61
 .DW #0
 
 ; TODO: Why do I need this here to make this file parse???
