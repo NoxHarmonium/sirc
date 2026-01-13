@@ -15,20 +15,17 @@ std::string ImageExporter::exportToAsm(
     const std::unordered_map<SircPalette,
                              std::vector<std::pair<std::string, SircImage>>>
         &quantizedImagesByPalette) {
-  // Important: These must be declared BEFORE tilemaps and palettes to avoid
-  // dangling pointers
-  // TODO: Hardcoded 16 values for 8x8 tiles (64 pixels / 4 bpp)
-  // Will need to be 64 for 16x16 tiles
-  std::vector<uint16_t>
-      tileDataStorage; // Store vectors to keep pixel data alive
-  auto tileIndex = 0u;
   std::vector<libsirc::CTilemap>
       tileMapStorage; // Store our actual CTilemap structs
   std::vector<std::unique_ptr<std::string>>
       stringStorage; // Store strings to keep them alive
 
   uint16_t currentPaletteIndex = 0;
+  // Currently all tilemaps share the same tileset base address
+  // so this index has to be in the outer scope
+  uint16_t currentTileIndex = 0;
   std::vector<libsirc::CPalette> palettes;
+  std::vector<uint16_t> tileSetData;
   const auto maxPaletteCount = quantizedImagesByPalette.size();
 
   for (const auto &[palette, images] : quantizedImagesByPalette) {
@@ -69,11 +66,16 @@ std::string ImageExporter::exportToAsm(
       auto *const tileComment = stringStorage.back()->c_str();
 
       std::unordered_map<TileReference, uint16_t> hashToIndex;
+      hashToIndex.reserve(uniqueTiles.size());
       for (auto &[tileHash, tileData] : uniqueTiles) {
-        tileDataStorage.insert(std::end(tileDataStorage), std::begin(tileData),
-                               std::end(tileData));
-        hashToIndex[tileHash] = tileIndex;
-        ++tileIndex;
+        // Insert full 8x8 tile into storage
+        tileSetData.insert(std::end(tileSetData), std::begin(tileData),
+                           std::end(tileData));
+        hashToIndex[tileHash] = currentTileIndex;
+        ++currentTileIndex;
+        assert(currentTileIndex <
+               0x3FF); // Tile index is stored in 10 bits - any larger and we
+                       // need to have different tilesets per bg layer
       }
 
       auto tileMap = libsirc::CTilemap{
@@ -82,11 +84,14 @@ std::string ImageExporter::exportToAsm(
           .data = {},
       };
 
-      // TODO: Rewrite with std::transform?
-      // TODO: Assert bounds?
-      for (size_t i = 0; i < tileMapWithHashes.size(); ++i) {
-        tileMap.data[i] = hashToIndex.at(tileMapWithHashes[i]);
-      }
+      assert(tileMapWithHashes.size() == libsirc::TILEMAP_SIZE);
+      const auto tilemapDataSpan =
+          std::span(tileMap.data, libsirc::TILEMAP_SIZE);
+      std::ranges::transform(tileMapWithHashes, tilemapDataSpan.begin(),
+                             [hashToIndex](const size_t tileHash) -> uint16_t {
+                               return hashToIndex.at(tileHash);
+                             });
+
       // Create and store the tilemap
       tileMapStorage.push_back(tileMap);
     }
@@ -102,15 +107,16 @@ std::string ImageExporter::exportToAsm(
 
   // Only one tileset for now (can store 1024 tiles which is probably enough for
   // anyone)
-  stringStorage.push_back(std::make_unique<std::string>("tileset_1"));
+  stringStorage.push_back(std::make_unique<std::string>("tileset_0"));
   const auto *const tilesetLabel = stringStorage.back()->c_str();
-  stringStorage.push_back(std::make_unique<std::string>(std::format(
-      "Tileset 1 (number of values: {}) ", tileDataStorage.size())));
+  stringStorage.push_back(std::make_unique<std::string>(
+      std::format("Tileset 0 (number of tiles: {}, number of values: {}) ",
+                  tileSetData.size() / 16, tileSetData.size())));
   const auto *const tilesetComment = stringStorage.back()->c_str();
   auto tileSet = libsirc::CTileSet{.label = tilesetLabel,
                                    .comment = tilesetComment,
-                                   .data = tileDataStorage.data(),
-                                   .data_len = tileDataStorage.size()};
+                                   .data = tileSetData.data(),
+                                   .data_len = tileSetData.size()};
   auto tileSets = std::vector{tileSet};
 
   libsirc::CTilemapExport export_data = {.tilesets_comment = tilesetsComment,

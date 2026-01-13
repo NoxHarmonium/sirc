@@ -35,7 +35,8 @@ TEST_CASE("Exports images correctly") {
   std::cout << asmOutput << "\n";
 
   // TODO: A better test
-  REQUIRE(asmOutput.starts_with(
-      ";Tilesets Section\n;Tileset 1 (number of values: 96) \n:tileset_1\n.DW "
-      "#0x6666\n.DW #0x7000\n.DW #0x000"));
+  REQUIRE(
+      asmOutput.starts_with(";Tilesets Section\n;Tileset 0 (number of tiles: "
+                            "6, number of values: 96) \n:tileset_0\n.DW "
+                            "#0x6666\n.D"));
 }
