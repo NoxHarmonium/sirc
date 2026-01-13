@@ -29,11 +29,11 @@
 .EQU $PPU_BG3_PALETTE_CONFIG       #0x0014
 
 ; VRAM Layout
-.EQU $VRAM_BG1_TILEMAP_BASE        #0x0000
-.EQU $VRAM_BG2_TILEMAP_BASE        #0x0400
-.EQU $VRAM_BG3_TILEMAP_BASE        #0x0800
-.EQU $VRAM_TILESET_BASE            #0x8000
 .EQU $CGRAM_PALETTE_BASE           #0x6000
+.EQU $VRAM_TILESET_BASE            #0x8000
+.EQU $VRAM_BG1_TILEMAP_BASE        #0xA000
+.EQU $VRAM_BG2_TILEMAP_BASE        #0xA400
+.EQU $VRAM_BG3_TILEMAP_BASE        #0xA800
 
 ;; Scratch Variables
 .EQU $FRAME_COUNTER                 #0x0002
@@ -112,17 +112,18 @@ RETE
 LDEA s, (#0, l)
 
 ; 1. Copy Tileset (6176 words)
-LOAD r1, @tileset_1.l
+LOAD r1, @tileset_1
 LOAD r2, @tileset_1.u
 LOAD r3, $VRAM_TILESET_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
+; TODO: Embed the number of words in the generated data
 LOAD r5, #6176
 BRSR @memcpy
 
 ; 2. Copy Tilemaps (1024 words each)
 ; BG1
-LOAD r1, @tilemap__0_0.l
-LOAD r2, @tilemap__0_0.u
+LOAD r1, @tilemap__0_2.l
+LOAD r2, @tilemap__0_2.u
 LOAD r3, $VRAM_BG1_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
@@ -137,8 +138,8 @@ LOAD r5, #1024
 BRSR @memcpy
 
 ; BG3
-LOAD r1, @tilemap__0_2.l
-LOAD r2, @tilemap__0_2.u
+LOAD r1, @tilemap__0_0.l
+LOAD r2, @tilemap__0_0.u
 LOAD r3, $VRAM_BG3_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
@@ -223,19 +224,26 @@ RETS
     CMPI r5, #0
     RETS|==
 
+    ; Align source pointer because the toolchain packs words in the binary as double words where the higher word is always zero.
+    ; A fix for that is in the works
+    ; The destination pointer doesn't need the same treatment
+    ADDI r1, #1
+
 :memcpy_loop
     ; Load from source
     LOAD ah, r2
-    LOAD al, r1
-    LOAD r6, (#0, a)
+    ; TODO: Can we use post increment addressing here?
+    LOAD r6, (r1, a)
 
     ; Store to destination
     LOAD ah, r4
-    LOAD al, r3
-    STOR (#0, a), r6
+    STOR (r3, a), r6
 
     ; Increment pointers
-    ADDI r1, #1
+    ; Add 2 to the source pointer because the toolchain packs words in the binary as double words where the higher word is always zero.
+    ; A fix for that is in the works
+    ; The destination pointer doesn't need the same treatment
+    ADDI r1, #2
     ADDI r3, #1
     SUBI r5, #1
     BRAN|>> @memcpy_loop

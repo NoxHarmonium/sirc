@@ -15,7 +15,7 @@
 mod types;
 
 use crate::types::{PaletteRegister, PaletteSize, PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
-use log::{debug, info};
+use log::info;
 use minifb::WindowOptions;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
@@ -30,11 +30,15 @@ use types::{Backgrounds, PixelBuffer, TileLine, TilemapEntry};
 // https://forums.nesdev.org/viewtopic.php?f=12&t=14467&p=211380 -- sprite calculations in hardware
 // https://retrocomputing.stackexchange.com/questions/30570/snes-sprites-are-they-rendered-using-shift-registers-or-with-a-line-buffer sprites again
 
-// 128kb = 64kw
-const VRAM_SIZE: usize = 32_768;
+// The first half of the video device segment is reserved for special registers, palette, etc.
+// The second half of the video device segment (starting at 0x8000) is just multipurpose vram that
+// can store tile data and tilemap data
+// Half a segment = 64kw = 128kb = which is twice the SNES so plenty
+const VRAM_SIZE: usize = 0x8000;
+const VRAM_OFFSET: u32 = 0x8000;
 // 256 RGB words - fast access
 const PALETTE_SIZE: usize = 256;
-// PAL can have a higher resolution but to keep things simple
+// PAL can have a higher resolution, but to keep things simple,
 // the renderer size can be static and PAL can have black bars
 const WIDTH_PIXELS: u16 = 256;
 const HEIGHT_PIXELS: u16 = 224;
@@ -405,7 +409,8 @@ impl Device for VideoDevice {
                     Backgrounds::Bg3 => self.ppu_registers.b3_tilemap_addr,
                 };
                 let tilemap_entry_address: u16 = base_address + tilemap_x + tilemap_y;
-                let tilemap_data: TilemapEntry = self.vram[tilemap_entry_address as usize].into();
+                let tilemap_data: TilemapEntry =
+                    self.read_address(u32::from(tilemap_entry_address)).into();
                 match background {
                     Backgrounds::Bg1 => {
                         if tilemap_x > 0 {
@@ -549,7 +554,6 @@ impl Device for VideoDevice {
 
 impl MemoryMapped for VideoDevice {
     fn read_address(&self, address: u32) -> u16 {
-        debug!("Reading from address 0x{address:X}");
         match address {
             // First FF addresses are control registers
             0x0000..=0x00FF => self.ppu_registers.read_address(address),
@@ -557,7 +561,7 @@ impl MemoryMapped for VideoDevice {
             0x6000..=0x6100 => self.palette[(address - 0x6000) as usize].into(),
             // TODO: Sprite Data
             // After that range
-            0x8000..=0xFFFF => self.vram[(address as usize) - 0x8000],
+            VRAM_OFFSET..=0xFFFF => self.vram[(address as usize) - VRAM_OFFSET as usize],
             // Else - open bus
             _ => 0x0, // Not sure how real hardware will work. Could be garbage?
         }
@@ -565,7 +569,6 @@ impl MemoryMapped for VideoDevice {
 
     #[allow(clippy::cast_possible_truncation)]
     fn write_address(&mut self, address: u32, value: u16) {
-        debug!("Writing 0x{value:X} to address 0x{address:X}");
         match address {
             // First FF addresses are control registers
             0x0000..=0x00FF => {
@@ -576,7 +579,7 @@ impl MemoryMapped for VideoDevice {
             }
             // TODO: Sprite Data
             // After that range
-            0x8000..=0xFFFF => self.vram[(address as usize) - 0x8000] = value,
+            VRAM_OFFSET..=0xFFFF => self.vram[(address as usize) - VRAM_OFFSET as usize] = value,
             // Else - open bus
             _ => {}
         }
@@ -643,6 +646,7 @@ mod tests {
                     .collect::<Vec<u16>>()
                     .try_into()
                     .unwrap();
+                // vram is mapped to 0x8000, so 0x1000 will actually be 0x9000 when read by CPU
                 video_device.vram[0x1000 + tile_offset * 16..0x1000 + ((tile_offset + 1) * 16)]
                     .copy_from_slice(tile_as_u16.as_slice());
                 video_device.vram[0x2000 + tile_offset * 16..0x2000 + ((tile_offset + 1) * 16)]
@@ -654,6 +658,7 @@ mod tests {
     }
 
     fn copy_tilemaps_to_vram(video_device: &mut VideoDevice) {
+        // vram is mapped to 0x8000, so 0x0100 will actually be 0x8100 when read by CPU
         video_device.vram[0x0100..0x0500].copy_from_slice(TEST_TILEMAP.as_slice());
         video_device.vram[0x0500..0x0900].copy_from_slice(TEST_TILEMAP.as_slice());
         video_device.vram[0x0900..0x0D00].copy_from_slice(TEST_TILEMAP.as_slice());
@@ -695,12 +700,12 @@ mod tests {
         copy_tiles_to_vram(&mut video_device);
         copy_tilemaps_to_vram(&mut video_device);
 
-        video_device.ppu_registers.b1_tilemap_addr = 0x0100;
-        video_device.ppu_registers.b2_tilemap_addr = 0x0500;
-        video_device.ppu_registers.b3_tilemap_addr = 0x0900;
-        video_device.ppu_registers.b1_tile_addr = 0x1000;
-        video_device.ppu_registers.b2_tile_addr = 0x2000;
-        video_device.ppu_registers.b3_tile_addr = 0x3000;
+        video_device.ppu_registers.b1_tilemap_addr = 0x8100;
+        video_device.ppu_registers.b2_tilemap_addr = 0x8500;
+        video_device.ppu_registers.b3_tilemap_addr = 0x8900;
+        video_device.ppu_registers.b1_tile_addr = 0x9000;
+        video_device.ppu_registers.b2_tile_addr = 0xA000;
+        video_device.ppu_registers.b3_tile_addr = 0xB000;
         video_device.ppu_registers.b1_palette_config = PaletteRegister::new()
             .with_palette_size(PaletteSize::Sixteen)
             .with_palette_offset(0);
