@@ -22,6 +22,8 @@ before I optimise everything. Please don't judge me._
 
 I built a basic CPU using an FPGA board in university about ten years ago so it could be possible...
 
+![screenshot](./docs/screenshot.png)
+
 # Components
 
 ### sirc-vm
