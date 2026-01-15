@@ -29,7 +29,7 @@ jobs:
       - name: Generate libsirc
         run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: libsirc
           path: ./sirc-vm/libsirc-out
@@ -77,7 +77,7 @@ jobs:
       - name: Generate coverage file
         run: cargo +nightly llvm-cov report --doctests --codecov --output-path codecov-main.json
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: codecov-main
           path: ./sirc-vm/codecov-main.json
@@ -116,7 +116,7 @@ jobs:
           cargo llvm-cov --manifest-path=../../sirc-vm/Cargo.toml report --codecov --output-path codecov-${{ matrix.example-name }}.json
         working-directory: ./examples/${{ matrix.example-name }}
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: codecov-${{ matrix.example-name }}
           path: ./examples/${{ matrix.example-name }}/codecov-${{ matrix.example-name }}.json
