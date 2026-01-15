@@ -29,14 +29,35 @@ TEST_CASE("Exports images correctly") {
           {palette1, {{"sircImage1", sircImage1}, {"sircImage2", sircImage2}}},
           {palette2, {{"sircImage3", sircImage3}}}};
 
-  auto const asmOutput =
-      ImageExporter::exportToAsm(quantizedImagesByPalette).substr(0, 98);
+  auto const asmOutput = ImageExporter::exportToAsm(quantizedImagesByPalette);
 
   std::cout << asmOutput << "\n";
 
-  // TODO: A better test
-  REQUIRE(
-      asmOutput.starts_with(";Tilesets Section\n;Tileset 0 (number of tiles: "
-                            "6, number of values: 96) \n:tileset_0\n.DW "
-                            "#0x6666\n.D"));
+  const auto expectedLines =
+      std::array{";Tilesets Section",
+                 ";Tileset 0 (number of tiles: 6, number of values: 96) ",
+                 ":tileset_0",
+                 ";Tilemaps Section",
+                 ";Tilemap for sircImage3 (number of tiles: 1024 (unique: 2)",
+                 ":tilemap__0_0",
+                 ";Tilemap for sircImage1 (number of tiles: 1024 (unique: 2)",
+                 ":tilemap__1_1",
+                 ";Tilemap for sircImage2 (number of tiles: 1024 (unique: 2)",
+                 ":tilemap__1_2",
+                 ";Palettes Section",
+                 ";Palette 0 (number of values: 9)",
+                 ":palette__0_0",
+                 ";Palette 1 (number of values: 9)",
+                 ":palette__1_1"};
+
+  size_t lastPos = 0;
+  for (const auto &line : expectedLines) {
+    std::cout << "Checking for line: " << line << "\n";
+    const auto pos = asmOutput.find(line);
+    // Check for the presence of line in the output
+    REQUIRE(pos != std::string::npos);
+    // Enforce ordering of expected lines
+    REQUIRE(pos >= lastPos);
+    lastPos = pos;
+  }
 }

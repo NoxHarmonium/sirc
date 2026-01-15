@@ -95,6 +95,8 @@ std::string ImageExporter::exportToAsm(
       // Create and store the tilemap
       tileMapStorage.push_back(tileMap);
     }
+
+    ++currentPaletteIndex;
   }
 
   // Create the export structure
