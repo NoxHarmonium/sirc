@@ -22,7 +22,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      - uses: taiki-e/cache-cargo-install-action@v2
+      - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-c@0.10.19+cargo-0.93.0
 
