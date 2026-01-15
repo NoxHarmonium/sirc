@@ -1,6 +1,6 @@
 .EQU $FALSE                         #0x0
 .EQU $TRUE                          #0x1
-.EQU $MAX_FRAMES                    #600
+.EQU $MAX_FRAMES                    #60
 
 ;; Segments
 .EQU $PROGRAM_SEGMENT               #0x0000
