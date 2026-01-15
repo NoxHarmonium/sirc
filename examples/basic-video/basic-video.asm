@@ -135,20 +135,20 @@ RETE
 LDEA s, (#0, l)
 
 ; 1. Copy Tileset (10224 words)
-LOAD r1, @tileset_1.l
-LOAD r2, @tileset_1.u
+LOAD r1, @tileset_0.l
+LOAD r2, @tileset_0.u
 LOAD r3, $VRAM_TILESET_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
-; TODO: Embed the number of words in the generated data
-LOAD r5, #10224
+; TODO: Embed the number of words in the generated data so we don't need to hardcode this
+LOAD r5, #6176
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; 2. Copy Tilemaps (1024 words each)
 ; BG1
-LOAD r1, @tilemap__0_0.l
-LOAD r2, @tilemap__0_0.u
+LOAD r1, @tilemap__0_2.l
+LOAD r2, @tilemap__0_2.u
 LOAD r3, $VRAM_BG1_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
@@ -157,8 +157,8 @@ BRSR @memcpy
 BRSR @print_delimiter
 
 ; BG2
-LOAD r1, @tilemap__0_1.l
-LOAD r2, @tilemap__0_1.u
+LOAD r1, @tilemap__0_0.l
+LOAD r2, @tilemap__0_0.u
 LOAD r3, $VRAM_BG2_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
@@ -167,8 +167,8 @@ BRSR @memcpy
 BRSR @print_delimiter
 
 ; BG3
-LOAD r1, @tilemap__0_2.l
-LOAD r2, @tilemap__0_2.u
+LOAD r1, @tilemap__0_1.l
+LOAD r2, @tilemap__0_1.u
 LOAD r3, $VRAM_BG3_TILEMAP_BASE
 LOAD r4, $VIDEO_DEVICE_SEGMENT
 LOAD r5, #1024
@@ -253,6 +253,7 @@ RETS
 ; r3 = destination address (offset)
 ; r4 = destination segment
 ; r5 = length (words)
+; One day replace this with DMA
 :memcpy
     CMPI r5, #0
     RETS|==
@@ -268,7 +269,6 @@ RETS
 :memcpy_loop
     ; Load from source
     LOAD ah, r2
-    ; TODO: Can we use post increment addressing here?
     LOAD r6, (r1, a)
 
     ; Store to destination
