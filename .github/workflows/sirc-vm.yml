@@ -24,7 +24,7 @@ jobs:
           components: llvm-tools-preview
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
-          tool: cargo-c@0.10.14+cargo-0.89.0
+          tool: cargo-c@0.10.19+cargo-0.93.0
 
       - name: Generate libsirc
         run: cargo cinstall --meson-paths --prefix=/usr/local --destdir=./libsirc-out --verbose

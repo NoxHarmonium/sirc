@@ -16,39 +16,93 @@
 #![deny(warnings)]
 
 use insta::assert_snapshot;
-use libsirc::capi::{CPalette, CTilemap, CTilemapExport, free_str, tilemap_to_str};
+use libsirc::capi::{
+    CPalette, CTileSet, CTilemap, CTilemapExport, TILEMAP_SIZE, free_str, tilemap_to_str,
+};
 use std::ffi::CString;
 
 /// Just exists to make sure nothing goes out of scope and invaldates pointers
 #[repr(C)]
 struct TestHarness {
-    palette_comments: [CString; 16],
-    tilemap_comment: CString,
-    tilemap_label_name: CString,
-    palette_label_name: CString,
-    palettes: [CPalette; 16],
-    tilemap: CTilemap,
+    tilesets_comment: CString,
+    tileset_comments: [CString; 16],
+    tileset_labels: [CString; 16],
+    tilesets: Vec<CTileSet>,
+    tileset_data: Vec<[u16; 16]>,
+
+    tilemaps_comment: CString,
+    tilemap_comments: [CString; 16],
+    tilemap_labels: [CString; 16],
     tilemaps: Vec<CTilemap>,
+    tilemap_data: Vec<[u16; TILEMAP_SIZE]>,
+
+    palettes_comment: CString,
+    palette_comments: [CString; 16],
+    palette_labels: [CString; 16],
+    palettes: Vec<CPalette>,
+    palette_data: Vec<[u16; 16]>,
+
     export: CTilemapExport,
 }
 
-fn create_test_export() -> TestHarness {
-    let pixels = &[1u16, 2u16, 3u16, 4u16];
+fn create_test_export() -> Box<TestHarness> {
+    // 8x8 tile
+    let tile_pixels = &[
+        1u16, 2u16, 3u16, 4u16, 1u16, 2u16, 3u16, 4u16, 1u16, 2u16, 3u16, 4u16, 1u16, 2u16, 3u16,
+        4u16,
+    ];
+    let tilemap_entries = &[
+        0x0u16, 0x1u16, 0x2u16, 0x3u16, 0x4u16, 0x5u16, 0x6u16, 0x7u16,
+    ];
 
-    let tilemap_comment = CString::new("tilemap 1 comment").unwrap();
-    let palette_label_name = CString::new("palettes").unwrap();
-    let tilemap_label_name = CString::new("tilemaps").unwrap();
+    let tilesets_comment = CString::new("Tilesets Section").unwrap();
+    let tileset_comments: [CString; 16] = (0..16)
+        .map(|i| CString::new(format!("tileset {i} comment")).unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let tileset_labels: [CString; 16] = (0..16)
+        .map(|i| CString::new(format!("tileset_{i}")).unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let tileset_data = (0..16).map(|_| *tile_pixels).collect::<Vec<[u16; 16]>>();
 
+    let tilemaps_comment = CString::new("Tilemaps Section").unwrap();
+    let tilemap_comments: [CString; 16] = (0..16)
+        .map(|i| CString::new(format!("tilemap {i} comment")).unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let tilemap_labels: [CString; 16] = (0..16)
+        .map(|i| CString::new(format!("tilemap_{i}")).unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let tilemap_data = (0..16)
+        .map(|_| {
+            std::iter::repeat_n(*tilemap_entries, TILEMAP_SIZE / tilemap_entries.len())
+                .flatten()
+                .collect::<Vec<u16>>()
+                .try_into()
+                .unwrap()
+        })
+        .collect::<Vec<[u16; TILEMAP_SIZE]>>();
+
+    let palettes_comment = CString::new("Palettes Section").unwrap();
     let palette_comments: [CString; 16] = (0..16)
         .map(|i| CString::new(format!("palette {i} comment")).unwrap())
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();
-
-    let palettes: [CPalette; 16] = (0..16)
-        .map(|i: u16| CPalette {
-            comment: palette_comments[i as usize].as_ptr(),
-            data: [
+    let palette_labels: [CString; 16] = (0..16)
+        .map(|i| CString::new(format!("palette_{i}")).unwrap())
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+    let palette_data = (0..16)
+        .map(|i: u16| {
+            [
                 i,
                 1 + i,
                 2 + i,
@@ -65,39 +119,87 @@ fn create_test_export() -> TestHarness {
                 13 + i,
                 14 + i,
                 15 + i,
-            ],
+            ]
         })
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap();
+        .collect::<Vec<_>>();
 
-    let tilemap: CTilemap = CTilemap {
-        label: tilemap_label_name.as_ptr(),
-        comment: tilemap_comment.as_ptr(),
-        packed_pixel_data: pixels.as_ptr(),
-        packed_pixel_data_len: pixels.len(),
-        palette_index: 0,
-    };
+    let mut harness = Box::new(TestHarness {
+        tilesets_comment,
+        tileset_comments,
+        tileset_labels,
+        tilesets: Vec::new(),
+        tileset_data,
 
-    let tilemaps = vec![tilemap];
+        tilemaps_comment,
+        tilemap_comments,
+        tilemap_labels,
+        tilemaps: Vec::new(),
+        tilemap_data,
 
-    let export = CTilemapExport {
-        tilemaps: tilemaps.as_ptr(),
-        tilemaps_len: 1,
-        palette_label: palette_label_name.as_ptr(),
-        palettes,
-    };
-
-    TestHarness {
+        palettes_comment,
         palette_comments,
-        tilemap_comment,
-        tilemap_label_name,
-        palette_label_name,
-        palettes,
-        tilemap,
-        tilemaps,
-        export,
+        palette_labels,
+        palettes: Vec::new(),
+        palette_data,
+
+        export: CTilemapExport {
+            tilesets_comment: std::ptr::null(),
+            tilesets: std::ptr::null(),
+            tilesets_len: 0,
+            tilemaps_comment: std::ptr::null(),
+            tilemaps: std::ptr::null(),
+            tilemaps_len: 0,
+            palettes_comment: std::ptr::null(),
+            palettes: std::ptr::null(),
+            palettes_len: 0,
+        },
+    });
+
+    for (i, tile) in harness.tileset_data.iter().enumerate() {
+        harness.tilesets.push(CTileSet {
+            label: harness.tileset_labels[i].as_ptr(),
+            comment: harness.tileset_comments[i].as_ptr(),
+            data: tile.as_ptr(),
+            data_len: tile.len(),
+        });
     }
+
+    for (i, tilemap_datum) in harness.tilemap_data.iter().enumerate() {
+        harness.tilemaps.push(CTilemap {
+            label: harness.tilemap_labels[i].as_ptr(),
+            comment: harness.tilemap_comments[i].as_ptr(),
+            data: *tilemap_datum,
+        });
+    }
+
+    for (i, palette_datum) in harness.palette_data.iter().enumerate() {
+        harness.palettes.push(CPalette {
+            label: harness.palette_labels[i].as_ptr(),
+            comment: harness.palette_comments[i].as_ptr(),
+            data: palette_datum.as_ptr(),
+            data_len: palette_datum.len(),
+        });
+    }
+
+    // TODO: What I am doing?
+    // I'll also have to update sirc-tiledit so it slices the pixels up into 8x8 or 16x16 tiles and deduplicates them
+    // I'm guessing that there won't be many tiles that are exact duplicates, but it will reduce the amount of storage
+    // for fully transparent areas by a lot.
+    // Then it can export a proper data structure in asm for basic_video asm example and maybe render something
+    // TODO: Do we need to duplicate all these types with the device-video types? Can we use them somehow?
+    harness.export = CTilemapExport {
+        tilesets_comment: harness.tilesets_comment.as_ptr(),
+        tilesets: harness.tilesets.as_ptr(),
+        tilesets_len: harness.tilesets.len(),
+        tilemaps_comment: harness.tilemaps_comment.as_ptr(),
+        tilemaps: harness.tilemaps.as_ptr(),
+        tilemaps_len: harness.tilemaps.len(),
+        palettes_comment: harness.palettes_comment.as_ptr(),
+        palettes: harness.palettes.as_ptr(),
+        palettes_len: harness.palettes.len(),
+    };
+
+    harness
 }
 
 #[test]

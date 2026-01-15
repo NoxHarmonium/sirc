@@ -1,18 +1,20 @@
 #include <QtWidgets>
-#include <libsirc/libsirc.h>
-
-#include "./ui_mainwindow.h"
-#include "aboutdialog.hpp"
-#include "mainwindow.hpp"
-
-#include "imagemerger.hpp"
-#include "inputimage.hpp"
-#include "pixmapadapter.hpp"
 
 #include <algorithm>
 #include <iostream>
-#include <mediancutquantizer.hpp>
 #include <ranges>
+
+#include "./ui_mainwindow.h"
+
+#include "aboutdialog.hpp"
+#include "imagemerger.hpp"
+#include "inputimage.hpp"
+#include "mainwindow.hpp"
+#include "pixmapadapter.hpp"
+
+#include <imageexporter.hpp>
+#include <mediancutquantizer.hpp>
+#include <utils.hpp>
 
 constexpr int PALLETE_VIEW_ITEM_HEIGHT = 40;
 
@@ -31,12 +33,57 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
 }
 #endif // QT_NO_CONTEXTMENU
 
-PaletteReductionBpp MainWindow::getPaletteReductionBpp() const {
+PaletteReductionBpp MainWindow::getPaletteSize() const {
   const auto currentItem = ui->paletteReductionOptions->currentData();
   if (currentItem.isNull() || !currentItem.isValid()) {
     return PaletteReductionBpp::None;
   }
   return currentItem.value<PaletteReductionBpp>();
+}
+
+std::unordered_map<InputImageId, SircImage>
+MainWindow::getOpenedImagesQuantizedById() const {
+  std::unordered_map<InputImageId, SircImage> quantizedImagesById;
+
+  // Step 1: Group up images by palettes
+  std::unordered_map<size_t, std::vector<InputImage>> paletteGroups;
+  for (const auto &openedImage : openedImages | std::views::values) {
+    auto &imagesInPaletteGroup = paletteGroups[openedImage->getPaletteIndex()];
+    // Future work: Can we avoid this copy?
+    imagesInPaletteGroup.push_back(*openedImage);
+  }
+
+  // Step 2: Quantize images that share a palette
+  for (const auto &paletteGroup : paletteGroups | std::views::values) {
+    std::vector<SircImage> imagesToQuantize;
+    // TODO: Validate that the palette reduction is the same for the whole
+    // group? Does it make sense for different members of the group to have a
+    // different reduction value?
+    const auto paletteReduction =
+        paletteGroup.at(0).getOutputPaletteReduction();
+    for (const auto &selectedImage : paletteGroup) {
+      const auto openedSourceFilename = selectedImage.getFileInfo().filePath();
+      auto reader = QImageReader(openedSourceFilename);
+      const auto pixmap = QPixmap::fromImageReader(&reader);
+
+      const auto scaledPixmap =
+          pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS,
+                        Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
+
+      const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
+      imagesToQuantize.push_back(sircImage);
+    }
+
+    const auto quantizer = MedianCutQuantizer();
+    const auto quantizedImages =
+        quantizer.quantizeAll(imagesToQuantize, paletteReduction);
+
+    for (auto const [index, quantizedImage] : enumerate(quantizedImages)) {
+      const auto selectedImage = paletteGroup.at(index);
+      quantizedImagesById[selectedImage.id()] = quantizedImage;
+    }
+  }
+  return quantizedImagesById;
 }
 
 // UI Setup
@@ -94,33 +141,14 @@ void MainWindow::setupPaletteView(const SircImage &sircImage) const {
 }
 
 void MainWindow::loadCurrentImages() const {
-  auto quantizedImages = std::vector<SircImage>();
-  for (const auto &openedImage : openedImages) {
-    if (openedImage.isNull()) {
-      return;
-    }
+  auto const quantizedImagesById = this->getOpenedImagesQuantizedById();
 
-    const auto openedSourceFilename = openedImage->file_info().filePath();
-
-    auto reader = QImageReader(openedSourceFilename);
-    const auto pixmap = QPixmap::fromImageReader(&reader);
-
-    const auto scaledPixmap =
-        pixmap.scaled(WIDTH_PIXELS, HEIGHT_PIXELS,
-                      Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
-
-    setupSourceImageView(scaledPixmap);
-    const auto sircImage = PixmapAdapter::pixmapToSircImage(scaledPixmap);
-
-    const auto paletteReductionBpp = openedImage->output_palette_reduction();
-    const auto quantizer = MedianCutQuantizer();
-    const auto quantizedImage =
-        quantizer.quantize(sircImage, paletteReductionBpp);
-
-    quantizedImages.push_back(quantizedImage);
+  std::vector<SircImage> selectedQuantizedImages;
+  selectedQuantizedImages.reserve(selectedImages.size());
+  for (const auto &selectedImage : selectedImages) {
+    selectedQuantizedImages.push_back(quantizedImagesById.at(selectedImage));
   }
-
-  auto mergedImage = ImageMerger::merge(quantizedImages);
+  const auto mergedImage = ImageMerger::merge(selectedQuantizedImages);
 
   setupTargetImageView(mergedImage);
   setupPaletteView(mergedImage);
@@ -176,10 +204,12 @@ void MainWindow::on_actionOpen_triggered() {
 
   for (const auto &openedSourceFilename : openedSourceFilenames) {
     const auto fileInfo = QFileInfo(openedSourceFilename);
-    const auto inputImage = QSharedPointer<InputImage>(
-        new InputImage(fileInfo, PaletteReductionBpp::None));
+    const auto hash = InputImage::generateHash(fileInfo);
     auto *item = new QListWidgetItem(fileInfo.fileName());
-    item->setData(Qt::UserRole, QVariant::fromValue(inputImage));
+    item->setData(Qt::UserRole, QVariant::fromValue(hash));
+    openedImages.emplace(hash, std::make_unique<InputImage>(
+                                   fileInfo, PaletteReductionBpp::None));
+
     ui->fileList->addItem(item);
   }
 }
@@ -191,59 +221,63 @@ void MainWindow::on_actionAbout_triggered() {
 }
 
 void MainWindow::on_actionExportAsm_triggered() {
-  constexpr std::array<uint16_t, 4> pixel_data = {0, 1, 2, 3};
+  const auto quantizedImagesById = this->getOpenedImagesQuantizedById();
+  std::unordered_map<SircPalette,
+                     std::vector<std::pair<std::string, SircImage>>>
+      quantizedImagesByPalette;
+  for (const auto &[id, quantizedImage] : quantizedImagesById) {
+    const auto &image = this->openedImages.at(id);
+    const std::string name = image->getFileInfo().fileName().toStdString();
+    quantizedImagesByPalette[quantizedImage.palette].emplace_back(
+        name, quantizedImage);
+  }
 
-  const auto tilemap =
-      libsirc::CTilemap{.label = "some_label",
-                        .comment = "some_comment",
-                        .palette_index = 0,
-                        .packed_pixel_data = pixel_data.data(),
-                        .packed_pixel_data_len = pixel_data.size()};
+  const auto asmOutputStr =
+      ImageExporter::exportToAsm(quantizedImagesByPalette);
 
-  const std::array tilemaps = {tilemap};
+  auto filenameToSave = QFileDialog::getSaveFileName(
+      this, tr("Save file"), "/home", tr("Assembly File (*.asm)"));
 
-  const libsirc::CPalette palette = {
-      .comment = "palette comment",
-      .data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
-
-  auto export_data = libsirc::CTilemapExport{
-      .tilemaps = tilemaps.data(),
-      .tilemaps_len = tilemaps.size(),
-      .palette_label = "some_label",
-      .palettes = {palette, palette, palette, palette, palette, palette,
-                   palette, palette, palette, palette, palette, palette,
-                   palette, palette, palette, palette}};
-
-  char *asmChar = libsirc::tilemap_to_str(libsirc::CTilemapExport(export_data));
-  std::string asmOutputStr(asmChar);
-  std::cout << asmOutputStr << std::endl;
-  libsirc::free_str(asmChar);
+  QFile file(filenameToSave);
+  // TODO: Error handling
+  if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    QTextStream stream(&file);
+    stream << QString(
+                  ";; Warning: Exported by sirc-tiledit. Don't edit manually.")
+           << Qt::endl
+           << QString::fromStdString(asmOutputStr) << Qt::endl;
+  }
+  file.close();
 }
 
 // Input Image Configuration
 
 void MainWindow::on_fileList_itemSelectionChanged() {
-  openedImages = std::vector<QSharedPointer<InputImage>>();
+  selectedImages.clear();
   auto selectedItems = sortedSelectedItems();
-  for (auto &selectedItem : selectedItems) {
+  for (const auto &selectedItem : selectedItems) {
     if (selectedItem == nullptr) {
       continue;
     }
-    openedImages.push_back(
-        selectedItem->data(Qt::UserRole).value<QSharedPointer<InputImage>>());
+    selectedImages.push_back(
+        selectedItem->data(Qt::UserRole).value<InputImageId>());
   }
   loadCurrentImages();
 }
 
 void MainWindow::on_paletteReductionOptions_currentIndexChanged(
     [[maybe_unused]] int index) const {
-  const auto selectedBpp = getPaletteReductionBpp();
+  const auto selectedBpp = getPaletteSize();
 
-  for (auto openedImage : openedImages) {
-    if (openedImage == nullptr) {
-      continue;
-    }
-    openedImage->set_output_palette_reduction(selectedBpp);
+  for (const auto &openedImageId : selectedImages) {
+    openedImages.at(openedImageId)->setOutputPaletteReduction(selectedBpp);
+  }
+  loadCurrentImages();
+}
+
+void MainWindow::on_paletteIndexSelection_valueChanged(int value) const {
+  for (const auto &openedImageId : selectedImages) {
+    openedImages.at(openedImageId)->setPaletteIndex(value);
   }
   loadCurrentImages();
 }

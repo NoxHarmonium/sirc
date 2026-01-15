@@ -112,10 +112,6 @@ fn main() -> io::Result<()> {
                     i16::MAX
                 )
             }) as u16,
-            // TODO: Check that the linker RefTypes are correct
-            // category=Toolchain
-            // I think LowerWord and UpperWord should be absolute, not relative?
-            // Note: I think bytemuck is little endian? so lower is actually offset 0
             RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
             RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
             RefType::FullAddress => {
@@ -133,7 +129,7 @@ fn main() -> io::Result<()> {
             // category=Toolchain
             RefType::FullAddress => target_offset_words,
             _ => {
-                panic!("Only FullAddress ref type currectly supported for data directives")
+                panic!("Only FullAddress ref type currently supported for data directives")
             }
         };
 

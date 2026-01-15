@@ -12,11 +12,12 @@
 QT_BEGIN_NAMESPACE
 
 namespace Ui {
+
 class MainWindow;
 } // namespace Ui
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow {
+class MainWindow final : public QMainWindow {
   Q_OBJECT
 
 public:
@@ -42,11 +43,14 @@ private slots:
   // Input Image Configuration
   void on_fileList_itemSelectionChanged();
   void on_paletteReductionOptions_currentIndexChanged(int index) const;
+  void on_paletteIndexSelection_valueChanged(int value) const;
   void on_moveFileListSelectionUp_clicked() const;
   void on_moveFileListSelectionDown_clicked() const;
 
 private:
-  [[nodiscard]] PaletteReductionBpp getPaletteReductionBpp() const;
+  [[nodiscard]] PaletteReductionBpp getPaletteSize() const;
+  [[nodiscard]] std::unordered_map<InputImageId, SircImage>
+  getOpenedImagesQuantizedById() const;
 
   // UI Setup
   void setupPaletteReductionOptions() const;
@@ -56,11 +60,13 @@ private:
   void loadCurrentImages() const;
 
   // UI Manipulation
-  QList<QListWidgetItem *> sortedSelectedItems() const;
-  QList<QListWidgetItem *> sortedSelectedItems(Qt::SortOrder sortOrder) const;
+  [[nodiscard]] QList<QListWidgetItem *> sortedSelectedItems() const;
+  [[nodiscard]] QList<QListWidgetItem *>
+  sortedSelectedItems(Qt::SortOrder sortOrder) const;
   void moveSelectedItems(int offset) const;
 
   Ui::MainWindow *ui;
-  std::vector<QSharedPointer<InputImage>> openedImages;
+  std::unordered_map<InputImageId, std::unique_ptr<InputImage>> openedImages;
+  std::vector<InputImageId> selectedImages;
 };
 #endif // MAINWINDOW_H

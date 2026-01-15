@@ -35,6 +35,8 @@ void runIntegrationTest(const std::filesystem::path &inputPath,
 
   // Save the data to a PNG for visual comparison when debugging
   ImageLoader::saveImageToPng(fullOutputPath.c_str(), outputImage);
+  // Uncomment this line to update the reference files after changes
+  // ImageLoader::saveImageToPng(fullReferencePath.c_str(), outputImage);
 
   const auto referencePixelData =
       ImageLoader::loadImageFromPng(fullReferencePath.c_str());

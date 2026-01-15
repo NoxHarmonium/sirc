@@ -1,2 +1,3 @@
 libs/shared/tests/catch2/*
 libs/shared/benchmarks/nanobench/*
+libs/shared/src/imageloader.cpp

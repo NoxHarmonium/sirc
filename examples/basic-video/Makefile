@@ -5,14 +5,17 @@ RUN_ARGS=-vv --program-file ./basic-video.bin --register-dump-file ./basic-video
 
 all: basic-video.bin
 
-serial-handler.o: serial-handler.asm
-	cargo run ${CARGO_ARGS} --bin assembler -- --input-file serial-handler.asm --output-file serial-handler.o
-
 basic-video.o: basic-video.asm
 	cargo run ${CARGO_ARGS} --bin assembler -- --input-file basic-video.asm --output-file basic-video.o
 
-basic-video.bin: basic-video.o serial-handler.o
-	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file basic-video.bin basic-video.o serial-handler.o
+serial-handler.o: serial-handler.asm
+	cargo run ${CARGO_ARGS} --bin assembler -- --input-file serial-handler.asm --output-file serial-handler.o
+
+data.o: data.asm
+	cargo run ${CARGO_ARGS} --bin assembler -- --input-file data.asm --output-file data.o
+
+basic-video.bin: basic-video.o serial-handler.o data.o
+	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file basic-video.bin basic-video.o serial-handler.o data.o
 
 run: basic-video.bin
 	cargo run ${CARGO_ARGS} --bin sirc_vm -- ${RUN_ARGS}
@@ -24,6 +27,6 @@ check: run
 	diff -u ./basic-video.register-dump ./basic-video.register-dump-expected
 
 clean:
-	rm -f basic-video.bin basic-video.o serial-handler.o basic-video.register-dump basic-video.bin.dbg
+	rm -f basic-video.bin basic-video.o serial-handler.o data.o basic-video.register-dump basic-video.bin.dbg
 	cargo clean ${CARGO_ARGS}
 	cargo llvm-cov clean ${CARGO_ARGS} --workspace

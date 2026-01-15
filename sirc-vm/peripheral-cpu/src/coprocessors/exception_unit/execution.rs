@@ -298,7 +298,7 @@ impl Executor for ExceptionUnitExecutor {
             }
             ExecutionPhase::InstructionDecode => {
                 self.vector_value |= bus_assertions.data as u32;
-                let vector_address_high = self.vector_address as u8 & u8::MAX;
+                let vector_address_high = self.vector_address as u8;
 
                 debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
 

@@ -28,7 +28,6 @@ QColor qRgbFromSircColor(const SircColor sircColor) {
 
   return qColor;
 }
-// TODO: Export assembly
 
 SircImage PixmapAdapter::pixmapToSircImage(const QPixmap &qPixmap) {
   const auto image = qPixmap.toImage();
@@ -55,9 +54,9 @@ QPixmap PixmapAdapter::sircImageToPixmap(const SircImage &sircImage) {
   for (int x = 0; x < WIDTH_PIXELS; x++) {
     for (int y = 0; y < HEIGHT_PIXELS; y++) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-      const auto paletteColor = pixelData[(x * WIDTH_PIXELS) + y];
-      assert(paletteColor <= palette.size());
-      const auto sircColor = palette.size() == 0 ? 0 : palette[paletteColor];
+      const auto paletteColor = pixelData[y * WIDTH_PIXELS + x];
+      assert(paletteColor <= palette->size());
+      const auto sircColor = palette->empty() ? 0 : palette->at(paletteColor);
 
       image.setPixelColor(x, y, qRgbFromSircColor(sircColor));
     }
@@ -72,7 +71,7 @@ PixmapAdapter::getPaletteColors(const SircImage &sircImage) {
 
   std::vector<QColor> output;
   std::ranges::transform(
-      palette, std::back_inserter(output),
+      *palette, std::back_inserter(output),
       [](const SircColor c) { return qRgbFromSircColor(c); });
   return output;
 }

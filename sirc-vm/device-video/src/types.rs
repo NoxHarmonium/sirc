@@ -5,7 +5,7 @@ use modular_bitfield::prelude::*;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 use std::ops::{Index, IndexMut};
 
-const READONLY_STATUS_REGISTER_ADDR: u32 = 0x0013;
+const READONLY_STATUS_REGISTER_ADDR: u32 = 0x0017;
 
 // NOTE: The structs are laid out backwards because of the way bitfield works
 // The memory layout in the actual system will be the reverse (see the wiki)
@@ -126,6 +126,14 @@ pub enum TilemapSize {
     Double,
 }
 
+#[derive(Specifier, Debug)]
+pub enum PaletteSize {
+    Four,
+    Eight,
+    Sixteen,
+    ThirtyTwo,
+}
+
 #[bitfield(bits = 16)]
 #[repr(u16)]
 #[derive(Debug, Default, Clone, Copy)]
@@ -156,6 +164,16 @@ pub struct ScrollRegister {
     // Note: Fields declared in reverse order from documentation!
     pub scroll_amount: B10,
     pub reserved: B6,
+}
+
+#[bitfield(bits = 16)]
+#[repr(u16)]
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PaletteRegister {
+    // Note: Fields declared in reverse order from documentation!
+    pub palette_size: PaletteSize,
+    pub reserved: B6,
+    pub palette_offset: u8,
 }
 
 #[derive(Specifier, Debug)]
@@ -194,6 +212,10 @@ pub struct PpuRegisters {
     pub b2_scroll_y: ScrollRegister,
     pub b3_scroll_y: ScrollRegister,
     pub reserved4: u16,
+    pub b1_palette_config: PaletteRegister,
+    pub b2_palette_config: PaletteRegister,
+    pub b3_palette_config: PaletteRegister,
+    pub reserved5: u16,
     pub s_tile_addr: u16,
     pub status: StatusRegister,
 }
@@ -221,7 +243,11 @@ impl MemoryMapped for PpuRegisters {
             0x000F => self.b2_scroll_y.into(),
             0x0010 => self.b3_scroll_y.into(),
             0x0011 => self.reserved4,
-            0x0012 => self.s_tile_addr,
+            0x0012 => self.b1_palette_config.into(),
+            0x0013 => self.b2_palette_config.into(),
+            0x0014 => self.b3_palette_config.into(),
+            0x0015 => self.reserved5,
+            0x0016 => self.s_tile_addr,
             READONLY_STATUS_REGISTER_ADDR => u16::from_be_bytes(self.status.bytes),
             _ => 0x0, // Open bus
         }
@@ -247,8 +273,12 @@ impl MemoryMapped for PpuRegisters {
             0x000F => self.b2_scroll_y = value.into(),
             0x0010 => self.b3_scroll_y = value.into(),
             0x0011 => self.reserved4 = value,
-            0x0012 => self.s_tile_addr = value,
-            // 0x0013 Read Only (status)
+            0x0012 => self.b1_palette_config = value.into(),
+            0x0013 => self.b2_palette_config = value.into(),
+            0x0014 => self.b3_palette_config = value.into(),
+            0x0015 => self.reserved5 = value,
+            0x0016 => self.s_tile_addr = value,
+            // 0x0017 Read Only (status)
             _ => {} // Open bus
         }
     }

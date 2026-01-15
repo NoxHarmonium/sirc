@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="test_imagetileslicer" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="sirc" TARGET_NAME="test_imagetileslicer" CONFIG_NAME="Default" version="1" RUN_TARGET_PROJECT_NAME="sirc" RUN_TARGET_NAME="test_imagetileslicer">
+    <envs>
+      <env name="DYLD_LIBRARY_PATH" value="../../../../third-party/libsirc/lib/" />
+      <env name="LD_LIBRARY_PATH" value="../../../../third-party/libsirc/lib/" />
+    </envs>
+    <method v="2">
+      <option name="CLION.COMPOUND.BUILD" enabled="true" />
+    </method>
+  </configuration>
+</component>

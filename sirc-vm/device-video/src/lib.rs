@@ -14,8 +14,8 @@
 
 mod types;
 
-use crate::types::{PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
-use log::{debug, info};
+use crate::types::{PaletteRegister, PaletteSize, PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
+use log::info;
 use minifb::WindowOptions;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
@@ -30,11 +30,15 @@ use types::{Backgrounds, PixelBuffer, TileLine, TilemapEntry};
 // https://forums.nesdev.org/viewtopic.php?f=12&t=14467&p=211380 -- sprite calculations in hardware
 // https://retrocomputing.stackexchange.com/questions/30570/snes-sprites-are-they-rendered-using-shift-registers-or-with-a-line-buffer sprites again
 
-// 64kb = 32kw
-const VRAM_SIZE: usize = 32_000;
+// The first half of the video device segment is reserved for special registers, palette, etc.
+// The second half of the video device segment (starting at 0x8000) is just multipurpose vram that
+// can store tile data and tilemap data
+// Half a segment = 64kw = 128kb = which is twice the SNES so plenty
+const VRAM_SIZE: usize = 0x8000;
+const VRAM_OFFSET: u32 = 0x8000;
 // 256 RGB words - fast access
 const PALETTE_SIZE: usize = 256;
-// PAL can have a higher resolution but to keep things simple
+// PAL can have a higher resolution, but to keep things simple,
 // the renderer size can be static and PAL can have black bars
 const WIDTH_PIXELS: u16 = 256;
 const HEIGHT_PIXELS: u16 = 224;
@@ -149,7 +153,7 @@ pub struct VideoDevice {
 
     // Native
     vram: Vec<u16>,
-    palette: Vec<PpuPixel>,
+    palette: [PpuPixel; PALETTE_SIZE],
     ppu_registers: PpuRegisters,
     vram_fetch_register: FetchRegisters,
     pixel_mux_buffer_register: PixelBuffer,
@@ -180,13 +184,44 @@ fn resolve_first_visible_pixel(pixel_values: [u8; 3], palette_offsets: [u8; 3]) 
     0
 }
 
-fn resolve_tile_line(fetch_registers: &FetchRegisters) -> TileLine {
+fn resolve_palette_addr(palette_select: u8, palette_register: PaletteRegister) -> u8 {
+    let shift: u32 = match palette_register.palette_size() {
+        PaletteSize::Four => 2,
+        PaletteSize::Eight => 3,
+        PaletteSize::Sixteen => 4,
+        PaletteSize::ThirtyTwo => 5,
+    };
+    // Use shift to keep hardware simple - we shouldn't need to handle overflow when shifting
+    // Max value is palette_select = 7 and palette_register.palette_size() = ThirtyTwo) which result
+    // in 0b0000_0111 shifted left by 5 => 0b1110_0000 = 224 which is still in bounds.
+    // We can overflow when adding the offset; in that case, the result will wrap, which is the
+    // simplest way to do it in hardware.
+    // assert_eq!(palette_select, 0, "palette_select: {} shift: {} palette_offset:{} result: {}", palette_select, shift, palette_register.palette_offset(), palette_select.unbounded_shl(shift).wrapping_add(palette_register.palette_offset()));
+    palette_select
+        .unbounded_shl(shift)
+        .wrapping_add(palette_register.palette_offset())
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn resolve_tile_line(
+    fetch_registers: &FetchRegisters,
+    ppu_registers: &PpuRegisters,
+) -> (u8, u8, u8, u8) {
     // TODO: This will be efficient in hardware but not sure how well this code will optimise
     // Would be good to check since it will be in a hot loop
     let palette_offsets = [
-        fetch_registers.bg3_tilemap.palette_select(),
-        fetch_registers.bg2_tilemap.palette_select(),
-        fetch_registers.bg1_tilemap.palette_select(),
+        resolve_palette_addr(
+            fetch_registers.bg3_tilemap.palette_select(),
+            ppu_registers.b3_palette_config,
+        ),
+        resolve_palette_addr(
+            fetch_registers.bg2_tilemap.palette_select(),
+            ppu_registers.b2_palette_config,
+        ),
+        resolve_palette_addr(
+            fetch_registers.bg1_tilemap.palette_select(),
+            ppu_registers.b1_palette_config,
+        ),
     ];
     let p1 = resolve_first_visible_pixel(
         [
@@ -220,12 +255,7 @@ fn resolve_tile_line(fetch_registers: &FetchRegisters) -> TileLine {
         ],
         palette_offsets,
     );
-    let mut out = TileLine::new();
-    out.set_p1(p1);
-    out.set_p2(p2);
-    out.set_p3(p3);
-    out.set_p4(p4);
-    out
+    (p1, p2, p3, p4)
 }
 
 #[must_use]
@@ -290,7 +320,7 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         buffer: vec![0; total_pixels as usize],
         window,
         vram: vec![0; VRAM_SIZE],
-        palette: vec![PpuPixel::new(); PALETTE_SIZE],
+        palette: [PpuPixel::new(); PALETTE_SIZE],
         vram_fetch_register: FetchRegisters::default(),
         pixel_mux_buffer_register: PixelBuffer::default(),
         ppu_registers: PpuRegisters::default(),
@@ -379,17 +409,19 @@ impl Device for VideoDevice {
                     Backgrounds::Bg3 => self.ppu_registers.b3_tilemap_addr,
                 };
                 let tilemap_entry_address: u16 = base_address + tilemap_x + tilemap_y;
-                let tilemap_data: TilemapEntry = self.vram[tilemap_entry_address as usize].into();
+                let tilemap_data: TilemapEntry =
+                    self.read_address(u32::from(tilemap_entry_address)).into();
                 match background {
                     Backgrounds::Bg1 => {
                         if tilemap_x > 0 {
                             // First clock muxes the result from the last cycle (it is pipelined, needs an entire cycle to fill the buffer)
-                            let resolved_line = resolve_tile_line(&self.vram_fetch_register);
+                            let (p1, p2, p3, p4) =
+                                resolve_tile_line(&self.vram_fetch_register, &self.ppu_registers);
                             self.pixel_mux_buffer_register = PixelBuffer {
-                                p1: self.palette[resolved_line.p1() as usize],
-                                p2: self.palette[resolved_line.p2() as usize],
-                                p3: self.palette[resolved_line.p3() as usize],
-                                p4: self.palette[resolved_line.p4() as usize],
+                                p1: self.palette[p1 as usize],
+                                p2: self.palette[p2 as usize],
+                                p3: self.palette[p3 as usize],
+                                p4: self.palette[p4 as usize],
                             };
                         } else {
                             // Flush buffer so the last chunk of the line doesn't end up on the next line
@@ -428,10 +460,12 @@ impl Device for VideoDevice {
                             + self.vram_fetch_register.bg3_tilemap.tile_index() * tile_size_words
                     }
                 };
+
                 let tile_x = ((pixel_clock - 8) / (tile_size * 2)) % 2; // minus 8 for the cycles to load the tile maps
                 let tile_y = (self.line % tile_size) * read_cycles_per_tile_line;
-                let tile_data: TileLine =
-                    self.vram[(tile_address + tile_x + tile_y) as usize].into();
+                let tile_data: TileLine = self
+                    .read_address(u32::from(tile_address + tile_x + tile_y))
+                    .into();
                 match background {
                     Backgrounds::Bg1 => {
                         // TODO: Pixel offset per line (e.g. scrolling) (tiles are 8x8, we read one line at a time)
@@ -522,15 +556,13 @@ impl Device for VideoDevice {
 
 impl MemoryMapped for VideoDevice {
     fn read_address(&self, address: u32) -> u16 {
-        debug!("Reading from address 0x{address:X}");
         match address {
             // First FF addresses are control registers
             0x0000..=0x00FF => self.ppu_registers.read_address(address),
             // 256 palette entries (CGRAM, fast access)
             0x6000..=0x6100 => self.palette[(address - 0x6000) as usize].into(),
-            // TODO: Sprite Data
             // After that range
-            0x8000..=0xFFFF => self.vram[(address as usize) - 0x8000],
+            VRAM_OFFSET..=0xFFFF => self.vram[(address - VRAM_OFFSET) as usize],
             // Else - open bus
             _ => 0x0, // Not sure how real hardware will work. Could be garbage?
         }
@@ -538,7 +570,6 @@ impl MemoryMapped for VideoDevice {
 
     #[allow(clippy::cast_possible_truncation)]
     fn write_address(&mut self, address: u32, value: u16) {
-        debug!("Writing 0x{value:X} to address 0x{address:X}");
         match address {
             // First FF addresses are control registers
             0x0000..=0x00FF => {
@@ -547,9 +578,8 @@ impl MemoryMapped for VideoDevice {
             0x6000..=0x6100 => {
                 self.palette[(address - 0x6000) as usize] = PpuPixel::from(value);
             }
-            // TODO: Sprite Data
             // After that range
-            0x8000..=0xFFFF => self.vram[(address as usize) - 0x8000] = value,
+            VRAM_OFFSET..=0xFFFF => self.vram[(address - VRAM_OFFSET) as usize] = value,
             // Else - open bus
             _ => {}
         }
@@ -563,8 +593,8 @@ mod tile_data;
 
 #[cfg(test)]
 mod tests {
-    use crate::tile_data::{DIGIT_TILES, PALETTE_1, TEST_PATTERNS, TEST_TILEMAP};
-    use crate::types::{Backgrounds, TileLine, TilemapEntry};
+    use crate::tile_data::{DIGIT_TILES, PALETTE_1, PALETTE_2, TEST_PATTERNS, TEST_TILEMAP};
+    use crate::types::{Backgrounds, PaletteRegister, PaletteSize, TileLine, TilemapEntry};
     use crate::{
         new_video_device, unpack_rgb, RenderStateMachine, VideoDevice, HEIGHT_PIXELS, TOTAL_LINES,
         WIDTH_PIXELS,
@@ -581,6 +611,7 @@ mod tests {
 
         for (digit_idx, tile) in orig_digit_tiles.iter().enumerate() {
             // 2x8 = 16
+            #[allow(clippy::needless_range_loop)]
             for i in 0..16 {
                 // Each line in output: 4 pixels per TileLine, so two TileLines per row
                 let base = i * 4;
@@ -601,6 +632,7 @@ mod tests {
 
     fn copy_palettes_to_vram(video_device: &mut VideoDevice) {
         video_device.palette[0x0..0x10].copy_from_slice(PALETTE_1.as_slice());
+        video_device.palette[0x10..0x20].copy_from_slice(PALETTE_2.as_slice());
     }
 
     fn copy_tiles_to_vram(video_device: &mut VideoDevice) {
@@ -614,6 +646,7 @@ mod tests {
                     .collect::<Vec<u16>>()
                     .try_into()
                     .unwrap();
+                // vram is mapped to 0x8000, so 0x1000 will actually be 0x9000 when read by CPU
                 video_device.vram[0x1000 + tile_offset * 16..0x1000 + ((tile_offset + 1) * 16)]
                     .copy_from_slice(tile_as_u16.as_slice());
                 video_device.vram[0x2000 + tile_offset * 16..0x2000 + ((tile_offset + 1) * 16)]
@@ -625,6 +658,7 @@ mod tests {
     }
 
     fn copy_tilemaps_to_vram(video_device: &mut VideoDevice) {
+        // vram is mapped to 0x8000, so 0x0100 will actually be 0x8100 when read by CPU
         video_device.vram[0x0100..0x0500].copy_from_slice(TEST_TILEMAP.as_slice());
         video_device.vram[0x0500..0x0900].copy_from_slice(TEST_TILEMAP.as_slice());
         video_device.vram[0x0900..0x0D00].copy_from_slice(TEST_TILEMAP.as_slice());
@@ -632,13 +666,13 @@ mod tests {
 
     #[test]
     fn test_parsing_tilemap() {
-        let tilemap_bytes = [0x83, 0xFF];
-        let tilemap_from_hex: u16 = u16::from_be_bytes([0x83, 0xFF]);
+        let tilemap_bytes = [0x87, 0xFF];
+        let tilemap_from_hex: u16 = u16::from_be_bytes([0x87, 0xFF]);
         let tilemap_from_constructor = TilemapEntry::new()
             .with_flip_vertical(1)
             .with_flip_horizontal(0)
             .with_priority(0)
-            .with_palette_select(0)
+            .with_palette_select(1)
             .with_tile_index(0x3FF);
 
         let x: u16 = tilemap_from_constructor.into();
@@ -666,12 +700,21 @@ mod tests {
         copy_tiles_to_vram(&mut video_device);
         copy_tilemaps_to_vram(&mut video_device);
 
-        video_device.ppu_registers.b1_tilemap_addr = 0x0100;
-        video_device.ppu_registers.b2_tilemap_addr = 0x0500;
-        video_device.ppu_registers.b3_tilemap_addr = 0x0900;
-        video_device.ppu_registers.b1_tile_addr = 0x1000;
-        video_device.ppu_registers.b2_tile_addr = 0x2000;
-        video_device.ppu_registers.b3_tile_addr = 0x3000;
+        video_device.ppu_registers.b1_tilemap_addr = 0x8100;
+        video_device.ppu_registers.b2_tilemap_addr = 0x8500;
+        video_device.ppu_registers.b3_tilemap_addr = 0x8900;
+        video_device.ppu_registers.b1_tile_addr = 0x9000;
+        video_device.ppu_registers.b2_tile_addr = 0xA000;
+        video_device.ppu_registers.b3_tile_addr = 0xB000;
+        video_device.ppu_registers.b1_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
+        video_device.ppu_registers.b2_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
+        video_device.ppu_registers.b3_palette_config = PaletteRegister::new()
+            .with_palette_size(PaletteSize::Sixteen)
+            .with_palette_offset(0);
 
         for line in 0..TOTAL_LINES {
             // Clocks are divided by two to turn master clocks into PPU clocks
