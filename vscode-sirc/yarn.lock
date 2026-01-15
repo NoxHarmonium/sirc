@@ -3,9 +3,9 @@
 
 
 "@types/node@^24.0.0":
-  version "24.9.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-24.9.1.tgz#b7360b3c789089e57e192695a855aa4f6981a53c"
-  integrity sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg==
+  version "24.10.8"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-24.10.8.tgz#9b529d32e7e5adb74b13d1fc9b83615e9a12a701"
+  integrity sha512-r0bBaXu5Swb05doFYO2kTWHMovJnNVbCsII0fhesM8bNRlLhXIuckley4a2DaD+vOdmm5G+zGkQZAPZsF80+YQ==
   dependencies:
     undici-types "~7.16.0"
 
