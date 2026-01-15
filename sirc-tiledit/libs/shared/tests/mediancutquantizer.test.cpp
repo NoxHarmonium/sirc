@@ -46,12 +46,6 @@ TEST_CASE("Single Image - Reduces palette size to 4bpp", "[quantize]") {
       0, 3, 5, 7, 8, 10, 12, 14, 16, 17,
   };
 
-  std::cout << "Palette 4bpp: " << std::endl;
-  for (const auto c : *palette) {
-    std::cout << c << ", ";
-  }
-  std::cout << std::endl;
-
   REQUIRE(10 == palette->size());
   REQUIRE((*palette)[0] == 0);
   REQUIRE(std::is_permutation(palette->cbegin() + 1, palette->cend(),
