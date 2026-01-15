@@ -74,16 +74,19 @@ componentWiseAverageOfAllColors(const std::span<const SircColor> &palette) {
   auto const channels = paletteAsSingleChannels(palette);
 
   const std::valarray<unsigned long> initial = {0ul, 0ul, 0ul};
-  auto const sum = std::reduce(channels.cbegin(), channels.cend(), initial,
-                               [](const std::valarray<unsigned long> &acc,
-                                  const std::valarray<SircColorComponent> &v)
-                                   -> std::valarray<unsigned long> {
-                                 auto const casted = std::valarray{
-                                     static_cast<unsigned long>(v[0]),
-                                     static_cast<unsigned long>(v[1]),
-                                     static_cast<unsigned long>(v[2])};
-                                 return acc + casted;
-                               });
+  // std::reduce would be better here because the operation is commutative
+  // but it crashes the build on CI/CD for some reason
+  auto const sum =
+      std::accumulate(channels.cbegin(), channels.cend(), initial,
+                      [](const std::valarray<unsigned long> &acc,
+                         const std::valarray<SircColorComponent> &v)
+                          -> std::valarray<unsigned long> {
+                        auto const casted =
+                            std::valarray{static_cast<unsigned long>(v[0]),
+                                          static_cast<unsigned long>(v[1]),
+                                          static_cast<unsigned long>(v[2])};
+                        return acc + casted;
+                      });
 
   auto const average = sum / channels.size();
 
