@@ -73,7 +73,7 @@ SircColor
 componentWiseAverageOfAllColors(const std::span<const SircColor> &palette) {
   auto const channels = paletteAsSingleChannels(palette);
 
-  const std::valarray initial = {0ul, 0ul, 0ul};
+  const std::valarray<unsigned long> initial = {0ul, 0ul, 0ul};
   auto const sum = std::reduce(channels.cbegin(), channels.cend(), initial,
                                [](const std::valarray<unsigned long> &acc,
                                   const std::valarray<SircColorComponent> &v)
