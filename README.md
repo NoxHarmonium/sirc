@@ -17,7 +17,8 @@ so that the final product is a physical game console.
 
 However, there is a long way to go until that point.
 
-_Note: It is my first serious project in rust so it will be a bit rough, I'm also trying to get a vertical slice going before I optimise everything. Please don't judge me._
+_Note: It is my first serious project in rust so it will be a bit rough, I'm also trying to get a vertical slice going
+before I optimise everything. Please don't judge me._
 
 I built a basic CPU using an FPGA board in university about ten years ago so it could be possible...
 
@@ -25,7 +26,8 @@ I built a basic CPU using an FPGA board in university about ten years ago so it 
 
 ### sirc-vm
 
-The simulator/virtual machine written in Rust that allows for designs to be tested and programs to be simulated before comitting to hardware designs.
+The simulator/virtual machine written in Rust that allows for designs to be tested and programs to be simulated before
+comitting to hardware designs.
 
 Also contains the toolchain (assembler/linker) that prepares programs for the CPU.
 
@@ -34,13 +36,15 @@ There are plans at some stage to make a "low accuracy" mode or a separate emulat
 
 ### vscode-sirc
 
-The vscode extension that provides syntax highlighting for SIRC flavoured assembly, as well as the interface to the debug server
+The vscode extension that provides syntax highlighting for SIRC flavoured assembly, as well as the interface to the
+debug server
 to allow for program debugging.
 
 ### sirc-tiledit
 
 A cross platform GUI (QT/C++) to make it a bit easier to process images into tile data, tilemaps and sprite definitions.
-Will quantize images into the limited palette available on the SIRC and export assembly snippets that can be used in programs.
+Will quantize images into the limited palette available on the SIRC and export assembly snippets that can be used in
+programs.
 
 ### examples
 
@@ -48,9 +52,11 @@ Lots of real world programs that test the sirc-vm but could also be run on the r
 
 # Target
 
-The console will be a "fourth generation" console and will be roughly targeting the power/graphics quality of a [SNES](https://en.wikipedia.org/wiki/Super_Nintendo_Entertainment_System).
+The console will be a "fourth generation" console and will be roughly targeting the power/graphics quality of
+a [SNES](https://en.wikipedia.org/wiki/Super_Nintendo_Entertainment_System).
 
-It should have about 128 KB of general-purpose RAM and 64 KB VRAM but this could be slightly flexible to allow differences
+It should have about 128 KB of general-purpose RAM and 64 KB VRAM but this could be slightly flexible to allow
+differences
 in system design.
 
 The target FPGA board at the moment is the [ULX3s](https://www.crowdsupply.com/radiona/ulx3s).
@@ -59,7 +65,8 @@ it at least provides a target to hit.
 
 # Usage
 
-A good example of all the components working together is the Makefile in the [byte-sieve example project](https://github.com/NoxHarmonium/sirc/blob/main/sirc-vm/examples/byte-sieve/Makefile).
+A good example of all the components working together is the Makefile in
+the [byte-sieve example project](https://github.com/NoxHarmonium/sirc/blob/main/sirc-vm/examples/byte-sieve/Makefile).
 
 It involves the assembler, linker and the virtual machine.
 
@@ -128,11 +135,12 @@ The many stages to building this thing:
 - [x] Run some basic programs
 - [x] Add a debugger to allow stepping through programs
 - [x] Write and run an extensive 'real world' test program to shake out any implementation bugs
-- [x] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also a benchmark)
+- [x] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also
+  a benchmark)
 - [ ] Optimise the simulator code to make it usable (or add a "low accuracy" mode)
 - [ ] Document the CPU architecture and instruction set in a proper reference manual
 - [ ] (Optional) Write an LLVM backend to write programs in C (or even rust???)
-- [ ] (Optional) Write a language server and asm regex for IDE support (and debugging??)
+- [x] (Optional) Write a language server and asm regex for IDE support (and debugging??)
 
 2. Design/Simulate Input
 
@@ -141,9 +149,9 @@ The many stages to building this thing:
 
 3. Design/Simulate the PPU
 
-- [ ] Design the PPU architecture (based mainly on the SNES)
-- [ ] Design the bus that connects the CPU/PPU and the clock ratios
-- [ ] Write a simulator for the PPU that renders to a window
+- [x] Design the PPU architecture (based mainly on the SNES)
+- [x] Design the bus that connects the CPU/PPU and the clock ratios
+- [x] Write a simulator for the PPU that renders to a window
 - [ ] Write a basic game that tests the PPU (e.g. tetris?)
 
 4. Design/Simulate the APU
