@@ -1,3 +1,4 @@
+#include "constants.hpp"
 #include "sircimage.hpp"
 
 #include <mediancutquantizer.hpp>
@@ -13,6 +14,34 @@
 #include <unordered_set>
 #include <utility>
 #include <valarray>
+
+double luminanceFromSircColor(SircColor sircColor) {
+  // Basic way to measure how perceptually dark a colour is
+  const auto [r, g, b] =
+      std::array{componentFromColor(sircColor, ImageChannel::R),
+                 componentFromColor(sircColor, ImageChannel::G),
+                 componentFromColor(sircColor, ImageChannel::B)};
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+void forceDarkestColourToTransparent(
+    std::vector<std::pair<SircColor, SircColor>> &mapping) {
+  // Find the darkest colour (perceptually) and force that to be black
+  // This needs to be done because the first index in a palette is always the
+  // transparency colour, and to keep things simple we make the transparency
+  // colour black.
+  const auto mappingWithDarkestColour =
+      std::ranges::min_element(mapping, [](const auto &lhs, const auto &rhs) {
+        return luminanceFromSircColor(lhs.second) <
+               luminanceFromSircColor(rhs.second);
+      });
+  const auto darkestColour = mappingWithDarkestColour->second;
+  for (auto &val : mapping | std::views::values) {
+    if (val == darkestColour) {
+      val = TRANSPARENCY_COLOR;
+    }
+  }
+}
 
 std::vector<SircColorComponent>
 paletteAsSingleChannel(const std::span<const SircColor> &palette,
@@ -130,8 +159,9 @@ std::vector<SircColor> deduplicatePalette(
     std::vector<std::pair<SircColor, SircColor>> quantizedPalettePairs) {
   const auto quantizedPaletteValues =
       quantizedPalettePairs | std::views::values;
-  const auto quantizedPaletteSet = std::unordered_set(
-      quantizedPaletteValues.begin(), quantizedPaletteValues.end());
+  std::set quantizedPaletteSet(quantizedPaletteValues.begin(),
+                               quantizedPaletteValues.end());
+
   return {quantizedPaletteSet.begin(), quantizedPaletteSet.end()};
 }
 
@@ -176,6 +206,7 @@ void splitPaletteIntoBucketsAndAverage(
 std::pair<std::vector<SircColor>, std::vector<std::vector<PaletteReference>>>
 mergePalettesAndDeduplicate(const std::vector<SircImage> &sircImages) {
   auto results = std::vector<std::vector<PaletteReference>>(sircImages.size());
+
   std::set<SircColor> mergedPalette;
 
   // Add all the palettes into a single set
@@ -214,6 +245,7 @@ quantizePaletteAndGenerateMapping(
     const std::span<const SircColor> &existingPalette,
     const size_t maxPaletteSize) {
   assert(maxPaletteSize > 0);
+  assert(std::has_single_bit(maxPaletteSize)); // Is power of two
 
   // Note: ceiling integer division
   const size_t maxBucketSize =
@@ -222,6 +254,9 @@ quantizePaletteAndGenerateMapping(
   auto results =
       std::vector<std::pair<SircColor, SircColor>>(existingPalette.size());
   splitPaletteIntoBucketsAndAverage(existingPalette, results, maxBucketSize);
+
+  forceDarkestColourToTransparent(results);
+
   const auto quantizedPaletteWithoutDupes = deduplicatePalette(results);
 
   return {quantizedPaletteWithoutDupes,
@@ -236,10 +271,16 @@ SircImage transformSircImagePixelsWithMapping(
   const auto [existingPalette, pixelData] = sircImage;
   SircImage quantizedImage = {.palette = quantizedPaletteWithoutDupes,
                               .pixelData = {}};
-
+  const auto paletteSize = paletteMapping.size();
   std::ranges::transform(
       pixelData.cbegin(), pixelData.cend(), quantizedImage.pixelData.begin(),
-      [paletteMapping](const PaletteReference &oldPaletteRef) {
+      [paletteMapping, paletteSize](const PaletteReference &oldPaletteRef) {
+        // This should only happen if the pixel data is
+        // referencing palette values that don't exist
+        if (oldPaletteRef >= paletteSize) {
+          throw std::invalid_argument(
+              "Pixel data out of bounds of original palette.");
+        }
         return paletteMapping[oldPaletteRef];
       });
   return quantizedImage;
@@ -264,7 +305,11 @@ SircImage MedianCutQuantizer::quantize(const SircImage &sircImage,
   const auto maxPaletteSize = to_underlying(bpp);
   const auto [existingPalette, pixelData] = sircImage;
 
-  if (existingPalette->size() <= maxPaletteSize) {
+  bool hasTransparency = !existingPalette->empty() &&
+                         existingPalette->front() == TRANSPARENCY_COLOR;
+  if (existingPalette->size() <= maxPaletteSize && hasTransparency) {
+    // No need to quantize. If the palette doesn't have the transparency colour
+    // at the first index, we run it through the quantizer anyway to add it
     return sircImage;
   }
 
