@@ -1,0 +1,93 @@
+\chapter{Meta-Instructions}
+\label{ch:meta-instructions}
+
+\section{Overview}
+
+Meta-instructions (also called pseudo-instructions) are assembly mnemonics that don't directly correspond to unique opcodes. Instead, they assemble to specific forms of existing instructions, providing more intuitive syntax for common operations.
+
+\section{NOOP -- No Operation}
+
+\textbf{Syntax:} \texttt{NOOP}
+
+\textbf{Assembles to:} \texttt{ADDI r1, \#0}
+
+\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during development.
+
+\textbf{Example:}
+\begin{lstlisting}
+NOOP                          ; Wait 6 cycles
+NOOP
+NOOP                          ; Total 18 cycles delay
+\end{lstlisting}
+
+\section{RETS -- Return from Subroutine}
+
+\textbf{Syntax:} \texttt{RETS}
+
+\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
+
+\textbf{Description:} Returns from a subroutine by copying the link register to the program counter. Used after \mnemonic{LJSR} or \mnemonic{BRSR}.
+
+\textbf{Example:}
+\begin{lstlisting}
+my_function:
+    ; ... function body ...
+    RETS                      ; Return to caller
+\end{lstlisting}
+
+\section{WAIT -- Wait for Interrupt}
+
+\textbf{Syntax:} \texttt{WAIT}
+
+\textbf{Assembles to:} \texttt{COP \#0x1F00}
+
+\textbf{Description:} Puts the CPU into a low-power wait state until an interrupt occurs. Sets the Waiting for Interrupt bit in the status register.
+
+\textbf{Example:}
+\begin{lstlisting}
+main_loop:
+    WAIT                      ; Sleep until interrupt
+    ; ... process interrupt ...
+    BRAN (#main_loop, p)
+\end{lstlisting}
+
+\section{RETE -- Return from Exception}
+
+\textbf{Syntax:} \texttt{RETE}
+
+\textbf{Assembles to:} \texttt{COP \#0x1A00}
+
+\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+exception_handler:
+    ; ... handle exception ...
+    RETE                      ; Return to interrupted code
+\end{lstlisting}
+
+\section{Additional Pseudo-Instructions}
+
+Assemblers may provide additional pseudo-instructions for convenience:
+
+\subsection{MOV -- Move}
+\begin{lstlisting}
+MOV rD, rS                    ; Assembles to: LOAD rD, rS
+\end{lstlisting}
+
+\subsection{CLR -- Clear Register}
+\begin{lstlisting}
+CLR rD                        ; Assembles to: LOAD rD, #0
+\end{lstlisting}
+
+\subsection{NOT -- Bitwise NOT}
+\begin{lstlisting}
+NOT rD                        ; Assembles to: XORI rD, #0xFFFF
+\end{lstlisting}
+
+\subsection{NEG -- Negate (Two's Complement)}
+\begin{lstlisting}
+NEG rD                        ; Assembles to: SUBR rD, #0, rD
+\end{lstlisting}
+
+\textit{(Note: Check assembler documentation for supported pseudo-instructions)}

@@ -1,0 +1,79 @@
+\begin{titlepage}
+    \centering
+
+    \vspace*{2cm}
+
+    {\Huge\bfseries\color{sircblue} SIRCULAR}
+
+    \vspace{0.5cm}
+
+    {\Large SIR Compute Using Load/store ALU and Registers}
+
+    \vspace{2cm}
+
+    {\LARGE\bfseries CPU Reference Manual}
+
+    \vspace{0.5cm}
+
+    {\large Featuring the SIRCIS Instruction Set}
+
+    \vspace{3cm}
+
+    \begin{tcolorbox}[colback=sirclightgray,colframe=sircblue,width=0.8\textwidth,arc=2mm]
+        \centering
+        \textbf{Technical Specifications}
+
+        \vspace{0.3cm}
+
+        \begin{tabular}{ll}
+            \textbf{Architecture:} & 16-bit RISC Load/Store \\
+            \textbf{Address Bus:} & 24-bit \\
+            \textbf{Data Bus:} & 16-bit \\
+            \textbf{Instruction Size:} & 32-bit (fixed) \\
+            \textbf{Registers:} & 16 general/address registers \\
+            \textbf{Execution:} & 6-stage pipeline \\
+        \end{tabular}
+    \end{tcolorbox}
+
+    \vfill
+
+    {\large\textit{Version 1.0}}
+
+    \vspace{0.5cm}
+
+    {\large\today}
+
+\end{titlepage}
+
+\clearpage
+\thispagestyle{empty}
+\vspace*{5cm}
+
+\section*{About This Manual}
+
+This reference manual provides comprehensive documentation for the SIRCULAR CPU architecture and the SIRCIS (SIRC Instruction Set) instruction set. It is intended for:
+
+\begin{itemize}
+    \item Assembly language programmers
+    \item Compiler and toolchain developers
+    \item Hardware designers and implementers
+    \item System software developers
+\end{itemize}
+
+\section*{Document Conventions}
+
+Throughout this manual, the following conventions are used:
+
+\begin{itemize}
+    \item Register names appear in typewriter font: \reg{r1}, \reg{ph}, \reg{sr}
+    \item Hexadecimal values are prefixed with \texttt{0x}: \opcode{1A}
+    \item Immediate values are prefixed with \texttt{\#}: \imm{123}
+    \item Instruction mnemonics appear in bold typewriter font: \mnemonic{ADDI}
+    \item Addressing modes use parentheses for indirection: \indirectimm{4}{a}
+\end{itemize}
+
+\section*{Acknowledgments}
+
+The SIRCULAR CPU draws inspiration from several classic processor architectures of the late 1980s and early 1990s, including the Motorola 68000 series, MOS 6502, ARM6, and MIPS R2000/R3000.
+
+\clearpage

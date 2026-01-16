@@ -1,0 +1,138 @@
+\chapter{Memory Access Instructions}
+\label{ch:memory-instructions}
+
+\section{Overview}
+
+Memory access instructions transfer data between registers and memory. Following the load/store architecture, these are the only instructions that can access memory—all arithmetic and logical operations must work on registers.
+
+The SIRCULAR provides two primary memory operations:
+\begin{itemize}
+    \item \mnemonic{LOAD} -- Read from memory into a register
+    \item \mnemonic{STOR} -- Write from a register to memory
+\end{itemize}
+
+Both instructions support multiple addressing modes:
+\begin{itemize}
+    \item Indirect with immediate offset: \texttt{(\#offset, addr)}
+    \item Indirect with register offset: \texttt{(reg, addr)}
+    \item Post-increment: \texttt{(\#offset, addr)+}
+    \item Pre-decrement: \texttt{-(\#offset, addr)}
+\end{itemize}
+
+\section{Effective Address Calculation}
+
+For all memory operations, the effective address (EA) is calculated as:
+
+\begin{equation}
+\text{EA} = \text{AddressRegister} + \text{Offset}
+\end{equation}
+
+Where:
+\begin{itemize}
+    \item Address Register is one of: \reg{l}, \reg{a}, \reg{s}, or \reg{p}
+    \item Offset is either an immediate value or register contents
+\end{itemize}
+
+The resulting 24-bit address is used to access memory.
+
+\section{LOAD Instructions}
+
+\begin{instructionbox}{LOAD -- Load from Memory}
+\textbf{Opcodes:} 0x14 (Indirect Imm), 0x15 (Indirect Reg), 0x16 (Post-Inc Imm), 0x17 (Post-Inc Reg)
+
+\textbf{Syntax:}
+\begin{lstlisting}
+LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
+LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
+LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += offset
+LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += rS
+\end{lstlisting}
+
+\textbf{Description:}
+
+Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after the load, useful for array traversal.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Load from fixed offset
+LOAD r1, (#4, a)              ; r1 = memory[a + 4]
+
+; Load using variable offset
+LOAD r2, (r3, a)              ; r2 = memory[a + r3]
+
+; Array iteration
+LOAD r4, (#0, a)+             ; r4 = *a; a += 2
+
+; Stack pop
+LOAD r5, (#0, s)+             ; r5 = *s; s += 2
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{STOR Instructions}
+
+\begin{instructionbox}{STOR -- Store to Memory}
+\textbf{Opcodes:} 0x10 (Indirect Imm), 0x11 (Indirect Reg), 0x12 (Pre-Dec Imm), 0x13 (Pre-Dec Reg)
+
+\textbf{Syntax:}
+\begin{lstlisting}
+STOR rS, (#offset, addr)      ; memory[addr + offset] = rS
+STOR rS, (rD, addr)           ; memory[addr + rD] = rS
+STOR rS, -(#offset, addr)     ; addr -= offset; memory[addr + offset] = rS
+STOR rS, -(rD, addr)          ; addr -= rD; memory[addr + rD] = rS
+\end{lstlisting}
+
+\textbf{Description:}
+
+Stores a 16-bit value from a register into memory. Pre-decrement forms update the address register before the store, useful for stack push operations.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Store to fixed offset
+STOR r1, (#8, a)              ; memory[a + 8] = r1
+
+; Store using variable offset
+STOR r2, (r3, a)              ; memory[a + r3] = r2
+
+; Stack push
+STOR r4, -(#2, s)             ; s -= 2; memory[s] = r4
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Common Memory Access Patterns}
+
+\subsection{Structure Field Access}
+\begin{lstlisting}
+; struct { int16_t x, y, z; } point;
+; 'a' points to point
+LOAD r1, (#0, a)              ; r1 = point.x
+LOAD r2, (#2, a)              ; r2 = point.y
+LOAD r3, (#4, a)              ; r3 = point.z
+\end{lstlisting}
+
+\subsection{Array Iteration}
+\begin{lstlisting}
+; Process array of 16-bit values
+; 'a' = array base, r7 = count
+loop:
+    LOAD r1, (#0, a)+         ; Load element, advance
+    ; ... process r1 ...
+    SUBI r7, #1
+    BRAN|!= loop
+\end{lstlisting}
+
+\subsection{Stack Operations}
+\begin{lstlisting}
+; Push registers
+STOR r1, -(#2, s)
+STOR r2, -(#2, s)
+STOR r3, -(#2, s)
+
+; Pop registers (reverse order)
+LOAD r3, (#0, s)+
+LOAD r2, (#0, s)+
+LOAD r1, (#0, s)+
+\end{lstlisting}
+
+\textit{(Additional memory instruction details would follow in a complete manual)}

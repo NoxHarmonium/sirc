@@ -1,0 +1,268 @@
+\chapter{Register Model}
+\label{ch:registers}
+
+\section{Overview}
+
+The SIRCULAR CPU provides sixteen 16-bit registers that serve various purposes. These registers can be classified into three categories:
+
+\begin{itemize}
+    \item General purpose registers (\reg{r1}--\reg{r7})
+    \item Address register pairs (\reg{l}, \reg{a}, \reg{s}, \reg{p})
+    \item Status register (\reg{sr})
+\end{itemize}
+
+All registers are 16 bits wide. However, the address registers can be used in pairs to form 24-bit addresses for memory operations.
+
+\section{General Purpose Registers}
+
+\subsection{Register Set}
+
+The SIRCULAR provides seven general-purpose registers:
+
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+\textbf{Register} & \textbf{Description} \\
+\midrule
+\reg{r1} & General purpose register 1 \\
+\reg{r2} & General purpose register 2 \\
+\reg{r3} & General purpose register 3 \\
+\reg{r4} & General purpose register 4 \\
+\reg{r5} & General purpose register 5 \\
+\reg{r6} & General purpose register 6 \\
+\reg{r7} & General purpose register 7 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These registers can be used freely for any purpose by the programmer. They hold 16-bit values and can be used as source or destination operands for all ALU instructions.
+
+\subsection{Usage Conventions}
+
+While there are no hardware-enforced conventions, typical usage patterns include:
+
+\begin{itemize}
+    \item \reg{r1}--\reg{r4}: Temporary values and expression evaluation
+    \item \reg{r5}--\reg{r7}: Preserved across function calls (by convention)
+\end{itemize}
+
+These are software conventions only and are not enforced by the CPU.
+
+\section{Address Register Pairs}
+
+\subsection{Overview}
+
+The SIRCULAR provides four address register pairs, each consisting of a high and low 16-bit register. When used together, these pairs form 24-bit addresses by combining the low 8 bits of the high register with the full 16 bits of the low register.
+
+\begin{figure}[H]
+\centering
+\begin{bytefield}[bitwidth=0.8em]{32}
+    \bitheader{0-31} \\
+    \bitbox{8}{\color{sircgray}Unused} &
+    \bitbox{8}{High[7:0]} &
+    \bitbox{16}{Low[15:0]} \\
+    \bitbox{8}{\color{sircgray}\tiny bits 31--24} &
+    \bitbox{8}{\tiny bits 23--16} &
+    \bitbox{16}{\tiny bits 15--0}
+\end{bytefield}
+\caption{Address Register Pair Formation}
+\label{fig:addr-pair}
+\end{figure}
+
+The upper 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage, enabling techniques such as tagged pointers.
+
+\subsection{Link Register (l)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Register} \\
+\midrule
+High Byte & \reg{lh} (privileged) \\
+Low Word & \reg{ll} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The link register pair stores return addresses for subroutine calls. When a subroutine is called using \mnemonic{LJSR} or \mnemonic{BRSR}, the return address is automatically saved to this register pair.
+
+\textbf{Typical Use:}
+\begin{itemize}
+    \item Storing return addresses from subroutine calls
+    \item Building nested subroutine call stacks
+\end{itemize}
+
+\subsection{Address Register (a)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Register} \\
+\midrule
+High Byte & \reg{ah} (privileged) \\
+Low Word & \reg{al} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A general-purpose address register pair used for pointer operations and memory access.
+
+\textbf{Typical Use:}
+\begin{itemize}
+    \item Base pointer for data structures
+    \item Array indexing
+    \item General memory addressing
+\end{itemize}
+
+\subsection{Stack Pointer (s)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Register} \\
+\midrule
+High Byte & \reg{sh} (privileged) \\
+Low Word & \reg{sl} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The stack pointer register pair points to the current top of the stack. Pre-decrement and post-increment addressing modes are particularly useful with this register.
+
+\textbf{Typical Use:}
+\begin{itemize}
+    \item Stack operations (push/pop)
+    \item Local variable allocation
+    \item Function parameter passing
+\end{itemize}
+
+\subsection{Program Counter (p)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Register} \\
+\midrule
+High Byte & \reg{ph} (privileged) \\
+Low Word & \reg{pl} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The program counter register pair points to the next instruction to be executed. It is automatically incremented by 4 after each instruction fetch (since instructions are 32 bits).
+
+\textbf{Typical Use:}
+\begin{itemize}
+    \item Automatically updated during normal execution
+    \item Modified by branch and jump instructions
+    \item Used for position-independent code
+\end{itemize}
+
+\section{Status Register}
+
+The status register (\reg{sr}) is a special 16-bit register that contains CPU status flags and control bits. It is divided into two bytes:
+
+\begin{itemize}
+    \item \textbf{Lower Byte (bits 7--0):} Condition flags, accessible in both supervisor and protected modes
+    \item \textbf{Upper Byte (bits 15--8):} Control flags, accessible only in supervisor mode (privileged)
+\end{itemize}
+
+The status register is discussed in detail in Chapter~\ref{ch:status-register}.
+
+\section{Privilege Restrictions}
+
+\subsection{High Address Register Restrictions}
+
+The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) is considered privileged:
+
+\begin{itemize}
+    \item In \textbf{supervisor mode}: Can be read from and written to freely
+    \item In \textbf{protected mode}:
+    \begin{itemize}
+        \item Reading is allowed
+        \item Writing triggers a privilege exception
+    \end{itemize}
+\end{itemize}
+
+This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
+
+\subsection{Bypassing Restrictions}
+
+Some instructions (\mnemonic{LDEA}, \mnemonic{LJSR}) that operate on full address register pairs can write to the low register only when the second operand bit is set. This allows controlled updates to addresses within the current segment even in protected mode.
+
+\section{Register Addressing}
+
+Registers are addressed using 4-bit register identifiers in instruction encoding:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{clc}
+\toprule
+\textbf{ID} & \textbf{Register} & \textbf{Privileged} \\
+\midrule
+0x0 & \reg{sr} & Upper byte only \\
+0x1 & \reg{r1} & No \\
+0x2 & \reg{r2} & No \\
+0x3 & \reg{r3} & No \\
+0x4 & \reg{r4} & No \\
+0x5 & \reg{r5} & No \\
+0x6 & \reg{r6} & No \\
+0x7 & \reg{r7} & No \\
+0x8 & \reg{lh} & Yes \\
+0x9 & \reg{ll} & No \\
+0xA & \reg{ah} & Yes \\
+0xB & \reg{al} & No \\
+0xC & \reg{sh} & Yes \\
+0xD & \reg{sl} & No \\
+0xE & \reg{ph} & Yes \\
+0xF & \reg{pl} & No \\
+\bottomrule
+\end{tabular}
+\caption{Register Encoding}
+\label{tab:register-encoding}
+\end{table}
+
+\section{Usage Examples}
+
+\subsection{Basic Register Operations}
+
+\begin{lstlisting}
+; Load immediate value into r1
+ADDI r1, #0, #100
+
+; Copy r1 to r2
+ADDR r2, r1, #0
+
+; Add r1 and r2, store in r3
+ADDR r3, r1, r2
+\end{lstlisting}
+
+\subsection{Address Register Usage}
+
+\begin{lstlisting}
+; Load value from memory at address in 'a' register pair
+LOAD r1, (#0, a)
+
+; Store r1 to memory at address (a + 8)
+STOR r1, (#8, a)
+
+; Push r1 onto stack (pre-decrement)
+STOR r1, -(#2, s)
+
+; Pop r2 from stack (post-increment)
+LOAD r2, (#0, s)+
+\end{lstlisting}
+
+\subsection{Subroutine Call}
+
+\begin{lstlisting}
+; Call subroutine at address in 'a' register
+; Return address saved to 'l' register automatically
+LJSR (#0, a)
+
+; ...subroutine code...
+
+; Return from subroutine
+; Copies 'l' register to 'p' register
+RETS
+\end{lstlisting}

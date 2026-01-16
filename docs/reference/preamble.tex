@@ -1,0 +1,140 @@
+% ==========================================
+% Preamble for SIRCULAR CPU Reference Manual
+% ==========================================
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{bytefield}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{float}
+
+% Page geometry - similar to classic technical manuals
+\geometry{
+    letterpaper,
+    margin=1in,
+    headheight=14pt,
+}
+
+% Colors - inspired by 90s technical documentation
+\definecolor{sircblue}{RGB}{0,51,102}
+\definecolor{sircgray}{RGB}{128,128,128}
+\definecolor{sirclightgray}{RGB}{230,230,230}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{opcodecolor}{RGB}{153,0,0}
+
+% Header/Footer styling
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\nouppercase{\leftmark}}
+\fancyhead[RO]{\nouppercase{\rightmark}}
+\fancyfoot[LE,RO]{\thepage}
+\fancyfoot[C]{\textcolor{sircgray}{\textsc{SIRCULAR Reference Manual}}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=sircblue,
+    filecolor=sircblue,
+    urlcolor=sircblue,
+    citecolor=sircblue,
+    bookmarksnumbered=true,
+    pdfauthor={SIRC Development Team},
+    pdftitle={SIRCULAR CPU Reference Manual},
+    pdfsubject={SIRCIS Instruction Set Architecture},
+}
+
+% Assembly code listings
+\lstdefinelanguage{SIRC}{
+    morekeywords={ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,ANDI,ANDR,ORRI,ORRR,
+                  XORI,XORR,LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
+                  LDEA,BRAN,LJSR,BRSR,RETS,NOOP,WAIT,RETE,
+                  COPI,COPR,COP},
+    keywordstyle=\color{sircblue}\bfseries,
+    sensitive=false,
+    morecomment=[l]{;},
+    commentstyle=\color{sircgray}\itshape,
+    morestring=[b]",
+    stringstyle=\color{opcodecolor},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    showstringspaces=false,
+}
+
+\lstset{
+    language=SIRC,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{sircgray},
+    numbers=left,
+    numberstyle=\tiny\color{sircgray},
+    numbersep=5pt,
+    xleftmargin=15pt,
+    framexleftmargin=15pt,
+}
+
+% Custom environment for instruction pages
+\newtcolorbox{instructionbox}[1]{
+    colback=sirclightgray,
+    colframe=sircblue,
+    fonttitle=\bfseries\large,
+    title=#1,
+    arc=2mm,
+}
+
+% Register notation command
+\newcommand{\reg}[1]{\texttt{#1}}
+
+% Opcode notation
+\newcommand{\opcode}[1]{\textcolor{opcodecolor}{\texttt{0x#1}}}
+
+% Status bit notation
+\newcommand{\statusbit}[1]{\texttt{#1}}
+
+% Instruction mnemonic
+\newcommand{\mnemonic}[1]{\textbf{\texttt{#1}}}
+
+% Memory address notation
+\newcommand{\addr}[1]{\texttt{#1}}
+
+% Immediate value notation
+\newcommand{\imm}[1]{\texttt{\##1}}
+
+% Addressing mode notation
+\newcommand{\indirectimm}[2]{\texttt{(\##1, #2)}}
+\newcommand{\indirectreg}[2]{\texttt{(#1, #2)}}
+\newcommand{\postinc}[2]{\texttt{(#1, #2)+}}
+\newcommand{\predec}[2]{\texttt{-(#1, #2)}}
+
+% Shift notation
+\newcommand{\shift}[2]{\texttt{#1 \##2}}
+
+% Chapter styling
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+    {\normalfont\huge\bfseries\color{sircblue}}
+    {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}
+    {\normalfont\Large\bfseries\color{sircblue}}
+    {\thesection}{1em}{}
+\titleformat{\subsection}
+    {\normalfont\large\bfseries\color{sircblue}}
+    {\thesubsection}{1em}{}
+
+% Table styling
+\renewcommand{\arraystretch}{1.3}

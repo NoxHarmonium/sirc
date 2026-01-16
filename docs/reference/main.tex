@@ -1,0 +1,53 @@
+\documentclass[11pt,letterpaper,twoside]{book}
+
+% ==========================================
+% SIRCULAR CPU Reference Manual
+% SIR Compute Using Load/store ALU and Registers
+% ==========================================
+
+\input{preamble}
+
+\begin{document}
+
+% Front Matter
+\frontmatter
+\input{chapters/title}
+\tableofcontents
+\listoftables
+\listoffigures
+
+% Main Content
+\mainmatter
+
+% Part I: Architecture Overview
+\part{Architecture Overview}
+\input{chapters/01-introduction}
+\input{chapters/02-registers}
+\input{chapters/03-status-register}
+
+% Part II: Instruction Set Architecture
+\part{Instruction Set Architecture}
+\input{chapters/04-instruction-formats}
+\input{chapters/05-addressing-modes}
+\input{chapters/06-shift-operations}
+\input{chapters/07-condition-codes}
+
+% Part III: SIRCIS Instruction Reference
+\part{SIRCIS Instruction Reference}
+\input{chapters/08-instruction-summary}
+\input{chapters/09-alu-instructions}
+\input{chapters/10-memory-instructions}
+\input{chapters/11-control-flow}
+\input{chapters/12-coprocessor-instructions}
+\input{chapters/13-meta-instructions}
+
+% Back Matter
+\appendix
+\input{chapters/appendix-a-opcode-map}
+\input{chapters/appendix-b-timing}
+\input{chapters/appendix-c-undocumented}
+
+\backmatter
+% Index would go here if we add one later
+
+\end{document}

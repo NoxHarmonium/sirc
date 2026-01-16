@@ -1,0 +1,304 @@
+\chapter{Condition Codes}
+\label{ch:condition-codes}
+
+\section{Overview}
+
+Most SIRCIS instructions can be executed conditionally based on the state of the condition flags in the status register. This allows for efficient implementation of conditional logic without requiring explicit branch instructions.
+
+The 4-bit condition code field in each instruction specifies under what conditions the instruction should execute. If the condition is not met, the instruction behaves as a \mnemonic{NOOP} (no operation).
+
+\section{Condition Code Encoding}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clp{7cm}}
+\toprule
+\textbf{Code} & \textbf{Mnemonic} & \textbf{Condition (when instruction executes)} \\
+\midrule
+0000 & (none) & Always (unconditional) \\
+0001 & == & Equal (Z = 1) \\
+0010 & != & Not Equal (Z = 0) \\
+0011 & CS & Carry Set (C = 1) \\
+0100 & CC & Carry Clear (C = 0) \\
+0101 & <0 & Negative (N = 1) \\
+0110 & >=0 & Non-Negative (N = 0) \\
+0111 & VS & Overflow Set (V = 1) \\
+1000 & VC & Overflow Clear (V = 0) \\
+1001 & > & Unsigned Higher (C = 1 AND Z = 0) \\
+1010 & <= & Unsigned Lower or Same (C = 0 OR Z = 1) \\
+1011 & >= & Signed Greater or Equal (N = V) \\
+1100 & < & Signed Less Than (N $\neq$ V) \\
+1101 & >> & Signed Greater Than (Z = 0 AND N = V) \\
+1110 & << & Signed Less or Equal (Z = 1 OR N $\neq$ V) \\
+1111 & NV & Never (never executes) \\
+\bottomrule
+\end{tabular}
+\caption{Condition Code Encoding}
+\label{tab:condition-codes}
+\end{table}
+
+\section{Condition Code Categories}
+
+\subsection{Simple Conditions}
+
+These conditions test a single status flag:
+
+\begin{description}
+    \item[Always (default)] No condition code specified; instruction always executes.
+
+    \item[== (Equal)] Executes when Z = 1. Typically used after \mnemonic{CMP} to test equality.
+
+    \item[!= (Not Equal)] Executes when Z = 0. Typical use: test inequality.
+
+    \item[CS (Carry Set)] Executes when C = 1. Can indicate unsigned overflow or borrow.
+
+    \item[CC (Carry Clear)] Executes when C = 0. No unsigned overflow/borrow.
+
+    \item[<0 (Negative)] Executes when N = 1. Tests if result is negative (signed).
+
+    \item[>=0 (Non-Negative)] Executes when N = 0. Tests if result is positive or zero (signed).
+
+    \item[VS (Overflow Set)] Executes when V = 1. Signed overflow occurred.
+
+    \item[VC (Overflow Clear)] Executes when V = 0. No signed overflow.
+\end{description}
+
+\subsection{Unsigned Comparisons}
+
+These conditions are used after comparing unsigned integers:
+
+\begin{description}
+    \item[> (Unsigned Higher)] Executes when C = 1 AND Z = 0. Tests if first operand $>$ second operand (unsigned).
+
+    \item[<= (Unsigned Lower or Same)] Executes when C = 0 OR Z = 1. Tests if first $\leq$ second (unsigned).
+\end{description}
+
+\textbf{Note:} For unsigned comparisons:
+\begin{itemize}
+    \item Use \texttt{>} and \texttt{<=} after \mnemonic{CMP}
+    \item \texttt{>=} (unsigned) is equivalent to \texttt{CS}
+    \item \texttt{<} (unsigned) is equivalent to \texttt{CC}
+\end{itemize}
+
+\subsection{Signed Comparisons}
+
+These conditions are used after comparing signed integers:
+
+\begin{description}
+    \item[>= (Signed Greater or Equal)] Executes when N = V. First operand $\geq$ second operand (signed).
+
+    \item[< (Signed Less Than)] Executes when N $\neq$ V. First operand $<$ second operand (signed).
+
+    \item[>> (Signed Greater Than)] Executes when Z = 0 AND N = V. First operand $>$ second operand (signed).
+
+    \item[<< (Signed Less or Equal)] Executes when Z = 1 OR N $\neq$ V. First operand $\leq$ second operand (signed).
+\end{description}
+
+\subsection{Special Conditions}
+
+\begin{description}
+    \item[Never (NV)] Never executes; equivalent to \mnemonic{NOOP}. Can be used for instruction padding or to temporarily disable instructions during debugging.
+\end{description}
+
+\section{Assembly Syntax}
+
+Condition codes are specified by appending a pipe character (\texttt{|}) followed by the condition mnemonic to the instruction:
+
+\begin{lstlisting}
+; Unconditional
+ADDI r1, #10
+
+; Conditional - execute only if equal
+ADDI|== r2, #20
+
+; Conditional branch
+BRAN|!= loop_start
+
+; Multiple conditions
+ADDR|> r3, r4, r5
+STOR|<0 r6, (#0, s)
+\end{lstlisting}
+
+\section{Usage with Compare Instructions}
+
+The most common use of condition codes is with compare (\mnemonic{CMP}) instructions:
+
+\subsection{Unsigned Comparison}
+
+\begin{lstlisting}
+; if (r1 > r2) { r3 = r4; } (unsigned)
+CMPR r1, r2          ; Compare r1 and r2
+ADDR|> r3, r4, #0    ; r3 = r4 if r1 > r2 (unsigned)
+
+; if (r1 <= 100) { branch } (unsigned)
+CMPI r1, #100
+BRAN|<= target
+\end{lstlisting}
+
+\subsection{Signed Comparison}
+
+\begin{lstlisting}
+; if (r1 >= r2) { r3 = r4; } (signed)
+CMPR r1, r2          ; Compare r1 and r2
+ADDR|>= r3, r4, #0   ; r3 = r4 if r1 >= r2 (signed)
+
+; if (r1 < -10) { branch } (signed)
+CMPI r1, #-10
+BRAN|< negative_case
+\end{lstlisting}
+
+\subsection{Equality Testing}
+
+\begin{lstlisting}
+; if (r1 == r2) { branch }
+CMPR r1, r2
+BRAN|== equal_case
+
+; if (r1 != 0) { branch }
+CMPI r1, #0
+BRAN|!= non_zero_case
+\end{lstlisting}
+
+\section{Condition Code Truth Tables}
+
+\subsection{After Unsigned Comparison (CMPR rA, rB)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{cccccc}
+\toprule
+\textbf{Relationship} & \textbf{Z} & \textbf{C} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
+\midrule
+rA = rB & 1 & * & == & 0001 & Equal \\
+rA $\neq$ rB & 0 & * & != & 0010 & Not Equal \\
+rA $>$ rB (unsigned) & 0 & 1 & > & 1001 & Higher \\
+rA $<$ rB (unsigned) & 0 & 0 & CC & 0100 & Lower \\
+rA $\geq$ rB (unsigned) & * & 1 & CS & 0011 & Higher or Same \\
+rA $\leq$ rB (unsigned) & * & * & <= & 1010 & Lower or Same \\
+\bottomrule
+\end{tabular}
+\caption{Unsigned Comparison Results}
+\end{table}
+
+\subsection{After Signed Comparison (CMPR rA, rB)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccccccc}
+\toprule
+\textbf{Relationship} & \textbf{Z} & \textbf{N} & \textbf{V} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
+\midrule
+rA = rB & 1 & * & * & == & 0001 & Equal \\
+rA $\neq$ rB & 0 & * & * & != & 0010 & Not Equal \\
+rA $>$ rB (signed) & 0 & 0 & 0 & >> & 1101 & Greater \\
+rA $>$ rB (signed) & 0 & 1 & 1 & >> & 1101 & Greater \\
+rA $<$ rB (signed) & * & 0 & 1 & < & 1100 & Less \\
+rA $<$ rB (signed) & * & 1 & 0 & < & 1100 & Less \\
+rA $\geq$ rB (signed) & * & 0 & 0 & >= & 1011 & Greater or Equal \\
+rA $\geq$ rB (signed) & * & 1 & 1 & >= & 1011 & Greater or Equal \\
+rA $\leq$ rB (signed) & 1 & * & * & << & 1110 & Less or Equal \\
+rA $\leq$ rB (signed) & 0 & 0 & 1 & << & 1110 & Less or Equal \\
+rA $\leq$ rB (signed) & 0 & 1 & 0 & << & 1110 & Less or Equal \\
+\bottomrule
+\end{tabular}
+\caption{Signed Comparison Results}
+\end{table}
+
+\section{Advanced Usage}
+
+\subsection{Conditional Assignment}
+
+\begin{lstlisting}
+; max = (a > b) ? a : b (unsigned)
+CMPR r1, r2              ; Compare a and b
+ADDR|> r3, r1, #0        ; r3 = a if a > b
+ADDR|<= r3, r2, #0       ; r3 = b if a <= b
+\end{lstlisting}
+
+\subsection{Conditional Increment}
+
+\begin{lstlisting}
+; if (condition) count++
+CMPI r1, #0
+ADDI|!= r2, #1           ; Increment r2 if r1 != 0
+\end{lstlisting}
+
+\subsection{Conditional Function Call}
+
+\begin{lstlisting}
+; if (r1 > 0) call_function()
+CMPI r1, #0
+LJSR|>0 (#0, a)          ; Call function if r1 > 0
+\end{lstlisting}
+
+\subsection{Loop Construction}
+
+\begin{lstlisting}
+; for (i = 10; i > 0; i--)
+ADDI r1, #0, #10         ; i = 10
+loop:
+    ; ... loop body ...
+    SUBI r1, #1          ; i--
+    BRAN|> loop          ; Continue if i > 0 (unsigned)
+\end{lstlisting}
+
+\section{Condition Code Selection Guide}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Intent} & \textbf{After CMP} & \textbf{Condition Code} \\
+\midrule
+If equal & \texttt{CMPR a, b} & \texttt{==} \\
+If not equal & \texttt{CMPR a, b} & \texttt{!=} \\
+If a $>$ b (unsigned) & \texttt{CMPR a, b} & \texttt{>} \\
+If a $\geq$ b (unsigned) & \texttt{CMPR a, b} & \texttt{CS} \\
+If a $<$ b (unsigned) & \texttt{CMPR a, b} & \texttt{CC} \\
+If a $\leq$ b (unsigned) & \texttt{CMPR a, b} & \texttt{<=} \\
+If a $>$ b (signed) & \texttt{CMPR a, b} & \texttt{>>} \\
+If a $\geq$ b (signed) & \texttt{CMPR a, b} & \texttt{>=} \\
+If a $<$ b (signed) & \texttt{CMPR a, b} & \texttt{<} \\
+If a $\leq$ b (signed) & \texttt{CMPR a, b} & \texttt{<<} \\
+If negative & \texttt{CMPI a, \#0} & \texttt{<0} \\
+If positive or zero & \texttt{CMPI a, \#0} & \texttt{>=0} \\
+If overflow occurred & After arithmetic & \texttt{VS} \\
+If no overflow & After arithmetic & \texttt{VC} \\
+\bottomrule
+\end{tabular}
+\caption{Condition Code Selection Guide}
+\label{tab:condition-selection}
+\end{table}
+
+\section{Performance Considerations}
+
+\begin{itemize}
+    \item Conditional instructions do not branch, avoiding pipeline flushes
+    \item When a condition is false, the instruction still takes 6 cycles but performs no operation
+    \item For short conditional sequences, conditional execution can be faster than branching
+    \item For longer conditional blocks, explicit branches may be more efficient
+\end{itemize}
+
+\section{Common Pitfalls}
+
+\begin{itemize}
+    \item \textbf{Signed vs. Unsigned}: Using unsigned conditions (\texttt{>}, \texttt{<=}) for signed values or vice versa produces incorrect results
+
+    \item \textbf{Flag Clobbering}: Flags are modified by most ALU instructions. Ensure the condition flags haven't been modified between the comparison and conditional instruction:
+
+\begin{lstlisting}
+; WRONG - flags clobbered
+CMPR r1, r2
+ADDI r3, #100         ; Modifies flags!
+BRAN|> target         ; Tests wrong flags
+
+; CORRECT - flags preserved
+CMPR r1, r2
+BRAN|> target
+ADDI r3, #100         ; After the branch
+\end{lstlisting}
+
+    \item \textbf{Inverted Logic}: Remember that \texttt{CMP A, B} computes A - B, so condition codes test A relative to B, not B relative to A
+\end{itemize}

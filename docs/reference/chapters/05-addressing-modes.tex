@@ -1,0 +1,469 @@
+\chapter{Addressing Modes}
+\label{ch:addressing-modes}
+
+\section{Overview}
+
+The SIRCULAR CPU supports eight addressing modes that specify how operands are accessed. These modes determine whether an operand is an immediate value, register contents, or data in memory at a computed address.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lp{8cm}}
+\toprule
+\textbf{Mode} & \textbf{Description} \\
+\midrule
+Immediate & Operand is a constant value encoded in the instruction \\
+Register Direct & Operand is the contents of a specified register \\
+Indirect Immediate & Memory address = address register + immediate offset \\
+Indirect Register & Memory address = address register + register offset \\
+Post-Increment & Indirect register, then increment address register \\
+Pre-Decrement & Decrement address register, then use as indirect \\
+Implied & No operand specified (encoded in instruction) \\
+Short Immediate & 8-bit constant with optional shift \\
+\bottomrule
+\end{tabular}
+\caption{Addressing Modes Summary}
+\label{tab:addr-modes}
+\end{table}
+
+\section{Immediate Addressing}
+
+\subsection{Description}
+
+The operand is a constant value encoded directly in the instruction. For full immediate mode, this can be a 16-bit signed or unsigned value. For short immediate mode, it is an 8-bit value that can optionally be shifted.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+ADDI r1, #100         ; 16-bit immediate
+ADDI r2, #-50         ; Signed immediate
+ADDI r3, #10, LSL #2  ; 8-bit immediate with shift
+\end{lstlisting}
+
+\subsection{Effective Value}
+
+\begin{description}
+    \item[Immediate:] The value is used directly
+    \item[Short Immediate:] Value = (immediate $\ll$ shift\_count) or (immediate $\gg$ shift\_count)
+\end{description}
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Loading constant values
+    \item Arithmetic with known values
+    \item Bit manipulation with masks
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Load constant
+ADDI r1, #0, #1234    ; r1 = 1234
+
+; Add constant
+ADDI r2, #100         ; r2 = r2 + 100
+
+; Create large constant via shift
+ADDI r3, #1, LSL #12  ; r3 = r3 + 4096
+\end{lstlisting}
+
+\section{Register Direct Addressing}
+
+\subsection{Description}
+
+The operand is the contents of a specified register. This is the most common mode for ALU operations in a load/store architecture.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+ADDR r1, r2, r3   ; r1 = r2 + r3
+ADDR r4, r5       ; r4 = r4 + r5
+\end{lstlisting}
+
+\subsection{Effective Value}
+
+The 16-bit value currently stored in the specified register.
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item All ALU operations between registers
+    \item Register-to-register data movement
+    \item Testing register values
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Add registers
+ADDR r1, r2, r3       ; r1 = r2 + r3
+
+; Copy register
+ADDR r4, r5, #0       ; r4 = r5 + 0 = r5
+
+; Compare registers
+CMPR r1, r2           ; Sets flags based on r1 - r2
+\end{lstlisting}
+
+\section{Indirect Immediate Addressing}
+
+\subsection{Description}
+
+The effective address is computed by adding a 16-bit signed immediate offset to an address register pair. The operand is then loaded from or stored to this computed address.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+LOAD r1, (#8, a)      ; Load from address (a + 8)
+STOR r2, (#-4, s)     ; Store to address (s - 4)
+LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
+\end{lstlisting}
+
+\subsection{Effective Address}
+
+\begin{equation}
+\text{EA} = \text{AddressRegister} + \text{Offset}
+\end{equation}
+
+The address register can be: \reg{l} (link), \reg{a} (address), \reg{s} (stack), or \reg{p} (program counter).
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Accessing structure fields (fixed offset from base)
+    \item Array element access (if index is constant)
+    \item Stack frame access (local variables)
+    \item Position-independent code (PC-relative addressing)
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Access structure fields
+LOAD r1, (#0, a)      ; r1 = struct.field0
+LOAD r2, (#2, a)      ; r2 = struct.field1
+LOAD r3, (#4, a)      ; r3 = struct.field2
+
+; Stack frame access
+STOR r4, (#-2, s)     ; Save local variable
+LOAD r5, (#-4, s)     ; Load local variable
+
+; PC-relative branch
+BRAN (#10, p)         ; Jump forward 10 bytes
+\end{lstlisting}
+
+\section{Indirect Register Addressing}
+
+\subsection{Description}
+
+Similar to indirect immediate, but the offset is taken from a register instead of being encoded as an immediate value. This enables runtime-computed offsets.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+LOAD r1, (r2, a)      ; Load from address (a + r2)
+STOR r3, (r4, s)      ; Store to address (s + r4)
+\end{lstlisting}
+
+\subsection{Effective Address}
+
+\begin{equation}
+\text{EA} = \text{AddressRegister} + \text{IndexRegister}
+\end{equation}
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Array indexing with variable index
+    \item Table lookups
+    \item Dynamic offset calculations
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Array access: array[i]
+; Assume 'a' points to array base, r2 contains index * 2
+LOAD r1, (r2, a)      ; r1 = array[i]
+
+; Write to array
+STOR r3, (r2, a)      ; array[i] = r3
+
+; Lookup table
+LOAD r4, (r5, a)      ; r4 = table[r5]
+\end{lstlisting}
+
+\section{Post-Increment Addressing}
+
+\subsection{Description}
+
+The effective address is computed using indirect register addressing, then the address register pair is incremented by the index register value after the memory operation.
+
+This mode is particularly useful for iterating through arrays or implementing stack operations.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+LOAD r1, (r2, a)+     ; Load from (a + r2), then a = a + r2
+STOR r3, (#2, s)+     ; Store to (s + 2), then s = s + 2
+\end{lstlisting}
+
+\subsection{Operation Sequence}
+
+\begin{enumerate}
+    \item Compute EA = AddressRegister + Offset
+    \item Perform memory operation (load or store)
+    \item AddressRegister = AddressRegister + Offset
+\end{enumerate}
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Stack pop operations
+    \item Forward array traversal
+    \item Buffer reading
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Pop from stack
+; Assume s points to current top of stack
+LOAD r1, (#0, s)+     ; r1 = *s; s = s + 2
+
+; Iterate through array
+; Process 10 elements
+ADDI r2, #0, #10      ; Counter
+loop:
+  LOAD r3, (#0, a)+   ; Load element, advance pointer
+  ; ... process r3 ...
+  SUBI r2, #1         ; Decrement counter
+  BRAN|!= loop        ; Continue if not zero
+\end{lstlisting}
+
+\section{Pre-Decrement Addressing}
+
+\subsection{Description}
+
+The address register pair is decremented by the offset value before computing the effective address for the memory operation.
+
+This mode is the complement of post-increment and is useful for stack push operations.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+STOR r1, -(r2, s)     ; s = s - r2, then store to (s + r2)
+STOR r3, -(#2, s)     ; s = s - 2, then store to (s + 2)
+\end{lstlisting}
+
+\subsection{Operation Sequence}
+
+\begin{enumerate}
+    \item AddressRegister = AddressRegister - Offset
+    \item Compute EA = AddressRegister + Offset
+    \item Perform memory operation (typically store)
+\end{enumerate}
+
+Note: After decrement, we still add the offset to compute EA. This may seem counterintuitive, but it allows the stack to grow downward properly.
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Stack push operations
+    \item Backward array traversal
+    \item Buffer writing
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Push onto stack
+STOR r1, -(#2, s)     ; s = s - 2; *s = r1
+
+; Save multiple registers
+STOR r1, -(#2, s)
+STOR r2, -(#2, s)
+STOR r3, -(#2, s)
+; Stack now has r3, r2, r1 (r3 at top)
+
+; Later, restore them
+LOAD r3, (#0, s)+
+LOAD r2, (#0, s)+
+LOAD r1, (#0, s)+
+\end{lstlisting}
+
+\section{Implied Addressing}
+
+\subsection{Description}
+
+No operand is specified; the operation is fully defined by the opcode. This mode is used for control flow instructions and other operations that don't need explicit operands.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+NOOP              ; No operation
+WAIT              ; Wait for interrupt
+RETS              ; Return from subroutine
+RETE              ; Return from exception
+\end{lstlisting}
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Meta-instructions that assemble to specific operations
+    \item Control flow that operates on implied registers
+    \item System operations
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Function call and return
+LJSR (#0, a)          ; Call function, address in 'a'
+; ... function code ...
+RETS                  ; Return (copies 'l' to 'p')
+
+; Wait for interrupt
+WAIT                  ; CPU enters low-power state
+
+; No operation (delay)
+NOOP                  ; Do nothing for 6 cycles
+\end{lstlisting}
+
+\section{Short Immediate Addressing}
+
+\subsection{Description}
+
+Similar to immediate addressing, but limited to 8-bit values. The value can be shifted before use, effectively allowing larger values to be encoded efficiently if they are multiples of powers of 2.
+
+\subsection{Syntax}
+
+\begin{lstlisting}
+ADDI r1, #10, LSL #2  ; r1 = r1 + (10 << 2) = r1 + 40
+SUBI r2, #1, LSL #8   ; r2 = r2 - 256
+\end{lstlisting}
+
+\subsection{Effective Value}
+
+The 8-bit immediate is shifted according to the shift type and count, then used as the operand.
+
+\subsection{Usage}
+
+\begin{itemize}
+    \item Efficiently encoding common constants (powers of 2, multiples)
+    \item Bit field manipulation
+    \item Scaled arithmetic
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+; Set bit 12
+ORRI r1, #1, LSL #12
+
+; Clear bit 8
+ANDI r1, #~(1 << 8)   ; Assembler computes #0xFEFF
+
+; Multiply by 4 (add value * 4)
+ADDR r1, r2, r2, LSL #2  ; r1 = r2 + (r2 << 2) = r2 * 5
+\end{lstlisting}
+
+\section{Address Register Selection}
+
+Many addressing modes require specifying which address register pair to use. The 2-bit address register field encodes:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccl}
+\toprule
+\textbf{Bits} & \textbf{Symbol} & \textbf{Register Pair} \\
+\midrule
+00 & l & Link Register (lh, ll) \\
+01 & a & Address Register (ah, al) \\
+10 & s & Stack Pointer (sh, sl) \\
+11 & p & Program Counter (ph, pl) \\
+\bottomrule
+\end{tabular}
+\caption{Address Register Encoding}
+\label{tab:addr-reg-encoding}
+\end{table}
+
+\section{Addressing Mode Examples}
+
+\subsection{Structure Access}
+
+\begin{lstlisting}
+; Assume 'a' points to a struct:
+; struct Point {
+;   int16_t x;  // offset 0
+;   int16_t y;  // offset 2
+; }
+
+LOAD r1, (#0, a)      ; r1 = point.x
+LOAD r2, (#2, a)      ; r2 = point.y
+\end{lstlisting}
+
+\subsection{Array Iteration}
+
+\begin{lstlisting}
+; Iterate array of 16-bit values
+; Assume 'a' points to array start
+; r7 = counter
+loop:
+  LOAD r1, (#0, a)+   ; Load element, advance by 2
+  ; ... process r1 ...
+  SUBI r7, #1
+  BRAN|!= loop
+\end{lstlisting}
+
+\subsection{Stack Frame}
+
+\begin{lstlisting}
+; Function prologue - save registers
+STOR r1, -(#2, s)
+STOR r2, -(#2, s)
+STOR r3, -(#2, s)
+
+; Access parameters (above saved regs)
+LOAD r4, (#6, s)      ; First parameter
+LOAD r5, (#8, s)      ; Second parameter
+
+; Function epilogue - restore registers
+LOAD r3, (#0, s)+
+LOAD r2, (#0, s)+
+LOAD r1, (#0, s)+
+RETS
+\end{lstlisting}
+
+\subsection{Position-Independent Code}
+
+\begin{lstlisting}
+; PC-relative data access
+LOAD r1, (#data_offset, p)  ; Load from PC + offset
+
+; PC-relative call
+LJSR (#function_offset, p)  ; Call function at PC + offset
+
+data_offset: DW 100   ; Some data
+function_offset: DW 200  ; Distance to function
+\end{lstlisting}
+
+\section{Addressing Mode Restrictions}
+
+\subsection{Privilege Mode Restrictions}
+
+In protected mode, indirect addressing modes that would write to the high byte of an address register are restricted:
+
+\begin{itemize}
+    \item \textbf{LDEA with both registers}: Privileged in protected mode
+    \item \textbf{LDEA with low register only}: Allowed (can't change segment)
+    \item \textbf{Post-increment/Pre-decrement}: Can only modify low register in protected mode
+\end{itemize}
+
+\subsection{Alignment}
+
+\begin{itemize}
+    \item Memory operations should target even addresses (16-bit aligned)
+    \item Unaligned access behavior is undefined
+    \item PC must always be 4-byte aligned (instruction alignment)
+\end{itemize}
