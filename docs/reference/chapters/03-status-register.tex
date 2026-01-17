@@ -100,31 +100,46 @@ mode will be ignored (the write affects only the lower byte).
 		      \item Upper byte of status register
 		      \item Privileged coprocessor operations (opcodes > 0x07xx)
 	      \end{itemize}
-	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments
+	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. With the exception of writing to the status register, preforming a restricted operation will cause a "privilege violation" fault.
 \end{description}
 
 \subsection{Interrupt Mask Bits (I1, I2, I3) -- Bits 9--11}
 
-These three bits control which interrupt priority levels are masked:
+% TODO: The exception handling should probably get its own chapter? explain different types of exceptions and priorities etc. and the sliding link registers
+% TODO: Clarify interrupt vs exception
+% TODO: Is there any way to disable specific hardware interrupt levels without blocking software exceptions? I don't think so. Could this be an issue? Maybe leave that up to an external chip?
+
+These three bits control which interrupt priority levels are masked.
+
+If an exception comes in with a lower priority than the mask, it will not be serviced until the higher priority interrupts are finished.
+
+These bits should not be modified by the user, and are automatically set by the exception coprocessor.
+
+If a level 5 interrupt is triggered while the level 5 interrupt is masked it will cause a fault.
+
+If a fault occurs while handling another fault the CPU will be halted. This is due to the architecture of the exception unit.
+
+%Interrupt handling is discussed in detail in Chapter~\ref{ch:interrupts}.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{cccp{7cm}}
+	\begin{tabular}{cp{7cm}}
 		\toprule
-		\textbf{I3} & \textbf{I2} & \textbf{I1} & \textbf{Effect}                                  \\
+		\textbf{Value} & \textbf{Interrupt Type}                          \\
 		\midrule
-		0           & 0           & 0           & All interrupts enabled                           \\
-		0           & 0           & 1           & Low priority interrupts masked                   \\
-		0           & 1           & 0           & Low and medium priority interrupts masked        \\
-		0           & 1           & 1           & Low, medium, and high priority interrupts masked \\
-		1           & x           & x           & All interrupts masked (NMI still active)         \\
+		0x0           & No Interrupt                           \\
+		0x1           & Software Exception                   \\
+		0x2           & Level 1 Hardware        \\
+		0x3           & Level 2 Hardware \\
+		0x4           & Level 3 Hardware \\
+		0x5           & Level 4 Hardware \\
+		0x6           & Level 5 Hardware \\
+		0x7           & Fault         \\
 		\bottomrule
 	\end{tabular}
 	\caption{Interrupt Mask Settings}
 	\label{tab:interrupt-mask}
 \end{table}
-
-\textbf{Note:} Non-maskable interrupts (NMI) cannot be disabled by these bits.
 
 \subsection{Waiting for Interrupt (W) -- Bit 12}
 
@@ -132,7 +147,7 @@ These three bits control which interrupt priority levels are masked:
 	\item[Set when:] The \mnemonic{WAIT} instruction is executed
 	\item[Cleared when:] An interrupt or exception occurs
 	\item[Purpose:] Indicates the CPU is in low-power wait state
-	\item[Note:] This bit is primarily for hardware implementation and is typically not accessed by software
+	\item[Note:] This bit is primarily for hardware implementation, and is mapped to an external pin. No program will ever read this bit as 1 as the CPU is not executing when this bit is active.
 \end{description}
 
 \subsection{CPU Halted (H) -- Bit 13}
@@ -142,13 +157,14 @@ These three bits control which interrupt priority levels are masked:
 	\item[Cleared when:] CPU is reset
 	\item[Purpose:] Indicates the CPU has halted execution
 	\item[Note:] This feature may not be implemented in all versions
+	\item[Note:] This bit is primarily for hardware implementation, and is mapped to an external pin. No program will ever read this bit as 1 as the CPU is not executing when this bit is active.
 \end{description}
 
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
 \begin{description}
 	\item[When Set (1):] Memory address calculations that overflow or underflow will trigger an address overflow exception
-	\item[When Clear (0):] Address overflows wrap around silently
+	\item[When Clear (0):] Address overflows wrap around without any side effects
 	\item[Purpose:] Helps detect pointer errors during development
 	\item[Typical Use:] Enabled during debugging, disabled in production for performance
 \end{description}
@@ -160,7 +176,6 @@ These three bits control which interrupt priority levels are masked:
 	\item[When Clear (0):] Normal execution
 	\item[Purpose:] Allows debuggers to single-step through code
 	\item[Note:] Used by SIRCIT (SIRC Instruction Tracer) for debugging
-	\item[Implementation:] May not be fully implemented in all simulator versions
 \end{description}
 
 \section{Status Register Updates}
@@ -171,10 +186,10 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 
 \begin{itemize}
 	\item \textbf{Arithmetic Instructions} (\mnemonic{ADDI}, \mnemonic{SUBI}, \mnemonic{ADCI}, \mnemonic{SBCI}): Update all four condition flags
-	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z and N flags; C and V are cleared
-	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Update all flags but do not write result to destination
-	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Update Z and N flags only
-	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Do not update condition flags
+	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z, N and V flags; C flag is cleared
+	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Same as Arithmetic Instructions but does not update destination
+	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
+	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Does not update condition flags
 	\item \textbf{Shift Operations}: Can optionally update flags based on the instruction's status register update source field
 \end{itemize}
 
@@ -183,17 +198,15 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 The status register can be directly manipulated like any other register:
 
 \begin{lstlisting}
-; Read current status register
-ADDR r1, sr, #0
-
 ; Set protected mode bit (only in supervisor mode)
 ORRI sr, #0x0100
 
 ; Clear interrupt mask
 ANDI sr, #0xF1FF
 
-; Restore saved status register
-ADDR sr, r1, #0
+; Restore status register saved to stack
+LOAD sr, (s)+
+
 \end{lstlisting}
 
 \textbf{Important:} When running in protected mode, writes to the status register only affect the lower byte (bits 7--0). The upper byte remains unchanged.
@@ -205,10 +218,10 @@ lower byte in bits 7--0, with bits 15--8 masked to zero (for security).
 
 \begin{lstlisting}
 ; In supervisor mode - gets full 16 bits
-ADDR r1, sr, #0  ; r1 = 0xXXXX (all bits)
+LOAD r1, sr  ; r1 = 0xXXXX (all bits)
 
 ; In protected mode - upper byte masked
-ADDR r1, sr, #0  ; r1 = 0x00XX (upper byte forced to 0)
+LOAD r1, sr  ; r1 = 0x00XX (upper byte forced to 0)
 \end{lstlisting}
 
 \section{Exception Handling Effects}
@@ -233,13 +246,13 @@ When returning from an exception with \mnemonic{RETE}, the saved status register
 CMPI r1, r2
 
 ; Branch if equal
-BRAN|== label_equal
+BRAN|== @label_equal
 
 ; Branch if r1 > r2 (unsigned)
-BRAN|> label_greater
+BRAN|> @label_greater
 
-; Branch if r1 >= r2 (signed)
-BRAN|>= label_signed_ge
+; Add 0x16 to r1 if r1 >= r2 (signed)
+ADDI|>= r1, #0x16
 \end{lstlisting}
 
 \subsection{Testing Bits}
@@ -267,12 +280,12 @@ ORRI sr, #0x0100  ; Set protected mode bit
 
 \begin{lstlisting}
 ; Save status register
-ADDR r7, sr, #0
+LOAD r7, sr
 
 ; Do some operations that change flags
 ADDI r1, r2, r3
 CMPI r1, #100
 
 ; Restore original status
-ADDR sr, r7, #0
+LOAD sr, r7
 \end{lstlisting}

@@ -105,7 +105,7 @@ ANDI    sr, #0xBFFF
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
 COPI    r1, #0x4000
 
-; Switch to non privillaged mode
+; Switch to non privileged mode
 ORRI     sr, #0x0100
 ; Try to escape the current segment
 LOAD     ph, #0xFEFE
@@ -130,7 +130,7 @@ RETE
 ADDI    r2, #1
 
 ; Fix up the return address because the original PC causes an alignment fault
-; Returning witout fixing up the return address would cause an endless loop
+; Returning without fixing up the return address would cause an endless loop
 
 ; Transfer current ELR into 'a' register
 COPI    r1, #0x1C16

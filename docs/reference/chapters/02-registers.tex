@@ -77,6 +77,14 @@ the low register.
 The upper 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
 enabling techniques such as tagged pointers.
 
+Although each address register pair has a specific name, and a suggested usage by convention,
+they are all treated the same by STOR/LOAD instructions and they can all be used for indirect addressing the same way.
+
+In fact, you can perform a jump by simply loading a value in to the Program Counter registers.
+
+However, it is worth noting that the Link Register pair will be updated automatically though specific instructions (LJSR, BRSR)
+and the Program Counter pair is incremented after every instruction.
+
 \subsection{Link Register (l)}
 
 \begin{center}
@@ -96,7 +104,7 @@ or \mnemonic{BRSR}, the return address is automatically saved to this register p
 \textbf{Typical Use:}
 \begin{itemize}
 	\item Storing return addresses from subroutine calls
-	\item Building nested subroutine call stacks
+	\item Alternate storage for general memory addressing
 \end{itemize}
 
 \subsection{Address Register (a)}
@@ -157,8 +165,8 @@ modes are particularly useful with this register.
 	\end{tabular}
 \end{center}
 
-The program counter register pair points to the next instruction to be executed. It is automatically incremented by 4
-after each instruction fetch (since instructions are 32 bits).
+The program counter register pair points to the next instruction to be executed. It is automatically incremented by 2
+after each instruction fetch (since instructions are 32 bits and each fetch is 16 bits).
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -197,12 +205,6 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
 
-\subsection{Bypassing Restrictions}
-
-Some instructions (\mnemonic{LDEA}, \mnemonic{LJSR}) that operate on full address register pairs can write to the low
-register only when the second operand bit is set. This allows controlled updates to addresses within the current
-segment even in protected mode.
-
 \section{Register Addressing}
 
 Registers are addressed using 4-bit register identifiers in instruction encoding:
@@ -235,16 +237,19 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 	\label{tab:register-encoding}
 \end{table}
 
+% TODO: There are some other registers like the cause register we should probably document here
+% TODO: Do we need a usage example here? Seems a bit out of place?
+
 \section{Usage Examples}
 
 \subsection{Basic Register Operations}
 
 \begin{lstlisting}
 ; Load immediate value into r1
-ADDI r1, #0, #100
+LOAD r1, #100
 
-; Copy r1 to r2
-ADDR r2, r1, #0
+; Add 2 to the value stored in r1 and store the result into r2
+ADDR r2, r1, #2
 
 ; Add r1 and r2, store in r3
 ADDR r3, r1, r2
@@ -254,16 +259,17 @@ ADDR r3, r1, r2
 
 \begin{lstlisting}
 ; Load value from memory at address in 'a' register pair
-LOAD r1, (#0, a)
+LOAD r1, (a)
 
 ; Store r1 to memory at address (a + 8)
-STOR r1, (#8, a)
+STOR (#8, a), r1
 
 ; Push r1 onto stack (pre-decrement)
-STOR r1, -(#2, s)
+STOR -(s), r1
 
-; Pop r2 from stack (post-increment)
-LOAD r2, (#0, s)+
+; Pop stack into r2 (post-increment)
+LOAD r2, (s)+
+
 \end{lstlisting}
 
 \subsection{Subroutine Call}
@@ -271,7 +277,7 @@ LOAD r2, (#0, s)+
 \begin{lstlisting}
 ; Call subroutine at address in 'a' register
 ; Return address saved to 'l' register automatically
-LJSR (#0, a)
+LJSR (a)
 
 ; ...subroutine code...
 

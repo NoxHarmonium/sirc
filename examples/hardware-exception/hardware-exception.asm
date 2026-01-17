@@ -72,7 +72,7 @@ RETS
 ; This means that we can't trigger any more interrupts manually after the data is piped
 ; (stdin is currently the only way to externally trigger an interrupt)
 ; If the data is coming in at the same type we are sending data out,
-; it ends up with the program gets stuck waiting for an interupt and never finishes
+; it ends up with the program gets stuck waiting for an interrupt and never finishes
 ; TODO: Actually that shouldn't be a problem - better investigate this further (
 ;   maybe the exception handler routines are conflicting with each other)
 

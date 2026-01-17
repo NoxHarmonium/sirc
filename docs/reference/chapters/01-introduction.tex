@@ -93,7 +93,7 @@ dramatically simplifies the hardware design by eliminating the need for variable
 
 \subsection{Coprocessors}
 
-The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus.
+The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and register file.
 Only one coprocessor can be active at one time and are usually activated using the COP instructions (except for the "exception unit" which can be activated when physical pins are asserted on the chip).
 All implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor 0x1.
 Other coprocessors are optional and will vary depending on which SIRC-1 model you have.
@@ -108,6 +108,7 @@ The instruction set supports up to 16 coprocessors.
 		0x0           & Processing Unit    & No                       & Executes instructions                                      \\
 		0x1           & Exception Unit     & No                       & Handles interrupts and exceptions                          \\
 		0x2           & DMA Unit           & Yes                      & Transfers large amounts of data via the bus                \\
+		0x3           & Maths Unit         & Yes                      & Performs mathematical operations in hardware               \\
 		\bottomrule
 	\end{tabular}
 	\caption{List of coprocessors}
