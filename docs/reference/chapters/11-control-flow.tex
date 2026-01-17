@@ -3,35 +3,38 @@
 
 \section{Overview}
 
-Control flow instructions modify the program counter to change the execution flow. The SIRCULAR provides several types of control flow operations:
+Control flow instructions modify the program counter to change the execution flow. The SIRCULAR provides several types
+of control flow operations:
 
 \begin{itemize}
-    \item \mnemonic{BRAN} -- Branch (unconditional or conditional jump)
-    \item \mnemonic{LJSR} -- Long Jump to Subroutine (with link)
-    \item \mnemonic{BRSR} -- Branch to Subroutine (relative, with link)
-    \item \mnemonic{LDEA} -- Load Effective Address (can be used for jumps)
+	\item \mnemonic{BRAN} -- Branch (unconditional or conditional jump)
+	\item \mnemonic{LJSR} -- Long Jump to Subroutine (with link)
+	\item \mnemonic{BRSR} -- Branch to Subroutine (relative, with link)
+	\item \mnemonic{LDEA} -- Load Effective Address (can be used for jumps)
 \end{itemize}
 
-All control flow instructions can be conditional, allowing efficient implementation of if-then-else and loop constructs.
+All control flow instructions can be conditional, allowing efficient implementation of if-then-else and loop
+constructs.
 
 \section{Branch Instructions}
 
 \begin{instructionbox}{BRAN -- Branch}
-\textbf{Opcodes:} 0x1A (Imm Displacement), 0x1B (Reg Displacement)
+	\textbf{Opcodes:} 0x1A (Imm Displacement), 0x1B (Reg Displacement)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 BRAN (#disp, p)               ; PC = PC + disp
 BRAN (rS, p)                  ; PC = PC + rS
 BRAN|cond (#disp, p)          ; Conditional branch
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Branches to a new location by adding a displacement to the program counter. The displacement can be an immediate value (for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative.
+	Branches to a new location by adding a displacement to the program counter. The displacement can be an immediate value
+	(for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative.
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Unconditional branch forward
 BRAN (#20, p)                 ; Jump ahead 20 bytes
 
@@ -50,20 +53,21 @@ BRAN|>= (#8, p)               ; Branch if r1 >= 10
 \section{Subroutine Call Instructions}
 
 \begin{instructionbox}{LJSR -- Long Jump to Subroutine}
-\textbf{Opcodes:} 0x1C (Imm), 0x1D (Reg)
+	\textbf{Opcodes:} 0x1C (Imm), 0x1D (Reg)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 LJSR (#addr, a)               ; l = PC; PC = a + addr
 LJSR (#addr, p)               ; l = PC; PC = PC + addr (rel call)
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Calls a subroutine by saving the return address to the link register (\reg{l}) and jumping to the target address. The return address can later be restored using \mnemonic{RETS}.
+	Calls a subroutine by saving the return address to the link register (\reg{l}) and jumping to the target address. The
+	return address can later be restored using \mnemonic{RETS}.
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Call function at address in 'a'
 LJSR (#0, a)
 
@@ -79,20 +83,21 @@ RETS                          ; Assembles to: LDEA p, (#0, l)
 \section{Load Effective Address}
 
 \begin{instructionbox}{LDEA -- Load Effective Address}
-\textbf{Opcodes:} 0x18 (Imm), 0x19 (Reg)
+	\textbf{Opcodes:} 0x18 (Imm), 0x19 (Reg)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 LDEA dest, (#offset, src)     ; dest = src + offset
 LDEA dest, (rS, src)          ; dest = src + rS
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Computes an effective address and loads it into the destination address register pair. Can be used for pointer arithmetic or, when the destination is the program counter, as a jump instruction.
+	Computes an effective address and loads it into the destination address register pair. Can be used for pointer
+	arithmetic or, when the destination is the program counter, as a jump instruction.
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Pointer arithmetic
 LDEA a, (#16, a)              ; a = a + 16
 

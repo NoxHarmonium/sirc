@@ -8,16 +8,16 @@ OUTPUT = sircular-reference-manual
 LATEX = pdflatex
 LATEX_FLAGS = -interaction=nonstopmode -halt-on-error
 
-# Output directory (optional)
-# OUTDIR = build
+ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+TEX := $(MAIN).tex preamble.tex $(wildcard chapters/*.tex)
 
-.PHONY: all clean cleanall quick view
+.PHONY: all clean cleanall quick view format format-check
 
 # Default target - build the PDF
 all: $(OUTPUT).pdf
 
 # Build the PDF (multiple passes for cross-references)
-$(OUTPUT).pdf: $(MAIN).tex preamble.tex chapters/*.tex
+$(OUTPUT).pdf: $(TEX)
 	@echo "Building PDF (pass 1/3)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex > /dev/null || (cat $(MAIN).log && exit 1)
 	@echo "Building PDF (pass 2/3)..."
@@ -28,7 +28,7 @@ $(OUTPUT).pdf: $(MAIN).tex preamble.tex chapters/*.tex
 	@echo "✓ PDF generated: $(OUTPUT).pdf"
 
 # Quick build (single pass, for drafts)
-quick: $(MAIN).tex
+quick: $(TEX)
 	@echo "Quick build (single pass)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
 	@mv $(MAIN).pdf $(OUTPUT).pdf
@@ -47,36 +47,14 @@ cleanall: clean
 	@rm -f $(OUTPUT).pdf $(MAIN).pdf
 	@echo "✓ All clean"
 
-# View the PDF (macOS)
-view: $(OUTPUT).pdf
-	@open $(OUTPUT).pdf
 
-# View the PDF (Linux)
-view-linux: $(OUTPUT).pdf
-	@xdg-open $(OUTPUT).pdf
+format: .format.stamp
 
-# View the PDF (Windows)
-view-windows: $(OUTPUT).pdf
-	@start $(OUTPUT).pdf
+.format.stamp: $(TEX)
+	latexindent -m -l  --cruft=.cruft/ --overwriteIfDifferent --silent $? || (cat .cruft/indent.log && exit 1)
 
-# Help
-help:
-	@echo "SIRCULAR CPU Reference Manual - Build System"
-	@echo ""
-	@echo "Available targets:"
-	@echo "  make          - Build the complete PDF (default)"
-	@echo "  make quick    - Quick build (single pass, for drafts)"
-	@echo "  make clean    - Remove temporary files"
-	@echo "  make cleanall - Remove all generated files including PDF"
-	@echo "  make view     - Open the PDF (macOS)"
-	@echo "  make help     - Show this help message"
-	@echo ""
-	@echo "The output PDF will be named: $(OUTPUT).pdf"
 
-# Word count (approximate, from .tex files)
-wordcount:
-	@echo "Approximate word count:"
-	@texcount -total -q $(MAIN).tex chapters/*.tex
+format-check: .format-check.stamp
 
-format:
-	latexindent $(MAIN).tex chapters/*.tex
+.format-check.stamp: $(MAIN).tex preamble.tex chapters/*.tex
+	latexindent -m -l --cruft=.cruft/ --silent --check $? || (cat .cruft/indent.log && exit 1)

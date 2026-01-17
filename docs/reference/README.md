@@ -32,6 +32,10 @@ make cleanall
 
 # Quick build (single pass, for drafts)
 make quick
+
+# Indent the tex files automatically to make everything consistent
+# On MacOS you might need to install this with `brew install latexindent`. The version that comes with maxtex seems broken.
+make format
 ```
 
 ### Manual Build

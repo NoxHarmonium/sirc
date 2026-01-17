@@ -3,20 +3,21 @@
 
 \section{Overview}
 
-Memory access instructions transfer data between registers and memory. Following the load/store architecture, these are the only instructions that can access memory—all arithmetic and logical operations must work on registers.
+Memory access instructions transfer data between registers and memory. Following the load/store architecture, these are
+the only instructions that can access memory—all arithmetic and logical operations must work on registers.
 
 The SIRCULAR provides two primary memory operations:
 \begin{itemize}
-    \item \mnemonic{LOAD} -- Read from memory into a register
-    \item \mnemonic{STOR} -- Write from a register to memory
+	\item \mnemonic{LOAD} -- Read from memory into a register
+	\item \mnemonic{STOR} -- Write from a register to memory
 \end{itemize}
 
 Both instructions support multiple addressing modes:
 \begin{itemize}
-    \item Indirect with immediate offset: \texttt{(\#offset, addr)}
-    \item Indirect with register offset: \texttt{(reg, addr)}
-    \item Post-increment: \texttt{(\#offset, addr)+}
-    \item Pre-decrement: \texttt{-(\#offset, addr)}
+	\item Indirect with immediate offset: \texttt{(\#offset, addr)}
+	\item Indirect with register offset: \texttt{(reg, addr)}
+	\item Post-increment: \texttt{(\#offset, addr)+}
+	\item Pre-decrement: \texttt{-(\#offset, addr)}
 \end{itemize}
 
 \section{Effective Address Calculation}
@@ -24,13 +25,13 @@ Both instructions support multiple addressing modes:
 For all memory operations, the effective address (EA) is calculated as:
 
 \begin{equation}
-\text{EA} = \text{AddressRegister} + \text{Offset}
+	\text{EA} = \text{AddressRegister} + \text{Offset}
 \end{equation}
 
 Where:
 \begin{itemize}
-    \item Address Register is one of: \reg{l}, \reg{a}, \reg{s}, or \reg{p}
-    \item Offset is either an immediate value or register contents
+	\item Address Register is one of: \reg{l}, \reg{a}, \reg{s}, or \reg{p}
+	\item Offset is either an immediate value or register contents
 \end{itemize}
 
 The resulting 24-bit address is used to access memory.
@@ -38,22 +39,23 @@ The resulting 24-bit address is used to access memory.
 \section{LOAD Instructions}
 
 \begin{instructionbox}{LOAD -- Load from Memory}
-\textbf{Opcodes:} 0x14 (Indirect Imm), 0x15 (Indirect Reg), 0x16 (Post-Inc Imm), 0x17 (Post-Inc Reg)
+	\textbf{Opcodes:} 0x14 (Indirect Imm), 0x15 (Indirect Reg), 0x16 (Post-Inc Imm), 0x17 (Post-Inc Reg)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
 LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
 LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += offset
 LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += rS
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after the load, useful for array traversal.
+	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
+	the load, useful for array traversal.
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Load from fixed offset
 LOAD r1, (#4, a)              ; r1 = memory[a + 4]
 
@@ -72,22 +74,23 @@ LOAD r5, (#0, s)+             ; r5 = *s; s += 2
 \section{STOR Instructions}
 
 \begin{instructionbox}{STOR -- Store to Memory}
-\textbf{Opcodes:} 0x10 (Indirect Imm), 0x11 (Indirect Reg), 0x12 (Pre-Dec Imm), 0x13 (Pre-Dec Reg)
+	\textbf{Opcodes:} 0x10 (Indirect Imm), 0x11 (Indirect Reg), 0x12 (Pre-Dec Imm), 0x13 (Pre-Dec Reg)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 STOR rS, (#offset, addr)      ; memory[addr + offset] = rS
 STOR rS, (rD, addr)           ; memory[addr + rD] = rS
 STOR rS, -(#offset, addr)     ; addr -= offset; memory[addr + offset] = rS
 STOR rS, -(rD, addr)          ; addr -= rD; memory[addr + rD] = rS
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Stores a 16-bit value from a register into memory. Pre-decrement forms update the address register before the store, useful for stack push operations.
+	Stores a 16-bit value from a register into memory. Pre-decrement forms update the address register before the store,
+	useful for stack push operations.
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Store to fixed offset
 STOR r1, (#8, a)              ; memory[a + 8] = r1
 

@@ -24,9 +24,9 @@
 
 % Page geometry - similar to classic technical manuals
 \geometry{
-    letterpaper,
-    margin=1in,
-    headheight=14pt,
+	letterpaper,
+	margin=1in,
+	headheight=14pt,
 }
 
 % Colors - inspired by 90s technical documentation
@@ -48,53 +48,53 @@
 
 % Hyperref setup
 \hypersetup{
-    colorlinks=true,
-    linkcolor=sircblue,
-    filecolor=sircblue,
-    urlcolor=sircblue,
-    citecolor=sircblue,
-    bookmarksnumbered=true,
-    pdfauthor={SIRC Development Team},
-    pdftitle={SIRCULAR CPU Reference Manual},
-    pdfsubject={SIRCIS Instruction Set Architecture},
+	colorlinks=true,
+	linkcolor=sircblue,
+	filecolor=sircblue,
+	urlcolor=sircblue,
+	citecolor=sircblue,
+	bookmarksnumbered=true,
+	pdfauthor={SIRC Development Team},
+	pdftitle={SIRCULAR CPU Reference Manual},
+	pdfsubject={SIRCIS Instruction Set Architecture},
 }
 
 % Assembly code listings
 \lstdefinelanguage{SIRC}{
-    morekeywords={ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,ANDI,ANDR,ORRI,ORRR,
-                  XORI,XORR,LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
-                  LDEA,BRAN,LJSR,BRSR,RETS,NOOP,WAIT,RETE,
-                  COPI,COPR,COP},
-    keywordstyle=\color{sircblue}\bfseries,
-    sensitive=false,
-    morecomment=[l]{;},
-    commentstyle=\color{sircgray}\itshape,
-    morestring=[b]",
-    stringstyle=\color{opcodecolor},
-    basicstyle=\ttfamily\small,
-    breaklines=true,
-    showstringspaces=false,
+	morekeywords={ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,ANDI,ANDR,ORRI,ORRR,
+			XORI,XORR,LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
+			LDEA,BRAN,LJSR,BRSR,RETS,NOOP,WAIT,RETE,
+			COPI,COPR,COP},
+	keywordstyle=\color{sircblue}\bfseries,
+	sensitive=false,
+	morecomment=[l]{;},
+	commentstyle=\color{sircgray}\itshape,
+	morestring=[b]",
+	stringstyle=\color{opcodecolor},
+	basicstyle=\ttfamily\small,
+	breaklines=true,
+	showstringspaces=false,
 }
 
 \lstset{
-    language=SIRC,
-    backgroundcolor=\color{codebg},
-    frame=single,
-    rulecolor=\color{sircgray},
-    numbers=left,
-    numberstyle=\tiny\color{sircgray},
-    numbersep=5pt,
-    xleftmargin=15pt,
-    framexleftmargin=15pt,
+	language=SIRC,
+	backgroundcolor=\color{codebg},
+	frame=single,
+	rulecolor=\color{sircgray},
+	numbers=left,
+	numberstyle=\tiny\color{sircgray},
+	numbersep=5pt,
+	xleftmargin=15pt,
+	framexleftmargin=15pt,
 }
 
 % Custom environment for instruction pages
 \newtcolorbox{instructionbox}[1]{
-    colback=sirclightgray,
-    colframe=sircblue,
-    fonttitle=\bfseries\large,
-    title=#1,
-    arc=2mm,
+	colback=sirclightgray,
+	colframe=sircblue,
+	fonttitle=\bfseries\large,
+	title=#1,
+	arc=2mm,
 }
 
 % Register notation command
@@ -127,14 +127,14 @@
 % Chapter styling
 \usepackage{titlesec}
 \titleformat{\chapter}[display]
-    {\normalfont\huge\bfseries\color{sircblue}}
-    {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+{\normalfont\huge\bfseries\color{sircblue}}
+{\chaptertitlename\ \thechapter}{20pt}{\Huge}
 \titleformat{\section}
-    {\normalfont\Large\bfseries\color{sircblue}}
-    {\thesection}{1em}{}
+{\normalfont\Large\bfseries\color{sircblue}}
+{\thesection}{1em}{}
 \titleformat{\subsection}
-    {\normalfont\large\bfseries\color{sircblue}}
-    {\thesubsection}{1em}{}
+{\normalfont\large\bfseries\color{sircblue}}
+{\thesubsection}{1em}{}
 
 % Table styling
 \renewcommand{\arraystretch}{1.3}

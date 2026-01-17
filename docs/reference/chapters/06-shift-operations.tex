@@ -3,32 +3,34 @@
 
 \section{Overview}
 
-The SIRCULAR CPU supports powerful shift operations that can be applied to operands in many instructions. Shifts can multiply or divide values by powers of 2, extract bit fields, or perform bit rotations.
+The SIRCULAR CPU supports powerful shift operations that can be applied to operands in many instructions. Shifts can
+multiply or divide values by powers of 2, extract bit fields, or perform bit rotations.
 
-Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted before being used in an ALU operation—all within a single instruction.
+Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
+before being used in an ALU operation—all within a single instruction.
 
 \section{Shift Types}
 
 \subsection{Shift Type Encoding}
 
 \begin{table}[H]
-\centering
-\begin{tabular}{clcp{7cm}}
-\toprule
-\textbf{Code} & \textbf{Mnemonic} & \textbf{Type} & \textbf{Description} \\
-\midrule
-000 & -- & None & No shift performed \\
-001 & LSL & Logical Shift Left & Shift left, fill with zeros \\
-010 & LSR & Logical Shift Right & Shift right, fill with zeros \\
-011 & ASL & Arithmetic Shift Left & Same as LSL (shifts in zeros) \\
-100 & ASR & Arithmetic Shift Right & Shift right, preserving sign bit \\
-101 & ROL & Rotate Left & Rotate left through carry \\
-110 & ROR & Rotate Right & Rotate right through carry \\
-111 & -- & Reserved & Reserved for future use \\
-\bottomrule
-\end{tabular}
-\caption{Shift Type Encoding}
-\label{tab:shift-encoding}
+	\centering
+	\begin{tabular}{clcp{7cm}}
+		\toprule
+		\textbf{Code} & \textbf{Mnemonic} & \textbf{Type}          & \textbf{Description}             \\
+		\midrule
+		000           & --                & None                   & No shift performed               \\
+		001           & LSL               & Logical Shift Left     & Shift left, fill with zeros      \\
+		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros     \\
+		011           & ASL               & Arithmetic Shift Left  & Same as LSL (shifts in zeros)    \\
+		100           & ASR               & Arithmetic Shift Right & Shift right, preserving sign bit \\
+		101           & ROL               & Rotate Left            & Rotate left through carry        \\
+		110           & ROR               & Rotate Right           & Rotate right through carry       \\
+		111           & --                & Reserved               & Reserved for future use          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Shift Type Encoding}
+	\label{tab:shift-encoding}
 \end{table}
 
 \section{Shift Type Details}
@@ -38,20 +40,20 @@ Shift operations are encoded within Short Immediate and Register format instruct
 \textbf{Operation:} Shift bits to the left, filling vacated bits with zeros.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=1.2em]{17}
-    \bitheader{0-15} \\
-    \bitbox{1}{$\leftarrow$}
-    \bitbox{15}{\small Shift Left}
-    \bitbox{1}{0}
-\end{bytefield}
-\caption{Logical Shift Left}
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{17}
+		\bitheader{0-15} \\
+		\bitbox{1}{$\leftarrow$}
+		\bitbox{15}{\small Shift Left}
+		\bitbox{1}{0}
+	\end{bytefield}
+	\caption{Logical Shift Left}
 \end{figure}
 
 \begin{itemize}
-    \item Bit 15 is shifted into the carry flag
-    \item Bit 0 receives 0
-    \item Equivalent to multiplying by $2^n$ where $n$ is the shift count
+	\item Bit 15 is shifted into the carry flag
+	\item Bit 0 receives 0
+	\item Equivalent to multiplying by $2^n$ where $n$ is the shift count
 \end{itemize}
 
 \textbf{Example:}
@@ -68,21 +70,21 @@ ORRI r3, #1, LSL #10     ; r3 |= 0x0400
 \textbf{Operation:} Shift bits to the right, filling vacated bits with zeros.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=1.2em]{17}
-    \bitheader{0-15} \\
-    \bitbox{1}{0}
-    \bitbox{15}{\small Shift Right}
-    \bitbox{1}{$\rightarrow$}
-\end{bytefield}
-\caption{Logical Shift Right}
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{17}
+		\bitheader{0-15} \\
+		\bitbox{1}{0}
+		\bitbox{15}{\small Shift Right}
+		\bitbox{1}{$\rightarrow$}
+	\end{bytefield}
+	\caption{Logical Shift Right}
 \end{figure}
 
 \begin{itemize}
-    \item Bit 0 is shifted into the carry flag
-    \item Bit 15 receives 0
-    \item Equivalent to unsigned division by $2^n$
-    \item Use for unsigned values only
+	\item Bit 0 is shifted into the carry flag
+	\item Bit 15 receives 0
+	\item Equivalent to unsigned division by $2^n$
+	\item Use for unsigned values only
 \end{itemize}
 
 \textbf{Example:}
@@ -99,9 +101,9 @@ ADDR r3, r4, #0, LSR #8  ; r3 = r4 >> 8
 \textbf{Operation:} Identical to LSL. Shift bits to the left, filling with zeros.
 
 \begin{itemize}
-    \item Equivalent to signed multiplication by $2^n$
-    \item Can cause signed overflow if sign bit changes
-    \item Overflow flag is set if sign bit changes during shift
+	\item Equivalent to signed multiplication by $2^n$
+	\item Can cause signed overflow if sign bit changes
+	\item Overflow flag is set if sign bit changes during shift
 \end{itemize}
 
 \textbf{Example:}
@@ -115,21 +117,21 @@ ADDI r1, #0, r2, ASL #1  ; r1 = r2 * 2 (signed)
 \textbf{Operation:} Shift bits to the right, preserving the sign bit (bit 15).
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=1.2em]{17}
-    \bitheader{0-15} \\
-    \bitbox{1}{$\curvearrowleft$}
-    \bitbox{15}{\small Shift Right}
-    \bitbox{1}{$\rightarrow$}
-\end{bytefield}
-\caption{Arithmetic Shift Right}
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{17}
+		\bitheader{0-15} \\
+		\bitbox{1}{$\curvearrowleft$}
+		\bitbox{15}{\small Shift Right}
+		\bitbox{1}{$\rightarrow$}
+	\end{bytefield}
+	\caption{Arithmetic Shift Right}
 \end{figure}
 
 \begin{itemize}
-    \item Bit 0 is shifted into the carry flag
-    \item Bit 15 (sign bit) is copied into bit 15 and bit 14
-    \item Equivalent to signed division by $2^n$ (rounds toward negative infinity)
-    \item Use for signed values only
+	\item Bit 0 is shifted into the carry flag
+	\item Bit 15 (sign bit) is copied into bit 15 and bit 14
+	\item Equivalent to signed division by $2^n$ (rounds toward negative infinity)
+	\item Use for signed values only
 \end{itemize}
 
 \textbf{Example:}
@@ -147,23 +149,23 @@ ADDR r3, r3, #0, ASR #1  ; r3 = (r4 + r5) / 2
 \textbf{Operation:} Rotate bits to the left through the carry flag.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=1.2em]{18}
-    \bitbox{1}{C}
-    \bitheader{0-15} \\
-    \bitbox{1}{$\curvearrowleft$}
-    \bitbox{1}{$\leftarrow$}
-    \bitbox{15}{\small Rotate Left}
-    \bitbox{1}{$\curvearrowleft$}
-\end{bytefield}
-\caption{Rotate Left}
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{18}
+		\bitbox{1}{C}
+		\bitheader{0-15} \\
+		\bitbox{1}{$\curvearrowleft$}
+		\bitbox{1}{$\leftarrow$}
+		\bitbox{15}{\small Rotate Left}
+		\bitbox{1}{$\curvearrowleft$}
+	\end{bytefield}
+	\caption{Rotate Left}
 \end{figure}
 
 \begin{itemize}
-    \item Bit 15 moves into the carry flag
-    \item Previous carry flag value moves into bit 0
-    \item No data is lost
-    \item Useful for multi-word shifts and bit manipulation
+	\item Bit 15 moves into the carry flag
+	\item Previous carry flag value moves into bit 0
+	\item No data is lost
+	\item Useful for multi-word shifts and bit manipulation
 \end{itemize}
 
 \textbf{Example:}
@@ -181,22 +183,22 @@ ADDR r1, r1, #0, ROL #1  ; Shift high word, carry -> bit 0
 \textbf{Operation:} Rotate bits to the right through the carry flag.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=1.2em]{18}
-    \bitheader{0-15}
-    \bitbox{1}{C} \\
-    \bitbox{1}{$\curvearrowright$}
-    \bitbox{15}{\small Rotate Right}
-    \bitbox{1}{$\rightarrow$}
-    \bitbox{1}{$\curvearrowright$}
-\end{bytefield}
-\caption{Rotate Right}
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{18}
+		\bitheader{0-15}
+		\bitbox{1}{C} \\
+		\bitbox{1}{$\curvearrowright$}
+		\bitbox{15}{\small Rotate Right}
+		\bitbox{1}{$\rightarrow$}
+		\bitbox{1}{$\curvearrowright$}
+	\end{bytefield}
+	\caption{Rotate Right}
 \end{figure}
 
 \begin{itemize}
-    \item Bit 0 moves into the carry flag
-    \item Previous carry flag value moves into bit 15
-    \item No data is lost
+	\item Bit 0 moves into the carry flag
+	\item Previous carry flag value moves into bit 15
+	\item No data is lost
 \end{itemize}
 
 \textbf{Example:}
@@ -214,17 +216,17 @@ ADDR r2, r1, #0, ROR #1  ; Bit 0 -> carry
 The Shift Operand (SO) bit determines what value is shifted:
 
 \begin{table}[H]
-\centering
-\begin{tabular}{clp{8cm}}
-\toprule
-\textbf{SO Bit} & \textbf{Mode} & \textbf{Description} \\
-\midrule
-0 & Shift Immediate/R3 & The immediate value or R3 register value is shifted \\
-1 & Shift Count in Register & R3 contains the shift count; R2 is shifted by that amount \\
-\bottomrule
-\end{tabular}
-\caption{Shift Operand Modes}
-\label{tab:shift-operand}
+	\centering
+	\begin{tabular}{clp{8cm}}
+		\toprule
+		\textbf{SO Bit} & \textbf{Mode}           & \textbf{Description}                                      \\
+		\midrule
+		0               & Shift Immediate/R3      & The immediate value or R3 register value is shifted       \\
+		1               & Shift Count in Register & R3 contains the shift count; R2 is shifted by that amount \\
+		\bottomrule
+	\end{tabular}
+	\caption{Shift Operand Modes}
+	\label{tab:shift-operand}
 \end{table}
 
 \subsection{Mode 0: Shift the Value}
@@ -260,9 +262,9 @@ ADDR r4, r5, r6, ASR     ; r4 = r5 >> r6 (arithmetic)
 The shift count is a 4-bit field, allowing shifts of 0--15 positions.
 
 \begin{itemize}
-    \item Shift count of 0 means no shift is performed
-    \item Maximum shift count is 15
-    \item Shift counts $\geq$ 16 would be meaningless for 16-bit values
+	\item Shift count of 0 means no shift is performed
+	\item Maximum shift count is 15
+	\item Shift counts $\geq$ 16 would be meaningless for 16-bit values
 \end{itemize}
 
 \section{Status Flag Effects}
@@ -271,9 +273,9 @@ The shift count is a 4-bit field, allowing shifts of 0--15 positions.
 
 For all shifts and rotates:
 \begin{itemize}
-    \item The last bit shifted out is placed in the carry flag
-    \item For shifts of more than 1 position, only the final bit shifted out matters
-    \item If shift count is 0, carry flag is not modified
+	\item The last bit shifted out is placed in the carry flag
+	\item For shifts of more than 1 position, only the final bit shifted out matters
+	\item If shift count is 0, carry flag is not modified
 \end{itemize}
 
 \subsection{Zero Flag}
@@ -287,8 +289,8 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 \subsection{Overflow Flag}
 
 \begin{itemize}
-    \item For \textbf{ASL}: Set if the sign bit changes during the shift (signed overflow)
-    \item For other shifts: Behavior is undefined; typically unchanged or cleared
+	\item For \textbf{ASL}: Set if the sign bit changes during the shift (signed overflow)
+	\item For other shifts: Behavior is undefined; typically unchanged or cleared
 \end{itemize}
 
 \section{Common Use Cases}
@@ -397,17 +399,18 @@ ADDR r2, r2, #0, ROR #1   ; Rotate low with carry
 \section{Performance Considerations}
 
 \begin{itemize}
-    \item All shift operations complete in the same number of cycles regardless of shift count
-    \item Shifts can be performed "for free" as part of another instruction (no extra cycles)
-    \item Using shifts for multiplication/division by powers of 2 is much faster than using a multiply/divide instruction (if one existed)
-    \item Barrel shifter implementation in hardware allows any shift count in constant time
+	\item All shift operations complete in the same number of cycles regardless of shift count
+	\item Shifts can be performed "for free" as part of another instruction (no extra cycles)
+	\item Using shifts for multiplication/division by powers of 2 is much faster than using a multiply/divide instruction (if one
+	      existed)
+	\item Barrel shifter implementation in hardware allows any shift count in constant time
 \end{itemize}
 
 \section{Limitations}
 
 \begin{itemize}
-    \item Maximum shift count is 15 (4-bit field)
-    \item For shifts $>$ 15, multiple shift instructions must be used
-    \item Rotates include the carry flag, so rotating by 16 does not equal original value
-    \item Some shift types (e.g., reserved type 111) may have undefined behavior
+	\item Maximum shift count is 15 (4-bit field)
+	\item For shifts $>$ 15, multiple shift instructions must be used
+	\item Rotates include the carry flag, so rotating by 16 does not equal original value
+	\item Some shift types (e.g., reserved type 111) may have undefined behavior
 \end{itemize}

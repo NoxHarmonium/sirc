@@ -3,9 +3,12 @@
 
 \section{Overview}
 
-The SIRCULAR (SIR Compute Using Load/store ALU and Registers) is a 16-bit RISC processor designed with simplicity and performance in mind. It features a load/store architecture with fixed-length 32-bit instructions, drawing inspiration from classic processor designs of the early 1990s era.
+The SIRCULAR (SIR Compute Using Load/store ALU and Registers) is a 16-bit RISC processor designed with simplicity and
+performance in mind. It features a load/store architecture with fixed-length 32-bit instructions, drawing inspiration
+from classic processor designs of the early 1990s era.
 
-The SIRCULAR implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a comprehensive set of operations while maintaining a clean, orthogonal design philosophy.
+The SIRCULAR implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a comprehensive
+set of operations while maintaining a clean, orthogonal design philosophy.
 
 \section{Design Philosophy}
 
@@ -14,15 +17,15 @@ The SIRCULAR implements the SIRCIS (SIRC Instruction Set) instruction set archit
 The SIRCULAR adheres to Reduced Instruction Set Computer (RISC) design principles:
 
 \begin{itemize}
-    \item \textbf{Load/Store Architecture:} All ALU operations work exclusively on registers. Memory access is performed only through dedicated load and store instructions.
+	\item \textbf{Load/Store Architecture:} All ALU operations work exclusively on registers. Memory access is performed only through dedicated load and store instructions.
 
-    \item \textbf{Fixed Instruction Length:} All instructions are exactly 32 bits (2 words) in length, simplifying instruction fetch and decode logic.
+	\item \textbf{Fixed Instruction Length:} All instructions are exactly 32 bits (2 words) in length, simplifying instruction fetch and decode logic.
 
-    \item \textbf{Simple Instruction Formats:} Only four instruction formats are supported: Implied, Immediate, Short Immediate with Shift, and Register.
+	\item \textbf{Simple Instruction Formats:} Only four instruction formats are supported: Implied, Immediate, Short Immediate with Shift, and Register.
 
-    \item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
+	\item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
 
-    \item \textbf{Consistent Execution Time:} All instructions execute in exactly 6 clock cycles, eliminating the need for microcode and simplifying hardware implementation.
+	\item \textbf{Consistent Execution Time:} All instructions execute in exactly 6 clock cycles, eliminating the need for microcode and simplifying hardware implementation.
 \end{itemize}
 
 \subsection{Design Goals}
@@ -30,13 +33,15 @@ The SIRCULAR adheres to Reduced Instruction Set Computer (RISC) design principle
 The SIRCULAR was designed with several key goals:
 
 \begin{description}
-    \item[Simplicity] The CPU should be simple enough to be implemented in hardware (e.g., FPGA or ASIC) without requiring complex microcode engines or multi-level instruction decoders.
+	\item[Simplicity] The CPU should be simple enough to be implemented in hardware (e.g., FPGA or ASIC) without requiring
+	      complex microcode engines or multi-level instruction decoders.
 
-    \item[Performance] While simple, the design should allow for reasonable performance through efficient instruction encoding and the potential for future enhancements like pipelining.
+	\item[Performance] While simple, the design should allow for reasonable performance through efficient instruction encoding
+	      and the potential for future enhancements like pipelining.
 
-    \item[Memory Protection] Basic privilege levels and memory segmentation provide rudimentary protection for system software.
+	\item[Memory Protection] Basic privilege levels and memory segmentation provide rudimentary protection for system software.
 
-    \item[Debuggability] Features like trace mode and comprehensive status flags aid in software development and debugging.
+	\item[Debuggability] Features like trace mode and comprehensive status flags aid in software development and debugging.
 \end{description}
 
 \section{Key Features}
@@ -44,24 +49,24 @@ The SIRCULAR was designed with several key goals:
 \subsection{Architecture Characteristics}
 
 \begin{table}[H]
-\centering
-\begin{tabular}{ll}
-\toprule
-\textbf{Feature} & \textbf{Specification} \\
-\midrule
-Data Width & 16-bit \\
-Address Bus & 24-bit (16MB address space) \\
-Instruction Size & 32-bit fixed \\
-General Purpose Registers & 7 (r1--r7) \\
-Address Register Pairs & 4 (l, a, s, p) \\
-Total Addressable Registers & 16 \\
-Instruction Formats & 4 \\
-Addressing Modes & 8 \\
-Condition Codes & 16 \\
-\bottomrule
-\end{tabular}
-\caption{SIRCULAR CPU Specifications}
-\label{tab:specs}
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Feature}            & \textbf{Specification}      \\
+		\midrule
+		Data Width                  & 16-bit                      \\
+		Address Bus                 & 24-bit (16MB address space) \\
+		Instruction Size            & 32-bit fixed                \\
+		General Purpose Registers   & 7 (r1--r7)                  \\
+		Address Register Pairs      & 4 (l, a, s, p)              \\
+		Total Addressable Registers & 16                          \\
+		Instruction Formats         & 4                           \\
+		Addressing Modes            & 8                           \\
+		Condition Codes             & 16                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{SIRCULAR CPU Specifications}
+	\label{tab:specs}
 \end{table}
 
 \subsection{Execution Model}
@@ -69,24 +74,29 @@ Condition Codes & 16 \\
 The SIRCULAR employs a six-stage execution pipeline:
 
 \begin{enumerate}
-    \item \textbf{Instruction Fetch (First Word)} -- Fetch bits 31--16 from memory
-    \item \textbf{Instruction Fetch (Second Word)} -- Fetch bits 15--0 from memory
-    \item \textbf{Decode and Register Fetch} -- Decode the instruction and read source registers
-    \item \textbf{Execute and Address Calculation} -- Perform ALU operation or calculate effective address
-    \item \textbf{Memory Access} -- Read from or write to memory (or NOP for register operations)
-    \item \textbf{Write Back} -- Write results to destination register
+	\item \textbf{Instruction Fetch (First Word)} -- Fetch bits 31--16 from memory
+	\item \textbf{Instruction Fetch (Second Word)} -- Fetch bits 15--0 from memory
+	\item \textbf{Decode and Register Fetch} -- Decode the instruction and read source registers
+	\item \textbf{Execute and Address Calculation} -- Perform ALU operation or calculate effective address
+	\item \textbf{Memory Access} -- Read from or write to memory (or NOP for register operations)
+	\item \textbf{Write Back} -- Write results to destination register
 \end{enumerate}
 
-This fixed six-stage model means that all instructions take exactly 6 clock cycles to complete, regardless of their complexity. While this may seem wasteful for simple register operations that don't require memory access, it dramatically simplifies the hardware design by eliminating the need for variable-length execution cycles or microcode.
+This fixed six-stage model means that all instructions take exactly 6 clock cycles to complete, regardless of their
+complexity. While this may seem wasteful for simple register operations that don't require memory access, it
+dramatically simplifies the hardware design by eliminating the need for variable-length execution cycles or microcode.
 
 \subsection{Privilege Levels}
 
 The SIRCULAR supports two privilege levels:
 
 \begin{description}
-    \item[Supervisor Mode] Full access to all registers and instructions. Can set the high bytes of address register pairs, access privileged status register bits, and execute privileged coprocessor operations.
+	\item[Supervisor Mode] Full access to all registers and instructions. Can set the high bytes of address register pairs,
+	      access privileged status register bits, and execute privileged coprocessor operations.
 
-    \item[Protected Mode] Restricted access for user programs. Cannot write to the high bytes of address register pairs (providing memory segmentation/protection), cannot access privileged status register bits, and cannot execute privileged coprocessor instructions.
+	\item[Protected Mode] Restricted access for user programs. Cannot write to the high bytes of address register pairs
+	      (providing memory segmentation/protection), cannot access privileged status register bits, and cannot execute
+	      privileged coprocessor instructions.
 \end{description}
 
 The privilege level is controlled by the Protected Mode bit in the status register.
@@ -95,23 +105,25 @@ The privilege level is controlled by the Protected Mode bit in the status regist
 
 \subsection{Address Space}
 
-The SIRCULAR provides a 24-bit address space, allowing access to 16 megabytes of memory. Addresses are formed by combining the 8-bit high byte and 16-bit low word of address register pairs:
+The SIRCULAR provides a 24-bit address space, allowing access to 16 megabytes of memory. Addresses are formed by
+combining the 8-bit high byte and 16-bit low word of address register pairs:
 
 \begin{equation}
-\text{Address} = (\text{RegHigh}[7:0] \ll 16) \mid \text{RegLow}[15:0]
+	\text{Address} = (\text{RegHigh}[7:0] \ll 16) \mid \text{RegLow}[15:0]
 \end{equation}
 
-Note that the upper 8 bits of the high register (bits 15--8) are not used for addressing but are available for storage, enabling techniques like tagged pointers.
+Note that the upper 8 bits of the high register (bits 15--8) are not used for addressing but are available for storage,
+enabling techniques like tagged pointers.
 
 \subsection{Memory Map}
 
 The CPU expects certain memory regions to be defined:
 
 \begin{itemize}
-    \item \textbf{Vector Table} (\addr{0x000000}--\addr{0x0000FF}): Contains reset and exception vectors
-    \item \textbf{Reset Vector} (\addr{0x000000}): Initial program counter after reset
-    \item \textbf{System RAM Offset} (\addr{0x000002}): Base address for system RAM
-    \item \textbf{Stack Pointer} (\addr{0x000004}): Initial stack pointer value
+	\item \textbf{Vector Table} (\addr{0x000000}--\addr{0x0000FF}): Contains reset and exception vectors
+	\item \textbf{Reset Vector} (\addr{0x000000}): Initial program counter after reset
+	\item \textbf{System RAM Offset} (\addr{0x000002}): Base address for system RAM
+	\item \textbf{Stack Pointer} (\addr{0x000004}): Initial stack pointer value
 \end{itemize}
 
 Beyond these reserved regions, the memory layout is flexible and can be defined by system software.
@@ -119,9 +131,9 @@ Beyond these reserved regions, the memory layout is flexible and can be defined 
 \subsection{Alignment}
 
 \begin{itemize}
-    \item All instructions must be aligned on 4-byte boundaries (word-aligned)
-    \item Data can be accessed at any 2-byte boundary (halfword-aligned)
-    \item Unaligned instruction fetches trigger an alignment fault exception
+	\item All instructions must be aligned on 4-byte boundaries (word-aligned)
+	\item Data can be accessed at any 2-byte boundary (halfword-aligned)
+	\item Unaligned instruction fetches trigger an alignment fault exception
 \end{itemize}
 
 \section{Document Organization}
@@ -129,11 +141,14 @@ Beyond these reserved regions, the memory layout is flexible and can be defined 
 This manual is organized into three main parts:
 
 \begin{description}
-    \item[Part I: Architecture Overview] Covers the register model, status register, and overall CPU architecture.
+	\item[Part I: Architecture Overview] Covers the register model, status register, and overall CPU architecture.
 
-    \item[Part II: Instruction Set Architecture] Details instruction formats, addressing modes, shift operations, and condition codes.
+	\item[Part II: Instruction Set Architecture] Details instruction formats, addressing modes, shift operations, and condition
+	      codes.
 
-    \item[Part III: SIRCIS Instruction Reference] Provides detailed documentation for each instruction, including encoding, operation, and examples.
+	\item[Part III: SIRCIS Instruction Reference] Provides detailed documentation for each instruction, including encoding,
+	      operation, and examples.
 \end{description}
 
-Appendices provide quick reference materials including complete opcode maps, timing diagrams, and notes on undocumented instructions.
+Appendices provide quick reference materials including complete opcode maps, timing diagrams, and notes on undocumented
+instructions.

@@ -3,29 +3,32 @@
 
 \section{Overview}
 
-The SIRCULAR CPU includes a coprocessor interface that allows delegation of certain operations to specialized coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and privileged operations.
+The SIRCULAR CPU includes a coprocessor interface that allows delegation of certain operations to specialized
+coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and
+privileged operations.
 
 \begin{instructionbox}{COP -- Coprocessor Call}
-\textbf{Opcodes:} 0x0F (Imm), 0x2F (Short Imm), 0x3F (Reg)
+	\textbf{Opcodes:} 0x0F (Imm), 0x2F (Short Imm), 0x3F (Reg)
 
-\textbf{Syntax:}
-\begin{lstlisting}
+	\textbf{Syntax:}
+	\begin{lstlisting}
 COPI #opcode                  ; Call coprocessor with 16-bit opcode
 COPR rS                       ; Call coprocessor with register value
 \end{lstlisting}
 
-\textbf{Description:}
+	\textbf{Description:}
 
-Transfers control to a coprocessor. The coprocessor ID and operation code are encoded in the immediate value or register. Coprocessor operations may be privileged.
+	Transfers control to a coprocessor. The coprocessor ID and operation code are encoded in the immediate value or
+	register. Coprocessor operations may be privileged.
 
-\textbf{Format:}
-\begin{itemize}
-    \item Bits 15--12: Coprocessor ID
-    \item Bits 11--0: Operation code
-\end{itemize}
+	\textbf{Format:}
+	\begin{itemize}
+		\item Bits 15--12: Coprocessor ID
+		\item Bits 11--0: Operation code
+	\end{itemize}
 
-\textbf{Examples:}
-\begin{lstlisting}
+	\textbf{Examples:}
+	\begin{lstlisting}
 ; Wait for interrupt (Exception Unit)
 COP #0x1F00                   ; Coprocessor 1, opcode 0xF00
 ; Assembled as WAIT pseudo-instruction
@@ -41,25 +44,25 @@ COP #0x1A00                   ; Coprocessor 1, opcode 0xA00
 
 The Exception Unit handles:
 \begin{itemize}
-    \item Hardware exceptions (faults, traps)
-    \item Software exceptions
-    \item Interrupts (multiple priority levels)
-    \item Privileged operations
+	\item Hardware exceptions (faults, traps)
+	\item Software exceptions
+	\item Interrupts (multiple priority levels)
+	\item Privileged operations
 \end{itemize}
 
 \subsection{Common Operations}
 
 \begin{table}[H]
-\centering
-\begin{tabular}{lp{8cm}}
-\toprule
-\textbf{Opcode} & \textbf{Operation} \\
-\midrule
-0x1A00 & Return from exception (RETE) \\
-0x1F00 & Wait for interrupt (WAIT) \\
-\bottomrule
-\end{tabular}
-\caption{Exception Unit Operations}
+	\centering
+	\begin{tabular}{lp{8cm}}
+		\toprule
+		\textbf{Opcode} & \textbf{Operation}           \\
+		\midrule
+		0x1A00          & Return from exception (RETE) \\
+		0x1F00          & Wait for interrupt (WAIT)    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Unit Operations}
 \end{table}
 
 \textit{(Additional coprocessor details would follow)}

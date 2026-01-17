@@ -3,15 +3,17 @@
 
 \section{Overview}
 
-All SIRCIS instructions are exactly 32 bits (4 bytes, or 2 words) in length. This fixed instruction size simplifies instruction fetch and decode logic, though it may result in larger code size compared to variable-length instruction sets.
+All SIRCIS instructions are exactly 32 bits (4 bytes, or 2 words) in length. This fixed instruction size simplifies
+instruction fetch and decode logic, though it may result in larger code size compared to variable-length instruction
+sets.
 
 The SIRCULAR supports four distinct instruction formats:
 
 \begin{enumerate}
-    \item Implied
-    \item Immediate
-    \item Short Immediate (with Shift)
-    \item Register
+	\item Implied
+	\item Immediate
+	\item Short Immediate (with Shift)
+	\item Register
 \end{enumerate}
 
 Each format is optimized for different types of operations and addressing modes.
@@ -19,20 +21,20 @@ Each format is optimized for different types of operations and addressing modes.
 \section{Format Overview}
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabular}{lp{9cm}}
-\toprule
-\textbf{Format} & \textbf{Typical Use} \\
-\midrule
-Implied & Instructions with no operands (\mnemonic{NOOP}, \mnemonic{WAIT}) \\
-Immediate & Operations with a 16-bit constant value \\
-Short Immediate & Operations with an 8-bit constant and optional shift \\
-Register & Operations on multiple registers with optional shift \\
-\bottomrule
-\end{tabular}
-\caption{Instruction Format Summary}
-\label{tab:format-summary}
+	\centering
+	\small
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Format} & \textbf{Typical Use}                                             \\
+		\midrule
+		Implied         & Instructions with no operands (\mnemonic{NOOP}, \mnemonic{WAIT}) \\
+		Immediate       & Operations with a 16-bit constant value                          \\
+		Short Immediate & Operations with an 8-bit constant and optional shift             \\
+		Register        & Operations on multiple registers with optional shift             \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instruction Format Summary}
+	\label{tab:format-summary}
 \end{table}
 
 \section{Common Fields}
@@ -40,11 +42,12 @@ Register & Operations on multiple registers with optional shift \\
 All instruction formats share some common fields:
 
 \begin{description}
-    \item[Opcode (6 bits)] Identifies the operation to perform. With 6 bits, up to 64 distinct operations can be encoded.
+	\item[Opcode (6 bits)] Identifies the operation to perform. With 6 bits, up to 64 distinct operations can be encoded.
 
-    \item[Condition Flags (4 bits)] Specifies under what conditions the instruction should execute. See Chapter~\ref{ch:condition-codes} for details.
+	\item[Condition Flags (4 bits)] Specifies under what conditions the instruction should execute. See
+	      Chapter~\ref{ch:condition-codes} for details.
 
-    \item[Additional Flags (2 bits)] Used in some formats to specify address register pairs (a, p, s, l) or other modifiers.
+	\item[Additional Flags (2 bits)] Used in some formats to specify address register pairs (a, p, s, l) or other modifiers.
 \end{description}
 
 \section{Implied Format}
@@ -54,29 +57,29 @@ All instruction formats share some common fields:
 The implied format is used for instructions that don't require any operands.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=0.9em]{32}
-    \bitheader{0-31} \\
-    \bitbox{6}{Opcode} &
-    \bitbox{22}{Reserved (0)} &
-    \bitbox{4}{Cond}
-\end{bytefield}
-\caption{Implied Instruction Format}
-\label{fig:implied-format}
+	\centering
+	\begin{bytefield}[bitwidth=0.9em]{32}
+		\bitheader{0-31} \\
+		\bitbox{6}{Opcode} &
+		\bitbox{22}{Reserved (0)} &
+		\bitbox{4}{Cond}
+	\end{bytefield}
+	\caption{Implied Instruction Format}
+	\label{fig:implied-format}
 \end{figure}
 
 \begin{description}
-    \item[Opcode (bits 31--26)] 6-bit operation code
-    \item[Reserved (bits 25--4)] Must be zero
-    \item[Condition (bits 3--0)] 4-bit condition code
+	\item[Opcode (bits 31--26)] 6-bit operation code
+	\item[Reserved (bits 25--4)] Must be zero
+	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
 \subsection{Examples}
 
 \begin{itemize}
-    \item \mnemonic{NOOP} -- No operation (actually encoded as \texttt{ADDI r1, \#0})
-    \item \mnemonic{WAIT} -- Wait for interrupt
-    \item \mnemonic{HALT} -- Halt processor (if implemented)
+	\item \mnemonic{NOOP} -- No operation (actually encoded as \texttt{ADDI r1, \#0})
+	\item \mnemonic{WAIT} -- Wait for interrupt
+	\item \mnemonic{HALT} -- Halt processor (if implemented)
 \end{itemize}
 
 \subsection{Assembly Syntax}
@@ -93,39 +96,39 @@ WAIT|==        ; Wait if zero flag set
 The immediate format encodes a full 16-bit immediate value within the instruction.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=0.9em]{32}
-    \bitheader{0-31} \\
-    \bitbox{6}{Opcode} &
-    \bitbox{4}{Reg} &
-    \bitbox{16}{Immediate Value} &
-    \bitbox{2}{Addr} &
-    \bitbox{4}{Cond}
-\end{bytefield}
-\caption{Immediate Instruction Format}
-\label{fig:immediate-format}
+	\centering
+	\begin{bytefield}[bitwidth=0.9em]{32}
+		\bitheader{0-31} \\
+		\bitbox{6}{Opcode} &
+		\bitbox{4}{Reg} &
+		\bitbox{16}{Immediate Value} &
+		\bitbox{2}{Addr} &
+		\bitbox{4}{Cond}
+	\end{bytefield}
+	\caption{Immediate Instruction Format}
+	\label{fig:immediate-format}
 \end{figure}
 
 \begin{description}
-    \item[Opcode (bits 31--26)] 6-bit operation code
-    \item[Register (bits 25--22)] 4-bit destination/source register identifier
-    \item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
-    \item[Address Reg (bits 5--4)] 2-bit address register pair selector (for memory operations)
-    \begin{itemize}
-        \item 00 = l (link register)
-        \item 01 = a (address register)
-        \item 10 = s (stack pointer)
-        \item 11 = p (program counter)
-    \end{itemize}
-    \item[Condition (bits 3--0)] 4-bit condition code
+	\item[Opcode (bits 31--26)] 6-bit operation code
+	\item[Register (bits 25--22)] 4-bit destination/source register identifier
+	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
+	\item[Address Reg (bits 5--4)] 2-bit address register pair selector (for memory operations)
+	      \begin{itemize}
+		      \item 00 = l (link register)
+		      \item 01 = a (address register)
+		      \item 10 = s (stack pointer)
+		      \item 11 = p (program counter)
+	      \end{itemize}
+	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
 \subsection{Examples}
 
 \begin{itemize}
-    \item \mnemonic{ADDI r1, \#1234} -- Add 1234 to r1
-    \item \mnemonic{LOAD r2, (\#8, a)} -- Load from address a+8 into r2
-    \item \mnemonic{STOR r3, (\#-4, s)} -- Store r3 to address s-4
+	\item \mnemonic{ADDI r1, \#1234} -- Add 1234 to r1
+	\item \mnemonic{LOAD r2, (\#8, a)} -- Load from address a+8 into r2
+	\item \mnemonic{STOR r3, (\#-4, s)} -- Store r3 to address s-4
 \end{itemize}
 
 \subsection{Assembly Syntax}
@@ -141,56 +144,57 @@ STOR r4, (#-2, s)      ; memory[s - 2] = r4
 
 \subsection{Structure}
 
-The short immediate format sacrifices immediate value width to include shift information, allowing for more powerful single-instruction operations.
+The short immediate format sacrifices immediate value width to include shift information, allowing for more powerful
+single-instruction operations.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=0.75em]{32}
-    \bitheader{0-31} \\
-    \bitbox{6}{Op} &
-    \bitbox{4}{Reg} &
-    \bitbox{8}{Imm} &
-    \bitbox{1}{SO} &
-    \bitbox{3}{ST} &
-    \bitbox{4}{SC} &
-    \bitbox{2}{Addr} &
-    \bitbox{4}{Cond}
-\end{bytefield}
-\caption{Short Immediate with Shift Format}
-\label{fig:short-imm-format}
+	\centering
+	\begin{bytefield}[bitwidth=0.75em]{32}
+		\bitheader{0-31} \\
+		\bitbox{6}{Op} &
+		\bitbox{4}{Reg} &
+		\bitbox{8}{Imm} &
+		\bitbox{1}{SO} &
+		\bitbox{3}{ST} &
+		\bitbox{4}{SC} &
+		\bitbox{2}{Addr} &
+		\bitbox{4}{Cond}
+	\end{bytefield}
+	\caption{Short Immediate with Shift Format}
+	\label{fig:short-imm-format}
 \end{figure}
 
 \begin{description}
-    \item[Opcode (bits 31--26)] 6-bit operation code
-    \item[Register (bits 25--22)] 4-bit destination/source register
-    \item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
-    \item[Shift Operand (bit 13)] What to shift (0 = immediate value, 1 = register value)
-    \item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
-    \item[Shift Count (bits 9--6)] Amount to shift (0--15)
-    \item[Address Reg (bits 5--4)] 2-bit address register pair selector
-    \item[Condition (bits 3--0)] 4-bit condition code
+	\item[Opcode (bits 31--26)] 6-bit operation code
+	\item[Register (bits 25--22)] 4-bit destination/source register
+	\item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
+	\item[Shift Operand (bit 13)] What to shift (0 = immediate value, 1 = register value)
+	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
+	\item[Shift Count (bits 9--6)] Amount to shift (0--15)
+	\item[Address Reg (bits 5--4)] 2-bit address register pair selector
+	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
 \subsection{Shift Types}
 
 \begin{table}[H]
-\centering
-\begin{tabular}{clc}
-\toprule
-\textbf{Code} & \textbf{Type} & \textbf{Mnemonic} \\
-\midrule
-000 & None (no shift) & -- \\
-001 & Logical Shift Left & LSL \\
-010 & Logical Shift Right & LSR \\
-011 & Arithmetic Shift Left & ASL \\
-100 & Arithmetic Shift Right & ASR \\
-101 & Rotate Left & ROL \\
-110 & Rotate Right & ROR \\
-111 & Reserved & -- \\
-\bottomrule
-\end{tabular}
-\caption{Shift Type Encoding}
-\label{tab:shift-types}
+	\centering
+	\begin{tabular}{clc}
+		\toprule
+		\textbf{Code} & \textbf{Type}          & \textbf{Mnemonic} \\
+		\midrule
+		000           & None (no shift)        & --                \\
+		001           & Logical Shift Left     & LSL               \\
+		010           & Logical Shift Right    & LSR               \\
+		011           & Arithmetic Shift Left  & ASL               \\
+		100           & Arithmetic Shift Right & ASR               \\
+		101           & Rotate Left            & ROL               \\
+		110           & Rotate Right           & ROR               \\
+		111           & Reserved               & --                \\
+		\bottomrule
+	\end{tabular}
+	\caption{Shift Type Encoding}
+	\label{tab:shift-types}
 \end{table}
 
 \subsection{Examples}
@@ -213,42 +217,42 @@ STOR r3, (#10, a), LSR #1
 The register format allows operations on up to three registers with optional shift.
 
 \begin{figure}[H]
-\centering
-\begin{bytefield}[bitwidth=0.75em]{32}
-    \bitheader{0-31} \\
-    \bitbox{6}{Op} &
-    \bitbox{4}{R1} &
-    \bitbox{4}{R2} &
-    \bitbox{4}{R3} &
-    \bitbox{1}{SO} &
-    \bitbox{3}{ST} &
-    \bitbox{4}{SC} &
-    \bitbox{2}{Addr} &
-    \bitbox{4}{Cond}
-\end{bytefield}
-\caption{Register Instruction Format}
-\label{fig:register-format}
+	\centering
+	\begin{bytefield}[bitwidth=0.75em]{32}
+		\bitheader{0-31} \\
+		\bitbox{6}{Op} &
+		\bitbox{4}{R1} &
+		\bitbox{4}{R2} &
+		\bitbox{4}{R3} &
+		\bitbox{1}{SO} &
+		\bitbox{3}{ST} &
+		\bitbox{4}{SC} &
+		\bitbox{2}{Addr} &
+		\bitbox{4}{Cond}
+	\end{bytefield}
+	\caption{Register Instruction Format}
+	\label{fig:register-format}
 \end{figure}
 
 \begin{description}
-    \item[Opcode (bits 31--26)] 6-bit operation code
-    \item[Register 1 (bits 25--22)] Destination register (or first source for some instructions)
-    \item[Register 2 (bits 21--18)] Source register
-    \item[Register 3 (bits 17--14)] Second source register (if needed)
-    \item[Shift Operand (bit 13)] 0 = shift register 3 value, 1 = shift by register 3's value
-    \item[Shift Type (bits 12--10)] Type of shift
-    \item[Shift Count (bits 9--6)] Shift amount (or register containing shift amount)
-    \item[Address Reg (bits 5--4)] Address register pair selector (for memory operations)
-    \item[Condition (bits 3--0)] Condition code
+	\item[Opcode (bits 31--26)] 6-bit operation code
+	\item[Register 1 (bits 25--22)] Destination register (or first source for some instructions)
+	\item[Register 2 (bits 21--18)] Source register
+	\item[Register 3 (bits 17--14)] Second source register (if needed)
+	\item[Shift Operand (bit 13)] 0 = shift register 3 value, 1 = shift by register 3's value
+	\item[Shift Type (bits 12--10)] Type of shift
+	\item[Shift Count (bits 9--6)] Shift amount (or register containing shift amount)
+	\item[Address Reg (bits 5--4)] Address register pair selector (for memory operations)
+	\item[Condition (bits 3--0)] Condition code
 \end{description}
 
 \subsection{Register Operand Semantics}
 
 For most three-operand instructions:
 \begin{itemize}
-    \item R1 = Destination
-    \item R2 = First source operand
-    \item R3 = Second source operand (optional)
+	\item R1 = Destination
+	\item R2 = First source operand
+	\item R3 = Second source operand (optional)
 \end{itemize}
 
 If R3 is zero or not specified, many instructions use R1 as both destination and first source operand:
@@ -281,10 +285,10 @@ The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
 \subsection{ALU Instructions}
 
 \begin{itemize}
-    \item \textbf{0x0\_}: Immediate operand, save result
-    \item \textbf{0x1\_}: Memory operations
-    \item \textbf{0x2\_}: Short immediate with shift, save result
-    \item \textbf{0x3\_}: Register operand, save result
+	\item \textbf{0x0\_}: Immediate operand, save result
+	\item \textbf{0x1\_}: Memory operations
+	\item \textbf{0x2\_}: Short immediate with shift, save result
+	\item \textbf{0x3\_}: Register operand, save result
 \end{itemize}
 
 \subsection{Test vs. Save}
@@ -292,14 +296,14 @@ The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
 Many ALU operations have both a "save result" and "test only" variant:
 
 \begin{itemize}
-    \item \textbf{+0x0}: Save result to destination
-    \item \textbf{+0x8}: Test only (update flags, don't save result)
+	\item \textbf{+0x0}: Save result to destination
+	\item \textbf{+0x8}: Test only (update flags, don't save result)
 \end{itemize}
 
 For example:
 \begin{itemize}
-    \item \opcode{04}: \mnemonic{ANDI} -- AND immediate, save result
-    \item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (don't save result)
+	\item \opcode{04}: \mnemonic{ANDI} -- AND immediate, save result
+	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (don't save result)
 \end{itemize}
 
 \section{Instruction Fetch and Alignment}
@@ -309,37 +313,40 @@ For example:
 Since instructions are 32 bits and the data bus is 16 bits wide, each instruction requires two fetch cycles:
 
 \begin{enumerate}
-    \item Fetch high word (bits 31--16) from address in PC
-    \item Increment PC by 2
-    \item Fetch low word (bits 15--0) from address in PC
-    \item Increment PC by 2
+	\item Fetch high word (bits 31--16) from address in PC
+	\item Increment PC by 2
+	\item Fetch low word (bits 15--0) from address in PC
+	\item Increment PC by 2
 \end{enumerate}
 
 \subsection{Alignment Requirements}
 
-Instructions must be aligned on 4-byte boundaries. The low word of the program counter (\reg{pl}) must always be even, and instructions must not span across 4-byte boundaries.
+Instructions must be aligned on 4-byte boundaries. The low word of the program counter (\reg{pl}) must always be even,
+and instructions must not span across 4-byte boundaries.
 
-Attempting to fetch an instruction from an unaligned address (odd address or not on 4-byte boundary) will trigger an alignment fault exception.
+Attempting to fetch an instruction from an unaligned address (odd address or not on 4-byte boundary) will trigger an
+alignment fault exception.
 
 \section{Format Selection Guidelines}
 
 When writing assembly code, the assembler automatically selects the appropriate format based on operands:
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabular}{lll}
-\toprule
-\textbf{Assembly} & \textbf{Format Used} & \textbf{Notes} \\
-\midrule
-\texttt{ADDI r1, \#1000} & Immediate & Full 16-bit immediate \\
-\texttt{ADDI r1, \#10, LSL \#2} & Short Immediate & 8-bit immediate + shift \\
-\texttt{ADDR r1, r2, r3} & Register & Three register operands \\
-\texttt{NOOP} & Implied & No operands \\
-\bottomrule
-\end{tabular}
-\caption{Format Selection Examples}
-\label{tab:format-selection}
+	\centering
+	\small
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Assembly}               & \textbf{Format Used} & \textbf{Notes}          \\
+		\midrule
+		\texttt{ADDI r1, \#1000}        & Immediate            & Full 16-bit immediate   \\
+		\texttt{ADDI r1, \#10, LSL \#2} & Short Immediate      & 8-bit immediate + shift \\
+		\texttt{ADDR r1, r2, r3}        & Register             & Three register operands \\
+		\texttt{NOOP}                   & Implied              & No operands             \\
+		\bottomrule
+	\end{tabular}
+	\caption{Format Selection Examples}
+	\label{tab:format-selection}
 \end{table}
 
-The choice of format affects instruction encoding but is generally transparent to the programmer, as the assembler handles the details.
+The choice of format affects instruction encoding but is generally transparent to the programmer, as the assembler
+handles the details.
