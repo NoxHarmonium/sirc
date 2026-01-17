@@ -3,15 +3,14 @@
 
 	\vspace*{2cm}
 
-	{\Huge\bfseries\color{sircblue} SIRCULAR}
-
-	\vspace{0.5cm}
-
-	{\Large SIR Compute Using Load/store ALU and Registers}
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.5\textwidth]{sirc-logo.png}
+	\end{figure}
 
 	\vspace{2cm}
 
-	{\LARGE\bfseries CPU Reference Manual}
+	{\LARGE\bfseries SIRC-1 CPU Reference Manual}
 
 	\vspace{0.5cm}
 
@@ -26,18 +25,21 @@
 		\vspace{0.3cm}
 
 		\begin{tabular}{ll}
-			\textbf{Architecture:}     & 16-bit RISC Load/Store       \\
-			\textbf{Address Bus:}      & 24-bit                       \\
-			\textbf{Data Bus:}         & 16-bit                       \\
-			\textbf{Instruction Size:} & 32-bit (fixed)               \\
-			\textbf{Registers:}        & 16 general/address registers \\
-			\textbf{Execution:}        & 6-stage pipeline             \\
+			\textbf{Architecture:}     & 16-bit RISC Load/Store \\
+			\textbf{Address Bus:}      & 24-bit                 \\
+			\textbf{Data Bus:}         & 16-bit                 \\
+			\textbf{Instruction Size:} & 32-bit (fixed)         \\
+			\textbf{Registers:}        & 16 x 16-bit registers  \\
+			\textbf{Execution:}        & 6-stage pipeline       \\
 		\end{tabular}
 	\end{tcolorbox}
 
 	\vfill
 
 	{\large\textit{Version 1.0}}
+	\vspace{0.5cm}
+
+	{\large\textit{Copyright Silicon Integrated Research Corporation (SIRC) 1989}}
 
 	\vspace{0.5cm}
 
@@ -51,7 +53,7 @@
 
 \section*{About This Manual}
 
-This reference manual provides comprehensive documentation for the SIRCULAR CPU architecture and the SIRCIS (SIRC
+This reference manual provides comprehensive documentation for the SIRC-1 CPU architecture and the SIRCIS (SIRC
 Instruction Set) instruction set. It is intended for:
 
 \begin{itemize}
@@ -73,9 +75,5 @@ Throughout this manual, the following conventions are used:
 	\item Addressing modes use parentheses for indirection: \indirectimm{4}{a}
 \end{itemize}
 
-\section*{Acknowledgments}
-
-The SIRCULAR CPU draws inspiration from several classic processor architectures of the late 1980s and early 1990s,
-including the Motorola 68000 series, MOS 6502, ARM6, and MIPS R2000/R3000.
 
 \clearpage

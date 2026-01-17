@@ -3,18 +3,15 @@
 
 \section{Overview}
 
-The SIRCULAR (SIR Compute Using Load/store ALU and Registers) is a 16-bit RISC processor designed with simplicity and
-performance in mind. It features a load/store architecture with fixed-length 32-bit instructions, drawing inspiration
-from classic processor designs of the early 1990s era.
+The SIRC-1 is a 16-bit RISC processor ideal for general purpose computing.
 
-The SIRCULAR implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a comprehensive
-set of operations while maintaining a clean, orthogonal design philosophy.
+\noindent It implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a comprehensive set of operations while maintaining a clean, consistent design philosophy.
 
 \section{Design Philosophy}
 
 \subsection{RISC Principles}
 
-The SIRCULAR adheres to Reduced Instruction Set Computer (RISC) design principles:
+The SIRC-1 adheres to Reduced Instruction Set Computer (RISC) design principles:
 
 \begin{itemize}
 	\item \textbf{Load/Store Architecture:} All ALU operations work exclusively on registers. Memory access is performed only through dedicated load and store instructions.
@@ -30,19 +27,27 @@ The SIRCULAR adheres to Reduced Instruction Set Computer (RISC) design principle
 
 \subsection{Design Goals}
 
-The SIRCULAR was designed with several key goals:
+The SIRC-1 was designed with several key goals in order of importance:
 
 \begin{description}
-	\item[Simplicity] The CPU should be simple enough to be implemented in hardware (e.g., FPGA or ASIC) without requiring
+	\item[Simplicity] The CPU should be simple enough to be implemented in hardware without requiring
 	      complex microcode engines or multi-level instruction decoders.
+
+	\item[Developer Ergonomics] It should have powerful instruction encodings that include conditional execution and bit shifting
+    that can help reduce the number of instructions and branches to keep track of.
 
 	\item[Performance] While simple, the design should allow for reasonable performance through efficient instruction encoding
 	      and the potential for future enhancements like pipelining.
 
 	\item[Memory Protection] Basic privilege levels and memory segmentation provide rudimentary protection for system software.
-
-	\item[Debuggability] Features like trace mode and comprehensive status flags aid in software development and debugging.
 \end{description}
+
+\subsection{Applications}
+
+The SIRC-1 is designed for ideal for general purpose computing, such as the core of a microcomputer.
+
+\noindent It should not be used in memory constrained environments, as the fixed length instructions and lack of byte addressing can potentially mean larger program sizes.
+
 
 \section{Key Features}
 
@@ -65,13 +70,13 @@ The SIRCULAR was designed with several key goals:
 		Condition Codes             & 16                          \\
 		\bottomrule
 	\end{tabular}
-	\caption{SIRCULAR CPU Specifications}
+	\caption{SIRC-1 CPU Specifications}
 	\label{tab:specs}
 \end{table}
 
 \subsection{Execution Model}
 
-The SIRCULAR employs a six-stage execution pipeline:
+The SIRC-1 employs a six-stage execution sequence (one stage per clock):
 
 \begin{enumerate}
 	\item \textbf{Instruction Fetch (First Word)} -- Fetch bits 31--16 from memory
@@ -86,9 +91,34 @@ This fixed six-stage model means that all instructions take exactly 6 clock cycl
 complexity. While this may seem wasteful for simple register operations that don't require memory access, it
 dramatically simplifies the hardware design by eliminating the need for variable-length execution cycles or microcode.
 
+\subsection{Coprocessors}
+
+The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus.
+Only one coprocessor can be active at one time and are usually activated using the COP instructions (except for the "exception unit" which can be activated when physical pins are asserted on the chip).
+All implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor 0x1.
+Other coprocessors are optional and will vary depending on which SIRC-1 model you have.
+The instruction set supports up to 16 coprocessors.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{ID} & \textbf{Name}        & \textbf{Optional}        & \textbf{Purpose}                                           \\
+		\midrule
+		0x0           & Processing Unit    & No                       & Executes instructions                                      \\
+		0x1           & Exception Unit     & No                       & Handles interrupts and exceptions                          \\
+		0x2           & DMA Unit           & Yes                      & Transfers large amounts of data via the bus                \\
+		\bottomrule
+	\end{tabular}
+	\caption{List of coprocessors}
+	\label{tab:coprocessor-list}
+\end{table}
+
+Each coprocessor can execute 16 opcodes, the first 8 (0x0-0x7) can be called in any mode. The last 8 (0x8-0xF) can only be called in supervisor mode.
+
 \subsection{Privilege Levels}
 
-The SIRCULAR supports two privilege levels:
+The SIRC-1 supports two privilege levels:
 
 \begin{description}
 	\item[Supervisor Mode] Full access to all registers and instructions. Can set the high bytes of address register pairs,
@@ -105,7 +135,7 @@ The privilege level is controlled by the Protected Mode bit in the status regist
 
 \subsection{Address Space}
 
-The SIRCULAR provides a 24-bit address space, allowing access to 16 megabytes of memory. Addresses are formed by
+The SIRC-1 provides a 24-bit address space, allowing access to 16 megabytes of memory. Addresses are formed by
 combining the 8-bit high byte and 16-bit low word of address register pairs:
 
 \begin{equation}
@@ -120,10 +150,10 @@ enabling techniques like tagged pointers.
 The CPU expects certain memory regions to be defined:
 
 \begin{itemize}
-	\item \textbf{Vector Table} (\addr{0x000000}--\addr{0x0000FF}): Contains reset and exception vectors
 	\item \textbf{Reset Vector} (\addr{0x000000}): Initial program counter after reset
-	\item \textbf{System RAM Offset} (\addr{0x000002}): Base address for system RAM
-	\item \textbf{Stack Pointer} (\addr{0x000004}): Initial stack pointer value
+	\item \textbf{Fault Vectors} (\addr{0x000001}--\addr{0x000007}): Fault vectors
+	\item \textbf{Hardware Vectors} (\addr{0x000010}--\addr{0x000050}): Hardware exception vectors (offset by 0x10 due to hardware implementation)
+	\item \textbf{User Vectors} (\addr{0x000060}--\addr{0x0000FF}): User exception vectors
 \end{itemize}
 
 Beyond these reserved regions, the memory layout is flexible and can be defined by system software.

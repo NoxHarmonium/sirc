@@ -1,8 +1,8 @@
-# SIRCULAR CPU Reference Manual - Project Summary
+# SIRC-1 CPU Reference Manual - Project Summary
 
 ## What Has Been Created
 
-I've created a comprehensive LaTeX reference manual for your SIRCULAR CPU in the style of early 90s technical documentation. The manual documents the SIRCIS instruction set architecture in detail.
+I've created a comprehensive LaTeX reference manual for your SIRC-1 CPU in the style of early 90s technical documentation. The manual documents the SIRCIS instruction set architecture in detail.
 
 ## Project Structure
 
@@ -82,12 +82,12 @@ brew install --cask mactex
 make
 
 # Open the PDF
-open sircular-reference-manual.pdf
+open SIRC-1-reference-manual.pdf
 ```
 
 ### What Gets Generated
 
-- **sircular-reference-manual.pdf** - The complete reference manual
+- **SIRC-1-reference-manual.pdf** - The complete reference manual
 - Approximately 50+ pages of comprehensive documentation
 - Fully hyperlinked table of contents and cross-references
 - Professional title page with technical specifications
@@ -96,7 +96,7 @@ open sircular-reference-manual.pdf
 
 ### Part I: Architecture Overview (Chapters 1-3)
 
-- Introduction to SIRCULAR design philosophy
+- Introduction to SIRC-1 design philosophy
 - RISC load/store architecture explanation
 - Complete register model with 16 registers
 - Status register with condition flags
@@ -189,7 +189,7 @@ Consider adding:
 ## Notes
 
 - The manual focuses **only on the CPU**, not the console itself (as requested)
-- Uses your naming conventions: SIRCULAR (CPU), SIRCIS (instruction set), SIRCIT (debugger)
+- Uses your naming conventions: SIRC-1 (CPU), SIRCIS (instruction set), SIRCIT (debugger)
 - Maintains consistency with your existing documentation in `docs/wiki/`
 - All examples use valid SIRC assembly syntax
 - Timing assumes your 6-stage pipeline model

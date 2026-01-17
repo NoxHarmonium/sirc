@@ -1,6 +1,6 @@
-# SIRCULAR CPU Reference Manual
+# SIRC-1 CPU Reference Manual
 
-This directory contains the LaTeX source for the SIRCULAR CPU Reference Manual, documenting the SIRCIS (SIRC Instruction Set) architecture.
+This directory contains the LaTeX source for the SIRC-1 CPU Reference Manual, documenting the SIRCIS (SIRC Instruction Set) architecture.
 
 ## Contents
 

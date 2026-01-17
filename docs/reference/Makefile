@@ -1,8 +1,8 @@
-# Makefile for SIRCULAR CPU Reference Manual
+# Makefile for SIRC-1 CPU Reference Manual
 
 # Main document
 MAIN = main
-OUTPUT = sircular-reference-manual
+OUTPUT = SIRC-1-reference-manual
 
 # LaTeX compiler
 LATEX = pdflatex

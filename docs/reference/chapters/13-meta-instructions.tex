@@ -3,9 +3,7 @@
 
 \section{Overview}
 
-Meta-instructions (also called pseudo-instructions) are assembly mnemonics that don't directly correspond to unique
-opcodes. Instead, they assemble to specific forms of existing instructions, providing more intuitive syntax for common
-operations.
+Meta-instructions (also called pseudo-instructions) are assembly mnemonics that don't directly correspond to unique opcodes. Instead, they assemble to specific forms of existing instructions, providing more intuitive syntax for common operations.
 
 \section{NOOP -- No Operation}
 
@@ -66,30 +64,6 @@ main_loop:
 exception_handler:
     ; ... handle exception ...
     RETE                      ; Return to interrupted code
-\end{lstlisting}
-
-\section{Additional Pseudo-Instructions}
-
-Assemblers may provide additional pseudo-instructions for convenience:
-
-\subsection{MOV -- Move}
-\begin{lstlisting}
-MOV rD, rS                    ; Assembles to: LOAD rD, rS
-\end{lstlisting}
-
-\subsection{CLR -- Clear Register}
-\begin{lstlisting}
-CLR rD                        ; Assembles to: LOAD rD, #0
-\end{lstlisting}
-
-\subsection{NOT -- Bitwise NOT}
-\begin{lstlisting}
-NOT rD                        ; Assembles to: XORI rD, #0xFFFF
-\end{lstlisting}
-
-\subsection{NEG -- Negate (Two's Complement)}
-\begin{lstlisting}
-NEG rD                        ; Assembles to: SUBR rD, #0, rD
 \end{lstlisting}
 
 \textit{(Note: Check assembler documentation for supported pseudo-instructions)}
