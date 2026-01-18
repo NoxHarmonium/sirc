@@ -55,9 +55,9 @@ These are software conventions only and are not enforced by the CPU.
 
 \subsection{Overview}
 
-The SIRC-1 provides four address register pairs, each consisting of a high and low 16-bit register. When used
-together, these pairs form 24-bit addresses by combining the low 8 bits of the high register with the full 16 bits of
-the low register.
+The SIRC-1 provides four address register pairs, each consisting of a high and low 16-bit register. When used together,
+these pairs form 24-bit addresses by combining the low 8 bits of the high register with the full 16 bits of the low
+register.
 
 \begin{figure}[H]
 	\centering
@@ -77,13 +77,13 @@ the low register.
 The upper 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
 enabling techniques such as tagged pointers.
 
-Although each address register pair has a specific name, and a suggested usage by convention,
-they are all treated the same by STOR/LOAD instructions and they can all be used for indirect addressing the same way.
+Although each address register pair has a specific name, and a suggested usage by convention, they are all treated the
+same by STOR/LOAD instructions and they can all be used for indirect addressing the same way.
 
 In fact, you can perform a jump by simply loading a value in to the Program Counter registers.
 
-However, it is worth noting that the Link Register pair will be updated automatically though specific instructions (LJSR, BRSR)
-and the Program Counter pair is incremented after every instruction.
+However, it is worth noting that the Link Register pair will be updated automatically though specific instructions
+(LJSR, BRSR) and the Program Counter pair is incremented after every instruction.
 
 \subsection{Link Register (l)}
 

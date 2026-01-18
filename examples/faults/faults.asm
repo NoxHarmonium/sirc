@@ -183,7 +183,7 @@ RETE
 :privilege_violation_fault_handler
 ADDI    r5, #1
 
-; Make sure that the CPU is back in privilaged mode again after handling this fault
+; Make sure that the CPU is back in privileged mode again after handling this fault
 
 ; Transfer current ELR into 'r7' register
 COPI    r1, #0x1C26

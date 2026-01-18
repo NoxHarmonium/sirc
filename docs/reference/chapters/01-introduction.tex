@@ -30,11 +30,11 @@ The SIRC-1 adheres to Reduced Instruction Set Computer (RISC) design principles:
 The SIRC-1 was designed with several key goals in order of importance:
 
 \begin{description}
-	\item[Simplicity] The CPU should be simple enough to be implemented in hardware without requiring
-	      complex microcode engines or multi-level instruction decoders.
+	\item[Simplicity] The CPU should be simple enough to be implemented in hardware without requiring complex microcode engines
+	      or multi-level instruction decoders.
 
 	\item[Developer Ergonomics] It should have powerful instruction encodings that include conditional execution and bit shifting
-    that can help reduce the number of instructions and branches to keep track of.
+	      that can help reduce the number of instructions and branches to keep track of.
 
 	\item[Performance] While simple, the design should allow for reasonable performance through efficient instruction encoding
 	      and the potential for future enhancements like pipelining.
@@ -47,7 +47,6 @@ The SIRC-1 was designed with several key goals in order of importance:
 The SIRC-1 is designed for ideal for general purpose computing, such as the core of a microcomputer.
 
 \noindent It should not be used in memory constrained environments, as the fixed length instructions and lack of byte addressing can potentially mean larger program sizes.
-
 
 \section{Key Features}
 
@@ -93,29 +92,31 @@ dramatically simplifies the hardware design by eliminating the need for variable
 
 \subsection{Coprocessors}
 
-The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and register file.
-Only one coprocessor can be active at one time and are usually activated using the COP instructions (except for the "exception unit" which can be activated when physical pins are asserted on the chip).
-All implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor 0x1.
-Other coprocessors are optional and will vary depending on which SIRC-1 model you have.
-The instruction set supports up to 16 coprocessors.
+The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
+register file. Only one coprocessor can be active at one time and are usually activated using the COP instructions
+(except for the "exception unit" which can be activated when physical pins are asserted on the chip). All
+implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor
+0x1. Other coprocessors are optional and will vary depending on which SIRC-1 model you have. The instruction set
+supports up to 16 coprocessors.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{ID} & \textbf{Name}        & \textbf{Optional}        & \textbf{Purpose}                                           \\
+		\textbf{ID} & \textbf{Name}   & \textbf{Optional} & \textbf{Purpose}                             \\
 		\midrule
-		0x0           & Processing Unit    & No                       & Executes instructions                                      \\
-		0x1           & Exception Unit     & No                       & Handles interrupts and exceptions                          \\
-		0x2           & DMA Unit           & Yes                      & Transfers large amounts of data via the bus                \\
-		0x3           & Maths Unit         & Yes                      & Performs mathematical operations in hardware               \\
+		0x0         & Processing Unit & No                & Executes instructions                        \\
+		0x1         & Exception Unit  & No                & Handles interrupts and exceptions            \\
+		0x2         & DMA Unit        & Yes               & Transfers large amounts of data via the bus  \\
+		0x3         & Maths Unit      & Yes               & Performs mathematical operations in hardware \\
 		\bottomrule
 	\end{tabular}
 	\caption{List of coprocessors}
 	\label{tab:coprocessor-list}
 \end{table}
 
-Each coprocessor can execute 16 opcodes, the first 8 (0x0-0x7) can be called in any mode. The last 8 (0x8-0xF) can only be called in supervisor mode.
+Each coprocessor can execute 16 opcodes, the first 8 (0x0-0x7) can be called in any mode. The last 8 (0x8-0xF) can only
+be called in supervisor mode.
 
 \subsection{Privilege Levels}
 
