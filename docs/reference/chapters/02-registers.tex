@@ -265,7 +265,7 @@ LOAD r1, (a)
 STOR (#8, a), r1
 
 ; Push r1 onto stack (pre-decrement)
-STOR -(s), r1
+STOR -(#2, s), r1
 
 ; Pop stack into r2 (post-increment)
 LOAD r2, (s)+

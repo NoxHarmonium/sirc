@@ -95,7 +95,7 @@ ADDI r7, #0, #10              ; 6 cycles
 loop:
     LOAD r1, (#0, a)+         ; 6 cycles
     ADDI r1, #1               ; 6 cycles
-    STOR r1, (#-2, a)         ; 6 cycles
+    STOR (#-2, a), r1         ; 6 cycles
     SUBI r7, #1               ; 6 cycles
     BRAN|!= (#loop, p)        ; 6 cycles
 ; Total per iteration: 30 cycles

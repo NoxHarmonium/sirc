@@ -90,7 +90,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 ADDI r1, #100          ; r1 = r1 + 100
 CMPI r2, #0x8000       ; Compare r2 with 0x8000
 LOAD r3, (#16, a)      ; r3 = memory[a + 16]
-STOR r4, (#-2, s)      ; memory[s - 2] = r4
+STOR (#-2, s), r4      ; memory[s - 2] = r4
 \end{lstlisting}
 
 \section{Short Immediate Format (with Shift)}
@@ -172,7 +172,7 @@ The register format allows operations on up to three registers with optional shi
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=0.75em]{32}
+	\begin{bytefield}[bitwidth=1.25em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Op} &
 		\bitbox{4}{R1} &
@@ -229,7 +229,7 @@ ADDR r1, r2, r3, LSL #2 ; r1 = (r2 << 2) + r3
 LOAD r1, (r2, a)        ; r1 = memory[a + r2]
 
 ; Store with post-increment
-STOR r1, (r2, s)+       ; memory[s + r2] = r1; s = s + 1
+STOR (r2, s)+, r1       ; memory[s + r2] = r1; s = s + 1
 \end{lstlisting}
 
 \section{Opcode Encoding Patterns}
@@ -250,8 +250,8 @@ The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
 Many ALU operations have both a "save result" and "test only" variant:
 
 \begin{itemize}
-	\item \textbf{+0x0}: Save result to destination
-	\item \textbf{+0x8}: Test only (update flags, don't save result)
+	\item \textbf{0x\_0-0x\_7}: Save result to destination
+	\item \textbf{0x\_8-0x\_F}: Test only (update flags, don't save result)
 \end{itemize}
 
 For example:
@@ -295,7 +295,6 @@ When writing assembly code, the assembler automatically selects the appropriate 
 		\texttt{ADDI r1, \#1000}        & Immediate            & Full 16-bit immediate   \\
 		\texttt{ADDI r1, \#10, LSL \#2} & Short Immediate      & 8-bit immediate + shift \\
 		\texttt{ADDR r1, r2, r3}        & Register             & Three register operands \\
-		\texttt{NOOP}                   & Implied              & No operands             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Format Selection Examples}

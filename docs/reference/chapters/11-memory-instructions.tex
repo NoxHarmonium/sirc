@@ -45,8 +45,8 @@ The resulting 24-bit address is used to access memory.
 	\begin{lstlisting}
 LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
 LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
-LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += offset
-LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += rS
+LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
+LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += 1
 \end{lstlisting}
 
 	\textbf{Description:}
@@ -80,8 +80,8 @@ LOAD r5, (#0, s)+             ; r5 = *s; s += 2
 	\begin{lstlisting}
 STOR rS, (#offset, addr)      ; memory[addr + offset] = rS
 STOR rS, (rD, addr)           ; memory[addr + rD] = rS
-STOR rS, -(#offset, addr)     ; addr -= offset; memory[addr + offset] = rS
-STOR rS, -(rD, addr)          ; addr -= rD; memory[addr + rD] = rS
+STOR rS, -(#offset, addr)     ; addr -= 1; memory[addr + offset] = rS
+STOR rS, -(rD, addr)          ; addr -= 1; memory[addr + rD] = rS
 \end{lstlisting}
 
 	\textbf{Description:}
@@ -92,13 +92,13 @@ STOR rS, -(rD, addr)          ; addr -= rD; memory[addr + rD] = rS
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; Store to fixed offset
-STOR r1, (#8, a)              ; memory[a + 8] = r1
+STOR (#8, a), r1              ; memory[a + 8] = r1
 
 ; Store using variable offset
-STOR r2, (r3, a)              ; memory[a + r3] = r2
+STOR (r3, a), r2              ; memory[a + r3] = r2
 
 ; Stack push
-STOR r4, -(#2, s)             ; s -= 2; memory[s] = r4
+STOR -(#2, s), r4             ; s -= 2; memory[s] = r4
 \end{lstlisting}
 
 \end{instructionbox}
@@ -128,9 +128,9 @@ loop:
 \subsection{Stack Operations}
 \begin{lstlisting}
 ; Push registers
-STOR r1, -(#2, s)
-STOR r2, -(#2, s)
-STOR r3, -(#2, s)
+STOR -(#2, s), r1
+STOR -(#2, s), r2
+STOR -(#2, s), r3
 
 ; Pop registers (reverse order)
 LOAD r3, (#0, s)+
