@@ -15,7 +15,8 @@ The SIRC-1 supports three distinct instruction formats:
 	\item Register
 \end{enumerate}
 
-Note: there are meta instructions that do not take any arguments (e.g. NOOP) but they are still assembled to by one of the three instruction formats. There is no "implied" instruction format supported by the CPU.
+Note: there are meta instructions that do not take any arguments (e.g. NOOP) but they are still assembled to by one of
+the three instruction formats. There is no "implied" instruction format supported by the CPU.
 
 Each format is optimized for different types of operations and addressing modes.
 
@@ -26,11 +27,11 @@ Each format is optimized for different types of operations and addressing modes.
 	\small
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Format} & \textbf{Typical Use}                                             \\
+		\textbf{Format} & \textbf{Typical Use}                                  \\
 		\midrule
-		Immediate       & Operations with a 16-bit constant value                          \\
-		Short Immediate & Operations with an 8-bit constant with optional shift            \\
-		Register        & Operations on multiple registers with optional shift             \\
+		Immediate       & Operations with a 16-bit constant value               \\
+		Short Immediate & Operations with an 8-bit constant with optional shift \\
+		Register        & Operations on multiple registers with optional shift  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Format Summary}
@@ -47,7 +48,8 @@ All instruction formats share some common fields:
 	\item[Condition Flags (4 bits)] Specifies under what conditions the instruction should execute. See
 	      \textbf{Chapter~\ref{ch:condition-codes}} for details.
 
-	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (a, p, s, l) and in ALU operations to specify how the status register is updated.
+	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (a, p, s, l) and in ALU
+	      operations to specify how the status register is updated.
 
 \end{description}
 
@@ -87,14 +89,44 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
-\subsection{Examples}
+\subsection{Encoding Examples}
 
-\begin{lstlisting}
-ADDI r1, #100        ; r1 = r1 + 100
-CMPI r2, #0x8000       ; Compare r2 with 0x8000
-LOAD r3, (#16, a)      ; r3 = memory[a + 16]
-STOR (#-2, s), r4      ; memory[s - 2] = r4
-\end{lstlisting}
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lcccccc}
+		\toprule
+		\textbf{Instruction}        & \textbf{Opcode} & \textbf{Reg} & \textbf{Immediate}    & \textbf{AF} & \textbf{Cond} & \textbf{Hex}        \\
+		\midrule
+		\texttt{ADDI r1, \#100}     & 0x00            & 0x1          & 0x0064                & 0b00        & 0x0           & \texttt{0x00420000} \\
+		                            & (000000)        & (0001)       & (0000 0000 0110 0100) & (00)        & (0000)        &                     \\
+		\midrule
+		\texttt{CMPI r2, \#0x8000}  & 0x0A            & 0x2          & 0x8000                & 0b00        & 0x0           & \texttt{0x2A800000} \\
+		                            & (001010)        & (0010)       & (1000 0000 0000 0000) & (00)        & (0000)        &                     \\
+		\midrule
+		\texttt{LOAD r3, (\#16, a)} & 0x14            & 0x3          & 0x0010                & 0b01        & 0x0           & \texttt{0x53040010} \\
+		                            & (010100)        & (0011)       & (0000 0000 0001 0000) & (01)        & (0000)        &                     \\
+		\midrule
+		\texttt{STOR (\#-2, s), r4} & 0x10            & 0x4          & 0xFFFE                & 0b10        & 0x0           & \texttt{0x41FFF820} \\
+		                            & (010000)        & (0100)       & (1111 1111 1111 1110) & (10)        & (0000)        &                     \\
+		\midrule
+		\texttt{ADDI|== r5, \#42}   & 0x00            & 0x5          & 0x002A                & 0b00        & 0x1           & \texttt{0x014A001}  \\
+		                            & (000000)        & (0101)       & (0000 0000 0010 1010) & (00)        & (0001)        &                     \\
+		\midrule
+		\texttt{SUBI|>= r6, \#10}   & 0x02            & 0x6          & 0x000A                & 0b00        & 0xB           & \texttt{0x0982800B} \\
+		                            & (000010)        & (0110)       & (0000 0000 0000 1010) & (00)        & (1011)        &                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Immediate Format Encoding Examples}
+	\label{tab:immediate-format-examples}
+\end{table}
+
+\noindent\textbf{Notes:}
+\begin{itemize}
+	\item Condition code examples: 0x0 (0000) = Always, 0x1 (0001) = Equal (==), 0xB (1011) = Signed >=
+	\item AF field selects address register: 00=l, 01=a, 10=s, 11=p
+	\item Negative immediates use two's complement (\#-2 = 0xFFFE)
+\end{itemize}
 
 \section{Short Immediate Format (with Shift)}
 
@@ -127,30 +159,61 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier
 	\item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
-		\begin{itemize}
-			\item 0 = Shift amount field contains the literal shift amount
-			\item 1 = Shift amount field refers to register that contains shift amount
-		\end{itemize}
-	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
+	      \begin{itemize}
+		      \item 0 = Shift amount field contains the literal shift amount
+		      \item 1 = Shift amount field refers to register that contains shift amount
+	      \end{itemize}
+	\item[Shift Type (bits 12--10)] Type of shift operation (see Table~\ref{tab:shift-types} for encoding details)
 	\item[Shift Amount (bits 9--6)] Shift amount (or register containing shift amount)
 	\item[Additional Flags (bits 5--4)] 2-bit status register update source selector
-		\begin{itemize}
-			\item 00 = Status register not updated
-			\item 01 = Status register updated from ALU operation
-			\item 10 = Status register updated from shift operation
-			\item 11 = Reserved for future use
-		\end{itemize}
+	      \begin{itemize}
+		      \item 00 = Status register not updated
+		      \item 01 = Status register updated from ALU operation
+		      \item 10 = Status register updated from shift operation
+		      \item 11 = Reserved for future use
+	      \end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
-\subsection{Examples}
+\subsection{Encoding Examples}
 
-\begin{lstlisting}
+\begin{table}[H]
+	\centering
+	\tiny
+	\begin{tabular}{lcccccccccc}
+		\toprule
+		\textbf{Instruction}               & \textbf{Op} & \textbf{Reg} & \textbf{Imm} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex}         \\
+		\midrule
+		\texttt{ADDI r1, \#2, LSL \#3}     & 0x20        & 0x1          & 0x02         & 0           & 001         & 0x3         & 0b01        & 0x0           & \texttt{0x08108C10}  \\
+		                                   & (100000)    & (0001)       & (00000010)   & (0)         & (001)       & (0011)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{ORRI r2, \#1, LSL \#10}    & 0x25        & 0x2          & 0x01         & 0           & 001         & 0xA         & 0b01        & 0x0           & \texttt{0x09504A10}  \\
+		                                   & (100101)    & (0010)       & (00000001)   & (0)         & (001)       & (1010)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{ANDI r3, \#7, ASR \#2}     & 0x24        & 0x3          & 0x07         & 0           & 100         & 0x2         & 0b01        & 0x0           & \texttt{0x09331C210} \\
+		                                   & (100100)    & (0011)       & (00000111)   & (0)         & (100)       & (0010)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{SUBI r4, \#5, LSL r2}      & 0x22        & 0x4          & 0x05         & 1           & 001         & 0x2         & 0b01        & 0x0           & \texttt{0x08A8A10}   \\
+		                                   & (100010)    & (0100)       & (00000101)   & (1)         & (001)       & (0010)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{XORI|!= r7, \#15, LSR \#4} & 0x26        & 0x7          & 0x0F         & 0           & 010         & 0x4         & 0b01        & 0x2           & \texttt{0x9F7C512}   \\
+		                                   & (100110)    & (0111)       & (00001111)   & (0)         & (010)       & (0100)      & (01)        & (0010)        &                      \\
+		\midrule
+		\texttt{CMPI|<0 r1, \#8, ROL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
+		                                   & (101010)    & (0001)       & (00001000)   & (1)         & (101)       & (0011)      & (01)        & (0101)        &                      \\
+		\bottomrule
+	\end{tabular}
+	\caption{Short Immediate Format Encoding Examples}
+	\label{tab:short-imm-format-examples}
+\end{table}
 
-; r1 = (r1 << 3) + 2
-ADDI r1, #2, LSL #3
-
-\end{lstlisting}
+\noindent\textbf{Notes:}
+\begin{itemize}
+	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
+	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
+	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift
+	\item Condition code examples: 0x0 = Always, 0x2 = Not Equal (!=), 0x5 = Negative (<0)
+\end{itemize}
 
 \section{Register Format}
 
@@ -182,26 +245,26 @@ The register format allows operations on up to three registers with optional shi
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
-		\begin{itemize}
-			\item 0 = Shift amount field contains the literal shift amount
-			\item 1 = Shift amount field refers to register that contains shift amount
-		\end{itemize}
-	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
+	      \begin{itemize}
+		      \item 0 = Shift amount field contains the literal shift amount
+		      \item 1 = Shift amount field refers to register that contains shift amount
+	      \end{itemize}
+	\item[Shift Type (bits 12--10)] Type of shift operation (see Table~\ref{tab:shift-types} for encoding details)
 	\item[Shift Amount (bits 9--6)] Shift amount (or register containing shift amount)
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
-		\begin{itemize}
-			\item 00 = l (link register)
-			\item 01 = a (address register)
-			\item 10 = s (stack pointer)
-			\item 11 = p (program counter)
-		\end{itemize}
-		or 2-bit status register update source selector (for ALU operations)
-		\begin{itemize}
-			\item 00 = Status register not updated
-			\item 01 = Status register updated from ALU operation
-			\item 10 = Status register updated from shift operation
-			\item 11 = Reserved for future use
-		\end{itemize}
+	      \begin{itemize}
+		      \item 00 = l (link register)
+		      \item 01 = a (address register)
+		      \item 10 = s (stack pointer)
+		      \item 11 = p (program counter)
+	      \end{itemize}
+	      or 2-bit status register update source selector (for ALU operations)
+	      \begin{itemize}
+		      \item 00 = Status register not updated
+		      \item 01 = Status register updated from ALU operation
+		      \item 10 = Status register updated from shift operation
+		      \item 11 = Reserved for future use
+	      \end{itemize}
 	\item[Condition (bits 3--0)] Condition code
 \end{description}
 
@@ -221,23 +284,89 @@ ADDR r1, r2, r3  ; r1 = r2 + r3
 ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 \end{lstlisting}
 
-\subsection{Examples}
+\subsection{Encoding Examples}
 
-\begin{lstlisting}
-; Add two registers
-ADDR r1, r2, r3         ; r1 = r2 + r3
+\begin{table}[H]
+	\centering
+	\tiny
+	\begin{tabular}{lccccccccccc}
+		\toprule
+		\textbf{Instruction}                & \textbf{Op} & \textbf{R1} & \textbf{R2} & \textbf{R3} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex}         \\
+		\midrule
+		\texttt{ADDR r1, r2, r3}            & 0x30        & 0x1         & 0x2         & 0x3         & 0           & 000         & 0x0         & 0b01        & 0x0           & \texttt{0x0C123010}  \\
+		                                    & (110000)    & (0001)      & (0010)      & (0011)      & (0)         & (000)       & (0000)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{ADDR r1, r2, r3, LSL \#2}   & 0x30        & 0x1         & 0x2         & 0x3         & 0           & 001         & 0x2         & 0b01        & 0x0           & \texttt{0x0C1232B10} \\
+		                                    & (110000)    & (0001)      & (0010)      & (0011)      & (0)         & (001)       & (0010)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{LOAD r1, (r2, a)}           & 0x15        & 0x1         & 0x2         & 0x0         & 0           & 000         & 0x0         & 0b01        & 0x0           & \texttt{0x55200010}  \\
+		                                    & (010101)    & (0001)      & (0010)      & (0000)      & (0)         & (000)       & (0000)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{STOR (r2, s)+, r1}          & 0x13        & 0x1         & 0x2         & 0x0         & 0           & 000         & 0x0         & 0b10        & 0x0           & \texttt{0x4D200020}  \\
+		                                    & (010011)    & (0001)      & (0010)      & (0000)      & (0)         & (000)       & (0000)      & (10)        & (0000)        &                      \\
+		\midrule
+		\texttt{CMPR r4, r5}                & 0x3A        & 0x4         & 0x4         & 0x5         & 0           & 000         & 0x0         & 0b01        & 0x0           & \texttt{0x0E945010}  \\
+		                                    & (111010)    & (0100)      & (0100)      & (0101)      & (0)         & (000)       & (0000)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{XORR r2, r3, r4, ROR \#1}   & 0x36        & 0x2         & 0x3         & 0x4         & 0           & 110         & 0x1         & 0b01        & 0x0           & \texttt{0x0DA346D10} \\
+		                                    & (110110)    & (0010)      & (0011)      & (0100)      & (0)         & (110)       & (0001)      & (01)        & (0000)        &                      \\
+		\midrule
+		\texttt{SUBR|>> r1, r2, r3, ASR r4} & 0x32        & 0x1         & 0x2         & 0x3         & 1           & 100         & 0x4         & 0b01        & 0xD           & \texttt{0xCA372D1D}  \\
+		                                    & (110010)    & (0001)      & (0010)      & (0011)      & (1)         & (100)       & (0100)      & (01)        & (1101)        &                      \\
+		\midrule
+		\texttt{ANDR|CS r5, r6, r7, LSL r1} & 0x34        & 0x5         & 0x6         & 0x7         & 1           & 001         & 0x1         & 0b01        & 0x3           & \texttt{0xD567913}   \\
+		                                    & (110100)    & (0101)      & (0110)      & (0111)      & (1)         & (001)       & (0001)      & (01)        & (0011)        &                      \\
+		\bottomrule
+	\end{tabular}
+	\caption{Register Format Encoding Examples}
+	\label{tab:register-format-examples}
+\end{table}
 
-; Add with shift
-ADDR r1, r2, r3, LSL #2 ; r1 = (r2 << 2) + r3
+% TODO: Example of setting status register with result of SHIFT (AF = 0b10)
 
-; Load using register offset
-LOAD r1, (r2, a)        ; r1 = memory[a + r2]
+\noindent\textbf{Notes:}
+\begin{itemize}
+	\item When R3 is not specified in assembly, it defaults to R1 (e.g., \texttt{ADDR r4, r5} uses R1=0x4, R2=0x4, R3=0x5)
+	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 7 and 8)
+	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
+	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU
+	\item Condition code examples: 0x0 = Always, 0xD = Signed > (>>), 0x3 = Carry Set (CS)
+\end{itemize}
 
-; Store with post-increment
-STOR (r2, s)+, r1       ; memory[s + r2] = r1; s = s + 1
-\end{lstlisting}
+\section{Operand Encoding Details}
 
-\section{Shift Encoding}
+\subsection{Condition Codes}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{clp{6cm}}
+		\toprule
+		\textbf{Code} & \textbf{Mnemonic} & \textbf{Condition}                         \\
+		\midrule
+		0000          & (none)            & Always (unconditional)                     \\
+		0001          & ==                & Equal (Z = 1)                              \\
+		0010          & !=                & Not Equal (Z = 0)                          \\
+		0011          & CS                & Carry Set (C = 1)                          \\
+		0100          & CC                & Carry Clear (C = 0)                        \\
+		0101          & <0                & Negative (N = 1)                           \\
+		0110          & >=0               & Non-Negative (N = 0)                       \\
+		0111          & VS                & Overflow Set (V = 1)                       \\
+		1000          & VC                & Overflow Clear (V = 0)                     \\
+		1001          & >                 & Unsigned Higher (C = 1 AND Z = 0)          \\
+		1010          & <=                & Unsigned Lower or Same (C = 0 OR Z = 1)    \\
+		1011          & >=                & Signed Greater or Equal (N = V)            \\
+		1100          & <                 & Signed Less Than (N $\neq$ V)              \\
+		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)      \\
+		1110          & <<                & Signed Less or Equal (Z = 1 OR N $\neq$ V) \\
+		1111          & NV                & Never (never executes)                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Condition Code Encoding}
+	\label{tab:condition-code-encoding}
+\end{table}
+
+For more details on condition codes see \textbf{Chapter~\ref{ch:condition-codes}}
 
 \subsection{Shift Types}
 

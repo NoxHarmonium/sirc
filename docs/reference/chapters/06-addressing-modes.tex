@@ -18,7 +18,7 @@ operand is an immediate value, register contents, or data in memory at a compute
 		Indirect Register  & Memory address = address register + register offset    \\
 		Post-Increment     & Indirect register, then increment address register     \\
 		Pre-Decrement      & Decrement address register, then use as indirect       \\
-		Implied            & No operand specified (inferred by the assembler)        \\
+		Implied            & No operand specified (inferred by the assembler)       \\
 		Short Immediate    & 8-bit constant with optional shift                     \\
 		\bottomrule
 	\end{tabular}
@@ -31,7 +31,8 @@ operand is an immediate value, register contents, or data in memory at a compute
 \subsection{Description}
 
 The operand is a constant value encoded directly in the instruction. For full immediate mode, this can be a 16-bit
-signed or unsigned value. For short immediate mode, it is an 8-bit value that allows for the instruction source to be shifted.
+signed or unsigned value. For short immediate mode, it is an 8-bit value that allows for the instruction source to be
+shifted.
 
 \subsection{Syntax}
 
