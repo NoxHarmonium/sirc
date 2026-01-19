@@ -29,7 +29,7 @@ Each format is optimized for different types of operations and addressing modes.
 		\textbf{Format} & \textbf{Typical Use}                                             \\
 		\midrule
 		Immediate       & Operations with a 16-bit constant value                          \\
-		Short Immediate & Operations with an 8-bit constant and optional shift             \\
+		Short Immediate & Operations with an 8-bit constant with optional shift            \\
 		Register        & Operations on multiple registers with optional shift             \\
 		\bottomrule
 	\end{tabular}
@@ -45,9 +45,10 @@ All instruction formats share some common fields:
 	\item[Opcode (6 bits)] Identifies the operation to perform. With 6 bits, up to 64 distinct operations can be encoded.
 
 	\item[Condition Flags (4 bits)] Specifies under what conditions the instruction should execute. See
-	      Chapter~\ref{ch:condition-codes} for details.
+	      \textbf{Chapter~\ref{ch:condition-codes}} for details.
 
-	\item[Additional Flags (2 bits)] Used in some formats to specify address register pairs (a, p, s, l) or other modifiers.
+	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (a, p, s, l) and in ALU operations to specify how the status register is updated.
+
 \end{description}
 
 \section{Immediate Format}
@@ -56,14 +57,16 @@ All instruction formats share some common fields:
 
 The immediate format encodes a full 16-bit immediate value within the instruction.
 
+Note: Due to the large 16-bit operand, shift is not supported in this format.
+
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=1.25em]{32}
+	\begin{bytefield}[bitwidth=1.3em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Opcode} &
 		\bitbox{4}{Reg} &
 		\bitbox{16}{Immediate Value} &
-		\bitbox{2}{Addr} &
+		\bitbox{2}{AF} &
 		\bitbox{4}{Cond}
 	\end{bytefield}
 	\caption{Immediate Instruction Format}
@@ -74,7 +77,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 	\item[Opcode (bits 31--26)] 6-bit operation code
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
-	\item[Address Reg (bits 5--4)] 2-bit address register pair selector (for memory operations)
+	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
 		      \item 00 = l (link register)
 		      \item 01 = a (address register)
@@ -87,7 +90,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 \subsection{Examples}
 
 \begin{lstlisting}
-ADDI r1, #100          ; r1 = r1 + 100
+ADDI r1, #100        ; r1 = r1 + 100
 CMPI r2, #0x8000       ; Compare r2 with 0x8000
 LOAD r3, (#16, a)      ; r3 = memory[a + 16]
 STOR (#-2, s), r4      ; memory[s - 2] = r4
@@ -104,15 +107,15 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=1.25em]{32}
+	\begin{bytefield}[bitwidth=1.3em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Op} &
 		\bitbox{4}{Reg} &
 		\bitbox{8}{Imm} &
 		\bitbox{1}{SO} &
 		\bitbox{3}{ST} &
-		\bitbox{4}{SV} &
-		\bitbox{2}{Addr} &
+		\bitbox{4}{SA} &
+		\bitbox{2}{AF} &
 		\bitbox{4}{Cond}
 	\end{bytefield}
 	\caption{Short Immediate with Shift Format}
@@ -123,37 +126,22 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 	\item[Opcode (bits 31--26)] 6-bit operation code
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier
 	\item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
-	\item[Shift Operand (bit 13)] 0 = Shift Value is shift count, 1 = Shift value is register
+	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
+		\begin{itemize}
+			\item 0 = Shift amount field contains the literal shift amount
+			\item 1 = Shift amount field refers to register that contains shift amount
+		\end{itemize}
 	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
-	\item[Shift Value (bits 9--6)] Shift amount (or register containing shift amount)
-	\item[Address Reg (bits 5--4)] 2-bit address register pair selector
+	\item[Shift Amount (bits 9--6)] Shift amount (or register containing shift amount)
+	\item[Additional Flags (bits 5--4)] 2-bit status register update source selector
+		\begin{itemize}
+			\item 00 = Status register not updated
+			\item 01 = Status register updated from ALU operation
+			\item 10 = Status register updated from shift operation
+			\item 11 = Reserved for future use
+		\end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
-
-\subsection{Shift Types}
-
-% TODO : Both short immediate and register instruction sets have shift types, should this table be in its own section?
-% TODO: Link to the detailed section on shifting?
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{clc}
-		\toprule
-		\textbf{Code} & \textbf{Type}          & \textbf{Mnemonic} \\
-		\midrule
-		000           & None (no shift)        & --                \\
-		001           & Logical Shift Left     & LSL               \\
-		010           & Logical Shift Right    & LSR               \\
-		011           & Arithmetic Shift Left  & ASL               \\
-		100           & Arithmetic Shift Right & ASR               \\
-		101           & Rotate Left            & ROL               \\
-		110           & Rotate Right           & ROR               \\
-		111           & Reserved               & --                \\
-		\bottomrule
-	\end{tabular}
-	\caption{Shift Type Encoding}
-	\label{tab:shift-types}
-\end{table}
 
 \subsection{Examples}
 
@@ -172,7 +160,7 @@ The register format allows operations on up to three registers with optional shi
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=1.25em]{32}
+	\begin{bytefield}[bitwidth=1.3em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Op} &
 		\bitbox{4}{R1} &
@@ -180,8 +168,8 @@ The register format allows operations on up to three registers with optional shi
 		\bitbox{4}{R3} &
 		\bitbox{1}{SO} &
 		\bitbox{3}{ST} &
-		\bitbox{4}{SV} &
-		\bitbox{2}{Addr} &
+		\bitbox{4}{SA} &
+		\bitbox{2}{AF} &
 		\bitbox{4}{Cond}
 	\end{bytefield}
 	\caption{Register Instruction Format}
@@ -193,10 +181,27 @@ The register format allows operations on up to three registers with optional shi
 	\item[Register 1 (bits 25--22)] 4-bit destination register
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
-	\item[Shift Operand (bit 13)] 0 = Shift Value is shift count, 1 = Shift value is register
+	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
+		\begin{itemize}
+			\item 0 = Shift amount field contains the literal shift amount
+			\item 1 = Shift amount field refers to register that contains shift amount
+		\end{itemize}
 	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
-	\item[Shift Value (bits 9--6)] Shift amount (or register containing shift amount)
-	\item[Address Reg (bits 5--4)] 2-bit address register pair selector
+	\item[Shift Amount (bits 9--6)] Shift amount (or register containing shift amount)
+	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
+		\begin{itemize}
+			\item 00 = l (link register)
+			\item 01 = a (address register)
+			\item 10 = s (stack pointer)
+			\item 11 = p (program counter)
+		\end{itemize}
+		or 2-bit status register update source selector (for ALU operations)
+		\begin{itemize}
+			\item 00 = Status register not updated
+			\item 01 = Status register updated from ALU operation
+			\item 10 = Status register updated from shift operation
+			\item 11 = Reserved for future use
+		\end{itemize}
 	\item[Condition (bits 3--0)] Condition code
 \end{description}
 
@@ -232,6 +237,32 @@ LOAD r1, (r2, a)        ; r1 = memory[a + r2]
 STOR (r2, s)+, r1       ; memory[s + r2] = r1; s = s + 1
 \end{lstlisting}
 
+\section{Shift Encoding}
+
+\subsection{Shift Types}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clc}
+		\toprule
+		\textbf{Code} & \textbf{Type}          & \textbf{Mnemonic} \\
+		\midrule
+		000           & None (no shift)        & --                \\
+		001           & Logical Shift Left     & LSL               \\
+		010           & Logical Shift Right    & LSR               \\
+		011           & Arithmetic Shift Left  & ASL               \\
+		100           & Arithmetic Shift Right & ASR               \\
+		101           & Rotate Left            & ROL               \\
+		110           & Rotate Right           & ROR               \\
+		111           & Reserved               & --                \\
+		\bottomrule
+	\end{tabular}
+	\caption{Shift Type Encoding}
+	\label{tab:shift-types}
+\end{table}
+
+For more details on shift operations see \textbf{Chapter~\ref{ch:shift-operations}}
+
 \section{Opcode Encoding Patterns}
 
 The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
@@ -239,22 +270,25 @@ The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
 \subsection{ALU Instructions}
 
 \begin{itemize}
-	\item \textbf{0x0\_}: Immediate operand, save result
+	\item \textbf{0x0\_}: Immediate operand
 	\item \textbf{0x1\_}: Memory operations
-	\item \textbf{0x2\_}: Short immediate with shift, save result
-	\item \textbf{0x3\_}: Register operand, save result
+	\item \textbf{0x2\_}: Short immediate with shift
+	\item \textbf{0x3\_}: Register operand
 \end{itemize}
 
 \subsection{Test vs. Save}
 
-Many ALU operations have both a "save result" and "test only" variant:
+All ALU operations have both a "save result" and "test only" variant:
 
 \begin{itemize}
 	\item \textbf{0x\_0-0x\_7}: Save result to destination
 	\item \textbf{0x\_8-0x\_F}: Test only (update flags, don't save result)
 \end{itemize}
 
+To turn a "save result" instruction to a "test only" instruction, you can simply add 0x8 to the opcode.
+
 For example:
+
 \begin{itemize}
 	\item \opcode{04}: \mnemonic{ANDI} -- AND immediate, save result
 	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (don't save result)
