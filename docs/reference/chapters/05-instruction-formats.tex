@@ -7,14 +7,15 @@ All SIRCIS instructions are exactly 32 bits (4 bytes, or 2 words) in length. Thi
 instruction fetch and decode logic, though it may result in larger code size compared to variable-length instruction
 sets.
 
-The SIRC-1 supports four distinct instruction formats:
+The SIRC-1 supports three distinct instruction formats:
 
 \begin{enumerate}
-	\item Implied
 	\item Immediate
 	\item Short Immediate (with Shift)
 	\item Register
 \end{enumerate}
+
+Note: there are meta instructions that do not take any arguments (e.g. NOOP) but they are still assembled to by one of the three instruction formats. There is no "implied" instruction format supported by the CPU.
 
 Each format is optimized for different types of operations and addressing modes.
 
@@ -27,7 +28,6 @@ Each format is optimized for different types of operations and addressing modes.
 		\toprule
 		\textbf{Format} & \textbf{Typical Use}                                             \\
 		\midrule
-		Implied         & Instructions with no operands (\mnemonic{NOOP}, \mnemonic{WAIT}) \\
 		Immediate       & Operations with a 16-bit constant value                          \\
 		Short Immediate & Operations with an 8-bit constant and optional shift             \\
 		Register        & Operations on multiple registers with optional shift             \\
@@ -50,45 +50,6 @@ All instruction formats share some common fields:
 	\item[Additional Flags (2 bits)] Used in some formats to specify address register pairs (a, p, s, l) or other modifiers.
 \end{description}
 
-\section{Implied Format}
-
-\subsection{Structure}
-
-The implied format is used for instructions that don't require any operands.
-
-\begin{figure}[H]
-	\centering
-	\begin{bytefield}[bitwidth=0.9em]{32}
-		\bitheader{0-31} \\
-		\bitbox{6}{Opcode} &
-		\bitbox{22}{Reserved (0)} &
-		\bitbox{4}{Cond}
-	\end{bytefield}
-	\caption{Implied Instruction Format}
-	\label{fig:implied-format}
-\end{figure}
-
-\begin{description}
-	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Reserved (bits 25--4)] Must be zero
-	\item[Condition (bits 3--0)] 4-bit condition code
-\end{description}
-
-\subsection{Examples}
-
-\begin{itemize}
-	\item \mnemonic{NOOP} -- No operation (actually encoded as \texttt{ADDI r1, \#0})
-	\item \mnemonic{WAIT} -- Wait for interrupt
-	\item \mnemonic{HALT} -- Halt processor (if implemented)
-\end{itemize}
-
-\subsection{Assembly Syntax}
-
-\begin{lstlisting}
-NOOP           ; Execute always
-WAIT|==        ; Wait if zero flag set
-\end{lstlisting}
-
 \section{Immediate Format}
 
 \subsection{Structure}
@@ -97,7 +58,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=0.9em]{32}
+	\begin{bytefield}[bitwidth=1.25em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Opcode} &
 		\bitbox{4}{Reg} &
@@ -125,14 +86,6 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 
 \subsection{Examples}
 
-\begin{itemize}
-	\item \mnemonic{ADDI r1, \#1234} -- Add 1234 to r1
-	\item \mnemonic{LOAD r2, (\#8, a)} -- Load from address a+8 into r2
-	\item \mnemonic{STOR r3, (\#-4, s)} -- Store r3 to address s-4
-\end{itemize}
-
-\subsection{Assembly Syntax}
-
 \begin{lstlisting}
 ADDI r1, #100          ; r1 = r1 + 100
 CMPI r2, #0x8000       ; Compare r2 with 0x8000
@@ -147,16 +100,18 @@ STOR r4, (#-2, s)      ; memory[s - 2] = r4
 The short immediate format sacrifices immediate value width to include shift information, allowing for more powerful
 single-instruction operations.
 
+Only supported for ALU instructions - cannot be used with any of the branching, or load/store instructions.
+
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=0.75em]{32}
+	\begin{bytefield}[bitwidth=1.25em]{32}
 		\bitheader{0-31} \\
 		\bitbox{6}{Op} &
 		\bitbox{4}{Reg} &
 		\bitbox{8}{Imm} &
 		\bitbox{1}{SO} &
 		\bitbox{3}{ST} &
-		\bitbox{4}{SC} &
+		\bitbox{4}{SV} &
 		\bitbox{2}{Addr} &
 		\bitbox{4}{Cond}
 	\end{bytefield}
@@ -166,16 +121,19 @@ single-instruction operations.
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register
+	\item[Register (bits 25--22)] 4-bit destination/source register identifier
 	\item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
-	\item[Shift Operand (bit 13)] What to shift (0 = immediate value, 1 = register value)
+	\item[Shift Operand (bit 13)] 0 = Shift Value is shift count, 1 = Shift value is register
 	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
-	\item[Shift Count (bits 9--6)] Amount to shift (0--15)
+	\item[Shift Value (bits 9--6)] Shift amount (or register containing shift amount)
 	\item[Address Reg (bits 5--4)] 2-bit address register pair selector
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
 \subsection{Shift Types}
+
+% TODO : Both short immediate and register instruction sets have shift types, should this table be in its own section?
+% TODO: Link to the detailed section on shifting?
 
 \begin{table}[H]
 	\centering
@@ -200,14 +158,10 @@ single-instruction operations.
 \subsection{Examples}
 
 \begin{lstlisting}
-; Add 2 to r1, but shift 2 left by 3 first (r1 = r1 + 16)
+
+; r1 = (r1 << 3) + 2
 ADDI r1, #2, LSL #3
 
-; Load value, shifted
-LOAD r2, #4, ASL #2   ; r2 = r2 + (4 << 2)
-
-; Store with shifted offset
-STOR r3, (#10, a), LSR #1
 \end{lstlisting}
 
 \section{Register Format}
@@ -226,7 +180,7 @@ The register format allows operations on up to three registers with optional shi
 		\bitbox{4}{R3} &
 		\bitbox{1}{SO} &
 		\bitbox{3}{ST} &
-		\bitbox{4}{SC} &
+		\bitbox{4}{SV} &
 		\bitbox{2}{Addr} &
 		\bitbox{4}{Cond}
 	\end{bytefield}
@@ -236,13 +190,13 @@ The register format allows operations on up to three registers with optional shi
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register 1 (bits 25--22)] Destination register (or first source for some instructions)
-	\item[Register 2 (bits 21--18)] Source register
-	\item[Register 3 (bits 17--14)] Second source register (if needed)
-	\item[Shift Operand (bit 13)] 0 = shift register 3 value, 1 = shift by register 3's value
-	\item[Shift Type (bits 12--10)] Type of shift
-	\item[Shift Count (bits 9--6)] Shift amount (or register containing shift amount)
-	\item[Address Reg (bits 5--4)] Address register pair selector (for memory operations)
+	\item[Register 1 (bits 25--22)] 4-bit destination register
+	\item[Register 2 (bits 21--18)] 4-bit source A register
+	\item[Register 3 (bits 17--14)] 4-bit source B register
+	\item[Shift Operand (bit 13)] 0 = Shift Value is shift count, 1 = Shift value is register
+	\item[Shift Type (bits 12--10)] Type of shift operation (LSL, LSR, ASL, ASR, ROL, ROR)
+	\item[Shift Value (bits 9--6)] Shift amount (or register containing shift amount)
+	\item[Address Reg (bits 5--4)] 2-bit address register pair selector
 	\item[Condition (bits 3--0)] Condition code
 \end{description}
 
@@ -255,7 +209,7 @@ For most three-operand instructions:
 	\item R3 = Second source operand (optional)
 \end{itemize}
 
-If R3 is zero or not specified, many instructions use R1 as both destination and first source operand:
+If R3 is zero or not specified, instructions use R1 as both destination and first source operand:
 
 \begin{lstlisting}
 ADDR r1, r2, r3  ; r1 = r2 + r3
@@ -269,13 +223,13 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 ADDR r1, r2, r3         ; r1 = r2 + r3
 
 ; Add with shift
-ADDR r1, r2, r3, LSL #2 ; r1 = r2 + (r3 << 2)
+ADDR r1, r2, r3, LSL #2 ; r1 = (r2 << 2) + r3
 
 ; Load using register offset
 LOAD r1, (r2, a)        ; r1 = memory[a + r2]
 
 ; Store with post-increment
-STOR r1, (r2, s)+       ; memory[s + r2] = r1; s = s + r2
+STOR r1, (r2, s)+       ; memory[s + r2] = r1; s = s + 1
 \end{lstlisting}
 
 \section{Opcode Encoding Patterns}

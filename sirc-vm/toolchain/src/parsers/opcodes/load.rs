@@ -183,30 +183,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: displacement_register.to_register_index(),
-                        shift_operand,
-                        shift_type,
-                        shift_count,
-                        condition_flag,
-                        //  Clamp/validate additional_flags to 10 bits
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
-        }
         [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
             displacement_register,
             address_register,
@@ -223,31 +199,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
-                        condition_flag,
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
-        }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
-            displacement_register,
-            address_register,
-        ), AddressingMode::ShiftDefinition(shift_definition_data)] => {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: displacement_register.to_register_index(),
-                        shift_operand,
-                        shift_type,
-                        shift_count,
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),

@@ -3,8 +3,7 @@ use crate::coprocessors::processing_unit::definitions::{
     Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS,
 };
 use crate::coprocessors::processing_unit::encoding::{
-    decode_immediate_instruction, decode_implied_instruction, decode_register_instruction,
-    decode_short_immediate_instruction,
+    decode_immediate_instruction, decode_register_instruction, decode_short_immediate_instruction,
 };
 use crate::registers::{
     sr_bit_is_set, RegisterName, Registers, StatusRegisterFields, SR_REDACTION_MASK,
@@ -56,7 +55,7 @@ fn do_shift(
     let shift_operand = register_representation.shift_operand;
     match shift_operand {
         ShiftOperand::Immediate => {
-            // TODO: Think of a clever way to do this in hardward to save a barrel shifter?
+            // TODO: Think of a clever way to do this in hardware to save a barrel shifter?
             perform_shift(
                 sr_a_before_shift,
                 register_representation.shift_type,
@@ -141,20 +140,22 @@ pub fn decode_and_register_fetch(
     // actually the 'value' rather than register indexes.
     // If we filled these with zero, we might accidentally rely on the value being zero in our
     // simulated version, and then on the hardware it might go wrong because there is actually garbage there.
-    let implied_representation = decode_implied_instruction(raw_instruction);
     let immediate_representation = decode_immediate_instruction(raw_instruction);
     let short_immediate_representation = decode_short_immediate_instruction(raw_instruction);
     let register_representation = decode_register_instruction(raw_instruction);
 
-    // TODO: Is this decoded getting too complex? Probably
-    let instruction_type =
-        decode_fetch_and_decode_step_instruction_type(implied_representation.op_code);
+    // All the representations have the op_code field.
+    // immediate_representation was chosen arbitrarily but it could have been any of them
+    let op_code = immediate_representation.op_code;
 
-    let addr_inc: i16 = match implied_representation.op_code {
+    // TODO: Is this decoded getting too complex? Probably
+    let instruction_type = decode_fetch_and_decode_step_instruction_type(op_code);
+
+    let addr_inc: i16 = match op_code {
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement
-        | Instruction::LoadRegisterFromIndirectImmediatePostIncrement => 1, // TODO: Match LOAD (a)+
+        | Instruction::LoadRegisterFromIndirectImmediatePostIncrement => 1,
         Instruction::StoreRegisterToIndirectRegisterPreDecrement
-        | Instruction::StoreRegisterToIndirectImmediatePreDecrement => -1, // TODO: Match STOR -(a)
+        | Instruction::StoreRegisterToIndirectImmediatePreDecrement => -1,
         _ => 0,
     };
 
@@ -196,7 +197,7 @@ pub fn decode_and_register_fetch(
 
     (
         DecodedInstruction {
-            ins: implied_representation.op_code,
+            ins: op_code,
             des,
             sr_a,
             sr_b,
