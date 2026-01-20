@@ -3,28 +3,31 @@
 
 \section{Overview}
 
-The SIRC-1 CPU supports eight addressing modes that specify how operands are accessed. These modes determine whether an
+The SIRC-1 CPU supports seven addressing modes that specify how operands are accessed. These modes determine whether an
 operand is an immediate value, register contents, or data in memory at a computed address.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lp{8cm}}
 		\toprule
-		\textbf{Mode}      & \textbf{Description}                                   \\
+		\textbf{Mode}      & \textbf{Description}                                             \\
 		\midrule
-		Immediate          & Operand is a constant value encoded in the instruction \\
-		Register Direct    & Operand is the contents of a specified register        \\
-		Indirect Immediate & Memory address = address register + immediate offset   \\
-		Indirect Register  & Memory address = address register + register offset    \\
-		Post-Increment     & Indirect register, then increment address register     \\
-		Pre-Decrement      & Decrement address register, then use as indirect       \\
-		Implied            & No operand specified (inferred by the assembler)       \\
-		Short Immediate    & 8-bit constant with optional shift                     \\
+		Immediate          & Operand is a constant value encoded in the instruction           \\
+		Register Direct    & Operand is the contents of a specified register                  \\
+		Indirect Immediate & Memory address = address register + immediate offset             \\
+		Indirect Register  & Memory address = address register + register offset              \\
+		Post-Increment     & Indirect register, then increment address register               \\
+		Pre-Decrement      & Decrement address register, then use as indirect                 \\
+		Short Immediate    & 8-bit constant with optional shift                               \\
+		Implied            & No operand specified (addressing mode inferred by the assembler) \\
 		\bottomrule
 	\end{tabular}
 	\caption{Addressing Modes Summary}
 	\label{tab:addr-modes}
 \end{table}
+
+Note: Implied is not an addressing mode supported by the CPU itself, but it is included as the assembler uses it for
+meta instructions.
 
 \section{Immediate Addressing}
 
@@ -300,43 +303,6 @@ LOAD r2, (#0, s)+
 LOAD r1, (#0, s)+
 \end{lstlisting}
 
-\section{Implied Addressing}
-
-\subsection{Description}
-
-No operand is specified; the operation is fully defined by the opcode. This mode is used for control flow instructions
-and other operations that don't need explicit operands.
-
-\subsection{Syntax}
-
-\begin{lstlisting}
-NOOP              ; No operation
-WAIT              ; Wait for interrupt
-RETS              ; Return from subroutine
-RETE              ; Return from exception
-\end{lstlisting}
-
-\subsection{Usage}
-
-\begin{itemize}
-	\item Meta-instructions that assemble to instructions with operands
-\end{itemize}
-
-\subsection{Example}
-
-\begin{lstlisting}
-; Function call and return
-LJSR (#0, a)          ; Call function, address in 'a'
-; ... function code ...
-RETS                  ; Return (copies 'l' to 'p')
-
-; Wait for interrupt
-WAIT                  ; CPU enters low-power state
-
-; No operation (delay)
-NOOP                  ; Do nothing for 6 cycles
-\end{lstlisting}
-
 \section{Short Immediate Addressing}
 
 \subsection{Description}
@@ -374,6 +340,34 @@ ANDI r1, #~(1 << 8)   ; Assembler computes #0xFEFF
 
 ; Multiply by 4 (add value * 4)
 ADDR r1, r2, r2, LSL #2  ; r1 = r2 + (r2 << 2) = r2 * 5
+\end{lstlisting}
+
+\section{Implied Addressing}
+
+\subsection{Description}
+
+No operand is specified; the operation is fully defined by the mnemonic.
+
+This is not an addressing mode supported by the CPU hardware, there is no encoding for an implied instruction. However,
+it is supported by the assembler for meta instructions that assemble to other instructions that do have operands.
+
+\subsection{Usage}
+
+\begin{itemize}
+	\item Meta-instructions that assemble to instructions with operands
+\end{itemize}
+
+\subsection{Example}
+
+\begin{lstlisting}
+NOOP              ; No operation
+; Assembles to 'ADDI r0, #0' with status register update set to 0x0 (or 0x0000_0000)
+
+WAIT              ; Wait for interrupt
+; Assembles to 'COPI r1, #0x1900'
+
+RETS              ; Return from subroutine
+; Assembles to 'LDEA p, (l)
 \end{lstlisting}
 
 \section{Address Register Selection}

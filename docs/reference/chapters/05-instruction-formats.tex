@@ -86,6 +86,13 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 		      \item 10 = s (stack pointer)
 		      \item 11 = p (program counter)
 	      \end{itemize}
+	      or 2-bit status register update source selector (for ALU operations)
+	      \begin{itemize}
+		      \item 00 = Status register not updated
+		      \item 01 = Status register updated from ALU operation
+		      \item 10 = Status register updated from shift operation
+		      \item 11 = Reserved for future use
+	      \end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
@@ -98,11 +105,11 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 		\toprule
 		\textbf{Instruction}        & \textbf{Opcode} & \textbf{Reg} & \textbf{Immediate}    & \textbf{AF} & \textbf{Cond} & \textbf{Hex}        \\
 		\midrule
-		\texttt{ADDI r1, \#100}     & 0x00            & 0x1          & 0x0064                & 0b00        & 0x0           & \texttt{0x00420000} \\
-		                            & (000000)        & (0001)       & (0000 0000 0110 0100) & (00)        & (0000)        &                     \\
+		\texttt{ADDI r1, \#100}     & 0x00            & 0x1          & 0x0064                & 0b01        & 0x0           & \texttt{0x00420010} \\
+		                            & (000000)        & (0001)       & (0000 0000 0110 0100) & (01)        & (0000)        &                     \\
 		\midrule
-		\texttt{CMPI r2, \#0x8000}  & 0x0A            & 0x2          & 0x8000                & 0b00        & 0x0           & \texttt{0x2A800000} \\
-		                            & (001010)        & (0010)       & (1000 0000 0000 0000) & (00)        & (0000)        &                     \\
+		\texttt{CMPI r2, \#0x8000}  & 0x0A            & 0x2          & 0x8000                & 0b01        & 0x0           & \texttt{0x2A800010} \\
+		                            & (001010)        & (0010)       & (1000 0000 0000 0000) & (01)        & (0000)        &                     \\
 		\midrule
 		\texttt{LOAD r3, (\#16, a)} & 0x14            & 0x3          & 0x0010                & 0b01        & 0x0           & \texttt{0x53040010} \\
 		                            & (010100)        & (0011)       & (0000 0000 0001 0000) & (01)        & (0000)        &                     \\
@@ -110,21 +117,24 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 		\texttt{STOR (\#-2, s), r4} & 0x10            & 0x4          & 0xFFFE                & 0b10        & 0x0           & \texttt{0x41FFF820} \\
 		                            & (010000)        & (0100)       & (1111 1111 1111 1110) & (10)        & (0000)        &                     \\
 		\midrule
-		\texttt{ADDI|== r5, \#42}   & 0x00            & 0x5          & 0x002A                & 0b00        & 0x1           & \texttt{0x014A001}  \\
-		                            & (000000)        & (0101)       & (0000 0000 0010 1010) & (00)        & (0001)        &                     \\
+		\texttt{ADDI|== r5, \#42}   & 0x00            & 0x5          & 0x002A                & 0b01        & 0x1           & \texttt{0x014A0011} \\
+		                            & (000000)        & (0101)       & (0000 0000 0010 1010) & (01)        & (0001)        &                     \\
 		\midrule
-		\texttt{SUBI|>= r6, \#10}   & 0x02            & 0x6          & 0x000A                & 0b00        & 0xB           & \texttt{0x0982800B} \\
-		                            & (000010)        & (0110)       & (0000 0000 0000 1010) & (00)        & (1011)        &                     \\
-		\bottomrule
+		\texttt{SUBI|>= r6, \#10}   & 0x02            & 0x6          & 0x000A                & 0b01        & 0xB           & \texttt{0x0982801B} \\
+		                            & (000010)        & (0110)       & (0000 0000 0000 1010) & (01)        & (1011)        &                     \\
+		\midrule
 	\end{tabular}
 	\caption{Immediate Format Encoding Examples}
 	\label{tab:immediate-format-examples}
 \end{table}
 
+% TODO: Come up with assembler syntax that allows you to override the AF field so you can prevent status register updates
+% I'm thinking something like ADDI, r1, #1, s=n to disable status register updates (or s=a for ALU source and s=s for shift source)
+
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item Condition code examples: 0x0 (0000) = Always, 0x1 (0001) = Equal (==), 0xB (1011) = Signed >=
-	\item AF field selects address register: 00=l, 01=a, 10=s, 11=p
+	\item AF field for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift
 	\item Negative immediates use two's complement (\#-2 = 0xFFFE)
 \end{itemize}
 
@@ -201,6 +211,9 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 		\midrule
 		\texttt{CMPI|<0 r1, \#8, ROL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
 		                                   & (101010)    & (0001)       & (00001000)   & (1)         & (101)       & (0011)      & (01)        & (0101)        &                      \\
+		\midrule
+		\texttt{SHFI r3, \#0, ROR \#5}     & 0x20        & 0x3          & 0x00         & 0           & 110         & 0x5         & 0b10        & 0x0           & \texttt{0x08307520}  \\
+		                                   & (100000)    & (0011)       & (00000000)   & (0)         & (110)       & (0101)      & (10)        & (0000)        &                      \\
 		\bottomrule
 	\end{tabular}
 	\caption{Short Immediate Format Encoding Examples}
@@ -211,8 +224,9 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 \begin{itemize}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
-	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift
+	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFI row 7)
 	\item Condition code examples: 0x0 = Always, 0x2 = Not Equal (!=), 0x5 = Negative (<0)
+	\item SHFI is a meta instruction using ADDI opcode (0x20) with AF=0b10
 \end{itemize}
 
 \section{Register Format}
@@ -277,7 +291,8 @@ For most three-operand instructions:
 	\item R3 = Second source operand (optional)
 \end{itemize}
 
-If R3 is zero or not specified, instructions use R1 as both destination and first source operand:
+Note: If R3 is not specified, the assembler with use R1 as both destination and first source operand when encoding the
+instruction:
 
 \begin{lstlisting}
 ADDR r1, r2, r3  ; r1 = r2 + r3
@@ -316,21 +331,24 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 		\midrule
 		\texttt{ANDR|CS r5, r6, r7, LSL r1} & 0x34        & 0x5         & 0x6         & 0x7         & 1           & 001         & 0x1         & 0b01        & 0x3           & \texttt{0xD567913}   \\
 		                                    & (110100)    & (0101)      & (0110)      & (0111)      & (1)         & (001)       & (0001)      & (01)        & (0011)        &                      \\
+		\midrule
+		\texttt{SHFR r1, r0, r2, ASL \#3}   & 0x30        & 0x1         & 0x0         & 0x2         & 0           & 011         & 0x3         & 0b10        & 0x0           & \texttt{0x0C102720}  \\
+		                                    & (110000)    & (0001)      & (0000)      & (0010)      & (0)         & (011)       & (0011)      & (10)        & (0000)        &                      \\
 		\bottomrule
 	\end{tabular}
 	\caption{Register Format Encoding Examples}
 	\label{tab:register-format-examples}
 \end{table}
 
-% TODO: Example of setting status register with result of SHIFT (AF = 0b10)
-
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item When R3 is not specified in assembly, it defaults to R1 (e.g., \texttt{ADDR r4, r5} uses R1=0x4, R2=0x4, R3=0x5)
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 7 and 8)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
-	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU
+	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift (see
+	      SHFR row 9)
 	\item Condition code examples: 0x0 = Always, 0xD = Signed > (>>), 0x3 = Carry Set (CS)
+	\item SHFR is a meta instruction using ADDR opcode (0x30) with AF=0b10
 \end{itemize}
 
 \section{Operand Encoding Details}

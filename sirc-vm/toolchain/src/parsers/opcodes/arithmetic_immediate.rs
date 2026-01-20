@@ -15,7 +15,8 @@ use peripheral_cpu::registers::RegisterName;
 
 fn tag_to_instruction_long(tag: &String) -> Instruction {
     match tag.as_str() {
-        "ADDI" => Instruction::AddImmediate,
+        // SHFI is a "meta instruction" i.e. it does not have its own opcode - It is just AddImmediate but status register is updated from shift not ALU
+        "ADDI" | "SHFI" => Instruction::AddImmediate,
         "ADCI" => Instruction::AddImmediateWithCarry,
         "SUBI" => Instruction::SubtractImmediate,
         "SBCI" => Instruction::SubtractImmediateWithCarry,
@@ -33,7 +34,8 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
 
 fn tag_to_instruction_short(tag: &String) -> Instruction {
     match tag.as_str() {
-        "ADDI" => Instruction::AddShortImmediate,
+        // SHFI is a "meta instruction" i.e. it does not have its own opcode - It is just AddShortImmediate but status register is updated from shift not ALU
+        "ADDI" | "SHFI" => Instruction::AddShortImmediate,
         "ADCI" => Instruction::AddShortImmediateWithCarry,
         "SUBI" => Instruction::SubtractShortImmediate,
         "SBCI" => Instruction::SubtractShortImmediateWithCarry,
@@ -89,6 +91,8 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("TSAI"),
         parse_instruction_tag("TSXI"),
         parse_instruction_tag("COPI"),
+        // Meta instruction
+        parse_instruction_tag("SHFI"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
@@ -170,22 +174,21 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 split_shift_definition_data(shift_definition_data);
             match immediate_type {
                 ImmediateType::Value(value) => {
-                    if value > &0xFF {
-                        let error_string = format!("Immediate values can only be up to 8 bits when using a shift definition ({value} > 0xFF)");
+                    let short_value: Result<u8, _> = (*value).try_into();
+                    short_value.map_or_else(|_| {
+                          let error_string = format!("Immediate values must fit into 8 bits when using a shift definition ({value} > 0xFF)");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
                             i,
                             ErrorKind::Fail,
                             error_string.as_str(),
                         )))
-                    } else {
+                    },|short_value| {
                         Ok((
                             i,
                             InstructionToken {
                                 input_length,
                                 instruction: construct_short_immediate_instruction(
-                                    (*value).try_into().expect(
-                                        "Value should fit into a u8 as it is filtered above",
-                                    ),
+                                    short_value,
                                     dest_register,
                                     shift_operand,
                                     shift_type,
@@ -195,7 +198,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 ..Default::default()
                             },
                         ))
-                    }
+                    })
                 }
                 ImmediateType::PlaceHolder(placeholder_name) => Ok((
                     i,

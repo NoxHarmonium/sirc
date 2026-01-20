@@ -14,7 +14,8 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 
 fn tag_to_instruction(tag: &str) -> Instruction {
     match tag {
-        "ADDR" => Instruction::AddRegister,
+        // SHFR is a "meta instruction" i.e. it does not have its own opcode - It is just AddRegister but status register is updated from shift not ALU
+        "ADDR" | "SHFR" => Instruction::AddRegister,
         "ADCR" => Instruction::AddRegisterWithCarry,
         "SUBR" => Instruction::SubtractRegister,
         "SBCR" => Instruction::SubtractRegisterWithCarry,
@@ -81,6 +82,8 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("TSAR"),
         parse_instruction_tag("TSXR"),
         parse_instruction_tag("COPR"),
+        // Meta instruction
+        parse_instruction_tag("SHFR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =

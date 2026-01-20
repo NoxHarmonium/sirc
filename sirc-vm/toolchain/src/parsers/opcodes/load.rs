@@ -6,7 +6,6 @@ use crate::{
         instruction::{
             parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
         },
-        shared::split_shift_definition_data,
     },
     types::object::RefType,
 };
