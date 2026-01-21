@@ -63,10 +63,10 @@ LOAD r1, (#4, a)              ; r1 = memory[a + 4]
 LOAD r2, (r3, a)              ; r2 = memory[a + r3]
 
 ; Array iteration
-LOAD r4, (#0, a)+             ; r4 = *a; a += 2
+LOAD r4, (#0, a)+             ; r4 = *a; a += 1
 
 ; Stack pop
-LOAD r5, (#0, s)+             ; r5 = *s; s += 2
+LOAD r5, (#0, s)+             ; r5 = *s; s += 1
 \end{lstlisting}
 
 \end{instructionbox}
@@ -98,7 +98,7 @@ STOR (#8, a), r1              ; memory[a + 8] = r1
 STOR (r3, a), r2              ; memory[a + r3] = r2
 
 ; Stack push
-STOR -(#2, s), r4             ; s -= 2; memory[s] = r4
+STOR -(#0, s), r4             ; s -= 1; memory[s] = r4
 \end{lstlisting}
 
 \end{instructionbox}
@@ -110,8 +110,8 @@ STOR -(#2, s), r4             ; s -= 2; memory[s] = r4
 ; struct { int16_t x, y, z; } point;
 ; 'a' points to point
 LOAD r1, (#0, a)              ; r1 = point.x
-LOAD r2, (#2, a)              ; r2 = point.y
-LOAD r3, (#4, a)              ; r3 = point.z
+LOAD r2, (#1, a)              ; r2 = point.y
+LOAD r3, (#2, a)              ; r3 = point.z
 \end{lstlisting}
 
 \subsection{Array Iteration}
@@ -128,9 +128,9 @@ loop:
 \subsection{Stack Operations}
 \begin{lstlisting}
 ; Push registers
-STOR -(#2, s), r1
-STOR -(#2, s), r2
-STOR -(#2, s), r3
+STOR -(#0, s), r1
+STOR -(#0, s), r2
+STOR -(#0, s), r3
 
 ; Pop registers (reverse order)
 LOAD r3, (#0, s)+

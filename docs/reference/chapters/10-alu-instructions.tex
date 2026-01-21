@@ -61,9 +61,9 @@ Most ALU instructions update the status register flags:
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ADDI rD, #imm16                ; rD = rD + imm16
-ADDI rD, #imm8, shift          ; rD = rD + (imm8 << shift)
+ADDI rD, #imm8, shift          ; rD = (rD << shift) + imm8
 ADDR rD, rS1, rS2              ; rD = rS1 + rS2
-ADDR rD, rS1, rS2, shift       ; rD = rS1 + (rS2 << shift)
+ADDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2
 \end{lstlisting}
 
 	\textbf{Operation:}
@@ -116,7 +116,7 @@ ADDI r1, #1, LSL #12       ; r1 = r1 + 4096
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ADCI rD, #imm16                ; rD = rD + imm16 + C
-ADCI rD, #imm8, shift          ; rD = rD + (imm8 << shift) + C
+ADCI rD, #imm8, shift          ; rD = (rD << shift) + imm8 + C
 ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
 \end{lstlisting}
 
@@ -164,7 +164,7 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SUBI rD, #imm16                ; rD = rD - imm16
-SUBI rD, #imm8, shift          ; rD = rD - (imm8 << shift)
+SUBI rD, #imm8, shift          ; rD = (rD << shift) - imm8
 SUBR rD, rS1, rS2              ; rD = rS1 - rS2
 \end{lstlisting}
 
@@ -261,7 +261,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ANDI rD, #imm16                ; rD = rD & imm16
-ANDI rD, #imm8, shift          ; rD = rD & (imm8 << shift)
+ANDI rD, #imm8, shift          ; rD = (rD << shift) & imm8
 ANDR rD, rS1, rS2              ; rD = rS1 & rS2
 \end{lstlisting}
 
@@ -313,7 +313,7 @@ BRAN|!= common_bits        ; Branch if any bits in common
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ORRI rD, #imm16                ; rD = rD | imm16
-ORRI rD, #imm8, shift          ; rD = rD | (imm8 << shift)
+ORRI rD, #imm8, shift          ; rD = (rD << shift) | imm8
 ORRR rD, rS1, rS2              ; rD = rS1 | rS2
 \end{lstlisting}
 
@@ -368,7 +368,7 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 	\textbf{Syntax:}
 	\begin{lstlisting}
 XORI rD, #imm16                ; rD = rD ^ imm16
-XORI rD, #imm8, shift          ; rD = rD ^ (imm8 << shift)
+XORI rD, #imm8, shift          ; rD = (rD << shift) ^ imm8
 XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
 \end{lstlisting}
 
@@ -454,14 +454,14 @@ LOAD r2, r1                ; r2 = r1
 
 ; Load with arithmetic
 LOAD r3, #1
-ADDR r3, r3, #0, LSL #8    ; r3 = 1 << 8 = 256
+ADDI r3, #0, LSL #8        ; r3 = (r3 << 8) + 0 = 256
 
 ; Zero a register
 LOAD r4, #0                ; r4 = 0
 
 ; Load large constant (combine)
 LOAD r5, #0x12
-ADDR r5, r5, #0, LSL #8    ; r5 = 0x1200
+ADDI r5, #0, LSL #8        ; r5 = (r5 << 8) + 0 = 0x1200
 ORRI r5, #0x34             ; r5 = 0x1234
 \end{lstlisting}
 
@@ -483,7 +483,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 	\textbf{Syntax:}
 	\begin{lstlisting}
 CMPI rS, #imm16                ; Compare rS with imm16
-CMPI rS, #imm8, shift          ; Compare rS with (imm8 << shift)
+CMPI rS, #imm8, shift          ; Compare (rS << shift) with imm8
 CMPR rS1, rS2                  ; Compare rS1 with rS2
 \end{lstlisting}
 
@@ -546,7 +546,7 @@ BRAN|>= out_of_range       ; Branch if r1 >= 20
 	\textbf{Syntax:}
 	\begin{lstlisting}
 TSAI rS, #imm16                ; Test rS & imm16
-TSAI rS, #imm8, shift          ; Test rS & (imm8 << shift)
+TSAI rS, #imm8, shift          ; Test (rS << shift) & imm8
 TSAR rS1, rS2                  ; Test rS1 & rS2
 \end{lstlisting}
 
@@ -605,7 +605,7 @@ BRAN|== upper_clear        ; Branch if all tested bits clear
 	\textbf{Syntax:}
 	\begin{lstlisting}
 TSXI rS, #imm16                ; Test rS ^ imm16
-TSXI rS, #imm8, shift          ; Test rS ^ (imm8 << shift)
+TSXI rS, #imm8, shift          ; Test (rS << shift) ^ imm8
 TSXR rS1, rS2                  ; Test rS1 ^ rS2
 \end{lstlisting}
 
