@@ -452,14 +452,16 @@ LOAD r1, #1234             ; r1 = 1234
 ; Copy register
 LOAD r2, r1                ; r2 = r1
 
-; Load with shift
-LOAD r3, #1, LSL #8        ; r3 = 256
+; Load with arithmetic
+LOAD r3, #1
+ADDR r3, r3, #0, LSL #8    ; r3 = 1 << 8 = 256
 
 ; Zero a register
 LOAD r4, #0                ; r4 = 0
 
 ; Load large constant (combine)
-LOAD r5, #0x12, LSL #8     ; r5 = 0x1200
+LOAD r5, #0x12
+ADDR r5, r5, #0, LSL #8    ; r5 = 0x1200
 ORRI r5, #0x34             ; r5 = 0x1234
 \end{lstlisting}
 

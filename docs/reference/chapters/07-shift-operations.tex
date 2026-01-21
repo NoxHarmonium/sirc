@@ -33,6 +33,32 @@ before being used in an ALU operation—all within a single instruction.
 	\label{tab:shift-encoding}
 \end{table}
 
+\section{Shift Syntax}
+
+A shift postamble can come after any short immediate or register instruction. It is applied in the "Decode and Register
+Fetch" phase of instruction execution, before any ALU operations or memory address calculation occurs.
+
+It is applied to the first source operand of an instruction. If using the three operand form of instruction, it will be
+the second operand. If using the two operand form of instruction, the second operand is inferred to be the same as the
+destination.
+
+See this table for some examples of which operand is shifted:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Instruction}     & \textbf{How the CPU Interprets It} & \textbf{First Source Operand} \\
+		\midrule
+		ADDR r1, r2, r3, LSL \#1 & ADDR r1, r2, r3, LSL \#1           & r2                            \\
+		ADDR r1, r2, LSL \#1     & ADDR r1, r1, r2, LSL \#1           & r1                            \\
+		ADDI r1, \#2, LSL \#1    & ADDI r1, r1, \#2, LSL \#1          & r1                            \\
+		\bottomrule
+	\end{tabular}
+	\caption{Examples of first source operands}
+	\label{tab:source-operand-examples}
+\end{table}
+
 \section{Shift Type Details}
 
 \subsection{Logical Shift Left (LSL)}
@@ -58,11 +84,12 @@ before being used in an ALU operation—all within a single instruction.
 
 \textbf{Example:}
 \begin{lstlisting}
-; Multiply by 4
-ADDI r1, #0, r2, LSL #2  ; r1 = r2 * 4
+; Multiply r1 by 4
+ADDI r1, #0, LSL #2  ; r1 = (r1 << 2) = r1 * 4
 
+% TODO: This is broken
 ; Set bit 10
-ORRI r3, #1, LSL #10     ; r3 |= 0x0400
+ORRI r3, #1, LSL #10     ; r3 |= (r3 << 10) with immediate 1 = 0x0400
 \end{lstlisting}
 
 \subsection{Logical Shift Right (LSR)}
@@ -90,10 +117,10 @@ ORRI r3, #1, LSL #10     ; r3 |= 0x0400
 \textbf{Example:}
 \begin{lstlisting}
 ; Divide unsigned value by 8
-ADDI r1, #0, r2, LSR #3  ; r1 = r2 / 8 (unsigned)
+ADDI r1, #0, LSR #3  ; r1 = (r1 >> 3) = r1 / 8 (unsigned)
 
 ; Extract upper byte
-ADDR r3, r4, #0, LSR #8  ; r3 = r4 >> 8
+ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 \end{lstlisting}
 
 \subsection{Arithmetic Shift Left (ASL)}
@@ -109,7 +136,7 @@ ADDR r3, r4, #0, LSR #8  ; r3 = r4 >> 8
 \textbf{Example:}
 \begin{lstlisting}
 ; Multiply signed value by 2
-ADDI r1, #0, r2, ASL #1  ; r1 = r2 * 2 (signed)
+ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
 \end{lstlisting}
 
 \subsection{Arithmetic Shift Right (ASR)}
@@ -137,11 +164,11 @@ ADDI r1, #0, r2, ASL #1  ; r1 = r2 * 2 (signed)
 \textbf{Example:}
 \begin{lstlisting}
 ; Divide signed value by 4
-ADDI r1, #0, r2, ASR #2  ; r1 = r2 / 4 (signed)
+ADDI r1, #0, ASR #2  ; r1 = (r1 >> 2) = r1 / 4 (signed)
 
 ; Average two signed values
 ADDR r3, r4, r5
-ADDR r3, r3, #0, ASR #1  ; r3 = (r4 + r5) / 2
+ADDI r3, #0, ASR #1  ; r3 = (r3 >> 1) = (r4 + r5) / 2
 \end{lstlisting}
 
 \subsection{Rotate Left (ROL)}
@@ -171,11 +198,11 @@ ADDR r3, r3, #0, ASR #1  ; r3 = (r4 + r5) / 2
 \textbf{Example:}
 \begin{lstlisting}
 ; Rotate r1 left by 1
-ADDR r1, r1, #0, ROL #1
+ADDI r1, #0, ROL #1
 
 ; Multi-word left shift (32-bit value in r1:r2)
-ADDR r2, r2, #0, LSL #1  ; Shift low word, bit 15 -> carry
-ADDR r1, r1, #0, ROL #1  ; Shift high word, carry -> bit 0
+ADDI r2, #0, LSL #1  ; Shift low word, bit 15 -> carry
+ADDI r1, #0, ROL #1  ; Shift high word, carry -> bit 0
 \end{lstlisting}
 
 \subsection{Rotate Right (ROR)}
@@ -204,10 +231,10 @@ ADDR r1, r1, #0, ROL #1  ; Shift high word, carry -> bit 0
 \textbf{Example:}
 \begin{lstlisting}
 ; Rotate r1 right by 1
-ADDR r1, r1, #0, ROR #1
+ADDI r1, #0, ROR #1
 
 ; Check if bit 0 is set
-ADDR r2, r1, #0, ROR #1  ; Bit 0 -> carry
+ADDI r2, #0, ROR #1  ; Bit 0 -> carry
 ; Now branch on carry to test bit 0
 \end{lstlisting}
 
@@ -219,42 +246,40 @@ The Shift Operand (SO) bit determines what value is shifted:
 	\centering
 	\begin{tabular}{clp{8cm}}
 		\toprule
-		\textbf{SO Bit} & \textbf{Mode}           & \textbf{Description}                                      \\
+		\textbf{SO Bit} & \textbf{Mode}           & \textbf{Description}                                     \\
 		\midrule
-		0               & Shift Immediate/R3      & The immediate value or R3 register value is shifted       \\
-		1               & Shift Count in Register & R3 contains the shift count; R2 is shifted by that amount \\
+		0               & Shift by Immediate      & R2 (first source operand) is shifted by a literal amount \\
+		1               & Shift Count in Register & R2 is shifted by the amount in the shift count register  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Shift Operand Modes}
 	\label{tab:shift-operand}
 \end{table}
 
-\subsection{Mode 0: Shift the Value}
+\subsection{Mode 0: Shift by Immediate}
 
-The value itself (immediate or register) is shifted before the ALU operation.
+The first source operand (R2) is shifted by a literal amount before the ALU operation.
 
 \begin{lstlisting}
-; Add r2 * 4 to r1
-ADDR r1, r2, r2, LSL #2  ; r1 = r2 + (r2 << 2) = r2 * 5
-                          ; SO=0: r2 value is shifted
+; Add (r1 * 4) + 1 to r1
+ADDI r1, #1, LSL #2  ; r1 = r1 + (r2 << 2) + 1
+                          ; SO=0: r2 is shifted by literal 2
 
-; Load with scaled offset
-LOAD r1, (r2, a), LSL #1 ; EA = a + (r2 << 1)
-                          ; SO=0: r2 value is shifted
 \end{lstlisting}
 
 \subsection{Mode 1: Shift by Register Count}
 
-The shift count is taken from a register, allowing variable-length shifts.
+The shift count is taken from the shift amount field (interpreted as a register), allowing variable-length shifts. R2
+(first source) is still what gets shifted.
 
 \begin{lstlisting}
 ; Variable shift
-; r3 contains shift amount
-ADDR r1, r2, r3, LSL     ; r1 = r2 << r3
-                          ; SO=1: shift r2 by r3's value
+; Shift amount register contains shift count
+ADDR r1, r2, r3, LSL r4  ; r1 = (r2 << r4) + r3
+                          ; SO=1: shift r2 by value in r4
 
 ; Barrel shifter emulation
-ADDR r4, r5, r6, ASR     ; r4 = r5 >> r6 (arithmetic)
+ADDR r4, r5, r6, ASR r7  ; r4 = (r5 >> r7) + r6 (arithmetic)
 \end{lstlisting}
 
 \section{Shift Count}
@@ -299,70 +324,59 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 
 \begin{lstlisting}
 ; Multiply by 2
-ADDR r1, r2, r2, LSL #1   ; r1 = r2 * 2
+ADDI r1, #0, LSL #1   ; r1 = (r1 << 1) = r1 * 2
 
 ; Multiply by 3
-ADDR r1, r2, r2, LSL #1   ; r1 = r2 + (r2 * 2) = r2 * 3
+ADDR r1, r2, r2, LSL #1   ; r1 = (r2 << 1) + r2 = r2 * 3
 
 ; Multiply by 5
-ADDR r1, r2, r2, LSL #2   ; r1 = r2 + (r2 * 4) = r2 * 5
-
-; Multiply by 10
-ADDR r1, r2, r2, LSL #2   ; r1 = r2 * 5
-ADDR r1, r1, r1, LSL #1   ; r1 = r1 * 2 = r2 * 10
+ADDR r1, r2, r2, LSL #2   ; r1 = (r2 << 2) + r2 = r2 * 5
 \end{lstlisting}
 
 \subsection{Division by Powers of 2}
 
 \begin{lstlisting}
 ; Unsigned divide by 4
-ADDR r1, r2, #0, LSR #2   ; r1 = r2 / 4 (unsigned)
+LOAD r1, r2        ; r1 = r2
+ADDI r1, #0, LSR #2   ; r1 = (r1 >> 2) = r1 / 4 (unsigned)
 
 ; Signed divide by 8
-ADDR r1, r2, #0, ASR #3   ; r1 = r2 / 8 (signed)
+LOAD r1, r2        ; r1 = r2
+ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 \end{lstlisting}
 
 \subsection{Bit Field Extraction}
 
 \begin{lstlisting}
 ; Extract bits 8-11 from r1
-ADDR r2, r1, #0, LSR #8   ; Shift down
+LOAD r2, r1        ; r2 = r1
+ADDI r2, #0, LSR #8   ; Shift down
 ANDI r2, #0x0F            ; Mask to 4 bits
 
 ; Extract and sign-extend bit 7
-ADDR r2, r1, #0, LSL #8   ; Shift bit 7 to bit 15
-ADDR r2, r2, #0, ASR #8   ; Arithmetic shift to sign-extend
-\end{lstlisting}
-
-\subsection{Scaled Array Indexing}
-
-\begin{lstlisting}
-; Access array of 4-byte structures
-; r2 = index, 'a' = base address
-; Each element is 4 bytes, so multiply index by 4
-LOAD r1, (r2, a), LSL #2  ; EA = a + (index * 4)
-
-; Access array of 16-bit values
-LOAD r3, (r4, a), LSL #1  ; EA = a + (index * 2)
+LOAD r2, r1        ; r2 = r1
+ADDI r2, #0, LSL #8   ; Shift bit 7 to bit 15
+ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
 \end{lstlisting}
 
 \subsection{Bit Manipulation}
 
 \begin{lstlisting}
 ; Set bit N (where N is in r2)
-ADDI r3, #1               ; r3 = 1
-ADDR r3, r3, r2, LSL      ; r3 = 1 << N
+LOAD r3, #1               ; r3 = 1
+ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
 ORRR r1, r3               ; r1 |= (1 << N)
 
 ; Clear bit N
-ADDI r3, #1
-ADDR r3, r3, r2, LSL      ; r3 = 1 << N
-XORI r3, #0xFFFF          ; r3 = ~(1 << N)
-ANDR r1, r3               ; r1 &= ~(1 << N)
+LOAD r3, #1
+ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
+LOAD r4, #0xFFFF
+XORR r3, r4, r3           ; r3 = 0xFFFF ^ (1 << N) = ~(1 << N)
+ANDR r1, r1, r3           ; r1 = r1 & ~(1 << N)
 
 ; Test bit N
-ADDI r3, #1
-ADDR r3, r3, r2, LSL      ; r3 = 1 << N
+LOAD r3, #1
+ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
 TSAR r1, r3               ; Test r1 & (1 << N)
 BRAN|!= bit_was_set       ; Branch if bit set
 \end{lstlisting}
@@ -376,24 +390,24 @@ For operations on values larger than 16 bits, shifts and rotates can be combined
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 left by 1
 ; r1 = high word, r2 = low word
-ADDR r2, r2, #0, LSL #1   ; Shift low, MSB -> carry
-ADDR r1, r1, #0, ROL #1   ; Rotate high with carry
+ADDI r2, #0, LSL #1   ; Shift low, MSB -> carry
+ADDI r1, #0, ROL #1   ; Rotate high with carry
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Unsigned)}
 
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (unsigned)
-ADDR r1, r1, #0, LSR #1   ; Shift high, LSB -> carry
-ADDR r2, r2, #0, ROR #1   ; Rotate low with carry
+ADDI r1, #0, LSR #1   ; Shift high, LSB -> carry
+ADDI r2, #0, ROR #1   ; Rotate low with carry
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Signed)}
 
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (signed)
-ADDR r1, r1, #0, ASR #1   ; Arithmetic shift high
-ADDR r2, r2, #0, ROR #1   ; Rotate low with carry
+ADDI r1, #0, ASR #1   ; Arithmetic shift high
+ADDI r2, #0, ROR #1   ; Rotate low with carry
 \end{lstlisting}
 
 \section{Performance Considerations}
