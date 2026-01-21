@@ -142,7 +142,8 @@ while_end:
 \subsection{Switch/Jump Table}
 \begin{lstlisting}
 ; Switch on r1 (0-3)
-ADDR r2, r1, #0, LSL #1       ; r2 = (r1 << 1) = r1 * 2 (word size)
+LOAD r2, r1                   ; r2 = r1
+ADDI r2, #0, LSL #1           ; r2 = (r2 << 1) = r2 * 2 (word size)
 LDEA p, (r2, p)               ; Jump via table
 
 jump_table:

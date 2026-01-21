@@ -249,7 +249,8 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 LOAD r1, #100
 
 ; Add 2 to the value stored in r1 and store the result into r2
-ADDR r2, r1, #2
+LOAD r2, r1
+ADDI r2, #2
 
 ; Add r1 and r2, store in r3
 ADDR r3, r1, r2

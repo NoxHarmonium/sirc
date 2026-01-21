@@ -364,19 +364,19 @@ ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
 \begin{lstlisting}
 ; Set bit N (where N is in r2)
 LOAD r3, #1               ; r3 = 1
-ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
+ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 ORRR r1, r3               ; r1 |= (1 << N)
 
 ; Clear bit N
 LOAD r3, #1
-ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
+ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 LOAD r4, #0xFFFF
 XORR r3, r4, r3           ; r3 = 0xFFFF ^ (1 << N) = ~(1 << N)
 ANDR r1, r1, r3           ; r1 = r1 & ~(1 << N)
 
 ; Test bit N
 LOAD r3, #1
-ADDR r3, r3, #0, LSL r2   ; r3 = (r3 << r2) = 1 << N
+ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 TSAR r1, r3               ; Test r1 & (1 << N)
 BRAN|!= bit_was_set       ; Branch if bit set
 \end{lstlisting}

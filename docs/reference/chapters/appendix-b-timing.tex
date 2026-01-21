@@ -164,7 +164,7 @@ ADDI|HI r3, #1             ; Saves branch overhead
 	      \begin{lstlisting}
 ; Instead of:
 ADDR r1, r2, r2
-ADDR r1, r1, #0, LSL #1
+ADDI r1, #0, LSL #1
 
 ; Use:
 ADDR r1, r2, r2, LSL #1    ; Multiply by 3 in one instruction

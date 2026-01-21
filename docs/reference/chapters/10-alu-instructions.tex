@@ -96,7 +96,7 @@ ADDR r3, r1, r2            ; r3 = r1 + r2
 ADDR r4, r5, r5, LSL #1    ; r4 = r5 + (r5 * 2) = r5 * 3
 
 ; Build large constant
-ADDI r1, #1, LSL #12       ; r1 = r1 + 4096
+ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 \end{lstlisting}
 
 	\textbf{Notes:}
