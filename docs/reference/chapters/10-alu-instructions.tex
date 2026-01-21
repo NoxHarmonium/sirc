@@ -78,7 +78,8 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Adds two values and stores the result in the destination register. The carry flag is set if an unsigned overflow occurs
+	Adds two values and stores the result in the destination register. In short immediate format with shift, the destination
+	register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
 	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
 	the operation).
 
@@ -132,7 +133,8 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Adds two values plus the carry flag and stores the result. This instruction is used for multi-precision (32-bit,
+	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
+	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit,
 	48-bit, etc.) arithmetic to propagate the carry from lower-order additions to higher-order additions.
 
 	\textbf{Flags:} N Z C V
@@ -180,7 +182,8 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Subtracts the second operand from the first and stores the result. The carry flag is cleared if a borrow occurs
+	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the destination
+	register is shifted before subtracting the immediate. The carry flag is cleared if a borrow occurs
 	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
@@ -230,7 +233,8 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Subtracts the second operand and borrow (inverse of carry) from the first operand. Used for multi-precision subtraction
+	Subtracts the second operand and borrow (inverse of carry) from the first operand. In short immediate format with shift,
+	the destination register is shifted before subtracting the immediate. Used for multi-precision subtraction
 	to propagate borrows from lower-order to higher-order subtractions.
 
 	\textbf{Flags:} N Z C V
@@ -278,6 +282,7 @@ SR.V = 0
 	\textbf{Description:}
 
 	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1.
+	In short immediate format with shift, the destination register is shifted before ANDing with the immediate.
 	Commonly used for bit masking and clearing specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
@@ -329,7 +334,8 @@ SR.V = 0
 
 	\textbf{Description:}
 
-	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. Commonly
+	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1.
+	In short immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly
 	used for setting specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
@@ -385,7 +391,8 @@ SR.V = 0
 	\textbf{Description:}
 
 	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
-	are different. Used for toggling bits, bitwise comparison, and simple encryption.
+	are different. In short immediate format with shift, the destination register is shifted before XORing with the immediate.
+	Used for toggling bits, bitwise comparison, and simple encryption.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -499,7 +506,8 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Performs subtraction but discards the result, only updating the status flags. This is the primary instruction for
+	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift,
+	the source register is shifted before comparing with the immediate. This is the primary instruction for
 	implementing conditional execution and branches. The flags can be tested with condition codes to determine the
 	relationship between the operands.
 
@@ -562,7 +570,8 @@ SR.V = 0
 
 	\textbf{Description:}
 
-	Performs bitwise AND but discards the result, only updating flags. Used to test if specific bits are set without
+	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift,
+	the source register is shifted before ANDing with the immediate. Used to test if specific bits are set without
 	modifying the register. The zero flag indicates whether any tested bits were set.
 
 	\textbf{Flags:} N Z (C and V cleared)
@@ -621,7 +630,8 @@ SR.V = 0
 
 	\textbf{Description:}
 
-	Performs bitwise XOR but discards the result, only updating flags. Used to test if bits match a specific pattern or to
+	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift,
+	the source register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to
 	compare values for equality. Z=1 indicates the values are identical.
 
 	\textbf{Flags:} N Z (C and V cleared)
