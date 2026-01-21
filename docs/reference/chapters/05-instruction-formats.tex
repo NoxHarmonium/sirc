@@ -209,7 +209,7 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 		\texttt{XORI|!= r7, \#15, LSR \#4} & 0x26        & 0x7          & 0x0F         & 0           & 010         & 0x4         & 0b01        & 0x2           & \texttt{0x9F7C512}   \\
 		                                   & (100110)    & (0111)       & (00001111)   & (0)         & (010)       & (0100)      & (01)        & (0010)        &                      \\
 		\midrule
-		\texttt{CMPI|<0 r1, \#8, ROL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
+		\texttt{CMPI|NS r1, \#8, ROL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
 		                                   & (101010)    & (0001)       & (00001000)   & (1)         & (101)       & (0011)      & (01)        & (0101)        &                      \\
 		\midrule
 		\texttt{SHFI r3, \#0, ROR \#5}     & 0x20        & 0x3          & 0x00         & 0           & 110         & 0x5         & 0b10        & 0x0           & \texttt{0x08307520}  \\
@@ -367,12 +367,12 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 		0010          & !=                & Not Equal (Z = 0)                          \\
 		0011          & CS                & Carry Set (C = 1)                          \\
 		0100          & CC                & Carry Clear (C = 0)                        \\
-		0101          & <0                & Negative (N = 1)                           \\
-		0110          & >=0               & Non-Negative (N = 0)                       \\
-		0111          & VS                & Overflow Set (V = 1)                       \\
-		1000          & VC                & Overflow Clear (V = 0)                     \\
-		1001          & >                 & Unsigned Higher (C = 1 AND Z = 0)          \\
-		1010          & <=                & Unsigned Lower or Same (C = 0 OR Z = 1)    \\
+		0101          & NS                & Negative Set (N = 1)                       \\
+		0110          & NC                & Negative Clear (N = 0)                     \\
+		0111          & OS                & Overflow Set (V = 1)                       \\
+		1000          & OC                & Overflow Clear (V = 0)                     \\
+		1001          & HI                & Unsigned Higher (C = 1 AND Z = 0)          \\
+		1010          & LO                & Unsigned Lower or Same (C = 0 OR Z = 1)    \\
 		1011          & >=                & Signed Greater or Equal (N = V)            \\
 		1100          & <                 & Signed Less Than (N $\neq$ V)              \\
 		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)      \\

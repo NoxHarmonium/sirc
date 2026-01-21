@@ -513,7 +513,7 @@ BRAN|== is_zero            ; Branch if r1 == 0
 
 ; Test if r1 > r2 (unsigned)
 CMPR r1, r2
-BRAN|> r1_greater
+BRAN|HI r1_greater
 
 ; Test if r1 >= r2 (signed)
 CMPR r1, r2
@@ -521,7 +521,7 @@ BRAN|>= r1_greater_or_equal
 
 ; Range check: if (r1 >= 10 && r1 < 20)
 CMPI r1, #10
-BRAN|< out_of_range        ; Branch if r1 < 10
+BRAN|<< out_of_range       ; Branch if r1 < 10
 CMPI r1, #20
 BRAN|>= out_of_range       ; Branch if r1 >= 20
 ; r1 is in range [10, 20)

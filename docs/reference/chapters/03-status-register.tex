@@ -58,7 +58,7 @@ privilege level.
 \begin{description}
 	\item[Set when:] The result of an operation is negative (bit 15 = 1) when interpreted as a signed two's complement value
 	\item[Cleared when:] The result is positive or zero (bit 15 = 0)
-	\item[Tested by:] Negative Set (\texttt{<0}), Negative Clear (\texttt{>=0}), and signed comparison condition codes
+	\item[Tested by:] Negative Set (\texttt{NS}), Negative Clear (\texttt{NC}), and signed comparison condition codes
 \end{description}
 
 \subsection{Carry Flag (C) -- Bit 2}
@@ -66,8 +66,8 @@ privilege level.
 \begin{description}
 	\item[Set when:] An addition produces a carry out of bit 15, or a subtraction produces a borrow
 	\item[Cleared when:] No carry/borrow occurs
-	\item[Tested by:] Carry Set (\texttt{CS}), Carry Clear (\texttt{CC}), Unsigned Higher (\texttt{>}), Unsigned Lower or Same
-	      (\texttt{<=}) condition codes
+	\item[Tested by:] Carry Set (\texttt{CS}), Carry Clear (\texttt{CC}), Unsigned Higher (\texttt{HI}), Unsigned Lower or Same
+	      (\texttt{LO}) condition codes
 	\item[Note:] For unsigned comparisons, the carry flag acts as an unsigned overflow indicator
 \end{description}
 
@@ -76,7 +76,7 @@ privilege level.
 \begin{description}
 	\item[Set when:] A signed arithmetic operation produces a result that cannot be represented in 16 bits (signed overflow)
 	\item[Cleared when:] No signed overflow occurs
-	\item[Tested by:] Overflow Set (\texttt{VS}), Overflow Clear (\texttt{VC}), and signed comparison condition codes
+	\item[Tested by:] Overflow Set (\texttt{OS}), Overflow Clear (\texttt{OC}), and signed comparison condition codes
 	\item[Note:] Overflow occurs when adding two positive numbers yields a negative result, or adding two negative numbers yields
 	      a positive result
 \end{description}
@@ -251,7 +251,7 @@ CMPI r1, r2
 BRAN|== @label_equal
 
 ; Branch if r1 > r2 (unsigned)
-BRAN|> @label_greater
+BRAN|HI @label_greater
 
 ; Add 0x16 to r1 if r1 >= r2 (signed)
 ADDI|>= r1, #0x16

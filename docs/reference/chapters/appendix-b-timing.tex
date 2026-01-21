@@ -117,8 +117,8 @@ RETS                          ; 6 cycles
 \subsection{Conditional Block}
 \begin{lstlisting}
 CMPR r1, r2                   ; 6 cycles
-ADDR|> r3, r4, r5             ; 6 cycles (exec if r1 > r2)
-ADDR|<= r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
+ADDR|HI r3, r4, r5            ; 6 cycles (exec if r1 > r2)
+ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
 ; Total: 18 cycles (one conditional executes, one doesn't)
 \end{lstlisting}
 
@@ -157,7 +157,7 @@ skip:
 
 ; Use:
 CMPR r1, r2
-ADDI|> r3, #1              ; Saves branch overhead
+ADDI|HI r3, #1             ; Saves branch overhead
     \end{lstlisting}
 
 	\item \textbf{Combine operations with shifts}
@@ -191,7 +191,7 @@ loop:
     LOAD r4, (#0, a)+
     ; Process 4 items...
     SUBI r7, #4
-    BRAN|> loop
+    BRAN|HI loop
     \end{lstlisting}
 \end{enumerate}
 
