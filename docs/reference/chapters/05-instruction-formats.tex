@@ -209,10 +209,10 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 		\texttt{XORI|!= r7, \#15, LSR \#4} & 0x26        & 0x7          & 0x0F         & 0           & 010         & 0x4         & 0b01        & 0x2           & \texttt{0x9F7C512}   \\
 		                                   & (100110)    & (0111)       & (00001111)   & (0)         & (010)       & (0100)      & (01)        & (0010)        &                      \\
 		\midrule
-		\texttt{CMPI|NS r1, \#8, ROL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
+		\texttt{CMPI|NS r1, \#8, RTL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA887D15}   \\
 		                                   & (101010)    & (0001)       & (00001000)   & (1)         & (101)       & (0011)      & (01)        & (0101)        &                      \\
 		\midrule
-		\texttt{SHFI r3, \#0, ROR \#5}     & 0x20        & 0x3          & 0x00         & 0           & 110         & 0x5         & 0b10        & 0x0           & \texttt{0x08307520}  \\
+		\texttt{SHFI r3, \#0, RTR \#5}     & 0x20        & 0x3          & 0x00         & 0           & 110         & 0x5         & 0b10        & 0x0           & \texttt{0x08307520}  \\
 		                                   & (100000)    & (0011)       & (00000000)   & (0)         & (110)       & (0101)      & (10)        & (0000)        &                      \\
 		\bottomrule
 	\end{tabular}
@@ -323,7 +323,7 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 		\texttt{CMPR r4, r5}                & 0x3A        & 0x4         & 0x4         & 0x5         & 0           & 000         & 0x0         & 0b01        & 0x0           & \texttt{0x0E945010}  \\
 		                                    & (111010)    & (0100)      & (0100)      & (0101)      & (0)         & (000)       & (0000)      & (01)        & (0000)        &                      \\
 		\midrule
-		\texttt{XORR r2, r3, r4, ROR \#1}   & 0x36        & 0x2         & 0x3         & 0x4         & 0           & 110         & 0x1         & 0b01        & 0x0           & \texttt{0x0DA346D10} \\
+		\texttt{XORR r2, r3, r4, RTR \#1}   & 0x36        & 0x2         & 0x3         & 0x4         & 0           & 110         & 0x1         & 0b01        & 0x0           & \texttt{0x0DA346D10} \\
 		                                    & (110110)    & (0010)      & (0011)      & (0100)      & (0)         & (110)       & (0001)      & (01)        & (0000)        &                      \\
 		\midrule
 		\texttt{SUBR|>> r1, r2, r3, ASR r4} & 0x32        & 0x1         & 0x2         & 0x3         & 1           & 100         & 0x4         & 0b01        & 0xD           & \texttt{0xCA372D1D}  \\
@@ -399,8 +399,8 @@ For more details on condition codes see \textbf{Chapter~\ref{ch:condition-codes}
 		010           & Logical Shift Right    & LSR               \\
 		011           & Arithmetic Shift Left  & ASL               \\
 		100           & Arithmetic Shift Right & ASR               \\
-		101           & Rotate Left            & ROL               \\
-		110           & Rotate Right           & ROR               \\
+		101           & Rotate Left            & RTL               \\
+		110           & Rotate Right           & RTR               \\
 		111           & Reserved               & --                \\
 		\bottomrule
 	\end{tabular}

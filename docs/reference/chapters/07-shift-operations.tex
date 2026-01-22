@@ -24,8 +24,8 @@ before being used in an ALU operation—all within a single instruction.
 		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros     \\
 		011           & ASL               & Arithmetic Shift Left  & Same as LSL (shifts in zeros)    \\
 		100           & ASR               & Arithmetic Shift Right & Shift right, preserving sign bit \\
-		101           & ROL               & Rotate Left            & Rotate left through carry        \\
-		110           & ROR               & Rotate Right           & Rotate right through carry       \\
+		101           & RTL               & Rotate Left            & Rotate left through carry        \\
+		110           & RTR               & Rotate Right           & Rotate right through carry       \\
 		111           & --                & Reserved               & Reserved for future use          \\
 		\bottomrule
 	\end{tabular}
@@ -171,7 +171,7 @@ ADDR r3, r4, r5
 ADDI r3, #0, ASR #1  ; r3 = (r3 >> 1) = (r4 + r5) / 2
 \end{lstlisting}
 
-\subsection{Rotate Left (ROL)}
+\subsection{Rotate Left (RTL)}
 
 \textbf{Operation:} Rotate bits to the left through the carry flag.
 
@@ -202,10 +202,10 @@ ADDI r1, #0, ROL #1
 
 ; Multi-word left shift (32-bit value in r1:r2)
 ADDI r2, #0, LSL #1  ; Shift low word, bit 15 -> carry
-ADDI r1, #0, ROL #1  ; Shift high word, carry -> bit 0
+ADDI r1, #0, RTL #1  ; Shift high word, carry -> bit 0
 \end{lstlisting}
 
-\subsection{Rotate Right (ROR)}
+\subsection{Rotate Right (RTR)}
 
 \textbf{Operation:} Rotate bits to the right through the carry flag.
 
@@ -231,10 +231,10 @@ ADDI r1, #0, ROL #1  ; Shift high word, carry -> bit 0
 \textbf{Example:}
 \begin{lstlisting}
 ; Rotate r1 right by 1
-ADDI r1, #0, ROR #1
+ADDI r1, #0, RTR #1
 
 ; Check if bit 0 is set
-ADDI r2, #0, ROR #1  ; Bit 0 -> carry
+ADDI r2, #0, RTR #1  ; Bit 0 -> carry
 ; Now branch on carry to test bit 0
 \end{lstlisting}
 
@@ -391,7 +391,7 @@ For operations on values larger than 16 bits, shifts and rotates can be combined
 ; Shift 32-bit value in r1:r2 left by 1
 ; r1 = high word, r2 = low word
 ADDI r2, #0, LSL #1   ; Shift low, MSB -> carry
-ADDI r1, #0, ROL #1   ; Rotate high with carry
+ADDI r1, #0, RTL #1   ; Rotate high with carry
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Unsigned)}
@@ -399,7 +399,7 @@ ADDI r1, #0, ROL #1   ; Rotate high with carry
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (unsigned)
 ADDI r1, #0, LSR #1   ; Shift high, LSB -> carry
-ADDI r2, #0, ROR #1   ; Rotate low with carry
+ADDI r2, #0, RTR #1   ; Rotate low with carry
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Signed)}
@@ -407,7 +407,7 @@ ADDI r2, #0, ROR #1   ; Rotate low with carry
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (signed)
 ADDI r1, #0, ASR #1   ; Arithmetic shift high
-ADDI r2, #0, ROR #1   ; Rotate low with carry
+ADDI r2, #0, RTR #1   ; Rotate low with carry
 \end{lstlisting}
 
 \section{Performance Considerations}
