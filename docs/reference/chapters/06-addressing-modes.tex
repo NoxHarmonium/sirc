@@ -344,7 +344,8 @@ In protected mode, indirect addressing modes that would write to the high byte o
 \subsection{Alignment}
 
 \begin{itemize}
-	\item Memory operations should target even addresses (16-bit aligned)
-	\item Unaligned access behavior is undefined
-	\item PC must always be 4-byte aligned (instruction alignment)
+	\item All memory addresses refer to 16-bit words
+	\item There are no alignment restrictions for general memory I/O
+	\item All instructions span 2 words and must begin at an even word address
+	\item Unaligned instruction fetches (odd word address) trigger an alignment fault exception
 \end{itemize}

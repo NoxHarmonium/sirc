@@ -165,8 +165,9 @@ modes are particularly useful with this register.
 	\end{tabular}
 \end{center}
 
-The program counter register pair points to the next instruction to be executed. It is automatically incremented by 2
-after each instruction fetch (since instructions are 32 bits and each fetch is 16 bits).
+The program counter register pair points to the next instruction to be executed. It is automatically incremented by 1
+after each 16-bit word fetch. Since instructions are 32 bits (two words), the PC is incremented twice during a complete
+instruction fetch, advancing by 2 words total per instruction.
 
 \textbf{Typical Use:}
 \begin{itemize}

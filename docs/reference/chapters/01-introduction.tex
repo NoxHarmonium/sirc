@@ -59,7 +59,8 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 		\textbf{Feature}            & \textbf{Specification}      \\
 		\midrule
 		Data Width                  & 16-bit                      \\
-		Address Bus                 & 24-bit (16MB address space) \\
+		Addressing                  & Word Addressing             \\
+		Address Bus                 & 24-bit (32MB address space) \\
 		Instruction Size            & 32-bit fixed                \\
 		General Purpose Registers   & 7 (r1--r7)                  \\
 		Address Register Pairs      & 4 (l, a, s, p)              \\
@@ -137,8 +138,9 @@ The privilege level is controlled by the Protected Mode bit in the status regist
 
 \subsection{Address Space}
 
-The SIRC-1 provides a 24-bit address space, allowing access to 16 megabytes of memory. Addresses are formed by
-combining the 8-bit high byte and 16-bit low word of address register pairs:
+The SIRC-1 uses word addressing, where each address refers to a 16-bit word. With a 24-bit address space, this allows
+access to 2\^24 = 16,777,216 words, or 32 megabytes of memory. Addresses are formed by combining the 8-bit high byte
+and 16-bit low word of address register pairs:
 
 \begin{equation}
 	\text{Address} = (\text{RegHigh}[7:0] \ll 16) \mid \text{RegLow}[15:0]
@@ -163,9 +165,10 @@ Beyond these reserved regions, the memory layout is flexible and can be defined 
 \subsection{Alignment}
 
 \begin{itemize}
-	\item All instructions must be aligned on 4-byte boundaries (word-aligned)
-	\item Data can be accessed at any 2-byte boundary (halfword-aligned)
-	\item Unaligned instruction fetches trigger an alignment fault exception
+	\item All memory addresses refer to 16-bit words
+	\item There are no alignment restrictions for general memory I/O
+	\item All instructions span 2 words and must begin at an even word address
+	\item Unaligned instruction fetches (odd word address) trigger an alignment fault exception
 \end{itemize}
 
 \section{Document Organization}

@@ -449,18 +449,17 @@ Since instructions are 32 bits and the data bus is 16 bits wide, each instructio
 
 \begin{enumerate}
 	\item Fetch high word (bits 31--16) from address in PC
-	\item Increment PC by 2
+	\item Increment PC by 1
 	\item Fetch low word (bits 15--0) from address in PC
-	\item Increment PC by 2
+	\item Increment PC by 1
 \end{enumerate}
 
 \subsection{Alignment Requirements}
 
-Instructions must be aligned on 4-byte boundaries. The low word of the program counter (\reg{pl}) must always be even,
-and instructions must not span across 4-byte boundaries.
+Instructions span two consecutive words and must begin at an even word address. The program counter (\reg{pl}) must
+always be even.
 
-Attempting to fetch an instruction from an unaligned address (odd address or not on 4-byte boundary) will trigger an
-alignment fault exception.
+Attempting to fetch an instruction from an odd word address will trigger an alignment fault exception.
 
 \section{Format Selection Guidelines}
 

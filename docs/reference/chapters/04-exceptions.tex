@@ -35,7 +35,7 @@ exceptions are in the 0x1-0xF range.
 	      an error. It could also be used to implement virtual memory as the instruction is aborted and program counter is not
 	      incremented, so the address can be re-calculated and the operation retried.
 
-	\item \textbf{Alignment Fault:} Raised when fetching instructions if program counter points to an odd address
+	\item \textbf{Alignment Fault:} Raised when fetching instructions if the program counter contains an odd word address
 
 	      This is to simplify fetching as the second word of an instruction is always at pl | 0x1 and ensures that we never have
 	      to worry about instructions overflowing segments (e.g. if the first word is at 0xFFFF and the second word at 0x0000)
