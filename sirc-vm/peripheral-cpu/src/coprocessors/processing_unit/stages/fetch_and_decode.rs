@@ -50,7 +50,6 @@ fn do_shift(
     registers: &Registers,
     sr_a_before_shift: u16,
     register_representation: &RegisterInstructionData,
-    short_immediate: bool,
 ) -> (u16, u16) {
     let shift_operand = register_representation.shift_operand;
     match shift_operand {
@@ -60,7 +59,6 @@ fn do_shift(
                 sr_a_before_shift,
                 register_representation.shift_type,
                 u16::from(register_representation.shift_count),
-                short_immediate,
             )
         }
         ShiftOperand::Register => {
@@ -70,7 +68,6 @@ fn do_shift(
                 sr_a_before_shift,
                 register_representation.shift_type,
                 dereferenced_shift_count,
-                short_immediate,
             )
         }
     }
@@ -172,13 +169,12 @@ pub fn decode_and_register_fetch(
                 registers,
                 get_register_value(registers, sr_a),
                 &register_representation,
-                false,
             );
             (sr_a_, get_register_value(registers, sr_b), sr_shift)
         }
         FetchAndDecodeStepInstructionType::Immediate => (des_, immediate_representation.value, 0x0),
         FetchAndDecodeStepInstructionType::ShortImmediate => {
-            let (sr_a_, sr_shift) = do_shift(registers, des_, &register_representation, true);
+            let (sr_a_, sr_shift) = do_shift(registers, des_, &register_representation);
             (sr_a_, short_immediate_representation.value as u16, sr_shift)
         }
     };
