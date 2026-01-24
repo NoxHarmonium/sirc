@@ -217,6 +217,7 @@ fn parse_comment_(i: &str) -> AsmResult<Token> {
     // category=Toolchain
     // TODO: Comments with nothing after the semicolon currently fail
     // category=Toolchain
+    // TODO: Comments with a semi-colon in the body  them seem to fail
     map(pair(char(';'), cut(is_not("\n\r"))), |(_, text)| {
         Token::Comment(String::from(text))
     })(i)

@@ -116,6 +116,7 @@ impl StatusRegisterUpdateSource {
 // TODO: Find a better place for `ConditionFlags` implementation
 // category=Refactoring
 // Define trait and move somewhere else?
+// Note: copied from ARM - https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/condition-codes-1-condition-flags-and-codes
 impl ConditionFlags {
     #[must_use]
     pub fn should_execute(&self, registers: &Registers) -> bool {
