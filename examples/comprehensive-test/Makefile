@@ -9,8 +9,11 @@ all: comprehensive-test.bin
 comprehensive-test.o: comprehensive-test.asm
 	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file comprehensive-test.asm --output-file comprehensive-test.o
 
-comprehensive-test.bin: comprehensive-test.o
-	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file comprehensive-test.bin comprehensive-test.o
+serial-handler.o: serial-handler.asm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file serial-handler.asm --output-file serial-handler.o
+
+comprehensive-test.bin: comprehensive-test.o serial-handler.o
+	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file comprehensive-test.bin comprehensive-test.o serial-handler.o
 
 run: comprehensive-test.bin
 	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS}
@@ -22,7 +25,7 @@ check: run
 	diff -u ./comprehensive-test.register-dump ./comprehensive-test.register-dump-expected
 
 clean:
-	rm -f comprehensive-test.bin comprehensive-test.o comprehensive-test.register-dump comprehensive-test.bin.dbg
+	rm -f comprehensive-test.bin comprehensive-test.o serial-handler.o comprehensive-test.register-dump comprehensive-test.bin.dbg
 	cargo clean ${CARGO_ARGS}
 	cargo llvm-cov clean ${CARGO_ARGS} --workspace
 

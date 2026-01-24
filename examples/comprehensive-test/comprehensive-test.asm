@@ -7,9 +7,14 @@
 .EQU $TEST_RUNNER_STORAGE           #0x0002
 .EQU $STACK                         #0x0003
 
+;; Devices
+; Serial
+.EQU $SERIAL_DEVICE_SEGMENT         #0x000A
+
 ;; Constants
 .EQU $TEST_RESULT_BASE_OFFSET       #0x000F
 .EQU $TEST_RESULT_LENGTH            #0x00FF
+.EQU $MESSAGE_BUFFER_OFFSET         #0x0200
 
 
 ;; Variables
@@ -19,6 +24,10 @@
 ; Exception vector table
 .ORG 0x0000
 .DQ @main
+
+; Serial interrupt (p3)
+.ORG 0x0080
+.DQ @exception_handler_p3
 
 .ORG 0x0200
 
@@ -60,7 +69,9 @@
     RETS
 
 :count_passed_tests
-    ; Store used registers
+    ; Store used registers and link register
+    STOR -(#0, s), lh
+    STOR -(#0, s), ll
     STOR -(#0, s), ah
     STOR -(#0, s), al
     STOR -(#0, s), r1
@@ -88,20 +99,118 @@
     SUBI r1, #1
 
     LOAD r2, (r1, a)
+
+    ; Print this test result
+    ; r1 has test index (0-based), r2 has pass/fail (0 or 1)
+    BRSR @print_test_result
+
     CMPI r2, #0
     ADDI|!= r7, #1
 
     ; Return when the end of the array is reached
     CMPI r1, #0
-    RETS|==
-
-    BRAN @count_passed_tests_loop
+    BRAN|!= @count_passed_tests_loop
 
     ; Restore used registers
     LOAD r2, (#0, s)+
     LOAD r1, (#0, s)+
     LOAD al, (#0, s)+
     LOAD ah, (#0, s)+
+    LOAD ll, (#0, s)+
+    LOAD lh, (#0, s)+
+
+    RETS
+
+; Subroutine to print test result
+; Inputs: r1 = test index (0-based), r2 = pass/fail (0 or 1)
+; Clobbers: r3, r4, r5, r6
+:print_test_result
+    ; Save registers including link register
+    STOR -(#0, s), lh
+    STOR -(#0, s), ll
+    STOR -(#0, s), ah
+    STOR -(#0, s), al
+    STOR -(#0, s), r1
+    STOR -(#0, s), r2
+    STOR -(#0, s), r3
+    STOR -(#0, s), r4
+    STOR -(#0, s), r5
+    STOR -(#0, s), r6
+
+    ; Convert test index (0-based) to 1-based for display
+    ADDI r1, #1
+
+    ; Copy template string to buffer
+    LOAD ah, $TEST_RUNNER_STORAGE
+    LOAD al, $MESSAGE_BUFFER_OFFSET
+
+    LOAD lh, $PROGRAM_SEGMENT
+
+    ; Choose which template based on r2 (pass/fail)
+    CMPI r2, #0
+    LOAD|== ll, @fail_message
+    LOAD|!= ll, @pass_message
+
+    ; Copy string to buffer (simple byte copy)
+    ; -
+    ; Align source pointer because the toolchain packs words in the binary as double words where the higher word is always zero.
+    ; A fix for that is in the works
+    ; The destination pointer doesn't need the same treatment
+    LOAD r4, #1
+:print_test_copy_loop
+    LOAD r5, (r4, l)  ; Load character from template (l points to string)
+    STOR (r4, a), r5  ; Store to buffer
+    CMPI r5, #0       ; Check for null terminator
+    BRAN|== @print_test_format_number
+
+    ; Increment by two due to annoying padding for strings
+    ADDI r4, #2
+    BRAN @print_test_copy_loop
+
+:print_test_format_number
+    ; Format test number into buffer at offset 5 ("Test XX: ")
+    ; r1 has test number (1-50)
+
+    ; Extract tens digit
+    LOAD r5, r1
+    LOAD r6, #10
+
+    ; Simple division by repeated subtraction
+    LOAD r3, #0  ; quotient (tens)
+:print_test_div_loop
+    CMPR r5, r6
+    BRAN|<< @print_test_div_done
+    SUBR r5, r5, r6
+    ADDI r3, #1
+    BRAN @print_test_div_loop
+
+:print_test_div_done
+    ; r3 = tens digit, r5 = ones digit
+    ; Convert to ASCII ('0' = 48 = 0x30)
+    ADDI r3, #48
+    ADDI r5, #48
+
+    ; Store digits at offset 11 and 13
+    STOR (#11, a), r3
+    STOR (#13, a), r5
+
+    ; Print the buffer
+    ; TODO: - print only works
+    LOAD r1, $MESSAGE_BUFFER_OFFSET
+    LOAD r2, $TEST_RUNNER_STORAGE
+    BRSR @print
+
+    ; Restore registers
+    LOAD r6, (#0, s)+
+    LOAD r5, (#0, s)+
+    LOAD r4, (#0, s)+
+    LOAD r3, (#0, s)+
+    LOAD r2, (#0, s)+
+    LOAD r1, (#0, s)+
+    LOAD al, (#0, s)+
+    LOAD ah, (#0, s)+
+    LOAD ll, (#0, s)+
+    LOAD lh, (#0, s)+
 
     RETS
 
@@ -109,6 +218,14 @@
     ; Setup stack frame
     LOAD sh, $STACK
     LOAD sl, #0xFFFF
+
+    ; Setup serial device
+    BRSR @setup_serial
+
+    ; Test serial output
+    LOAD r1, @test_start_message
+    LOAD r2, $PROGRAM_SEGMENT
+    BRSR @print
 
     LOAD ah, #0x0001
     LOAD al, #0x0000
@@ -318,8 +435,8 @@
 ; TEST 24: Arithmetic Shift Right Multiple Bits
     BRSR @reset_test
     LOAD r3, #0xF000
-    ADDI r3, #0, ASR #4 ; r3 should be 0xFF00 (sign extended)
-    CMPI r3, #0xFF00
+    ADDI r3, #0, ASR #4 ; r3 should be 0x8F00 (sign extended)
+    CMPI r3, #0x8F00
     LOAD|== r7, #1
     BRSR @store_test_result
 
@@ -578,3 +695,59 @@
 
 ; Halt CPU
     COPI r1, #0x14FF
+
+;;;;;;; DATA
+
+:test_start_message
+.DW #83    ; S
+.DW #116   ; t
+.DW #97    ; a
+.DW #114   ; r
+.DW #116   ; t
+.DW #105   ; i
+.DW #110   ; n
+.DW #103   ; g
+.DW #32    ; space
+.DW #116   ; t
+.DW #101   ; e
+.DW #115   ; s
+.DW #116   ; t
+.DW #115   ; s
+.DW #10    ; newline
+.DW #0     ; null
+
+:pass_message
+.DW #84    ; T
+.DW #101   ; e
+.DW #115   ; s
+.DW #116   ; t
+.DW #32    ; space
+.DW #88    ; X (placeholder)
+.DW #88    ; X (placeholder)
+.DW #58    ; :
+.DW #32    ; space
+.DW #80    ; P
+.DW #65    ; A
+.DW #83    ; S
+.DW #83    ; S
+.DW #10    ; newline
+.DW #0     ; null
+
+:fail_message
+.DW #84    ; T
+.DW #101   ; e
+.DW #115   ; s
+.DW #116   ; t
+.DW #32    ; space
+.DW #88    ; X (placeholder)
+.DW #88    ; X (placeholder)
+.DW #58    ; :
+.DW #32    ; space
+.DW #70    ; F
+.DW #65    ; A
+.DW #73    ; I
+.DW #76    ; L
+.DW #10    ; newline
+.DW #0     ; null
+
+NOOP
