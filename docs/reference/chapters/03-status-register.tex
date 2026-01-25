@@ -257,6 +257,22 @@ BRAN|HI @label_greater
 ADDI|>= r1, #0x16
 \end{lstlisting}
 
+\subsection{Manual Status Flag Control}
+
+The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
+particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
+Chapter~\ref{ch:shift-operations} for complete details.
+
+\begin{lstlisting}
+; Update flags from shift instead of ALU
+ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
+
+; Preserve flags across operations
+CMPI r1, r2                   ; Set comparison flags
+ADDI[N] r3, #1                ; Increment without changing flags
+BRAN|== still_uses_cmpi_flags ; Branch uses CMPI flags
+\end{lstlisting}
+
 \subsection{Testing Bits}
 
 \begin{lstlisting}

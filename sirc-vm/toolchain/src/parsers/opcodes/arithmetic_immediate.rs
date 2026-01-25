@@ -15,8 +15,7 @@ use peripheral_cpu::registers::RegisterName;
 
 fn tag_to_instruction_long(tag: &String) -> Instruction {
     match tag.as_str() {
-        // SHFI is a "meta instruction" i.e. it does not have its own opcode - It is just AddImmediate but status register is updated from shift not ALU
-        "ADDI" | "SHFI" => Instruction::AddImmediate,
+        "ADDI" => Instruction::AddImmediate,
         "ADCI" => Instruction::AddImmediateWithCarry,
         "SUBI" => Instruction::SubtractImmediate,
         "SBCI" => Instruction::SubtractImmediateWithCarry,
@@ -34,13 +33,14 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
 
 fn tag_to_instruction_short(tag: &String) -> Instruction {
     match tag.as_str() {
-        // SHFI is a "meta instruction" i.e. it does not have its own opcode - It is just AddShortImmediate but status register is updated from shift not ALU
-        "ADDI" | "SHFI" => Instruction::AddShortImmediate,
+        "ADDI" => Instruction::AddShortImmediate,
         "ADCI" => Instruction::AddShortImmediateWithCarry,
         "SUBI" => Instruction::SubtractShortImmediate,
         "SBCI" => Instruction::SubtractShortImmediateWithCarry,
         "ANDI" => Instruction::AndShortImmediate,
-        "ORRI" => Instruction::OrShortImmediate,
+        // SHFT is a "meta instruction" i.e. it does not have its own opcode - It is just OrShortImmediate but status register is updated from shift not ALU
+        // We use OrShortImmediate because it is a no-op with a hardcoded zero value (other instructions could probably also work)
+        "ORRI" | "SHFT" => Instruction::OrShortImmediate,
         "XORI" => Instruction::XorShortImmediate,
         "CMPI" => Instruction::CompareShortImmediate,
         "TSAI" => Instruction::TestAndShortImmediate,
@@ -91,8 +91,8 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("TSAI"),
         parse_instruction_tag("TSXI"),
         parse_instruction_tag("COPI"),
-        // Meta instruction
-        parse_instruction_tag("SHFI"),
+        // Meta instruction - for shifting values between registers
+        parse_instruction_tag("SHFT"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
@@ -104,11 +104,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             register: dest_register.to_register_index(),
             value,
             condition_flag,
-            additional_flags: if &tag == "SHFI" {
-                StatusRegisterUpdateSource::Shift.to_flags()
-            } else {
-                StatusRegisterUpdateSource::Alu.to_flags()
-            },
+            additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
         })
     };
 
@@ -117,54 +113,93 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
          dest_register: &RegisterName,
          shift_operand: ShiftOperand,
          shift_type: ShiftType,
-         shift_count: u8| {
+         shift_count: u8,
+         status_register_update_source: StatusRegisterUpdateSource| {
             InstructionData::ShortImmediate(ShortImmediateInstructionData {
                 op_code: tag_to_instruction_short(&tag),
                 register: dest_register.to_register_index(),
                 value,
                 condition_flag,
-                additional_flags: if &tag == "SHFI" {
-                    StatusRegisterUpdateSource::Shift.to_flags()
-                } else {
-                    StatusRegisterUpdateSource::Alu.to_flags()
-                },
+                additional_flags: status_register_update_source.to_flags(),
                 shift_operand,
                 shift_type,
                 shift_count,
             })
         };
 
+    let incorrect_shft_usage_error = || -> AsmResult<InstructionToken> {
+        let error_string = format!("The [{tag}] meta instruction only supports a single register operand with a shift definition (e.g. SHFT r1, LSL #1).");
+        Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string.as_str(),
+        )))
+    };
+
     match operands.as_slice() {
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
-            match immediate_type {
-                ImmediateType::Value(value) => Ok((
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::ShiftDefinition(shift_definition_data)] => {
+            if &tag == "SHFT" {
+                let (shift_operand, shift_type, shift_count) =
+                    split_shift_definition_data(shift_definition_data);
+                Ok((
                     i,
                     InstructionToken {
                         input_length,
-                        instruction: construct_immediate_instruction(
-                            value.to_owned(),
+                        instruction: construct_short_immediate_instruction(
+                            0x0,
                             dest_register,
+                            shift_operand,
+                            shift_type,
+                            shift_count,
+                            StatusRegisterUpdateSource::Shift,
                         ),
+                        symbol_ref: None,
                         ..Default::default()
                     },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                ))
+            } else {
+                let error_string = format!("The [{tag}] meta instruction does not support a single register operand with a shift definition. Only the SHFT instruction supports that.");
+                Err(nom::Err::Failure(ErrorTree::from_external_error(
                     i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, dest_register),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(_) => {
-                    let error_string =
-                        format!("The [{tag}] opcode does not support symbol refs at this time");
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
+                    ErrorKind::Fail,
+                    error_string.as_str(),
+                )))
+            }
+        }
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
+            if &tag == "SHFT" {
+                incorrect_shft_usage_error()
+            } else {
+                match immediate_type {
+                    ImmediateType::Value(value) => Ok((
                         i,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
+                        InstructionToken {
+                            input_length,
+                            instruction: construct_immediate_instruction(
+                                value.to_owned(),
+                                dest_register,
+                            ),
+                            ..Default::default()
+                        },
+                    )),
+                    ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                        i,
+                        InstructionToken {
+                            input_length,
+                            instruction: construct_immediate_instruction(0x0, dest_register),
+                            placeholder_name: Some(placeholder_name.clone()),
+                            ..Default::default()
+                        },
+                    )),
+                    ImmediateType::SymbolRef(_) => {
+                        let error_string =
+                            format!("The [{tag}] opcode does not support symbol refs at this time");
+                        Err(nom::Err::Failure(ErrorTree::from_external_error(
+                            i,
+                            ErrorKind::Fail,
+                            error_string.as_str(),
+                        )))
+                    }
                 }
             }
         }
@@ -172,10 +207,13 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
-            match immediate_type {
-                ImmediateType::Value(value) => {
-                    let short_value: Result<u8, _> = (*value).try_into();
-                    short_value.map_or_else(|_| {
+            if &tag == "SHFT" {
+                incorrect_shft_usage_error()
+            } else {
+                match immediate_type {
+                    ImmediateType::Value(value) => {
+                        let short_value: Result<u8, _> = (*value).try_into();
+                        short_value.map_or_else(|_| {
                           let error_string = format!("Immediate values must fit into 8 bits when using a shift definition ({value} > 0xFF)");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
                             i,
@@ -193,36 +231,39 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                     shift_operand,
                                     shift_type,
                                     shift_count,
+                                    StatusRegisterUpdateSource::Alu,
                                 ),
                                 symbol_ref: None,
                                 ..Default::default()
                             },
                         ))
                     })
-                }
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_short_immediate_instruction(
-                            0x0,
-                            dest_register,
-                            shift_operand,
-                            shift_type,
-                            shift_count,
-                        ),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(_) => {
-                    let error_string =
-                        format!("The [{tag}] opcode does not support symbol refs at this time");
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
+                    }
+                    ImmediateType::PlaceHolder(placeholder_name) => Ok((
                         i,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
+                        InstructionToken {
+                            input_length,
+                            instruction: construct_short_immediate_instruction(
+                                0x0,
+                                dest_register,
+                                shift_operand,
+                                shift_type,
+                                shift_count,
+                                StatusRegisterUpdateSource::Alu,
+                            ),
+                            placeholder_name: Some(placeholder_name.clone()),
+                            ..Default::default()
+                        },
+                    )),
+                    ImmediateType::SymbolRef(_) => {
+                        let error_string =
+                            format!("The [{tag}] opcode does not support symbol refs at this time");
+                        Err(nom::Err::Failure(ErrorTree::from_external_error(
+                            i,
+                            ErrorKind::Fail,
+                            error_string.as_str(),
+                        )))
+                    }
                 }
             }
         }

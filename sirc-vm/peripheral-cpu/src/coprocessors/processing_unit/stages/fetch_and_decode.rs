@@ -1,10 +1,11 @@
 use super::{alu::perform_shift, shared::DecodedInstruction};
 use crate::coprocessors::processing_unit::definitions::{
-    Instruction, RegisterInstructionData, ShiftOperand, INSTRUCTION_SIZE_WORDS,
+    Instruction, ShiftOperand, ShiftType, INSTRUCTION_SIZE_WORDS,
 };
 use crate::coprocessors::processing_unit::encoding::{
     decode_immediate_instruction, decode_register_instruction, decode_short_immediate_instruction,
 };
+use crate::coprocessors::processing_unit::stages::shared::ShiftParameters;
 use crate::registers::{
     sr_bit_is_set, RegisterName, Registers, StatusRegisterFields, SR_REDACTION_MASK,
 };
@@ -49,26 +50,20 @@ fn get_register_value(registers: &Registers, index: u8) -> u16 {
 fn do_shift(
     registers: &Registers,
     sr_a_before_shift: u16,
-    register_representation: &RegisterInstructionData,
+    shift_params: &ShiftParameters,
 ) -> (u16, u16) {
-    let shift_operand = register_representation.shift_operand;
+    let ShiftParameters {
+        shift_count,
+        shift_operand,
+        shift_type,
+    } = *shift_params;
     match shift_operand {
         ShiftOperand::Immediate => {
-            // TODO: Think of a clever way to do this in hardware to save a barrel shifter?
-            perform_shift(
-                sr_a_before_shift,
-                register_representation.shift_type,
-                u16::from(register_representation.shift_count),
-            )
+            perform_shift(sr_a_before_shift, shift_type, u16::from(shift_count))
         }
         ShiftOperand::Register => {
-            let dereferenced_shift_count =
-                get_register_value(registers, register_representation.shift_count);
-            perform_shift(
-                sr_a_before_shift,
-                register_representation.shift_type,
-                dereferenced_shift_count,
-            )
+            let dereferenced_shift_count = get_register_value(registers, shift_count);
+            perform_shift(sr_a_before_shift, shift_type, dereferenced_shift_count)
         }
     }
 }
@@ -163,18 +158,32 @@ pub fn decode_and_register_fetch(
 
     let des_ = get_register_value(registers, des);
 
+    let shift_params = match instruction_type {
+        FetchAndDecodeStepInstructionType::Register
+        | FetchAndDecodeStepInstructionType::ShortImmediate => ShiftParameters {
+            shift_count: register_representation.shift_count,
+            shift_operand: register_representation.shift_operand,
+            shift_type: register_representation.shift_type,
+        },
+        FetchAndDecodeStepInstructionType::Immediate => ShiftParameters {
+            shift_count: 0,
+            shift_operand: ShiftOperand::Immediate,
+            shift_type: ShiftType::None,
+        },
+    };
+
     let (sr_a_, sr_b_, sr_shift) = match instruction_type {
         FetchAndDecodeStepInstructionType::Register => {
             let (sr_a_, sr_shift) = do_shift(
                 registers,
                 get_register_value(registers, sr_a),
-                &register_representation,
+                &shift_params,
             );
             (sr_a_, get_register_value(registers, sr_b), sr_shift)
         }
         FetchAndDecodeStepInstructionType::Immediate => (des_, immediate_representation.value, 0x0),
         FetchAndDecodeStepInstructionType::ShortImmediate => {
-            let (sr_a_, sr_shift) = do_shift(registers, des_, &register_representation);
+            let (sr_a_, sr_shift) = do_shift(registers, des_, &shift_params);
             (sr_a_, short_immediate_representation.value as u16, sr_shift)
         }
     };
@@ -203,6 +212,7 @@ pub fn decode_and_register_fetch(
             ad_h,
             sr_src: num::FromPrimitive::from_u8(immediate_representation.additional_flags & 0x3)
                 .expect("should fit in two bits"),
+            shift_params,
             addr_inc,
             des_ad_l,
             des_ad_h,

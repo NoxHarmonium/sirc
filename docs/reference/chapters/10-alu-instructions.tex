@@ -52,6 +52,28 @@ Most ALU instructions update the status register flags:
 	\item[Load (LOAD)] Do not update flags
 \end{description}
 
+\subsection{Manual Flag Update Control}
+
+ALU instructions support manual control over how status flags are updated using the status override syntax. See
+Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
+
+\begin{itemize}
+	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
+	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
+	\item \texttt{INSTR[N]} -- Do not update status flags
+\end{itemize}
+
+\textbf{Example:}
+\begin{lstlisting}
+; Update flags from shift operation
+ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
+
+; Preserve flags during operation
+CMPI r2, r3                   ; Set comparison flags
+ADDI[N] r4, #1                ; Increment without changing flags
+BRAN|>= branch_if_r2_gte_r3   ; Use flags from CMPI
+\end{lstlisting}
+
 % ============================================================================
 \section{ADD -- Addition}
 

@@ -9,6 +9,8 @@ multiply or divide values by powers of 2, extract bit fields, or perform bit rot
 Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
 before being used in an ALU operation—all within a single instruction.
 
+\textbf{Note:} By default, when shifts are used with ALU instructions (apart from the SHFT meta instruction), the status register flags are updated based on the ALU operation result, not the shift. However, you can manually control this behavior using the status override syntax (see Section~\ref{sec:status-override}).
+
 \section{Shift Types}
 
 \subsection{Shift Type Encoding}
@@ -294,6 +296,15 @@ The shift count is a 4-bit field, allowing shifts of 0--15 positions.
 
 \section{Status Flag Effects}
 
+\subsection{Default Behavior}
+
+When shift operations are used with ALU instructions, the status flags are \textbf{by default} updated based on the
+\textbf{ALU operation result}, not the shift operation. For example, in \texttt{CMPI r2, \#1, LSL \#2}, the flags
+reflect the comparison result, not the shift.
+
+To update flags based on the shift operation instead, use the \texttt{[S]} status override modifier (see
+Section~\ref{sec:status-override}), or use the \mnemonic{SHFT} meta-instruction (Chapter~\\ref{ch:meta-instructions}).
+
 \subsection{Carry Flag}
 
 For all shifts and rotates:
@@ -427,4 +438,108 @@ ADDI r2, #0, RTR #1   ; Rotate low with carry
 	\item For shifts $>$ 15, multiple shift instructions must be used
 	\item Rotates include the carry flag, so rotating by 16 does not equal original value
 	\item Some shift types (e.g., reserved type 111) may have undefined behavior
+\end{itemize}
+
+\section{Status Flag Update Control}
+\label{sec:status-override}
+
+By default, ALU instructions with shift operations update the status register flags based on the \textbf{ALU operation
+	result}, not the shift operation. However, the SIRC-1 provides manual control over which operation updates the flags.
+
+\subsection{Status Override Syntax}
+
+A status override modifier can be added immediately after an instruction mnemonic using square brackets:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clp{8cm}}
+		\toprule
+		\textbf{Modifier} & \textbf{Meaning} & \textbf{Description}                    \\
+		\midrule
+		{[}A{]}           & ALU              & Update flags from ALU result (default)  \\
+		{[}S{]}           & Shift            & Update flags from shift result, not ALU \\
+		{[}N{]}           & None             & Do not update status flags at all       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Status Flag Override Modifiers}
+	\label{tab:status-override}
+\end{table}
+
+\subsection{Examples}
+
+\textbf{Default Behavior (ALU flags):}
+\begin{lstlisting}
+; Without override, flags reflect the ALU addition result
+ADDI r2, #1, LSL #2           ; r2 = (r2 << 2) + 1
+                              ; Flags: based on addition result
+\end{lstlisting}
+
+\textbf{Shift Flag Override:}
+\begin{lstlisting}
+; Update flags based on shift result instead of ALU
+ADDI[S] r2, #1, LSL #2        ; r2 = (r2 << 2) + 1
+                              ; Flags: based on (r2 << 2), not the +1
+
+; Check if shifted value is zero
+CMPI[S] r3, #0, LSR #4        ; Compare (r3 >> 4) with 0
+                              ; Flags: based on shift, not comparison
+\end{lstlisting}
+
+\textbf{No Flag Update:}
+\begin{lstlisting}
+; Perform operation without affecting status flags
+ADDI[N] r1, #5, LSL #1        ; r1 = (r1 << 1) + 5
+                              ; Flags: unchanged
+
+; Useful when preserving flags from previous operation
+CMPI r4, r5                   ; Set flags based on comparison
+ADDI[N] r6, #1                ; Increment r6 without changing flags
+BRAN|== equal_branch          ; Branch using flags from CMPI
+\end{lstlisting}
+
+\subsection{Use Cases}
+
+\subsubsection{Testing Shift Results}
+
+When you need to know properties of a shifted value without performing a subsequent comparison:
+
+\begin{lstlisting}
+; Check if r1 << 3 would be negative
+ADDI[S] r1, #0, LSL #3        ; r1 = r1 << 3, flags from shift
+BRAN|NS overflow_detected     ; Branch if sign bit set
+\end{lstlisting}
+
+\subsubsection{Preserving Flags}
+
+When performing operations that should not affect condition codes:
+
+\begin{lstlisting}
+; Test condition
+CMPI r1, r2                   ; Compare r1 and r2
+
+; Do some work without affecting flags
+ADDI[N] r3, #1                ; Increment counter (flags unchanged)
+LOAD[N] r4, (#0, a)+          ; Load next value (flags unchanged)
+
+; Branch using original comparison flags
+BRAN|>= r1_was_greater
+\end{lstlisting}
+
+\subsubsection{SHFT Meta-Instruction}
+
+The \mnemonic{SHFT} meta-instruction (see Chapter~\ref{ch:meta-instructions}) uses the {[}S{]} modifier internally:
+
+\begin{lstlisting}
+SHFT r1, ASL #3               ; Expands to: ORRI[S] r1, #0, ASL #3
+\end{lstlisting}
+
+This provides a clean syntax for shift-only operations with flag updates.
+
+\subsection{Assembler Syntax Notes}
+
+\begin{itemize}
+	\item The status override modifier must appear immediately after the instruction mnemonic with no spaces: \texttt{ADDI[S]}
+	\item The modifier is optional; omitting it defaults to {[}A{]} (ALU flag updates)
+	\item The override applies to the entire instruction, including any conditional execution
+	\item Explicit {[}A{]} is rarely needed but can improve code readability
 \end{itemize}

@@ -684,16 +684,189 @@
     LOAD|== r7, #1
     BRSR @store_test_result
 
+; TEST 50: LOAD with LSL shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0400
+    LOAD r1, #0x0003        ; Value to store: 0x0003
+    STOR (#0, a), r1
+    LOAD r2, #0x0000        ; Offset register
+    LOAD r3, (r2, a), LSL #2  ; Load 0x0003 and shift left by 2: 0x000C
+    CMPI r3, #0x000C
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 51: LOAD with LSR shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0410
+    LOAD r1, #0x00F0        ; Value to store: 0x00F0
+    STOR (#0, a), r1
+    LOAD r2, #0x0000        ; Offset register
+    LOAD r4, (r2, a), LSR #4  ; Load 0x00F0 and shift right by 4: 0x000F
+    CMPI r4, #0x000F
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 52: LOAD with ASL shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0420
+    LOAD r1, #0x0005        ; Value to store: 0x0005
+    STOR (#0, a), r1
+    LOAD r2, #0x0000        ; Offset register
+    LOAD r5, (r2, a), ASL #3  ; Load 0x0005 and shift left by 3: 0x0028
+    CMPI r5, #0x0028
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 53: LOAD with ASR shift (register-based, negative number)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0430
+    LOAD r1, #0x8000        ; Value to store: 0x8000 (negative)
+    STOR (#0, a), r1
+    LOAD r2, #0x0000        ; Offset register
+    LOAD r6, (r2, a), ASR #2  ; Load 0x8000 and shift right by 2: 0xA000 (sign extended)
+    CMPI r6, #0xA000
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 54: STOR with LSL shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0440
+    LOAD r1, #0x0007        ; Value in register: 0x0007
+    LOAD r2, #0x0000        ; Offset register
+    STOR (r2, a), r1, LSL #1  ; Shift r1 left by 1 and store: 0x000E
+    LOAD r3, (#0, a)        ; Read back the value
+    CMPI r3, #0x000E
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 55: STOR with LSR shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0450
+    LOAD r1, #0x0080        ; Value in register: 0x0080
+    LOAD r2, #0x0000        ; Offset register
+    STOR (r2, a), r1, LSR #3  ; Shift r1 right by 3 and store: 0x0010
+    LOAD r4, (#0, a)        ; Read back the value
+    CMPI r4, #0x0010
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 56: STOR with ASL shift (register-based)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0460
+    LOAD r1, #0x000A        ; Value in register: 0x000A
+    LOAD r2, #0x0000        ; Offset register
+    STOR (r2, a), r1, ASL #2  ; Shift r1 left by 2 and store: 0x0028
+    LOAD r5, (#0, a)        ; Read back the value
+    CMPI r5, #0x0028
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 57: STOR with ASR shift (register-based, negative number)
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0470
+    LOAD r1, #0xF000        ; Value in register: 0xF000 (negative)
+    LOAD r2, #0x0000        ; Offset register
+    STOR (r2, a), r1, ASR #4  ; Shift r1 right by 4 and store: 0x8F00 (sign extended)
+    LOAD r6, (#0, a)        ; Read back the value
+    CMPI r6, #0x8F00
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 58: LOAD with shift and post-increment
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0480
+    LOAD r1, #0x000C        ; Value to store: 0x000C
+    STOR (#0, a), r1
+    LOAD r2, #0x0000        ; Offset register
+    LOAD r3, (r2, a)+, LSL #1  ; Load 0x000C, shift left by 1: 0x0018, then increment al
+    CMPI r3, #0x0018
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 59: Verify post-increment happened with shift
+    BRSR @reset_test
+    ; al should now be 0x0481 after previous post-increment
+    CMPI al, #0x0481
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 60: STOR with shift and pre-decrement
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x0490
+    LOAD r1, #0x0040        ; Value in register: 0x0040
+    LOAD r2, #0x0000        ; Offset register
+    STOR -(r2, a), r1, LSR #2  ; Decrement al, then shift r1 right by 2 and store: 0x0010
+    CMPI al, #0x048F        ; Verify al was decremented
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 61: Verify pre-decrement stored correct value with shift
+    BRSR @reset_test
+    LOAD r5, (#0, a)        ; Read back from 0x048F
+    CMPI r5, #0x0010
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 62: LOAD with non-zero register offset and shift
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x04A0
+    LOAD r1, #0x00AA        ; Value to store: 0x00AA
+    STOR (#0x0005, a), r1    ; Store at offset 0x05
+    LOAD r2, #0x0005        ; Offset register = 5
+    LOAD r3, (r2, a), LSL #1  ; Load from (al + r2) = 0x04A5, shift left: 0x0154
+    CMPI r3, #0x0154
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 63: STOR with non-zero register offset and shift
+    BRSR @reset_test
+    LOAD ah, #0x0001
+    LOAD al, #0x04B0
+    LOAD r1, #0x0100        ; Value in register: 0x0100
+    LOAD r2, #0x0008        ; Offset register = 8
+    STOR (r2, a), r1, LSR #4  ; Store at (al + r2) = 0x04B8, shift right: 0x0010
+    LOAD r4, (#0x0008, a)   ; Read back from offset 0x08
+    CMPI r4, #0x0010
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 64: SHFT instruction with immediate shift
+    BRSR @reset_test
+    LOAD r1, #0x0007
+    SHFT r1, ASL #3
+    CMPI r1, #0x0038
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 65: SHFT instruction with register-based shift
+    BRSR @reset_test
+    LOAD r3, #0x0080
+    SHFT r3, LSR #2
+    CMPI r3, #0x0020
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
 ; Final Counter Check
     BRSR @count_passed_tests
-    ; r7 should now equal 49 (0x31) if all tests passed
-    CMPI r7, #0x31
+    ; r7 should now equal 65 (0x41) if all tests passed
+    CMPI r7, #0x41
     LOAD|== r1, #0x0FAB     ; Success marker
     LOAD|!= r1, #0xFA11     ; Failure marker (0xFA11)
 
 ; Store final test count for inspection
     LOAD r2, r7             ; Copy test pass count to r2
-    LOAD r3, #0x0031        ; Expected count (49 decimal = 0x31 hex)
+    LOAD r3, #0x0041        ; Expected count (65 decimal = 0x41 hex)
 
 ; Halt CPU
     COPI r1, #0x14FF

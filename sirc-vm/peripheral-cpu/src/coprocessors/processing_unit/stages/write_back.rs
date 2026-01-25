@@ -1,7 +1,10 @@
 use peripheral_bus::device::BusAssertions;
 
 use crate::{
-    coprocessors::processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
+    coprocessors::processing_unit::{
+        definitions::{Instruction, ShiftOperand, StatusRegisterUpdateSource},
+        stages::{alu::perform_shift, shared::ShiftParameters},
+    },
     registers::{
         sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, StatusRegisterFields,
         SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
@@ -24,6 +27,16 @@ enum WriteBackInstructionType {
 
 pub struct WriteBackExecutor;
 
+fn get_register_value(registers: &Registers, index: u8) -> u16 {
+    let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
+    let sr_register_index = RegisterName::Sr as u8;
+    if should_redact_sr && index == sr_register_index {
+        registers[index] & SR_REDACTION_MASK
+    } else {
+        registers[index]
+    }
+}
+
 fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
     let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
     let sr_register_index = RegisterName::Sr as u8;
@@ -31,6 +44,27 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
         registers[index] = (registers[index] & SR_PRIVILEGED_MASK) | (value & SR_REDACTION_MASK);
     } else {
         registers[index] = value;
+    }
+}
+
+fn do_shift(
+    registers: &Registers,
+    sr_a_before_shift: u16,
+    shift_params: &ShiftParameters,
+) -> (u16, u16) {
+    let ShiftParameters {
+        shift_count,
+        shift_operand,
+        shift_type,
+    } = *shift_params;
+    match shift_operand {
+        ShiftOperand::Immediate => {
+            perform_shift(sr_a_before_shift, shift_type, u16::from(shift_count))
+        }
+        ShiftOperand::Register => {
+            let dereferenced_shift_count = get_register_value(registers, shift_count);
+            perform_shift(sr_a_before_shift, shift_type, dereferenced_shift_count)
+        }
     }
 }
 
@@ -100,11 +134,9 @@ impl StageExecutor for WriteBackExecutor {
         let write_back_step_instruction_type =
             decode_write_back_step_instruction_type(decoded.ins, decoded);
 
+        // Internal Registers
         match write_back_step_instruction_type {
-            WriteBackInstructionType::NoOp => {}
-            WriteBackInstructionType::MemoryLoad => {
-                set_register_value(registers, decoded.des, bus_assertions.data);
-            }
+            WriteBackInstructionType::NoOp | WriteBackInstructionType::MemoryLoad => {}
             WriteBackInstructionType::AluStatusOnly => {
                 update_status_flags(decoded, registers, intermediate_registers);
             }
@@ -114,29 +146,33 @@ impl StageExecutor for WriteBackExecutor {
             }
             WriteBackInstructionType::AddressWrite => {
                 registers[decoded.des_ad_h] = decoded.ad_h_;
-                registers[decoded.des_ad_l] = intermediate_registers.alu_output;
+                registers[decoded.des_ad_l] = intermediate_registers.address_output;
             }
-            WriteBackInstructionType::AddressWriteLoadPostDecrement => {
-                // TODO: Reduce code duplication in `WriteBackExecutor`
-                // category=Refactoring
-                // Is there a smarter way to do this that doesn't duplicate MemoryLoad and AddressWriteStorePreIncrement branch
-                // also make sure that this is ok to do in hardware
-                // TODO: Clarify how AddressWriteLoadPostDecrement will work in hardware
-                // category=Hardware
-                // The order of operations matters here which probably doesn't bode well for the hardware
-                // implementation. What happens if the destination register is the same as the address source register?
-                // I guess the destination register should take precedence
-                registers[decoded.ad_h] = decoded.ad_h_;
-                registers[decoded.ad_l] = intermediate_registers.address_output;
-                set_register_value(registers, decoded.des, bus_assertions.data);
-            }
-            WriteBackInstructionType::AddressWriteStorePreIncrement => {
+            WriteBackInstructionType::AddressWriteLoadPostDecrement
+            | WriteBackInstructionType::AddressWriteStorePreIncrement => {
                 registers[decoded.ad_h] = decoded.ad_h_;
                 registers[decoded.ad_l] = intermediate_registers.address_output;
             }
             WriteBackInstructionType::CoprocessorCall => {
                 registers.pending_coprocessor_command = intermediate_registers.alu_output;
             }
+        }
+
+        // Load from Memory
+        match write_back_step_instruction_type {
+            WriteBackInstructionType::MemoryLoad
+            | WriteBackInstructionType::AddressWriteLoadPostDecrement => {
+                // LOAD instructions never update the status register, so status register updates are ignored, regardless of the status register update source parameter
+                let (shifted, _) = do_shift(registers, bus_assertions.data, &decoded.shift_params);
+
+                set_register_value(registers, decoded.des, shifted);
+            }
+            WriteBackInstructionType::NoOp
+            | WriteBackInstructionType::AluToRegister
+            | WriteBackInstructionType::AluStatusOnly
+            | WriteBackInstructionType::AddressWrite
+            | WriteBackInstructionType::AddressWriteStorePreIncrement
+            | WriteBackInstructionType::CoprocessorCall => {}
         }
         BusAssertions::default()
     }

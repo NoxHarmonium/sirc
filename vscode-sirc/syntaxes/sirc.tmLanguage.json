@@ -46,7 +46,7 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LJMP|LJSR|LOAD|STOR)((\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV)(?<!\\w))|\\b)",
+          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LJMP|LJSR|LOAD|STOR|SHFT)((\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV)(?<!\\w))|\\b)",
           "captures": {
             "1": { "name": "keyword.control.mnemonic.sirc" },
             "2": { "name": "keyword.control.condition.sirc" }

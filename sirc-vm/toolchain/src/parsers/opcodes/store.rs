@@ -47,7 +47,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             })
         };
 
+    // NOTE: No shifting with immediate operands because there is no short immediate representation of STOR
     match operands.as_slice() {
+        // STOR (#0, a), r1
         [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
@@ -93,6 +95,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
+        // STOR (r1, a), r1
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register)] =>
         {
             Ok((
@@ -114,6 +117,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        // STOR (r1, a), r1, ASL #1
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
@@ -137,6 +141,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        // STOR -(#0, a), r1
         [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
@@ -182,6 +187,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
+        // STOR -(r1, a), r1
         [AddressingMode::IndirectRegisterDisplacementPreDecrement(
             displacement_register,
             address_register,
@@ -204,6 +210,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 }
             }))
         }
+        // STOR -(r1, a), r1, ASL #1
         [AddressingMode::IndirectRegisterDisplacementPreDecrement(
             displacement_register,
             address_register,

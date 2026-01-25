@@ -20,6 +20,8 @@ Both instructions support multiple addressing modes:
 	\item Pre-decrement: \texttt{-(\#offset, addr)}
 \end{itemize}
 
+\textbf{Important:} When using indirect addressing modes (with memory access), \mnemonic{LOAD} and \mnemonic{STOR} instructions support optional shift operations on the data being loaded or stored. See Section~\ref{sec:memory-shifts} for details. Note that shifts are \textbf{not} supported when loading immediate values or copying register values directly.
+
 \section{Effective Address Calculation}
 
 For all memory operations, the effective address (EA) is calculated as:
@@ -47,6 +49,12 @@ LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
 LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
 LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
 LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += 1
+
+; With optional shift (memory addressing modes only)
+LOAD rD, (#offset, addr), shift      ; Load and shift
+LOAD rD, (rS, addr), shift           ; Load and shift
+LOAD rD, (#offset, addr)+, shift     ; Load, shift, then increment
+LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 \end{lstlisting}
 
 	\textbf{Description:}
@@ -67,6 +75,10 @@ LOAD r4, (#0, a)+             ; r4 = *a; a += 1
 
 ; Stack pop
 LOAD r5, (#0, s)+             ; r5 = *s; s += 1
+
+; Load and shift (for bit manipulation)
+LOAD r3, (r2, a), LSL #2      ; r3 = memory[a + r2] << 2
+LOAD r6, (#0, a), ASR #2      ; r6 = memory[a] >> 2 (signed)
 \end{lstlisting}
 
 \end{instructionbox}
@@ -78,10 +90,16 @@ LOAD r5, (#0, s)+             ; r5 = *s; s += 1
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-STOR rS, (#offset, addr)      ; memory[addr + offset] = rS
-STOR rS, (rD, addr)           ; memory[addr + rD] = rS
-STOR rS, -(#offset, addr)     ; addr -= 1; memory[addr + offset] = rS
-STOR rS, -(rD, addr)          ; addr -= 1; memory[addr + rD] = rS
+STOR (#offset, addr), rS      ; memory[addr + offset] = rS
+STOR (rD, addr), rS           ; memory[addr + rD] = rS
+STOR -(#offset, addr), rS     ; addr -= 1; memory[addr + offset] = rS
+STOR -(rD, addr), rS          ; addr -= 1; memory[addr + rD] = rS
+
+; With optional shift (memory addressing modes only)
+STOR (#offset, addr), rS, shift      ; Shift and store
+STOR (rD, addr), rS, shift           ; Shift and store
+STOR -(#offset, addr), rS, shift     ; Decrement, shift, and store
+STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
 \end{lstlisting}
 
 	\textbf{Description:}
@@ -96,6 +114,10 @@ STOR (#8, a), r1              ; memory[a + 8] = r1
 
 ; Store using variable offset
 STOR (r3, a), r2              ; memory[a + r3] = r2
+
+; Store with shift (data shifted before storing)
+STOR (r2, a), r1, LSL #1      ; memory[a + r2] = r1 << 1
+STOR (#0, a), r1, LSR #3      ; memory[a] = r1 >> 3
 
 ; Stack push
 STOR -(#0, s), r4             ; s -= 1; memory[s] = r4
@@ -138,4 +160,96 @@ LOAD r2, (#0, s)+
 LOAD r1, (#0, s)+
 \end{lstlisting}
 
-\textit{(Additional memory instruction details would follow in a complete manual)}
+\section{Shift Operations with Memory Instructions}
+\label{sec:memory-shifts}
+
+When using indirect addressing modes (memory access), both \mnemonic{LOAD} and \mnemonic{STOR} instructions support
+optional shift operations. This feature allows data to be shifted during the load or store operation, which is
+particularly useful for bit manipulation and working with the CPU's word-addressed memory architecture.
+
+\subsection{LOAD with Shift}
+
+When loading from memory, the data read from memory is shifted \textbf{after} being loaded but \textbf{before} being
+written to the destination register:
+
+\begin{lstlisting}
+LOAD r3, (r2, a), LSL #2      ; r3 = (memory[a + r2]) << 2
+LOAD r4, (#0, a), LSR #4      ; r4 = (memory[a]) >> 4
+LOAD r5, (r2, a), ASL #3      ; r5 = (memory[a + r2]) << 3
+LOAD r6, (#0, a), ASR #2      ; r6 = (memory[a]) >> 2 (sign-extend)
+\end{lstlisting}
+
+\subsection{STOR with Shift}
+
+When storing to memory, the source register value is shifted \textbf{before} being written to memory. The original
+register value is \textbf{not} modified:
+
+\begin{lstlisting}
+STOR (r2, a), r1, LSL #1      ; memory[a + r2] = r1 << 1 (r1 unchanged)
+STOR (#0, a), r1, LSR #3      ; memory[a] = r1 >> 3 (r1 unchanged)
+STOR (r2, a), r1, ASL #2      ; memory[a + r2] = r1 << 2 (r1 unchanged)
+STOR (#0, a), r1, ASR #4      ; memory[a] = r1 >> 4 (r1 unchanged)
+\end{lstlisting}
+
+\subsection{Supported Shift Types}
+
+All standard shift types are supported:
+\begin{itemize}
+	\item \textbf{LSL} -- Logical Shift Left (fill with zeros)
+	\item \textbf{LSR} -- Logical Shift Right (fill with zeros)
+	\item \textbf{ASL} -- Arithmetic Shift Left (same as LSL)
+	\item \textbf{ASR} -- Arithmetic Shift Right (sign-extend)
+	\item \textbf{RTL} -- Rotate Left (through carry)
+	\item \textbf{RTR} -- Rotate Right (through carry)
+\end{itemize}
+
+\subsection{Shift Limitations}
+
+\textbf{Important:} Shift operations are \textbf{only} supported when using indirect addressing modes (accessing memory). The following \mnemonic{LOAD} modes do \textbf{not} support shifts:
+\begin{itemize}
+	\item Loading immediate values: \texttt{LOAD r1, \#0x1234} -- No shift allowed
+	\item Copying registers: \texttt{LOAD r1, r2} -- No shift allowed
+\end{itemize}
+
+For these non-memory operations, use regular ALU instructions with shifts instead (e.g., \texttt{ADDI r1, \#0, LSL
+	\#2}).
+
+\subsection{Use Cases}
+
+\subsubsection{Word-Addressed Memory}
+
+The SIRC-1 uses word addressing, so shifting during load/store can save cycles when converting between byte and word
+addresses:
+
+\begin{lstlisting}
+; Convert byte offset to word address and load
+LOAD r3, (r2, a), LSR #1      ; Divide byte offset by 2
+\end{lstlisting}
+
+\subsubsection{Bit Manipulation}
+
+Shifting during memory access enables efficient bit manipulation:
+
+\begin{lstlisting}
+; Extract upper byte from memory
+LOAD r1, (#0, a), LSR #8      ; r1 = (memory[a] >> 8) & 0xFF
+
+; Store scaled value
+STOR (#0, a), r2, LSL #2      ; memory[a] = r2 * 4
+\end{lstlisting}
+
+\subsubsection{Combined with Auto-Increment/Decrement}
+
+Shifts work seamlessly with post-increment and pre-decrement modes:
+
+\begin{lstlisting}
+; Load, shift, and advance pointer
+LOAD r3, (r2, a)+, LSL #1     ; r3 = (memory[a + r2]) << 1; a += 1
+
+; Decrement, shift, and store
+STOR -(r2, a), r1, LSR #2     ; a -= 1; memory[a + r2] = r1 >> 2
+\end{lstlisting}
+
+\subsection{Status Flags}
+
+\textbf{Note:} Unlike shifts in ALU instructions, shifts performed during \mnemonic{LOAD} and \mnemonic{STOR} operations can \textbf{not} update the status register flags. If you need flag updates based on a shift result, use an ALU instruction or the \mnemonic{SHFT} meta-instruction (see Chapter~\ref{ch:meta-instructions}).

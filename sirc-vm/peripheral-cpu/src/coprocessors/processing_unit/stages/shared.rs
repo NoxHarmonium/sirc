@@ -2,10 +2,17 @@ use peripheral_bus::device::BusAssertions;
 
 use crate::{
     coprocessors::processing_unit::definitions::{
-        ConditionFlags, Instruction, StatusRegisterUpdateSource,
+        ConditionFlags, Instruction, ShiftOperand, ShiftType, StatusRegisterUpdateSource,
     },
     registers::{ExceptionUnitRegisters, Registers},
 };
+
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct ShiftParameters {
+    pub shift_count: u8,
+    pub shift_operand: ShiftOperand,
+    pub shift_type: ShiftType,
+}
 
 /**
 * The instruction mapped out into components.
@@ -33,6 +40,7 @@ pub struct DecodedInstruction {
     pub con: ConditionFlags,
     pub adr: u8,
     pub sr_src: StatusRegisterUpdateSource,
+    pub shift_params: ShiftParameters,
     // Inferred
     pub ad_l: u8,
     pub ad_h: u8,

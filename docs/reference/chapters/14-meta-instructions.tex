@@ -68,4 +68,38 @@ exception_handler:
     RETE                      ; Return to interrupted code
 \end{lstlisting}
 
+\section{SHFT -- Shift with Status Update}
+
+\textbf{Syntax:} \texttt{SHFT rD, shift}
+
+\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+
+\textbf{Description:} Shifts the value in a register and updates the status register flags based on the shift result (not the ALU operation). This is useful when you need to shift a value and have the flags reflect the shifted result.
+
+Normally, when using shift operations with ALU instructions like \texttt{CMPI r2, \#1, LSL \#2}, the status flags are
+updated according to the ALU operation result, not the shift. The \mnemonic{SHFT} instruction allows the status flags
+to be updated from the shift operation itself.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Shift r1 left by 3 and update flags
+SHFT r1, LSL #3               ; r1 = r1 << 3, flags = status of shift
+
+; Shift right and test result
+SHFT r3, LSR #2               ; r3 = r3 >> 2
+BRAN|== zero_result           ; Branch if shifted result is zero
+
+; Arithmetic shift with sign check
+SHFT r6, ASR #4               ; r6 = r6 >> 4 (signed)
+BRAN|NS negative_value        ; Branch if result is negative
+\end{lstlisting}
+
+\textbf{Notes:}
+\begin{itemize}
+	\item Behind the scenes, \mnemonic{SHFT} uses the status override syntax (see Section~\ref{sec:status-override}) to force
+	      flag updates from the shift operation
+	\item All shift types are supported (LSL, LSR, ASL, ASR, RTL, RTR)
+	\item Both immediate and register-based shift counts are supported
+\end{itemize}
+
 \textit{(Note: Check assembler documentation for supported pseudo-instructions)}

@@ -135,6 +135,3 @@ fn test_ldea_indirect_register() {
         }
     }
 }
-
-// TODO: Clarify whether PC be written to with LDEA
-// category=Hardware

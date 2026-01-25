@@ -14,8 +14,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 
 fn tag_to_instruction(tag: &str) -> Instruction {
     match tag {
-        // SHFR is a "meta instruction" i.e. it does not have its own opcode - It is just AddRegister but status register is updated from shift not ALU
-        "ADDR" | "SHFR" => Instruction::AddRegister,
+        "ADDR" => Instruction::AddRegister,
         "ADCR" => Instruction::AddRegisterWithCarry,
         "SUBR" => Instruction::SubtractRegister,
         "SBCR" => Instruction::SubtractRegisterWithCarry,
@@ -82,8 +81,6 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("TSAR"),
         parse_instruction_tag("TSXR"),
         parse_instruction_tag("COPR"),
-        // Meta instruction
-        parse_instruction_tag("SHFR"),
     ));
 
     let (i, ((tag, condition_flag), operands)) =
@@ -106,11 +103,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -130,11 +123,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -159,11 +148,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -187,11 +172,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
                     }),
                     ..Default::default()
                 },
