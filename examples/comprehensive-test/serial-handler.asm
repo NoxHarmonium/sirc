@@ -26,51 +26,50 @@
 :setup_serial
 
 ; Save the used registers
-STOR -(#0, s), ah
-STOR -(#0, s), al
-STOR -(#0, s), r1
+STOR -(s), ah
+STOR -(s), al
+STOR -(s), r1
 
 LOAD    r1, #9600
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_BAUD
-; TODO: Allow omitting the #0 offset when not using an offset (infer the #0)
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Restore the used registers
-LOAD r1, (#0, s)+
-LOAD al, (#0, s)+
-LOAD ah, (#0, s)+
+LOAD r1, (s)+
+LOAD al, (s)+
+LOAD ah, (s)+
 
 RETS
 
 :print
 
 ; Save the used registers
-STOR -(#0, s), ah
-STOR -(#0, s), al
-STOR -(#0, s), r1
-STOR -(#0, s), r2
+STOR -(s), ah
+STOR -(s), al
+STOR -(s), r1
+STOR -(s), r2
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_BASE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Store segment
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_SEGMENT
-STOR    (#0, a), r2
+STOR    (a), r2
 
 ; Align pointer
 LOAD    r1, #1
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r1
+STOR    (a), r1
 
 LOAD    r1, $TRUE
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-STOR    (#0, a), r1
+STOR    (a), r1
 
 :wait_for_print_finish
 
@@ -79,42 +78,42 @@ COPI    r1, #0x1900
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 
 CMPI    r1, $TRUE
 BRAN|== @wait_for_print_finish
 
 ; Restore the used registers
-LOAD r2, (#0, s)+
-LOAD r1, (#0, s)+
-LOAD al, (#0, s)+
-LOAD ah, (#0, s)+
+LOAD r2, (s)+
+LOAD r1, (s)+
+LOAD al, (s)+
+LOAD ah, (s)+
 
 RETS
 
 :exception_handler_p3
 
 ; Save the used registers
-STOR -(#0, s), lh
-STOR -(#0, s), ll
-STOR -(#0, s), ah
-STOR -(#0, s), al
-STOR -(#0, s), r1
-STOR -(#0, s), r2
-STOR -(#0, s), r3
-STOR -(#0, s), r4
+STOR -(s), lh
+STOR -(s), ll
+STOR -(s), ah
+STOR -(s), al
+STOR -(s), r1
+STOR -(s), r2
+STOR -(s), r3
+STOR -(s), r4
 
 BRSR @write_pending_byte
 
 ; Restore the used registers
-LOAD r4, (#0, s)+
-LOAD r3, (#0, s)+
-LOAD r2, (#0, s)+
-LOAD r1, (#0, s)+
-LOAD al, (#0, s)+
-LOAD ah, (#0, s)+
-LOAD ll, (#0, s)+
-LOAD lh, (#0, s)+
+LOAD r4, (s)+
+LOAD r3, (s)+
+LOAD r2, (s)+
+LOAD r1, (s)+
+LOAD al, (s)+
+LOAD ah, (s)+
+LOAD ll, (s)+
+LOAD lh, (s)+
 
 RETE
 
@@ -123,7 +122,7 @@ RETE
 ; Check if the device is ready to write
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 
 ; Return early if not (there is already a send pending)
 CMPI    r1, $TRUE
@@ -131,11 +130,11 @@ RETS|==
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-LOAD    r2, (#0, a)
+LOAD    r2, (a)
 LOAD    al, $MESSAGE_SEND_SEGMENT
-LOAD    r4, (#0, a)
+LOAD    r4, (a)
 LOAD    al, $MESSAGE_SEND_BASE
-LOAD    al, (#0, a)
+LOAD    al, (a)
 LOAD    ah, r4
 
 LOAD    r3, (r2, a)
@@ -146,18 +145,18 @@ BRAN|== @stop_send
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_DATA
-STOR    (#0, a), r3
+STOR    (a), r3
 
 ; Increment by two because of lack of packing (a word actually is padded to a DW)
 ADDI    r2, #2
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r2
+STOR    (a), r2
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING
 LOAD    r1, $TRUE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS
 
@@ -165,6 +164,6 @@ RETS
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
 LOAD    r1, $FALSE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS

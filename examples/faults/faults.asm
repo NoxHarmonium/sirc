@@ -47,7 +47,7 @@ LOAD    r7, #1
 ; Get the debug device to raise a fault on the bus
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_BUS_ERROR
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Jumping to an odd address triggers an alignment fault
 LOAD    pl, #0x0201
@@ -84,7 +84,7 @@ LOAD    al, #0xFFFE
 ; This should not trigger fault
 ; TODO: Fix LJMP so we don't have to used LDEA
 ; Also fix LDEA so we don't need to use this weird syntax, should really be LDEA p, a
-LDEA    p, (#0, a)
+LDEA    p, (a)
 
 :return_from_testing_pc_overflow_no_fault
 
@@ -95,7 +95,7 @@ LOAD    ah, $PROGRAM_SEGMENT_HIGH
 LOAD    al, #0xFFFE
 
 ; This _should_ trigger a fault
-LDEA    p, (#0, a)
+LDEA    p, (a)
 
 :return_from_testing_pc_overflow_with_fault
 
@@ -115,7 +115,7 @@ LOAD     ph, #0xFEFE
 LOAD    r7, #0x1
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
-STOR    (#0, a), r7
+STOR    (a), r7
 
 ; Halt CPU
 COPI    r1, #0x14FF
@@ -206,7 +206,7 @@ ADDI    r6, #0x1000
 LOAD    r7, #0x1
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
-STOR    (#0, a), r7
+STOR    (a), r7
 
 RETE
 

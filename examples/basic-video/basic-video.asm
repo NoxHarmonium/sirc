@@ -74,7 +74,7 @@ COPI    r1, #0x1900
 ; Exit when MAX_FRAMES have been rendered so it doesn't loop forever
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $FRAME_COUNTER
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 CMPI    r1, $MAX_FRAMES
 BRAN|>= @finish
 
@@ -104,27 +104,27 @@ BRAN    @print
 :exception_handler_p5
 
 ; Save the used registers
-STOR -(#0, s), lh
-STOR -(#0, s), ll
-STOR -(#0, s), ah
-STOR -(#0, s), al
-STOR -(#0, s), r1
+STOR -(s), lh
+STOR -(s), ll
+STOR -(s), ah
+STOR -(s), al
+STOR -(s), r1
 
 ; TODO: Make sure exception handlers don't stomp all over the registers
 
 ; Increment frame count
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $FRAME_COUNTER
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 ADDI    r1, #1
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Restore the used registers
-LOAD r1, (#0, s)+
-LOAD al, (#0, s)+
-LOAD ah, (#0, s)+
-LOAD ll, (#0, s)+
-LOAD lh, (#0, s)+
+LOAD r1, (s)+
+LOAD al, (s)+
+LOAD ah, (s)+
+LOAD ll, (s)+
+LOAD lh, (s)+
 
 RETE
 
@@ -132,7 +132,7 @@ RETE
 
 :setup_video
 ; Save link register
-LDEA s, (#0, l)
+LDEA s, (l)
 
 ; 1. Copy Tileset (10224 words)
 LOAD r1, @tileset_0.l
@@ -192,33 +192,33 @@ LOAD ah, $VIDEO_DEVICE_SEGMENT
 ; Tile Size (all 8x8, all Single tilemap size)
 LOAD al, $PPU_TILE_SIZE
 LOAD r1, #0
-STOR (#0, a), r1
+STOR (a), r1
 
 ; BG Tilemap Addresses
 LOAD al, $PPU_BG1_TILEMAP_ADDR
 LOAD r1, $VRAM_BG1_TILEMAP_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG2_TILEMAP_ADDR
 LOAD r1, $VRAM_BG2_TILEMAP_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG3_TILEMAP_ADDR
 LOAD r1, $VRAM_BG3_TILEMAP_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 ; BG Tile Data Addresses
 LOAD al, $PPU_BG1_TILE_ADDR
 LOAD r1, $VRAM_TILESET_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG2_TILE_ADDR
 LOAD r1, $VRAM_TILESET_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG3_TILE_ADDR
 LOAD r1, $VRAM_TILESET_BASE
-STOR (#0, a), r1
+STOR (a), r1
 
 ; pub struct PaletteRegister {
 ;    pub palette_size: PaletteSize, // Bits 0-1
@@ -229,23 +229,23 @@ STOR (#0, a), r1
 LOAD r1, #0x0002
 
 LOAD al, $PPU_BG1_PALETTE_CONFIG
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG2_PALETTE_CONFIG
-STOR (#0, a), r1
+STOR (a), r1
 
 LOAD al, $PPU_BG3_PALETTE_CONFIG
-STOR (#0, a), r1
+STOR (a), r1
 
 ; Base Config (Enable all BG and Sprites, Brightness 15)
 ; Brightness 15 = 0xF << 3 = 0x0078
 ; All disable bits = 0
 LOAD al, $PPU_BASE_CONFIG
 LOAD r1, #0x0078
-STOR (#0, a), r1
+STOR (a), r1
 
 ; Restore link register
-LDEA l, (#0, s)
+LDEA l, (s)
 RETS
 
 ; r1 = source address (offset)

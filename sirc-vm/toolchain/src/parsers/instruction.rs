@@ -151,8 +151,12 @@ fn parse_indirect_register_displacement(i: &str) -> AsmResult<(RegisterName, Add
 fn parse_indirect_immediate_displacement(
     i: &str,
 ) -> AsmResult<(ImmediateType, AddressRegisterName)> {
-    let args = separated_pair(parse_value, parse_comma_sep, parse_address_register);
-    delimited(char('('), args, char(')'))(i)
+    let explicit_args = separated_pair(parse_value, parse_comma_sep, parse_address_register);
+    // Shorthand syntax for (#0, a) -> (a)
+    let implicit_args = parse_address_register
+        .map(|address_register_name| (ImmediateType::Value(0), address_register_name));
+    let either_args = alt((explicit_args, implicit_args));
+    delimited(char('('), either_args, char(')'))(i)
 }
 
 // Address register indirect with immediate displacement and post increment | (#n, a)+ | LOAD (#-3, s)+, x1

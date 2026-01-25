@@ -37,16 +37,16 @@
 
 :store_test_result
     ; Store used registers
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
-    STOR -(#0, s), r1
+    STOR -(s), ah
+    STOR -(s), al
+    STOR -(s), r1
 
     ; Set the correct segment
     LOAD ah, $TEST_RUNNER_STORAGE
 
     ; Load current offset in array
     LOAD al, $TEST_RESULT_OFFSET
-    LOAD r1, (#0, a)
+    LOAD r1, (a)
 
     ; Setup pointer to start of array
     LOAD al, $TEST_RESULT_BASE_OFFSET
@@ -59,30 +59,30 @@
 
     ; Store the incremented offset back to memory
     LOAD al, $TEST_RESULT_OFFSET
-    STOR (#0, a), r1
+    STOR (a), r1
 
     ; Restore used registers
-    LOAD r1, (#0, s)+
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
+    LOAD r1, (s)+
+    LOAD al, (s)+
+    LOAD ah, (s)+
 
     RETS
 
 :count_passed_tests
     ; Store used registers and link register
-    STOR -(#0, s), lh
-    STOR -(#0, s), ll
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
-    STOR -(#0, s), r1
-    STOR -(#0, s), r2
+    STOR -(s), lh
+    STOR -(s), ll
+    STOR -(s), ah
+    STOR -(s), al
+    STOR -(s), r1
+    STOR -(s), r2
 
     ; Set the correct segment
     LOAD ah, $TEST_RUNNER_STORAGE
 
     ; Load current offset in array (total count)
     LOAD al, $TEST_RESULT_OFFSET
-    LOAD r1, (#0, a)
+    LOAD r1, (a)
 
     ; Setup pointer to start of array
     LOAD al, $TEST_RESULT_BASE_OFFSET
@@ -112,12 +112,12 @@
     BRAN|!= @count_passed_tests_loop
 
     ; Restore used registers
-    LOAD r2, (#0, s)+
-    LOAD r1, (#0, s)+
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD ll, (#0, s)+
-    LOAD lh, (#0, s)+
+    LOAD r2, (s)+
+    LOAD r1, (s)+
+    LOAD al, (s)+
+    LOAD ah, (s)+
+    LOAD ll, (s)+
+    LOAD lh, (s)+
 
     RETS
 
@@ -126,16 +126,16 @@
 ; Clobbers: r3, r4, r5, r6
 :print_test_result
     ; Save registers including link register
-    STOR -(#0, s), lh
-    STOR -(#0, s), ll
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
-    STOR -(#0, s), r1
-    STOR -(#0, s), r2
-    STOR -(#0, s), r3
-    STOR -(#0, s), r4
-    STOR -(#0, s), r5
-    STOR -(#0, s), r6
+    STOR -(s), lh
+    STOR -(s), ll
+    STOR -(s), ah
+    STOR -(s), al
+    STOR -(s), r1
+    STOR -(s), r2
+    STOR -(s), r3
+    STOR -(s), r4
+    STOR -(s), r5
+    STOR -(s), r6
 
     ; Convert test index (0-based) to 1-based for display
     ADDI r1, #1
@@ -200,16 +200,16 @@
     BRSR @print
 
     ; Restore registers
-    LOAD r6, (#0, s)+
-    LOAD r5, (#0, s)+
-    LOAD r4, (#0, s)+
-    LOAD r3, (#0, s)+
-    LOAD r2, (#0, s)+
-    LOAD r1, (#0, s)+
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD ll, (#0, s)+
-    LOAD lh, (#0, s)+
+    LOAD r6, (s)+
+    LOAD r5, (s)+
+    LOAD r4, (s)+
+    LOAD r3, (s)+
+    LOAD r2, (s)+
+    LOAD r1, (s)+
+    LOAD al, (s)+
+    LOAD ah, (s)+
+    LOAD ll, (s)+
+    LOAD lh, (s)+
 
     RETS
 
@@ -603,7 +603,7 @@
     LOAD r2, #0xBBBB
     STOR (#0x0001, a), r2
     LOAD al, #0x0200        ; Reset pointer
-    LOAD r4, (#0, a)+       ; r4 = 0xAAAA, al += 1
+    LOAD r4, (a)+       ; r4 = 0xAAAA, al += 1
     CMPI r4, #0xAAAA
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -617,7 +617,7 @@
 
 ; TEST 42: Memory Post-Increment Second Read
     BRSR @reset_test
-    LOAD r5, (#0, a)+       ; r5 = 0xBBBB, al += 1
+    LOAD r5, (a)+       ; r5 = 0xBBBB, al += 1
     CMPI r5, #0xBBBB
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -627,7 +627,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0306
     LOAD r1, #0x1111
-    STOR -(#0, a), r1       ; al -= 1, store at 0x0305
+    STOR -(a), r1       ; al -= 1, store at 0x0305
     CMPI al, #0x0305
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -689,7 +689,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0400
     LOAD r1, #0x0003        ; Value to store: 0x0003
-    STOR (#0, a), r1
+    STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
     LOAD r3, (r2, a), LSL #2  ; Load 0x0003 and shift left by 2: 0x000C
     CMPI r3, #0x000C
@@ -701,7 +701,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0410
     LOAD r1, #0x00F0        ; Value to store: 0x00F0
-    STOR (#0, a), r1
+    STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
     LOAD r4, (r2, a), LSR #4  ; Load 0x00F0 and shift right by 4: 0x000F
     CMPI r4, #0x000F
@@ -713,7 +713,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0420
     LOAD r1, #0x0005        ; Value to store: 0x0005
-    STOR (#0, a), r1
+    STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
     LOAD r5, (r2, a), ASL #3  ; Load 0x0005 and shift left by 3: 0x0028
     CMPI r5, #0x0028
@@ -725,7 +725,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0430
     LOAD r1, #0x8000        ; Value to store: 0x8000 (negative)
-    STOR (#0, a), r1
+    STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
     LOAD r6, (r2, a), ASR #2  ; Load 0x8000 and shift right by 2: 0xA000 (sign extended)
     CMPI r6, #0xA000
@@ -739,7 +739,7 @@
     LOAD r1, #0x0007        ; Value in register: 0x0007
     LOAD r2, #0x0000        ; Offset register
     STOR (r2, a), r1, LSL #1  ; Shift r1 left by 1 and store: 0x000E
-    LOAD r3, (#0, a)        ; Read back the value
+    LOAD r3, (a)        ; Read back the value
     CMPI r3, #0x000E
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -751,7 +751,7 @@
     LOAD r1, #0x0080        ; Value in register: 0x0080
     LOAD r2, #0x0000        ; Offset register
     STOR (r2, a), r1, LSR #3  ; Shift r1 right by 3 and store: 0x0010
-    LOAD r4, (#0, a)        ; Read back the value
+    LOAD r4, (a)        ; Read back the value
     CMPI r4, #0x0010
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -763,7 +763,7 @@
     LOAD r1, #0x000A        ; Value in register: 0x000A
     LOAD r2, #0x0000        ; Offset register
     STOR (r2, a), r1, ASL #2  ; Shift r1 left by 2 and store: 0x0028
-    LOAD r5, (#0, a)        ; Read back the value
+    LOAD r5, (a)        ; Read back the value
     CMPI r5, #0x0028
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -775,7 +775,7 @@
     LOAD r1, #0xF000        ; Value in register: 0xF000 (negative)
     LOAD r2, #0x0000        ; Offset register
     STOR (r2, a), r1, ASR #4  ; Shift r1 right by 4 and store: 0x8F00 (sign extended)
-    LOAD r6, (#0, a)        ; Read back the value
+    LOAD r6, (a)        ; Read back the value
     CMPI r6, #0x8F00
     LOAD|== r7, #1
     BRSR @store_test_result
@@ -785,7 +785,7 @@
     LOAD ah, #0x0001
     LOAD al, #0x0480
     LOAD r1, #0x000C        ; Value to store: 0x000C
-    STOR (#0, a), r1
+    STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
     LOAD r3, (r2, a)+, LSL #1  ; Load 0x000C, shift left by 1: 0x0018, then increment al
     CMPI r3, #0x0018
@@ -812,7 +812,7 @@
 
 ; TEST 61: Verify pre-decrement stored correct value with shift
     BRSR @reset_test
-    LOAD r5, (#0, a)        ; Read back from 0x048F
+    LOAD r5, (a)        ; Read back from 0x048F
     CMPI r5, #0x0010
     LOAD|== r7, #1
     BRSR @store_test_result
