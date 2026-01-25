@@ -41,7 +41,16 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("RETE"),
     ));
 
-    let (i, (tag, condition_flag)) = instructions(i)?;
+    let (i, (tag, condition_flag, status_register_update_source)) = instructions(i)?;
+    if status_register_update_source.is_some() {
+        let error_string =
+            format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string.as_str(),
+        )));
+    }
     let (i, _) = one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).map_err(|_| {
         let error_string =
             format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");

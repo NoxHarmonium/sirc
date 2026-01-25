@@ -857,10 +857,48 @@
     LOAD|== r7, #1
     BRSR @store_test_result
 
+; TEST 66: Status override [S] - flags from shift not ALU
+    BRSR @reset_test
+    LOAD r1, #0x8000        ; Negative value
+    ADDI[S] r1, #0, LSL #1  ; Shift left by 1 (becomes 0x0000), flags from shift
+    ; After shift: r1 = 0x0000, Z flag should be set (from shift result)
+    ; After ALU (add 0): still 0x0000
+    LOAD|== r7, #1          ; Check if zero flag is set
+    BRSR @store_test_result
+
+; TEST 67: Status override [N] - no flag updates
+    BRSR @reset_test
+    LOAD r1, #0x0001
+    LOAD r2, #0
+    CMPI r1, #0x0001        ; Set Z flag (equal)
+    ADDI[X] r2, #0x0005     ; Add without updating flags
+    ; r2 should be 5, but Z flag should still be set from CMPI
+    LOAD|== r3, #1          ; Check if Z flag still set
+    CMPI r2, #0x0005        ; Verify r2 = 5
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 68: Status override [A] - flags from ALU (default)
+    BRSR @reset_test
+    LOAD r1, #0x0003
+    ADDI[A] r1, #1, LSL #2  ; r1 = (r1 << 2) + 1 = (3 << 2) + 1 = 13
+    ; Flags should be from ALU result (13), not shift result (12)
+    CMPI r1, #0x000D        ; Verify r1 = 13
+    LOAD|== r7, #1
+    BRSR @store_test_result
+
+; TEST 69: Status override [S] with negative shift result
+    BRSR @reset_test
+    LOAD r1, #0x4000        ; 0x4000
+    ADDI[S] r1, #0, LSL #1  ; Shift left by 1 = 0x8000, flags from shift
+    ; Shift result 0x8000 has bit 15 set, so N flag should be set
+    LOAD|NS r7, #1          ; Check if negative flag is set
+    BRSR @store_test_result
+
 ; Final Counter Check
     BRSR @count_passed_tests
-    ; r7 should now equal 65 (0x41) if all tests passed
-    CMPI r7, #0x41
+    ; r7 should now equal 69 (0x45) if all tests passed
+    CMPI r7, #0x45
     LOAD|== r1, #0x0FAB     ; Success marker
     LOAD|!= r1, #0xFA11     ; Failure marker (0xFA11)
 

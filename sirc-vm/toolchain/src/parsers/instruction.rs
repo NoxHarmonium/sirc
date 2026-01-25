@@ -1,5 +1,5 @@
 use nom::branch::alt;
-use nom::character::complete::{char, space0, space1};
+use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
 use nom::multi::separated_list1;
@@ -11,7 +11,7 @@ use nom_supreme::ParserExt;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction, InstructionData, ShiftType,
-    MAX_SHIFT_COUNT,
+    StatusRegisterUpdateSource, MAX_SHIFT_COUNT,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
@@ -195,6 +195,20 @@ fn parse_indirect_register_pre_decrement(
     Ok((i, args))
 }
 
+fn parse_status_register_update_source(i: &str) -> AsmResult<Option<StatusRegisterUpdateSource>> {
+    let (i, status_register_update_flag) =
+        opt(delimited(char('['), one_of("asnASN"), char(']'))
+            .context("Status register update source ([A|S|N])"))(i)?;
+    let update_source = match status_register_update_flag.map(|c| c.to_ascii_lowercase()) {
+        Some('a') => Some(StatusRegisterUpdateSource::Alu),
+        Some('s') => Some(StatusRegisterUpdateSource::Shift),
+        Some('n') => Some(StatusRegisterUpdateSource::None),
+        Some(c) => panic!("Tag mismatch between parser and handler ({c})"),
+        None => None,
+    };
+    Ok((i, update_source))
+}
+
 #[allow(clippy::let_and_return)]
 fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
     let (i, shift_type) = parse_shift_type(i)?;
@@ -325,7 +339,7 @@ fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
             ">>" => ConditionFlags::GreaterThan,
             "<=" => ConditionFlags::LessThanOrEqual,
             "NV" => ConditionFlags::Never,
-            _ => panic!("Mismatch between this switch statement and parser tags"),
+            _ => panic!("Tag mismatch between parser and handler ({code})"),
         },
     )(i)
 }
@@ -349,17 +363,19 @@ fn parse_shift_type(i: &str) -> AsmResult<ShiftType> {
             "ASR" => ShiftType::ArithmeticRightShift,
             "RTL" => ShiftType::RotateLeft,
             "RTR" => ShiftType::RotateRight,
-            _ => panic!("Mismatch between this switch statement and parser tags"),
+            _ => panic!("Tag mismatch between parser and handler ({code})"),
         },
     )(i)
 }
 
 pub fn parse_instruction_tag(
     instruction_tag: &'static str,
-) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + 'static {
+) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags, Option<StatusRegisterUpdateSource>)> + 'static
+{
     move |i: &str| {
         let tag_parser = tag(instruction_tag);
         let (i, tag) = tag_parser(i)?;
+        let (i, status_register_update_source) = parse_status_register_update_source(i)?;
         let (i, condition_code_specified) = opt(char('|'))(i)?;
         let (i, condition_code) = if condition_code_specified.is_some() {
             cut(parse_condition_code.context("condition code"))(i)?
@@ -372,7 +388,14 @@ pub fn parse_instruction_tag(
         // Get lexeme working with this function to avoid this
         let (i, _) = space0(i)?;
 
-        Ok((i, (String::from(tag), condition_code)))
+        Ok((
+            i,
+            (
+                String::from(tag),
+                condition_code,
+                status_register_update_source,
+            ),
+        ))
     }
 }
 
@@ -455,7 +478,7 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
         "sh" => RegisterName::Sh,
         "sl" => RegisterName::Sl,
         "sr" => RegisterName::Sr,
-        _ => panic!("Mismatch between parser and enum mapping"),
+        _ => panic!("Tag mismatch between parser and handler ({tag})"),
     })(i)
 }
 

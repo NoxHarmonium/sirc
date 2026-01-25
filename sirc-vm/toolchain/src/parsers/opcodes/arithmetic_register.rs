@@ -83,8 +83,11 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("COPR"),
     ));
 
-    let (i, ((tag, condition_flag), operands)) =
+    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
+
+    let default_status_register_update_source =
+        status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
 
     match operands.as_slice() {
         // The CPU does not support register arithmetic instructions with two register operands
@@ -103,7 +106,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -123,7 +126,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -148,7 +151,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -172,7 +175,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },

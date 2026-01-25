@@ -45,8 +45,18 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// ```
 pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag), operands)) =
+    let (i, ((_, condition_flag, status_register_update_source), operands)) =
         tuple((parse_instruction_tag("LJMP"), parse_instruction_operands1))(i)?;
+
+    if status_register_update_source.is_some() {
+        let error_string =
+            "The [LJMP] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string,
+        )));
+    }
 
     let construct_immediate_instruction = |offset: u16, address_register: &AddressRegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {

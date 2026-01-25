@@ -70,8 +70,18 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let instructions = alt((parse_instruction_tag("BRAN"), parse_instruction_tag("BRSR")));
 
-    let (i, ((tag, condition_flag), operands)) =
+    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
+
+    if status_register_update_source.is_some() {
+        let error_string =
+            format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string.as_str(),
+        )));
+    }
 
     let construct_branch_immediate_instruction = |value: u16| {
         InstructionData::Immediate(ImmediateInstructionData {

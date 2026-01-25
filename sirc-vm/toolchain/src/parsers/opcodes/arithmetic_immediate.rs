@@ -95,8 +95,11 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("SHFT"),
     ));
 
-    let (i, ((tag, condition_flag), operands)) =
+    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
         tuple((instructions, parse_instruction_operands1))(i)?;
+
+    let default_status_register_update_source =
+        status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
 
     let construct_immediate_instruction = |value: u16, dest_register: &RegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {
@@ -104,7 +107,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             register: dest_register.to_register_index(),
             value,
             condition_flag,
-            additional_flags: StatusRegisterUpdateSource::Alu.to_flags(),
+            additional_flags: default_status_register_update_source.to_flags(),
         })
     };
 
@@ -151,7 +154,8 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                             shift_operand,
                             shift_type,
                             shift_count,
-                            StatusRegisterUpdateSource::Shift,
+                            status_register_update_source
+                                .unwrap_or(StatusRegisterUpdateSource::Shift),
                         ),
                         symbol_ref: None,
                         ..Default::default()
@@ -231,7 +235,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                     shift_operand,
                                     shift_type,
                                     shift_count,
-                                    StatusRegisterUpdateSource::Alu,
+                                     default_status_register_update_source,
                                 ),
                                 symbol_ref: None,
                                 ..Default::default()
@@ -249,7 +253,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 shift_operand,
                                 shift_type,
                                 shift_count,
-                                StatusRegisterUpdateSource::Alu,
+                                default_status_register_update_source,
                             ),
                             placeholder_name: Some(placeholder_name.clone()),
                             ..Default::default()
