@@ -146,9 +146,13 @@ RETE
 
 ; Transfer exception metadata to r7
 COPI    r1, #0x1C27
+; Mask off the phase section of the status register
+ANDI    r7, #0x7
 
 CMPI    r7, $CPU_PHASE_INSTRUCTION_FETCH
 BRAN|== @segment_overflow_fault_handler_pc
+; Mask off the phase section of the status register
+ANDI    r7, #0x7
 
 CMPI    r7, $CPU_PHASE_EFFECTIVE_ADDRESS
 BRAN|== @segment_overflow_fault_handler_address

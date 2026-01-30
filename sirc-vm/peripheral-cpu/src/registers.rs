@@ -10,11 +10,6 @@ pub const SR_PRIVILEGED_MASK: u16 = 0xFF00;
 // The parts of the status register that non privileged code can "see" (or write to)
 pub const SR_REDACTION_MASK: u16 = 0x00FF;
 
-// Fault metadata is the extra data like what the bus is doing when the fault happened,
-// index 6 stores the actual return address
-// 0 = SW Exception, 1-5 interrupts, 6 = fault, 7 = fault metadata
-pub const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
-
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum StatusRegisterFields {
     // Byte 1
@@ -612,7 +607,7 @@ pub struct ExceptionUnitRegisters {
     // category=Hardware
     pub pending_hardware_exceptions: u8,
     pub pending_fault: Option<Faults>,
-    // 8 registers - 7 exception levels + one (index 7) to store fault metadata
+    // 8 registers for 7 exception levels + 1 metadata register that stores metadata about faults (at index 0xF)
     pub link_registers: [ExceptionLinkRegister; 8],
     pub waiting_for_exception: bool,
 }

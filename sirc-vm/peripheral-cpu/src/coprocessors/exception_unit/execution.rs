@@ -16,7 +16,7 @@ use crate::{
     coprocessors::{
         exception_unit::definitions::{
             vectors::{
-                LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
+                DOUBLE_FAULT_VECTOR, LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
                 USER_EXCEPTION_VECTOR_START,
             },
             ExceptionPriorities, Faults, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
@@ -154,6 +154,7 @@ pub fn get_cause_register_value(
             Faults::PrivilegeViolation => PRIVILEGE_VIOLATION_FAULT,
             Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
             Faults::LevelFiveInterruptConflict => LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT,
+            Faults::DoubleFault => DOUBLE_FAULT_VECTOR,
         };
 
         return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
@@ -201,7 +202,6 @@ fn extract_transfer_instruction_parameters<'a>(
 
     trace!("----> eu_register: {eu_register}");
 
-    // TODO: Again, what would happen in hardware if this was out of range in hardware?
     let link_register = eu_registers
         .link_registers
         .get_mut(eu_register as usize)
@@ -233,11 +233,12 @@ fn handle_exception(
     }
 
     // Store current PC in windowed link register and jump to vector
-    if current_interrupt_mask >= exception_level {
+    if current_interrupt_mask >= exception_level && exception_level != 7 {
         // TODO: Should this just be done when determining the cause register?
         // Ignore lower priority exceptions
         return;
     }
+
     eu_registers.link_registers[(exception_level - 1) as usize] = ExceptionLinkRegister {
         return_address: registers.get_full_pc_address(),
         return_status_register: registers.sr,

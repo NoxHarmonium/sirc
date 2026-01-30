@@ -54,7 +54,7 @@ ExceptionUnitRegisters {
         },
         ExceptionLinkRegister {
             return_address: 0x0,
-            return_status_register: 0x3,
+            return_status_register: 0x773,
         },
     ],
     waiting_for_exception: false,

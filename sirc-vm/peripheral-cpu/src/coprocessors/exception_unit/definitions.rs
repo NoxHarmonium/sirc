@@ -54,7 +54,26 @@ pub mod vectors {
     /// 3. Triggering exception below 0x80
     pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
-    // 0x05-0x07 Reserved
+    /// Vector to jump to on a double fault.
+    ///
+    /// When we are already handling a fault, and another one occurs,
+    /// we don't have any more banked link registers to store a return
+    /// address in so we have a last chance vector to most likely just
+    /// dump the registers and reset.
+    ///
+    /// There is only one fault metadata register so that gets clobbered
+    /// and you lose the original fault's bus address.
+    ///
+    /// If a fault occurs when already handling a double fault, it will just
+    /// double fault again and will keep overwriting the return address/
+    /// metadata registers.
+    ///
+    /// If you leave it at zero it will reset the program, but will still be
+    /// in an exception handler state, so you should probably provide a vector
+    /// and at least have a reset COP instruction.
+    pub const DOUBLE_FAULT_VECTOR: u8 = 0x06;
+
+    // 0x06-0x07 Reserved
 
     // Privileged Regular Exceptions (0x08-0x0F)
 
@@ -153,4 +172,5 @@ pub enum Faults {
     PrivilegeViolation = 0x5,
     InstructionTrace = 0x6,
     LevelFiveInterruptConflict = 0x7,
+    DoubleFault = 0x8,
 }

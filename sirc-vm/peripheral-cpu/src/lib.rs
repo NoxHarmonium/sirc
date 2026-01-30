@@ -45,14 +45,15 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
 };
+use num::ToPrimitive;
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
-use registers::{
-    get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
-    FAULT_METADATA_LINK_REGISTER_INDEX,
-};
+use registers::{get_interrupt_mask, ExceptionUnitRegisters};
 
-use crate::registers::Registers;
+use crate::registers::{ExceptionLinkRegister, Registers};
+
+// The 8th exception link register stores metadata about faults
+const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
@@ -62,6 +63,21 @@ pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
 pub const COPROCESSOR_ID_LENGTH: u16 = 12;
 pub const CAUSE_OPCODE_ID_MASK: u16 = 0x0F00;
 pub const CAUSE_OPCODE_ID_LENGTH: u16 = 8;
+
+// pub phase: u8, // 3 bits
+// pub double_fault: bool, // 1 bit
+// pub fault: Faults, // 4 bits (needs to hold values up to 0x8)
+// pub original_fault: Faults // 4 bits (needs to hold values up to 0x8)
+
+// Fault metadata components
+pub const PHASE_MASK: u16 = 0x7;
+pub const PHASE_LENGTH: u16 = 0;
+pub const DOUBLE_FAULT_FLAG_MASK: u16 = 0x8;
+pub const DOUBLE_FAULT_FLAG_LENGTH: u16 = 3;
+pub const CURRENT_FAULT_MASK: u16 = 0xF0;
+pub const CURRENT_FAULT_LENGTH: u16 = 4;
+pub const PREVIOUS_FAULT_MASK: u16 = 0xF00;
+pub const PREVIOUS_FAULT_LENGTH: u16 = 8;
 
 #[derive(Debug)]
 pub enum Error {
@@ -76,6 +92,32 @@ pub struct CpuPeripheral {
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
     pub cause_register_value: u16,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct FaultMetadataRegister {
+    pub phase: u8,          // 3 bits (bits 0-2)
+    pub double_fault: bool, // 1 bit (bit 3)
+    pub fault: Faults,      // 4 bits (bits 4-7, needs to hold values up to 0x8)
+    // If double_fault holds the fault that caused the double fault
+    pub original_fault: Faults, // 4 bits (bits 8-11, needs to hold values up to 0x8)
+}
+
+pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
+    FaultMetadataRegister {
+        phase: ((val & PHASE_MASK) >> PHASE_LENGTH) as u8,
+        double_fault: ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1,
+        fault: Faults::from_u16((val & CURRENT_FAULT_MASK) >> CURRENT_FAULT_LENGTH).unwrap(),
+        original_fault: Faults::from_u16((val & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH)
+            .unwrap(),
+    }
+}
+
+pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
+    (reg.original_fault.to_u16().unwrap()) << PREVIOUS_FAULT_LENGTH
+        | (reg.fault.to_u16().unwrap()) << CURRENT_FAULT_LENGTH
+        | u16::from(reg.double_fault) << DOUBLE_FAULT_FLAG_LENGTH
+        | u16::from(reg.phase)
 }
 
 pub fn raise_fault(
@@ -94,26 +136,38 @@ pub fn raise_fault(
         panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
     }
 
-    let current_interrupt_mask: u8 = get_interrupt_mask(registers);
-    if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
-        error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
-        panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
-    }
-
     debug!(
         "raise_fault: fault: {fault:?} address: 0x{:X} phase: {phase:?}",
         bus_assertions.address,
     );
 
+    let current_interrupt_mask: u8 = get_interrupt_mask(registers);
+    let is_double_fault = current_interrupt_mask >= ExceptionPriorities::Fault as u8;
+    let resolved_fault = if is_double_fault {
+        error!("Double fault! [{fault:?}] raised when a fault was already being serviced. Jumping to double fault vector.");
+        Faults::DoubleFault
+    } else {
+        fault
+    };
+    // Is always clobbered, so you lose the original fault metadata register if there is a double fault
+    // Make sure you save it somewhere if you're being careful
     eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
+        // Not actually a return address, just using the same data structure as a link register for now
         return_address: bus_assertions.address,
         // TODO: Find a use for unused bits in `return_status_register`
         // category=Hardware
-        // phase only takes up u8 (or less), could fit more data in here - what is useful?
-        return_status_register: phase as u16,
+        // 1 bit for phase
+        // 1 bit for double fault flag
+        // 3 bits for fault type
+        // 3 bits for original fault type (if double fault)
+        return_status_register: encode_fault_metadata_register(&FaultMetadataRegister {
+            phase: phase as u8,
+            double_fault: is_double_fault,
+            fault: resolved_fault,
+            original_fault: fault,
+        }),
     };
-
-    Some(fault)
+    Some(resolved_fault)
 }
 
 ///
