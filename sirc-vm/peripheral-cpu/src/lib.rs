@@ -242,15 +242,8 @@ impl Device for CpuPeripheral {
                 bus_assertions,
             ),
             _ => {
-                warn!("Invalid op code detected");
-                // TODO: Double check invalid op code fault handling
-                // category=Hardware
-                // This doesn't seem to line up with how the other faults are handled
-                // because of this check. We need it because the cause register is currently
-                // only set on the first phase of the CPU cycles, so this gets run each cycle
-                let should_fault = self.eu_registers.pending_fault != Some(Faults::InvalidOpCode);
-
-                if should_fault {
+                if phase == ExecutionPhase::InstructionFetchLow {
+                    warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
                     // Can be used for forwards compatibility if co-processors are added in later models
                     self.eu_registers.pending_fault = raise_fault(
                         &self.registers,
