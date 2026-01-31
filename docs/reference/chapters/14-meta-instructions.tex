@@ -58,7 +58,7 @@ EXCP #0x80                    ; Trap to OS print routine
 
 \textbf{Assembles to:} \texttt{COPI \#0x1900}
 
-\textbf{Description:} Puts the CPU into a low-power wait state until an exception occurs. Sets the Waiting for Interrupt bit in the status register. Only valid in supervisor mode.
+\textbf{Description:} Puts the CPU into a low-power wait state until an exception occurs. Sets the waiting\_for\_exception flag in the exception unit. Only valid in supervisor mode.
 
 \textbf{Example:}
 \begin{lstlisting}

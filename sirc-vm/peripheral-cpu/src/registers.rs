@@ -25,15 +25,6 @@ pub enum StatusRegisterFields {
     InterruptMaskLow = 0b0000_0010 << u8::BITS,
     InterruptMaskMed = 0b0000_0100 << u8::BITS,
     InterruptMaskHigh = 0b0000_1000 << u8::BITS,
-    /// Set when a WAIT instruction is executed
-    /// Mainly just for control circuits, there shouldn't be a way to read this in a program
-    WaitingForInterrupt = 0b0001_0000 << u8::BITS,
-    /// Set to one when the CPU is halted (stopped until reset)
-    // TODO: Double check if CpuHalted status bit makes sense
-    // category=Hardware
-    // I think this should be dropped, a CPU usually doesn't halt, unless from external pin like when the bus is busy
-    // during a DMA transfer or something but in that case we wouldn't be able to read the status bit anyway
-    CpuHalted = 0b0010_0000 << u8::BITS,
     /// During memory effective address calcs, if the address wraps around with either and overflow or underflow
     /// and this bit is set, an exception will be thrown to detect an invalid access
     TrapOnAddressOverflow = 0b0100_0000 << u8::BITS,
@@ -610,4 +601,5 @@ pub struct ExceptionUnitRegisters {
     // 8 registers for 7 exception levels + 1 metadata register that stores metadata about faults (at index 0xF)
     pub link_registers: [ExceptionLinkRegister; 8],
     pub waiting_for_exception: bool,
+    pub cpu_halted: bool,
 }

@@ -141,27 +141,6 @@ Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
 	\label{tab:interrupt-mask}
 \end{table}
 
-\subsection{Waiting for Interrupt (W) -- Bit 12}
-
-\begin{description}
-	\item[Set when:] The \mnemonic{WAIT} instruction is executed
-	\item[Cleared when:] An interrupt or exception occurs
-	\item[Purpose:] Indicates the CPU is in low-power wait state
-	\item[Note:] This bit is primarily for hardware implementation, and is mapped to an external pin. No program will ever read
-	      this bit as 1 as the CPU is not executing when this bit is active.
-\end{description}
-
-\subsection{CPU Halted (H) -- Bit 13}
-
-\begin{description}
-	\item[Set when:] A \mnemonic{HALT} instruction is executed (if implemented)
-	\item[Cleared when:] CPU is reset
-	\item[Purpose:] Indicates the CPU has halted execution
-	\item[Note:] This feature may not be implemented in all versions
-	\item[Note:] This bit is primarily for hardware implementation, and is mapped to an external pin. No program will ever read
-	      this bit as 1 as the CPU is not executing when this bit is active.
-\end{description}
-
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
 \begin{description}

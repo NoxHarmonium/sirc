@@ -123,7 +123,8 @@ link registers in total, indexed 0-7:
 	\item Register 0: Software exceptions (traps)
 	\item Registers 1-5: Hardware exceptions (interrupts), one for each priority level
 	\item Register 6: Faults (abort exceptions)
-	\item Register 7: Fault metadata (stores bus address and execution phase information)
+	\item Register 7: Fault metadata (stores bus address and execution phase information, see section
+	      \ref{sec:fault-metadata-register-format} for the format)
 \end{itemize}
 
 Each link register stores two pieces of information:
@@ -186,6 +187,7 @@ You could provide an even more robust implementation by storing/loading from har
 to always be valid.
 
 \subsubsection{Fault Metadata Register Format}
+\label{sec:fault-metadata-register-format}
 
 The fault metadata register (register 7) stores additional information about faults beyond just the return address. The
 return\_status\_register field is used to encode fault-specific metadata in the following format:

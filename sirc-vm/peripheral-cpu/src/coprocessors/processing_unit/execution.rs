@@ -199,7 +199,7 @@ impl Executor for ProcessingUnitExecutor {
             ),
         };
 
-        if sr_bit_is_set(StatusRegisterFields::CpuHalted, registers) {
+        if eu_registers.cpu_halted {
             BusAssertions {
                 exit_simulation: true,
                 ..BusAssertions::default()
