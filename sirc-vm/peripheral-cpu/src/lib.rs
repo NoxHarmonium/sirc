@@ -48,9 +48,9 @@ use coprocessors::{
 use num::ToPrimitive;
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
-use registers::{get_interrupt_mask, ExceptionUnitRegisters};
+use registers::ExceptionUnitRegisters;
 
-use crate::registers::{ExceptionLinkRegister, Registers};
+use crate::registers::{get_hardware_interrupt_enable, ExceptionLinkRegister, Registers};
 
 // The 8th exception link register stores metadata about faults
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
@@ -121,7 +121,6 @@ pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
 }
 
 pub fn raise_fault(
-    registers: &Registers,
     eu_registers: &mut ExceptionUnitRegisters,
     fault: Faults,
     phase: ExecutionPhase,
@@ -141,8 +140,8 @@ pub fn raise_fault(
         bus_assertions.address,
     );
 
-    let current_interrupt_mask: u8 = get_interrupt_mask(registers);
-    let is_double_fault = current_interrupt_mask >= ExceptionPriorities::Fault as u8;
+    let current_exception_level = eu_registers.current_exception_level;
+    let is_double_fault = current_exception_level >= ExceptionPriorities::Fault as u8;
     let resolved_fault = if is_double_fault {
         error!("Double fault! [{fault:?}] raised when a fault was already being serviced. Jumping to double fault vector.");
         Faults::DoubleFault
@@ -166,6 +165,7 @@ pub fn raise_fault(
             fault: resolved_fault,
             original_fault: fault,
         }),
+        saved_exception_level: 0, // Not used for fault metadata
     };
     Some(resolved_fault)
 }
@@ -197,20 +197,21 @@ impl Device for CpuPeripheral {
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
 
+        // Allow wake up if there is a hardware interrupt
+        if bus_assertions.interrupt_assertion > 0 {
+            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+        }
+
+        if self.eu_registers.waiting_for_exception {
+            return BusAssertions::default();
+        }
+
         if bus_assertions.bus_error {
             // TODO: Reduce number of mutable references in `CpuPeripheral` poll
             // category=Refactoring
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
-            self.eu_registers.pending_fault = raise_fault(
-                &self.registers,
-                &mut self.eu_registers,
-                Faults::Bus,
-                phase,
-                &bus_assertions,
-            );
-        }
-        if bus_assertions.interrupt_assertion > 0 {
-            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+            self.eu_registers.pending_fault =
+                raise_fault(&mut self.eu_registers, Faults::Bus, phase, &bus_assertions);
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
@@ -246,7 +247,6 @@ impl Device for CpuPeripheral {
                     warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
                     // Can be used for forwards compatibility if co-processors are added in later models
                     self.eu_registers.pending_fault = raise_fault(
-                        &self.registers,
                         &mut self.eu_registers,
                         Faults::InvalidOpCode,
                         phase,
@@ -292,15 +292,21 @@ impl CpuPeripheral {
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
         // This level is a bitmask
         if level > 0 {
-            trace!("Interrupt level [b{level:b}] raised");
-            // TODO: Clarify what happens when software exception is triggered in interrupt handler
-            // category=Hardware
-            // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-            // TODO: Use consistent terminology for exceptions
-            // category=Refactoring
-            // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
-            self.eu_registers.pending_hardware_exceptions |= level;
-            self.eu_registers.waiting_for_exception = false;
+            // Only mark interrupts as pending if they are enabled
+            let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
+            let enabled_interrupts = level & hw_interrupt_enable;
+
+            if enabled_interrupts > 0 {
+                trace!("Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
+                // TODO: Clarify what happens when software exception is triggered in interrupt handler
+                // category=Hardware
+                // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+                // TODO: Use consistent terminology for exceptions
+                // category=Refactoring
+                // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+                self.eu_registers.pending_hardware_exceptions |= enabled_interrupts;
+                self.eu_registers.waiting_for_exception = false;
+            }
         }
     }
 
@@ -321,10 +327,8 @@ impl CpuPeripheral {
         // It was created as an interim to make refactoring easier but there is probably a better way to do it
         // TODO: Investigate if spinning is the best way to wait for exception
         // category=Performance
-        if !self.eu_registers.waiting_for_exception {
-            for _ in 0..CYCLES_PER_INSTRUCTION {
-                self.poll(BusAssertions::default(), true);
-            }
+        for _ in 0..CYCLES_PER_INSTRUCTION {
+            self.poll(BusAssertions::default(), true);
         }
     }
 }

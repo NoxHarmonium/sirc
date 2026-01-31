@@ -40,6 +40,9 @@
 .ORG 0x0200
 :start
 
+; Enable all hardware interrupts (set bits 9-13 of SR)
+ORRI sr, #0x3E00
+
 ; Setup routines
 BRSR @setup_serial
 BRSR @print_help
@@ -110,9 +113,6 @@ LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
 STOR    (a), r1
 
 :wait_for_print_finish
-
-; Wait for exception (will spin until interrupted)
-WAIT
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED

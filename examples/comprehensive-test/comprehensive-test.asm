@@ -31,6 +31,11 @@
 
 .ORG 0x0200
 
+:enable_hardware_interrupts
+    ; Enable all hardware interrupts (set bits 9-13 of SR)
+    ORRI sr, #0x3E00
+    RETS
+
 :reset_test
     LOAD r7, #0
     RETS
@@ -217,6 +222,9 @@
     ; Setup stack frame
     LOAD sh, $STACK
     LOAD sl, #0xFFFF
+
+    ; Enable hardware interrupts
+    BRSR @enable_hardware_interrupts
 
     ; Setup serial device
     BRSR @setup_serial
@@ -871,7 +879,7 @@
     LOAD r1, #0x0001
     LOAD r2, #0
     CMPI r1, #0x0001        ; Set Z flag (equal)
-    ADDI[X] r2, #0x0005     ; Add without updating flags
+    ADDI[N] r2, #0x0005     ; Add without updating flags
     ; r2 should be 5, but Z flag should still be set from CMPI
     LOAD|== r3, #1          ; Check if Z flag still set
     CMPI r2, #0x0005        ; Verify r2 = 5

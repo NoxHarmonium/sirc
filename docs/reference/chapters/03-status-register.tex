@@ -19,13 +19,13 @@ the CPU. It is divided into two bytes with different privilege levels:
 		\bitheader{0-15} \\
 		\bitbox{1}{T} &
 		\bitbox{1}{A} &
-		\bitbox{1}{H} &
 		\bitbox{1}{W} &
-		\bitbox{1}{I3} &
-		\bitbox{1}{I2} &
-		\bitbox{1}{I1} &
+		\bitbox{1}{E5} &
+		\bitbox{1}{E4} &
+		\bitbox{1}{E3} &
+		\bitbox{1}{E2} &
+		\bitbox{1}{E1} &
 		\bitbox{1}{P} &
-		\bitbox{1}{} &
 		\bitbox{1}{} &
 		\bitbox{1}{} &
 		\bitbox{1}{} &
@@ -105,41 +105,35 @@ mode will be ignored (the write affects only the lower byte).
 	      fault.
 \end{description}
 
-\subsection{Interrupt Mask Bits (I1, I2, I3) -- Bits 9--11}
+\subsection{Hardware Interrupt Enable Bits (E1--E5) -- Bits 9--13}
 
-These three bits control which interrupt priority levels are masked.
+These five bits individually control whether each of the five hardware interrupt lines is enabled:
 
-If an exception comes in with a lower priority than the mask, it will not be serviced until the higher priority
-interrupts are finished.
+\begin{itemize}
+	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 5, highest priority)
+	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 4)
+	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (Level 3)
+	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 2)
+	\item \textbf{E5 (Bit 13):} Enable Hardware Interrupt Line 5 (Level 1, lowest priority)
+\end{itemize}
 
-These bits should not be modified by the user, and are automatically set by the exception coprocessor.
+When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
+When cleared to 0, interrupts on that line are disabled and will not be serviced.
 
-If a level 5 interrupt is triggered while the level 5 interrupt is masked it will cause a fault.
+\textbf{Important behavior:}
+\begin{itemize}
+	\item Disabled interrupts are not queued -- they are completely ignored while the enable bit is 0
+	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
+	      exception level
+	\item This prevents the same interrupt from re-triggering while its handler is executing
+	\item Lower priority interrupts that occur while handling a higher priority interrupt are queued and serviced after the
+	      current handler completes (after RETE)
+\end{itemize}
 
-If a fault occurs while handling another fault the CPU will be halted. This is due to the architecture of the exception
-unit.
+These bits are typically managed by the operating system's interrupt handling code. At reset, all interrupt enable bits
+are cleared (interrupts disabled).
 
 Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{cp{7cm}}
-		\toprule
-		\textbf{Value} & \textbf{Interrupt Type} \\
-		\midrule
-		0x0            & No Interrupt            \\
-		0x1            & Software Exception      \\
-		0x2            & Level 1 Hardware        \\
-		0x3            & Level 2 Hardware        \\
-		0x4            & Level 3 Hardware        \\
-		0x5            & Level 4 Hardware        \\
-		0x6            & Level 5 Hardware        \\
-		0x7            & Fault                   \\
-		\bottomrule
-	\end{tabular}
-	\caption{Interrupt Mask Settings}
-	\label{tab:interrupt-mask}
-\end{table}
 
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
@@ -182,8 +176,11 @@ The status register can be directly manipulated like any other register:
 ; Set protected mode bit (only in supervisor mode)
 ORRI sr, #0x0100
 
-; Clear interrupt mask
-ANDI sr, #0xF1FF
+; Enable all hardware interrupts (set bits 9-13)
+ORRI sr, #0x3E00
+
+; Disable all hardware interrupts (clear bits 9-13)
+ANDI sr, #0xC1FF
 
 ; Restore status register saved to stack
 LOAD sr, (s)+

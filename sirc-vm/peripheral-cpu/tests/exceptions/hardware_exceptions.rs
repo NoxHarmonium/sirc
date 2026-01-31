@@ -1,7 +1,7 @@
 use assert_hex::assert_eq_hex;
 use peripheral_cpu::{
     new_cpu_peripheral,
-    registers::{set_sr_bit, sr_bit_is_set, StatusRegisterFields},
+    registers::{set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, StatusRegisterFields},
 };
 
 use crate::exceptions::common::{
@@ -13,6 +13,9 @@ use crate::exceptions::common::{
 fn test_hardware_exception_clears_protected_mode() {
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     let mut clocks = 0;
+
+    // Enable all hardware interrupts
+    set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0b11111);
 
     // Set protected mode to test if the interrupt flips into privileged mode.
     set_sr_bit(
@@ -47,6 +50,9 @@ fn test_hardware_exception_clears_protected_mode() {
 fn test_hardware_exception_triggers_in_order() {
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     let mut clocks = 0;
+
+    // Enable all hardware interrupts
+    set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0b11111);
 
     run_expectations(
         &mut cpu_peripheral,
@@ -103,6 +109,9 @@ fn test_hardware_exception_trigger_repeats() {
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     let mut clocks = 0;
 
+    // Enable all hardware interrupts
+    set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0b11111);
+
     run_expectations(
         &mut cpu_peripheral,
         &expect_main_program_cycle(0x0000_0000),
@@ -146,6 +155,9 @@ fn test_hardware_exception_trigger_repeats() {
 fn test_hardware_exception_higher_priority_interrupts_handler() {
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
     let mut clocks = 0;
+
+    // Enable all hardware interrupts
+    set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0b11111);
 
     run_expectations(
         &mut cpu_peripheral,

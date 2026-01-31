@@ -118,7 +118,9 @@ fn update_status_flags(
             (registers.sr & SR_PRIVILEGED_MASK)
                 | (intermediate_registers.alu_status_register & SR_REDACTION_MASK)
         }
-        StatusRegisterUpdateSource::Shift => decoded.sr_shift,
+        StatusRegisterUpdateSource::Shift => {
+            (registers.sr & SR_PRIVILEGED_MASK) | (decoded.sr_shift & SR_REDACTION_MASK)
+        }
         _ => registers.sr,
     }
 }

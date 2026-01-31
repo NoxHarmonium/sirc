@@ -228,21 +228,37 @@ The cause register is automatically populated by the exception unit when a pendi
 priority of exceptions is determined by examining the first nibble of the vector ID, calculated as 7 minus the value of
 the first nibble (e.g., 0x00 is priority 7, 0x40 is priority 3, 0x60 and above are all priority 1).
 
-\subsection{Interrupt Mask}
+\subsection{Hardware Interrupt Enable Bits}
 
-The status register contains a 3-bit interrupt mask field (bits 9-11 in the privileged byte) that determines which
-exception priority levels are currently enabled. The mask value ranges from 0-7:
+The status register contains 5 individual enable bits (bits 9-13 in the privileged byte) that control whether each
+hardware interrupt line can trigger an exception:
 
 \begin{itemize}
-	\item A mask value of 0 means all exceptions are enabled
-	\item A mask value of 7 means only faults (priority 7) can interrupt execution
-	\item When servicing an exception at level N, the mask is automatically set to N to prevent lower-priority exceptions from
-	      interrupting
+	\item Bit 9 (E1): Hardware Interrupt Line 1 (Exception Level 5, highest priority)
+	\item Bit 10 (E2): Hardware Interrupt Line 2 (Exception Level 4)
+	\item Bit 11 (E3): Hardware Interrupt Line 3 (Exception Level 3)
+	\item Bit 12 (E4): Hardware Interrupt Line 4 (Exception Level 2)
+	\item Bit 13 (E5): Hardware Interrupt Line 5 (Exception Level 1, lowest priority)
 \end{itemize}
 
-Level 5 hardware exceptions are special - they are treated like non-maskable interrupts (NMIs). If a level 5 exception
-is raised while another level 5 exception is being handled, a Level Five Hardware Exception Conflict fault is raised
-instead.
+When an interrupt line is disabled (bit = 0), interrupts on that line are completely ignored and not queued. When
+enabled (bit = 1), the interrupt can trigger an exception if its priority is higher than the currently executing
+exception level.
+
+\textbf{Hierarchical Exception Handling:}
+
+Exceptions in SIRC-1 are strictly hierarchical. A hardware interrupt can only interrupt the current execution if its
+priority level (exception level) is \textit{higher} than the currently active exception level. This prevents:
+
+\begin{itemize}
+	\item An interrupt handler from being interrupted by its own interrupt (same level)
+	\item Lower priority interrupts from interrupting higher priority handlers
+	\item Software exceptions from running during any hardware interrupt (would corrupt link register 0)
+\end{itemize}
+
+The exception unit maintains a \texttt{current\_exception\_level} field that tracks the active exception level (0-7).
+When not handling any exception, this is 0. When handling an exception at level N, only exceptions at level > N can
+interrupt.
 
 \section{Exception Processing}
 
@@ -265,24 +281,41 @@ Exceptions are prioritized as follows (highest to lowest):
 When an exception occurs, the following steps are executed:
 
 \begin{enumerate}
-	\item The exception unit checks if the exception priority is higher than the current interrupt mask. If not, the exception is
-	      ignored.
+	\item For hardware exceptions, the exception unit checks if the interrupt line is enabled in the status register. If
+	      disabled, the interrupt is ignored and not queued.
 
-	\item For level 5 hardware exceptions being raised when one is already being handled, a Level Five Hardware Exception
-	      Conflict fault is raised instead.
+	\item The exception unit checks if the exception priority level is higher than the current active exception level. If not,
+	      the exception is deferred until the current handler completes.
 
-	\item The current program counter and status register are stored in the appropriate link register based on the exception
-	      level.
+	\item For level 5 hardware exceptions being raised when one is already being handled (both have exception level 6), a Level
+	      Five Hardware Exception Conflict fault is raised instead.
+
+	\item The current program counter, status register, and current exception level are stored in the appropriate link register
+	      based on the exception priority level.
 
 	\item The Protected Mode bit in the status register is cleared, switching the CPU to supervisor mode.
 
-	\item The interrupt mask is set to the exception level being serviced to prevent lower-priority interrupts.
+	\item The current exception level is updated to the level of the exception being serviced.
 
 	\item The vector address is computed by multiplying the vector ID by 2 (since vectors are 32-bit addresses stored as two
 	      16-bit words).
 
 	\item The program counter is set to the vector address, transferring control to the exception handler.
 \end{enumerate}
+
+\textbf{Returning from Exceptions:}
+
+The RETE (Return from Exception) instruction restores the saved state from the link register:
+
+\begin{enumerate}
+	\item The return address is loaded from the link register into the program counter
+	\item The saved status register value is restored (including interrupt enable bits)
+	\item The saved exception level is restored to current\_exception\_level
+	\item Execution resumes at the return address
+\end{enumerate}
+
+After RETE, any pending interrupts that are now eligible to run (higher priority than the restored exception level and
+enabled) will be serviced before the next instruction executes.
 
 \subsection{Vector Table}
 
