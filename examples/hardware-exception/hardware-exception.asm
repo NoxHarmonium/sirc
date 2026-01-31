@@ -40,6 +40,9 @@
 .ORG 0x0200
 :start
 
+; Enable all hardware interrupts (set bits 9-13 of SR)
+ORRI sr, #0x1E00
+
 ; Setup routines
 BRSR @setup_serial
 BRSR @print_help
@@ -48,7 +51,7 @@ BRSR @enable_serial_recv
 
 :wait_for_char
 ; Wait for exception (will spin until interrupted)
-COPI    r1, #0x1900
+WAIT
 
 ; Pending byte should be in r7 after exeception handler runs
 CMPI    r7, $EXPECTED_CHAR
@@ -61,8 +64,7 @@ BRAN @wait_for_char
 LOAD    r1, #9600
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_BAUD
-; TODO: Allow omitting the #0 offset when not using an offset (infer the #0)
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS
 
@@ -72,13 +74,13 @@ RETS
 ; This means that we can't trigger any more interrupts manually after the data is piped
 ; (stdin is currently the only way to externally trigger an interrupt)
 ; If the data is coming in at the same type we are sending data out,
-; it ends up with the program gets stuck waiting for an interupt and never finishes
+; it ends up with the program gets stuck waiting for an interrupt and never finishes
 ; TODO: Actually that shouldn't be a problem - better investigate this further (
 ;   maybe the exception handler routines are conflicting with each other)
 
 LOAD    r1, #0x1
 LOAD    al, $SERIAL_DEVICE_RECV_ENABLED
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS
 
@@ -96,28 +98,25 @@ BRAN    @print
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_BASE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Align pointer
 LOAD    r1, #1
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r1
+STOR    (a), r1
 
 LOAD    r1, $TRUE
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-STOR    (#0, a), r1
+STOR    (a), r1
 
 :wait_for_print_finish
 
-; Wait for exception (will spin until interrupted)
-COPI    r1, #0x1900
-
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 
 CMPI    r1, $TRUE
 BRAN|== @wait_for_print_finish
@@ -137,13 +136,13 @@ COPI    r1, #0x14FF
 :exception_handler_p3
 
 ; Save the link register
-LDEA s, (#0, l)
+LDEA s, (l)
 
 BRSR @read_pending_byte
 BRSR @write_pending_byte
 
 ; Restore the link register
-LDEA l, (#0, s)
+LDEA l, (s)
 
 RETE
 
@@ -151,7 +150,7 @@ RETE
 ; Check if there is something we need to read
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_RECV_PENDING
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 
 ; Return early if not
 CMPI    r1, $FALSE
@@ -159,18 +158,18 @@ RETS|==
 
 ; Read pending byte
 LOAD    al, $SERIAL_DEVICE_RECV_DATA
-LOAD    r7, (#0, a)
+LOAD    r7, (a)
 
 LOAD    al, $SERIAL_DEVICE_RECV_PENDING
 LOAD    r1, $FALSE
-STOR    (#0, a), r1
+STOR    (a), r1
 RETS
 
 :write_pending_byte
 ; Check if the device is ready to write
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r1, (#0, a)
+LOAD    r1, (a)
 
 ; Return early if not (there is already a send pending)
 CMPI    r1, $TRUE
@@ -178,9 +177,9 @@ RETS|==
 
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-LOAD    r2, (#0, a)
+LOAD    r2, (a)
 LOAD    al, $MESSAGE_SEND_BASE
-LOAD    al, (#0, a)
+LOAD    al, (a)
 
 LOAD    ah, $PROGRAM_SEGMENT
 LOAD    r3, (r2, a)
@@ -191,18 +190,18 @@ BRAN|== @stop_send
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_DATA
-STOR    (#0, a), r3
+STOR    (a), r3
 
 ; Increment by two because of lack of packing (a word actually is padded to a DW)
 ADDI    r2, #2
 LOAD    ah, $SCRATCH_SEGMENT
 LOAD    al, $MESSAGE_SEND_POINTER
-STOR    (#0, a), r2
+STOR    (a), r2
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_PENDING
 LOAD    r1, $TRUE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS
 
@@ -210,6 +209,6 @@ RETS
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
 LOAD    r1, $FALSE
-STOR    (#0, a), r1
+STOR    (a), r1
 
 RETS

@@ -1,16 +1,16 @@
 ===REGISTERS===
 Registers {
-    sr: 0x0,
+    sr: 0x100,
     r1: 0x4000,
     r2: 0x2,
     r3: 0xf10,
-    r4: 0x2,
-    r5: 0x2,
-    r6: 0x1001,
+    r4: 0x5,
+    r5: 0x1,
+    r6: 0x1,
     r7: 0x1,
     lh: 0x0,
     ll: 0x0,
-    ah: 0xb,
+    ah: 0x0,
     al: 0x5,
     sh: 0x0,
     sl: 0x0,
@@ -27,35 +27,45 @@ ExceptionUnitRegisters {
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
-        },
-        ExceptionLinkRegister {
-            return_address: 0x24a,
-            return_status_register: 0x0,
-        },
-        ExceptionLinkRegister {
-            return_address: 0x242,
-            return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
-            return_status_register: 0x3,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x246,
+            return_status_register: 0x100,
+            saved_exception_level: 0x7,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x245,
+            return_status_register: 0x58a,
+            saved_exception_level: 0x0,
         },
     ],
     waiting_for_exception: false,
+    cpu_halted: false,
+    current_exception_level: 0x7,
 }

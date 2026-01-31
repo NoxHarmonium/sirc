@@ -15,12 +15,13 @@
 
 use clap::Parser;
 
-use nom_supreme::error::ErrorTree;
+use nom_supreme::error::{ErrorTree, GenericErrorTree};
 use nom_supreme::final_parser::{final_parser, Location};
 
 use toolchain::data::object::build_object;
 
 use core::panic;
+use std::error::Error;
 use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
@@ -37,6 +38,44 @@ struct Args {
     output_file: PathBuf,
 }
 
+fn collect_line_with_error(
+    error: &GenericErrorTree<
+        Location,
+        &'static str,
+        &'static str,
+        Box<dyn Error + Send + Sync + 'static>,
+    >,
+) -> Vec<usize> {
+    match &error {
+        GenericErrorTree::Base { location, kind: _ } => vec![location.line],
+        GenericErrorTree::Stack { base: _, contexts } => {
+            contexts.first().map(|c| vec![c.0.line]).unwrap_or(vec![])
+        }
+        GenericErrorTree::Alt(sub_trees) => {
+            sub_trees.iter().flat_map(collect_line_with_error).collect()
+        }
+    }
+}
+
+fn log_line_with_error(
+    input_file: &str,
+    file_contents_with_new_line: &str,
+    error: &GenericErrorTree<
+        Location,
+        &'static str,
+        &'static str,
+        Box<dyn Error + Send + Sync + 'static>,
+    >,
+) {
+    // TODO: Why is there so many duplicate lines?
+    let lines = collect_line_with_error(error);
+    for line in lines {
+        if let Some(text) = file_contents_with_new_line.lines().nth(line - 1) {
+            println!("In file {input_file}, at line {line}:\n{text}");
+        }
+    }
+}
+
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
@@ -48,7 +87,14 @@ fn main() -> io::Result<()> {
     )(file_contents_with_new_line.as_str())
     {
         Ok(tokens) => tokens,
-        Err(error) => panic!("Error parsing file:\n{error}"),
+        Err(error) => {
+            log_line_with_error(
+                args.input_file.to_str().unwrap_or(""),
+                &file_contents_with_new_line,
+                &error,
+            );
+            panic!("Error parsing file:\n{error}")
+        }
     };
     let object_definition = build_object(
         tokens,

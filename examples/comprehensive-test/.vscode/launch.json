@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Requires vscode-sirc plugin to be running
+      // When debugging the vscode-sirc plugin with F5 this might still say "debug type is not recognized" but you should still be
+      // able to run it via the "Run and Debug" tab
+      "type": "sirc",
+      "request": "attach",
+      "name": "Attach to VM",
+      "port": 9090
+    }
+  ]
+}

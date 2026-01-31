@@ -1031,9 +1031,11 @@ fn test_tsxi_immediate() {
     }
 }
 
+// #### Shifting ####
+// There is no room in immediate instruction encoding to store shift information
+// There is a SHFI meta instruction but that requires the short immediate instruction encoding, see sirc-vm/peripheral-cpu/tests/instructions/arithmetic_short_immediate_test.rs for those
+
 // TODO: Improve unit test coverage for arithmetic immediate instructions
 // category=Testing
-// - Test ShiftOperand::Register
-// - Test Rotates
 // - Test COPI
 // - Test CMPR/TSAR/TSXR etc.

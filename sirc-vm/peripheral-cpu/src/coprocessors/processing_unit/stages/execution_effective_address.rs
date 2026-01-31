@@ -112,7 +112,6 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     && (displacement_overflowed || displacement_overflowed_after_inc)
                 {
                     eu_registers.pending_fault = raise_fault(
-                        registers,
                         eu_registers,
                         Faults::SegmentOverflow,
                         ExecutionPhase::ExecutionEffectiveAddressExecutor,

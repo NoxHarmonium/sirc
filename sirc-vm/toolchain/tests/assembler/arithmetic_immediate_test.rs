@@ -9,6 +9,10 @@ use toolchain::parsers::shared::parse_tokens;
 use toolchain::types::shared::Token;
 
 static PARSER_INPUT: &str = r"
+; One argument - destination and source register the same and value implied
+SHFT r1, ASL #2
+SHFT r1, RTL r2
+
 ; Two argument - destination and source register the same
 ADDI r1, #0
 ADCI r2, #0x0

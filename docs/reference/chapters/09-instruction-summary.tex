@@ -1,0 +1,172 @@
+\chapter{Instruction Summary}
+\label{ch:instruction-summary}
+
+\section{Overview}
+
+The SIRCIS instruction set consists of 64 possible opcodes (6-bit opcode field), of which approximately 52 are
+documented and assigned. The instructions are organized into logical groups:
+
+\begin{itemize}
+	\item \textbf{ALU Instructions (0x00--0x0F, 0x20--0x2F, 0x30--0x3F)}: Arithmetic, logical, and comparison operations
+	\item \textbf{Memory Instructions (0x10--0x17)}: Load and store operations
+	\item \textbf{Control Flow (0x18--0x1F)}: Branches, jumps, and address loading
+	\item \textbf{Coprocessor (0x0F, 0x2F, 0x3F)}: Coprocessor interface
+\end{itemize}
+
+\section{Complete Instruction List}
+
+\begin{table}[H]
+	\centering
+	\tiny
+	\begin{tabular}{clllp{4cm}}
+		\toprule
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Format} & \textbf{Flags} & \textbf{Operation}            \\
+		\midrule
+		0x00            & ADDI              & Immediate       & NZCV           & Add immediate                 \\
+		0x01            & ADCI              & Immediate       & NZCV           & Add immediate with carry      \\
+		0x02            & SUBI              & Immediate       & NZCV           & Subtract immediate            \\
+		0x03            & SBCI              & Immediate       & NZCV           & Subtract immediate with carry \\
+		0x04            & ANDI              & Immediate       & NZ             & AND immediate                 \\
+		0x05            & ORRI              & Immediate       & NZ             & OR immediate                  \\
+		0x06            & XORI              & Immediate       & NZ             & XOR immediate                 \\
+		0x07            & LOAD              & Immediate       & --             & Load immediate (move)         \\
+		0x08            & --                & --              & --             & Undocumented                  \\
+		0x09            & --                & --              & --             & Undocumented                  \\
+		0x0A            & CMPI              & Immediate       & NZCV           & Compare immediate             \\
+		0x0B            & --                & --              & --             & Undocumented                  \\
+		0x0C            & TSAI              & Immediate       & NZ             & Test AND immediate            \\
+		0x0D            & --                & --              & --             & Undocumented                  \\
+		0x0E            & TSXI              & Immediate       & NZ             & Test XOR immediate            \\
+		0x0F            & COPI              & Immediate       & --             & Coprocessor call immediate    \\
+		\midrule
+		0x10            & STOR              & Indirect Imm    & --             & Store to (addr + imm)         \\
+		0x11            & STOR              & Indirect Reg    & --             & Store to (addr + reg)         \\
+		0x12            & STOR              & Pre-Dec         & --             & Store with pre-decrement      \\
+		0x13            & STOR              & Pre-Dec Reg     & --             & Store with pre-dec (reg)      \\
+		0x14            & LOAD              & Indirect Imm    & --             & Load from (addr + imm)        \\
+		0x15            & LOAD              & Indirect Reg    & --             & Load from (addr + reg)        \\
+		0x16            & LOAD              & Post-Inc        & --             & Load with post-increment      \\
+		0x17            & LOAD              & Post-Inc Reg    & --             & Load with post-inc (reg)      \\
+		0x18            & LDEA              & Indirect Imm    & --             & Load effective address        \\
+		0x19            & LDEA              & Indirect Reg    & --             & Load effective address (reg)  \\
+		0x1A            & BRAN              & Indirect Imm    & --             & Branch (imm displacement)     \\
+		0x1B            & BRAN              & Indirect Reg    & --             & Branch (reg displacement)     \\
+		0x1C            & LJSR              & Indirect Imm    & --             & Long jump to subroutine       \\
+		0x1D            & LJSR              & Indirect Reg    & --             & Long jump to subroutine (reg) \\
+		0x1E            & BRSR              & Indirect Imm    & --             & Branch to subroutine          \\
+		0x1F            & BRSR              & Indirect Reg    & --             & Branch to subroutine (reg)    \\
+		\midrule
+		0x20            & ADDI              & Short Imm+Shift & NZCV           & Add short immediate           \\
+		0x21            & ADCI              & Short Imm+Shift & NZCV           & Add short imm with carry      \\
+		0x22            & SUBI              & Short Imm+Shift & NZCV           & Subtract short immediate      \\
+		0x23            & SBCI              & Short Imm+Shift & NZCV           & Subtract short imm with carry \\
+		0x24            & ANDI              & Short Imm+Shift & NZ             & AND short immediate           \\
+		0x25            & ORRI              & Short Imm+Shift & NZ             & OR short immediate            \\
+		0x26            & XORI              & Short Imm+Shift & NZ             & XOR short immediate           \\
+		0x27            & LOAD              & Short Imm+Shift & --             & Load short immediate          \\
+		0x28            & --                & --              & --             & Undocumented                  \\
+		0x29            & --                & --              & --             & Undocumented                  \\
+		0x2A            & CMPI              & Short Imm+Shift & NZCV           & Compare short immediate       \\
+		0x2B            & --                & --              & --             & Undocumented                  \\
+		0x2C            & TSAI              & Short Imm+Shift & NZ             & Test AND short immediate      \\
+		0x2D            & --                & --              & --             & Undocumented                  \\
+		0x2E            & TSXI              & Short Imm+Shift & NZ             & Test XOR short immediate      \\
+		0x2F            & COPI              & Short Imm+Shift & --             & Coprocessor call short imm    \\
+		\midrule
+		0x30            & ADDR              & Register        & NZCV           & Add register                  \\
+		0x31            & ADCR              & Register        & NZCV           & Add register with carry       \\
+		0x32            & SUBR              & Register        & NZCV           & Subtract register             \\
+		0x33            & SBCR              & Register        & NZCV           & Subtract register with carry  \\
+		0x34            & ANDR              & Register        & NZ             & AND register                  \\
+		0x35            & ORRR              & Register        & NZ             & OR register                   \\
+		0x36            & XORR              & Register        & NZ             & XOR register                  \\
+		0x37            & LOAD              & Register        & --             & Load from register (move)     \\
+		0x38            & --                & --              & --             & Undocumented                  \\
+		0x39            & --                & --              & --             & Undocumented                  \\
+		0x3A            & CMPR              & Register        & NZCV           & Compare register              \\
+		0x3B            & --                & --              & --             & Undocumented                  \\
+		0x3C            & TSAR              & Register        & NZ             & Test AND register             \\
+		0x3D            & --                & --              & --             & Undocumented                  \\
+		0x3E            & TSXR              & Register        & NZ             & Test XOR register             \\
+		0x3F            & COPR              & Register        & --             & Coprocessor call register     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Complete SIRCIS Instruction Set}
+	\label{tab:complete-instruction-set}
+\end{table}
+
+\section{Instruction Grouping Patterns}
+
+\subsection{Opcode Organization}
+
+The opcode space is systematically organized:
+
+\begin{itemize}
+	\item \textbf{0x0\_}: Immediate operand format
+	\item \textbf{0x1\_}: Memory and control flow operations
+	\item \textbf{0x2\_}: Short immediate with shift format
+	\item \textbf{0x3\_}: Register operand format
+\end{itemize}
+
+\subsection{Save vs. Test Variants}
+
+Many ALU instructions have two variants:
+
+\begin{itemize}
+	\item \textbf{+0x00 to +0x07}: Save result to destination register
+	\item \textbf{+0x08 to +0x0F}: Test only (update flags, discard result)
+\end{itemize}
+
+Examples:
+\begin{itemize}
+	\item 0x04 = \mnemonic{ANDI} (save result), 0x0C = \mnemonic{TSAI} (test only)
+	\item 0x06 = \mnemonic{XORI} (save result), 0x0E = \mnemonic{TSXI} (test only)
+\end{itemize}
+
+\section{Meta-Instructions}
+
+Several commonly-used operations are implemented as meta-instructions (pseudo-instructions) that assemble to specific
+opcodes:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7cm}}
+		\toprule
+		\textbf{Meta-Instruction} & \textbf{Assembles To}     & \textbf{Purpose}       \\
+		\midrule
+		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
+		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
+		\mnemonic{WAIT}           & \texttt{COP \#0x1F00}     & Wait for interrupt     \\
+		\mnemonic{RETE}           & \texttt{COP \#0x1A00}     & Return from exception  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Meta-Instructions}
+	\label{tab:meta-instructions}
+\end{table}
+
+\section{Instruction Timing}
+
+All instructions execute in exactly 6 clock cycles:
+
+\begin{enumerate}
+	\item Instruction Fetch (High Word)
+	\item Instruction Fetch (Low Word)
+	\item Decode and Register Fetch
+	\item Execute/Address Calculate
+	\item Memory Access (or NOP)
+	\item Write Back
+\end{enumerate}
+
+This fixed timing simplifies hardware design and makes execution time predictable.
+
+\section{Next Chapters}
+
+The following chapters provide detailed documentation for each instruction group:
+
+\begin{itemize}
+	\item \textbf{Chapter~\ref{ch:alu-instructions}}: ALU instructions (arithmetic, logical, compare)
+	\item \textbf{Chapter~\ref{ch:memory-instructions}}: Load and store operations
+	\item \textbf{Chapter~\ref{ch:control-flow}}: Branches, jumps, and address operations
+	\item \textbf{Chapter~\ref{ch:coprocessor}}: Coprocessor interface
+	\item \textbf{Chapter~\ref{ch:meta-instructions}}: Meta-instructions and pseudo-ops
+\end{itemize}

@@ -1,8 +1,8 @@
 use nom::branch::alt;
-use nom::character::complete::{char, space0, space1};
+use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
-use nom::multi::separated_list1;
+use nom::multi::separated_list0;
 use nom::sequence::{delimited, separated_pair};
 use nom::Parser;
 use nom_supreme::error::ErrorTree;
@@ -11,7 +11,7 @@ use nom_supreme::ParserExt;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction, InstructionData, ShiftType,
-    MAX_SHIFT_COUNT,
+    StatusRegisterUpdateSource, MAX_SHIFT_COUNT,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
@@ -151,8 +151,12 @@ fn parse_indirect_register_displacement(i: &str) -> AsmResult<(RegisterName, Add
 fn parse_indirect_immediate_displacement(
     i: &str,
 ) -> AsmResult<(ImmediateType, AddressRegisterName)> {
-    let args = separated_pair(parse_value, parse_comma_sep, parse_address_register);
-    delimited(char('('), args, char(')'))(i)
+    let explicit_args = separated_pair(parse_value, parse_comma_sep, parse_address_register);
+    // Shorthand syntax for (#0, a) -> (a)
+    let implicit_args = parse_address_register
+        .map(|address_register_name| (ImmediateType::Value(0), address_register_name));
+    let either_args = alt((explicit_args, implicit_args));
+    delimited(char('('), either_args, char(')'))(i)
 }
 
 // Address register indirect with immediate displacement and post increment | (#n, a)+ | LOAD (#-3, s)+, x1
@@ -189,6 +193,20 @@ fn parse_indirect_register_pre_decrement(
     let (i, _) = char('-')(i)?;
     let (i, args) = parse_indirect_register_displacement(i)?;
     Ok((i, args))
+}
+
+fn parse_status_register_update_source(i: &str) -> AsmResult<Option<StatusRegisterUpdateSource>> {
+    let (i, status_register_update_flag) =
+        opt(delimited(char('['), one_of("asnASN"), char(']'))
+            .context("Status register update source ([A|S|N])"))(i)?;
+    let update_source = match status_register_update_flag.map(|c| c.to_ascii_lowercase()) {
+        Some('a') => Some(StatusRegisterUpdateSource::Alu),
+        Some('s') => Some(StatusRegisterUpdateSource::Shift),
+        Some('n') => Some(StatusRegisterUpdateSource::None),
+        Some(c) => panic!("Tag mismatch between parser and handler ({c})"),
+        None => None,
+    };
+    Ok((i, update_source))
 }
 
 #[allow(clippy::let_and_return)]
@@ -278,9 +296,9 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     lexeme(addressing_mode_parser)(i)
 }
 
-pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {
+pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
     let mut parser =
-        separated_list1(parse_comma_sep, parse_addressing_mode).context("addressing modes");
+        separated_list0(parse_comma_sep, parse_addressing_mode).context("addressing modes");
     parser.parse(i)
 }
 
@@ -321,7 +339,7 @@ fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {
             ">>" => ConditionFlags::GreaterThan,
             "<=" => ConditionFlags::LessThanOrEqual,
             "NV" => ConditionFlags::Never,
-            _ => panic!("Mismatch between this switch statement and parser tags"),
+            _ => panic!("Tag mismatch between parser and handler ({code})"),
         },
     )(i)
 }
@@ -345,17 +363,19 @@ fn parse_shift_type(i: &str) -> AsmResult<ShiftType> {
             "ASR" => ShiftType::ArithmeticRightShift,
             "RTL" => ShiftType::RotateLeft,
             "RTR" => ShiftType::RotateRight,
-            _ => panic!("Mismatch between this switch statement and parser tags"),
+            _ => panic!("Tag mismatch between parser and handler ({code})"),
         },
     )(i)
 }
 
 pub fn parse_instruction_tag(
     instruction_tag: &'static str,
-) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags)> + 'static {
+) -> impl FnMut(&str) -> AsmResult<(String, ConditionFlags, Option<StatusRegisterUpdateSource>)> + 'static
+{
     move |i: &str| {
         let tag_parser = tag(instruction_tag);
         let (i, tag) = tag_parser(i)?;
+        let (i, status_register_update_source) = parse_status_register_update_source(i)?;
         let (i, condition_code_specified) = opt(char('|'))(i)?;
         let (i, condition_code) = if condition_code_specified.is_some() {
             cut(parse_condition_code.context("condition code"))(i)?
@@ -368,7 +388,14 @@ pub fn parse_instruction_tag(
         // Get lexeme working with this function to avoid this
         let (i, _) = space0(i)?;
 
-        Ok((i, (String::from(tag), condition_code)))
+        Ok((
+            i,
+            (
+                String::from(tag),
+                condition_code,
+                status_register_update_source,
+            ),
+        ))
     }
 }
 
@@ -390,6 +417,7 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::ljsr::ljsr.context("LJSR instruction"),
         opcodes::load::load.context("LOAD instruction"),
         opcodes::store::stor.context("STOR instruction"),
+        opcodes::exception::exception.context("Exception Unit Instruction"),
     ))(i)?;
 
     Ok((i, Token::Instruction(instruction_token)))
@@ -451,7 +479,7 @@ fn parse_register(i: &str) -> AsmResult<RegisterName> {
         "sh" => RegisterName::Sh,
         "sl" => RegisterName::Sl,
         "sr" => RegisterName::Sr,
-        _ => panic!("Mismatch between parser and enum mapping"),
+        _ => panic!("Tag mismatch between parser and handler ({tag})"),
     })(i)
 }
 

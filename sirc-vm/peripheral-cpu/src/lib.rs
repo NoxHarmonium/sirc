@@ -45,14 +45,15 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
 };
+use num::ToPrimitive;
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
-use registers::{
-    get_interrupt_mask, ExceptionLinkRegister, ExceptionUnitRegisters,
-    FAULT_METADATA_LINK_REGISTER_INDEX,
-};
+use registers::ExceptionUnitRegisters;
 
-use crate::registers::Registers;
+use crate::registers::{get_hardware_interrupt_enable, ExceptionLinkRegister, Registers};
+
+// The 8th exception link register stores metadata about faults
+const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u32 = 6;
@@ -62,6 +63,21 @@ pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
 pub const COPROCESSOR_ID_LENGTH: u16 = 12;
 pub const CAUSE_OPCODE_ID_MASK: u16 = 0x0F00;
 pub const CAUSE_OPCODE_ID_LENGTH: u16 = 8;
+
+// pub phase: u8, // 3 bits
+// pub double_fault: bool, // 1 bit
+// pub fault: Faults, // 4 bits (needs to hold values up to 0x8)
+// pub original_fault: Faults // 4 bits (needs to hold values up to 0x8)
+
+// Fault metadata components
+pub const PHASE_MASK: u16 = 0x7;
+pub const PHASE_LENGTH: u16 = 0;
+pub const DOUBLE_FAULT_FLAG_MASK: u16 = 0x8;
+pub const DOUBLE_FAULT_FLAG_LENGTH: u16 = 3;
+pub const CURRENT_FAULT_MASK: u16 = 0xF0;
+pub const CURRENT_FAULT_LENGTH: u16 = 4;
+pub const PREVIOUS_FAULT_MASK: u16 = 0xF00;
+pub const PREVIOUS_FAULT_LENGTH: u16 = 8;
 
 #[derive(Debug)]
 pub enum Error {
@@ -78,8 +94,33 @@ pub struct CpuPeripheral {
     pub cause_register_value: u16,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct FaultMetadataRegister {
+    pub phase: u8,          // 3 bits (bits 0-2)
+    pub double_fault: bool, // 1 bit (bit 3)
+    pub fault: Faults,      // 4 bits (bits 4-7, needs to hold values up to 0x8)
+    // If double_fault holds the fault that caused the double fault
+    pub original_fault: Faults, // 4 bits (bits 8-11, needs to hold values up to 0x8)
+}
+
+pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
+    FaultMetadataRegister {
+        phase: ((val & PHASE_MASK) >> PHASE_LENGTH) as u8,
+        double_fault: ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1,
+        fault: Faults::from_u16((val & CURRENT_FAULT_MASK) >> CURRENT_FAULT_LENGTH).unwrap(),
+        original_fault: Faults::from_u16((val & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH)
+            .unwrap(),
+    }
+}
+
+pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
+    (reg.original_fault.to_u16().unwrap()) << PREVIOUS_FAULT_LENGTH
+        | (reg.fault.to_u16().unwrap()) << CURRENT_FAULT_LENGTH
+        | u16::from(reg.double_fault) << DOUBLE_FAULT_FLAG_LENGTH
+        | u16::from(reg.phase)
+}
+
 pub fn raise_fault(
-    registers: &Registers,
     eu_registers: &mut ExceptionUnitRegisters,
     fault: Faults,
     phase: ExecutionPhase,
@@ -94,26 +135,39 @@ pub fn raise_fault(
         panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
     }
 
-    let current_interrupt_mask: u8 = get_interrupt_mask(registers);
-    if current_interrupt_mask >= ExceptionPriorities::Fault as u8 {
-        error!("Double fault! [{fault:?}] raised when a fault was already being serviced ");
-        panic!("Double faults are unhandled right now and crash the VM. In the future they would halt the CPU.");
-    }
-
     debug!(
         "raise_fault: fault: {fault:?} address: 0x{:X} phase: {phase:?}",
         bus_assertions.address,
     );
 
+    let current_exception_level = eu_registers.current_exception_level;
+    let is_double_fault = current_exception_level >= ExceptionPriorities::Fault as u8;
+    let resolved_fault = if is_double_fault {
+        error!("Double fault! [{fault:?}] raised when a fault was already being serviced. Jumping to double fault vector.");
+        Faults::DoubleFault
+    } else {
+        fault
+    };
+    // Is always clobbered, so you lose the original fault metadata register if there is a double fault
+    // Make sure you save it somewhere if you're being careful
     eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
+        // Not actually a return address, just using the same data structure as a link register for now
         return_address: bus_assertions.address,
         // TODO: Find a use for unused bits in `return_status_register`
         // category=Hardware
-        // phase only takes up u8 (or less), could fit more data in here - what is useful?
-        return_status_register: phase as u16,
+        // 1 bit for phase
+        // 1 bit for double fault flag
+        // 3 bits for fault type
+        // 3 bits for original fault type (if double fault)
+        return_status_register: encode_fault_metadata_register(&FaultMetadataRegister {
+            phase: phase as u8,
+            double_fault: is_double_fault,
+            fault: resolved_fault,
+            original_fault: fault,
+        }),
+        saved_exception_level: 0, // Not used for fault metadata
     };
-
-    Some(fault)
+    Some(resolved_fault)
 }
 
 ///
@@ -143,20 +197,21 @@ impl Device for CpuPeripheral {
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
 
+        // Allow wake up if there is a hardware interrupt
+        if bus_assertions.interrupt_assertion > 0 {
+            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+        }
+
+        if self.eu_registers.waiting_for_exception {
+            return BusAssertions::default();
+        }
+
         if bus_assertions.bus_error {
             // TODO: Reduce number of mutable references in `CpuPeripheral` poll
             // category=Refactoring
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
-            self.eu_registers.pending_fault = raise_fault(
-                &self.registers,
-                &mut self.eu_registers,
-                Faults::Bus,
-                phase,
-                &bus_assertions,
-            );
-        }
-        if bus_assertions.interrupt_assertion > 0 {
-            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+            self.eu_registers.pending_fault =
+                raise_fault(&mut self.eu_registers, Faults::Bus, phase, &bus_assertions);
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
@@ -188,18 +243,10 @@ impl Device for CpuPeripheral {
                 bus_assertions,
             ),
             _ => {
-                warn!("Invalid op code detected");
-                // TODO: Double check invalid op code fault handling
-                // category=Hardware
-                // This doesn't seem to line up with how the other faults are handled
-                // because of this check. We need it because the cause register is currently
-                // only set on the first phase of the CPU cycles, so this gets run each cycle
-                let should_fault = self.eu_registers.pending_fault != Some(Faults::InvalidOpCode);
-
-                if should_fault {
+                if phase == ExecutionPhase::InstructionFetchLow {
+                    warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
                     // Can be used for forwards compatibility if co-processors are added in later models
                     self.eu_registers.pending_fault = raise_fault(
-                        &self.registers,
                         &mut self.eu_registers,
                         Faults::InvalidOpCode,
                         phase,
@@ -245,15 +292,21 @@ impl CpuPeripheral {
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
         // This level is a bitmask
         if level > 0 {
-            trace!("Interrupt level [b{level:b}] raised");
-            // TODO: Clarify what happens when software exception is triggered in interrupt handler
-            // category=Hardware
-            // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-            // TODO: Use consistent terminology for exceptions
-            // category=Refactoring
-            // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
-            self.eu_registers.pending_hardware_exceptions |= level;
-            self.eu_registers.waiting_for_exception = false;
+            // Only mark interrupts as pending if they are enabled
+            let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
+            let enabled_interrupts = level & hw_interrupt_enable;
+
+            if enabled_interrupts > 0 {
+                trace!("Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
+                // TODO: Clarify what happens when software exception is triggered in interrupt handler
+                // category=Hardware
+                // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+                // TODO: Use consistent terminology for exceptions
+                // category=Refactoring
+                // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+                self.eu_registers.pending_hardware_exceptions |= enabled_interrupts;
+                self.eu_registers.waiting_for_exception = false;
+            }
         }
     }
 
@@ -274,10 +327,8 @@ impl CpuPeripheral {
         // It was created as an interim to make refactoring easier but there is probably a better way to do it
         // TODO: Investigate if spinning is the best way to wait for exception
         // category=Performance
-        if !self.eu_registers.waiting_for_exception {
-            for _ in 0..CYCLES_PER_INSTRUCTION {
-                self.poll(BusAssertions::default(), true);
-            }
+        for _ in 0..CYCLES_PER_INSTRUCTION {
+            self.poll(BusAssertions::default(), true);
         }
     }
 }

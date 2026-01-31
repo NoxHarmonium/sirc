@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands1, parse_instruction_tag, AddressingMode,
+    parse_instruction_operands0, parse_instruction_tag, AddressingMode,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
@@ -83,8 +83,11 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("COPR"),
     ));
 
-    let (i, ((tag, condition_flag), operands)) =
-        tuple((instructions, parse_instruction_operands1))(i)?;
+    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
+        tuple((instructions, parse_instruction_operands0))(i)?;
+
+    let default_status_register_update_source =
+        status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
 
     match operands.as_slice() {
         // The CPU does not support register arithmetic instructions with two register operands
@@ -103,11 +106,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -127,11 +126,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -156,11 +151,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },
@@ -184,11 +175,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                         shift_type,
                         shift_count,
                         condition_flag,
-                        additional_flags: if &tag == "SHFR" {
-                            StatusRegisterUpdateSource::Shift.to_flags()
-                        } else {
-                            StatusRegisterUpdateSource::Alu.to_flags()
-                        },
+                        additional_flags: default_status_register_update_source.to_flags(),
                     }),
                     ..Default::default()
                 },

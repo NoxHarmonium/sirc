@@ -536,7 +536,7 @@ fn test_load_register() {
 //
 // #### Shifting ####
 // (Adding with zero to try to test shifting in isolation)
-//
+// These tests would be the equivalent of the SHFR meta instruction- Reuses the same opcode as ADDR but the StatusRegisterUpdateSource is Shift
 
 #[test]
 fn test_logical_shift_left_register() {

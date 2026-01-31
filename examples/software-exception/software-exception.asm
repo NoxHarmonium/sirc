@@ -14,8 +14,8 @@
 
 ; Reset register
 LOAD    r1, #1
-; Trigger Software Exception (TODO: Create psuedo instructions for these)
-COPI    r1, #0x1140
+; Trigger Software Exception
+EXCP    #0x40
 
 ; r1 should be 0x0FF here after exception handler runs
 
@@ -29,9 +29,9 @@ COPI    r1, #0x14FF
 ; Final value of r1 should be this value
 LOAD    r1, #0xFF
 ; Try and trigger nested software exception (should be ignored)
-COPI    r1, #0x1141
+EXCP    #0x41
 ; Return from exception
-COPI    r1, #0x1A00
+RETE
 
 .ORG 0x0500
 :exception_handler_that_should_be_ignored
@@ -40,4 +40,4 @@ COPI    r1, #0x1A00
 ; Final value of r1 should _not_ be BB because this vector should never be jumped to
 LOAD    r1, #0xBB
 ; Return from exception
-COPI    r1, #0x1A00
+RETE

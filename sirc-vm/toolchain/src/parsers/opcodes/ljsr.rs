@@ -1,7 +1,7 @@
 use super::super::shared::AsmResult;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
-    parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
@@ -42,8 +42,18 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// ```
 pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag), operands)) =
-        tuple((parse_instruction_tag("LJSR"), parse_instruction_operands1))(i)?;
+    let (i, ((_, condition_flag, status_register_update_source), operands)) =
+        tuple((parse_instruction_tag("LJSR"), parse_instruction_operands0))(i)?;
+
+    if status_register_update_source.is_some() {
+        let error_string =
+            "The [LJSR] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string,
+        )));
+    }
 
     let construct_immediate_instruction = |offset: u16, address_register: &AddressRegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {

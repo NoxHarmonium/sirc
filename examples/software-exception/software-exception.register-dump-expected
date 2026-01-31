@@ -27,35 +27,45 @@ ExceptionUnitRegisters {
         ExceptionLinkRegister {
             return_address: 0x204,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
             return_address: 0x0,
             return_status_register: 0x0,
+            saved_exception_level: 0x0,
         },
     ],
     waiting_for_exception: false,
+    cpu_halted: false,
+    current_exception_level: 0x0,
 }

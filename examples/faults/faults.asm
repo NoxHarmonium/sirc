@@ -28,6 +28,8 @@
 .DQ @invalid_opcode_fault_handler
 .ORG 0x000A
 .DQ @privilege_violation_fault_handler
+.ORG 0x000C
+.DQ @double_fault_handler
 .ORG 0x000E
 .DQ @level_five_interrupt_conflict_handler
 
@@ -47,7 +49,7 @@ LOAD    r7, #1
 ; Get the debug device to raise a fault on the bus
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_BUS_ERROR
-STOR    (#0, a), r1
+STOR    (a), r1
 
 ; Jumping to an odd address triggers an alignment fault
 LOAD    pl, #0x0201
@@ -84,7 +86,7 @@ LOAD    al, #0xFFFE
 ; This should not trigger fault
 ; TODO: Fix LJMP so we don't have to used LDEA
 ; Also fix LDEA so we don't need to use this weird syntax, should really be LDEA p, a
-LDEA    p, (#0, a)
+LDEA    p, (a)
 
 :return_from_testing_pc_overflow_no_fault
 
@@ -95,7 +97,7 @@ LOAD    ah, $PROGRAM_SEGMENT_HIGH
 LOAD    al, #0xFFFE
 
 ; This _should_ trigger a fault
-LDEA    p, (#0, a)
+LDEA    p, (a)
 
 :return_from_testing_pc_overflow_with_fault
 
@@ -105,7 +107,7 @@ ANDI    sr, #0xBFFF
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
 COPI    r1, #0x4000
 
-; Switch to non privillaged mode
+; Switch to non privileged mode
 ORRI     sr, #0x0100
 ; Try to escape the current segment
 LOAD     ph, #0xFEFE
@@ -115,7 +117,7 @@ LOAD     ph, #0xFEFE
 LOAD    r7, #0x1
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
-STOR    (#0, a), r7
+STOR    (a), r7
 
 ; Halt CPU
 COPI    r1, #0x14FF
@@ -130,14 +132,14 @@ RETE
 ADDI    r2, #1
 
 ; Fix up the return address because the original PC causes an alignment fault
-; Returning witout fixing up the return address would cause an endless loop
+; Returning without fixing up the return address would cause an endless loop
 
 ; Transfer current ELR into 'a' register
-COPI    r1, #0x1C16
+ETFR a, #6
 ; Correct the lower word
 LOAD    al, @after_odd_address
 ; Transfer corrected address back to ELR
-COPI    r1, #0x1D16
+ETTR #6, a
 
 RETE
 
@@ -145,10 +147,14 @@ RETE
 ; Check the phase
 
 ; Transfer exception metadata to r7
-COPI    r1, #0x1C27
+ETFR    r7, #7
+; Mask off the phase section of the status register
+ANDI    r7, #0x7
 
 CMPI    r7, $CPU_PHASE_INSTRUCTION_FETCH
 BRAN|== @segment_overflow_fault_handler_pc
+; Mask off the phase section of the status register
+ANDI    r7, #0x7
 
 CMPI    r7, $CPU_PHASE_EFFECTIVE_ADDRESS
 BRAN|== @segment_overflow_fault_handler_address
@@ -164,7 +170,7 @@ ADDI    r3, #0x0F00
 LOAD    ah, $PROGRAM_SEGMENT
 LOAD    al, @return_from_testing_pc_overflow_with_fault
 ; Transfer corrected address back to ELR
-COPI    r1, #0x1D16
+ETTR    #6, a
 
 BRAN @segment_overflow_fault_handler_end
 
@@ -177,21 +183,38 @@ ADDI    r3, #0x000F
 RETE
 
 :invalid_opcode_fault_handler
+; A double fault will blat the EU link registers so we need to save them before we trigger it
+ETFR #6
+
 ADDI    r4, #1
+; Trigger another invalid opcode fault to test double fault handling
+; This will cause a fault while already handling a fault
+COPI    r1, #0xF000
+
+; Restore link register
+ETTR #6
+
 RETE
 
 :privilege_violation_fault_handler
 ADDI    r5, #1
 
-; Make sure that the CPU is back in privilaged mode again after handling this fault
+; Make sure that the CPU is back in privileged mode again after handling this fault
 
 ; Transfer current ELR into 'r7' register
-COPI    r1, #0x1C26
+ETFR    r7, #6
 ; Correct the lower word
 ANDI    r7, #0xFEFF
 ; Transfer corrected SR back to ELR
-COPI    r1, #0x1D26
+ETTR    #6, r7
 
+RETE
+
+:double_fault_handler
+; A double fault occurred - this is typically a last-chance handler
+; In this example, we'll increment r4 to show we were here
+; and then return (though in production you'd probably reset)
+ADDI    r4, #1
 RETE
 
 :level_five_interrupt_conflict_handler
@@ -206,7 +229,7 @@ ADDI    r6, #0x1000
 LOAD    r7, #0x1
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
-STOR    (#0, a), r7
+STOR    (a), r7
 
 RETE
 

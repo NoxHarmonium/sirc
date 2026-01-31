@@ -39,7 +39,7 @@ CMPI    r2, #1
 BRAN|== @4
 ; THIS NUMBER IS A PRIME!
 ; TODO: Log this somehow
-STOR    -(#0, s), r1
+STOR    -(s), r1
 LOAD    r7, r1
 LOAD    r2, r1
 

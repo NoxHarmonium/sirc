@@ -16,3 +16,6 @@ mem.bin
 # We usually don't want to check in logs
 *.log
 
+# latexindent
+.cruft
+*.stamp

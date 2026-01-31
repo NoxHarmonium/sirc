@@ -1,0 +1,705 @@
+\chapter{ALU Instructions}
+\label{ch:alu-instructions}
+
+\section{Overview}
+
+The ALU (Arithmetic Logic Unit) instructions perform arithmetic and logical operations on register operands. All ALU
+instructions follow the load/store architecture principle: they operate only on registers, not directly on memory.
+
+ALU instructions are available in three format variants:
+\begin{itemize}
+	\item \textbf{Immediate}: Operation with 16-bit constant
+	\item \textbf{Short Immediate with Shift}: Operation with 8-bit constant and optional shift
+	\item \textbf{Register}: Operation between registers with optional shift
+\end{itemize}
+
+\section{ALU Instruction Families}
+
+\subsection{Arithmetic Instructions}
+\begin{itemize}
+	\item \mnemonic{ADD} -- Addition
+	\item \mnemonic{ADC} -- Add with Carry
+	\item \mnemonic{SUB} -- Subtraction
+	\item \mnemonic{SBC} -- Subtract with Carry (Borrow)
+\end{itemize}
+
+\subsection{Logical Instructions}
+\begin{itemize}
+	\item \mnemonic{AND} -- Bitwise AND
+	\item \mnemonic{ORR} -- Bitwise OR
+	\item \mnemonic{XOR} -- Bitwise XOR (Exclusive OR)
+\end{itemize}
+
+\subsection{Data Movement}
+\begin{itemize}
+	\item \mnemonic{LOAD} -- Load immediate or copy register
+\end{itemize}
+
+\subsection{Test and Compare}
+\begin{itemize}
+	\item \mnemonic{CMP} -- Compare (subtract without saving result)
+	\item \mnemonic{TSA} -- Test AND (AND without saving result)
+	\item \mnemonic{TSX} -- Test XOR (XOR without saving result)
+\end{itemize}
+
+\section{Status Flag Updates}
+
+Most ALU instructions update the status register flags:
+
+\begin{description}
+	\item[Arithmetic (ADD, ADC, SUB, SBC, CMP)] Update all four flags: N, Z, C, V
+	\item[Logical (AND, ORR, XOR, TSA, TSX)] Update N and Z; clear C and V
+	\item[Load (LOAD)] Do not update flags
+\end{description}
+
+\subsection{Manual Flag Update Control}
+
+ALU instructions support manual control over how status flags are updated using the status override syntax. See
+Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
+
+\begin{itemize}
+	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
+	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
+	\item \texttt{INSTR[N]} -- Do not update status flags
+\end{itemize}
+
+\textbf{Example:}
+\begin{lstlisting}
+; Update flags from shift operation
+ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
+
+; Preserve flags during operation
+CMPI r2, r3                   ; Set comparison flags
+ADDI[N] r4, #1                ; Increment without changing flags
+BRAN|>= branch_if_r2_gte_r3   ; Use flags from CMPI
+\end{lstlisting}
+
+% ============================================================================
+\section{ADD -- Addition}
+
+\begin{instructionbox}{ADDI / ADDR -- Add Immediate / Add Register}
+	\textbf{Opcodes:} 0x00 (Imm), 0x20 (Short Imm), 0x30 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ADDI rD, #imm16                ; rD = rD + imm16
+ADDI rD, #imm8, shift          ; rD = (rD << shift) + imm8
+ADDR rD, rS1, rS2              ; rD = rS1 + rS2
+ADDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Adds two values and stores the result in the destination register. In short immediate format with shift, the
+	destination register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
+	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
+	the operation).
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Simple addition
+ADDI r1, #100              ; r1 = r1 + 100
+
+; Add two registers
+ADDR r3, r1, r2            ; r3 = r1 + r2
+
+; Scaled addition (multiply by 3)
+ADDR r4, r5, r5, LSL #1    ; r4 = r5 + (r5 * 2) = r5 * 3
+
+; Build large constant
+ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item For multi-precision arithmetic, use \mnemonic{ADC} to propagate carry
+		\item Adding zero (\texttt{ADDI r1, \#0}) can be used to move values or test flags
+		\item Shift operations allow efficient constant multiplication
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{ADC -- Add with Carry}
+
+\begin{instructionbox}{ADCI / ADCR -- Add with Carry}
+	\textbf{Opcodes:} 0x01 (Imm), 0x21 (Short Imm), 0x31 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ADCI rD, #imm16                ; rD = rD + imm16 + C
+ADCI rD, #imm8, shift          ; rD = (rD << shift) + imm8 + C
+ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
+ADCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2 + C
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2 + SR.C
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
+	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
+	arithmetic to propagate the carry from lower-order additions to higher-order additions.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; 32-bit addition (r1:r2 = r3:r4 + r5:r6)
+; Low words
+ADDR r2, r4, r6            ; r2 = r4 + r6, set carry
+
+; High words (with carry propagation)
+ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Always use after \mnemonic{ADD} for multi-word arithmetic
+		\item The carry flag must be in the correct state before \mnemonic{ADC}
+		\item Can be used to add 1 conditionally based on carry flag
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{SUB -- Subtraction}
+
+\begin{instructionbox}{SUBI / SUBR -- Subtract Immediate / Subtract Register}
+	\textbf{Opcodes:} 0x02 (Imm), 0x22 (Short Imm), 0x32 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SUBI rD, #imm16                ; rD = rD - imm16
+SUBI rD, #imm8, shift          ; rD = (rD << shift) - imm8
+SUBR rD, rS1, rS2              ; rD = rS1 - rS2
+SUBR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = NOT(borrow)  ; Set if no borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
+	destination register is shifted before subtracting the immediate. The carry flag is cleared if a borrow occurs
+	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Decrement by 1
+SUBI r1, #1                ; r1 = r1 - 1
+
+; Subtract registers
+SUBR r3, r1, r2            ; r3 = r1 - r2
+
+; Loop counter
+SUBI r7, #1                ; Decrement counter
+BRAN|!= loop               ; Branch if not zero
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Carry flag behavior is inverted compared to ADD (set when no borrow)
+		\item For multi-precision subtraction, use \mnemonic{SBC}
+		\item Subtracting a value from itself (\texttt{SUBR r1, r1, r1}) clears the register
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{SBC -- Subtract with Carry (Borrow)}
+
+\begin{instructionbox}{SBCI / SBCR -- Subtract with Carry}
+	\textbf{Opcodes:} 0x03 (Imm), 0x23 (Short Imm), 0x33 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SBCI rD, #imm16                ; rD = rD - imm16 - !C
+SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - !C
+SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - !C
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2 - (1 - SR.C)
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = NOT(borrow)
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Subtracts the second operand and borrow (inverse of carry) from the first operand. In short immediate format with
+	shift, the destination register is shifted before subtracting the immediate. Used for multi-precision subtraction to
+	propagate borrows from lower-order to higher-order subtractions.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; 32-bit subtraction (r1:r2 = r3:r4 - r5:r6)
+; Low words
+SUBR r2, r4, r6            ; r2 = r4 - r6, set/clear carry
+
+; High words (with borrow propagation)
+SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Always use after \mnemonic{SUB} for multi-word subtraction
+		\item Remember: carry flag is inverted for subtraction (C=1 means no borrow)
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{AND -- Bitwise AND}
+
+\begin{instructionbox}{ANDI / ANDR -- AND Immediate / AND Register}
+	\textbf{Opcodes:} 0x04 (Imm), 0x24 (Short Imm), 0x34 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ANDI rD, #imm16                ; rD = rD & imm16
+ANDI rD, #imm8, shift          ; rD = (rD << shift) & imm8
+ANDR rD, rS1, rS2              ; rD = rS1 & rS2
+ANDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) & rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 AND operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
+	short immediate format with shift, the destination register is shifted before ANDing with the immediate. Commonly used
+	for bit masking and clearing specific bits.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Mask lower byte
+ANDI r1, #0x00FF           ; r1 = r1 & 0xFF
+
+; Clear bit 5
+ANDI r2, #~(1<<5)          ; r2 = r2 & 0xFFDF
+
+; Check if two registers share any set bits
+ANDR r3, r1, r2            ; r3 = r1 & r2
+CMPI r3, #0
+BRAN|!= common_bits        ; Branch if any bits in common
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item ANDing with 0xFFFF leaves value unchanged
+		\item ANDing with 0x0000 clears the register
+		\item Use \mnemonic{TSA} to test bits without modifying the register
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{ORR -- Bitwise OR}
+
+\begin{instructionbox}{ORRI / ORRR -- OR Immediate / OR Register}
+	\textbf{Opcodes:} 0x05 (Imm), 0x25 (Short Imm), 0x35 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ORRI rD, #imm16                ; rD = rD | imm16
+ORRI rD, #imm8, shift          ; rD = (rD << shift) | imm8
+ORRR rD, rS1, rS2              ; rD = rS1 | rS2
+ORRR rD, rS1, rS2, shift       ; rD = (rS1 << shift) | rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 OR operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
+	immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly used for
+	setting specific bits.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Set bit 7
+ORRI r1, #0x0080           ; r1 = r1 | 0x80
+
+; Set multiple bits
+ORRI r2, #0xF000           ; Set upper nibble
+
+; Combine two registers
+ORRR r3, r1, r2            ; r3 = r1 | r2
+
+; Set bit N (variable)
+ADDI r4, #1
+ADDR r4, r4, r5, LSL       ; r4 = 1 << r5
+ORRR r1, r4                ; r1 |= (1 << r5)
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item ORing with 0x0000 leaves value unchanged
+		\item ORing with 0xFFFF sets all bits
+		\item Use for enabling flag bits or combining bit fields
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{XOR -- Bitwise Exclusive OR}
+
+\begin{instructionbox}{XORI / XORR -- XOR Immediate / XOR Register}
+	\textbf{Opcodes:} 0x06 (Imm), 0x26 (Short Imm), 0x36 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+XORI rD, #imm16                ; rD = rD ^ imm16
+XORI rD, #imm8, shift          ; rD = (rD << shift) ^ imm8
+XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
+XORR rD, rS1, rS2, shift       ; rD = (rS1 << shift) ^ rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 XOR operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
+	are different. In short immediate format with shift, the destination register is shifted before XORing with the
+	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Toggle bit 3
+XORI r1, #0x0008           ; r1 = r1 ^ 0x08
+
+; Invert all bits
+XORI r2, #0xFFFF           ; r2 = ~r2
+
+; Check if registers are equal
+XORR r3, r1, r2            ; r3 = r1 ^ r2
+; If r3 == 0, then r1 == r2
+
+; Swap using XOR (no temporary)
+XORR r1, r1, r2            ; r1 = r1 ^ r2
+XORR r2, r1, r2            ; r2 = r1 ^ r2 = (r1 ^ r2) ^ r2 = r1
+XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item XORing with 0x0000 leaves value unchanged
+		\item XORing with 0xFFFF inverts all bits (bitwise NOT)
+		\item XORing a value with itself always gives 0
+		\item Use \mnemonic{TSX} to check for differences without modifying register
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{LOAD -- Load Immediate / Move Register}
+
+\begin{instructionbox}{LOAD -- Load/Move}
+	\textbf{Opcodes:} 0x07 (Imm), 0x27 (Short Imm), 0x37 (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+LOAD rD, #imm16                ; rD = imm16 (via add)
+LOAD rD, #imm8, shift          ; rD = imm8 << shift
+LOAD rD, rS                    ; rD = rS (via add)
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+; Implemented as: rD = 0 + operand
+destination = operand
+; Flags NOT updated
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
+	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
+	registers.
+
+	\textbf{Flags:} None
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Load constant
+LOAD r1, #1234             ; r1 = 1234
+
+; Copy register
+LOAD r2, r1                ; r2 = r1
+
+; Load with arithmetic
+LOAD r3, #1
+ADDI r3, #0, LSL #8        ; r3 = (r3 << 8) + 0 = 256
+
+; Zero a register
+LOAD r4, #0                ; r4 = 0
+
+; Load large constant (combine)
+LOAD r5, #0x12
+ADDI r5, #0, LSL #8        ; r5 = (r5 << 8) + 0 = 0x1200
+ORRI r5, #0x34             ; r5 = 0x1234
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not update flags, unlike \mnemonic{ADD}
+		\item Most efficient way to move data between registers
+		\item For 16-bit constants, use immediate form
+		\item For larger or shifted constants, use short immediate with shift
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{CMP -- Compare}
+
+\begin{instructionbox}{CMPI / CMPR -- Compare Immediate / Compare Register}
+	\textbf{Opcodes:} 0x0A (Imm), 0x2A (Short Imm), 0x3A (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CMPI rS, #imm16                ; Compare rS with imm16
+CMPI rS, #imm8, shift          ; Compare (rS << shift) with imm8
+CMPR rS1, rS2                  ; Compare rS1 with rS2
+CMPR rS1, rS2, shift           ; Compare (rS1 << shift) with rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = NOT(borrow)
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
+	source register is shifted before comparing with the immediate. This is the primary instruction for implementing
+	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
+	the operands.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Test if r1 is zero
+CMPI r1, #0
+BRAN|== is_zero            ; Branch if r1 == 0
+
+; Test if r1 > r2 (unsigned)
+CMPR r1, r2
+BRAN|HI r1_greater
+
+; Test if r1 >= r2 (signed)
+CMPR r1, r2
+BRAN|>= r1_greater_or_equal
+
+; Range check: if (r1 >= 10 && r1 < 20)
+CMPI r1, #10
+BRAN|<< out_of_range       ; Branch if r1 < 10
+CMPI r1, #20
+BRAN|>= out_of_range       ; Branch if r1 >= 20
+; r1 is in range [10, 20)
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Use with conditional instructions or branches
+		\item Remember: \texttt{CMP A, B} computes A - B
+		\item For signed comparisons, use \texttt{>=}, \texttt{<}, \texttt{>>}, \texttt{<<}
+		\item For unsigned comparisons, use \texttt{>}, \texttt{CS}, \texttt{CC}, \texttt{<=}
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{TSA -- Test AND}
+
+\begin{instructionbox}{TSAI / TSAR -- Test AND Immediate / Test AND Register}
+	\textbf{Opcodes:} 0x0C (Imm), 0x2C (Short Imm), 0x3C (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSAI rS, #imm16                ; Test rS & imm16
+TSAI rS, #imm8, shift          ; Test (rS << shift) & imm8
+TSAR rS1, rS2                  ; Test rS1 & rS2
+TSAR rS1, rS2, shift           ; Test (rS1 << shift) & rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 AND operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying the
+	register. The zero flag indicates whether any tested bits were set.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Test if bit 5 is set
+TSAI r1, #0x0020           ; Test r1 & 0x20
+BRAN|!= bit5_set           ; Branch if bit 5 was set
+
+; Test if any upper byte bits are set
+TSAI r2, #0xFF00
+BRAN|!= has_upper_bits
+
+; Test if r1 and r2 have any bits in common
+TSAR r1, r2
+BRAN|== no_common_bits     ; Branch if no bits in common
+
+; Test multiple bits
+TSAI r3, #0xF000           ; Test upper nibble
+BRAN|== upper_clear        ; Branch if all tested bits clear
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means all tested bits were 0
+		\item Z=0 means at least one tested bit was 1
+		\item Use for bit testing without side effects
+		\item More efficient than AND + CMP for simple tests
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\section{TSX -- Test XOR}
+
+\begin{instructionbox}{TSXI / TSXR -- Test XOR Immediate / Test XOR Register}
+	\textbf{Opcodes:} 0x0E (Imm), 0x2E (Short Imm), 0x3E (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSXI rS, #imm16                ; Test rS ^ imm16
+TSXI rS, #imm8, shift          ; Test (rS << shift) ^ imm8
+TSXR rS1, rS2                  ; Test rS1 ^ rS2
+TSXR rS1, rS2, shift           ; Test (rS1 << shift) ^ rS2
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 XOR operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to compare
+	values for equality. Z=1 indicates the values are identical.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Example:}
+	\begin{lstlisting}
+; Test if r1 equals specific value
+TSXI r1, #0x1234           ; Test r1 ^ 0x1234
+BRAN|== is_0x1234          ; Branch if r1 == 0x1234
+
+; Test if two registers are equal
+TSXR r1, r2                ; Test r1 ^ r2
+BRAN|== registers_equal    ; Branch if r1 == r2
+
+; Test if bit pattern matches
+TSAI r3, #0xFF             ; Mask to lower byte
+TSXI r3, #0xAA             ; Test if lower byte == 0xAA
+BRAN|== pattern_match
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means values are identical (all bits match)
+		\item Can be used as equality test (alternative to CMP for == only)
+		\item More efficient than XOR + CMP for simple equality tests
+	\end{itemize}
+\end{instructionbox}
+
+\section{Summary}
+
+The ALU instructions form the computational core of the SIRCIS instruction set. Key points:
+
+\begin{itemize}
+	\item All ALU operations work only on registers (load/store architecture)
+	\item Three format variants provide flexibility (immediate, short+shift, register)
+	\item Test variants (CMP, TSA, TSX) allow non-destructive testing
+	\item Shift operations can be combined with ALU ops for powerful single-cycle operations
+	\item Consistent flag behavior makes conditional execution predictable
+\end{itemize}

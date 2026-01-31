@@ -1,0 +1,230 @@
+\chapter{Instruction Timing}
+\label{appendix:timing}
+
+\section{Overview}
+
+All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage pipeline architecture. This fixed
+timing greatly simplifies software development and hardware design.
+
+\section{Six-Stage Pipeline}
+
+\begin{enumerate}
+	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
+	      \begin{itemize}
+		      \item Fetch bits 31--16 from memory address in PC
+		      \item Increment PC by 1
+	      \end{itemize}
+
+	\item \textbf{Instruction Fetch (Low Word)} -- 1 cycle
+	      \begin{itemize}
+		      \item Fetch bits 15--0 from memory address in PC
+		      \item Increment PC by 1
+		      \item Instruction is now fully available for decode
+	      \end{itemize}
+
+	\item \textbf{Decode and Register Fetch} -- 1 cycle
+	      \begin{itemize}
+		      \item Decode instruction opcode and operands
+		      \item Read source registers
+		      \item Evaluate condition codes
+	      \end{itemize}
+
+	\item \textbf{Execute and Address Calculation} -- 1 cycle
+	      \begin{itemize}
+		      \item Perform ALU operation, or
+		      \item Calculate effective memory address
+		      \item Apply shift operations if specified
+	      \end{itemize}
+
+	\item \textbf{Memory Access} -- 1 cycle
+	      \begin{itemize}
+		      \item Read from memory (LOAD), or
+		      \item Write to memory (STOR), or
+		      \item No operation (register-only instructions)
+	      \end{itemize}
+
+	\item \textbf{Write Back} -- 1 cycle
+	      \begin{itemize}
+		      \item Write result to destination register
+		      \item Update status register flags if applicable
+		      \item Update address registers for post-increment/pre-decrement
+	      \end{itemize}
+\end{enumerate}
+
+\section{Timing Characteristics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lc}
+		\toprule
+		\textbf{Instruction Type}  & \textbf{Cycles} \\
+		\midrule
+		ALU (Register)             & 6               \\
+		ALU (Immediate)            & 6               \\
+		Load from Memory           & 6               \\
+		Store to Memory            & 6               \\
+		Branch (taken)             & 6               \\
+		Branch (not taken)         & 6               \\
+		Conditional (executed)     & 6               \\
+		Conditional (not executed) & 6               \\
+		NOOP                       & 6               \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instruction Timing (All instructions)}
+\end{table}
+
+\section{Conditional Execution}
+
+When a conditional instruction's condition is not met:
+\begin{itemize}
+	\item The instruction still takes 6 cycles to complete
+	\item All pipeline stages execute normally
+	\item The write-back stage is disabled (no register or memory modification)
+	\item Status flags are not updated
+\end{itemize}
+
+This means conditional instructions do not branch and avoid pipeline stalls, but failed conditions still consume
+execution time.
+
+\section{Program Timing Examples}
+
+\subsection{Simple Loop}
+\begin{lstlisting}
+; Process 10 elements
+ADDI r7, #0, #10              ; 6 cycles
+loop:
+    LOAD r1, (#0, a)+         ; 6 cycles
+    ADDI r1, #1               ; 6 cycles
+    STOR (#-2, a), r1         ; 6 cycles
+    SUBI r7, #1               ; 6 cycles
+    BRAN|!= (#loop, p)        ; 6 cycles
+; Total per iteration: 30 cycles
+; Total for 10 iterations: 6 + (10 * 30) = 306 cycles
+\end{lstlisting}
+
+\subsection{Function Call Overhead}
+\begin{lstlisting}
+; Call function
+LJSR (#0, a)                  ; 6 cycles
+
+; Function body executes...
+
+; Return
+RETS                          ; 6 cycles
+; Total overhead: 12 cycles
+\end{lstlisting}
+
+\subsection{Conditional Block}
+\begin{lstlisting}
+CMPR r1, r2                   ; 6 cycles
+ADDR|HI r3, r4, r5            ; 6 cycles (exec if r1 > r2)
+ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
+; Total: 18 cycles (one conditional executes, one doesn't)
+\end{lstlisting}
+
+\section{Performance Considerations}
+
+\subsection{No Pipeline Stalls}
+
+The SIRC-1 does not implement pipelining in the traditional sense where multiple instructions are in flight
+simultaneously. Instead:
+
+\begin{itemize}
+	\item Each instruction completes fully before the next begins
+	\item No data hazards or pipeline bubbles
+	\item No branch prediction penalties
+	\item Execution time is completely predictable
+\end{itemize}
+
+\subsection{Memory Access}
+
+\begin{itemize}
+	\item Memory access always takes 1 cycle within the instruction
+	\item No wait states or cache misses (in the simulation)
+	\item Real hardware implementations may have variable memory timing
+\end{itemize}
+
+\subsection{Optimization Guidelines}
+
+\begin{enumerate}
+	\item \textbf{Use conditional execution for short sequences}
+	      \begin{lstlisting}
+; Instead of:
+CMPR r1, r2
+BRAN|<= skip
+ADDI r3, #1
+skip:
+
+; Use:
+CMPR r1, r2
+ADDI|HI r3, #1             ; Saves branch overhead
+    \end{lstlisting}
+
+	\item \textbf{Combine operations with shifts}
+	      \begin{lstlisting}
+; Instead of:
+ADDR r1, r2, r2
+ADDI r1, #0, LSL #1
+
+; Use:
+ADDR r1, r2, r2, LSL #1    ; Multiply by 3 in one instruction
+    \end{lstlisting}
+
+	\item \textbf{Use post-increment/pre-decrement for iteration}
+	      \begin{lstlisting}
+; Instead of:
+LOAD r1, (#0, a)
+ADDI a, #2
+
+; Use:
+LOAD r1, (#0, a)+          ; Same result, fewer cycles
+    \end{lstlisting}
+
+	\item \textbf{Loop unrolling reduces overhead}
+	      \begin{lstlisting}
+; Instead of processing one item per iteration,
+; process multiple items to reduce branch overhead
+loop:
+    LOAD r1, (#0, a)+
+    LOAD r2, (#0, a)+
+    LOAD r3, (#0, a)+
+    LOAD r4, (#0, a)+
+    ; Process 4 items...
+    SUBI r7, #4
+    BRAN|HI loop
+    \end{lstlisting}
+\end{enumerate}
+
+\section{Theoretical Performance}
+
+At a given clock frequency:
+
+\begin{itemize}
+	\item \textbf{Instructions per second:} $f_{clock} / 6$
+	\item \textbf{At 10 MHz:} $\approx$ 1.67 million instructions/second
+	\item \textbf{At 25 MHz:} $\approx$ 4.17 million instructions/second
+\end{itemize}
+
+These are theoretical maximums assuming perfect code with no inefficiencies.
+
+\section{Comparison to Other CPUs}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lcp{6cm}}
+		\toprule
+		\textbf{CPU}   & \textbf{Avg CPI} & \textbf{Notes}             \\
+		\midrule
+		SIRC-1         & 6.0              & Fixed, all instructions    \\
+		MOS 6502       & 2-7              & Variable by instruction    \\
+		Motorola 68000 & 4-158            & Highly variable            \\
+		ARM6           & 1.0              & Single-cycle with pipeline \\
+		MIPS R2000     & 1.0              & Single-cycle with pipeline \\
+		\bottomrule
+	\end{tabular}
+	\caption{Cycles Per Instruction Comparison}
+\end{table}
+
+The SIRC-1's fixed 6-cycle execution makes it slower than pipelined RISC CPUs but more predictable. It's comparable to
+early microprocessors while being simpler to implement in hardware.

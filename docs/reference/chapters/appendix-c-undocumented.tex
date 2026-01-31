@@ -1,0 +1,188 @@
+\chapter{Undocumented Instructions}
+\label{appendix:undocumented}
+
+\section{Overview}
+
+The SIRCIS instruction set includes 12 undocumented instruction opcodes. These opcodes are valid and will execute in
+hardware, but their behaviour is not officially specified and may vary between CPU implementations or revisions.
+
+\textbf{Warning:} Use of undocumented instructions is not recommended for production code.
+
+\section{Undocumented Opcode List}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clll}
+		\toprule
+		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}         \\
+		\midrule
+		0x08            & Immediate       & ADD-like + 0x8   & Test variant (no save) \\
+		0x09            & Immediate       & ADC-like + 0x8   & Test variant (no save) \\
+		0x0B            & Immediate       & SUB-like + 0x8   & Test variant (no save) \\
+		0x0D            & Immediate       & SBC-like + 0x8   & Test variant (no save) \\
+		0x28            & Short Imm       & ADD-like + 0x8   & Test variant (no save) \\
+		0x29            & Short Imm       & ADC-like + 0x8   & Test variant (no save) \\
+		0x2B            & Short Imm       & SUB-like + 0x8   & Test variant (no save) \\
+		0x2D            & Short Imm       & SBC-like + 0x8   & Test variant (no save) \\
+		0x38            & Register        & ADD-like + 0x8   & Test variant (no save) \\
+		0x39            & Register        & ADC-like + 0x8   & Test variant (no save) \\
+		0x3B            & Register        & SUB-like + 0x8   & Test variant (no save) \\
+		0x3D            & Register        & SBC-like + 0x8   & Test variant (no save) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Undocumented Instruction Opcodes}
+\end{table}
+
+\section{Likely Behavior}
+
+Based on the systematic opcode organization, these undocumented instructions likely behave as "test" variants of
+arithmetic instructions:
+
+\subsection{0x08, 0x28, 0x38 (ADD Test)}
+
+Probably performs addition but discards the result, only updating flags. Similar to \mnemonic{CMP} but using ADD
+semantics instead of SUB.
+
+\begin{lstlisting}
+; Hypothetical behavior
+result = operand1 + operand2  ; Calculate
+; result is discarded (not written to register)
+; Flags updated based on result
+\end{lstlisting}
+
+\textbf{Utility:} Limited. \mnemonic{CMP} already provides comparison functionality.
+
+\subsection{0x09, 0x29, 0x39 (ADC Test)}
+
+Probably performs add-with-carry but discards the result, updating flags.
+
+\begin{lstlisting}
+; Hypothetical behavior
+result = operand1 + operand2 + C
+; result is discarded
+; Flags updated
+\end{lstlisting}
+
+\textbf{Utility:} Possibly useful for testing carry propagation without modifying registers.
+
+\subsection{0x0B, 0x2B, 0x3B (SUB Test)}
+
+Probably identical to \mnemonic{CMP} (which is already SUB without save).
+
+\textbf{Utility:} None. Use \mnemonic{CMP} instead.
+
+\subsection{0x0D, 0x2D, 0x3D (SBC Test)}
+
+Probably performs subtract-with-borrow but discards the result.
+
+\begin{lstlisting}
+; Hypothetical behavior
+result = operand1 - operand2 - (1 - C)
+; result is discarded
+; Flags updated
+\end{lstlisting}
+
+\textbf{Utility:} Possibly useful for testing borrow propagation in multi-precision arithmetic.
+
+\section{Implementation Notes}
+
+\subsection{Current Simulator}
+
+In the current SIRC-VM simulator (as of version 1.0):
+
+\begin{itemize}
+	\item Undocumented instructions are recognized and decoded
+	\item They execute following the "test variant" pattern (no write-back)
+	\item Flag updates may or may not be implemented correctly
+	\item Behavior may change in future versions
+\end{itemize}
+
+\subsection{Hardware Implementation}
+
+In a hardware implementation:
+
+\begin{itemize}
+	\item The decoder treats bit 3 = 1 as "don't write back"
+	\item ALU operations still execute normally
+	\item Flags are still updated
+	\item The write-back stage is simply disabled
+\end{itemize}
+
+This means the instructions \textit{will} work, but their exact behavior depends on the hardware implementation
+details.
+
+\section{Why Undocumented?}
+
+These instructions were left undocumented for several reasons:
+
+\begin{enumerate}
+	\item \textbf{Limited utility}: Most have no practical use beyond documented instructions
+	\item \textbf{Incomplete semantics}: The designer hasn't fully defined their behavior
+	\item \textbf{Opcode space reservation}: May be used for future features
+	\item \textbf{Implementation flexibility}: Allows hardware optimizations
+\end{enumerate}
+
+\section{Recommendations}
+
+\subsection{For Application Developers}
+
+\textbf{Do not use undocumented instructions in production code.}
+
+\begin{itemize}
+	\item Behavior may change between CPU revisions
+	\item Assemblers may reject them or emit warnings
+	\item Code may not be portable
+	\item Debugging tools may not recognize them
+\end{itemize}
+
+\subsection{For Compiler Writers}
+
+\begin{itemize}
+	\item Do not generate undocumented instructions
+	\item Use only documented instructions for all operations
+	\item If optimization requires new operations, request formal documentation
+\end{itemize}
+
+\subsection{For Hardware Implementers}
+
+\begin{itemize}
+	\item You may implement these opcodes following the logical pattern
+	\item Document any implementation-specific behavior
+	\item Consider reserving them for future standardization
+\end{itemize}
+
+\subsection{For Researchers/Hackers}
+
+If you must experiment with undocumented instructions:
+
+\begin{itemize}
+	\item Test thoroughly on your specific hardware/simulator version
+	\item Document your findings
+	\item Isolate usage in test code, not production
+	\item Be prepared for behavior changes
+\end{itemize}
+
+\section{Future Standardization}
+
+Some undocumented instructions may be formally specified in future SIRCIS revisions. Candidates for standardization
+include:
+
+\begin{itemize}
+	\item \textbf{ADC Test (0x09/0x29/0x39)}: For carry flag testing in multi-precision
+	\item \textbf{SBC Test (0x0D/0x2D/0x3D)}: For borrow flag testing in multi-precision
+\end{itemize}
+
+Others (SUB Test, which duplicates CMP) will likely remain undocumented or be repurposed.
+
+\section{Opcode Space for Expansion}
+
+The SIRCIS instruction set has limited expansion space:
+
+\begin{itemize}
+	\item 12 undocumented opcodes (could be formally specified)
+	\item Reserved shift type (0x111) could enable additional shift modes
+	\item Reserved address register encoding could enable more address modes
+	\item Additional coprocessors could provide extended functionality
+\end{itemize}
+
+Any future expansion must maintain backward compatibility with existing code.

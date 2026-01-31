@@ -87,40 +87,6 @@ pub fn decode_shift_count(raw_instruction: [u8; 4]) -> u8 {
 }
 
 ///
-/// Decodes the arguments for an "implied" instruction (an instruction has no arguments)
-///
-/// 6 bit instruction identifier (max 64 instructions)
-/// 22 bit reserved
-/// 4 bit conditions flags
-///
-/// ```
-/// use peripheral_cpu::coprocessors::processing_unit::encoding::{decode_implied_instruction};
-/// use peripheral_cpu::coprocessors::processing_unit::definitions::{Instruction, ImpliedInstructionData, ConditionFlags};
-///
-/// assert_eq!(decode_implied_instruction([0xF1, 0xBF, 0xEA, 0x80]), ImpliedInstructionData {
-///     op_code: Instruction::TestAndRegister, condition_flag: ConditionFlags::Always
-/// });
-/// assert_eq!(decode_implied_instruction([0xFF, 0xFF, 0xFF, 0xF0]), ImpliedInstructionData {
-///     op_code: Instruction::CoprocessorCallRegister, condition_flag: ConditionFlags::Always
-/// });
-///
-/// ```
-#[must_use]
-pub fn decode_implied_instruction(raw_instruction: [u8; 4]) -> ImpliedInstructionData {
-    let op_code = decode_instruction_id(raw_instruction);
-    let condition_flag = decode_condition_flags(raw_instruction);
-
-    // No args are used at this point (reserved for more complex instructions)
-    ImpliedInstructionData {
-        // TODO: Improve error handling in `decode_implied_instruction`
-        // category=Refactoring
-        op_code: num::FromPrimitive::from_u8(op_code)
-            .expect("instruction ID to to map to instruction enum"),
-        condition_flag,
-    }
-}
-
-///
 /// Decodes the arguments for an "immediate" instruction (an instruction that applies a value to
 /// a register)
 ///

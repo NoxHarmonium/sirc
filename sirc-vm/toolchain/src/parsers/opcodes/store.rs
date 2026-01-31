@@ -4,7 +4,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
         },
         shared::split_shift_definition_data,
     },
@@ -22,8 +22,18 @@ use peripheral_cpu::{
 };
 pub fn stor(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag), operands)) =
-        tuple((parse_instruction_tag("STOR"), parse_instruction_operands1))(i)?;
+    let (i, ((_, condition_flag, status_register_update_source), operands)) =
+        tuple((parse_instruction_tag("STOR"), parse_instruction_operands0))(i)?;
+
+    if status_register_update_source.is_some() {
+        let error_string =
+            "The [STOR] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i,
+            ErrorKind::Fail,
+            error_string,
+        )));
+    }
 
     let construct_indirect_immediate_instruction =
         |offset: u16, src_register: &RegisterName, address_register: &AddressRegisterName| {
@@ -47,7 +57,9 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             })
         };
 
+    // NOTE: No shifting with immediate operands because there is no short immediate representation of STOR
     match operands.as_slice() {
+        // STOR (#0, a), r1
         [AddressingMode::IndirectImmediateDisplacement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
@@ -93,6 +105,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
+        // STOR (r1, a), r1
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register)] =>
         {
             Ok((
@@ -114,6 +127,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        // STOR (r1, a), r1, ASL #1
         [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
             let (shift_operand, shift_type, shift_count) =
@@ -137,6 +151,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        // STOR -(#0, a), r1
         [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
@@ -182,6 +197,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
+        // STOR -(r1, a), r1
         [AddressingMode::IndirectRegisterDisplacementPreDecrement(
             displacement_register,
             address_register,
@@ -204,6 +220,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 }
             }))
         }
+        // STOR -(r1, a), r1, ASL #1
         [AddressingMode::IndirectRegisterDisplacementPreDecrement(
             displacement_register,
             address_register,

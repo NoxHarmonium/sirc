@@ -1,0 +1,77 @@
+\chapter{Coprocessor Instructions}
+\label{ch:coprocessor}
+
+\section{Overview}
+
+The SIRC-1 CPU includes a coprocessor interface that allows delegation of certain operations to specialized
+coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and
+privileged operations.
+
+\begin{instructionbox}{COP -- Coprocessor Call}
+	\textbf{Opcodes:} 0x0F (Imm), 0x2F (Short Imm), 0x3F (Reg)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+COPI #opcode                  ; Call coprocessor with 16-bit opcode
+COPR rS                       ; Call coprocessor with register value
+\end{lstlisting}
+
+	\textbf{Description:}
+
+	Transfers control to a coprocessor. The coprocessor ID and operation code are encoded in the immediate value or
+	register. Coprocessor operations may be privileged.
+
+	\textbf{Format:}
+	\begin{itemize}
+		\item Bits 15--12: Coprocessor ID
+		\item Bits 11--0: Operation code
+	\end{itemize}
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Wait for interrupt (Exception Unit)
+COPI #0x1900                  ; Coprocessor 1, opcode 0x900
+; Assembled as WAIT meta-instruction
+
+; Return from exception
+COPI #0x1A00                  ; Coprocessor 1, opcode 0xA00
+; Assembled as RETE meta-instruction
+
+; User exception (system call)
+COPI #0x1180                  ; Coprocessor 1, opcode 0x180 (vector 0x80)
+; Assembled as EXCP #0x80 meta-instruction
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Exception Unit (Coprocessor 1)}
+
+The Exception Unit handles:
+\begin{itemize}
+	\item Hardware exceptions (faults, traps)
+	\item Software exceptions
+	\item Interrupts (multiple priority levels)
+	\item Privileged operations
+\end{itemize}
+
+\subsection{Common Operations}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{8cm}}
+		\toprule
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                        \\
+		\midrule
+		0x1100-0x11FF   & EXCP              & User exception (trap) at vector 0x60-0xFF \\
+		0x1900          & WAIT              & Wait for interrupt                        \\
+		0x1A00          & RETE              & Return from exception                     \\
+		0x1B00          & RSET              & System reset                              \\
+		0x1C00-0x1C7F   & ETFR              & Transfer from exception link register     \\
+		0x1D00-0x1D7F   & ETTR              & Transfer to exception link register       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Unit Operations}
+\end{table}
+
+See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
+instructions.

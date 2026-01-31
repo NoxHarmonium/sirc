@@ -1,0 +1,179 @@
+\chapter{Meta-Instructions}
+\label{ch:meta-instructions}
+
+\section{Overview}
+
+Meta-instructions (also called pseudo-instructions) are assembly mnemonics that don't directly correspond to unique
+opcodes. Instead, they assemble to specific forms of existing instructions, providing more intuitive syntax for common
+operations.
+
+\section{NOOP -- No Operation}
+
+\textbf{Syntax:} \texttt{NOOP}
+
+\textbf{Assembles to:} \texttt{ADDI r1, \#0}
+
+\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during development.
+
+\textbf{Example:}
+\begin{lstlisting}
+NOOP                          ; Wait 6 cycles
+NOOP
+NOOP                          ; Total 18 cycles delay
+\end{lstlisting}
+
+\section{RETS -- Return from Subroutine}
+
+\textbf{Syntax:} \texttt{RETS}
+
+\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
+
+\textbf{Description:} Returns from a subroutine by copying the link register to the program counter. Used after \mnemonic{LJSR} or \mnemonic{BRSR}.
+
+\textbf{Example:}
+\begin{lstlisting}
+my_function:
+    ; ... function body ...
+    RETS                      ; Return to caller
+\end{lstlisting}
+
+\section{EXCP -- User Exception (Trap)}
+
+\textbf{Syntax:} \texttt{EXCP \#vector}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}
+
+\textbf{Description:} Triggers a software exception (trap) at the specified user vector (0x60-0xFF). Used by user-mode programs to invoke system calls or request supervisor mode services.
+
+\textbf{Example:}
+\begin{lstlisting}
+; System call to print character
+LOAD r1, #'A'                 ; Character to print
+EXCP #0x80                    ; Trap to OS print routine
+\end{lstlisting}
+
+\section{WAIT -- Wait for Interrupt}
+
+\textbf{Syntax:} \texttt{WAIT}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1900}
+
+\textbf{Description:} Puts the CPU into a low-power wait state until an exception occurs. Sets the waiting\_for\_exception flag in the exception unit. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+main_loop:
+    WAIT                      ; Sleep until interrupt
+    ; ... process interrupt ...
+    BRAN main_loop
+\end{lstlisting}
+
+\section{RETE -- Return from Exception}
+
+\textbf{Syntax:} \texttt{RETE}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1A00}
+
+\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+exception_handler:
+    ; ... handle exception ...
+    RETE                      ; Return to interrupted code
+\end{lstlisting}
+
+\section{RSET -- System Reset}
+
+\textbf{Syntax:} \texttt{RSET}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1B00}
+
+\textbf{Description:} Performs a software reset of the processor by clearing the status register and jumping to the reset vector. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+fatal_error:
+    ; Log error...
+    RSET                      ; Reset the system
+\end{lstlisting}
+
+\section{ETFR -- Exception Transfer From Register}
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETFR #n                       ; Transfer both to a and r7
+ETFR a, #n                    ; Transfer address to a only
+ETFR r7, #n                   ; Transfer status to r7 only
+\end{lstlisting}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} (where x = register select, y = link register)
+
+\textbf{Description:} Copies the return address and/or status register from a link register (0-7) to CPU registers. Used in exception handlers to examine saved processor state. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+alignment_fault_handler:
+    ETFR a, #6                ; Get faulting return address
+    LOAD al, @fixed_address   ; Correct the address
+    ETTR #6, a                ; Write corrected address back
+    RETE
+\end{lstlisting}
+
+\section{ETTR -- Exception Transfer To Register}
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETTR #n                       ; Transfer both a and r7
+ETTR #n, a                    ; Transfer a to address only
+ETTR #n, r7                   ; Transfer r7 to status only
+\end{lstlisting}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1Dxy} (where x = register select, y = link register)
+
+\textbf{Description:} Copies CPU registers to a link register's return address and/or status register. Used to modify saved processor state before returning from an exception. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+privilege_fault_handler:
+    ETFR r7, #6               ; Get saved status register
+    ANDI r7, #0xFEFF          ; Clear protected mode bit
+    ETTR #6, r7               ; Save modified status back
+    RETE
+\end{lstlisting}
+
+\section{SHFT -- Shift with Status Update}
+
+\textbf{Syntax:} \texttt{SHFT rD, shift}
+
+\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+
+\textbf{Description:} Shifts the value in a register and updates the status register flags based on the shift result (not the ALU operation). This is useful when you need to shift a value and have the flags reflect the shifted result.
+
+Normally, when using shift operations with ALU instructions like \texttt{CMPI r2, \#1, LSL \#2}, the status flags are
+updated according to the ALU operation result, not the shift. The \mnemonic{SHFT} instruction allows the status flags
+to be updated from the shift operation itself.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Shift r1 left by 3 and update flags
+SHFT r1, LSL #3               ; r1 = r1 << 3, flags = status of shift
+
+; Shift right and test result
+SHFT r3, LSR #2               ; r3 = r3 >> 2
+BRAN|== zero_result           ; Branch if shifted result is zero
+
+; Arithmetic shift with sign check
+SHFT r6, ASR #4               ; r6 = r6 >> 4 (signed)
+BRAN|NS negative_value        ; Branch if result is negative
+\end{lstlisting}
+
+\textbf{Notes:}
+\begin{itemize}
+	\item Behind the scenes, \mnemonic{SHFT} uses the status override syntax (see Section~\ref{sec:status-override}) to force
+	      flag updates from the shift operation
+	\item All shift types are supported (LSL, LSR, ASL, ASR, RTL, RTR)
+	\item Both immediate and register-based shift counts are supported
+\end{itemize}
+
+\textit{(Note: Check assembler documentation for supported pseudo-instructions)}

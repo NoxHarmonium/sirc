@@ -1,0 +1,303 @@
+\chapter{Status Register}
+\label{ch:status-register}
+
+\section{Overview}
+
+The Status Register (\reg{sr}) is a 16-bit special-purpose register that contains condition flags and control bits for
+the CPU. It is divided into two bytes with different privilege levels:
+
+\begin{itemize}
+	\item \textbf{Lower Byte (bits 7--0):} Condition flags -- readable and writable in both supervisor and protected modes
+	\item \textbf{Upper Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode
+\end{itemize}
+
+\section{Status Register Layout}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.5em]{16}
+		\bitheader{0-15} \\
+		\bitbox{1}{T} &
+		\bitbox{1}{A} &
+		\bitbox{1}{W} &
+		\bitbox{1}{EA} &
+		\bitbox{1}{E4} &
+		\bitbox{1}{E3} &
+		\bitbox{1}{E2} &
+		\bitbox{1}{E1} &
+		\bitbox{1}{P} &
+		\bitbox{1}{} &
+		\bitbox{1}{} &
+		\bitbox{1}{} &
+		\bitbox{1}{V} &
+		\bitbox{1}{C} &
+		\bitbox{1}{N} &
+		\bitbox{1}{Z} \\
+		\bitbox{8}{\small Privileged} &
+		\bitbox{8}{\small Non-Privileged}
+	\end{bytefield}
+	\caption{Status Register Bit Layout}
+	\label{fig:sr-layout}
+\end{figure}
+
+\section{Condition Flags (Non-Privileged)}
+
+These flags reflect the results of ALU operations and comparisons. They can be read and written by code running in any
+privilege level.
+
+\subsection{Zero Flag (Z) -- Bit 0}
+
+\begin{description}
+	\item[Set when:] The result of an operation is zero
+	\item[Cleared when:] The result of an operation is non-zero
+	\item[Tested by:] Equal (\texttt{==}), Not Equal (\texttt{!=}) condition codes
+\end{description}
+
+\subsection{Negative Flag (N) -- Bit 1}
+
+\begin{description}
+	\item[Set when:] The result of an operation is negative (bit 15 = 1) when interpreted as a signed two's complement value
+	\item[Cleared when:] The result is positive or zero (bit 15 = 0)
+	\item[Tested by:] Negative Set (\texttt{NS}), Negative Clear (\texttt{NC}), and signed comparison condition codes
+\end{description}
+
+\subsection{Carry Flag (C) -- Bit 2}
+
+\begin{description}
+	\item[Set when:] An addition produces a carry out of bit 15, or a subtraction produces a borrow
+	\item[Cleared when:] No carry/borrow occurs
+	\item[Tested by:] Carry Set (\texttt{CS}), Carry Clear (\texttt{CC}), Unsigned Higher (\texttt{HI}), Unsigned Lower or Same
+	      (\texttt{LO}) condition codes
+	\item[Note:] For unsigned comparisons, the carry flag acts as an unsigned overflow indicator
+\end{description}
+
+\subsection{Overflow Flag (V) -- Bit 3}
+
+\begin{description}
+	\item[Set when:] A signed arithmetic operation produces a result that cannot be represented in 16 bits (signed overflow)
+	\item[Cleared when:] No signed overflow occurs
+	\item[Tested by:] Overflow Set (\texttt{OS}), Overflow Clear (\texttt{OC}), and signed comparison condition codes
+	\item[Note:] Overflow occurs when adding two positive numbers yields a negative result, or adding two negative numbers yields
+	      a positive result
+\end{description}
+
+\subsection{Reserved Flags -- Bits 4--7}
+
+Bits 4 through 7 of the lower byte are reserved for future use. They should not be relied upon by software.
+
+\section{Control Flags (Privileged)}
+
+These flags control CPU behavior and can only be modified in supervisor mode. Attempts to write these bits in protected
+mode will be ignored (the write affects only the lower byte).
+
+\subsection{Protected Mode (P) -- Bit 8}
+
+\begin{description}
+	\item[When Clear (0):] CPU operates in supervisor mode with full privileges
+	\item[When Set (1):] CPU operates in protected mode with restricted access to:
+	      \begin{itemize}
+		      \item High bytes of address register pairs (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph})
+		      \item Upper byte of status register
+		      \item Privileged coprocessor operations (opcodes > 0x07xx)
+	      \end{itemize}
+	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. With the
+	      exception of writing to the status register, preforming a restricted operation will cause a "privilege violation"
+	      fault.
+\end{description}
+
+\subsection{Hardware Interrupt Enable Bits (E1--E4) -- Bits 9--12}
+
+These four bits individually control whether each of the four maskable hardware interrupt lines is enabled:
+
+\begin{itemize}
+	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 5, highest priority)
+	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 4)
+	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (Level 3)
+	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 2)
+\end{itemize}
+
+\textbf{Note:} Hardware Interrupt Line 5 (Level 1) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
+be disabled via the status register.
+
+When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
+When cleared to 0, interrupts on that line are disabled and will not be serviced.
+
+\textbf{Important behavior:}
+\begin{itemize}
+	\item Disabled interrupts are not queued -- they are completely ignored while the enable bit is 0
+	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
+	      exception level
+	\item This prevents the same interrupt from re-triggering while its handler is executing
+	\item Lower priority interrupts that occur while handling a higher priority interrupt are queued and serviced after the
+	      current handler completes (after RETE)
+\end{itemize}
+
+These bits are typically managed by the operating system's interrupt handling code. At reset, all interrupt enable bits
+are cleared (interrupts disabled).
+
+Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
+
+\subsection{Exception Active (EA) -- Bit 13}
+
+\begin{description}
+	\item[When Set (1):] The CPU is currently executing an exception handler (\texttt{current\_exception\_level != 0})
+	\item[When Clear (0):] The CPU is executing normal code (\texttt{current\_exception\_level == 0})
+	\item[Automatically Set:] When any exception is entered (software, hardware, or fault)
+	\item[Automatically Cleared:] When returning to exception level 0 via \mnemonic{RETE}
+	\item[Purpose:] Allows software to detect whether it's running within an exception handler context
+	\item[Typical Use:] OS code can check this bit to determine appropriate behavior (e.g., avoid re-enabling interrupts during
+	      nested exception handling)
+\end{description}
+
+\textbf{Note:} This bit reflects the internal \texttt{current\_exception\_level} state. Programs can read this bit but
+cannot directly modify it -- it is managed automatically by the exception handling hardware.
+
+\subsection{Trap on Address Overflow (A) -- Bit 14}
+
+\begin{description}
+	\item[When Set (1):] Memory address calculations that overflow or underflow will trigger an address overflow exception
+	\item[When Clear (0):] Address overflows wrap around without any side effects
+	\item[Purpose:] Helps detect pointer errors during development
+	\item[Typical Use:] Enabled during debugging, disabled in production for performance
+\end{description}
+
+\subsection{Trace Mode (T) -- Bit 15}
+
+\begin{description}
+	\item[When Set (1):] An exception is generated after every instruction
+	\item[When Clear (0):] Normal execution
+	\item[Purpose:] Allows debuggers to single-step through code
+	\item[Note:] Used by SIRCIT (SIRC Instruction Tracer) for debugging
+\end{description}
+
+\section{Status Register Updates}
+
+\subsection{Automatic Updates}
+
+The condition flags (Z, N, C, V) are automatically updated by most ALU instructions, unless explicitly disabled:
+
+\begin{itemize}
+	\item \textbf{Arithmetic Instructions} (\mnemonic{ADDI}, \mnemonic{SUBI}, \mnemonic{ADCI}, \mnemonic{SBCI}): Update all four condition flags
+	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z, N and V flags; C flag is cleared
+	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Same as Arithmetic Instructions but does not update destination
+	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
+	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Does not update condition flags
+	\item \textbf{Shift Operations}: Can optionally update flags based on the instruction's status register update source field
+\end{itemize}
+
+\subsection{Manual Updates}
+
+The status register can be directly manipulated like any other register:
+
+\begin{lstlisting}
+; Set protected mode bit (only in supervisor mode)
+ORRI sr, #0x0100
+
+; Enable all maskable hardware interrupts (set bits 9-12)
+; Note: Hardware interrupt line 5 is an NMI and is always enabled
+ORRI sr, #0x1E00
+
+; Disable all maskable hardware interrupts (clear bits 9-12)
+ANDI sr, #0xE1FF
+
+; Restore status register saved to stack
+LOAD sr, (s)+
+
+\end{lstlisting}
+
+\textbf{Important:} When running in protected mode, writes to the status register only affect the lower byte (bits 7--0). The upper byte remains unchanged.
+
+\section{Reading the Status Register}
+
+In supervisor mode, reading \reg{sr} returns the full 16-bit value. In protected mode, reading \reg{sr} returns the
+lower byte in bits 7--0, with bits 15--8 masked to zero (for security).
+
+\begin{lstlisting}
+; In supervisor mode - gets full 16 bits
+LOAD r1, sr  ; r1 = 0xXXXX (all bits)
+
+; In protected mode - upper byte masked
+LOAD r1, sr  ; r1 = 0x00XX (upper byte forced to 0)
+\end{lstlisting}
+
+\section{Exception Handling Effects}
+
+When an exception occurs:
+
+\begin{enumerate}
+	\item The current status register is saved
+	\item Protected mode bit (P) is cleared (entering supervisor mode)
+	\item Trace mode bit (T) is cleared (disabling single-stepping in exception handler)
+	\item Interrupts may be masked depending on exception type
+\end{enumerate}
+
+When returning from an exception with \mnemonic{RETE}, the saved status register is restored.
+
+\section{Usage Examples}
+
+\subsection{Conditional Execution}
+
+\begin{lstlisting}
+; Compare r1 with r2
+CMPI r1, r2
+
+; Branch if equal
+BRAN|== @label_equal
+
+; Branch if r1 > r2 (unsigned)
+BRAN|HI @label_greater
+
+; Add 0x16 to r1 if r1 >= r2 (signed)
+ADDI|>= r1, #0x16
+\end{lstlisting}
+
+\subsection{Manual Status Flag Control}
+
+The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
+particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
+Chapter~\ref{ch:shift-operations} for complete details.
+
+\begin{lstlisting}
+; Update flags from shift instead of ALU
+ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
+
+; Preserve flags across operations
+CMPI r1, r2                   ; Set comparison flags
+ADDI[N] r3, #1                ; Increment without changing flags
+BRAN|== still_uses_cmpi_flags ; Branch uses CMPI flags
+\end{lstlisting}
+
+\subsection{Testing Bits}
+
+\begin{lstlisting}
+; Test if bit 5 is set in r1
+TSAI r1, #0x0020  ; AND with 0x0020, update flags only
+
+; Branch if bit was set (result non-zero)
+BRAN|!= bit_was_set
+\end{lstlisting}
+
+\subsection{Enabling Protected Mode}
+
+\begin{lstlisting}
+; Entering user mode (from supervisor mode)
+ORRI sr, #0x0100  ; Set protected mode bit
+; Now running in protected mode
+
+; Attempting to write privileged register will fault
+; ADDI ah, #0x05  ; This would cause exception!
+\end{lstlisting}
+
+\subsection{Saving and Restoring Status}
+
+\begin{lstlisting}
+; Save status register
+LOAD r7, sr
+
+; Do some operations that change flags
+ADDI r1, r2, r3
+CMPI r1, #100
+
+; Restore original status
+LOAD sr, r7
+\end{lstlisting}
