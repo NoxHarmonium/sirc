@@ -22,6 +22,7 @@ use toolchain::data::object::build_object;
 
 use core::panic;
 use std::error::Error;
+use std::fmt::Write;
 use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
@@ -45,11 +46,13 @@ fn collect_line_with_error(
         &'static str,
         Box<dyn Error + Send + Sync + 'static>,
     >,
-) -> Vec<usize> {
+) -> Vec<(usize, usize)> {
     match &error {
-        GenericErrorTree::Base { location, kind: _ } => vec![location.line],
-        GenericErrorTree::Stack { base: _, contexts } => {
-            contexts.first().map(|c| vec![c.0.line]).unwrap_or(vec![])
+        GenericErrorTree::Base { location, kind: _ } => vec![(location.line, location.column)],
+        GenericErrorTree::Stack { base, contexts } => {
+            let collected_base = collect_line_with_error(base);
+            let mapped = contexts.iter().map(|c| (c.0.line, c.0.column)).collect();
+            [collected_base, mapped].concat()
         }
         GenericErrorTree::Alt(sub_trees) => {
             sub_trees.iter().flat_map(collect_line_with_error).collect()
@@ -57,7 +60,7 @@ fn collect_line_with_error(
     }
 }
 
-fn log_line_with_error(
+fn format_line_with_error(
     input_file: &str,
     file_contents_with_new_line: &str,
     error: &GenericErrorTree<
@@ -66,14 +69,64 @@ fn log_line_with_error(
         &'static str,
         Box<dyn Error + Send + Sync + 'static>,
     >,
-) {
-    // TODO: Why is there so many duplicate lines?
+) -> String {
+    // ANSI color codes - TODO: Move these somewhere
+    const RESET: &str = "\x1b[0m";
+    const BOLD: &str = "\x1b[1m";
+    const RED: &str = "\x1b[31m";
+    const CYAN: &str = "\x1b[36m";
+
+    // We get a huge tree of errors which is useful when printing out all the parsers that were
+    // tried, but in this case we just want the line that triggered the error, so the first line
+    // should be the last that happened (at least according to the nom_supreme docs) which
+    // is the faulting token.
     let lines = collect_line_with_error(error);
-    for line in lines {
-        if let Some(text) = file_contents_with_new_line.lines().nth(line - 1) {
-            println!("In file {input_file}, at line {line}:\n{text}");
+    if let Some((error_line, error_column)) = lines.first() {
+        let all_lines: Vec<&str> = file_contents_with_new_line.lines().collect();
+
+        // Early return if error_line is out of range
+        if *error_line == 0 || *error_line > all_lines.len() {
+            return "Unknown Line".to_string();
         }
+
+        // Calculate the range of lines to display (2 before and 2 after)
+        let start_line = error_line.saturating_sub(3); // -1 for 0-indexing, -2 for context
+        let end_line = (error_line + 2).min(all_lines.len());
+
+        let mut result = format!(
+            "{BOLD}{RED}error{RESET}{BOLD}: parsing failed{RESET}\n  {BOLD}{CYAN}-->{RESET} {input_file}:{error_line}:{error_column}\n"
+        );
+
+        // Calculate the width needed for line numbers
+        let line_num_width = end_line.to_string().len();
+
+        // Add context lines
+        for line_num in start_line..end_line {
+            let line_text = all_lines.get(line_num).unwrap_or(&"");
+            let display_line_num = line_num + 1;
+
+            // Print the line
+            writeln!(
+                result,
+                "{BOLD}{CYAN}{display_line_num:line_num_width$} |{RESET} {line_text}"
+            )
+            .unwrap();
+
+            // Add pointer line if this is the error line
+            if display_line_num == *error_line {
+                let spaces = " ".repeat(error_column - 1);
+                writeln!(
+                    result,
+                    "{BOLD}{CYAN}{:line_num_width$} |{RESET} {spaces}{BOLD}{RED}^{RESET}",
+                    ""
+                )
+                .unwrap();
+            }
+        }
+
+        return result;
     }
+    "Unknown Line".to_string()
 }
 
 fn main() -> io::Result<()> {
@@ -88,12 +141,12 @@ fn main() -> io::Result<()> {
     {
         Ok(tokens) => tokens,
         Err(error) => {
-            log_line_with_error(
+            let error_message = format_line_with_error(
                 args.input_file.to_str().unwrap_or(""),
                 &file_contents_with_new_line,
                 &error,
             );
-            panic!("Error parsing file:\n{error}")
+            panic!("Error parsing file:\n{error_message}\n{error}")
         }
     };
     let object_definition = build_object(
