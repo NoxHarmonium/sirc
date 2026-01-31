@@ -40,8 +40,19 @@ fn get_register_value(registers: &Registers, index: u8) -> u16 {
 fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
     let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
     let sr_register_index = RegisterName::Sr as u8;
-    if should_redact_sr && index == sr_register_index {
-        registers[index] = (registers[index] & SR_PRIVILEGED_MASK) | (value & SR_REDACTION_MASK);
+    if index == sr_register_index {
+        // Always preserve the ExceptionActive bit (bit 13) - only the EU can modify it
+        let exception_active_mask = StatusRegisterFields::ExceptionActive as u16;
+        let exception_active_preserved = registers[index] & exception_active_mask;
+
+        if should_redact_sr {
+            // In protected mode: preserve privileged byte, but allow new value in lower byte
+            registers[index] =
+                (registers[index] & SR_PRIVILEGED_MASK) | (value & SR_REDACTION_MASK);
+        } else {
+            // In supervisor mode: allow new value everywhere except ExceptionActive bit
+            registers[index] = (value & !exception_active_mask) | exception_active_preserved;
+        }
     } else {
         registers[index] = value;
     }
@@ -107,6 +118,7 @@ fn update_status_flags(
     // category=Refactoring
     // Should this be done with an instruction type?
     // Not sure what this was referring to but worth a second look
+
     registers.sr = match decoded.sr_src {
         // TODO: Allow specifying explicit status register update source via assembly
         // category=Features
