@@ -209,7 +209,7 @@ The exception vectors are stored starting at address 0x0. Each vector is a 32-bi
 
 \section{Return from Exception}
 
-To return from an exception handler, the \texttt{RETI} (Return from Exception) instruction is used. This instruction
+To return from an exception handler, the \texttt{RETE} (Return from Exception) instruction is used. This instruction
 performs the following operations:
 
 \begin{enumerate}
@@ -220,8 +220,8 @@ performs the following operations:
 	\item Execution continues from the restored address
 \end{enumerate}
 
-For abort exceptions (faults), \texttt{RETI} returns to the faulting instruction, allowing it to be retried. For
-regular exceptions, \texttt{RETI} returns to the instruction following the one that was executing when the exception
+For abort exceptions (faults), \texttt{RETE} returns to the faulting instruction, allowing it to be retried. For
+regular exceptions, \texttt{RETE} returns to the instruction following the one that was executing when the exception
 occurred.
 
 \subsection{Accessing Link Registers}
@@ -246,6 +246,8 @@ opcode specified in the instruction encoding.
 
 \textbf{Opcode:} 0x1 \quad \textbf{Privilege:} User
 
+\textbf{Syntax:} \texttt{EXCP \#vector}
+
 Triggers a software exception (trap) at the specified vector. The vector must be in the range 0x60-0xFF (user exception
 vectors). This instruction is used by user-mode programs to invoke system calls or request supervisor mode services.
 
@@ -258,9 +260,17 @@ vectors). This instruction is used by user-mode programs to invoke system calls 
 	\item Jumps to the handler address specified in the vector table
 \end{enumerate}
 
+\textbf{Example:}
+\begin{lstlisting}
+; Trigger user exception at vector 0x80
+EXCP #0x80                    ; System call trap
+\end{lstlisting}
+
 \subsection{WAIT - Wait for Exception}
 
 \textbf{Opcode:} 0x9 \quad \textbf{Privilege:} Supervisor
+
+\textbf{Syntax:} \texttt{WAIT}
 
 Puts the CPU into a low-power waiting state until an exception occurs. This is useful for idle loops in operating
 systems or when waiting for hardware interrupts.
@@ -272,9 +282,19 @@ systems or when waiting for hardware interrupts.
 	\item When an exception occurs, normal exception processing resumes
 \end{enumerate}
 
+\textbf{Example:}
+\begin{lstlisting}
+main_loop:
+    WAIT                      ; Sleep until interrupt
+    ; ... process interrupt ...
+    BRAN main_loop
+\end{lstlisting}
+
 \subsection{RETE - Return from Exception}
 
 \textbf{Opcode:} 0xA \quad \textbf{Privilege:} Supervisor
+
+\textbf{Syntax:} \texttt{RETE}
 
 Returns from an exception handler by restoring the saved processor state from the current link register.
 
@@ -289,9 +309,18 @@ Returns from an exception handler by restoring the saved processor state from th
 Note: For fault exceptions, this returns to the faulting instruction. For other exceptions, this returns to the
 instruction after the one that was executing when the exception occurred.
 
+\textbf{Example:}
+\begin{lstlisting}
+bus_fault_handler:
+    ; ... handle bus fault ...
+    RETE                      ; Return to faulting instruction
+\end{lstlisting}
+
 \subsection{RSET - System Reset}
 
 \textbf{Opcode:} 0xB \quad \textbf{Privilege:} Supervisor
+
+\textbf{Syntax:} \texttt{RSET}
 
 Performs a software reset of the processor by clearing the status register and jumping to the reset vector.
 
@@ -303,9 +332,22 @@ Performs a software reset of the processor by clearing the status register and j
 	\item Execution begins at the reset handler
 \end{enumerate}
 
+\textbf{Example:}
+\begin{lstlisting}
+; Perform software reset
+RSET                          ; Jump to reset vector
+\end{lstlisting}
+
 \subsection{ETFR - Exception Transfer From Register}
 
 \textbf{Opcode:} 0xC \quad \textbf{Privilege:} Supervisor
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETFR #n                       ; Transfer both to a and r7
+ETFR a, #n                    ; Transfer return address to a only
+ETFR r7, #n                   ; Transfer return SR to r7 only
+\end{lstlisting}
 
 Transfers data from a link register to CPU registers. The instruction encoding specifies which link register (0-7) and
 which components (address and/or status register) to transfer.
@@ -335,9 +377,31 @@ which components (address and/or status register) to transfer.
 This instruction is useful for exception handlers that need to examine the saved state, such as debuggers or system
 call handlers that need to access parameters passed in the calling context.
 
+\textbf{Examples:}
+\begin{lstlisting}
+; Get both return address and status from fault link register
+ETFR #6                       ; a = return addr, r7 = return SR
+
+; Get only the return address to modify it
+ETFR a, #6                    ; a = return addr from link reg 6
+LOAD al, @after_odd_address   ; Fix alignment issue
+ETTR #6, a                    ; Write corrected address back
+
+; Get only the status register to inspect flags
+ETFR r7, #7                   ; r7 = fault metadata
+ANDI r7, #0x7                 ; Mask off CPU phase bits
+\end{lstlisting}
+
 \subsection{ETTR - Exception Transfer To Register}
 
 \textbf{Opcode:} 0xD \quad \textbf{Privilege:} Supervisor
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETTR #n                       ; Transfer both a and r7
+ETTR #n, a                    ; Transfer a to return address only
+ETTR #n, r7                   ; Transfer r7 to return SR only
+\end{lstlisting}
 
 Transfers data from CPU registers to a link register. The instruction encoding specifies which link register (0-7) and
 which components (address and/or status register) to transfer.
@@ -365,6 +429,25 @@ which components (address and/or status register) to transfer.
 \end{enumerate}
 
 This instruction allows exception handlers to modify the saved state before returning.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Fix up return address after alignment fault
+ETFR a, #6                    ; Get current return address
+LOAD al, @after_odd_address   ; Correct the lower word
+ETTR #6, a                    ; Write corrected address back
+
+; Clear protected mode bit in saved status register
+ETFR r7, #6                   ; Get current return SR
+ANDI r7, #0xFEFF              ; Clear protected mode bit
+ETTR #6, r7                   ; Write modified SR back
+
+; Transfer both modified address and status
+LOAD ah, $PROGRAM_SEGMENT     ; Set up new return address
+LOAD al, @return_point
+LOAD r7, #0x0000              ; Clear status register
+ETTR #6                       ; Write both back to link reg 6
+\end{lstlisting}
 
 \subsection{Internal Instructions}
 

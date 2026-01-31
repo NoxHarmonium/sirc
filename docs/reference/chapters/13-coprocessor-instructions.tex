@@ -30,12 +30,16 @@ COPR rS                       ; Call coprocessor with register value
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; Wait for interrupt (Exception Unit)
-COP #0x1F00                   ; Coprocessor 1, opcode 0xF00
-; Assembled as WAIT pseudo-instruction
+COPI #0x1900                  ; Coprocessor 1, opcode 0x900
+; Assembled as WAIT meta-instruction
 
 ; Return from exception
-COP #0x1A00                   ; Coprocessor 1, opcode 0xA00
-; Assembled as RETE pseudo-instruction
+COPI #0x1A00                  ; Coprocessor 1, opcode 0xA00
+; Assembled as RETE meta-instruction
+
+; User exception (system call)
+COPI #0x1180                  ; Coprocessor 1, opcode 0x180 (vector 0x80)
+; Assembled as EXCP #0x80 meta-instruction
 \end{lstlisting}
 
 \end{instructionbox}
@@ -54,15 +58,20 @@ The Exception Unit handles:
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lp{8cm}}
+	\begin{tabular}{llp{8cm}}
 		\toprule
-		\textbf{Opcode} & \textbf{Operation}           \\
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                        \\
 		\midrule
-		0x1A00          & Return from exception (RETE) \\
-		0x1F00          & Wait for interrupt (WAIT)    \\
+		0x1100-0x11FF   & EXCP              & User exception (trap) at vector 0x60-0xFF \\
+		0x1900          & WAIT              & Wait for interrupt                        \\
+		0x1A00          & RETE              & Return from exception                     \\
+		0x1B00          & RSET              & System reset                              \\
+		0x1C00-0x1C7F   & ETFR              & Transfer from exception link register     \\
+		0x1D00-0x1D7F   & ETTR              & Transfer to exception link register       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Exception Unit Operations}
 \end{table}
 
-\textit{(Additional coprocessor details would follow)}
+See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
+instructions.

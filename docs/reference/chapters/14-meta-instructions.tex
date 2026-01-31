@@ -37,27 +37,42 @@ my_function:
     RETS                      ; Return to caller
 \end{lstlisting}
 
+\section{EXCP -- User Exception (Trap)}
+
+\textbf{Syntax:} \texttt{EXCP \#vector}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}
+
+\textbf{Description:} Triggers a software exception (trap) at the specified user vector (0x60-0xFF). Used by user-mode programs to invoke system calls or request supervisor mode services.
+
+\textbf{Example:}
+\begin{lstlisting}
+; System call to print character
+LOAD r1, #'A'                 ; Character to print
+EXCP #0x80                    ; Trap to OS print routine
+\end{lstlisting}
+
 \section{WAIT -- Wait for Interrupt}
 
 \textbf{Syntax:} \texttt{WAIT}
 
-\textbf{Assembles to:} \texttt{COP \#0x1F00}
+\textbf{Assembles to:} \texttt{COPI \#0x1900}
 
-\textbf{Description:} Puts the CPU into a low-power wait state until an interrupt occurs. Sets the Waiting for Interrupt bit in the status register.
+\textbf{Description:} Puts the CPU into a low-power wait state until an exception occurs. Sets the Waiting for Interrupt bit in the status register. Only valid in supervisor mode.
 
 \textbf{Example:}
 \begin{lstlisting}
 main_loop:
     WAIT                      ; Sleep until interrupt
     ; ... process interrupt ...
-    BRAN (#main_loop, p)
+    BRAN main_loop
 \end{lstlisting}
 
 \section{RETE -- Return from Exception}
 
 \textbf{Syntax:} \texttt{RETE}
 
-\textbf{Assembles to:} \texttt{COP \#0x1A00}
+\textbf{Assembles to:} \texttt{COPI \#0x1A00}
 
 \textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register. Only valid in supervisor mode.
 
@@ -66,6 +81,65 @@ main_loop:
 exception_handler:
     ; ... handle exception ...
     RETE                      ; Return to interrupted code
+\end{lstlisting}
+
+\section{RSET -- System Reset}
+
+\textbf{Syntax:} \texttt{RSET}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1B00}
+
+\textbf{Description:} Performs a software reset of the processor by clearing the status register and jumping to the reset vector. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+fatal_error:
+    ; Log error...
+    RSET                      ; Reset the system
+\end{lstlisting}
+
+\section{ETFR -- Exception Transfer From Register}
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETFR #n                       ; Transfer both to a and r7
+ETFR a, #n                    ; Transfer address to a only
+ETFR r7, #n                   ; Transfer status to r7 only
+\end{lstlisting}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} (where x = register select, y = link register)
+
+\textbf{Description:} Copies the return address and/or status register from a link register (0-7) to CPU registers. Used in exception handlers to examine saved processor state. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+alignment_fault_handler:
+    ETFR a, #6                ; Get faulting return address
+    LOAD al, @fixed_address   ; Correct the address
+    ETTR #6, a                ; Write corrected address back
+    RETE
+\end{lstlisting}
+
+\section{ETTR -- Exception Transfer To Register}
+
+\textbf{Syntax:}
+\begin{lstlisting}
+ETTR #n                       ; Transfer both a and r7
+ETTR #n, a                    ; Transfer a to address only
+ETTR #n, r7                   ; Transfer r7 to status only
+\end{lstlisting}
+
+\textbf{Assembles to:} \texttt{COPI \#0x1Dxy} (where x = register select, y = link register)
+
+\textbf{Description:} Copies CPU registers to a link register's return address and/or status register. Used to modify saved processor state before returning from an exception. Only valid in supervisor mode.
+
+\textbf{Example:}
+\begin{lstlisting}
+privilege_fault_handler:
+    ETFR r7, #6               ; Get saved status register
+    ANDI r7, #0xFEFF          ; Clear protected mode bit
+    ETTR #6, r7               ; Save modified status back
+    RETE
 \end{lstlisting}
 
 \section{SHFT -- Shift with Status Update}
