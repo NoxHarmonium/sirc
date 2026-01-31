@@ -3,7 +3,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
         },
         shared::split_shift_definition_data,
     },
@@ -71,7 +71,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let instructions = alt((parse_instruction_tag("BRAN"), parse_instruction_tag("BRSR")));
 
     let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands1))(i)?;
+        tuple((instructions, parse_instruction_operands0))(i)?;
 
     if status_register_update_source.is_some() {
         let error_string =

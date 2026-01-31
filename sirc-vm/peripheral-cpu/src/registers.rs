@@ -47,7 +47,7 @@ pub enum StatusRegisterFields {
 /// Should map 1:1 with the Registers struct
 // TODO: Ensure that `RegisterName` enum and `Registers` struct are in alignment
 // category=Refactoring
-#[derive(FromPrimitive, ToPrimitive, Debug)]
+#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum RegisterName {
     Sr = 0,
     R1,
@@ -76,7 +76,7 @@ impl RegisterName {
 
 /// These three registers are special in that they can be used
 /// as combined 32-bit wide registers, but only for addressing.
-#[derive(FromPrimitive, ToPrimitive, Debug)]
+#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum AddressRegisterName {
     // l (lh, ll)
     LinkRegister,

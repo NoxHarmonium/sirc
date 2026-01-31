@@ -4,7 +4,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
         },
         shared::split_shift_definition_data,
     },
@@ -25,7 +25,7 @@ use peripheral_cpu::{
 pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let (i, ((_, condition_flag, status_register_update_source), operands)) =
-        tuple((parse_instruction_tag("LDEA"), parse_instruction_operands1))(i)?;
+        tuple((parse_instruction_tag("LDEA"), parse_instruction_operands0))(i)?;
 
     if status_register_update_source.is_some() {
         let error_string =

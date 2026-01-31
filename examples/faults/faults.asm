@@ -133,11 +133,11 @@ ADDI    r2, #1
 ; Returning without fixing up the return address would cause an endless loop
 
 ; Transfer current ELR into 'a' register
-COPI    r1, #0x1C16
+ETFR a, #6
 ; Correct the lower word
 LOAD    al, @after_odd_address
 ; Transfer corrected address back to ELR
-COPI    r1, #0x1D16
+ETTR #6, a
 
 RETE
 
@@ -145,7 +145,7 @@ RETE
 ; Check the phase
 
 ; Transfer exception metadata to r7
-COPI    r1, #0x1C27
+ETFR    r7, #7
 ; Mask off the phase section of the status register
 ANDI    r7, #0x7
 
@@ -168,7 +168,7 @@ ADDI    r3, #0x0F00
 LOAD    ah, $PROGRAM_SEGMENT
 LOAD    al, @return_from_testing_pc_overflow_with_fault
 ; Transfer corrected address back to ELR
-COPI    r1, #0x1D16
+ETTR    #6, a
 
 BRAN @segment_overflow_fault_handler_end
 
@@ -190,11 +190,11 @@ ADDI    r5, #1
 ; Make sure that the CPU is back in privileged mode again after handling this fault
 
 ; Transfer current ELR into 'r7' register
-COPI    r1, #0x1C26
+ETFR    r7, #6
 ; Correct the lower word
 ANDI    r7, #0xFEFF
 ; Transfer corrected SR back to ELR
-COPI    r1, #0x1D26
+ETTR    #6, r7
 
 RETE
 

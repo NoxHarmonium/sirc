@@ -1,7 +1,7 @@
 use super::super::shared::AsmResult;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
-    parse_instruction_operands1, parse_instruction_tag, AddressingMode, ImmediateType,
+    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
@@ -43,7 +43,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let (i, ((_, condition_flag, status_register_update_source), operands)) =
-        tuple((parse_instruction_tag("LJSR"), parse_instruction_operands1))(i)?;
+        tuple((parse_instruction_tag("LJSR"), parse_instruction_operands0))(i)?;
 
     if status_register_update_source.is_some() {
         let error_string =

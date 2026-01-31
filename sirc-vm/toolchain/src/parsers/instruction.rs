@@ -2,7 +2,7 @@ use nom::branch::alt;
 use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
-use nom::multi::separated_list1;
+use nom::multi::separated_list0;
 use nom::sequence::{delimited, separated_pair};
 use nom::Parser;
 use nom_supreme::error::ErrorTree;
@@ -296,9 +296,9 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
     lexeme(addressing_mode_parser)(i)
 }
 
-pub fn parse_instruction_operands1(i: &str) -> AsmResult<Vec<AddressingMode>> {
+pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
     let mut parser =
-        separated_list1(parse_comma_sep, parse_addressing_mode).context("addressing modes");
+        separated_list0(parse_comma_sep, parse_addressing_mode).context("addressing modes");
     parser.parse(i)
 }
 
@@ -417,6 +417,7 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::ljsr::ljsr.context("LJSR instruction"),
         opcodes::load::load.context("LOAD instruction"),
         opcodes::store::stor.context("STOR instruction"),
+        opcodes::exception::exception.context("Exception Unit Instruction"),
     ))(i)?;
 
     Ok((i, Token::Instruction(instruction_token)))

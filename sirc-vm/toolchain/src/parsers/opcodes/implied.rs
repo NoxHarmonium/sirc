@@ -11,7 +11,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::AddressRegisterName;
 
 ///
-/// Parses immediate arithmetic/logic opcodes
+/// Parses meta instructions that don't have any operands
 ///
 /// ```
 /// use toolchain::parsers::opcodes::implied::implied;
@@ -34,12 +34,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// ```
 pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let mut instructions = alt((
-        parse_instruction_tag("RETS"),
-        parse_instruction_tag("NOOP"),
-        parse_instruction_tag("WAIT"),
-        parse_instruction_tag("RETE"),
-    ));
+    let mut instructions = alt((parse_instruction_tag("RETS"), parse_instruction_tag("NOOP")));
 
     let (i, (tag, condition_flag, status_register_update_source)) = instructions(i)?;
     if status_register_update_source.is_some() {
@@ -96,36 +91,7 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
                 ..Default::default()
             },
         )),
-        // Tell the exception module to halt the CPU until an event comes through by passing it 0xFFFF
-        "WAIT" => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::CoprocessorCallImmediate,
-                    register: 0x0,
-                    value: 0x01F00,
-                    additional_flags: 0x0,
-                    condition_flag,
-                }),
-                ..Default::default()
-            },
-        )),
-        // Tell the exception module to return by passing it 0xFFFE
-        "RETE" => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::CoprocessorCallImmediate,
-                    register: 0x0,
-                    value: 0x1A00,
-                    additional_flags: 0x0,
-                    condition_flag,
-                }),
-                ..Default::default()
-            },
-        )),
+
         _ => {
             let error_string = format!("Mismatch between parser and handler for tag [{tag}] ");
             Err(nom::Err::Failure(ErrorTree::from_external_error(

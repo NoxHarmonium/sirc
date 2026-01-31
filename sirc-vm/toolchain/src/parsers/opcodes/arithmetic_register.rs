@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands1, parse_instruction_tag, AddressingMode,
+    parse_instruction_operands0, parse_instruction_tag, AddressingMode,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
@@ -84,7 +84,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
     ));
 
     let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands1))(i)?;
+        tuple((instructions, parse_instruction_operands0))(i)?;
 
     let default_status_register_update_source =
         status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);

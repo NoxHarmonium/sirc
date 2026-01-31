@@ -69,7 +69,7 @@ BRSR @setup_video
 :wait_for_interrupt
 
 ; Wait for exception (will spin until interrupted)
-COPI    r1, #0x1900
+WAIT
 
 ; Exit when MAX_FRAMES have been rendered so it doesn't loop forever
 LOAD    ah, $SCRATCH_SEGMENT

@@ -51,7 +51,7 @@ STOR    (a), r1
 :wait_for_print_finish
 
 ; Wait for exception (will spin until interrupted)
-COPI    r1, #0x1900
+WAIT
 
 LOAD    ah, $SERIAL_DEVICE_SEGMENT
 LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
