@@ -26,8 +26,8 @@ use crate::{
         shared::ExecutionPhase,
     },
     registers::{
-        clear_sr_bit, get_hardware_interrupt_enable, ExceptionLinkRegister, ExceptionUnitRegisters,
-        FullAddressRegisterAccess, Registers,
+        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, ExceptionLinkRegister,
+        ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
@@ -255,6 +255,8 @@ fn handle_exception(
     };
 
     clear_sr_bit(StatusRegisterFields::ProtectedMode, registers);
+    // Set ExceptionActive bit since we're entering an exception handler
+    set_sr_bit(StatusRegisterFields::ExceptionActive, registers);
 
     registers.set_full_pc_address(vector_address);
     eu_registers.current_exception_level = exception_level;
@@ -344,6 +346,11 @@ impl Executor for ExceptionUnitExecutor {
                         registers.set_full_pc_address(return_address);
                         registers.sr = return_status_register;
                         eu_registers.current_exception_level = saved_exception_level;
+
+                        // Clear ExceptionActive bit if we're returning to exception level 0
+                        if saved_exception_level == 0 {
+                            clear_sr_bit(StatusRegisterFields::ExceptionActive, registers);
+                        }
                     }
                     ExceptionUnitOpCodes::Reset => {
                         registers.sr = 0x0;

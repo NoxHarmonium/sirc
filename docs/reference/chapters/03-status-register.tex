@@ -20,7 +20,7 @@ the CPU. It is divided into two bytes with different privilege levels:
 		\bitbox{1}{T} &
 		\bitbox{1}{A} &
 		\bitbox{1}{W} &
-		\bitbox{1}{E5} &
+		\bitbox{1}{EA} &
 		\bitbox{1}{E4} &
 		\bitbox{1}{E3} &
 		\bitbox{1}{E2} &
@@ -105,17 +105,19 @@ mode will be ignored (the write affects only the lower byte).
 	      fault.
 \end{description}
 
-\subsection{Hardware Interrupt Enable Bits (E1--E5) -- Bits 9--13}
+\subsection{Hardware Interrupt Enable Bits (E1--E4) -- Bits 9--12}
 
-These five bits individually control whether each of the five hardware interrupt lines is enabled:
+These four bits individually control whether each of the four maskable hardware interrupt lines is enabled:
 
 \begin{itemize}
 	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 5, highest priority)
 	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 4)
 	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (Level 3)
 	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 2)
-	\item \textbf{E5 (Bit 13):} Enable Hardware Interrupt Line 5 (Level 1, lowest priority)
 \end{itemize}
+
+\textbf{Note:} Hardware Interrupt Line 5 (Level 1) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
+be disabled via the status register.
 
 When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
 When cleared to 0, interrupts on that line are disabled and will not be serviced.
@@ -134,6 +136,21 @@ These bits are typically managed by the operating system's interrupt handling co
 are cleared (interrupts disabled).
 
 Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
+
+\subsection{Exception Active (EA) -- Bit 13}
+
+\begin{description}
+	\item[When Set (1):] The CPU is currently executing an exception handler (\texttt{current\_exception\_level != 0})
+	\item[When Clear (0):] The CPU is executing normal code (\texttt{current\_exception\_level == 0})
+	\item[Automatically Set:] When any exception is entered (software, hardware, or fault)
+	\item[Automatically Cleared:] When returning to exception level 0 via \mnemonic{RETE}
+	\item[Purpose:] Allows software to detect whether it's running within an exception handler context
+	\item[Typical Use:] OS code can check this bit to determine appropriate behavior (e.g., avoid re-enabling interrupts during
+	      nested exception handling)
+\end{description}
+
+\textbf{Note:} This bit reflects the internal \texttt{current\_exception\_level} state. Programs can read this bit but
+cannot directly modify it -- it is managed automatically by the exception handling hardware.
 
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
@@ -176,11 +193,12 @@ The status register can be directly manipulated like any other register:
 ; Set protected mode bit (only in supervisor mode)
 ORRI sr, #0x0100
 
-; Enable all hardware interrupts (set bits 9-13)
-ORRI sr, #0x3E00
+; Enable all maskable hardware interrupts (set bits 9-12)
+; Note: Hardware interrupt line 5 is an NMI and is always enabled
+ORRI sr, #0x1E00
 
-; Disable all hardware interrupts (clear bits 9-13)
-ANDI sr, #0xC1FF
+; Disable all maskable hardware interrupts (clear bits 9-12)
+ANDI sr, #0xE1FF
 
 ; Restore status register saved to stack
 LOAD sr, (s)+

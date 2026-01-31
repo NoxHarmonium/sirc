@@ -1,6 +1,6 @@
 ===REGISTERS===
 Registers {
-    sr: 0x3e06,
+    sr: 0x1e06,
     r1: 0x0,
     r2: 0x13,
     r3: 0x0,
@@ -36,7 +36,7 @@ ExceptionUnitRegisters {
         },
         ExceptionLinkRegister {
             return_address: 0x240,
-            return_status_register: 0x3e01,
+            return_status_register: 0x1e01,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {

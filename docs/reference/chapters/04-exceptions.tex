@@ -230,16 +230,19 @@ the first nibble (e.g., 0x00 is priority 7, 0x40 is priority 3, 0x60 and above a
 
 \subsection{Hardware Interrupt Enable Bits}
 
-The status register contains 5 individual enable bits (bits 9-13 in the privileged byte) that control whether each
-hardware interrupt line can trigger an exception:
+The status register contains 4 individual enable bits (bits 9-12 in the privileged byte) that control whether each
+maskable hardware interrupt line can trigger an exception:
 
 \begin{itemize}
 	\item Bit 9 (E1): Hardware Interrupt Line 1 (Exception Level 5, highest priority)
 	\item Bit 10 (E2): Hardware Interrupt Line 2 (Exception Level 4)
 	\item Bit 11 (E3): Hardware Interrupt Line 3 (Exception Level 3)
 	\item Bit 12 (E4): Hardware Interrupt Line 4 (Exception Level 2)
-	\item Bit 13 (E5): Hardware Interrupt Line 5 (Exception Level 1, lowest priority)
 \end{itemize}
+
+\textbf{Note:} Hardware Interrupt Line 5 (Exception Level 1) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
+It will always trigger an exception when asserted, regardless of the enable bit settings. Bit 13 is used for the
+Exception Active flag instead.
 
 When an interrupt line is disabled (bit = 0), interrupts on that line are completely ignored and not queued. When
 enabled (bit = 1), the interrupt can trigger an exception if its priority is higher than the currently executing

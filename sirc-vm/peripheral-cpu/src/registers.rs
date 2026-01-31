@@ -30,8 +30,9 @@ pub enum StatusRegisterFields {
     HardwareInterruptEnable3 = 0b0000_1000 << u8::BITS,
     /// Enable hardware interrupt line 4 (Level 2)
     HardwareInterruptEnable4 = 0b0001_0000 << u8::BITS,
-    /// Enable hardware interrupt line 5 (lowest priority, Level 1)
-    HardwareInterruptEnable5 = 0b0010_0000 << u8::BITS,
+    /// Set when the CPU is handling an exception (`exception_level` != 0), cleared when returning to level 0
+    /// Note: Hardware interrupt line 5 is an NMI and cannot be masked
+    ExceptionActive = 0b0010_0000 << u8::BITS,
     /// During memory effective address calcs, if the address wraps around with either and overflow or underflow
     /// and this bit is set, an exception will be thrown to detect an invalid access
     TrapOnAddressOverflow = 0b0100_0000 << u8::BITS,
@@ -460,7 +461,8 @@ pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 /// Returns a 5-bit mask of which hardware interrupts are enabled.
 ///
 /// Each bit corresponds to a hardware interrupt line (1-5), where 1 = enabled, 0 = disabled.
-/// Bit 0 = HW interrupt 1 (highest priority), Bit 4 = HW interrupt 5 (lowest priority)
+/// Bit 0 = HW interrupt 1 (highest priority), Bit 3 = HW interrupt 4 (lowest maskable)
+/// Note: Hardware interrupt 5 is an NMI and is always enabled (bit 4 is always set)
 ///
 /// ```
 /// use peripheral_cpu::registers::{get_hardware_interrupt_enable, Registers};
@@ -468,10 +470,10 @@ pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 /// let mut registers = Registers::default();
 ///
 /// registers.sr = 0b0000_0000 << u8::BITS;
-/// assert_eq!(0b00000, get_hardware_interrupt_enable(&registers));
+/// assert_eq!(0b10000, get_hardware_interrupt_enable(&registers));
 /// registers.sr = 0b0000_0010 << u8::BITS;
-/// assert_eq!(0b00001, get_hardware_interrupt_enable(&registers));
-/// registers.sr = 0b0011_1110 << u8::BITS;
+/// assert_eq!(0b10001, get_hardware_interrupt_enable(&registers));
+/// registers.sr = 0b0001_1110 << u8::BITS;
 /// assert_eq!(0b11111, get_hardware_interrupt_enable(&registers));
 /// ```
 #[must_use]
@@ -479,17 +481,18 @@ pub fn get_hardware_interrupt_enable(registers: &Registers) -> u8 {
     let bit_mask = StatusRegisterFields::HardwareInterruptEnable1 as u16
         | StatusRegisterFields::HardwareInterruptEnable2 as u16
         | StatusRegisterFields::HardwareInterruptEnable3 as u16
-        | StatusRegisterFields::HardwareInterruptEnable4 as u16
-        | StatusRegisterFields::HardwareInterruptEnable5 as u16;
+        | StatusRegisterFields::HardwareInterruptEnable4 as u16;
     let masked_bits = registers.sr & bit_mask;
-    ((masked_bits >> 9) as u8) & 0x1F
+    // NMI (interrupt 5) is always enabled, so set bit 4
+    (((masked_bits >> 9) as u8) & 0x0F) | 0b10000
 }
 
 ///
 /// Sets which hardware interrupts are enabled via a 5-bit mask.
 ///
 /// Each bit corresponds to a hardware interrupt line (1-5), where 1 = enabled, 0 = disabled.
-/// Bit 0 = HW interrupt 1 (highest priority), Bit 4 = HW interrupt 5 (lowest priority)
+/// Bit 0 = HW interrupt 1 (highest priority), Bit 3 = HW interrupt 4 (lowest maskable)
+/// Note: Hardware interrupt 5 is an NMI and cannot be disabled (bit 4 is ignored)
 ///
 /// ```
 /// use peripheral_cpu::registers::{set_hardware_interrupt_enable, Registers};
@@ -501,16 +504,16 @@ pub fn get_hardware_interrupt_enable(registers: &Registers) -> u8 {
 /// assert_eq!(0b1100_0001 << u8::BITS, registers.sr);
 /// set_hardware_interrupt_enable(&mut registers, 0b00001);
 /// assert_eq!(0b1100_0011 << u8::BITS, registers.sr);
-/// set_hardware_interrupt_enable(&mut registers, 0b11111);
-/// assert_eq!(0b1111_1111 << u8::BITS, registers.sr);
+/// set_hardware_interrupt_enable(&mut registers, 0b01111);
+/// assert_eq!(0b1101_1111 << u8::BITS, registers.sr);
 /// ```
 pub fn set_hardware_interrupt_enable(registers: &mut Registers, enable_mask: u8) {
-    let shifted_value = u16::from(enable_mask & 0x1F) << 9;
+    // Only use the lower 4 bits (NMI cannot be masked)
+    let shifted_value = u16::from(enable_mask & 0x0F) << 9;
     let bit_mask = !(StatusRegisterFields::HardwareInterruptEnable1 as u16
         | StatusRegisterFields::HardwareInterruptEnable2 as u16
         | StatusRegisterFields::HardwareInterruptEnable3 as u16
-        | StatusRegisterFields::HardwareInterruptEnable4 as u16
-        | StatusRegisterFields::HardwareInterruptEnable5 as u16);
+        | StatusRegisterFields::HardwareInterruptEnable4 as u16);
 
     registers.sr = (registers.sr & bit_mask) | shifted_value;
 }

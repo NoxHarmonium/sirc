@@ -1,6 +1,6 @@
 ===REGISTERS===
 Registers {
-    sr: 0x3e06,
+    sr: 0x1e06,
     r1: 0x0,
     r2: 0x0,
     r3: 0x600e,
@@ -36,7 +36,7 @@ ExceptionUnitRegisters {
         },
         ExceptionLinkRegister {
             return_address: 0x330,
-            return_status_register: 0x3e01,
+            return_status_register: 0x1e01,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
@@ -45,8 +45,8 @@ ExceptionUnitRegisters {
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x20c,
-            return_status_register: 0x3e06,
+            return_address: 0x332,
+            return_status_register: 0x1e01,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
@@ -65,7 +65,7 @@ ExceptionUnitRegisters {
             saved_exception_level: 0x0,
         },
     ],
-    waiting_for_exception: true,
+    waiting_for_exception: false,
     cpu_halted: false,
     current_exception_level: 0x0,
 }

@@ -41,7 +41,7 @@
 :start
 
 ; Enable all hardware interrupts (set bits 9-13 of SR)
-ORRI sr, #0x3E00
+ORRI sr, #0x1E00
 
 ; Setup routines
 BRSR @setup_serial
