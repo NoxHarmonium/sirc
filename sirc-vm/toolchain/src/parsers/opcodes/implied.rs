@@ -20,7 +20,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("WAIT|==\n") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("RETS|==\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -29,7 +29,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// assert_eq!(op_code, Instruction::CoprocessorCallImmediate);
+/// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectImmediate);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
 /// ```
 pub fn implied(i: &str) -> AsmResult<InstructionToken> {

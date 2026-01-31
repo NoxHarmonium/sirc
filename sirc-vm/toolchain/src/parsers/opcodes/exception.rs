@@ -16,13 +16,13 @@ use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 /// Parses meta instructions that encode into exception co-processor COP instructions
 ///
 /// ```
-/// use toolchain::parsers::opcodes::implied::implied;
+/// use toolchain::parsers::opcodes::exception::exception;
 /// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData};
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("WAIT|==\n") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(exception)("RSET|==") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -131,7 +131,6 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                 ..Default::default()
             },
         )),
-
         ("ETFR", [AddressingMode::Immediate(immediate_type)]) => {
             // If just an immediate value is defined, it specifies the link register offset
             // and will transfer to both the address register _and_ r7 (the destination is implied)
@@ -248,7 +247,6 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                 )))
             }
         }
-
         ("ETTR", [AddressingMode::Immediate(immediate_type)]) => {
             // If just an immediate value is defined, it specifies the link register offset
             // and will transfer to both the address register _and_ r7 (the destination is implied)
