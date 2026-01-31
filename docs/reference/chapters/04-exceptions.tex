@@ -138,6 +138,53 @@ the current program counter and status register values. For abort exceptions (fa
 address of the faulting instruction so it can be retried. For regular exceptions (hardware and software exceptions),
 the return address is the address after the current instruction.
 
+\subsubsection{Link Register Preservation}
+
+\textbf{Important:} Link registers can be overwritten when fault occurs during fault handling.
+A overwrites both the fault link register (register 6)
+and the fault metadata register (register 7). This means the original return address is lost.
+
+A valid way of handling this is just to declare the CPU state as invalid, do some last chance error handling (e.g.
+dumping the registers) and reset.
+
+For robust fault handling that can recover from double faults, fault handlers should save the link register contents
+early in the handler:
+
+\begin{lstlisting}
+:fault_handler
+    ; Immediately save link register to memory before doing anything
+    ; that might trigger another fault
+    ETFR #6                   ; Save level 6 exception registers to a and r7
+    STOR (s)-, r7
+    STOR (s)-, ah
+    STOR (s)-, al
+    ETFR #7                   ; Save level 7 (metadata) exception registers to a and r7
+    STOR (s)-, r7
+    STOR (s)-, ah
+    STOR (s)-, al
+
+    ; Now safe to perform operations that might fault
+    ; ...
+
+    ; Restore and return
+    LOAD al, +(s),
+    LOAD ah, +(s)
+    LOAD r7, +(s)
+    ETTR #7                  ; Restore level 6 exception registers from a and r7
+    LOAD al, +(s)
+    LOAD ah, +(s)
+    LOAD r7, +(s)
+    ETTR #6                  ; Restore level 7 (metadata) exception registers from a and r7
+
+	; Now save to use RETE
+	RETE
+
+\end{lstlisting}
+
+However, if the stack pointer is invalid in this case, the double fault will still cause the CPU state to be corrupted.
+You could provide an even more robust implementation by storing/loading from hardcoded memory addresses that are known
+to always be valid.
+
 \subsubsection{Fault Metadata Register Format}
 
 The fault metadata register (register 7) stores additional information about faults beyond just the return address. The
