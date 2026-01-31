@@ -28,6 +28,8 @@
 .DQ @invalid_opcode_fault_handler
 .ORG 0x000A
 .DQ @privilege_violation_fault_handler
+.ORG 0x000C
+.DQ @double_fault_handler
 .ORG 0x000E
 .DQ @level_five_interrupt_conflict_handler
 
@@ -181,7 +183,17 @@ ADDI    r3, #0x000F
 RETE
 
 :invalid_opcode_fault_handler
+; A double fault will blat the EU link registers so we need to save them before we trigger it
+ETFR #6
+
 ADDI    r4, #1
+; Trigger another invalid opcode fault to test double fault handling
+; This will cause a fault while already handling a fault
+COPI    r1, #0xF000
+
+; Restore link register
+ETTR #6
+
 RETE
 
 :privilege_violation_fault_handler
@@ -196,6 +208,13 @@ ANDI    r7, #0xFEFF
 ; Transfer corrected SR back to ELR
 ETTR    #6, r7
 
+RETE
+
+:double_fault_handler
+; A double fault occurred - this is typically a last-chance handler
+; In this example, we'll increment r4 to show we were here
+; and then return (though in production you'd probably reset)
+ADDI    r4, #1
 RETE
 
 :level_five_interrupt_conflict_handler

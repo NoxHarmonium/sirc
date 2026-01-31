@@ -77,6 +77,25 @@ exceptions are in the 0x1-0xF range.
 	      is handy so that hardware bugs for things that should not be interrupted are picked up. Level 5 interrupts should be
 	      treated like NMIs.
 
+	\item \textbf{Double Fault:} Raised when a fault occurs while another fault is already being handled
+
+	      When the CPU is already handling a fault (priority 7) and another fault occurs, there is no additional banked link
+	      register available to store the return address. In this situation, a double fault is raised instead. The double fault
+	      mechanism overwrites the fault link register (register 6) with the new return address, meaning there is no way to
+	      return to the original program unless the original fault handler stored the return address elsewhere.
+
+	      The fault metadata register (register 7) is also overwritten with information about the double fault. The metadata
+	      includes a double fault flag and stores both the current fault type (which will be \texttt{DoubleFault}) and the
+	      original fault type that triggered the double fault.
+
+	      The CPU jumps to vector 0x06 (the double fault vector). This is typically used as a last-chance handler to dump
+	      registers and reset the CPU. A robust operating system might save the original return addresses in every fault handler
+	      to enable recovery from double faults.
+
+	      If a fault occurs while handling a double fault, it will trigger another double fault, continuously overwriting the
+	      link registers in an infinite loop. The double fault vector should therefore be implemented with extreme care to avoid
+	      any operations that could trigger additional faults.
+
 \end{itemize}
 
 \subsection{Hardware Exceptions (Interrupts)}
@@ -118,6 +137,32 @@ When an exception occurs, the appropriate link register (determined by the excep
 the current program counter and status register values. For abort exceptions (faults), the return address is the
 address of the faulting instruction so it can be retried. For regular exceptions (hardware and software exceptions),
 the return address is the address after the current instruction.
+
+\subsubsection{Fault Metadata Register Format}
+
+The fault metadata register (register 7) stores additional information about faults beyond just the return address. The
+return\_status\_register field is used to encode fault-specific metadata in the following format:
+
+\begin{itemize}
+	\item \textbf{Bits 0-2:} Execution phase when the fault occurred (3 bits)
+	      \begin{itemize}
+		      \item 0x0: Instruction fetch
+		      \item 0x3: Effective address calculation
+		      \item Other values indicate other pipeline phases
+	      \end{itemize}
+	\item \textbf{Bit 3:} Double fault flag (1 bit) - set to 1 if this is a double fault
+	\item \textbf{Bits 4-7:} Current fault type (4 bits) - the type of fault that occurred
+	\item \textbf{Bits 8-11:} Original fault type (4 bits) - only meaningful for double faults, indicates the fault type
+	      that was being handled when the double fault occurred
+	\item \textbf{Bits 12-15:} Unused (reserved for future use)
+\end{itemize}
+
+The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
+faults that involve memory access). For faults like invalid opcode that occur before bus access, this field will be
+zero.
+
+Exception handlers can use the \texttt{ETFR} instruction to read the fault metadata register and decode this
+information to determine how to handle the fault appropriately.
 
 \subsection{Cause Register}
 
@@ -197,7 +242,13 @@ The exception vectors are stored starting at address 0x0. Each vector is a 32-bi
 
 \begin{itemize}
 	\item \textbf{0x00:} Reset vector
-	\item \textbf{0x01-0x07:} Abort exception vectors (faults)
+	\item \textbf{0x01:} Bus fault
+	\item \textbf{0x02:} Alignment fault
+	\item \textbf{0x03:} Segment overflow fault
+	\item \textbf{0x04:} Invalid opcode fault
+	\item \textbf{0x05:} Privilege violation fault
+	\item \textbf{0x06:} Double fault
+	\item \textbf{0x07:} Reserved
 	\item \textbf{0x08-0x0F:} Reserved for future privileged exceptions
 	\item \textbf{0x10:} Level 5 hardware exception vector
 	\item \textbf{0x20:} Level 4 hardware exception vector
