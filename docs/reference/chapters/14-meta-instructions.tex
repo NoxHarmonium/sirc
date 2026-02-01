@@ -37,6 +37,26 @@ my_function:
     RETS                      ; Return to caller
 \end{lstlisting}
 
+\section{LJMP -- Long Jump}
+
+\textbf{Syntax:} \texttt{LJMP src [, offset]}
+
+\textbf{Assembles to:} \texttt{LDEA p, ...} (various forms)
+
+\textbf{Description:} Performs an absolute jump by transferring an address register to the program counter. Supports optional immediate or register offsets. Unlike \mnemonic{BRAN} which is PC-relative, \mnemonic{LJMP} uses absolute addressing via address registers.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Simple jump to address in register
+LJMP a                        ; Assembles to: LDEA p, (#0, a)
+
+; Jump with immediate offset
+LJMP a, #16                   ; Assembles to: LDEA p, (#16, a)
+
+; Jump with register displacement
+LJMP b, r1                    ; Assembles to: LDEA p, (r1, b)
+\end{lstlisting}
+
 \section{EXCP -- User Exception (Trap)}
 
 \textbf{Syntax:} \texttt{EXCP \#vector}

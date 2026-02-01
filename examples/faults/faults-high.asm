@@ -14,7 +14,7 @@
 
 LOAD    ah, $PROGRAM_SEGMENT
 LOAD    al, #0xFFF0
-LDEA    p, (a)
+LJMP    a
 
 
 ; TODO: Work out how to avoid padding this out

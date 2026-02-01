@@ -3,7 +3,6 @@ use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
-use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
 use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
@@ -17,6 +16,8 @@ use peripheral_cpu::registers::AddressRegisterName;
 ///
 /// Parses a long jump to subroutine instruction
 ///
+/// Syntax: LJSR src [, offset] [, shift]
+///
 /// ```
 /// use toolchain::parsers::opcodes::ljsr::ljsr;
 /// use toolchain::types::instruction::InstructionToken;
@@ -24,7 +25,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljsr)("LJSR|!= (#-4, a)\n") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(ljsr)("LJSR|!= a, #-4\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -67,78 +68,69 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     };
 
     match operands.as_slice() {
-        [AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => match offset {
-            ImmediateType::Value(offset) => Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: construct_immediate_instruction(
-                        offset.to_owned(),
-                        address_register,
-                    ),
-                    ..Default::default()
-                },
-            )),
-            ImmediateType::SymbolRef(ref_token) => Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: construct_immediate_instruction(0x0, address_register),
-                    symbol_ref: Some(override_ref_token_type_if_implied(
-                        ref_token,
-                        RefType::LowerWord,
-                    )),
-                    ..Default::default()
-                },
-            )),
-            ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: construct_immediate_instruction(0x0, address_register),
-                    placeholder_name: Some(placeholder_name.clone()),
-                    ..Default::default()
-                },
-            )),
-        },
-        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] => {
+        // LJSR a - simple direct addressing (no offset)
+        [AddressingMode::DirectAddressRegister(source_register)] => Ok((
+            i,
+            InstructionToken {
+                input_length,
+                instruction: construct_immediate_instruction(0, source_register),
+                ..Default::default()
+            },
+        )),
+        // LJSR a, #offset - with immediate offset
+        [AddressingMode::DirectAddressRegister(source_register), AddressingMode::Immediate(offset)] => {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_immediate_instruction(
+                            offset.to_owned(),
+                            source_register,
+                        ),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_immediate_instruction(0x0, source_register),
+                        symbol_ref: Some(override_ref_token_type_if_implied(
+                            ref_token,
+                            RefType::LowerWord,
+                        )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_immediate_instruction(0x0, source_register),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
+                    },
+                )),
+            }
+        }
+        // LJSR a, r1 - with register offset
+        [AddressingMode::DirectAddressRegister(source_register), AddressingMode::DirectRegister(displacement_register)] =>
+        {
             Ok((
                 i,
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
-                        r1: displacement_register.to_register_index(),
+                        r1: AddressRegisterName::ProgramCounter.to_register_index(),
                         r2: 0x0, // Unused
-                        r3: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
-        }
-        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
-                        r1: displacement_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: 0x0, // Unused
-                        shift_operand,
-                        shift_type,
-                        shift_count,
-                        condition_flag,
-                        additional_flags: address_register.to_register_index(),
+                        additional_flags: source_register.to_register_index(),
                     }),
                     ..Default::default()
                 },

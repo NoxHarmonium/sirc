@@ -8,6 +8,7 @@ control flow operations:
 
 \begin{itemize}
 	\item \mnemonic{BRAN} -- Branch (unconditional or conditional jump)
+	\item \mnemonic{LJMP} -- Long Jump (transfer address register to PC)
 	\item \mnemonic{LJSR} -- Long Jump to Subroutine (with link)
 	\item \mnemonic{BRSR} -- Branch to Subroutine (relative, with link)
 	\item \mnemonic{LDEA} -- Load Effective Address (can be used for jumps)
@@ -31,8 +32,7 @@ BRAN|cond (#disp, p)          ; Conditional branch
 	\textbf{Description:}
 
 	Branches to a new location by adding a displacement to the program counter. The displacement can be an immediate value
-	(for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative.
-	\textbf{Examples:}
+	(for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative. \textbf{Examples:}
 	\begin{lstlisting}
 ; Unconditional branch forward
 BRAN (#20, p)                 ; Jump ahead 20 words
@@ -49,6 +49,46 @@ BRAN|>= (#8, p)               ; Branch if r1 >= 10
 
 \end{instructionbox}
 
+\section{Long Jump}
+
+\begin{instructionbox}{LJMP -- Long Jump}
+	\textbf{Opcodes:} 0x18 (Imm Offset), 0x19 (Reg Offset)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+LJMP src                      ; PC = src
+LJMP src, #offset             ; PC = src + offset
+LJMP src, rS                  ; PC = src + rS
+\end{lstlisting}
+
+	\textbf{Description:}
+
+	Jumps to an absolute address by transferring the contents of an address register to the program counter. This is a
+	meta-instruction that assembles to \mnemonic{LDEA} with \reg{p} as the hardcoded destination. Unlike \mnemonic{BRAN}
+	which uses PC-relative addressing, \mnemonic{LJMP} performs absolute jumps using address registers.
+
+	The instruction supports optional immediate or register offsets. Note that shift operations cannot be applied to the
+	displacement operand for this instruction.
+
+	\textbf{Privilege:} Privileged instruction (like \mnemonic{LDEA}).
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Simple absolute jump
+LOAD ah, #0x0040
+LOAD al, #0x0000              ; a = 0x00400000
+LJMP a                        ; Jump to 0x00400000
+
+; Jump with immediate offset
+LJMP a, #16                   ; Jump to a + 16
+
+; Jump with register offset (jump table)
+LOAD r1, #8                   ; Table index * 2
+LJMP b, r1                    ; Jump to b + r1
+\end{lstlisting}
+
+\end{instructionbox}
+
 \section{Subroutine Call Instructions}
 
 \begin{instructionbox}{LJSR -- Long Jump to Subroutine}
@@ -56,22 +96,30 @@ BRAN|>= (#8, p)               ; Branch if r1 >= 10
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LJSR (#addr, a)               ; l = PC; PC = a + addr
-LJSR (#addr, p)               ; l = PC; PC = PC + addr (rel call)
+LJSR src                      ; l = PC; PC = src
+LJSR src, #offset             ; l = PC; PC = src + offset
+LJSR src, rS                  ; l = PC; PC = src + rS
 \end{lstlisting}
 
 	\textbf{Description:}
 
 	Calls a subroutine by saving the return address to the link register (\reg{l}) and jumping to the target address. The
-	return address can later be restored using \mnemonic{RETS}.
+	return address can later be restored using \mnemonic{RETS}. Supports optional immediate or register offsets, similar to
+	\mnemonic{LJMP}.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; Call function at address in 'a'
-LJSR (#0, a)
+LOAD ah, #0x0040
+LOAD al, #0x0000              ; a = 0x00400000
+LJSR a                        ; Call 0x00400000
 
-; PC-relative call
-LJSR (#function_offset, p)
+; Call with offset
+LJSR a, #function_offset      ; Call a + offset
+
+; Call with register displacement (function pointer table)
+LOAD r1, #8
+LJSR b, r1                    ; Call b + r1
 
 ; Return from subroutine
 RETS                          ; Assembles to: LDEA p, (#0, l)
