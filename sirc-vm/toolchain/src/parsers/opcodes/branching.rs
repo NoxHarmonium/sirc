@@ -9,8 +9,8 @@ use crate::{
     },
     types::object::RefType,
 };
+use nom::error::FromExternalError;
 use nom::{branch::alt, error::ErrorKind};
-use nom::{error::FromExternalError, sequence::tuple};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -68,16 +68,18 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let instructions = alt((parse_instruction_tag("BRAN"), parse_instruction_tag("BRSR")));
+    let mut instructions = alt((parse_instruction_tag("BRAN"), parse_instruction_tag("BRSR")));
 
-    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
+        instructions(i)?;
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
         let error_string =
             format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
-            i,
+            i_after_instruction,
             ErrorKind::Fail,
             error_string.as_str(),
         )));
@@ -229,7 +231,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 "The [{tag}] opcode only supports immediate addressing mode (e.g. BRAN #-3)"
             );
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

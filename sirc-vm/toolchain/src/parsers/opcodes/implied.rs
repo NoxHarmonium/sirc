@@ -36,7 +36,8 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let mut instructions = alt((parse_instruction_tag("RETS"), parse_instruction_tag("NOOP")));
 
-    let (i, (tag, condition_flag, status_register_update_source)) = instructions(i)?;
+    let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
+        instructions(i)?;
     if status_register_update_source.is_some() {
         let error_string =
             format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
@@ -46,15 +47,16 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
             error_string.as_str(),
         )));
     }
-    let (i, _) = one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i).map_err(|_| {
-        let error_string =
-            format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
-        nom::Err::Failure(ErrorTree::from_external_error(
-            i,
-            ErrorKind::Fail,
-            error_string.as_str(),
-        ))
-    })?;
+    let (i, _) =
+        one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i_after_instruction).map_err(|_| {
+            let error_string =
+                format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
+            nom::Err::Failure(ErrorTree::from_external_error(
+                i_after_instruction,
+                ErrorKind::Fail,
+                error_string.as_str(),
+            ))
+        })?;
 
     match tag.as_str() {
         // Returning from a subroutine is just loading the link register into the PC again

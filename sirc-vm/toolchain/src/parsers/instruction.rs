@@ -2,8 +2,8 @@ use nom::branch::alt;
 use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
-use nom::multi::separated_list0;
-use nom::sequence::{delimited, separated_pair};
+use nom::multi::many0;
+use nom::sequence::{delimited, preceded, separated_pair};
 use nom::Parser;
 use nom_supreme::error::ErrorTree;
 use nom_supreme::tag::complete::tag;
@@ -297,9 +297,21 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
 }
 
 pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
-    let mut parser =
-        separated_list0(parse_comma_sep, parse_addressing_mode).context("addressing modes");
-    parser.parse(i)
+    // Parse the first addressing mode without cut to allow empty list
+    let (i, first) = opt(parse_addressing_mode)(i)?;
+    match first {
+        Some(first_mode) => {
+            // For subsequent addressing modes, parse comma then addressing mode with cut
+            let (i, rest) = many0(preceded(
+                parse_comma_sep,
+                cut(parse_addressing_mode).context("addressing mode after comma"),
+            ))(i)?;
+            let mut result = vec![first_mode];
+            result.extend(rest);
+            Ok((i, result))
+        }
+        None => Ok((i, Vec::new())),
+    }
 }
 
 fn parse_condition_code(i: &str) -> AsmResult<ConditionFlags> {

@@ -10,10 +10,7 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::{
-    error::{ErrorKind, FromExternalError},
-    sequence::tuple,
-};
+use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -24,18 +21,21 @@ use peripheral_cpu::{
 };
 pub fn load(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag, status_register_update_source), operands)) =
-        tuple((parse_instruction_tag("LOAD"), parse_instruction_operands0))(i)?;
+
+    let (i_after_instruction, (_, condition_flag, status_register_update_source)) =
+        parse_instruction_tag("LOAD")(i)?;
 
     if status_register_update_source.is_some() {
         let error_string =
             "The [LOAD] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
-            i,
+            i_after_instruction,
             ErrorKind::Fail,
             error_string,
         )));
     }
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     let construct_immediate_instruction = |value: u16, dest_register: &RegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {
@@ -136,7 +136,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             // NOTE: No shifting with direct register -> direct register because of the way the CPU architecture works - use SHFT instead
             // LOAD r1, r2, ASL #1 would translate directly to SHFT r1, r2, ASL #1.
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 "Invalid addressing mode for LOAD:. Cannot use a shift with direct register -> direct register loads. Use SHFT instruction instead.",
             )))
@@ -332,7 +332,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
         modes => {
             let error_string = format!("Invalid addressing mode for LOAD: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

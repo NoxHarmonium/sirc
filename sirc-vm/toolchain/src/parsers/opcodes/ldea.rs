@@ -10,10 +10,7 @@ use crate::{
     },
     types::object::RefType,
 };
-use nom::{
-    error::{ErrorKind, FromExternalError},
-    sequence::tuple,
-};
+use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -24,14 +21,16 @@ use peripheral_cpu::{
 };
 pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag, status_register_update_source), operands)) =
-        tuple((parse_instruction_tag("LDEA"), parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (_, condition_flag, status_register_update_source)) =
+        parse_instruction_tag("LDEA")(i)?;
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
         let error_string =
             "The [LDEA] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
-            i,
+            i_after_instruction,
             ErrorKind::Fail,
             error_string,
         )));
@@ -144,7 +143,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
         modes => {
             let error_string = format!("Invalid addressing mode for LDEA: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

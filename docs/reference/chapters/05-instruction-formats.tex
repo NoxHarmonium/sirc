@@ -128,9 +128,6 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 	\label{tab:immediate-format-examples}
 \end{table}
 
-% TODO: Come up with assembler syntax that allows you to override the AF field so you can prevent status register updates
-% I'm thinking something like ADDI, r1, #1, s=n to disable status register updates (or s=a for ALU source and s=s for shift source)
-
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item Condition code examples: 0x0 (0000) = Always, 0x1 (0001) = Equal (==), 0xB (1011) = Signed >=

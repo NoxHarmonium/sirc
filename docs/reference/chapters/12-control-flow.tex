@@ -32,8 +32,6 @@ BRAN|cond (#disp, p)          ; Conditional branch
 
 	Branches to a new location by adding a displacement to the program counter. The displacement can be an immediate value
 	(for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative.
-	% TODO: Document how it is different to ADDI/ADDR with pl - it isn't really except that it doesn't update the status register (which you could do anyway by setting the AF to 0b00), and it uses the address unit rather than the ALU which may matter in the future
-	% Also: I guess semantically it is different, so in the future if we have pipelining or something maybe it will matter?
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; Unconditional branch forward

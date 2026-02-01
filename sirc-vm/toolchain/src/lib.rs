@@ -24,3 +24,4 @@ pub mod data;
 pub mod parsers;
 pub mod printers;
 pub mod types;
+pub mod utils;
