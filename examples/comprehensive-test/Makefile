@@ -26,6 +26,8 @@ check: run
 
 clean:
 	rm -f comprehensive-test.bin comprehensive-test.o serial-handler.o comprehensive-test.register-dump comprehensive-test.bin.dbg
+
+clean_all: clean
 	cargo clean ${CARGO_ARGS}
 	cargo llvm-cov clean ${CARGO_ARGS} --workspace
 

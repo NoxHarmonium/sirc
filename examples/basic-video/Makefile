@@ -28,5 +28,7 @@ check: run
 
 clean:
 	rm -f basic-video.bin basic-video.o serial-handler.o data.o basic-video.register-dump basic-video.bin.dbg
+
+clean_all: clean
 	cargo clean ${CARGO_ARGS}
 	cargo llvm-cov clean ${CARGO_ARGS} --workspace
