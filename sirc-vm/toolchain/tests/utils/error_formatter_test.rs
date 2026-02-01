@@ -124,7 +124,7 @@ fn test_short_input() {
 
 #[test]
 fn test_rets_invalid_addressing_mode_error_context() {
-    let input = "LOAD r1, #0\nWAIT r3\nLOAD r2, #5\n";
+    let input = "LOAD r1, #0\nRETS r3\nLOAD r2, #5\n";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for invalid LOAD addressing mode",
@@ -133,14 +133,14 @@ fn test_rets_invalid_addressing_mode_error_context() {
     error: parsing failed
       --> test.asm:2:6
     1 | LOAD r1, #0
-    2 | WAIT r3
+    2 | RETS r3
       |      ^
     3 | LOAD r2, #5
 
     in section "instruction" at line 2, column 1,
-    in section "Exception Unit Instruction" at line 2, column 1,
+    in section "Implied instruction" at line 2, column 1,
     external error:
-      Invalid addressing mode for WAIT: (("WAIT", [DirectRegister(R3)])) at line 2, column 6
+      The [RETS] does not support any addressing modes (e.g. NOOP or RETE) at line 2, column 6
     "#);
 }
 
