@@ -5,7 +5,6 @@ use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
-use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, ShiftOperand, ShiftType,
@@ -79,7 +78,7 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let instructions = alt((
+    let mut instructions = alt((
         parse_instruction_tag("ADDI"),
         parse_instruction_tag("ADCI"),
         parse_instruction_tag("SUBI"),
@@ -95,8 +94,10 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("SHFT"),
     ));
 
-    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
+        instructions(i)?;
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     let default_status_register_update_source =
         status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
@@ -133,7 +134,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     let incorrect_shft_usage_error = || -> AsmResult<InstructionToken> {
         let error_string = format!("The [{tag}] meta instruction only supports a single register operand with a shift definition (e.g. SHFT r1, LSL #1).");
         Err(nom::Err::Failure(ErrorTree::from_external_error(
-            i,
+            i_after_instruction,
             ErrorKind::Fail,
             error_string.as_str(),
         )))
@@ -164,7 +165,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             } else {
                 let error_string = format!("The [{tag}] meta instruction does not support a single register operand with a shift definition. Only the SHFT instruction supports that.");
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -199,7 +200,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         let error_string =
                             format!("The [{tag}] opcode does not support symbol refs at this time");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
-                            i,
+                            i_after_instruction,
                             ErrorKind::Fail,
                             error_string.as_str(),
                         )))
@@ -220,7 +221,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         short_value.map_or_else(|_| {
                           let error_string = format!("Immediate values must fit into 8 bits when using a shift definition ({value} > 0xFF)");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
-                            i,
+                            i_after_instruction,
                             ErrorKind::Fail,
                             error_string.as_str(),
                         )))
@@ -263,7 +264,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         let error_string =
                             format!("The [{tag}] opcode does not support symbol refs at this time");
                         Err(nom::Err::Failure(ErrorTree::from_external_error(
-                            i,
+                            i_after_instruction,
                             ErrorKind::Fail,
                             error_string.as_str(),
                         )))
@@ -274,7 +275,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         _ => {
             let error_string = format!("The [{tag}] opcode only supports immediate->register addressing mode (e.g. ADDI y1, #1)");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

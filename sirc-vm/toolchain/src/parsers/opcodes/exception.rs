@@ -5,7 +5,6 @@ use crate::parsers::instruction::{
 use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
-use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData,
@@ -36,7 +35,7 @@ use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 /// ```
 pub fn exception(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let instructions = alt((
+    let mut instructions = alt((
         parse_instruction_tag("EXCP"),
         parse_instruction_tag("WAIT"),
         parse_instruction_tag("RETE"),
@@ -45,8 +44,9 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("ETTR"),
     ));
 
-    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
+        instructions(i)?;
+
     if status_register_update_source.is_some() {
         let error_string =
             format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
@@ -56,6 +56,8 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
             error_string.as_str(),
         )));
     }
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     // Implied instructions
     match (tag.as_str(), operands.as_slice()) {
@@ -80,7 +82,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -155,7 +157,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -198,7 +200,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -231,7 +233,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                         "The return_address can only be transferred to a. Try ETFR a, #{value} instead"
                     );
                     Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i,
+                        i_after_instruction,
                         ErrorKind::Fail,
                         error_string.as_str(),
                     )))
@@ -241,7 +243,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -271,7 +273,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -304,7 +306,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                         "The return_status_register can only be transferred to r7. Try ETTR r7, #{value} instead"
                     );
                     Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i,
+                        i_after_instruction,
                         ErrorKind::Fail,
                         error_string.as_str(),
                     )))
@@ -314,7 +316,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -347,7 +349,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                         "The return_address can only be transferred to a. Try ETTR a, #{value} instead"
                     );
                     Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i,
+                        i_after_instruction,
                         ErrorKind::Fail,
                         error_string.as_str(),
                     )))
@@ -357,7 +359,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                     "The [{tag}] opcode does not support symbol refs or placeholders at this time"
                 );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i,
+                    i_after_instruction,
                     ErrorKind::Fail,
                     error_string.as_str(),
                 )))
@@ -367,7 +369,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         modes => {
             let error_string = format!("Invalid addressing mode for {tag}: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

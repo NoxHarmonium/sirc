@@ -5,7 +5,6 @@ use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
-use nom::sequence::tuple;
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     Instruction, InstructionData, RegisterInstructionData, ShiftOperand, ShiftType,
@@ -69,7 +68,7 @@ use super::super::shared::AsmResult;
 /// ```
 pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let instructions = alt((
+    let mut instructions = alt((
         parse_instruction_tag("ADDR"),
         parse_instruction_tag("ADCR"),
         parse_instruction_tag("SUBR"),
@@ -83,8 +82,10 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("COPR"),
     ));
 
-    let (i, ((tag, condition_flag, status_register_update_source), operands)) =
-        tuple((instructions, parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
+        instructions(i)?;
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     let default_status_register_update_source =
         status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
@@ -184,7 +185,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         _ => {
             let error_string = format!("The [{tag}] opcode only supports register->register or register->register->register addressing mode (e.g. ADDR y1, z2, a2 or SUBR y1, a2)");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

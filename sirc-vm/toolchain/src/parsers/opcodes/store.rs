@@ -10,8 +10,8 @@ use crate::{
     },
     types::object::RefType,
 };
+use nom::error::ErrorKind;
 use nom::error::FromExternalError;
-use nom::{error::ErrorKind, sequence::tuple};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::{
@@ -22,14 +22,16 @@ use peripheral_cpu::{
 };
 pub fn stor(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
-    let (i, ((_, condition_flag, status_register_update_source), operands)) =
-        tuple((parse_instruction_tag("STOR"), parse_instruction_operands0))(i)?;
+    let (i_after_instruction, (_, condition_flag, status_register_update_source)) =
+        parse_instruction_tag("STOR")(i)?;
+
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
         let error_string =
             "The [STOR] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
-            i,
+            i_after_instruction,
             ErrorKind::Fail,
             error_string,
         )));
@@ -252,7 +254,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
         modes => {
             let error_string = format!("Invalid addressing mode for STOR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))
