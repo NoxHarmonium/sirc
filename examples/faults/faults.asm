@@ -84,9 +84,7 @@ LOAD    ah, $PROGRAM_SEGMENT_HIGH
 LOAD    al, #0xFFFE
 
 ; This should not trigger fault
-; TODO: Fix LJMP so we don't have to used LDEA
-; Also fix LDEA so we don't need to use this weird syntax, should really be LDEA p, a
-LDEA    p, (a)
+LJMP    a
 
 :return_from_testing_pc_overflow_no_fault
 
@@ -97,7 +95,7 @@ LOAD    ah, $PROGRAM_SEGMENT_HIGH
 LOAD    al, #0xFFFE
 
 ; This _should_ trigger a fault
-LDEA    p, (a)
+LJMP    a
 
 :return_from_testing_pc_overflow_with_fault
 

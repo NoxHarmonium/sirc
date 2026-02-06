@@ -300,44 +300,45 @@ fn test_ldea_invalid_mode_error_context() {
 
 #[test]
 fn test_ljmp_invalid_mode_error_context() {
-    let input = "LJMP (#0, a)\nLJMP r1\nLJMP (#5, s)\n";
+    let input = "LJMP a\nLJMP r1\nLJMP #5\n";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for LJMP with invalid addressing mode",
     );
     assert_snapshot!(combined, @r#"
-            error: parsing failed
-              --> test.asm:2:6
-            1 | LJMP (#0, a)
-            2 | LJMP r1
-              |      ^
-            3 | LJMP (#5, s)
+    error: parsing failed
+      --> test.asm:2:6
+    1 | LJMP a
+    2 | LJMP r1
+      |      ^
+    3 | LJMP #5
 
-            in section "instruction" at line 2, column 1,
-            in section "LJMP instruction" at line 2, column 1,
-            external error:
-              Invalid addressing mode for LJMP: ([DirectRegister(R1)]) at line 2, column 6
-            "#);
+    in section "instruction" at line 2, column 1,
+    in section "LJMP instruction" at line 2, column 1,
+    external error:
+      Invalid addressing mode for LJMP: ([DirectRegister(R1)]) at line 2, column 6
+    "#);
 }
 
 #[test]
 fn test_ljsr_invalid_mode_error_context() {
-    let input = "LJSR (#0, a)\nLJSR r1\nLJSR (#5, s)\n";
+    let input = "LJSR a, #5\nLJSR s, r3\nLJSR r1\nADDI r2, #1";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for LJSR with invalid addressing mode",
     );
     assert_snapshot!(combined, @r#"
-            error: parsing failed
-              --> test.asm:2:6
-            1 | LJSR (#0, a)
-            2 | LJSR r1
-              |      ^
-            3 | LJSR (#5, s)
+    error: parsing failed
+      --> test.asm:3:6
+    1 | LJSR a, #5
+    2 | LJSR s, r3
+    3 | LJSR r1
+      |      ^
+    4 | ADDI r2, #1
 
-            in section "instruction" at line 2, column 1,
-            in section "LJSR instruction" at line 2, column 1,
-            external error:
-              Invalid addressing mode for LJSR: ([DirectRegister(R1)]) at line 2, column 6
-            "#);
+    in section "instruction" at line 3, column 1,
+    in section "LJSR instruction" at line 3, column 1,
+    external error:
+      Invalid addressing mode for LJSR: ([DirectRegister(R1)]) at line 3, column 6
+    "#);
 }

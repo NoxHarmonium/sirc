@@ -6,7 +6,6 @@ use crate::{
         instruction::{
             parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
         },
-        shared::split_shift_definition_data,
     },
     types::object::RefType,
 };
@@ -105,34 +104,11 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
                         r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
                         shift_operand: ShiftOperand::Immediate,
                         shift_type: ShiftType::None,
                         shift_count: 0,
-                        condition_flag,
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
-        }
-        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: displacement_register.to_register_index(),
-                        r3: 0x0, // Unused
-                        shift_operand,
-                        shift_type,
-                        shift_count,
                         condition_flag,
                         additional_flags: address_register.to_register_index(),
                     }),

@@ -903,16 +903,62 @@
     LOAD|NS r7, #1          ; Check if negative flag is set
     BRSR @store_test_result
 
+; TEST 70: LDEA with implied zero offset
+    BRSR @reset_test
+    LOAD lh, #0x0005        ; Set up l with segment 0x0005
+    LOAD ll, #0x1234        ; Set up l with offset 0x1234
+    LDEA a, (l)             ; Load effective address from s (no offset)
+    ; a should now contain 0x0005:0x1234
+    LOAD r3, #0             ; Count successful assertions
+    CMPI ah, #0x0005
+    ADDI|== r3, #1          ; Increment if ah matches
+    CMPI al, #0x1234
+    ADDI|== r3, #1          ; Increment if al matches
+    CMPI r3, #2             ; Check if both passed
+    LOAD|== r7, #1          ; Pass only if both assertions succeeded
+    BRSR @store_test_result
+
+; TEST 71: LDEA with immediate offset
+    BRSR @reset_test
+    LOAD ah, #0x0002        ; Set up a with segment 0x0002
+    LOAD al, #0x0100        ; Set up a with offset 0x0100
+    LDEA l, (#0x0002, a)    ; Calculate address a + 2
+    ; l should now contain 0x0002:0x0102
+    LOAD r3, #0             ; Count successful assertions
+    CMPI lh, #0x0002
+    ADDI|== r3, #1          ; Increment if lh matches
+    CMPI ll, #0x0102
+    ADDI|== r3, #1          ; Increment if ll matches
+    CMPI r3, #2             ; Check if both passed
+    LOAD|== r7, #1          ; Pass only if both assertions succeeded
+    BRSR @store_test_result
+
+; TEST 72: LDEA with register offset
+    BRSR @reset_test
+    LOAD lh, #0x0003        ; Set up l with segment 0x0003
+    LOAD ll, #0x0500        ; Set up l with offset 0x0500
+    LOAD r2, #0x0025        ; Set up offset register
+    LDEA a, (r2, l)         ; Calculate address l + r2
+    ; a should now contain 0x0003:0x0525
+    LOAD r3, #0             ; Count successful assertions
+    CMPI ah, #0x0003
+    ADDI|== r3, #1          ; Increment if ah matches
+    CMPI al, #0x0525
+    ADDI|== r3, #1          ; Increment if al matches
+    CMPI r3, #2             ; Check if both passed
+    LOAD|== r7, #1          ; Pass only if both assertions succeeded
+    BRSR @store_test_result
+
 ; Final Counter Check
     BRSR @count_passed_tests
-    ; r7 should now equal 69 (0x45) if all tests passed
-    CMPI r7, #0x45
+    ; r7 should now equal 72 if all tests passed
+    CMPI r7, #72
     LOAD|== r1, #0x0FAB     ; Success marker
     LOAD|!= r1, #0xFA11     ; Failure marker (0xFA11)
 
 ; Store final test count for inspection
     LOAD r2, r7             ; Copy test pass count to r2
-    LOAD r3, #0x0041        ; Expected count (65 decimal = 0x41 hex)
+    LOAD r3, #72            ; Expected count
 
 ; Halt CPU
     COPI r1, #0x14FF
