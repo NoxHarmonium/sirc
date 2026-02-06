@@ -28,6 +28,9 @@ pub fn print_number_token(number_token: &NumberToken) -> String {
             }
         }
         NumberType::Decimal => format!("#{}", number_token.value),
+        NumberType::Binary => {
+            format!("#0b{:b}", number_token.value)
+        }
     }
 }
 

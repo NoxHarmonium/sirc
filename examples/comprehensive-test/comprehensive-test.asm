@@ -37,7 +37,7 @@
     RETS
 
 :reset_test
-    LOAD r7, #0
+    LOAD r7, #0b0
     RETS
 
 :store_test_result

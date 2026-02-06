@@ -41,6 +41,22 @@ fn parse_label_name_(i: &str) -> AsmResult<&str> {
     )
 }
 
+fn parse_bin_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
+    let (i, _) = tag("0b")(i)?;
+    let (i, raw_digits) = is_a(&b"01"[..])(i)?;
+    let hex_parse_result = T::from_str_radix(raw_digits, 2);
+    hex_parse_result.map_or_else(
+        |_| {
+            Err(Err::Error(ErrorTree::Base {
+                location: i,
+                // TODO: Should we use a custom error here?
+                kind: BaseErrorKind::Expected(Expectation::Tag("binary digit")),
+            }))
+        },
+        |binary_value| Ok((i, binary_value)),
+    )
+}
+
 fn parse_hex_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     let (i, _) = tag("0x")(i)?;
     let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
@@ -78,7 +94,7 @@ fn parse_dec_(i: &str) -> AsmResult<u32> {
 }
 
 fn parse_number_(i: &str) -> AsmResult<NumberToken> {
-    preceded(char('#'), alt((parse_hex, parse_dec)))(i)
+    preceded(char('#'), alt((parse_hex, parse_bin, parse_dec)))(i)
 }
 
 fn parse_placeholder_(i: &str) -> AsmResult<String> {
@@ -128,6 +144,13 @@ pub fn parse_symbol_reference_(i: &str) -> AsmResult<RefToken> {
             ref_type: optional_postamble.unwrap_or(RefType::Implied),
         },
     ))
+}
+
+pub fn parse_bin(i: &str) -> AsmResult<NumberToken> {
+    map(lexeme(parse_bin_), |value| NumberToken {
+        value,
+        number_type: NumberType::Binary,
+    })(i)
 }
 
 pub fn parse_hex(i: &str) -> AsmResult<NumberToken> {

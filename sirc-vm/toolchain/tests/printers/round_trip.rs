@@ -24,6 +24,7 @@ static PARSER_INPUT: &str = r"
 .DB @some_label
 .DW @some_label
 .DQ @some_label
+.DW #0b1111
 ";
 
 #[test]
