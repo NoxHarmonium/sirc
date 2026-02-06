@@ -16,7 +16,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 ///
 /// Parses a long jump to subroutine instruction
 ///
-/// Syntax: LJSR src [, offset] [, shift]
+/// Syntax: LJSR src [, offset]
 ///
 /// ```
 /// use toolchain::parsers::opcodes::ljsr::ljsr;
