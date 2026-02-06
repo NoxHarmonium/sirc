@@ -7,6 +7,22 @@ use crate::types::shared::{
 };
 use itertools::Itertools;
 
+/// Adds underscore separators to a string representation of a number
+/// Separators are inserted every 4 characters from the right
+fn add_underscores(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut result = String::new();
+
+    for (i, ch) in chars.iter().enumerate() {
+        if i > 0 && (chars.len() - i).is_multiple_of(4) {
+            result.push('_');
+        }
+        result.push(*ch);
+    }
+
+    result
+}
+
 /// Prints the AST representation of a `NumberToken` to a string
 ///
 ///```
@@ -21,15 +37,20 @@ use itertools::Itertools;
 pub fn print_number_token(number_token: &NumberToken) -> String {
     match number_token.number_type {
         NumberType::Hex => {
-            if number_token.value > 0xFFFF {
-                format!("#0x{:08X}", number_token.value)
+            let hex_str = if number_token.value > 0xFFFF {
+                format!("{:08X}", number_token.value)
             } else {
-                format!("#0x{:04X}", number_token.value)
-            }
+                format!("{:04X}", number_token.value)
+            };
+            format!("#0x{}", add_underscores(&hex_str))
         }
-        NumberType::Decimal => format!("#{}", number_token.value),
+        NumberType::Decimal => {
+            let dec_str = format!("{}", number_token.value);
+            format!("#{}", add_underscores(&dec_str))
+        }
         NumberType::Binary => {
-            format!("#0b{:b}", number_token.value)
+            let bin_str = format!("{:b}", number_token.value);
+            format!("#0b{}", add_underscores(&bin_str))
         }
     }
 }

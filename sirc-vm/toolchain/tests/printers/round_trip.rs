@@ -17,14 +17,19 @@ static PARSER_INPUT: &str = r"
 ; Data Tests
 .DB #0xFF
 .DW #0xFFFF
-.DQ #0xFFFFFFFF
+.DQ #0xFFFFF_F
+.DQ #0xBEEF_CAFE
 .DB #255
 .DB #65535
 .DQ #4294967295
+.DQ #42949_6_7295
 .DB @some_label
 .DW @some_label
 .DQ @some_label
 .DW #0b1111
+.DW #0b1111_11
+.DW #0b1111_0011
+.DW #0b1011100111101010
 ";
 
 #[test]

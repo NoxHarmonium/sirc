@@ -1,6 +1,6 @@
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, is_not};
-use nom::character::complete::{char, digit1, multispace0, one_of, space0};
+use nom::character::complete::{char, multispace0, one_of, space0};
 use nom::combinator::{cut, eof, map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, preceded, terminated, tuple};
@@ -43,8 +43,9 @@ fn parse_label_name_(i: &str) -> AsmResult<&str> {
 
 fn parse_bin_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     let (i, _) = tag("0b")(i)?;
-    let (i, raw_digits) = is_a(&b"01"[..])(i)?;
-    let hex_parse_result = T::from_str_radix(raw_digits, 2);
+    let (i, raw_digits) = is_a(&b"01_"[..])(i)?;
+    let digits_without_underscores = raw_digits.replace('_', "");
+    let hex_parse_result = T::from_str_radix(&digits_without_underscores, 2);
     hex_parse_result.map_or_else(
         |_| {
             Err(Err::Error(ErrorTree::Base {
@@ -59,8 +60,9 @@ fn parse_bin_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
 
 fn parse_hex_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     let (i, _) = tag("0x")(i)?;
-    let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF"[..])(i)?;
-    let hex_parse_result = T::from_str_radix(raw_digits, 16);
+    let (i, raw_digits) = is_a(&b"0123456789abcdefABCDEF_"[..])(i)?;
+    let digits_without_underscores = raw_digits.replace('_', "");
+    let hex_parse_result = T::from_str_radix(&digits_without_underscores, 16);
     hex_parse_result.map_or_else(
         |_| {
             Err(Err::Error(ErrorTree::Base {
@@ -75,16 +77,17 @@ fn parse_hex_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
 #[allow(clippy::cast_sign_loss)]
 fn parse_dec_(i: &str) -> AsmResult<u32> {
     map_res(
-        tuple((opt(one_of("+-")), recognize(digit1))),
-        |(sign, number_string)| {
+        tuple((opt(one_of("+-")), recognize(is_a("0123456789_")))),
+        |(sign, number_string): (Option<char>, &str)| {
+            let digits_without_underscores = number_string.replace('_', "");
             sign.map_or_else(
-                || str::parse::<u32>(number_string),
+                || str::parse::<u32>(&digits_without_underscores),
                 |sign_value| {
                     // TODO: Fix strangeness in number parsing
                     // category=Toolchain
                     // Re-concatenating the original string seems bad
                     // We should probably just get the original value or something
-                    let full_number = format!("{sign_value}{number_string}");
+                    let full_number = format!("{sign_value}{digits_without_underscores}");
                     // Signed numbers represented in parser as unsigned for simplicity
                     str::parse::<i32>(full_number.as_str()).map(|signed| signed as u32)
                 },
