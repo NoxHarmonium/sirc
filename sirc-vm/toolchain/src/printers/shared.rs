@@ -32,7 +32,7 @@ fn add_underscores(s: &str) -> String {
 ///    value: 0xCAFE,
 ///    number_type: NumberType::Decimal
 /// });
-/// assert_eq!(String::from("#51966"), printed);
+/// assert_eq!(String::from("#5_1966"), printed);
 /// ```
 pub fn print_number_token(number_token: &NumberToken) -> String {
     match number_token.number_type {
