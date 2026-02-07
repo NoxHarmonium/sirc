@@ -6,11 +6,11 @@ RUN_ARGS=-vv --program-file ./comprehensive-test.bin --segment scratch:00010000:
 
 all: comprehensive-test.bin
 
-comprehensive-test.o: comprehensive-test.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file comprehensive-test.asm --output-file comprehensive-test.o
+comprehensive-test.o: comprehensive-test.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file comprehensive-test.sasm --output-file comprehensive-test.o
 
-serial-handler.o: serial-handler.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file serial-handler.asm --output-file serial-handler.o
+serial-handler.o: serial-handler.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file serial-handler.sasm --output-file serial-handler.o
 
 comprehensive-test.bin: comprehensive-test.o serial-handler.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file comprehensive-test.bin comprehensive-test.o serial-handler.o

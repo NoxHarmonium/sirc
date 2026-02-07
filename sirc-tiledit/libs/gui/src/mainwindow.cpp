@@ -236,7 +236,7 @@ void MainWindow::on_actionExportAsm_triggered() {
       ImageExporter::exportToAsm(quantizedImagesByPalette);
 
   auto filenameToSave = QFileDialog::getSaveFileName(
-      this, tr("Save file"), "/home", tr("Assembly File (*.asm)"));
+      this, tr("Save file"), "/home", tr("Assembly File (*.sasm)"));
 
   QFile file(filenameToSave);
   // TODO: Error handling

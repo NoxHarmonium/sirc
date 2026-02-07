@@ -6,11 +6,11 @@ RUN_ARGS=-vv --program-file ./hardware-exception.bin --register-dump-file ./hard
 
 all: hardware-exception.bin
 
-hardware-exception.o: hardware-exception.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file hardware-exception.asm --output-file hardware-exception.o
+hardware-exception.o: hardware-exception.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file hardware-exception.sasm --output-file hardware-exception.o
 
-data.o: data.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file data.asm --output-file data.o
+data.o: data.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file data.sasm --output-file data.o
 
 hardware-exception.bin: hardware-exception.o data.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file hardware-exception.bin hardware-exception.o data.o

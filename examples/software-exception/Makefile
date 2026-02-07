@@ -6,8 +6,8 @@ RUN_ARGS=--program-file ./software-exception.bin --register-dump-file ./software
 
 all: software-exception.bin
 
-software-exception.o: software-exception.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file software-exception.asm --output-file software-exception.o
+software-exception.o: software-exception.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file software-exception.sasm --output-file software-exception.o
 
 software-exception.bin: software-exception.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file software-exception.bin software-exception.o
