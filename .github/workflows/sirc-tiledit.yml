@@ -1,6 +1,6 @@
 name: SIRC Tiledit
 
-# TODO: Only run when sirc-tiledit directory has changes
+# Called implicitly by the coverage pipeline, so no branch triggers here (see coverage.yml)
 on:
   workflow_call:
 

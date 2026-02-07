@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - "vscode-sirc/**"
-      - ".github/workflows/syntax-tests.yml"
+      - ".github/workflows/vscode-sirc.yml"
   pull_request:
     branches: [main]
     paths:
       - "vscode-sirc/**"
-      - ".github/workflows/syntax-tests.yml"
+      - ".github/workflows/vscode-sirc.yml"
 
 jobs:
   test:
@@ -29,7 +29,7 @@ jobs:
         with:
           node-version-file: vscode-sirc/.tool-versions
           cache: "yarn"
-          cache-dependency-path: vscode-sirc/package.json
+          cache-dependency-path: vscode-sirc/yarn.lock
 
       - name: Install yarn
         run: npm install -g yarn
