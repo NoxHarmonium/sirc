@@ -59,7 +59,7 @@
 :start
 
 ; Enable all hardware interrupts (set bits 9-13 of SR)
-ORRI sr, #0x1E00
+ORRI sr, #0b0001_1110_0000_0000
 
 ; Setup stack frame - stack works backwards from end of segment
 LOAD sh, $SCRATCH_SEGMENT

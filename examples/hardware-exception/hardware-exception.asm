@@ -41,7 +41,7 @@
 :start
 
 ; Enable all hardware interrupts (set bits 9-13 of SR)
-ORRI sr, #0x1E00
+ORRI sr, #0b0001_1110_0000_0000
 
 ; Setup routines
 BRSR @setup_serial
@@ -128,7 +128,7 @@ RETS
 BRSR    @print_exit
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    r1, #0b0001_0100_1111_1111
 
 ;;;;;;; EXCEPTION HANDLERS
 
