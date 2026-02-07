@@ -1,0 +1,82 @@
+; SYNTAX TEST "source.sirc-asm"
+
+; Basic mnemonics
+ADDI r1, #5
+ADDR r2, r3, r4
+NOOP
+
+; Mnemonics with condition codes
+ADDI|== r1, #5
+BRAN|!= @some_label
+LOAD|CS r3, (#0, a)
+
+; Mnemonics with status override
+ADDI[S] r1, #0
+ADDI[A] r2, #1
+ADDI[N] r3, #2
+ADDI[s] r1, #0
+ADDI[a] r2, #1
+ADDI[n] r3, #2
+
+; Mnemonics with status override AND condition code
+ADDI[S]|== r1, #5
+ADDI[N]||>= r2, r3
+SHFT[s]|!= r4, LSL #3
+
+; Mnemonics with just condition (no status override)
+ADDI|CC r1, #10
+BRAN|NS :label
+
+; Edge cases - should still match mnemonic at word boundary
+ADDI
+ADDI|==
+ADDI[S]
+ADDI[S]|==
+
+; Should NOT match (but testing boundary behavior)
+XADDI r1, #5
+ADDIx r1, #5
+
+; Shift operations
+SHFT r1, LSL #3
+ADDI r2, #1, LSR #2
+ADDR r3, r4, r5, ASR #1
+
+; Constants
+#0xFF
+#0b1010
+#255
+#-10
+#0x00FF_FFFF
+#42_9496_7295
+#0b1011_1001_1110_1010
+
+; Labels and references
+:some_label
+@some_label
+@label.u
+@label.l
+
+; Directives
+.DB #0xFF
+.DW #0xFFFF
+.DQ #0xFFFFFFFF
+.ORG #0x1000
+.EQU
+
+; Comments
+; This is a comment
+ADDI r1, #5  ; inline comment
+
+; Registers
+r1 r2 r3 r4 r5 r6 r7
+lh ll ah al ph pl sh sl sr
+a p s
+
+; Variables/placeholders
+$my_variable
+$test123
+
+; Indirect addressing
+LOAD r1, (#5, a)
+STOR r2, (#0, p)+

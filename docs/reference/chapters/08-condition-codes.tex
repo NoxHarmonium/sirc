@@ -30,9 +30,9 @@ the condition is not met, the instruction behaves as a \mnemonic{NOOP} (no opera
 		1001          & HI                & Unsigned Higher (C = 1 AND Z = 0)              \\
 		1010          & LO                & Unsigned Lower or Same (C = 0 OR Z = 1)        \\
 		1011          & >=                & Signed Greater or Equal (N = V)                \\
-		1100          & <                 & Signed Less Than (N $\neq$ V)                  \\
+		1100          & <<                & Signed Less Than (N $\neq$ V)                  \\
 		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)          \\
-		1110          & <<                & Signed Less or Equal (Z = 1 OR N $\neq$ V)     \\
+		1110          & <=                & Signed Less or Equal (Z = 1 OR N $\neq$ V)     \\
 		1111          & NV                & Never (never executes)                         \\
 		\bottomrule
 	\end{tabular}

@@ -22,12 +22,16 @@
     "constants": {
       "patterns": [
         {
+          "name": "constant.numeric.bin.sirc",
+          "match": "(?<!\\w)#0b[0-1_]+\\b"
+        },
+        {
           "name": "constant.numeric.hex.sirc",
-          "match": "(?<!\\w)#0x[0-9a-fA-F]+\\b"
+          "match": "(?<!\\w)#0x[0-9a-fA-F_]+\\b"
         },
         {
           "name": "constant.numeric.decimal.sirc",
-          "match": "(?<!\\w)#(\\+|\\-)?[0-9]+\\b"
+          "match": "(?<!\\w)#(\\+|\\-)?[0-9_]+\\b"
         },
         {
           "name": "constant.language.register.sirc",
@@ -46,15 +50,18 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LJMP|LJSR|LOAD|STOR|SHFT)((\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV)(?<!\\w))|\\b)",
+          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LJMP|LJSR|LOAD|STOR|SHFT|EXCP|RSET|ETFR|ETTR)(\\[([SANsan])\\])?(\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV))?(?!\\w)",
           "captures": {
             "1": { "name": "keyword.control.mnemonic.sirc" },
-            "2": { "name": "keyword.control.condition.sirc" }
+            "2": { "name": "keyword.control.status-override.sirc" },
+            "3": { "name": "constant.language.status-override-type.sirc" },
+            "4": { "name": "keyword.control.condition.sirc" },
+            "5": { "name": "constant.language.condition-type.sirc" }
           }
         },
         {
           "name": "keyword.control.shift-definition.sirc",
-          "match": "(NUL|LSL|LJSR|ASL|ASR|RTL|RTR)"
+          "match": "(NUL|LSL|LSR|ASL|ASR|RTL|RTR)"
         },
         {
           "name": "keyword.control.indirect-addressing.sirc",

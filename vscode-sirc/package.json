@@ -54,7 +54,7 @@
       "onDebugResolve:sirc",
       "onDebugDynamicConfigurations:sirc",
       "onLanguage:sirc",
-      "workspaceContains:**/*.asm"
+      "workspaceContains:**/*.sasm"
     ],
     "languages": [
       {
@@ -64,7 +64,7 @@
           "SIRC"
         ],
         "extensions": [
-          ".asm"
+          ".sasm"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -77,7 +77,12 @@
       }
     ]
   },
+  "scripts": {
+    "test": "vscode-tmgrammar-test -g syntaxes/sirc.tmLanguage.json test/*.test.sasm",
+    "update-snapshot": "vscode-tmgrammar-snap -s source.sirc-asm -u -g syntaxes/sirc.tmLanguage.json test/*.test.sasm"
+  },
   "devDependencies": {
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.0.0",
+    "vscode-tmgrammar-test": "^0.1.3"
   }
 }

@@ -2,7 +2,7 @@
 
 ## Features
 
-- Defines the SIRC flavour of assembly with the language ID 'sirc' and extension '.asm'
+- Defines the SIRC flavour of assembly with the language ID 'sirc' and extension '.sasm'
 - Adds syntax highlighting for SIRC flavoured assembly
 - Adds the ability to use VS Code to debug SIRC programs running in sirc-vm (when the `--debug` switch is used).
 
