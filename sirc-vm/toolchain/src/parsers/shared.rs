@@ -45,8 +45,8 @@ fn parse_bin_<T: num_traits::Num>(i: &str) -> AsmResult<T> {
     let (i, _) = tag("0b")(i)?;
     let (i, raw_digits) = is_a(&b"01_"[..])(i)?;
     let digits_without_underscores = raw_digits.replace('_', "");
-    let hex_parse_result = T::from_str_radix(&digits_without_underscores, 2);
-    hex_parse_result.map_or_else(
+    let bin_parse_result = T::from_str_radix(&digits_without_underscores, 2);
+    bin_parse_result.map_or_else(
         |_| {
             Err(Err::Error(ErrorTree::Base {
                 location: i,
