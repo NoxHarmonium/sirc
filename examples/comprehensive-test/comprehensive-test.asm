@@ -33,11 +33,11 @@
 
 :enable_hardware_interrupts
     ; Enable all hardware interrupts (set bits 9-13 of SR)
-    ORRI sr, #0x1E00
+    ORRI sr, #0b0001_1110_0000_0000
     RETS
 
 :reset_test
-    LOAD r7, #0
+    LOAD r7, #0b0
     RETS
 
 :store_test_result

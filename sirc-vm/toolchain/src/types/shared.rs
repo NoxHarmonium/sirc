@@ -10,6 +10,7 @@ pub const REF_TOKEN_UPPER_WORD_SUFFIX: &str = ".u";
 pub enum NumberType {
     Hex,
     Decimal,
+    Binary,
 }
 
 #[derive(Debug, Clone, Serialize)]

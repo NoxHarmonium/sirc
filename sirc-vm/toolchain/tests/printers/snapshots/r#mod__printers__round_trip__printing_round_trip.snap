@@ -9,10 +9,16 @@ expression: printed
 ; Data Tests
 .DB #0x00FF
 .DW #0xFFFF
-.DQ #0xFFFFFFFF
+.DQ #0x00FF_FFFF
+.DQ #0xBEEF_CAFE
 .DB #255
-.DB #65535
-.DQ #4294967295
+.DB #6_5535
+.DQ #42_9496_7295
+.DQ #42_9496_7295
 .DB @some_label
 .DW @some_label
 .DQ @some_label
+.DW #0b1111
+.DW #0b11_1111
+.DW #0b1111_0011
+.DW #0b1011_1001_1110_1010

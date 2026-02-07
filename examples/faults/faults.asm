@@ -72,11 +72,11 @@ LOAD    al, #0xFFFE
 ; This should not trigger fault
 LOAD    r7, (#2, a)
 ; Switch on trap on overflow bit
-ORRI    sr, #0x4000
+ORRI    sr, #0b0100_0000_0000_0000
 ; This _should_ trigger a fault
 LOAD    r7, (#2, a)
 ; Switch off trap on overflow bit
-ANDI    sr, #0xBFFF
+ANDI    sr, #0b1011_1111_1111_1111
 
 ; Segment overflow again, but this time the PC overflow causes it
 
@@ -89,7 +89,7 @@ LJMP    a
 :return_from_testing_pc_overflow_no_fault
 
 ; Switch on trap on overflow bit
-ORRI    sr, #0x4000
+ORRI    sr, #0b0100_0000_0000_0000
 
 LOAD    ah, $PROGRAM_SEGMENT_HIGH
 LOAD    al, #0xFFFE
@@ -100,13 +100,13 @@ LJMP    a
 :return_from_testing_pc_overflow_with_fault
 
 ; Switch off trap on overflow bit
-ANDI    sr, #0xBFFF
+ANDI    sr, #0b1011_1111_1111_1111
 
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
 COPI    r1, #0x4000
 
 ; Switch to non privileged mode
-ORRI     sr, #0x0100
+ORRI     sr, #0b0000_0001_0000_0000
 ; Try to escape the current segment
 LOAD     ph, #0xFEFE
 
@@ -118,7 +118,7 @@ LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    r1, #0b0001_0100_1111_1111
 
 .ORG 0x0300
 
