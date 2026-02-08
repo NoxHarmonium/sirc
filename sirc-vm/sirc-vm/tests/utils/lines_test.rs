@@ -37,7 +37,7 @@ fn get_debug_info() -> ProgramDebugInfo {
             ObjectDebugInfo {
                 checksum: "91ee2c63df623437ce2af12bba2f40fa2401783ea349e838914cc31b3fbb2f95"
                     .to_string(),
-                original_filename: "UNIT_TEST.asm".to_string(),
+                original_filename: "UNIT_TEST.sasm".to_string(),
                 original_input: TEST_SOURCE_FILE_CONTENTS.to_string(),
                 program_to_input_offset_mapping: BTreeMap::from([
                     (0x0200, 92),
@@ -60,7 +60,7 @@ pub fn test_translate_pc_to_line_column() {
 
     assert_eq!(None, translate_pc_to_line_column(&program_debug_info, 0));
     assert_eq!(
-        Some((8, 1, "UNIT_TEST.asm".to_string())),
+        Some((8, 1, "UNIT_TEST.sasm".to_string())),
         translate_pc_to_line_column(&program_debug_info, 0x0200)
     );
     // Odd instructions are impossible
@@ -69,11 +69,11 @@ pub fn test_translate_pc_to_line_column() {
         translate_pc_to_line_column(&program_debug_info, 0x0201)
     );
     assert_eq!(
-        Some((9, 1, "UNIT_TEST.asm".to_string())),
+        Some((9, 1, "UNIT_TEST.sasm".to_string())),
         translate_pc_to_line_column(&program_debug_info, 0x0202)
     );
     assert_eq!(
-        Some((15, 1, "UNIT_TEST.asm".to_string())),
+        Some((15, 1, "UNIT_TEST.sasm".to_string())),
         translate_pc_to_line_column(&program_debug_info, 0x0208)
     );
     assert_eq!(
@@ -89,32 +89,32 @@ pub fn test_translate_line_column_to_pc() {
     assert_eq!(None, translate_pc_to_line_column(&program_debug_info, 0));
     assert_eq!(
         Some(0x0200),
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (8, 1))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (8, 1))
     );
     assert_eq!(
         Some(0x0202),
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (9, 1))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (9, 1))
     );
     assert_eq!(
         Some(0x0208),
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (15, 1))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (15, 1))
     );
     assert_eq!(
         Some(0x020E),
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (21, 1))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (21, 1))
     );
     // EOF
     assert_eq!(
         None,
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (21, 20))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (21, 20))
     );
     // Past EOF
     assert_eq!(
         None,
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (21, 21))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (21, 21))
     );
     assert_eq!(
         None,
-        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.asm", (22, 1))
+        translate_line_column_to_pc(&program_debug_info, "UNIT_TEST.sasm", (22, 1))
     );
 }

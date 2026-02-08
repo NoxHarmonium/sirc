@@ -39,8 +39,9 @@ There are plans at some stage to make a "low accuracy" mode or a separate emulat
 ### vscode-sirc
 
 The vscode extension that provides syntax highlighting for SIRC flavoured assembly, as well as the interface to the
-debug server
-to allow for program debugging.
+debug server to allow for program debugging.
+
+Now published on the VS Code marketplace: https://marketplace.visualstudio.com/publishers/noxharmonium
 
 ### sirc-tiledit
 
@@ -138,7 +139,7 @@ The many stages to building this thing:
 - [x] Add a debugger to allow stepping through programs
 - [x] Write and run an extensive 'real world' test program to shake out any implementation bugs
 - [x] Write a test unit suite to test each instruction to allow to do some serious refactoring for performance (and also
-  a benchmark)
+      a benchmark)
 - [ ] Optimise the simulator code to make it usable (or add a "low accuracy" mode)
 - [ ] Document the CPU architecture and instruction set in a proper reference manual
 - [ ] (Optional) Write an LLVM backend to write programs in C (or even rust???)

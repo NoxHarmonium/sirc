@@ -1,0 +1,363 @@
+>; SYNTAX TEST "source.sirc-asm"
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>
+>; Basic mnemonics
+#^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI r1, #5
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDR r2, r3, r4
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.language.register.sirc
+#           ^^ source.sirc-asm
+#             ^^ source.sirc-asm constant.language.register.sirc
+>NOOP
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+>
+>; Mnemonics with condition codes
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI|== r1, #5
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>BRAN|!= @some_label
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^^^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>LOAD|CS r3, (#0, a)
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#             ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#               ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#                 ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#                  ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+>
+>; Mnemonics with status override
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI[S] r1, #0
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[A] r2, #1
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[N] r3, #2
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[s] r1, #0
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[a] r2, #1
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[n] r3, #2
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.numeric.decimal.sirc
+>
+>; Mnemonics with status override AND condition code
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI[S]|== r1, #5
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm keyword.control.condition.sirc
+#        ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#          ^ source.sirc-asm
+#           ^^ source.sirc-asm constant.language.register.sirc
+#             ^^ source.sirc-asm
+#               ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI[N]||>= r2, r3
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^^^^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.language.register.sirc
+#              ^^ source.sirc-asm
+#                ^^ source.sirc-asm constant.language.register.sirc
+>SHFT[s]|!= r4, LSL #3
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm keyword.control.condition.sirc
+#        ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#          ^ source.sirc-asm
+#           ^^ source.sirc-asm constant.language.register.sirc
+#             ^^ source.sirc-asm
+#               ^^^ source.sirc-asm keyword.control.shift-definition.sirc
+#                  ^ source.sirc-asm
+#                   ^^ source.sirc-asm constant.numeric.decimal.sirc
+>
+>; Mnemonics with just condition (no status override)
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI|CC r1, #10
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^^ source.sirc-asm constant.numeric.decimal.sirc
+>BRAN|NS :label
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^^^^^ source.sirc-asm entity.name.function.sirc
+>
+>; Edge cases - should still match mnemonic at word boundary
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+>ADDI|==
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+>ADDI[S]
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+>ADDI[S]|==
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.status-override.sirc
+#     ^ source.sirc-asm keyword.control.status-override.sirc constant.language.status-override-type.sirc
+#      ^ source.sirc-asm keyword.control.status-override.sirc
+#       ^ source.sirc-asm keyword.control.condition.sirc
+#        ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+>
+>; Should NOT match (but testing boundary behavior)
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>XADDI r1, #5
+#^^^^^^ source.sirc-asm
+#      ^^ source.sirc-asm constant.language.register.sirc
+#        ^^ source.sirc-asm
+#          ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDIx r1, #5
+#^^^^^^ source.sirc-asm
+#      ^^ source.sirc-asm constant.language.register.sirc
+#        ^^ source.sirc-asm
+#          ^^ source.sirc-asm constant.numeric.decimal.sirc
+>
+>; Shift operations
+#^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>SHFT r1, LSL #3
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^^ source.sirc-asm keyword.control.shift-definition.sirc
+#            ^ source.sirc-asm
+#             ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDI r2, #1, LSR #2
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.numeric.decimal.sirc
+#           ^^ source.sirc-asm
+#             ^^^ source.sirc-asm keyword.control.shift-definition.sirc
+#                ^ source.sirc-asm
+#                 ^^ source.sirc-asm constant.numeric.decimal.sirc
+>ADDR r3, r4, r5, ASR #1
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.language.register.sirc
+#           ^^ source.sirc-asm
+#             ^^ source.sirc-asm constant.language.register.sirc
+#               ^^ source.sirc-asm
+#                 ^^^ source.sirc-asm keyword.control.shift-definition.sirc
+#                    ^ source.sirc-asm
+#                     ^^ source.sirc-asm constant.numeric.decimal.sirc
+>
+>; Constants
+#^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>#0xFF
+#^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>#0b1010
+#^^^^^^^ source.sirc-asm constant.numeric.bin.sirc
+>#255
+#^^^^ source.sirc-asm constant.numeric.decimal.sirc
+>#-10
+#^^^^ source.sirc-asm constant.numeric.decimal.sirc
+>#0x00FF_FFFF
+#^^^^^^^^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>#42_9496_7295
+#^^^^^^^^^^^^^ source.sirc-asm constant.numeric.decimal.sirc
+>#0b1011_1001_1110_1010
+#^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm constant.numeric.bin.sirc
+>
+>; Labels and references
+#^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>:some_label
+#^^^^^^^^^^^ source.sirc-asm entity.name.function.sirc
+>@some_label
+#^^^^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>@label.u
+#^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+#      ^^^ source.sirc-asm
+>@label.l
+#^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+#      ^^^ source.sirc-asm
+>
+>; Directives
+#^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>.DB #0xFF
+#^^^ source.sirc-asm keyword.other.directive.sirc
+#   ^ source.sirc-asm
+#    ^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>.DW #0xFFFF
+#^^^ source.sirc-asm keyword.other.directive.sirc
+#   ^ source.sirc-asm
+#    ^^^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>.DQ #0xFFFFFFFF
+#^^^ source.sirc-asm keyword.other.directive.sirc
+#   ^ source.sirc-asm
+#    ^^^^^^^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>.ORG #0x1000
+#^^^^ source.sirc-asm keyword.other.directive.sirc
+#    ^ source.sirc-asm
+#     ^^^^^^^ source.sirc-asm constant.numeric.hex.sirc
+>.EQU
+#^^^^ source.sirc-asm keyword.other.directive.sirc
+>
+>; Comments
+#^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>; This is a comment
+#^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>ADDI r1, #5  ; inline comment
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.numeric.decimal.sirc
+#           ^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>
+>; Registers
+#^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>r1 r2 r3 r4 r5 r6 r7
+#^^ source.sirc-asm constant.language.register.sirc
+#  ^ source.sirc-asm
+#   ^^ source.sirc-asm constant.language.register.sirc
+#     ^ source.sirc-asm
+#      ^^ source.sirc-asm constant.language.register.sirc
+#        ^ source.sirc-asm
+#         ^^ source.sirc-asm constant.language.register.sirc
+#           ^ source.sirc-asm
+#            ^^ source.sirc-asm constant.language.register.sirc
+#              ^ source.sirc-asm
+#               ^^ source.sirc-asm constant.language.register.sirc
+#                 ^ source.sirc-asm
+#                  ^^ source.sirc-asm constant.language.register.sirc
+>lh ll ah al ph pl sh sl sr
+#^^ source.sirc-asm constant.language.register.sirc
+#  ^ source.sirc-asm
+#   ^^ source.sirc-asm constant.language.register.sirc
+#     ^ source.sirc-asm
+#      ^^ source.sirc-asm constant.language.register.sirc
+#        ^ source.sirc-asm
+#         ^^ source.sirc-asm constant.language.register.sirc
+#           ^ source.sirc-asm
+#            ^^ source.sirc-asm constant.language.register.sirc
+#              ^ source.sirc-asm
+#               ^^ source.sirc-asm constant.language.register.sirc
+#                 ^ source.sirc-asm
+#                  ^^ source.sirc-asm constant.language.register.sirc
+#                    ^ source.sirc-asm
+#                     ^^ source.sirc-asm constant.language.register.sirc
+#                       ^ source.sirc-asm
+#                        ^^ source.sirc-asm constant.language.register.sirc
+>a p s
+#^ source.sirc-asm constant.language.register.sirc
+# ^ source.sirc-asm
+#  ^ source.sirc-asm constant.language.register.sirc
+#   ^ source.sirc-asm
+#    ^ source.sirc-asm constant.language.register.sirc
+>
+>; Variables/placeholders
+#^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>$my_variable
+#^^^^^^^^^^^^ source.sirc-asm variable.language.placeholder.sirc
+>$test123
+#^^^^^^^^ source.sirc-asm variable.language.placeholder.sirc
+>
+>; Indirect addressing
+#^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>LOAD r1, (#5, a)
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#          ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+>STOR r2, (#0, p)+
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#          ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#                ^^ source.sirc-asm
+>

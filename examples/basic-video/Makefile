@@ -5,14 +5,14 @@ RUN_ARGS=-vv --program-file ./basic-video.bin --register-dump-file ./basic-video
 
 all: basic-video.bin
 
-basic-video.o: basic-video.asm
-	cargo run ${CARGO_ARGS} --bin assembler -- --input-file basic-video.asm --output-file basic-video.o
+basic-video.o: basic-video.sasm
+	cargo run ${CARGO_ARGS} --bin assembler -- --input-file basic-video.sasm --output-file basic-video.o
 
-serial-handler.o: serial-handler.asm
-	cargo run ${CARGO_ARGS} --bin assembler -- --input-file serial-handler.asm --output-file serial-handler.o
+serial-handler.o: serial-handler.sasm
+	cargo run ${CARGO_ARGS} --bin assembler -- --input-file serial-handler.sasm --output-file serial-handler.o
 
-data.o: data.asm
-	cargo run ${CARGO_ARGS} --bin assembler -- --input-file data.asm --output-file data.o
+data.o: data.sasm
+	cargo run ${CARGO_ARGS} --bin assembler -- --input-file data.sasm --output-file data.o
 
 basic-video.bin: basic-video.o serial-handler.o data.o
 	cargo run ${CARGO_ARGS} --bin linker -- --segment-offset 0 --output-file basic-video.bin basic-video.o serial-handler.o data.o

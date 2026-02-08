@@ -7,8 +7,8 @@ RUN_ARGS=-vv --program-file ./byte-sieve.bin --segment file:00F00000:FFFF:./mem.
 all: byte-sieve.bin
 
 
-byte-sieve.o: byte-sieve.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file byte-sieve.asm --output-file byte-sieve.o
+byte-sieve.o: byte-sieve.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file byte-sieve.sasm --output-file byte-sieve.o
 
 byte-sieve.bin: byte-sieve.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file byte-sieve.bin byte-sieve.o

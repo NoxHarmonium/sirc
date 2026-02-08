@@ -6,8 +6,8 @@ RUN_ARGS=-vv --program-file ./store-load.bin --segment scratch:00080000:FFFF  --
 
 all: store-load.bin
 
-store-load.o: store-load.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file store-load.asm --output-file store-load.o
+store-load.o: store-load.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file store-load.sasm --output-file store-load.o
 
 store-load.bin: store-load.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file store-load.bin store-load.o

@@ -1,5 +1,6 @@
 name: SIRC VM
 
+# Called implicitly by the coverage pipeline, so no branch triggers here (see coverage.yml)
 on:
   workflow_call:
 

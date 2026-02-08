@@ -6,8 +6,8 @@ RUN_ARGS=-vv --program-file ./boring.bin --register-dump-file ./boring.register-
 
 all: boring.bin
 
-boring.o: boring.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file boring.asm --output-file boring.o
+boring.o: boring.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file boring.sasm --output-file boring.o
 
 boring.bin: boring.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file boring.bin boring.o

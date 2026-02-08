@@ -6,11 +6,11 @@ RUN_ARGS=-vv --program-file ./faults.bin --segment SCRATCH:00010000:FFFF --segme
 
 all: faults.bin
 
-faults.o: faults.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file faults.asm --output-file faults.o
+faults.o: faults.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file faults.sasm --output-file faults.o
 
-faults-high.o: faults-high.asm
-	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file faults-high.asm --output-file faults-high.o
+faults-high.o: faults-high.sasm
+	cargo run ${CARGO_ARGS} --no-default-features --bin assembler -- --input-file faults-high.sasm --output-file faults-high.o
 
 faults.bin: faults.o
 	cargo run ${CARGO_ARGS} --no-default-features --bin linker -- --segment-offset 0 --output-file faults.bin faults.o

@@ -14,7 +14,7 @@ fn test_error_formatting(input: &str, expected_panic_msg: &str) -> String {
     match result {
         Ok(_) => panic!("{}", expected_panic_msg),
         Err(error) => {
-            let formatted_error = format_line_with_error("test.asm", input, &error);
+            let formatted_error = format_line_with_error("test.sasm", input, &error);
             let error_tree = error.to_string();
             format!("{formatted_error}\n{error_tree}\n")
         }
@@ -111,7 +111,7 @@ fn test_short_input() {
     );
     assert_snapshot!(combined, @r#"
     error: parsing failed
-      --> test.asm:1:6
+      --> test.sasm:1:6
     1 | LOAD r1
       |      ^
 
@@ -131,7 +131,7 @@ fn test_rets_invalid_addressing_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
     error: parsing failed
-      --> test.asm:2:6
+      --> test.sasm:2:6
     1 | LOAD r1, #0
     2 | RETS r3
       |      ^
@@ -153,7 +153,7 @@ fn test_wait_invalid_addressing_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
     error: parsing failed
-      --> test.asm:2:6
+      --> test.sasm:2:6
     1 | LOAD r1, #0
     2 | WAIT r3
       |      ^
@@ -175,7 +175,7 @@ fn test_load_invalid_addressing_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | LOAD r1, #0
             2 | LOAD r1, r2, r3
               |      ^
@@ -197,7 +197,7 @@ fn test_store_invalid_addressing_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | STOR (#0, a), r1
             2 | STOR r1, r2
               |      ^
@@ -219,7 +219,7 @@ fn test_arithmetic_immediate_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | ADDI r1, #5
             2 | ADDI r1, r2
               |      ^
@@ -241,7 +241,7 @@ fn test_arithmetic_register_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | ADDR r1, r2
             2 | ADDR r1, #5
               |      ^
@@ -263,7 +263,7 @@ fn test_branching_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | BRAN #-5
             2 | BRAN r1
               |      ^
@@ -285,7 +285,7 @@ fn test_ldea_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
             error: parsing failed
-              --> test.asm:2:6
+              --> test.sasm:2:6
             1 | LDEA a, (#0, a)
             2 | LDEA r1, r2
               |      ^
@@ -307,7 +307,7 @@ fn test_ljmp_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
     error: parsing failed
-      --> test.asm:2:6
+      --> test.sasm:2:6
     1 | LJMP a
     2 | LJMP r1
       |      ^
@@ -329,7 +329,7 @@ fn test_ljsr_invalid_mode_error_context() {
     );
     assert_snapshot!(combined, @r#"
     error: parsing failed
-      --> test.asm:3:6
+      --> test.sasm:3:6
     1 | LJSR a, #5
     2 | LJSR s, r3
     3 | LJSR r1

@@ -1,0 +1,44 @@
+name: VS Code Extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "vscode-sirc/**"
+      - ".github/workflows/vscode-sirc.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "vscode-sirc/**"
+      - ".github/workflows/vscode-sirc.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vscode-sirc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: vscode-sirc/.tool-versions
+          cache: "yarn"
+          cache-dependency-path: vscode-sirc/yarn.lock
+
+      - name: Install yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run syntax tests
+        run: npm test
+
+      - name: Package extension
+        run: yarn vsce package
