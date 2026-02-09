@@ -1,5 +1,5 @@
 use crate::parsers::instruction::{
-    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+    AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
@@ -132,7 +132,9 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         };
 
     let incorrect_shft_usage_error = || -> AsmResult<InstructionToken> {
-        let error_string = format!("The [{tag}] meta instruction only supports a single register operand with a shift definition (e.g. SHFT r1, LSL #1).");
+        let error_string = format!(
+            "The [{tag}] meta instruction only supports a single register operand with a shift definition (e.g. SHFT r1, LSL #1)."
+        );
         Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
             ErrorKind::Fail,
@@ -141,7 +143,10 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
     };
 
     match operands.as_slice() {
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::ShiftDefinition(shift_definition_data)] => {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::ShiftDefinition(shift_definition_data),
+        ] => {
             if &tag == "SHFT" {
                 let (shift_operand, shift_type, shift_count) =
                     split_shift_definition_data(shift_definition_data);
@@ -163,7 +168,9 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                     },
                 ))
             } else {
-                let error_string = format!("The [{tag}] meta instruction does not support a single register operand with a shift definition. Only the SHFT instruction supports that.");
+                let error_string = format!(
+                    "The [{tag}] meta instruction does not support a single register operand with a shift definition. Only the SHFT instruction supports that."
+                );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
                     i_after_instruction,
                     ErrorKind::Fail,
@@ -171,7 +178,10 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 )))
             }
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type)] => {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::Immediate(immediate_type),
+        ] => {
             if &tag == "SHFT" {
                 incorrect_shft_usage_error()
             } else {
@@ -208,8 +218,11 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 }
             }
         }
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(immediate_type), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::Immediate(immediate_type),
+            AddressingMode::ShiftDefinition(shift_definition_data),
+        ] => {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             if &tag == "SHFT" {
@@ -273,7 +286,9 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
             }
         }
         _ => {
-            let error_string = format!("The [{tag}] opcode only supports immediate->register addressing mode (e.g. ADDI y1, #1)");
+            let error_string = format!(
+                "The [{tag}] opcode only supports immediate->register addressing mode (e.g. ADDI y1, #1)"
+            );
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i_after_instruction,
                 ErrorKind::Fail,

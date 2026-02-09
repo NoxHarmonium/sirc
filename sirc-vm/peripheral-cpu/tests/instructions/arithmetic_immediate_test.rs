@@ -5,7 +5,7 @@ use peripheral_cpu::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
         StatusRegisterUpdateSource,
     },
-    registers::{set_sr_bit, sr_bit_is_set, RegisterIndexing, Registers, StatusRegisterFields},
+    registers::{RegisterIndexing, Registers, StatusRegisterFields, set_sr_bit, sr_bit_is_set},
 };
 
 use crate::instructions::common;

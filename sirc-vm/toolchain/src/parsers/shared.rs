@@ -6,19 +6,19 @@ use nom::error::{ErrorKind, ParseError};
 use nom::sequence::{pair, preceded, terminated, tuple};
 use nom::{AsChar, IResult};
 use nom::{Err, InputTakeAtPosition, Parser};
+use nom_supreme::ParserExt;
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
 use nom_supreme::multi::collect_separated_terminated;
 use nom_supreme::tag::complete::tag;
-use nom_supreme::ParserExt;
 
-use super::instruction::{parse_instruction_token, ShiftDefinitionData};
+use super::instruction::{ShiftDefinitionData, parse_instruction_token};
 use crate::parsers::data::{parse_data_token, parse_equ_token};
 use crate::types::data::RefToken;
 use crate::types::object::RefType;
 use crate::types::shared::{
-    LabelToken, NumberToken, NumberType, OriginToken, Token, REF_TOKEN_LOWER_WORD_SUFFIX,
-    REF_TOKEN_OFFSET_SUFFIX, REF_TOKEN_UPPER_WORD_SUFFIX,
+    LabelToken, NumberToken, NumberType, OriginToken, REF_TOKEN_LOWER_WORD_SUFFIX,
+    REF_TOKEN_OFFSET_SUFFIX, REF_TOKEN_UPPER_WORD_SUFFIX, Token,
 };
 use peripheral_cpu::coprocessors::processing_unit::definitions::{ShiftOperand, ShiftType};
 

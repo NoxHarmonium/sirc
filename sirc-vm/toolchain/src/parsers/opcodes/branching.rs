@@ -3,7 +3,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+            AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
         },
         shared::split_shift_definition_data,
     },
@@ -76,8 +76,9 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
-        let error_string =
-            format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
+        let error_string = format!(
+            "The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect."
+        );
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
             ErrorKind::Fail,
@@ -203,8 +204,10 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        [AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
+        [
+            AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register),
+            AddressingMode::ShiftDefinition(shift_definition_data),
+        ] => {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((

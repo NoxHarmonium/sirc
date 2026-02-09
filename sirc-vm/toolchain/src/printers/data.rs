@@ -1,7 +1,7 @@
 use crate::printers::shared::{print_number_token, print_ref_token};
 use crate::types::data::{
-    DataToken, DataType, EquToken, DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE,
-    EQU_TOKEN,
+    DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE, DataToken, DataType, EQU_TOKEN,
+    EquToken,
 };
 use crate::types::object::RefType;
 

@@ -14,8 +14,8 @@ use crate::coprocessors::processing_unit::stages::write_back::WriteBackExecutor;
 use crate::coprocessors::shared::{ExecutionPhase, Executor};
 use crate::raise_fault;
 use crate::registers::{
-    sr_bit_is_set, ExceptionUnitRegisters, FullAddressRegisterAccess, RegisterName, Registers,
-    StatusRegisterFields,
+    ExceptionUnitRegisters, FullAddressRegisterAccess, RegisterName, Registers,
+    StatusRegisterFields, sr_bit_is_set,
 };
 
 const PRIVILEGED_REGISTERS: &[u8] = &[

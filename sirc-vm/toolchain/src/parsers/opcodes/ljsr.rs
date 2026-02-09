@@ -1,7 +1,7 @@
 use super::super::shared::AsmResult;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
-    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+    AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
 };
 use crate::types::instruction::InstructionToken;
 use crate::types::object::RefType;
@@ -48,8 +48,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
-        let error_string =
-            "The [LJSR] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        let error_string = "The [LJSR] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
             ErrorKind::Fail,
@@ -78,45 +77,48 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             },
         )),
         // LJSR a, #offset - with immediate offset
-        [AddressingMode::DirectAddressRegister(source_register), AddressingMode::Immediate(offset)] => {
-            match offset {
-                ImmediateType::Value(offset) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(
-                            offset.to_owned(),
-                            source_register,
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, source_register),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, source_register),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-            }
-        }
+        [
+            AddressingMode::DirectAddressRegister(source_register),
+            AddressingMode::Immediate(offset),
+        ] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(
+                        offset.to_owned(),
+                        source_register,
+                    ),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(0x0, source_register),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(0x0, source_register),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         // LJSR a, r1 - with register offset
-        [AddressingMode::DirectAddressRegister(source_register), AddressingMode::DirectRegister(displacement_register)] =>
-        {
+        [
+            AddressingMode::DirectAddressRegister(source_register),
+            AddressingMode::DirectRegister(displacement_register),
+        ] => {
             Ok((
                 i,
                 InstructionToken {

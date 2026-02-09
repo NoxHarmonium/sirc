@@ -4,7 +4,7 @@ use peripheral_cpu::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
     },
     new_cpu_peripheral,
-    registers::{set_sr_bit, sr_bit_is_set, FullAddressRegisterAccess, StatusRegisterFields},
+    registers::{FullAddressRegisterAccess, StatusRegisterFields, set_sr_bit, sr_bit_is_set},
 };
 
 use crate::exceptions::common::{

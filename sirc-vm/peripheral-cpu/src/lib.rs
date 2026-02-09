@@ -40,7 +40,7 @@ use log::{debug, error, trace, warn};
 use coprocessors::{
     exception_unit::{
         definitions::{ExceptionPriorities, ExceptionUnitOpCodes, Faults},
-        execution::{construct_cause_value, get_cause_register_value, ExceptionUnitExecutor},
+        execution::{ExceptionUnitExecutor, construct_cause_value, get_cause_register_value},
     },
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
@@ -50,7 +50,7 @@ use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
 
-use crate::registers::{get_hardware_interrupt_enable, ExceptionLinkRegister, Registers};
+use crate::registers::{ExceptionLinkRegister, Registers, get_hardware_interrupt_enable};
 
 // The 8th exception link register stores metadata about faults
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
@@ -132,7 +132,9 @@ pub fn raise_fault(
         // TODO: What would happen in hardware if a fault was raised when one was already pending
         // category=Hardware
         // Is this possible in hardware? If so, what would happen?
-        panic!("Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending.");
+        panic!(
+            "Cannot raise fault when one is pending. Trying to raise {fault:?} but {pending_fault:?} is already pending."
+        );
     }
 
     debug!(
@@ -143,7 +145,9 @@ pub fn raise_fault(
     let current_exception_level = eu_registers.current_exception_level;
     let is_double_fault = current_exception_level >= ExceptionPriorities::Fault as u8;
     let resolved_fault = if is_double_fault {
-        error!("Double fault! [{fault:?}] raised when a fault was already being serviced. Jumping to double fault vector.");
+        error!(
+            "Double fault! [{fault:?}] raised when a fault was already being serviced. Jumping to double fault vector."
+        );
         Faults::DoubleFault
     } else {
         fault
@@ -297,7 +301,9 @@ impl CpuPeripheral {
             let enabled_interrupts = level & hw_interrupt_enable;
 
             if enabled_interrupts > 0 {
-                trace!("Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
+                trace!(
+                    "Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])"
+                );
                 // TODO: Clarify what happens when software exception is triggered in interrupt handler
                 // category=Hardware
                 // By design it should be ignored, or cause a fault. At the moment it might just queue it up?

@@ -651,9 +651,9 @@ mod tests {
     ];
 
     use crate::coprocessors::processing_unit::definitions::{
-        all_condition_flags, all_instructions, all_shift_operands, all_shift_types, ConditionFlags,
-        ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData,
-        ShortImmediateInstructionData,
+        ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
+        RegisterInstructionData, ShortImmediateInstructionData, all_condition_flags,
+        all_instructions, all_shift_operands, all_shift_types,
     };
     use crate::coprocessors::processing_unit::encoding::decode_instruction;
 
