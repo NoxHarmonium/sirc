@@ -16,11 +16,11 @@
 use std::{cell::RefCell, path::PathBuf, process::exit, thread};
 
 use clap::Parser;
-use log::{error, info, Level};
+use log::{Level, error, info};
 
 use sirc_vm::debug_adapter::debug_map::read_debug_map;
 use sirc_vm::debug_adapter::server::{create_server_channels, start_server};
-use sirc_vm::{run_vm, run_vm_debug, Vm};
+use sirc_vm::{Vm, run_vm, run_vm_debug};
 
 use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
@@ -170,7 +170,9 @@ fn main() {
         run_vm(&vm, dump_file);
     }
 
-    info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
+    info!(
+        "Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes."
+    );
     exit(0);
 }
 

@@ -6,8 +6,8 @@ use crate::{
         stages::{alu::perform_shift, shared::ShiftParameters},
     },
     registers::{
-        sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, StatusRegisterFields,
-        SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
+        ExceptionUnitRegisters, RegisterName, Registers, SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
+        StatusRegisterFields, sr_bit_is_set,
     },
 };
 

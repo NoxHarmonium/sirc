@@ -2,8 +2,8 @@ use crate::printers::data::{print_data_token, print_equ_token};
 use crate::types::data::RefToken;
 use crate::types::object::RefType;
 use crate::types::shared::{
-    LabelToken, NumberToken, NumberType, Token, REF_TOKEN_LOWER_WORD_SUFFIX,
-    REF_TOKEN_OFFSET_SUFFIX, REF_TOKEN_UPPER_WORD_SUFFIX,
+    LabelToken, NumberToken, NumberType, REF_TOKEN_LOWER_WORD_SUFFIX, REF_TOKEN_OFFSET_SUFFIX,
+    REF_TOKEN_UPPER_WORD_SUFFIX, Token,
 };
 use itertools::Itertools;
 

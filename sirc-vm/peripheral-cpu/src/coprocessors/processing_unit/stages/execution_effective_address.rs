@@ -7,11 +7,11 @@ use crate::{
         shared::ExecutionPhase,
     },
     raise_fault,
-    registers::{sr_bit_is_set, ExceptionUnitRegisters, Registers, StatusRegisterFields},
+    registers::{ExceptionUnitRegisters, Registers, StatusRegisterFields, sr_bit_is_set},
 };
 
 use super::{
-    alu::{perform_alu_operation, AluOp},
+    alu::{AluOp, perform_alu_operation},
     shared::{DecodedInstruction, IntermediateRegisters, StageExecutor},
 };
 
@@ -83,7 +83,10 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 let (incremented_displacement, displacement_overflowed_after_inc) =
                     displaced.overflowing_add(decoded.addr_inc as u16);
 
-                trace!("Calculate offset: ad_l_ 0x{:X} sr_b_: 0x{:X} displaced: 0x{displaced:X} displacement_overflowed: {displacement_overflowed}", decoded.ad_l_ , decoded.sr_b_);
+                trace!(
+                    "Calculate offset: ad_l_ 0x{:X} sr_b_: 0x{:X} displaced: 0x{displaced:X} displacement_overflowed: {displacement_overflowed}",
+                    decoded.ad_l_, decoded.sr_b_
+                );
 
                 match decoded.addr_inc {
                     -1 => {

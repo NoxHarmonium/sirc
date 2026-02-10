@@ -1,7 +1,7 @@
 use insta::assert_snapshot;
 use nom_supreme::{
     error::ErrorTree,
-    final_parser::{final_parser, Location},
+    final_parser::{Location, final_parser},
 };
 use toolchain::parsers::shared::parse_tokens;
 use toolchain::printers::shared::print_tokens;

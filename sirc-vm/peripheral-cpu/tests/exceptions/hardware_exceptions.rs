@@ -1,7 +1,7 @@
 use assert_hex::assert_eq_hex;
 use peripheral_cpu::{
     new_cpu_peripheral,
-    registers::{set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, StatusRegisterFields},
+    registers::{StatusRegisterFields, set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set},
 };
 
 use crate::exceptions::common::{

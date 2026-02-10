@@ -1,10 +1,10 @@
 use std::{cell::RefCell, fs, path::PathBuf, time::Duration};
 
-use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
+use criterion::{Criterion, SamplingMode, criterion_group, criterion_main};
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
-use sirc_vm::{run_vm, Vm};
+use sirc_vm::{Vm, run_vm};
 
 static PROGRAM_SEGMENT: &str = "PROGRAM";
 static FILE_SEGMENT: &str = "FILE";

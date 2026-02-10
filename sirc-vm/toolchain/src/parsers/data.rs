@@ -3,13 +3,13 @@ use nom::{
     combinator::map,
     error::{ErrorKind, FromExternalError},
 };
+use nom_supreme::ParserExt;
 use nom_supreme::error::ErrorTree;
 use nom_supreme::tag::complete::tag;
-use nom_supreme::ParserExt;
 
-use super::shared::{lexeme, parse_number, parse_placeholder, parse_symbol_reference, AsmResult};
+use super::shared::{AsmResult, lexeme, parse_number, parse_placeholder, parse_symbol_reference};
 use crate::types::data::{
-    RefToken, DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE, EQU_TOKEN,
+    DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE, EQU_TOKEN, RefToken,
 };
 use crate::types::shared::{NumberToken, Token};
 use crate::types::{

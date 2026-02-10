@@ -1,9 +1,9 @@
 use insta::assert_snapshot;
 use nom_supreme::{
     error::ErrorTree,
-    final_parser::{final_parser, Location},
+    final_parser::{Location, final_parser},
 };
-use pretty_hex::{config_hex, HexConfig};
+use pretty_hex::{HexConfig, config_hex};
 use toolchain::types::shared::Token;
 use toolchain::{data::object::build_object, parsers::shared::parse_tokens};
 

@@ -5,8 +5,8 @@ use peripheral_cpu::{
         RegisterInstructionData, ShiftOperand, ShiftType,
     },
     registers::{
-        set_sr_bit, AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress,
-        StatusRegisterFields,
+        AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress, StatusRegisterFields,
+        set_sr_bit,
     },
 };
 

@@ -1,13 +1,13 @@
 use assert_hex::assert_eq_hex;
 use peripheral_bus::conversion::bytes_to_words;
 use peripheral_bus::device::{BusAssertions, Device};
+use peripheral_cpu::CpuPeripheral;
 use peripheral_cpu::coprocessors::processing_unit::definitions::InstructionData;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::registers::SegmentedAddress;
-use peripheral_cpu::CpuPeripheral;
 
 pub fn build_test_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {

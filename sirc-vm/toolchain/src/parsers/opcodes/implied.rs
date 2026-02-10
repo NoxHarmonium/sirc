@@ -39,8 +39,9 @@ pub fn implied(i: &str) -> AsmResult<InstructionToken> {
     let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
         instructions(i)?;
     if status_register_update_source.is_some() {
-        let error_string =
-            format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
+        let error_string = format!(
+            "The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect."
+        );
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i,
             ErrorKind::Fail,

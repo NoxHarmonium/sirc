@@ -1,10 +1,10 @@
-use crate::types::data::{DataToken, DataType, DB_VALUE, DQ_VALUE, DW_VALUE};
+use crate::types::data::{DB_VALUE, DQ_VALUE, DW_VALUE, DataToken, DataType};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 use crate::types::shared::Token;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
-    INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
+    INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS, ImmediateInstructionData, InstructionData,
+    ShortImmediateInstructionData,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use sirc_vm::debug_adapter::types::ObjectDebugInfo;
@@ -24,7 +24,9 @@ fn resolve_placeholder(
     match instruction_data {
         InstructionData::Immediate(immediate_instruction) => {
             if resolved_value > &0xFFFF {
-                panic!("Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)");
+                panic!(
+                    "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)"
+                );
             } else {
                 InstructionData::Immediate(ImmediateInstructionData {
                     value: resolved_value
@@ -37,7 +39,9 @@ fn resolve_placeholder(
         }
         InstructionData::ShortImmediate(short_immediate_instruction) => {
             if resolved_value > &0xFF {
-                panic!("Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)");
+                panic!(
+                    "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)"
+                );
             } else {
                 InstructionData::ShortImmediate(ShortImmediateInstructionData {
                     value: resolved_value

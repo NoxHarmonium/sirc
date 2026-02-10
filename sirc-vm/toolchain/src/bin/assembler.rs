@@ -16,7 +16,7 @@
 use clap::Parser;
 
 use nom_supreme::error::ErrorTree;
-use nom_supreme::final_parser::{final_parser, Location};
+use nom_supreme::final_parser::{Location, final_parser};
 
 use toolchain::data::object::build_object;
 use toolchain::utils::error_formatter::format_line_with_error;

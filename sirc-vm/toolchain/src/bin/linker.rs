@@ -17,7 +17,7 @@
 
 use clap::Parser;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, Instruction, InstructionData, INSTRUCTION_SIZE_WORDS,
+    INSTRUCTION_SIZE_WORDS, ImmediateInstructionData, Instruction, InstructionData,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::{
     decode_instruction, encode_instruction,
@@ -29,7 +29,7 @@ use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use toolchain::types::object::{merge_object_definitions, ObjectDefinition, RefType};
+use toolchain::types::object::{ObjectDefinition, RefType, merge_object_definitions};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -115,10 +115,14 @@ fn main() -> io::Result<()> {
             RefType::LowerWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[0],
             RefType::UpperWord => bytemuck::cast::<u32, [u16; 2]>(target_offset_words)[1],
             RefType::FullAddress => {
-                panic!("RefType should not be FullAddress when resolving for instructions (try the DQ directive)")
+                panic!(
+                    "RefType should not be FullAddress when resolving for instructions (try the DQ directive)"
+                )
             }
             RefType::Implied => {
-                panic!("RefType should not be Implied at this point (it should be resolved in the linker)")
+                panic!(
+                    "RefType should not be Implied at this point (it should be resolved in the linker)"
+                )
             }
         };
 
