@@ -1,0 +1,182 @@
+\chapter{CPU Architecture}
+\label{ch:cpu-architecture}
+
+\section{Overview}
+
+The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing a six-stage pipeline to execute
+instructions in exactly 6 clock cycles. The architecture is composed of several key functional units that work together
+to fetch, decode, execute, and complete instructions.
+
+\section{Six-Stage Pipeline}
+
+All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage pipeline architecture. This fixed
+timing greatly simplifies software development and hardware design.
+
+\begin{enumerate}
+	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
+	      \begin{itemize}
+		      \item Fetch bits 31--16 from memory address in PC
+		      \item Increment PC by 1
+	      \end{itemize}
+
+	\item \textbf{Instruction Fetch (Low Word)} -- 1 cycle
+	      \begin{itemize}
+		      \item Fetch bits 15--0 from memory address in PC
+		      \item Increment PC by 1
+		      \item Instruction is now fully available for decode
+	      \end{itemize}
+
+	\item \textbf{Decode and Register Fetch} -- 1 cycle
+	      \begin{itemize}
+		      \item Decode instruction opcode and operands
+		      \item Read source registers
+		      \item Evaluate condition codes
+	      \end{itemize}
+
+	\item \textbf{Execute and Address Calculation} -- 1 cycle
+	      \begin{itemize}
+		      \item Perform ALU operation, or
+		      \item Calculate effective memory address
+		      \item Apply shift operations if specified
+	      \end{itemize}
+
+	\item \textbf{Memory Access} -- 1 cycle
+	      \begin{itemize}
+		      \item Read from memory (LOAD), or
+		      \item Write to memory (STOR), or
+		      \item No operation (register-only instructions)
+	      \end{itemize}
+
+	\item \textbf{Write Back} -- 1 cycle
+	      \begin{itemize}
+		      \item Write result to destination register
+		      \item Update status register flags if applicable
+		      \item Update address registers for post-increment/pre-decrement
+	      \end{itemize}
+\end{enumerate}
+
+\section{Architectural Components}
+
+Figure~\ref{fig:cpu-block-diagram} illustrates the major functional units within the SIRC-1 CPU and their
+interconnections.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,trim=0 140mm 0 0,clip]{diagrams/cpu-block-diagram.pdf}
+\caption{SIRC-1 CPU Pipeline Architecture}
+\label{fig:cpu-block-diagram}
+\end{figure}
+
+
+\subsection{Control Unit (CU)}
+
+The Control Unit sits at the heart of the SIRC-1 CPU, coordinating all other functional units throughout the
+instruction execution pipeline. It decodes instructions and generates control signals that orchestrate data movement
+and operations across the CPU.
+
+Key responsibilities include:
+\begin{itemize}
+	\item Instruction fetch and decode
+	\item Pipeline stage coordination
+	\item Control signal generation for all functional units
+	\item Condition code evaluation for conditional execution
+\end{itemize}
+
+\subsection{Arithmetic Logic Unit (ALU)}
+
+The ALU performs all arithmetic and logical operations on register values. It supports the following operations:
+
+\begin{itemize}
+	\item \textbf{Arithmetic:} Addition, Subtraction (with and without carry)
+	\item \textbf{Logical:} AND, OR, XOR
+	\item \textbf{Comparison:} Test and compare operations
+	\item \textbf{Status Flag Generation:} Carry, Overflow, Negative, Zero
+\end{itemize}
+
+The ALU operates exclusively on data from the Register File (after optional shifting) and outputs results either back
+to the Register File or to memory via the data bus.
+
+\subsection{Addressing Unit (AU)}
+
+The Addressing Unit calculates memory addresses and manages address-related operations. It is responsible for:
+
+\begin{itemize}
+	\item Computing effective addresses from base + displacement
+	\item Handling pre-decrement and post-increment addressing modes
+	\item Updating address register pairs (l, a, s, p) for LDEA, jump, and branch instructions
+	\item Presenting calculated addresses to the address bus
+\end{itemize}
+
+The AU works in parallel with the ALU during the execution stage, allowing address calculation to occur simultaneously
+with ALU operations.
+
+\subsection{Register File}
+
+The Register File contains all CPU registers organized into three categories:
+
+\begin{itemize}
+	\item \textbf{General Purpose Registers:} \reg{r1}--\reg{r7}
+	\item \textbf{Address Register Pairs:} \reg{l} (link), \reg{a} (address), \reg{s} (stack), \reg{p} (program counter)
+	\item \textbf{Status Register:} \reg{sr}
+\end{itemize}
+
+The Register File provides multi-port access, allowing the ALU, AU, and Control Unit to read and write registers as
+needed during each pipeline stage. All registers are 16 bits wide, though address register pairs can be combined to
+form 24-bit addresses.
+
+\subsection{Barrel Shifters}
+
+Two barrel shifter units sit between the Register File and the CU, enabling efficient bit manipulation operations.
+
+The barrel shifters support logical shift left (LSL), logical shift right (LSR), arithmetic shift right (ASR), and
+rotate operations. Shift amounts can be specified as immediate values or dynamically from register contents.
+
+The shift is applied to the second source operand when fetching the source registers for an instruction.
+Shifts cannot be applied to the result or any other source operand.
+
+\section{Instruction Execution Pipeline}
+
+The SIRC-1 executes every instruction in exactly 6 clock cycles using a fixed pipeline with the following stages:
+
+\begin{description}
+	\item[Stage 1--3: Fetch and Decode] The instruction is fetched from memory (2 words = 32 bits), decoded to determine the
+	      instruction type, and all required registers are read from the Register File. Shift operations on source operands are
+	      performed during this phase.
+
+	\item[Stage 4: Execution and Address Calculation] The ALU performs the specified arithmetic or logical operation, while the
+	      AU simultaneously calculates any required memory addresses. This parallel execution improves efficiency for memory
+	      reference instructions.
+
+	\item[Stage 5: Memory Access] If the instruction requires memory access (load or store), the memory operation is performed
+	      using the address calculated in Stage 4. Non-memory instructions bypass this stage.
+
+	\item[Stage 6: Write Back] Results are written back to the Register File. For ALU instructions, the result (potentially
+	      shifted) is written to the destination register. For load instructions, data from memory is written. The status
+	      register is updated with any new condition flags.
+\end{description}
+
+\section{Design Characteristics}
+
+\subsection{Combinatorial Logic Implementation}
+
+The SIRC-1 uses pure combinatorial logic with no microcode engine. Each pipeline stage is implemented as combinatorial
+circuits that process data in a single clock cycle. This approach:
+
+\begin{itemize}
+	\item Simplifies the hardware design
+	\item Provides deterministic, fixed-time execution
+	\item Eliminates the complexity of microcode sequencing
+	\item Makes the CPU behavior fully predictable and easy to reason about
+\end{itemize}
+
+\subsection{Fixed Execution Time}
+
+All instructions execute in exactly 6 clock cycles, regardless of instruction type or operands. This design choice
+simplifies software timing and eliminates the need for branch prediction or complex pipeline control logic found in
+variable-time architectures.
+
+\subsection{Parallel Functional Units}
+
+The ALU and AU operate in parallel during Stage 4, allowing address calculation to proceed simultaneously with
+arithmetic operations. This parallelism enables efficient execution of memory reference instructions without additional
+clock cycles.
