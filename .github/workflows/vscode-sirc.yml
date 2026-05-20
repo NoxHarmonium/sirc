@@ -28,17 +28,14 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: vscode-sirc/.tool-versions
-          cache: "yarn"
-          cache-dependency-path: vscode-sirc/yarn.lock
-
-      - name: Install yarn
-        run: npm install -g yarn
+          cache: "npm"
+          cache-dependency-path: vscode-sirc/package-lock.json
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Run syntax tests
         run: npm test
 
       - name: Package extension
-        run: yarn vsce package
+        run: npx vsce package
