@@ -70,10 +70,9 @@ impl MemoryMapped for DebugDevice {
 
         match address {
             0x0 => self.trigger_bus_error = value == 0x1,
-            0x1..=0x5
-                if value == 0x1 => {
-                    self.trigger_interrupt = address as u8;
-                }
+            0x1..=0x5 if value == 0x1 => {
+                self.trigger_interrupt = address as u8;
+            }
             _ => {}
         }
     }
