@@ -23,6 +23,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          workspaces: sirc-vm
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-c@0.10.19+cargo-0.93.0
@@ -45,6 +48,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          workspaces: sirc-vm
 
       # Not really linting but we should check that all targets build in release
       - name: Build
@@ -66,6 +72,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          workspaces: sirc-vm
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
 
@@ -106,6 +115,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2.9.1
+        with:
+          workspaces: sirc-vm
       - uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run ${{ matrix.example-name }} and capture coverage
