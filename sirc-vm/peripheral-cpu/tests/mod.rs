@@ -15,8 +15,10 @@
 )]
 #![deny(warnings)]
 
+use ctor::ctor;
+
 #[cfg(test)]
-#[ctor::ctor]
+#[ctor(unsafe)]
 fn init() {
     stderrlog::new()
         .module(module_path!())
