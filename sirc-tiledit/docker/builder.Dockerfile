@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:noble
+FROM docker.io/library/ubuntu:resolute
 
 LABEL version="1.0"
 LABEL maintainer="Sean Dawson <contact@seandawson.info>"
