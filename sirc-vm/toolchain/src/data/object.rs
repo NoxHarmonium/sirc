@@ -191,7 +191,7 @@ pub fn build_object(
     // Calculate hash as a stable way to refer to sources
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
-    debug_info.checksum = format!("{:X}", hasher.finalize());
+    debug_info.checksum = hex::encode(hasher.finalize());
 
     ObjectDefinition {
         symbols,

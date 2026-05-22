@@ -15,8 +15,9 @@ postcard = { version = "1.0.8", features = ["alloc"] }
 serde = "1.0.200"
 bytemuck = "1.15.0"
 num-traits = "0.2.18"
-sha2 = "0.10.8"
+sha2 = "0.11.0"
 colored = "3.0"
+hex = "0.4.3"
 
 [dev-dependencies]
 insta = { version = "1.43.1", features = ["yaml"] }
