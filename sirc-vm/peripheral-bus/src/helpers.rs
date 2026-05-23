@@ -1,4 +1,4 @@
-use crate::{conversion::bytes_to_words, BusPeripheral};
+use crate::{BusPeripheral, conversion::bytes_to_words};
 use num::Integer;
 
 ///

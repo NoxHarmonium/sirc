@@ -14,7 +14,7 @@
 
 mod types;
 
-use crate::types::{PaletteRegister, PaletteSize, PpuPixel, PpuRegisters, PIXEL_BUFFER_SIZE};
+use crate::types::{PIXEL_BUFFER_SIZE, PaletteRegister, PaletteSize, PpuPixel, PpuRegisters};
 use log::info;
 use minifb::WindowOptions;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
@@ -44,9 +44,9 @@ const WIDTH_PIXELS: u16 = 256;
 const HEIGHT_PIXELS: u16 = 224;
 
 const TOTAL_LINES: u16 = 262; // NTSC
-                              // This just refers to the lines the TV can technically display
-                              // the console will output less than this
-                              // Number of vsync lines = TOTAL_LINES - VSYNC_LINE
+// This just refers to the lines the TV can technically display
+// the console will output less than this
+// Number of vsync lines = TOTAL_LINES - VSYNC_LINE
 
 pub const VSYNC_INTERRUPT: u8 = 0x1 << 3; // l4 - 1
 fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
@@ -596,11 +596,11 @@ mod tests {
     use crate::tile_data::{DIGIT_TILES, PALETTE_1, PALETTE_2, TEST_PATTERNS, TEST_TILEMAP};
     use crate::types::{Backgrounds, PaletteRegister, PaletteSize, TileLine, TilemapEntry};
     use crate::{
-        new_video_device, unpack_rgb, RenderStateMachine, VideoDevice, HEIGHT_PIXELS, TOTAL_LINES,
-        WIDTH_PIXELS,
+        HEIGHT_PIXELS, RenderStateMachine, TOTAL_LINES, VideoDevice, WIDTH_PIXELS,
+        new_video_device, unpack_rgb,
     };
     use image::ImageFormat;
-    use oxipng::{optimize_from_memory, Options, StripChunks};
+    use oxipng::{Options, StripChunks, optimize_from_memory};
     use peripheral_bus::device::{BusAssertions, Device};
     use std::io::Cursor;
 

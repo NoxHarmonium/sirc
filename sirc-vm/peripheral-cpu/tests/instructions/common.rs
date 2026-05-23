@@ -1,14 +1,14 @@
 use std::ops::Range;
 
 use peripheral_bus::memory_mapped_device::new_stub_memory_mapped_device;
-use peripheral_bus::{new_bus_peripheral, BusPeripheral};
+use peripheral_bus::{BusPeripheral, new_bus_peripheral};
+use peripheral_cpu::CYCLES_PER_INSTRUCTION;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    InstructionData, INSTRUCTION_SIZE_WORDS,
+    INSTRUCTION_SIZE_WORDS, InstructionData,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
 use peripheral_cpu::registers::FullAddress;
-use peripheral_cpu::CYCLES_PER_INSTRUCTION;
-use peripheral_cpu::{new_cpu_peripheral, registers::Registers, CpuPeripheral};
+use peripheral_cpu::{CpuPeripheral, new_cpu_peripheral, registers::Registers};
 
 static DUMMY_SEGMENT: &str = "DUMMY";
 static PROGRAM_SEGMENT: &str = "PROGRAM";

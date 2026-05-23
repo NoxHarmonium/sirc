@@ -4,7 +4,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+            AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
         },
     },
     types::object::RefType,
@@ -26,8 +26,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
     if status_register_update_source.is_some() {
-        let error_string =
-            "The [LDEA] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        let error_string = "The [LDEA] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
             ErrorKind::Fail,
@@ -49,8 +48,10 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
         };
 
     match operands.as_slice() {
-        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
-        {
+        [
+            AddressingMode::DirectAddressRegister(dest_register),
+            AddressingMode::IndirectImmediateDisplacement(offset, address_register),
+        ] => {
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -95,8 +96,10 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 )),
             }
         }
-        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] =>
-        {
+        [
+            AddressingMode::DirectAddressRegister(dest_register),
+            AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register),
+        ] => {
             Ok((
                 i,
                 InstructionToken {

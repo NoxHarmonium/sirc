@@ -167,9 +167,9 @@ fn test_load_indirect_register(
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                    "test_load_indirect_register: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
-                    expected_registers, current.registers
-                );
+            "test_load_indirect_register: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+            expected_registers, current.registers
+        );
     }
     TestResult::from_bool(test_successful)
 }
@@ -238,9 +238,9 @@ fn test_load_indirect_register_post_increment(
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                        "test_load_indirect_register_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
-                        expected_registers, current.registers
-                    );
+            "test_load_indirect_register_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+            expected_registers, current.registers
+        );
     }
     TestResult::from_bool(test_successful)
 }
@@ -286,9 +286,9 @@ fn test_load_indirect_immediate_post_increment(test_data: LoadTestData) -> TestR
     let test_successful = expected_registers == current.registers;
     if !test_successful {
         println!(
-                        "test_load_indirect_immediate_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
-                        expected_registers, current.registers
-                    );
+            "test_load_indirect_immediate_post_increment: Final register state does not match expected:\nexpected: {:X?}\nactual:{:X?}\n",
+            expected_registers, current.registers
+        );
     }
     TestResult::from_bool(test_successful)
 }

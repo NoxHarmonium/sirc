@@ -1,6 +1,6 @@
 use super::super::shared::AsmResult;
 use crate::parsers::instruction::{
-    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+    AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
 };
 use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
@@ -48,8 +48,9 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         instructions(i)?;
 
     if status_register_update_source.is_some() {
-        let error_string =
-            format!("The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.");
+        let error_string = format!(
+            "The [{tag}] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect."
+        );
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i,
             ErrorKind::Fail,
@@ -165,7 +166,10 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         }
         (
             "ETFR",
-            [AddressingMode::DirectRegister(register), AddressingMode::Immediate(immediate_type)],
+            [
+                AddressingMode::DirectRegister(register),
+                AddressingMode::Immediate(immediate_type),
+            ],
         ) => {
             // If the destination is r7, only transfer the return status register, and not the return address
             if let ImmediateType::Value(value) = immediate_type {
@@ -208,7 +212,10 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         }
         (
             "ETFR",
-            [AddressingMode::DirectAddressRegister(address_register), AddressingMode::Immediate(immediate_type)],
+            [
+                AddressingMode::DirectAddressRegister(address_register),
+                AddressingMode::Immediate(immediate_type),
+            ],
         ) => {
             // If the destination is a, only transfer the return address, and not the return status register
             if let ImmediateType::Value(value) = immediate_type {
@@ -281,7 +288,10 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         }
         (
             "ETTR",
-            [AddressingMode::Immediate(immediate_type), AddressingMode::DirectRegister(register)],
+            [
+                AddressingMode::Immediate(immediate_type),
+                AddressingMode::DirectRegister(register),
+            ],
         ) => {
             // If the destination is r7, only transfer the return status register, and not the return address
             if let ImmediateType::Value(value) = immediate_type {
@@ -324,7 +334,10 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
         }
         (
             "ETTR",
-            [AddressingMode::Immediate(immediate_type), AddressingMode::DirectAddressRegister(address_register)],
+            [
+                AddressingMode::Immediate(immediate_type),
+                AddressingMode::DirectAddressRegister(address_register),
+            ],
         ) => {
             // If the destination is a, only transfer the return address, and not the return status register
             if let ImmediateType::Value(value) = immediate_type {
