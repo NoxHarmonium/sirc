@@ -1,5 +1,19 @@
 # SIRC-1 CPU Reference Manual
 
+## Diagram Tooling
+
+The CPU block diagram is sourced from Graphviz and committed as a rendered PDF under `diagrams/`.
+
+- Building the manual does not require Graphviz when the committed diagram PDF is up to date.
+- Graphviz is only required when changing `.dot` sources and regenerating diagrams.
+- Regenerate diagrams explicitly with `make graphviz`.
+
+On macOS you can install Graphviz with:
+
+```bash
+brew install graphviz
+```
+
 ## Make Commands
 
 ```bash

@@ -10,14 +10,16 @@ LATEX_FLAGS = -interaction=nonstopmode -halt-on-error
 
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 TEX := $(MAIN).tex preamble.tex $(wildcard chapters/*.tex)
+DOT := $(wildcard diagrams/*.dot)
+DIAGRAM_PDF := $(DOT:.dot=.pdf)
 
-.PHONY: all clean cleanall quick view format format-check
+.PHONY: all clean cleanall quick graphviz view format format-check
 
 # Default target - build the PDF
 all: $(OUTPUT).pdf
 
 # Build the PDF (multiple passes for cross-references)
-$(OUTPUT).pdf: $(TEX)
+$(OUTPUT).pdf: graphviz $(TEX)
 	@echo "Building PDF (pass 1/3)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex > /dev/null || (cat $(MAIN).log && exit 1)
 	@echo "Building PDF (pass 2/3)..."
@@ -28,11 +30,22 @@ $(OUTPUT).pdf: $(TEX)
 	@echo "✓ PDF generated: $(OUTPUT).pdf"
 
 # Quick build (single pass, for drafts)
-quick: $(TEX)
+quick: graphviz $(TEX)
 	@echo "Quick build (single pass)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
 	@mv $(MAIN).pdf $(OUTPUT).pdf
 	@echo "✓ Quick PDF generated: $(OUTPUT).pdf"
+
+graphviz: $(DIAGRAM_PDF)
+
+diagrams/%.pdf: diagrams/%.dot
+	@echo "Rendering diagram: $<"
+	@if command -v dot >/dev/null 2>&1; then \
+		dot -Tpdf "$<" -o "$@"; \
+	else \
+		echo "Error: Graphviz 'dot' is required to regenerate $@"; \
+		exit 1; \
+	fi
 
 # Clean temporary files
 clean:
