@@ -48,9 +48,9 @@ COPI #0x1180                  ; Coprocessor 1, opcode 0x180 (vector 0x80)
 
 The Exception Unit handles:
 \begin{itemize}
-	\item Hardware exceptions (faults, traps)
-	\item Software exceptions
-	\item Interrupts (multiple priority levels)
+	\item Faults (abort exceptions, highest priority)
+	\item Hardware exceptions (interrupts, multiple priority levels)
+	\item Software exceptions (traps)
 	\item Privileged operations
 \end{itemize}
 
