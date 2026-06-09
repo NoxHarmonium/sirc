@@ -17,7 +17,7 @@ exception.
 
 When an Abort Exception occurs, the instruction causing the exception does not have any effect (it is cancelled after
 decode stage). The program address stored in the link register is the address of the faulting instruction so it can be
-retried (RETI will return to the same instruction again) This is important for things like privilege violation because
+retried (RETE will return to the same instruction again) This is important for things like privilege violation because
 you don't want the illegal instruction to modify any state. These are also referred to as faults. The vectors for abort
 exceptions are in the 0x1-0xF range.
 
@@ -95,11 +95,11 @@ exceptions are in the 0x1-0xF range.
 
 A hardware exception occurs when interrupt pins are signalled by external hardware. These are also referred to as
 "interrupts". When a hardware exception occurs the current instruction is completed, and control is transferred to
-different vectors based on the interrupt "priority". The vectors for abort exceptions are in the 0x10-0x50 range.
+different vectors based on the interrupt "priority". The vectors for hardware exceptions are in the 0x10-0x50 range.
 
 \subsection{User Exceptions (Traps)}
 
-A user exception occurs when the program executes a an EXCP instruction that signals the exception coprocessor that it
+A user exception occurs when the program executes an EXCP instruction that signals the exception coprocessor that it
 should trigger an exception. They are usually used by programs running in protected mode to switch to supervisor mode
 in a controlled way. They are also referred to as "traps". The vectors for user exceptions are in the 0x60-0xFF range.
 
@@ -227,13 +227,13 @@ The status register contains 4 individual enable bits (bits 9-12 in the privileg
 maskable hardware interrupt line can trigger an exception:
 
 \begin{itemize}
-	\item Bit 9 (E1): Hardware Interrupt Line 1 (Exception Level 5, highest priority)
-	\item Bit 10 (E2): Hardware Interrupt Line 2 (Exception Level 4)
-	\item Bit 11 (E3): Hardware Interrupt Line 3 (Exception Level 3)
-	\item Bit 12 (E4): Hardware Interrupt Line 4 (Exception Level 2)
+	\item Bit 9 (E1): Hardware Interrupt Line 1 (Level 1, lowest maskable priority)
+	\item Bit 10 (E2): Hardware Interrupt Line 2 (Level 2)
+	\item Bit 11 (E3): Hardware Interrupt Line 3 (Level 3)
+	\item Bit 12 (E4): Hardware Interrupt Line 4 (Level 4, highest maskable priority)
 \end{itemize}
 
-\textbf{Note:} Hardware Interrupt Line 5 (Exception Level 1) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
+\textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
 It will always trigger an exception when asserted, regardless of the enable bit settings. Bit 13 is used for the
 Exception Active flag instead.
 

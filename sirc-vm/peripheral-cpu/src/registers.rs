@@ -22,13 +22,13 @@ pub enum StatusRegisterFields {
     /// Setting bit 8 disables "privileged mode". Some instructions (and maybe addressing modes?) are only available in privileged mode
     /// and if they are used in when this flag is set, an exception is thrown
     ProtectedMode = 0b0000_0001 << u8::BITS,
-    /// Enable hardware interrupt line 1 (highest priority, Level 5)
+    /// Enable hardware interrupt line 1 (Level 1, lowest maskable priority)
     HardwareInterruptEnable1 = 0b0000_0010 << u8::BITS,
-    /// Enable hardware interrupt line 2 (Level 4)
+    /// Enable hardware interrupt line 2 (Level 2)
     HardwareInterruptEnable2 = 0b0000_0100 << u8::BITS,
     /// Enable hardware interrupt line 3 (Level 3)
     HardwareInterruptEnable3 = 0b0000_1000 << u8::BITS,
-    /// Enable hardware interrupt line 4 (Level 2)
+    /// Enable hardware interrupt line 4 (Level 4, highest maskable priority)
     HardwareInterruptEnable4 = 0b0001_0000 << u8::BITS,
     /// Set when the CPU is handling an exception (`exception_level` != 0), cleared when returning to level 0
     /// Note: Hardware interrupt line 5 is an NMI and cannot be masked
@@ -461,7 +461,7 @@ pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
 /// Returns a 5-bit mask of which hardware interrupts are enabled.
 ///
 /// Each bit corresponds to a hardware interrupt line (1-5), where 1 = enabled, 0 = disabled.
-/// Bit 0 = HW interrupt 1 (highest priority), Bit 3 = HW interrupt 4 (lowest maskable)
+/// Bit 0 = HW interrupt 1 (lowest maskable priority), Bit 3 = HW interrupt 4 (highest maskable priority)
 /// Note: Hardware interrupt 5 is an NMI and is always enabled (bit 4 is always set)
 ///
 /// ```
@@ -491,7 +491,7 @@ pub fn get_hardware_interrupt_enable(registers: &Registers) -> u8 {
 /// Sets which hardware interrupts are enabled via a 5-bit mask.
 ///
 /// Each bit corresponds to a hardware interrupt line (1-5), where 1 = enabled, 0 = disabled.
-/// Bit 0 = HW interrupt 1 (highest priority), Bit 3 = HW interrupt 4 (lowest maskable)
+/// Bit 0 = HW interrupt 1 (lowest maskable priority), Bit 3 = HW interrupt 4 (highest maskable priority)
 /// Note: Hardware interrupt 5 is an NMI and cannot be disabled (bit 4 is ignored)
 ///
 /// ```

@@ -6,7 +6,7 @@ pub mod vectors {
     // The full vector range is 8 bits, so there are a possible 128 32-bit vector addresses
     // that can be defined. Multiply the vector ID by two to get the actual memory address
     // The first 48 addresses are privileged and can only be raised by hardware or in system
-    // mode. The remaining 80 addresses can be raised in user mode to trap into system mode.
+    // mode. The remaining 80 addresses can be raised in user mode to trap into supervisor mode.
     //
     // Priority is determined 7 minus the value first nibble (e.g. 0x00 is priority 7, 0x40 is priority 3, 0x60 and above are all priority 1)
 
@@ -48,7 +48,7 @@ pub mod vectors {
     /// of the CPU will remain stable and future ISA improvements will be done via co-processors.
     pub const INVALID_OPCODE_FAULT: u8 = 0x04;
 
-    /// Raised when not in system mode and a privileged operation is performed:
+    /// Raised when not in supervisor mode and a privileged operation is performed:
     /// 1. Writing to the high word of any address registers
     /// 2. Writing to the high byte of the SR register
     /// 3. Triggering exception below 0x80
@@ -97,7 +97,7 @@ pub mod vectors {
 
     // Hardware Exceptions
 
-    // Special level - When level five hardware exception is masked and
+    // Special level - When level five hardware exception is already being handled and
     // another one is triggered, it isn't ignored, it triggers a LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
     // (see above)
     pub const LEVEL_FIVE_HARDWARE_EXCEPTION: u8 = 0x10; // 7 - 1 = p6
@@ -121,7 +121,7 @@ pub mod vectors {
 // Exception types
 // Abort Exception means that the instruction does not have any effect (it is cancelled after decode)
 // The program address stored in the link register is the address of the faulting instruction
-// so it can be retried (RETI will return to the same instruction again)
+// so it can be retried (RETE will return to the same instruction again)
 // This is important for things like privilege violation because you don't want the illegal
 // instruction to do anything.
 // Regular Exception means the instruction finishes (is not cancelled)

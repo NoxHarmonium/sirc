@@ -29,15 +29,14 @@ timing greatly simplifies software development and hardware design.
 	\item \textbf{Decode and Register Fetch} -- 1 cycle
 	      \begin{itemize}
 		      \item Decode instruction opcode and operands
-		      \item Read source registers
+		      \item Read source registers (optionally shifted)
 		      \item Evaluate condition codes
 	      \end{itemize}
 
 	\item \textbf{Execute and Address Calculation} -- 1 cycle
 	      \begin{itemize}
-		      \item Perform ALU operation, or
+		      \item Perform ALU operation, and/or
 		      \item Calculate effective memory address
-		      \item Apply shift operations if specified
 	      \end{itemize}
 
 	\item \textbf{Memory Access} -- 1 cycle
@@ -62,7 +61,7 @@ interconnections.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth,trim=0 140mm 0 0,clip]{diagrams/cpu-block-diagram.pdf}
+\includegraphics[width=\textwidth]{diagrams/cpu-block-diagram.pdf}
 \caption{SIRC-1 CPU Pipeline Architecture}
 \label{fig:cpu-block-diagram}
 \end{figure}
@@ -133,27 +132,6 @@ rotate operations. Shift amounts can be specified as immediate values or dynamic
 
 The shift is applied to the second source operand when fetching the source registers for an instruction.
 Shifts cannot be applied to the result or any other source operand.
-
-\section{Instruction Execution Pipeline}
-
-The SIRC-1 executes every instruction in exactly 6 clock cycles using a fixed pipeline with the following stages:
-
-\begin{description}
-	\item[Stage 1--3: Fetch and Decode] The instruction is fetched from memory (2 words = 32 bits), decoded to determine the
-	      instruction type, and all required registers are read from the Register File. Shift operations on source operands are
-	      performed during this phase.
-
-	\item[Stage 4: Execution and Address Calculation] The ALU performs the specified arithmetic or logical operation, while the
-	      AU simultaneously calculates any required memory addresses. This parallel execution improves efficiency for memory
-	      reference instructions.
-
-	\item[Stage 5: Memory Access] If the instruction requires memory access (load or store), the memory operation is performed
-	      using the address calculated in Stage 4. Non-memory instructions bypass this stage.
-
-	\item[Stage 6: Write Back] Results are written back to the Register File. For ALU instructions, the result (potentially
-	      shifted) is written to the destination register. For load instructions, data from memory is written. The status
-	      register is updated with any new condition flags.
-\end{description}
 
 \section{Design Characteristics}
 

@@ -101,7 +101,7 @@ mode will be ignored (the write affects only the lower byte).
 		      \item Privileged coprocessor operations (opcodes > 0x07xx)
 	      \end{itemize}
 	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. With the
-	      exception of writing to the status register, preforming a restricted operation will cause a "privilege violation"
+	      exception of writing to the status register, performing a restricted operation will cause a "privilege violation"
 	      fault.
 \end{description}
 
@@ -110,13 +110,13 @@ mode will be ignored (the write affects only the lower byte).
 These four bits individually control whether each of the four maskable hardware interrupt lines is enabled:
 
 \begin{itemize}
-	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 5, highest priority)
-	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 4)
+	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 1, lowest maskable priority)
+	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 2)
 	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (Level 3)
-	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 2)
+	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 4, highest maskable priority)
 \end{itemize}
 
-\textbf{Note:} Hardware Interrupt Line 5 (Level 1) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
+\textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
 be disabled via the status register.
 
 When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
