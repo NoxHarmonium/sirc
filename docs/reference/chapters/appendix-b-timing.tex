@@ -3,10 +3,12 @@
 
 \section{Overview}
 
-All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage pipeline architecture. This fixed
+All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage execution phase model. This fixed
 timing greatly simplifies software development and hardware design.
 
-\section{Six-Stage Pipeline}
+\section{Six-Stage Execution Phases}
+
+For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 \begin{enumerate}
 	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
@@ -44,12 +46,12 @@ timing greatly simplifies software development and hardware design.
 When a conditional instruction's condition is not met:
 \begin{itemize}
 	\item The instruction still takes 6 cycles to complete
-	\item All pipeline stages execute normally
+	\item All execution phases run normally
 	\item The write-back stage is disabled (no register or memory modification)
 	\item Status flags are not updated
 \end{itemize}
 
-This means conditional instructions do not branch and avoid pipeline stalls, but failed conditions still consume
+This means conditional instructions do not branch and avoid control-flow stalls, but failed conditions still consume
 execution time.
 
 \section{Program Timing Examples}
@@ -90,14 +92,14 @@ ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
 
 \section{Performance Considerations}
 
-\subsection{No Pipeline Stalls}
+\subsection{No Execution Phase Stalls}
 
 The SIRC-1 does not implement pipelining in the traditional sense where multiple instructions are in flight
 simultaneously. Instead:
 
 \begin{itemize}
 	\item Each instruction completes fully before the next begins
-	\item No data hazards or pipeline bubbles
+	\item No data hazards or phase bubbles
 	\item No branch prediction penalties
 	\item Execution time is completely predictable
 \end{itemize}

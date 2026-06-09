@@ -12,8 +12,8 @@ three categories:
 	\item Status register (\reg{sr})
 \end{itemize}
 
-All registers are 16 bits wide. However, the address registers can be used in pairs to form 24-bit addresses for memory
-operations.
+All programmer-visible registers are 16 bits wide. Address registers can be used in pairs to form 24-bit addresses for
+memory operations.
 
 \section{General Purpose Registers}
 
@@ -64,8 +64,8 @@ register.
 	\begin{bytefield}[bitwidth=0.8em]{32}
 		\bitheader{0-31} \\
 		\bitbox{8}{\color{sircgray}Unused} &
-		\bitbox{8}{High[7:0]} &
-		\bitbox{16}{Low[15:0]} \\
+		\bitbox{8}{High Register} &
+		\bitbox{16}{Low Register} \\
 		\bitbox{8}{\color{sircgray}\tiny bits 31--24} &
 		\bitbox{8}{\tiny bits 23--16} &
 		\bitbox{16}{\tiny bits 15--0}
@@ -92,8 +92,8 @@ However, it is worth noting that the Link Register pair will be updated automati
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Byte          & \reg{lh} (privileged) \\
-		Low Word           & \reg{ll}              \\
+		High Register     & \reg{lh} (privileged) \\
+		Low Register      & \reg{ll}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -114,8 +114,8 @@ or \mnemonic{BRSR}, the return address is automatically saved to this register p
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Byte          & \reg{ah} (privileged) \\
-		Low Word           & \reg{al}              \\
+		High Register     & \reg{ah} (privileged) \\
+		Low Register      & \reg{al}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -136,8 +136,8 @@ A general-purpose address register pair used for pointer operations and memory a
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Byte          & \reg{sh} (privileged) \\
-		Low Word           & \reg{sl}              \\
+		High Register     & \reg{sh} (privileged) \\
+		Low Register      & \reg{sl}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -159,8 +159,8 @@ modes are particularly useful with this register.
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Byte          & \reg{ph} (privileged) \\
-		Low Word           & \reg{pl}              \\
+		High Register     & \reg{ph} (privileged) \\
+		Low Register      & \reg{pl}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -183,8 +183,11 @@ divided into two bytes:
 
 \begin{itemize}
 	\item \textbf{Lower Byte (bits 7--0):} Condition flags, accessible in both supervisor and protected modes
-	\item \textbf{Upper Byte (bits 15--8):} Control flags, accessible only in supervisor mode (privileged)
+	\item \textbf{Upper Byte (bits 15--8):} Control and privileged state
 \end{itemize}
+
+In protected mode, reads of \reg{sr} are redacted to the lower byte (upper byte reads as zero). Writes in protected
+mode only update the lower byte and preserve the upper byte.
 
 The status register is discussed in detail in Chapter~\ref{ch:status-register}.
 
@@ -205,6 +208,12 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
+
+The status register differs slightly from the high address registers:
+\begin{itemize}
+	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but writes trigger a privilege violation fault.
+	\item The status register's privileged byte is hidden on reads in protected mode, and cannot be modified directly from protected mode writes.
+\end{itemize}
 
 \section{Register Addressing}
 
