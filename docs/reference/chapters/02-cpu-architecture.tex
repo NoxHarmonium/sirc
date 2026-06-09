@@ -130,7 +130,7 @@ Two barrel shifter units sit between the Register File and the CU, enabling effi
 The barrel shifters support logical shift left (LSL), logical shift right (LSR), arithmetic shift right (ASR), and
 rotate operations. Shift amounts can be specified as immediate values or dynamically from register contents.
 
-The shift is applied to the second source operand when fetching the source registers for an instruction.
+The shift is applied to the first source operand when fetching the source registers for an instruction.
 Shifts cannot be applied to the result or any other source operand.
 
 \section{Design Characteristics}
