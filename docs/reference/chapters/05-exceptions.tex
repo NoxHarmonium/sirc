@@ -368,215 +368,27 @@ features like system calls, context switching, and debuggers.
 \section{Exception Coprocessor Instructions}
 
 The exception coprocessor (coprocessor ID 0x1) provides several specialized instructions for exception handling and
-system control. These instructions are accessed via the coprocessor instruction format, with the exception coprocessor
-opcode specified in the instruction encoding.
+system control.
 
-\subsection{EXCP - Software Exception (User Exception)}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege} & \textbf{Purpose} \\
+		\midrule
+		\mnemonic{EXCP}      & 0x1             & User                & Trigger a software exception (trap) \\
+		\mnemonic{WAIT}      & 0x9             & Supervisor          & Enter wait state until an exception occurs \\
+		\mnemonic{RETE}      & 0xA             & Supervisor          & Return from an exception handler \\
+		\mnemonic{RSET}      & 0xB             & Supervisor          & Reset CPU state and jump to reset vector \\
+		\mnemonic{ETFR}      & 0xC             & Supervisor          & Copy saved exception state from a link register \\
+		\mnemonic{ETTR}      & 0xD             & Supervisor          & Write CPU register state back to a link register \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Coprocessor Instruction Summary}
+	\label{tab:exception-coprocessor-summary}
+\end{table}
 
-\textbf{Opcode:} 0x1 \quad \textbf{Privilege:} User
-
-\textbf{Syntax:} \texttt{EXCP \#vector}
-
-Triggers a software exception (trap) at the specified vector. The vector must be in the range 0x60-0xFF (user exception
-vectors). This instruction is used by user-mode programs to invoke system calls or request supervisor mode services.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Validates that the vector is in the user range (0x60-0xFF)
-	\item Stores current PC and SR in link register 0 (software exception register)
-	\item Clears the Protected Mode bit (enters supervisor mode)
-	\item Sets interrupt mask to 1
-	\item Jumps to the handler address specified in the vector table
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-; Trigger user exception at vector 0x80
-EXCP #0x80                    ; System call trap
-\end{lstlisting}
-
-\subsection{WAIT - Wait for Exception}
-
-\textbf{Opcode:} 0x9 \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{WAIT}
-
-Puts the CPU into a low-power waiting state until an exception occurs. This is useful for idle loops in operating
-systems or when waiting for hardware interrupts.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Sets the \texttt{waiting\_for\_exception} flag in the exception unit
-	\item CPU halts instruction fetch until an exception is raised
-	\item When an exception occurs, normal exception processing resumes
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-main_loop:
-    WAIT                      ; Sleep until interrupt
-    ; ... process interrupt ...
-    BRAN main_loop
-\end{lstlisting}
-
-\subsection{RETE - Return from Exception}
-
-\textbf{Opcode:} 0xA \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{RETE}
-
-Returns from an exception handler by restoring the saved processor state from the current link register.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Determines which link register to use based on current interrupt mask level
-	\item Restores PC from link register's return address
-	\item Restores SR from link register's return status register
-	\item Resumes execution at the restored address
-\end{enumerate}
-
-Note: For fault exceptions, this returns to the faulting instruction. For other exceptions, this returns to the
-instruction after the one that was executing when the exception occurred.
-
-\textbf{Example:}
-\begin{lstlisting}
-bus_fault_handler:
-    ; ... handle bus fault ...
-    RETE                      ; Return to faulting instruction
-\end{lstlisting}
-
-\subsection{RSET - System Reset}
-
-\textbf{Opcode:} 0xB \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{RSET}
-
-Performs a software reset of the processor by clearing the status register and jumping to the reset vector.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Clears the status register (SR = 0x0)
-	\item Reads the reset vector (vector 0x00) from the vector table
-	\item Sets PC to the address specified in the reset vector
-	\item Execution begins at the reset handler
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-; Perform software reset
-RSET                          ; Jump to reset vector
-\end{lstlisting}
-
-\subsection{ETFR - Exception Transfer From Register}
-
-\textbf{Opcode:} 0xC \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:}
-\begin{lstlisting}
-ETFR #n                       ; Transfer both to a and r7
-ETFR a, #n                    ; Transfer return address to a only
-ETFR r7, #n                   ; Transfer return SR to r7 only
-\end{lstlisting}
-
-Transfers data from a link register to CPU registers. The instruction encoding specifies which link register (0-7) and
-which components (address and/or status register) to transfer.
-
-\textbf{Parameters:}
-\begin{itemize}
-	\item Bits 3-0: Link register index (0-7)
-	\item Bits 5-4: Register select
-	      \begin{itemize}
-		      \item 0: No transfer (NOP)
-		      \item 1: Transfer return address to address register (A)
-		      \item 2: Transfer return status register to R7
-		      \item 3: Transfer both address to A and status to R7
-	      \end{itemize}
-\end{itemize}
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Selects the specified link register (0-7)
-	\item Based on register select bits:
-	      \begin{itemize}
-		      \item If bit 0 set: Copy link register's return address to address register (AH:AL)
-		      \item If bit 1 set: Copy link register's return status register to R7
-	      \end{itemize}
-\end{enumerate}
-
-This instruction is useful for exception handlers that need to examine the saved state, such as debuggers or system
-call handlers that need to access parameters passed in the calling context.
-
-\textbf{Examples:}
-\begin{lstlisting}
-; Get both return address and status from fault link register
-ETFR #6                       ; a = return addr, r7 = return SR
-
-; Get only the return address to modify it
-ETFR a, #6                    ; a = return addr from link reg 6
-LOAD al, @after_odd_address   ; Fix alignment issue
-ETTR #6, a                    ; Write corrected address back
-
-; Get only the status register to inspect flags
-ETFR r7, #7                   ; r7 = fault metadata
-ANDI r7, #0x7                 ; Mask off CPU phase bits
-\end{lstlisting}
-
-\subsection{ETTR - Exception Transfer To Register}
-
-\textbf{Opcode:} 0xD \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:}
-\begin{lstlisting}
-ETTR #n                       ; Transfer both a and r7
-ETTR #n, a                    ; Transfer a to return address only
-ETTR #n, r7                   ; Transfer r7 to return SR only
-\end{lstlisting}
-
-Transfers data from CPU registers to a link register. The instruction encoding specifies which link register (0-7) and
-which components (address and/or status register) to transfer.
-
-\textbf{Parameters:}
-\begin{itemize}
-	\item Bits 3-0: Link register index (0-7)
-	\item Bits 5-4: Register select
-	      \begin{itemize}
-		      \item 0: No transfer (NOP)
-		      \item 1: Transfer address register (A) to return address
-		      \item 2: Transfer R7 to return status register
-		      \item 3: Transfer both A to return address and R7 to status
-	      \end{itemize}
-\end{itemize}
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Selects the specified link register (0-7)
-	\item Based on register select bits:
-	      \begin{itemize}
-		      \item If bit 0 set: Copy address register (AH:AL) to link register's return address
-		      \item If bit 1 set: Copy R7 to link register's return status register
-	      \end{itemize}
-\end{enumerate}
-
-This instruction allows exception handlers to modify the saved state before returning.
-
-\textbf{Examples:}
-\begin{lstlisting}
-; Fix up return address after alignment fault
-ETFR a, #6                    ; Get current return address
-LOAD al, @after_odd_address   ; Correct the lower word
-ETTR #6, a                    ; Write corrected address back
-
-; Clear protected mode bit in saved status register
-ETFR r7, #6                   ; Get current return SR
-ANDI r7, #0xFEFF              ; Clear protected mode bit
-ETTR #6, r7                   ; Write modified SR back
-
-; Transfer both modified address and status
-LOAD ah, $PROGRAM_SEGMENT     ; Set up new return address
-LOAD al, @return_point
-LOAD r7, #0x0000              ; Clear status register
-ETTR #6                       ; Write both back to link reg 6
-\end{lstlisting}
+For full syntax, operation details, and worked examples, see Chapter~\ref{ch:meta-instructions}.
 
 \subsection{Internal Instructions}
 

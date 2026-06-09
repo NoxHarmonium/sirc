@@ -76,16 +76,8 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 
 \subsection{Execution Model}
 
-The SIRC-1 employs a six-stage execution sequence (one stage per clock):
-
-\begin{enumerate}
-	\item \textbf{Instruction Fetch (First Word)} -- Fetch bits 31--16 from memory
-	\item \textbf{Instruction Fetch (Second Word)} -- Fetch bits 15--0 from memory
-	\item \textbf{Decode and Register Fetch} -- Decode the instruction and read source registers
-	\item \textbf{Execute and Address Calculation} -- Perform ALU operation or calculate effective address
-	\item \textbf{Memory Access} -- Read from or write to memory (or NOP for register operations)
-	\item \textbf{Write Back} -- Write results to destination register
-\end{enumerate}
+The SIRC-1 executes every instruction through six sequential execution phases (one phase per clock cycle).
+For a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 This fixed six-stage model means that all instructions take exactly 6 clock cycles to complete, regardless of their
 complexity. While this may seem wasteful for simple register operations that don't require memory access, it

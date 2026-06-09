@@ -3,13 +3,13 @@
 
 \section{Overview}
 
-The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing a six-stage pipeline to execute
+The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing six sequential execution phases to execute
 instructions in exactly 6 clock cycles. The architecture is composed of several key functional units that work together
 to fetch, decode, execute, and complete instructions.
 
-\section{Six-Stage Pipeline}
+\section{Six-Stage Execution Phases}
 
-All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage pipeline architecture. This fixed
+All SIRCIS instructions execute in exactly 6 clock cycles, following a six-phase execution model. This fixed
 timing greatly simplifies software development and hardware design.
 
 \begin{enumerate}
@@ -62,7 +62,7 @@ interconnections.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{diagrams/cpu-block-diagram.pdf}
-\caption{SIRC-1 CPU Pipeline Architecture}
+\caption{SIRC-1 CPU Execution Phase Architecture}
 \label{fig:cpu-block-diagram}
 \end{figure}
 
@@ -70,13 +70,13 @@ interconnections.
 \subsection{Control Unit (CU)}
 
 The Control Unit sits at the heart of the SIRC-1 CPU, coordinating all other functional units throughout the
-instruction execution pipeline. It decodes instructions and generates control signals that orchestrate data movement
+instruction execution phases. It decodes instructions and generates control signals that orchestrate data movement
 and operations across the CPU.
 
 Key responsibilities include:
 \begin{itemize}
 	\item Instruction fetch and decode
-	\item Pipeline stage coordination
+	\item Execution phase coordination
 	\item Control signal generation for all functional units
 	\item Condition code evaluation for conditional execution
 \end{itemize}
@@ -120,7 +120,7 @@ The Register File contains all CPU registers organized into three categories:
 \end{itemize}
 
 The Register File provides multi-port access, allowing the ALU, AU, and Control Unit to read and write registers as
-needed during each pipeline stage. All registers are 16 bits wide, though address register pairs can be combined to
+needed during each execution phase. All registers are 16 bits wide, though address register pairs can be combined to
 form 24-bit addresses.
 
 \subsection{Barrel Shifters}
@@ -137,7 +137,7 @@ Shifts cannot be applied to the result or any other source operand.
 
 \subsection{Combinatorial Logic Implementation}
 
-The SIRC-1 uses pure combinatorial logic with no microcode engine. Each pipeline stage is implemented as combinatorial
+The SIRC-1 uses pure combinatorial logic with no microcode engine. Each execution phase is implemented as combinatorial
 circuits that process data in a single clock cycle. This approach:
 
 \begin{itemize}
@@ -150,7 +150,7 @@ circuits that process data in a single clock cycle. This approach:
 \subsection{Fixed Execution Time}
 
 All instructions execute in exactly 6 clock cycles, regardless of instruction type or operands. This design choice
-simplifies software timing and eliminates the need for branch prediction or complex pipeline control logic found in
+simplifies software timing and eliminates the need for branch prediction or complex multi-stage control logic found in
 variable-time architectures.
 
 \subsection{Parallel Functional Units}
