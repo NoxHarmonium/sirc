@@ -51,7 +51,7 @@ exceptions are in the 0x1-0xF range.
 	      those programs breaking in future iterations of the CPU but it is expected that the core of the CPU will remain stable
 	      and future ISA improvements will be done via co-processors.
 
-	\item \textbf{Privilege Violation Fault:} Raised when not in system mode and a privileged operation is performed:
+	\item \textbf{Privilege Violation Fault:} Raised when not in supervisor mode and a privileged operation is performed:
 	      \begin{enumerate}
 		      \item Writing to the high word of any address registers
 		      \item Writing to the high byte of the SR register
