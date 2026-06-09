@@ -10,45 +10,11 @@ timing greatly simplifies software development and hardware design.
 
 \begin{enumerate}
 	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
-	      \begin{itemize}
-		      \item Fetch bits 31--16 from memory address in PC
-		      \item Increment PC by 1
-	      \end{itemize}
-
 	\item \textbf{Instruction Fetch (Low Word)} -- 1 cycle
-	      \begin{itemize}
-		      \item Fetch bits 15--0 from memory address in PC
-		      \item Increment PC by 1
-		      \item Instruction is now fully available for decode
-	      \end{itemize}
-
 	\item \textbf{Decode and Register Fetch} -- 1 cycle
-	      \begin{itemize}
-		      \item Decode instruction opcode and operands
-		      \item Read source registers
-		      \item Evaluate condition codes
-	      \end{itemize}
-
 	\item \textbf{Execute and Address Calculation} -- 1 cycle
-	      \begin{itemize}
-		      \item Perform ALU operation, or
-		      \item Calculate effective memory address
-		      \item Apply shift operations if specified
-	      \end{itemize}
-
 	\item \textbf{Memory Access} -- 1 cycle
-	      \begin{itemize}
-		      \item Read from memory (LOAD), or
-		      \item Write to memory (STOR), or
-		      \item No operation (register-only instructions)
-	      \end{itemize}
-
 	\item \textbf{Write Back} -- 1 cycle
-	      \begin{itemize}
-		      \item Write result to destination register
-		      \item Update status register flags if applicable
-		      \item Update address registers for post-increment/pre-decrement
-	      \end{itemize}
 \end{enumerate}
 
 \section{Timing Characteristics}
