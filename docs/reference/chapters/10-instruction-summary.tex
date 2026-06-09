@@ -136,7 +136,7 @@ opcodes:
 		\midrule
 		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
 		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
-		\mnemonic{WAIT}           & \texttt{COP \#0x1F00}     & Wait for interrupt     \\
+		\mnemonic{WAIT}           & \texttt{COPI r1, \#0x1900} & Wait for interrupt     \\
 		\mnemonic{RETE}           & \texttt{COP \#0x1A00}     & Return from exception  \\
 		\bottomrule
 	\end{tabular}
