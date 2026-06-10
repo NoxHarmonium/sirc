@@ -39,7 +39,7 @@
 // 0x00 0004 : DW Base System RAM (for storing in interrupt vectors etc.)
 // ...
 
-use crate::registers::{sr_bit_is_set, Registers, StatusRegisterFields};
+use crate::registers::{Registers, StatusRegisterFields, sr_bit_is_set};
 
 // 32 bits = 2x 16 bit
 pub const INSTRUCTION_SIZE_WORDS: u32 = 2;

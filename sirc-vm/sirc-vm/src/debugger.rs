@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, sync::mpsc::TryRecvError};
 use super::debug_adapter::types::{
     DebuggerMessage, ResumeCondition, VmMessage, VmPauseReason, VmState,
 };
-use super::{utils::cpu_from_bus::cpu_from_bus, DebugState};
+use super::{DebugState, utils::cpu_from_bus::cpu_from_bus};
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::registers::FullAddressRegisterAccess;
 

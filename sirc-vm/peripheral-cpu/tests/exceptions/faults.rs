@@ -1,13 +1,14 @@
 use assert_hex::assert_eq_hex;
 use peripheral_bus::{conversion::bytes_to_words, device::BusAssertions};
 use peripheral_cpu::{
+    FaultMetadataRegister,
     coprocessors::{
         exception_unit::definitions::{
+            Faults,
             vectors::{
                 ALIGNMENT_FAULT, BUS_FAULT, DOUBLE_FAULT_VECTOR, INVALID_OPCODE_FAULT,
                 SEGMENT_OVERFLOW_FAULT,
             },
-            Faults,
         },
         processing_unit::{
             definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
@@ -16,10 +17,9 @@ use peripheral_cpu::{
     },
     decode_fault_metadata_register, encode_fault_metadata_register, new_cpu_peripheral,
     registers::{
-        set_sr_bit, sr_bit_is_set, FullAddressRegisterAccess, SegmentedAddress,
-        StatusRegisterFields,
+        FullAddressRegisterAccess, SegmentedAddress, StatusRegisterFields, set_sr_bit,
+        sr_bit_is_set,
     },
-    FaultMetadataRegister,
 };
 
 // TODO: Make sure that all test files have the same suffix
@@ -606,17 +606,17 @@ fn test_fault_metadata_register_encode_decode() {
             "Phase mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
         );
         assert_eq!(
-                decoded.double_fault, double_fault,
-                "Double fault flag mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
-            );
+            decoded.double_fault, double_fault,
+            "Double fault flag mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
+        );
         assert_eq!(
             decoded.fault as u16, fault as u16,
             "Fault mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
         );
         assert_eq!(
-                decoded.original_fault as u16, original_fault as u16,
-                "Original fault mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
-            );
+            decoded.original_fault as u16, original_fault as u16,
+            "Original fault mismatch for input ({phase}, {double_fault}, {fault:?}, {original_fault:?})"
+        );
     }
 }
 

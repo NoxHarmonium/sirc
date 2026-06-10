@@ -1,23 +1,23 @@
+use nom::Parser;
 use nom::branch::alt;
 use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
 use nom::error::{ErrorKind, FromExternalError};
 use nom::multi::many0;
 use nom::sequence::{delimited, preceded, separated_pair};
-use nom::Parser;
+use nom_supreme::ParserExt;
 use nom_supreme::error::ErrorTree;
 use nom_supreme::tag::complete::tag;
-use nom_supreme::ParserExt;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ConditionFlags, ImmediateInstructionData, Instruction, InstructionData, ShiftType,
-    StatusRegisterUpdateSource, MAX_SHIFT_COUNT,
+    ConditionFlags, ImmediateInstructionData, Instruction, InstructionData, MAX_SHIFT_COUNT,
+    ShiftType, StatusRegisterUpdateSource,
 };
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use super::opcodes;
 use super::shared::{
-    lexeme, parse_comma_sep, parse_number, parse_placeholder, parse_symbol_reference, AsmResult,
+    AsmResult, lexeme, parse_comma_sep, parse_number, parse_placeholder, parse_symbol_reference,
 };
 use crate::types::data::RefToken;
 use crate::types::instruction::InstructionToken;
@@ -225,8 +225,8 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
          }| {
             if shift_count > MAX_SHIFT_COUNT {
                 let error_string = format!(
-                "Shift definitions can only be in the range of 0-{MAX_SHIFT_COUNT}, got {shift_count}"
-            );
+                    "Shift definitions can only be in the range of 0-{MAX_SHIFT_COUNT}, got {shift_count}"
+                );
                 Err(nom::Err::Failure(ErrorTree::from_external_error(
                     i.to_owned(),
                     ErrorKind::Fail,

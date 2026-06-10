@@ -1,13 +1,17 @@
+use colored::control::set_override;
 use insta::assert_snapshot;
 use nom_supreme::{
     error::ErrorTree,
-    final_parser::{final_parser, Location},
+    final_parser::{Location, final_parser},
 };
 use toolchain::parsers::shared::parse_tokens;
 use toolchain::types::shared::Token;
 use toolchain::utils::error_formatter::format_line_with_error;
 
 fn test_error_formatting(input: &str, expected_panic_msg: &str) -> String {
+    // Disable colored output for tests to ensure consistent snapshots
+    set_override(false);
+
     let result =
         final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(parse_tokens)(input);
 

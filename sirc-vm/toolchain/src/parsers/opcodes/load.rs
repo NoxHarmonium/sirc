@@ -5,7 +5,7 @@ use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
         instruction::{
-            parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+            AddressingMode, ImmediateType, parse_instruction_operands0, parse_instruction_tag,
         },
     },
     types::object::RefType,
@@ -26,8 +26,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("LOAD")(i)?;
 
     if status_register_update_source.is_some() {
-        let error_string =
-            "The [LOAD] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
+        let error_string = "The [LOAD] opcode does not support an explicit status register update source. Only ALU instructions can update the status register as a side-effect.";
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
             ErrorKind::Fail,
@@ -72,45 +71,45 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
     // NOTE: No shifting with immediate operands because there is no short immediate representation of LOAD
     match operands.as_slice() {
         // LOAD r1, #0
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(offset)] => {
-            match offset {
-                ImmediateType::Value(value) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(
-                            value.to_owned(),
-                            dest_register,
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, dest_register),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, dest_register),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-            }
-        }
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::Immediate(offset),
+        ] => match offset {
+            ImmediateType::Value(value) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(value.to_owned(), dest_register),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(0x0, dest_register),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_immediate_instruction(0x0, dest_register),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         // LOAD r1, r2
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] =>
-        {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::DirectRegister(src_register),
+        ] => {
             Ok((
                 i,
                 InstructionToken {
@@ -131,8 +130,11 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // LOAD r1, r2, ASL #1
-        [AddressingMode::DirectRegister(_), AddressingMode::DirectRegister(_), AddressingMode::ShiftDefinition(_)] =>
-        {
+        [
+            AddressingMode::DirectRegister(_),
+            AddressingMode::DirectRegister(_),
+            AddressingMode::ShiftDefinition(_),
+        ] => {
             // NOTE: No shifting with direct register -> direct register because of the way the CPU architecture works - use SHFT instead
             // LOAD r1, r2, ASL #1 would translate directly to SHFT r1, r2, ASL #1.
             Err(nom::Err::Failure(ErrorTree::from_external_error(
@@ -142,54 +144,57 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             )))
         }
         // LOAD r1, (#0, a)
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
-            match offset {
-                ImmediateType::Value(offset) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_instruction(
-                            offset.to_owned(),
-                            dest_register,
-                            address_register,
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_instruction(
-                            0x0,
-                            dest_register,
-                            address_register,
-                        ),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_instruction(
-                            0x0,
-                            dest_register,
-                            address_register,
-                        ),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-            }
-        }
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectImmediateDisplacement(offset, address_register),
+        ] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_instruction(
+                        offset.to_owned(),
+                        dest_register,
+                        address_register,
+                    ),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_instruction(
+                        0x0,
+                        dest_register,
+                        address_register,
+                    ),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_instruction(
+                        0x0,
+                        dest_register,
+                        address_register,
+                    ),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         // LOAD r1, (r2, a)
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] =>
-        {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register),
+        ] => {
             Ok((
                 i,
                 InstructionToken {
@@ -210,8 +215,11 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // LOAD r1, (r2, a), ASL #1
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register),
+            AddressingMode::ShiftDefinition(shift_definition_data),
+        ] => {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((
@@ -234,56 +242,61 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // LOAD r1, (#0, a)+
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] => {
-            match offset {
-                ImmediateType::Value(offset) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_post_increment_instruction(
-                            offset.to_owned(),
-                            dest_register,
-                            address_register,
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_post_increment_instruction(
-                            0x0,
-                            dest_register,
-                            address_register,
-                        ),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_indirect_immediate_post_increment_instruction(
-                            0x0,
-                            dest_register,
-                            address_register,
-                        ),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-            }
-        }
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register),
+        ] => match offset {
+            ImmediateType::Value(offset) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_post_increment_instruction(
+                        offset.to_owned(),
+                        dest_register,
+                        address_register,
+                    ),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::SymbolRef(ref_token) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_post_increment_instruction(
+                        0x0,
+                        dest_register,
+                        address_register,
+                    ),
+                    symbol_ref: Some(override_ref_token_type_if_implied(
+                        ref_token,
+                        RefType::LowerWord,
+                    )),
+                    ..Default::default()
+                },
+            )),
+            ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: construct_indirect_immediate_post_increment_instruction(
+                        0x0,
+                        dest_register,
+                        address_register,
+                    ),
+                    placeholder_name: Some(placeholder_name.clone()),
+                    ..Default::default()
+                },
+            )),
+        },
         // LOAD r1, (r2, a)+
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
-            displacement_register,
-            address_register,
-        ), AddressingMode::ShiftDefinition(shift_definition_data)] => {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectRegisterDisplacementPostIncrement(
+                displacement_register,
+                address_register,
+            ),
+            AddressingMode::ShiftDefinition(shift_definition_data),
+        ] => {
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((
@@ -306,10 +319,13 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // LOAD r1, (r2, a)+, ASL #1
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
-            displacement_register,
-            address_register,
-        )] => {
+        [
+            AddressingMode::DirectRegister(dest_register),
+            AddressingMode::IndirectRegisterDisplacementPostIncrement(
+                displacement_register,
+                address_register,
+            ),
+        ] => {
             Ok((
                 i,
                 InstructionToken {

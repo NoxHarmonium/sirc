@@ -10,27 +10,27 @@ use super::{
 };
 use super::{
     definitions::ExceptionUnitOpCodes,
-    encoding::{decode_exception_unit_instruction, ExceptionUnitInstruction},
+    encoding::{ExceptionUnitInstruction, decode_exception_unit_instruction},
 };
 use crate::{
+    CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
     coprocessors::{
         exception_unit::definitions::{
+            EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK,
+            EXCEPTION_UNIT_TRANSFER_REGISTER_SELECT_MASK, ExceptionPriorities, Faults,
             vectors::{
                 DOUBLE_FAULT_VECTOR, LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
                 USER_EXCEPTION_VECTOR_START,
             },
-            ExceptionPriorities, Faults, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
-            EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK, EXCEPTION_UNIT_TRANSFER_REGISTER_SELECT_MASK,
         },
         processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
         shared::ExecutionPhase,
     },
     registers::{
-        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, ExceptionLinkRegister,
-        ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
+        ExceptionLinkRegister, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
+        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit,
     },
     util::find_highest_active_bit,
-    CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
 };
 use crate::{raise_fault, registers::StatusRegisterFields};
 
@@ -119,7 +119,10 @@ pub fn interrupt_flags_to_exception_level(active_interrupt_bitfield: u8) -> u8 {
 ///
 /// ```
 pub fn hardware_exception_level_to_vector(exception_level: u8) -> u8 {
-    assert!(exception_level != ExceptionPriorities::NoException as u8, "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)");
+    assert!(
+        exception_level != ExceptionPriorities::NoException as u8,
+        "Raising a level zero hardware interrupt makes no sense (and would be impossible in hardware)"
+    );
     assert!(
         exception_level < ExceptionPriorities::LevelFiveHardware as u8,
         "There is no interrupt level above level five"
@@ -227,7 +230,10 @@ fn handle_exception(
     vector_address: u32,
     bus_assertions: &BusAssertions,
 ) {
-    trace!("HANDLE EXCEPTION: current_exception_level: 0x{current_exception_level:X} exception_level: 0x{exception_level:X} pc: 0x{:X} vector_address: 0x{vector_address:X}", registers.get_full_pc_address() );
+    trace!(
+        "HANDLE EXCEPTION: current_exception_level: 0x{current_exception_level:X} exception_level: 0x{exception_level:X} pc: 0x{:X} vector_address: 0x{vector_address:X}",
+        registers.get_full_pc_address()
+    );
 
     // TODO: Magic numbers
     if current_exception_level == 6 && exception_level == 6 {
@@ -316,7 +322,8 @@ impl Executor for ExceptionUnitExecutor {
                 debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
 
                 assert!(
-                    op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_high >= USER_EXCEPTION_VECTOR_START,
+                    op_code != ExceptionUnitOpCodes::SoftwareException
+                        || vector_address_high >= USER_EXCEPTION_VECTOR_START,
                     "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_high:X}",
                 );
             }
@@ -330,7 +337,9 @@ impl Executor for ExceptionUnitExecutor {
                         // No-op
                     }
                     ExceptionUnitOpCodes::WaitForException => {
-                        debug!("Setting waiting_for_exception flag. CPU will go into low power mode until an interrupt is triggered.");
+                        debug!(
+                            "Setting waiting_for_exception flag. CPU will go into low power mode until an interrupt is triggered."
+                        );
                         eu_registers.waiting_for_exception = true;
                     }
                     ExceptionUnitOpCodes::ReturnFromException => {
@@ -373,7 +382,12 @@ impl Executor for ExceptionUnitExecutor {
                             _ => panic!("ETFR register select can only be in the range of 0-3"),
                         }
 
-                        trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
+                        trace!(
+                            "ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]",
+                            current_exception_level - 1,
+                            registers.get_full_address_address(),
+                            registers.r7
+                        );
                         trace!("ALL: {:X?}", eu_registers.link_registers);
                     }
                     ExceptionUnitOpCodes::TransferToRegister => {
@@ -399,7 +413,12 @@ impl Executor for ExceptionUnitExecutor {
                             _ => panic!("ETTR register select can only be in the range of 0-3"),
                         }
 
-                        trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
+                        trace!(
+                            "ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]",
+                            current_exception_level - 1,
+                            registers.get_full_address_address(),
+                            registers.r7
+                        );
                     }
                     ExceptionUnitOpCodes::Fault
                     | ExceptionUnitOpCodes::HardwareException

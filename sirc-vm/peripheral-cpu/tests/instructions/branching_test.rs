@@ -6,7 +6,7 @@ use peripheral_cpu::{
         RegisterInstructionData, ShiftOperand, ShiftType,
     },
     registers::{
-        set_sr_bit, AddressRegisterName, RegisterIndexing, Registers, StatusRegisterFields,
+        AddressRegisterName, RegisterIndexing, Registers, StatusRegisterFields, set_sr_bit,
     },
 };
 

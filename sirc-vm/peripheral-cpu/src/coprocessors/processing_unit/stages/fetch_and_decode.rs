@@ -1,13 +1,13 @@
 use super::{alu::perform_shift, shared::DecodedInstruction};
 use crate::coprocessors::processing_unit::definitions::{
-    Instruction, ShiftOperand, ShiftType, INSTRUCTION_SIZE_WORDS,
+    INSTRUCTION_SIZE_WORDS, Instruction, ShiftOperand, ShiftType,
 };
 use crate::coprocessors::processing_unit::encoding::{
     decode_immediate_instruction, decode_register_instruction, decode_short_immediate_instruction,
 };
 use crate::coprocessors::processing_unit::stages::shared::ShiftParameters;
 use crate::registers::{
-    sr_bit_is_set, RegisterName, Registers, StatusRegisterFields, SR_REDACTION_MASK,
+    RegisterName, Registers, SR_REDACTION_MASK, StatusRegisterFields, sr_bit_is_set,
 };
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Debug)]

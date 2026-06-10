@@ -29,21 +29,23 @@ const REGISTER_TRUE: u16 = 0x1;
 
 fn spawn_stdin_channel() -> Receiver<String> {
     let (tx, rx) = mpsc::channel::<String>();
-    thread::spawn(move || loop {
-        let mut buffer = String::new();
-        // Note: ideally we would pass the bytes through as they are input and not wait for a newline
-        // However, due to line buffering we probably wouldn't get the input until a new line anyway
-        // If it is an issue we could use a crate or maybe use raw mode but it's not too important
-        // at this point.
-        let bytes_read = io::stdin().read_line(&mut buffer).unwrap();
-        if bytes_read == 0 {
-            // read_line always returns zero bytes_read when EOF has been reached (nothing)
-            break;
-        }
-        if let Err(error) = tx.send(buffer) {
-            error!("Error reading stdin: {error:?}");
-            // If we get an error we probably wan't to clean up rather than try and read anything else from the stream
-            break;
+    thread::spawn(move || {
+        loop {
+            let mut buffer = String::new();
+            // Note: ideally we would pass the bytes through as they are input and not wait for a newline
+            // However, due to line buffering we probably wouldn't get the input until a new line anyway
+            // If it is an issue we could use a crate or maybe use raw mode but it's not too important
+            // at this point.
+            let bytes_read = io::stdin().read_line(&mut buffer).unwrap();
+            if bytes_read == 0 {
+                // read_line always returns zero bytes_read when EOF has been reached (nothing)
+                break;
+            }
+            if let Err(error) = tx.send(buffer) {
+                error!("Error reading stdin: {error:?}");
+                // If we get an error we probably wan't to clean up rather than try and read anything else from the stream
+                break;
+            }
         }
     });
     rx
@@ -99,7 +101,9 @@ impl Device for TerminalDevice {
                     // Nothing to do
                 }
                 Err(TryRecvError::Disconnected) => {
-                    debug!("Channel to read stdin has closed. This does not necessarily mean an error occurred if EOF was encountered");
+                    debug!(
+                        "Channel to read stdin has closed. This does not necessarily mean an error occurred if EOF was encountered"
+                    );
                     self.reading_finished = true;
                 }
             }

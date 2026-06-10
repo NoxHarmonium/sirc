@@ -142,59 +142,61 @@ pub fn start_server(
         .collect();
 
     let server_output = server.output.clone();
-    std::thread::spawn(move || loop {
-        if let Ok(data) = channels.rx.recv() {
-            match data {
-                VmMessage::Paused(reason, new_vm_state) => {
-                    let mut vm_state = vm_state_ref.lock().unwrap();
-                    *vm_state = Some(new_vm_state);
-                    drop(vm_state);
+    std::thread::spawn(move || {
+        loop {
+            if let Ok(data) = channels.rx.recv() {
+                match data {
+                    VmMessage::Paused(reason, new_vm_state) => {
+                        let mut vm_state = vm_state_ref.lock().unwrap();
+                        *vm_state = Some(new_vm_state);
+                        drop(vm_state);
 
-                    server_output
-                        .lock()
-                        .unwrap()
-                        .send_event(Event::Stopped(StoppedEventBody {
-                            reason: match reason {
-                                VmPauseReason::Init => StoppedEventReason::Entry,
-                                VmPauseReason::Breakpoint(_) => StoppedEventReason::Breakpoint,
-                                VmPauseReason::Step => StoppedEventReason::Step,
-                            },
-                            description: match reason {
-                                VmPauseReason::Init => {
-                                    Some("Paused at start of program".to_string())
-                                }
-                                VmPauseReason::Breakpoint(_) => {
-                                    Some("Paused on breakpoint".to_string())
-                                }
-                                VmPauseReason::Step => Some("Paused after step".to_string()),
-                            },
-                            thread_id: Some(DEFAULT_THREAD_ID),
-                            preserve_focus_hint: None,
-                            text: None,
-                            all_threads_stopped: Some(true),
-                            hit_breakpoint_ids: match reason {
-                                VmPauseReason::Breakpoint(breakpoint) => {
-                                    Some(vec![breakpoint.breakpoint_id])
-                                }
-                                VmPauseReason::Step | VmPauseReason::Init => None,
-                            },
-                        }))
-                        .unwrap();
+                        server_output
+                            .lock()
+                            .unwrap()
+                            .send_event(Event::Stopped(StoppedEventBody {
+                                reason: match reason {
+                                    VmPauseReason::Init => StoppedEventReason::Entry,
+                                    VmPauseReason::Breakpoint(_) => StoppedEventReason::Breakpoint,
+                                    VmPauseReason::Step => StoppedEventReason::Step,
+                                },
+                                description: match reason {
+                                    VmPauseReason::Init => {
+                                        Some("Paused at start of program".to_string())
+                                    }
+                                    VmPauseReason::Breakpoint(_) => {
+                                        Some("Paused on breakpoint".to_string())
+                                    }
+                                    VmPauseReason::Step => Some("Paused after step".to_string()),
+                                },
+                                thread_id: Some(DEFAULT_THREAD_ID),
+                                preserve_focus_hint: None,
+                                text: None,
+                                all_threads_stopped: Some(true),
+                                hit_breakpoint_ids: match reason {
+                                    VmPauseReason::Breakpoint(breakpoint) => {
+                                        Some(vec![breakpoint.breakpoint_id])
+                                    }
+                                    VmPauseReason::Step | VmPauseReason::Init => None,
+                                },
+                            }))
+                            .unwrap();
+                    }
                 }
-            }
-        } else {
-            // The VM has closed it side so we should terminate the debug session
-            // TODO: Fix up behaviour when debug server connection closes
-            // category=Debugger
-            // Why Error occurred in debug server: SendError { .. } is logged when this happens?
-            server_output
-                .lock()
-                .unwrap()
-                .send_event(Event::Terminated(None))
-                .unwrap();
+            } else {
+                // The VM has closed it side so we should terminate the debug session
+                // TODO: Fix up behaviour when debug server connection closes
+                // category=Debugger
+                // Why Error occurred in debug server: SendError { .. } is logged when this happens?
+                server_output
+                    .lock()
+                    .unwrap()
+                    .send_event(Event::Terminated(None))
+                    .unwrap();
 
-            // Stop looping
-            return;
+                // Stop looping
+                return;
+            }
         }
     });
 
