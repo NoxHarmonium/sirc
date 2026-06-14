@@ -22,7 +22,7 @@ The SIRC-1 adheres to Reduced Instruction Set Computer (RISC) design principles:
 
 	\item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
 
-	\item \textbf{Consistent Execution Time:} All instructions execute in exactly 6 clock cycles, eliminating the need for microcode and simplifying hardware implementation.
+	\item \textbf{Consistent Execution Time:} All instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required, eliminating the need for microcode and simplifying hardware implementation.
 \end{itemize}
 
 \subsection{Design Goals}
@@ -76,12 +76,14 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 
 \subsection{Execution Model}
 
-The SIRC-1 executes every instruction through six sequential execution phases (one phase per clock cycle).
+The SIRC-1 executes every instruction through six sequential execution phases (normally one phase per clock cycle).
 For a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
-This fixed six-stage model means that all instructions take exactly 6 clock cycles to complete, regardless of their
-complexity. While this may seem wasteful for simple register operations that don't require memory access, it
-dramatically simplifies the hardware design by eliminating the need for variable-length execution cycles or microcode.
+This fixed six-stage model means that all instructions take 6 clock cycles to complete when bus operations do not
+require wait states, regardless of their complexity. A bus device may hold the current phase by delaying bus
+acknowledgement, adding wait cycles without adding execution phases. While this may seem wasteful for simple register
+operations that don't require memory access, it dramatically simplifies the hardware design by eliminating the need
+for variable-length execution sequences or microcode.
 
 \subsection{Coprocessors}
 
@@ -162,7 +164,7 @@ The CPU expects certain memory regions to be defined:
 
 \begin{itemize}
 	\item \textbf{Reset Vector} (\addr{0x000000}): Initial program counter after reset
-	\item \textbf{Fault Vectors} (\addr{0x000001}--\addr{0x000007}): Fault vectors
+	\item \textbf{Fault Vectors} (\addr{0x000001}--\addr{0x00000F}): Fault vectors and reserved privileged exception vectors
 	\item \textbf{Hardware Vectors} (\addr{0x000010}--\addr{0x000050}): 5 x Hardware exception vectors (offset by 0x10 due to hardware implementation)
 	\item \textbf{User Vectors} (\addr{0x000060}--\addr{0x0000FF}): User exception vectors
 \end{itemize}

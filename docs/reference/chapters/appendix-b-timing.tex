@@ -3,8 +3,9 @@
 
 \section{Overview}
 
-All SIRCIS instructions execute in exactly 6 clock cycles, following the six-stage execution phase model. This fixed
-timing greatly simplifies software development and hardware design.
+All SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
+states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
+adding execution phases. This fixed execution sequence greatly simplifies software development and hardware design.
 
 \section{Six-Stage Execution Phases}
 
@@ -41,11 +42,13 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 	\caption{Instruction Timing (All instructions)}
 \end{table}
 
+The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state.
+
 \section{Conditional Execution}
 
 When a conditional instruction's condition is not met:
 \begin{itemize}
-	\item The instruction still takes 6 cycles to complete
+	\item The instruction still takes 6 cycles to complete when no bus wait states are required
 	\item All execution phases run normally
 	\item The write-back stage is disabled (no register or memory modification)
 	\item Status flags are not updated
@@ -58,7 +61,7 @@ execution time.
 
 \subsection{Simple Loop}
 \begin{lstlisting}
-; Process 10 elements
+; Process 10 elements (assuming no bus wait states)
 ADDI r7, #0, #10              ; 6 cycles
 loop:
     LOAD r1, (#0, a)+         ; 6 cycles
@@ -92,7 +95,7 @@ ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
 
 \section{Performance Considerations}
 
-\subsection{No Execution Phase Stalls}
+\subsection{No Pipeline Stalls}
 
 The SIRC-1 does not implement pipelining in the traditional sense where multiple instructions are in flight
 simultaneously. Instead:
@@ -101,15 +104,15 @@ simultaneously. Instead:
 	\item Each instruction completes fully before the next begins
 	\item No data hazards or phase bubbles
 	\item No branch prediction penalties
-	\item Execution time is completely predictable
+	\item Base execution time is predictable before bus wait states are considered
 \end{itemize}
 
 \subsection{Memory Access}
 
 \begin{itemize}
-	\item Memory access always takes 1 cycle within the instruction
-	\item No wait states or cache misses (in the simulation)
-	\item Real hardware implementations may have variable memory timing
+	\item Memory access occupies one execution phase
+	\item If BACK is not asserted, the CPU holds that phase until the bus operation is acknowledged
+	\item Each wait state adds one clock cycle to the instruction
 \end{itemize}
 
 \subsection{Optimization Guidelines}

@@ -271,6 +271,9 @@ pub struct ExceptionUnitExecutor {
 impl Executor for ExceptionUnitExecutor {
     const COPROCESSOR_ID: u8 = 1;
 
+    // TODO: When reset command is executed. Do nothing for 6 cycles and then fetch reset vector etc. after that
+    // TODO: When reset command is executed, assert RSTO pin to allow 6 cycles for external devices to reset.
+
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(

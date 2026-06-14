@@ -146,7 +146,7 @@ opcodes:
 
 \section{Instruction Timing}
 
-All instructions execute in exactly 6 clock cycles:
+All instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required:
 
 \begin{enumerate}
 	\item Instruction Fetch (High Word)
@@ -157,7 +157,7 @@ All instructions execute in exactly 6 clock cycles:
 	\item Write Back
 \end{enumerate}
 
-This fixed timing simplifies hardware design and makes execution time predictable.
+This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles.
 
 \section{Next Chapters}
 
