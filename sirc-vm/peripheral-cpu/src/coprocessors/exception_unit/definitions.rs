@@ -77,6 +77,10 @@ pub mod vectors {
 
     // Privileged Regular Exceptions (0x08-0x0F)
 
+    // TODO: I think these faults need to be incremented. DOUBLE_FAULT_VECTOR and INSTRUCTION_TRACE_FAULT are overlappying
+    // TODO: Add a BUS_PROTECTION_FAULT which is raised when the BPRT pin is asserted. It is like a BUS_ERROR but
+    // is raised when the bus address is valid, but the device disallowed the I/O due to memory protection etc.
+
     /// Raised after every instruction when the `TraceMode` SR bit is set
     /// Used for debugging
     pub const INSTRUCTION_TRACE_FAULT: u8 = 0x06;

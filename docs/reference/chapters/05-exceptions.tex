@@ -28,6 +28,11 @@ exceptions are in the 0x1-0xF range.
 	      an error. It could also be used to implement virtual memory as the instruction is aborted and program counter is not
 	      incremented, so the address can be re-calculated and the operation retried.
 
+	\item \textbf{Bus Protection Fault:} Raised when an external device asserts the bus protection error CPU pin.
+
+	      This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
+	      writing to ROM or accessing a protected memory region while the CPU is in protected mode.
+
 	\item \textbf{Alignment Fault:} Raised when fetching instructions if the program counter contains an odd word address
 
 	      This is to simplify fetching as the second word of an instruction is always at pl | 0x1 and ensures that we never have
@@ -81,7 +86,7 @@ exceptions are in the 0x1-0xF range.
 	      includes a double fault flag and stores both the current fault type (which will be \texttt{DoubleFault}) and the
 	      original fault type that triggered the double fault.
 
-	      The CPU jumps to vector 0x06 (the double fault vector). This is typically used as a last-chance handler to dump
+	      The CPU jumps to vector 0x08 (the double fault vector). This is typically used as a last-chance handler to dump
 	      registers and reset the CPU. A robust operating system might save the original return addresses in every fault handler
 	      to enable recovery from double faults.
 
@@ -134,9 +139,9 @@ the return address is the address after the current instruction.
 
 \subsubsection{Link Register Preservation}
 
-\textbf{Important:} Link registers can be overwritten when fault occurs during fault handling.
-A overwrites both the fault link register (register 6)
-and the fault metadata register (register 7). This means the original return address is lost.
+\textbf{Important:} Link registers can be overwritten when a fault occurs during the handling of another fault (a double fault).
+In this case, the fault link register (register 6) and the fault metadata register (register 7) is overwritten.
+This means the original return address is lost.
 
 A valid way of handling this is just to declare the CPU state as invalid, do some last chance error handling (e.g.
 dumping the registers) and reset.
@@ -197,6 +202,20 @@ return\_status\_register field is used to encode fault-specific metadata in the 
 	\item \textbf{Bits 8-11:} Original fault type (4 bits) - only meaningful for double faults, indicates the fault type
 	      that was being handled when the double fault occurred
 	\item \textbf{Bits 12-15:} Unused (reserved for future use)
+\end{itemize}
+
+Fault types use the following values:
+
+\begin{itemize}
+	\item \textbf{0x01:} Bus fault
+	\item \textbf{0x02:} Alignment fault
+	\item \textbf{0x03:} Segment overflow fault
+	\item \textbf{0x04:} Invalid opcode fault
+	\item \textbf{0x05:} Privilege violation fault
+	\item \textbf{0x06:} Instruction trace fault
+	\item \textbf{0x07:} Level five hardware exception conflict
+	\item \textbf{0x08:} Double fault
+	\item \textbf{0x09:} Bus protection fault
 \end{itemize}
 
 The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
@@ -325,9 +344,11 @@ The exception vectors are stored starting at address 0x0. Each vector is a 32-bi
 	\item \textbf{0x03:} Segment overflow fault
 	\item \textbf{0x04:} Invalid opcode fault
 	\item \textbf{0x05:} Privilege violation fault
-	\item \textbf{0x06:} Double fault
-	\item \textbf{0x07:} Reserved
-	\item \textbf{0x08-0x0F:} Reserved for future privileged exceptions
+	\item \textbf{0x06:} Instruction trace fault
+	\item \textbf{0x07:} Level five hardware exception conflict
+	\item \textbf{0x08:} Double fault
+	\item \textbf{0x09:} Bus protection fault
+	\item \textbf{0x0A-0x0F:} Reserved for future privileged exceptions
 	\item \textbf{0x10:} Level 5 hardware exception vector
 	\item \textbf{0x20:} Level 4 hardware exception vector
 	\item \textbf{0x30:} Level 3 hardware exception vector

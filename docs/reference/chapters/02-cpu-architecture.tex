@@ -3,14 +3,15 @@
 
 \section{Overview}
 
-The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing six sequential execution phases to execute
-instructions in exactly 6 clock cycles. The architecture is composed of several key functional units that work together
-to fetch, decode, execute, and complete instructions.
+The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing six sequential execution phases to
+execute instructions in 6 clock cycles when no bus wait states are required. The architecture is composed of several
+key functional units that work together to fetch, decode, execute, and complete instructions.
 
 \section{Six-Stage Execution Phases}
 
-All SIRCIS instructions execute in exactly 6 clock cycles, following a six-phase execution model. This fixed
-timing greatly simplifies software development and hardware design.
+All SIRCIS instructions follow a six-phase execution model and complete in 6 clock cycles when no bus wait states are
+required. A phase that performs a bus operation may be held until the bus acknowledges it. This fixed execution
+sequence greatly simplifies software development and hardware design.
 
 \begin{enumerate}
 	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
@@ -142,19 +143,465 @@ circuits that process data in a single clock cycle. This approach:
 
 \begin{itemize}
 	\item Simplifies the hardware design
-	\item Provides deterministic, fixed-time execution
+	\item Provides a deterministic, fixed execution sequence
 	\item Eliminates the complexity of microcode sequencing
 	\item Makes the CPU behavior fully predictable and easy to reason about
 \end{itemize}
 
-\subsection{Fixed Execution Time}
+\subsection{Fixed Execution Sequence}
 
-All instructions execute in exactly 6 clock cycles, regardless of instruction type or operands. This design choice
-simplifies software timing and eliminates the need for branch prediction or complex multi-stage control logic found in
-variable-time architectures.
+All instructions execute in exactly 6 phases, regardless of instruction type or operands, and complete in 6 clock
+cycles when no bus wait states are required. Delayed bus acknowledgement can hold a phase and add wait cycles. This
+design choice simplifies software timing and eliminates the need for branch prediction or complex multi-stage control
+logic found in variable-time architectures.
 
 \subsection{Parallel Functional Units}
 
 The ALU and AU operate in parallel during Stage 4, allowing address calculation to proceed simultaneously with
 arithmetic operations. This parallelism enables efficient execution of memory reference instructions without additional
 clock cycles.
+
+\section{External Interface}
+
+\subsection{Chip Layout}
+
+The SIRC CPU is most commonly provided as a DIP-64 package.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.8,
+    transform shape,
+    pinlabel/.style={font=\scriptsize},
+    pinnum/.style={font=\tiny},
+    body/.style={draw, thick, rounded corners=2pt, fill=gray!8},
+    pin/.style={draw, thick}
+]
+
+% Package body
+\draw[body] (0,0) rectangle (5,-16);
+
+% Notch
+\draw[thick] (2.1,0) arc[start angle=180,end angle=360,radius=0.4];
+
+% Left-side pins: 1-32, top to bottom
+\foreach \n/\name in {
+1/A0,
+2/A1,
+3/A2,
+4/A3,
+5/A4,
+6/A5,
+7/A6,
+8/A7,
+9/VCC1,
+10/A8,
+11/A9,
+12/A10,
+13/A11,
+14/A12,
+15/A13,
+16/A14,
+17/A15,
+18/A16,
+19/A17,
+20/A18,
+21/A19,
+22/A20,
+23/A21,
+24/A22,
+25/A23,
+26/GND1,
+27/D0,
+28/D1,
+29/D2,
+30/D3,
+31/D4,
+32/D5
+} {
+    \pgfmathsetmacro{\y}{-0.35 - (\n-1)*0.48}
+    \draw[pin] (-0.5,\y) -- (0,\y);
+    \node[pinnum, anchor=east] at (-0.58,\y) {\n};
+    \node[pinlabel, anchor=east] at (-0.95,\y) {\name};
+}
+
+% Right-side pins: 64-33, top to bottom
+\foreach \n/\name [count=\i from 0] in {
+64/RSTO,
+63/RSTI,
+62/NMI,
+61/IRQ4,
+60/IRQ3,
+59/IRQ2,
+58/IRQ1,
+57/TRCE,
+56/HALT,
+55/PROT,
+54/BAT2,
+53/BAT1,
+52/BAT0,
+51/BPER,
+50/BERR,
+49/BACK,
+48/BRW,
+47/BAS,
+46/SYNC,
+45/CLKI,
+44/GND2,
+43/VCC2,
+42/D15,
+41/D14,
+40/D13,
+39/D12,
+38/D11,
+37/D10,
+36/D9,
+35/D8,
+34/D7,
+33/D6
+} {
+    \pgfmathsetmacro{\y}{-0.35 - \i*0.48}
+    \draw[pin] (5,\y) -- (5.5,\y);
+    \node[pinnum, anchor=west] at (5.58,\y) {\n};
+    \node[pinlabel, anchor=west] at (5.95,\y) {\name};
+}
+
+% Package label
+\node[font=\bfseries] at (2.5,-7.6) {SIRC CPU};
+\node[font=\small] at (2.5,-8.1) {64-pin DIP};
+
+\end{tikzpicture}
+\caption{SIRC CPU 64-pin DIP pinout, top view}
+\end{figure}
+
+\begin{table}[]
+\centering
+\begin{tabular}{rll}
+\textbf{Pin} & \textbf{Name} & \textbf{Description} \\
+\hline
+1-8  & A0-A7    & Address bus bits 0-7 \\
+9  & VCC1  & Power supply \\
+10-25 & A8-A23    & Address bus bits 8-23 \\
+26 & GND1  & Ground \\
+27-42 & D0-D15    & Data bus bit 0-15 \\
+43 & VCC2  & Power supply \\
+44 & GND2  & Ground \\
+45 & CLKI  & Clock input \\
+46 & SYNC  & Instruction-complete strobe output \\
+47 & BAS   & Bus access strobe output \\
+48 & BRW   & Bus read/write output \\
+49 & BACK  & Bus acknowledge input \\
+50 & BERR  & Bus error input \\
+51 & BPER  & Bus protection error \\
+52-54 & BAT0-BAT2  & Bus access type bits 0-2 \\
+55 & PROT  & Protected-mode output \\
+56 & HALT  & External CPU halt input \\
+57 & TRCE  & Force trace mode input \\
+58-61 & IRQ1-IRQ4  & Maskable interrupt inputs 1-4 \\
+62 & NMI   & Non-maskable interrupt input \\
+63 & RSTI  & Reset input \\
+64 & RSTO  & Reset output \\
+\end{tabular}
+\caption{SIRC CPU 64-pin DIP pinout}
+\end{table}
+
+All inputs are active low, all outputs are active high.
+
+\subsection{Pin Descriptions}
+
+\subsubsection{Address Bus Bits (A0-23)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Connected to the address bus.
+
+These 24 pins declare the address on the bus that the CPU will read or write from when BAS
+(bus access strobe) is asserted.
+
+\subsubsection{Power Pins (VCC1-2, GND1-2)}
+
+These pins provide the 5V power that the CPU requires to function.
+
+The VCC pins must be connected to 5V +/- 5\% and GND pins must be connected to a 0V or ground rail.
+
+% TODO: Should I recommend some capacitors etc. to be put on the rail or something like that? Maybe should see what other CPU data sheets say
+
+\subsubsection{Data Bus Bits (D0-D15)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Bi-directional
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Connected to the data bus.
+
+These 16 pins will be driven to a 16-bit value when the CPU is outputting to the bus, and will
+be an input for a 16-bit value when the CPU is reading from the bus.
+
+
+\subsubsection{Clock Input (CLKI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Rising Edge
+	\item \textbf{Max Rate:} 24 Mhz
+\end{itemize}
+
+Progresses the CPU to the next cycle when the input transitions from low to high (rising edge).
+
+Each transition from low to high will progress the CPU internal six stage sequence, and so
+every six clock transitions will be a full instruction execution (assuming no wait for bus devices).
+
+
+\subsubsection{Bus Access Strobe Output (SYNC)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Rising Edge
+\end{itemize}
+
+When the CPU completes a full instruction (six internal cycles) it will transition this pin from
+low to high to signal external devices.
+
+It will be high for cycle 1, and low for every other cycle.
+
+It can be useful for debugging purposes.
+
+\subsubsection{Bus Access Strobe Output (BAS)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Rising Edge
+\end{itemize}
+
+When the CPU is ready to perform a bus operation (i.e. the address pins, data pins and BRW pin are
+all in the right state) it will transition this pin from low to high.
+
+It will then not progress to the next cycle until the bus asserts the BACK (Bus acknowledge input)
+pin, allowing slow devices time to complete operations.
+
+
+\subsubsection{Bus Access Strobe Output (BRW)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Only relevant when the BAS (Bus access strobe output) is asserted.
+
+When low, the CPU is requesting a read from the bus. Otherwise, when high, the CPU is requesting
+to write to the bus.
+
+\subsubsection{Bus Acknowledge Input (BACK)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, the bus is asserting that the previously requested read/write was successful, allowing the
+CPU I/O operation to complete.
+
+If all bus devices are fast and can complete reads/writes in a single cycle, this pin can be
+permanently pulled low.
+
+
+\subsubsection{Bus Error Input (BERR)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, the bus is asserting that the previously requested read/write was unsuccessful.
+
+This will cause the CPU to abort the I/O operation and raise a bus fault exception.
+
+An example of a situation where a bus error might be raised would be I/O to an address that is not
+connected to any device.
+
+\subsubsection{Bus Protection Error Input (BPER)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, the bus is asserting that the previously requested read/write was to a valid
+address/device, but that the I/O is disallowed given the current state of the CPU or bus.
+
+This will cause the CPU to abort the I/O operation and raise a bus protection fault exception.
+
+It acts very similar to the BERR pin but raises a different fault so that programs can handle it
+differently.
+
+An example of a situation where a bus protection error might be raised would be a write to ROM, or
+a write to a privileged section of memory when the CPU is not in supervisor mode.
+
+\subsubsection{Bus Access Type Bits (BAT0-BAT2)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Output by the CPU to describe what I/O operation it is performing.
+
+Can be used to provide useful hints to external devices during I/O.
+
+For example, if a memory controller knows that the DMA co-processor will be reading more than
+one sequential address, it can prefetch the next address.
+
+Another example might be a memory controller providing memory protection if these pins are used in
+conjuction with the PROT (Protected-mode output) pin. A memory controller might trigger a bus error
+if BAT is 010 (data read), PROT is 1 (user mode) and the address is in a protected memory region.
+
+\begin{table}[]
+\centering
+\begin{tabular}{rrrl}
+\textbf{BAT2} & \textbf{BAT1} & \textbf{BAT0} & \textbf{Description} \\
+\hline
+0  & 0  & 0 & No I/O \\
+0  & 0  & 1 & Instruction Fetch \\
+0  & 1  & 0 & Data Read \\
+0  & 1  & 1 & Data Write \\
+1  & 0  & 0 & Exception Vector Fetch \\
+1  & 0  & 1 & DMA Co-processor Read Burst \\
+1  & 1  & 0 & DMA Co-processor Write Burst \\
+1  & 1  & 1 & Reserved \\
+\end{tabular}
+\caption{Bus Access Type Bits Meaning}
+\end{table}
+
+\subsubsection{Protected-mode Output (PROT)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Indicates whether the CPU is in protected mode (high) or in supervisor mode (low).
+
+Connected directly to the status register Protected Mode (P) bit.
+
+When the CPU is in protected mode, programs have access to less types of instructions (e.g. they
+cannot write to the upper word of the address registers).
+
+Exposing this as an external pin allows other devices such as memory controllers to block access
+to protected regions of memory by raising bus protection errors.
+
+\subsubsection{External CPU halt input (HALT)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, the CPU will stop executing instructions.
+
+It will complete the current instruction and halt before the next instruction fetch.
+It will resume as normal when the input goes high.
+
+This pin is useful for hardware driven debugging, as the CPU can be halted and the state of the
+system examined.
+
+\subsubsection{Force trace mode input (TRCE)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, the Trace Mode (T) flag of the status register is forced to be 1, regardless of whether
+a program has cleared it or not.
+
+When in trace mode the CPU will raise exceptions every instruction to allow software debugging.
+
+\subsubsection{Maskable interrupt inputs (IRQ1-IRQ4)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When low, a hardware exception will be raised by the CPU for the corresponding exception level.
+
+They can be "masked" by the Hardware Interrupt Enable Bits (E1-E4) of the status register, which
+will disable them.
+
+If an exception for the interrupt level or higher is already being handled, the exception will be
+"queued" and handled whenever all the higher level interrupts have been serviced.
+
+If a lower level interrupt is being handled, it will be interrupted and the higher level interrupt
+will be serviced.
+
+If an interrupt pin is held low continuously it will be serviced again as soon as the exception
+has been handled.
+
+See the exceptions section for more details.
+
+\subsubsection{Non-maskable interrupt inputs (NMI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Falling Edge
+\end{itemize}
+
+When transitioning from high to low, will raise a level 5 hardware exception.
+
+This interrupt cannot be masked, and if this pin is asserted while another level 5 exception is
+being handled, a "level five hardware exception conflict" fault will be raised.
+
+If asserted again while that fault is being handled, it will trigger a double fault.
+
+Therefore, it is important that the level 5 exception handlers are executed quickly and that the NMI
+is only asserted for important non-interruptible events.
+
+\subsubsection{Reset input (RSTI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active low
+\end{itemize}
+
+Can be used by external devices to force a reset of the CPU.
+
+When low, the CPU will immediately be interrupted and stop processing. It will be set to cycle 0 and
+the cause register will be set to 0x1B00 (RSET).
+
+The RSTO pin will also be asserted.
+
+When this pin becomes high, the CPU will wait 6 cycles, stop asserting the RSTO pin, and the the
+exception co-processor will execute the RSET instruction, resetting the CPU state and fetching the
+reset vector.
+
+If your system needs external devices to be reset for longer than 6 cycles to allow the program,
+to run, the resets will have to be managed externally to the CPU and RSTI will need to be asserted
+for however long is needed for the other devices to reset.
+
+\subsubsection{Reset output (RSTO)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active high
+\end{itemize}
+
+Asserted while the RSTI pin is asserted, and for 6 cycles after the RSTI pin is no longer asserted.
+
+It will also be asserted for 6 cycles after a software reset
+
+A reset can be triggered by asserting the Reset input (RSTI) pin, or in software by a special
+exception co-processor meta instruction (RSET).
+
+This pin is useful to reset other devices on the bus whenever the CPU is reset or to trigger more
+complex reset/boot controllers.
+
+
+\subsection{Timing Notes}
+
+BACK, BERR and BPER are all mutually exclusive. If they happen to be asserted by the bus at the same
+time, BERR will take first priority, then BPER, then BACK.
