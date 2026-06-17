@@ -136,7 +136,7 @@ opcodes:
 		\midrule
 		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
 		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
-		\mnemonic{WAIT}           & \texttt{COP \#0x1F00}     & Wait for interrupt     \\
+		\mnemonic{WAIT}           & \texttt{COPI r1, \#0x1900} & Wait for interrupt     \\
 		\mnemonic{RETE}           & \texttt{COP \#0x1A00}     & Return from exception  \\
 		\bottomrule
 	\end{tabular}
@@ -146,7 +146,7 @@ opcodes:
 
 \section{Instruction Timing}
 
-All instructions execute in exactly 6 clock cycles:
+All instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required:
 
 \begin{enumerate}
 	\item Instruction Fetch (High Word)
@@ -157,7 +157,7 @@ All instructions execute in exactly 6 clock cycles:
 	\item Write Back
 \end{enumerate}
 
-This fixed timing simplifies hardware design and makes execution time predictable.
+This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles.
 
 \section{Next Chapters}
 

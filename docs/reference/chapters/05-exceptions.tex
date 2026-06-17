@@ -17,7 +17,7 @@ exception.
 
 When an Abort Exception occurs, the instruction causing the exception does not have any effect (it is cancelled after
 decode stage). The program address stored in the link register is the address of the faulting instruction so it can be
-retried (RETI will return to the same instruction again) This is important for things like privilege violation because
+retried (RETE will return to the same instruction again) This is important for things like privilege violation because
 you don't want the illegal instruction to modify any state. These are also referred to as faults. The vectors for abort
 exceptions are in the 0x1-0xF range.
 
@@ -27,6 +27,11 @@ exceptions are in the 0x1-0xF range.
 	      This could happen, for example, if a unmapped address is presented by the CPU and another chip detects this and raises
 	      an error. It could also be used to implement virtual memory as the instruction is aborted and program counter is not
 	      incremented, so the address can be re-calculated and the operation retried.
+
+	\item \textbf{Bus Protection Fault:} Raised when an external device asserts the bus protection error CPU pin.
+
+	      This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
+	      writing to ROM or accessing a protected memory region while the CPU is in protected mode.
 
 	\item \textbf{Alignment Fault:} Raised when fetching instructions if the program counter contains an odd word address
 
@@ -51,7 +56,7 @@ exceptions are in the 0x1-0xF range.
 	      those programs breaking in future iterations of the CPU but it is expected that the core of the CPU will remain stable
 	      and future ISA improvements will be done via co-processors.
 
-	\item \textbf{Privilege Violation Fault:} Raised when not in system mode and a privileged operation is performed:
+	\item \textbf{Privilege Violation Fault:} Raised when not in supervisor mode and a privileged operation is performed:
 	      \begin{enumerate}
 		      \item Writing to the high word of any address registers
 		      \item Writing to the high byte of the SR register
@@ -81,7 +86,7 @@ exceptions are in the 0x1-0xF range.
 	      includes a double fault flag and stores both the current fault type (which will be \texttt{DoubleFault}) and the
 	      original fault type that triggered the double fault.
 
-	      The CPU jumps to vector 0x06 (the double fault vector). This is typically used as a last-chance handler to dump
+	      The CPU jumps to vector 0x08 (the double fault vector). This is typically used as a last-chance handler to dump
 	      registers and reset the CPU. A robust operating system might save the original return addresses in every fault handler
 	      to enable recovery from double faults.
 
@@ -95,11 +100,11 @@ exceptions are in the 0x1-0xF range.
 
 A hardware exception occurs when interrupt pins are signalled by external hardware. These are also referred to as
 "interrupts". When a hardware exception occurs the current instruction is completed, and control is transferred to
-different vectors based on the interrupt "priority". The vectors for abort exceptions are in the 0x10-0x50 range.
+different vectors based on the interrupt "priority". The vectors for hardware exceptions are in the 0x10-0x50 range.
 
 \subsection{User Exceptions (Traps)}
 
-A user exception occurs when the program executes a an EXCP instruction that signals the exception coprocessor that it
+A user exception occurs when the program executes an EXCP instruction that signals the exception coprocessor that it
 should trigger an exception. They are usually used by programs running in protected mode to switch to supervisor mode
 in a controlled way. They are also referred to as "traps". The vectors for user exceptions are in the 0x60-0xFF range.
 
@@ -134,9 +139,9 @@ the return address is the address after the current instruction.
 
 \subsubsection{Link Register Preservation}
 
-\textbf{Important:} Link registers can be overwritten when fault occurs during fault handling.
-A overwrites both the fault link register (register 6)
-and the fault metadata register (register 7). This means the original return address is lost.
+\textbf{Important:} Link registers can be overwritten when a fault occurs during the handling of another fault (a double fault).
+In this case, the fault link register (register 6) and the fault metadata register (register 7) is overwritten.
+This means the original return address is lost.
 
 A valid way of handling this is just to declare the CPU state as invalid, do some last chance error handling (e.g.
 dumping the registers) and reset.
@@ -199,6 +204,20 @@ return\_status\_register field is used to encode fault-specific metadata in the 
 	\item \textbf{Bits 12-15:} Unused (reserved for future use)
 \end{itemize}
 
+Fault types use the following values:
+
+\begin{itemize}
+	\item \textbf{0x01:} Bus fault
+	\item \textbf{0x02:} Alignment fault
+	\item \textbf{0x03:} Segment overflow fault
+	\item \textbf{0x04:} Invalid opcode fault
+	\item \textbf{0x05:} Privilege violation fault
+	\item \textbf{0x06:} Instruction trace fault
+	\item \textbf{0x07:} Level five hardware exception conflict
+	\item \textbf{0x08:} Double fault
+	\item \textbf{0x09:} Bus protection fault
+\end{itemize}
+
 The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
 faults that involve memory access). For faults like invalid opcode that occur before bus access, this field will be
 zero.
@@ -227,13 +246,13 @@ The status register contains 4 individual enable bits (bits 9-12 in the privileg
 maskable hardware interrupt line can trigger an exception:
 
 \begin{itemize}
-	\item Bit 9 (E1): Hardware Interrupt Line 1 (Exception Level 5, highest priority)
-	\item Bit 10 (E2): Hardware Interrupt Line 2 (Exception Level 4)
-	\item Bit 11 (E3): Hardware Interrupt Line 3 (Exception Level 3)
-	\item Bit 12 (E4): Hardware Interrupt Line 4 (Exception Level 2)
+	\item Bit 9 (E1): Hardware Interrupt Line 1 (Level 1, lowest maskable priority)
+	\item Bit 10 (E2): Hardware Interrupt Line 2 (Level 2)
+	\item Bit 11 (E3): Hardware Interrupt Line 3 (Level 3)
+	\item Bit 12 (E4): Hardware Interrupt Line 4 (Level 4, highest maskable priority)
 \end{itemize}
 
-\textbf{Note:} Hardware Interrupt Line 5 (Exception Level 1) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
+\textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
 It will always trigger an exception when asserted, regardless of the enable bit settings. Bit 13 is used for the
 Exception Active flag instead.
 
@@ -325,9 +344,11 @@ The exception vectors are stored starting at address 0x0. Each vector is a 32-bi
 	\item \textbf{0x03:} Segment overflow fault
 	\item \textbf{0x04:} Invalid opcode fault
 	\item \textbf{0x05:} Privilege violation fault
-	\item \textbf{0x06:} Double fault
-	\item \textbf{0x07:} Reserved
-	\item \textbf{0x08-0x0F:} Reserved for future privileged exceptions
+	\item \textbf{0x06:} Instruction trace fault
+	\item \textbf{0x07:} Level five hardware exception conflict
+	\item \textbf{0x08:} Double fault
+	\item \textbf{0x09:} Bus protection fault
+	\item \textbf{0x0A-0x0F:} Reserved for future privileged exceptions
 	\item \textbf{0x10:} Level 5 hardware exception vector
 	\item \textbf{0x20:} Level 4 hardware exception vector
 	\item \textbf{0x30:} Level 3 hardware exception vector
@@ -368,215 +389,27 @@ features like system calls, context switching, and debuggers.
 \section{Exception Coprocessor Instructions}
 
 The exception coprocessor (coprocessor ID 0x1) provides several specialized instructions for exception handling and
-system control. These instructions are accessed via the coprocessor instruction format, with the exception coprocessor
-opcode specified in the instruction encoding.
+system control.
 
-\subsection{EXCP - Software Exception (User Exception)}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege} & \textbf{Purpose} \\
+		\midrule
+		\mnemonic{EXCP}      & 0x1             & User                & Trigger a software exception (trap) \\
+		\mnemonic{WAIT}      & 0x9             & Supervisor          & Enter wait state until an exception occurs \\
+		\mnemonic{RETE}      & 0xA             & Supervisor          & Return from an exception handler \\
+		\mnemonic{RSET}      & 0xB             & Supervisor          & Reset CPU state and jump to reset vector \\
+		\mnemonic{ETFR}      & 0xC             & Supervisor          & Copy saved exception state from a link register \\
+		\mnemonic{ETTR}      & 0xD             & Supervisor          & Write CPU register state back to a link register \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Coprocessor Instruction Summary}
+	\label{tab:exception-coprocessor-summary}
+\end{table}
 
-\textbf{Opcode:} 0x1 \quad \textbf{Privilege:} User
-
-\textbf{Syntax:} \texttt{EXCP \#vector}
-
-Triggers a software exception (trap) at the specified vector. The vector must be in the range 0x60-0xFF (user exception
-vectors). This instruction is used by user-mode programs to invoke system calls or request supervisor mode services.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Validates that the vector is in the user range (0x60-0xFF)
-	\item Stores current PC and SR in link register 0 (software exception register)
-	\item Clears the Protected Mode bit (enters supervisor mode)
-	\item Sets interrupt mask to 1
-	\item Jumps to the handler address specified in the vector table
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-; Trigger user exception at vector 0x80
-EXCP #0x80                    ; System call trap
-\end{lstlisting}
-
-\subsection{WAIT - Wait for Exception}
-
-\textbf{Opcode:} 0x9 \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{WAIT}
-
-Puts the CPU into a low-power waiting state until an exception occurs. This is useful for idle loops in operating
-systems or when waiting for hardware interrupts.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Sets the \texttt{waiting\_for\_exception} flag in the exception unit
-	\item CPU halts instruction fetch until an exception is raised
-	\item When an exception occurs, normal exception processing resumes
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-main_loop:
-    WAIT                      ; Sleep until interrupt
-    ; ... process interrupt ...
-    BRAN main_loop
-\end{lstlisting}
-
-\subsection{RETE - Return from Exception}
-
-\textbf{Opcode:} 0xA \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{RETE}
-
-Returns from an exception handler by restoring the saved processor state from the current link register.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Determines which link register to use based on current interrupt mask level
-	\item Restores PC from link register's return address
-	\item Restores SR from link register's return status register
-	\item Resumes execution at the restored address
-\end{enumerate}
-
-Note: For fault exceptions, this returns to the faulting instruction. For other exceptions, this returns to the
-instruction after the one that was executing when the exception occurred.
-
-\textbf{Example:}
-\begin{lstlisting}
-bus_fault_handler:
-    ; ... handle bus fault ...
-    RETE                      ; Return to faulting instruction
-\end{lstlisting}
-
-\subsection{RSET - System Reset}
-
-\textbf{Opcode:} 0xB \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:} \texttt{RSET}
-
-Performs a software reset of the processor by clearing the status register and jumping to the reset vector.
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Clears the status register (SR = 0x0)
-	\item Reads the reset vector (vector 0x00) from the vector table
-	\item Sets PC to the address specified in the reset vector
-	\item Execution begins at the reset handler
-\end{enumerate}
-
-\textbf{Example:}
-\begin{lstlisting}
-; Perform software reset
-RSET                          ; Jump to reset vector
-\end{lstlisting}
-
-\subsection{ETFR - Exception Transfer From Register}
-
-\textbf{Opcode:} 0xC \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:}
-\begin{lstlisting}
-ETFR #n                       ; Transfer both to a and r7
-ETFR a, #n                    ; Transfer return address to a only
-ETFR r7, #n                   ; Transfer return SR to r7 only
-\end{lstlisting}
-
-Transfers data from a link register to CPU registers. The instruction encoding specifies which link register (0-7) and
-which components (address and/or status register) to transfer.
-
-\textbf{Parameters:}
-\begin{itemize}
-	\item Bits 3-0: Link register index (0-7)
-	\item Bits 5-4: Register select
-	      \begin{itemize}
-		      \item 0: No transfer (NOP)
-		      \item 1: Transfer return address to address register (A)
-		      \item 2: Transfer return status register to R7
-		      \item 3: Transfer both address to A and status to R7
-	      \end{itemize}
-\end{itemize}
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Selects the specified link register (0-7)
-	\item Based on register select bits:
-	      \begin{itemize}
-		      \item If bit 0 set: Copy link register's return address to address register (AH:AL)
-		      \item If bit 1 set: Copy link register's return status register to R7
-	      \end{itemize}
-\end{enumerate}
-
-This instruction is useful for exception handlers that need to examine the saved state, such as debuggers or system
-call handlers that need to access parameters passed in the calling context.
-
-\textbf{Examples:}
-\begin{lstlisting}
-; Get both return address and status from fault link register
-ETFR #6                       ; a = return addr, r7 = return SR
-
-; Get only the return address to modify it
-ETFR a, #6                    ; a = return addr from link reg 6
-LOAD al, @after_odd_address   ; Fix alignment issue
-ETTR #6, a                    ; Write corrected address back
-
-; Get only the status register to inspect flags
-ETFR r7, #7                   ; r7 = fault metadata
-ANDI r7, #0x7                 ; Mask off CPU phase bits
-\end{lstlisting}
-
-\subsection{ETTR - Exception Transfer To Register}
-
-\textbf{Opcode:} 0xD \quad \textbf{Privilege:} Supervisor
-
-\textbf{Syntax:}
-\begin{lstlisting}
-ETTR #n                       ; Transfer both a and r7
-ETTR #n, a                    ; Transfer a to return address only
-ETTR #n, r7                   ; Transfer r7 to return SR only
-\end{lstlisting}
-
-Transfers data from CPU registers to a link register. The instruction encoding specifies which link register (0-7) and
-which components (address and/or status register) to transfer.
-
-\textbf{Parameters:}
-\begin{itemize}
-	\item Bits 3-0: Link register index (0-7)
-	\item Bits 5-4: Register select
-	      \begin{itemize}
-		      \item 0: No transfer (NOP)
-		      \item 1: Transfer address register (A) to return address
-		      \item 2: Transfer R7 to return status register
-		      \item 3: Transfer both A to return address and R7 to status
-	      \end{itemize}
-\end{itemize}
-
-\textbf{Operation:}
-\begin{enumerate}
-	\item Selects the specified link register (0-7)
-	\item Based on register select bits:
-	      \begin{itemize}
-		      \item If bit 0 set: Copy address register (AH:AL) to link register's return address
-		      \item If bit 1 set: Copy R7 to link register's return status register
-	      \end{itemize}
-\end{enumerate}
-
-This instruction allows exception handlers to modify the saved state before returning.
-
-\textbf{Examples:}
-\begin{lstlisting}
-; Fix up return address after alignment fault
-ETFR a, #6                    ; Get current return address
-LOAD al, @after_odd_address   ; Correct the lower word
-ETTR #6, a                    ; Write corrected address back
-
-; Clear protected mode bit in saved status register
-ETFR r7, #6                   ; Get current return SR
-ANDI r7, #0xFEFF              ; Clear protected mode bit
-ETTR #6, r7                   ; Write modified SR back
-
-; Transfer both modified address and status
-LOAD ah, $PROGRAM_SEGMENT     ; Set up new return address
-LOAD al, @return_point
-LOAD r7, #0x0000              ; Clear status register
-ETTR #6                       ; Write both back to link reg 6
-\end{lstlisting}
+For full syntax, operation details, and worked examples, see Chapter~\ref{ch:meta-instructions}.
 
 \subsection{Internal Instructions}
 

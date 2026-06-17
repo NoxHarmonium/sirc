@@ -172,10 +172,7 @@ fn main() -> io::Result<()> {
                         data.op_code
                     ),
                 },
-                _ => panic!(
-                    "Can't patch address/offset for instruction: {:?}",
-                    instruction
-                ),
+                _ => panic!("Can't patch address/offset for instruction: {instruction:?}"),
             };
 
             let raw_patched_instruction = encode_instruction(&patched_instruction);

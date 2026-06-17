@@ -96,11 +96,15 @@ pub struct CpuPeripheral {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct FaultMetadataRegister {
+    // TODO: Maybe phase should actually be the value of the BAT0-BAT2 status pins because they have more meaning
     pub phase: u8,          // 3 bits (bits 0-2)
     pub double_fault: bool, // 1 bit (bit 3)
     pub fault: Faults,      // 4 bits (bits 4-7, needs to hold values up to 0x8)
     // If double_fault holds the fault that caused the double fault
     pub original_fault: Faults, // 4 bits (bits 8-11, needs to hold values up to 0x8)
+                                // TODO: Maybe other metadata (whether I/O was read or write (I guess inferred from phase),
+                                //       whether we are in supervisor mode (probably already saved when SR was saved)
+                                // TODO: Do we store the address of the faulting I/O, or just the faulting instruction?
 }
 
 pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
