@@ -173,8 +173,7 @@ fn main() -> io::Result<()> {
                     ),
                 },
                 _ => panic!(
-                    "Can't patch address/offset for instruction: {:?}",
-                    instruction
+                    "Can't patch address/offset for instruction: {instruction:?}"
                 ),
             };
 
