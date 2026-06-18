@@ -104,6 +104,12 @@ LJMP    a
 ; Switch off trap on overflow bit
 ANDI    sr, #0b1011_1111_1111_1111
 
+; Instruction trace fault test
+; Set T bit - the next instruction will be traced and the handler will fire
+ORRI    sr, #0b1000_0000_0000_0000
+LOAD    r7, #0x1
+; T bit was cleared by the trace handler, so no further instructions are traced
+
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
 COPI    r1, #0x4000
 
@@ -234,7 +240,11 @@ STOR    (a), r7
 RETE
 
 :instruction_trace_fault_handler
-; Stub - instruction trace fault is not yet exercised in this test (it isn't implemented in the simulator yet)
+ADDI    r6, #0x100
+; Clear T bit from the saved SR so RETE does not re-enable tracing
+ETFR    r7, #6
+ANDI    r7, #0x7FFF
+ETTR    #6, r7
 RETE
 
 ; Trampoline for faults-high to come back

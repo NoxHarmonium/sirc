@@ -262,6 +262,7 @@ fn handle_exception(
     };
 
     clear_sr_bit(StatusRegisterFields::ProtectedMode, registers);
+    clear_sr_bit(StatusRegisterFields::TraceMode, registers);
     // Set ExceptionActive bit since we're entering an exception handler
     set_sr_bit(StatusRegisterFields::ExceptionActive, registers);
 

@@ -4,9 +4,10 @@ use peripheral_cpu::{
     coprocessors::{
         exception_unit::definitions::{
             vectors::{
-                ALIGNMENT_FAULT, BUS_FAULT, DOUBLE_FAULT_VECTOR, INVALID_OPCODE_FAULT,
-                LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT,
-                PRIVILEGE_VIOLATION_FAULT, SEGMENT_OVERFLOW_FAULT,
+                ALIGNMENT_FAULT, BUS_FAULT, DOUBLE_FAULT_VECTOR, INSTRUCTION_TRACE_FAULT,
+                INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
+                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
+                SEGMENT_OVERFLOW_FAULT,
             },
             Faults,
         },
@@ -17,8 +18,8 @@ use peripheral_cpu::{
     },
     decode_fault_metadata_register, encode_fault_metadata_register, new_cpu_peripheral,
     registers::{
-        set_sr_bit, sr_bit_is_set, FullAddressRegisterAccess, SegmentedAddress,
-        StatusRegisterFields,
+        set_sr_bit, sr_bit_is_set, sr_bit_is_set_value, FullAddressRegisterAccess,
+        SegmentedAddress, StatusRegisterFields,
     },
     FaultMetadataRegister,
 };
@@ -794,6 +795,60 @@ fn test_level_five_interrupt_conflict_fault() {
         &expect_fault(LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, (0x00AB, 0xCDE0)),
         &mut clocks,
     );
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_instruction_trace_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    set_sr_bit(
+        StatusRegisterFields::TraceMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    // Run a dummy instruction at PC=0x0. At WriteBackExecutor the T bit is set,
+    // so InstructionTrace is raised. PC has already advanced to 0x2 (next instruction)
+    // before the fault is set — this is the defining property of a post-instruction fault.
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_dummy_instruction(0x0, false),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::InstructionTrace),
+        "InstructionTrace fault should be pending after an instruction with T bit set"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(INSTRUCTION_TRACE_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    // RETE return address is the instruction AFTER the traced one (post-instruction fault)
+    assert_eq_hex!(
+        0x0000_0002,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+
+    // T bit is cleared in the current SR on exception entry
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::TraceMode,
+        &cpu_peripheral.registers
+    ));
+
+    // T bit is preserved in the saved SR so RETE restores it
+    assert!(sr_bit_is_set_value(
+        StatusRegisterFields::TraceMode,
+        cpu_peripheral.eu_registers.link_registers[6].return_status_register
+    ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
 }

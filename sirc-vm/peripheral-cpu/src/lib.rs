@@ -50,7 +50,10 @@ use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
 
-use crate::registers::{get_hardware_interrupt_enable, ExceptionLinkRegister, Registers};
+use crate::registers::{
+    get_hardware_interrupt_enable, sr_bit_is_set, ExceptionLinkRegister, Registers,
+    StatusRegisterFields,
+};
 
 // The 8th exception link register stores metadata about faults
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
@@ -261,6 +264,18 @@ impl Device for CpuPeripheral {
                 BusAssertions::default()
             }
         };
+
+        if phase == ExecutionPhase::WriteBackExecutor
+            && self.eu_registers.pending_fault.is_none()
+            && sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers)
+        {
+            self.eu_registers.pending_fault = raise_fault(
+                &mut self.eu_registers,
+                Faults::InstructionTrace,
+                phase,
+                &bus_assertions,
+            );
+        }
 
         // TODO: Investigate performance impact of unrolling the six CPU phases
         // category=Performance
