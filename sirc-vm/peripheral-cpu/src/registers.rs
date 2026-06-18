@@ -36,10 +36,7 @@ pub enum StatusRegisterFields {
     /// During memory effective address calcs, if the address wraps around with either and overflow or underflow
     /// and this bit is set, an exception will be thrown to detect an invalid access
     TrapOnAddressOverflow = 0b0100_0000 << u8::BITS,
-    /// When enabled, causes an exception every instruction to facilitate debuggers
-    // TODO: Implement TraceMode in CPU simulator
-    // category=Features
-    // Useful when debugging programs with other programs running on the CPU (e.g. if you have an OS)
+    /// When enabled, causes an `InstructionTrace` fault after every instruction to facilitate debuggers
     TraceMode = 0b1000_0000 << u8::BITS,
 }
 

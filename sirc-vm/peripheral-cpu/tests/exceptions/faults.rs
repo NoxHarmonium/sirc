@@ -4,7 +4,9 @@ use peripheral_cpu::{
     coprocessors::{
         exception_unit::definitions::{
             vectors::{
-                ALIGNMENT_FAULT, BUS_FAULT, DOUBLE_FAULT_VECTOR, INVALID_OPCODE_FAULT,
+                ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, DOUBLE_FAULT_VECTOR,
+                INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
+                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
                 SEGMENT_OVERFLOW_FAULT,
             },
             Faults,
@@ -16,8 +18,8 @@ use peripheral_cpu::{
     },
     decode_fault_metadata_register, encode_fault_metadata_register, new_cpu_peripheral,
     registers::{
-        set_sr_bit, sr_bit_is_set, FullAddressRegisterAccess, SegmentedAddress,
-        StatusRegisterFields,
+        set_sr_bit, sr_bit_is_set, sr_bit_is_set_value, FullAddressRegisterAccess,
+        SegmentedAddress, StatusRegisterFields,
     },
     FaultMetadataRegister,
 };
@@ -220,6 +222,101 @@ fn test_bus_fault() {
     run_expectations(
         &mut cpu_peripheral,
         &expect_bus_fault((0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+pub fn expect_bus_protection_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
+    let dummy_instruction = bytes_to_words(&encode_instruction(&build_test_instruction()));
+    let vector = u32::from(BUS_PROTECTION_FAULT);
+    let masked_vector_value = vector_value.to_full_address() & 0x00FF_FFFF;
+    let load_instruction_bytes: [u8; 4] = encode_instruction(&build_load_instruction());
+    let load_instruction_words = bytes_to_words(&load_instruction_bytes);
+
+    vec![
+        Some(expectation(None, None, Some(0x0000_0000), None)),
+        Some(expectation(
+            Some(load_instruction_words[0]),
+            None,
+            Some(0x0000_0001),
+            None,
+        )),
+        Some(expectation(
+            Some(load_instruction_words[1]),
+            None,
+            None,
+            None,
+        )),
+        None,
+        // Bus protection error when trying to load data from memory
+        Some(expectation(
+            None,
+            Some(BusAssertions {
+                address: 0x0000_CAFE,
+                op: peripheral_bus::device::BusOperation::Read,
+                ..BusAssertions::default()
+            }),
+            None,
+            None,
+        )),
+        Some(expectation(
+            Some(0x0),
+            Some(BusAssertions {
+                bus_protection_error: true,
+                ..BusAssertions::default()
+            }),
+            None,
+            None,
+        )),
+        // Fetch vector for bus protection fault (vector is 0x9 so address is 0x12)
+        // EU reads vector and jumps to it
+        Some(expectation(None, None, Some(vector * 2), None)),
+        Some(expectation(
+            Some(vector_value.0),
+            None,
+            Some((vector * 2) + 1),
+            None,
+        )),
+        Some(expectation(Some(vector_value.1), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        // PC should be pointing at contents of vector now
+        Some(expectation(None, None, Some(masked_vector_value), None)),
+        Some(expectation(
+            Some(dummy_instruction[0]),
+            None,
+            Some(masked_vector_value + 1),
+            None,
+        )),
+        Some(expectation(Some(dummy_instruction[1]), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+    ]
+}
+
+#[test]
+fn test_bus_protection_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Set protected mode to test if the fault flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_bus_protection_fault((0x00AB, 0xCDE0)),
         &mut clocks,
     );
 
@@ -699,6 +796,157 @@ fn test_fault_metadata_register_bit_layout() {
         0x8,
         "Original fault 0x8 should occupy bits 8-11"
     );
+}
+
+pub fn build_privilege_violation_instruction() -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadRegisterFromImmediate,
+        register: 0xE, // Ph (register 14) - a privileged register
+        value: 0xFEFE,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    })
+}
+
+#[test]
+fn test_privilege_violation_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Protected mode must be active for the privilege check to fire
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_instruction(&build_privilege_violation_instruction(), 0x0, false),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::PrivilegeViolation),
+        "A fault should be raised because Ph is a privileged register"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(PRIVILEGE_VIOLATION_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_level_five_interrupt_conflict_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Simulate being inside a level-5 handler
+    cpu_peripheral.eu_registers.current_exception_level = 6;
+
+    // Assert a second L5 interrupt (NMI). This should trigger the conflict fault because
+    // get_cause_register_value now lets L5 through when current_exception_level == 6,
+    // allowing handle_exception to detect the re-entry and raise LevelFiveInterruptConflict.
+    cpu_peripheral.raise_hardware_interrupt(0x10);
+
+    // The exception unit reads the L5 vector table entry (address LEVEL_FIVE_HARDWARE_EXCEPTION * 2)
+    // but handle_exception detects the conflict at phase 3 and raises pending_fault instead
+    // of jumping to the L5 handler. The vector data we provide is irrelevant here.
+    let l5_vector_addr = u32::from(LEVEL_FIVE_HARDWARE_EXCEPTION) * 2;
+    run_expectations(
+        &mut cpu_peripheral,
+        &vec![
+            Some(expectation(None, None, Some(l5_vector_addr), None)),
+            Some(expectation(Some(0x0), None, Some(l5_vector_addr + 1), None)),
+            Some(expectation(Some(0x0), None, None, None)),
+            None,
+            None,
+            None,
+        ],
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::LevelFiveInterruptConflict),
+        "LevelFiveInterruptConflict should be raised when L5 fires while already at exception level 6"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_instruction_trace_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    set_sr_bit(
+        StatusRegisterFields::TraceMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    // Run a dummy instruction at PC=0x0. T was set before this instruction started,
+    // so it is sampled at InstructionFetchLow and InstructionTrace is raised at
+    // WriteBackExecutor after the instruction commits. PC has already advanced to 0x2
+    // (next instruction) — this is the defining property of a post-instruction fault.
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_dummy_instruction(0x0, false),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::InstructionTrace),
+        "InstructionTrace fault should be pending after an instruction with T bit set"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(INSTRUCTION_TRACE_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    // RETE return address is the instruction AFTER the traced one (post-instruction fault)
+    assert_eq_hex!(
+        0x0000_0002,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+
+    // T bit is cleared in the current SR on exception entry
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::TraceMode,
+        &cpu_peripheral.registers
+    ));
+
+    // T bit is preserved in the saved SR so RETE restores it
+    assert!(sr_bit_is_set_value(
+        StatusRegisterFields::TraceMode,
+        cpu_peripheral.eu_registers.link_registers[6].return_status_register
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
 }
 
 // TODO: Test the metadata part of the exception link register

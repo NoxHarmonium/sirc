@@ -54,6 +54,22 @@ pub mod vectors {
     /// 3. Triggering exception below 0x80
     pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
+    /// Raised after every instruction when the `TraceMode` SR bit is set
+    /// Used for debugging
+    pub const INSTRUCTION_TRACE_FAULT: u8 = 0x06;
+
+    /// Raised when a level five hardware exception is raised
+    /// when one is already being handled
+    ///
+    /// We don't use a stack for handling exceptions, so there
+    /// is nowhere to store the return address past level five.
+    /// We could just ignore any level five HW exceptions while it is
+    /// masked, but that could indicate a hardware misconfiguration,
+    /// so it is handy so that hardware bugs for things that should
+    /// not be interrupted are picked up.
+    /// Level 5 interrupts should be treated like NMIs.
+    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x07;
+
     /// Vector to jump to on a double fault.
     ///
     /// When we are already handling a fault, and another one occurs,
@@ -71,33 +87,16 @@ pub mod vectors {
     /// If you leave it at zero it will reset the program, but will still be
     /// in an exception handler state, so you should probably provide a vector
     /// and at least have a reset COP instruction.
-    pub const DOUBLE_FAULT_VECTOR: u8 = 0x06;
+    pub const DOUBLE_FAULT_VECTOR: u8 = 0x08;
 
-    // 0x06-0x07 Reserved
-
-    // Privileged Regular Exceptions (0x08-0x0F)
-
-    // TODO: I think these faults need to be incremented. DOUBLE_FAULT_VECTOR and INSTRUCTION_TRACE_FAULT are overlappying
-    // TODO: Add a BUS_PROTECTION_FAULT which is raised when the BPRT pin is asserted. It is like a BUS_ERROR but
-    // is raised when the bus address is valid, but the device disallowed the I/O due to memory protection etc.
-
-    /// Raised after every instruction when the `TraceMode` SR bit is set
-    /// Used for debugging
-    pub const INSTRUCTION_TRACE_FAULT: u8 = 0x06;
-
-    /// Raised when a level five hardware exception is raised
-    /// when one is already being handled
+    /// Raised when an external device raised a protection error via the BPER CPU pin.
     ///
-    /// We don't use a stack for handling exceptions, so there
-    /// is nowhere to store the return address past level five.
-    /// We could just ignore any level five HW exceptions while it is
-    /// masked, but that could indicate a hardware misconfiguration,
-    /// so it is handy so that hardware bugs for things that should
-    /// not be interrupted are picked up.
-    /// Level 5 interrupts should be treated like NMIs.
-    pub const LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT: u8 = 0x07; // 0000_1001;
+    /// Unlike a Bus Fault (BERR), the address is valid and mapped but the device
+    /// disallowed the access, for example due to memory protection.
+    /// Priority: BERR > BPER > BACK.
+    pub const BUS_PROTECTION_FAULT: u8 = 0x09;
 
-    //  0x09-0x0F Reserved
+    //  0x0A-0x0F Reserved
 
     // Hardware Exceptions
 
@@ -177,4 +176,5 @@ pub enum Faults {
     InstructionTrace = 0x6,
     LevelFiveInterruptConflict = 0x7,
     DoubleFault = 0x8,
+    BusProtection = 0x9,
 }
