@@ -275,6 +275,30 @@ The exception unit maintains a \texttt{current\_exception\_level} field that tra
 When not handling any exception, this is 0. When handling an exception at level N, only exceptions at level > N can
 interrupt.
 
+\textbf{Level 5 NMI-like Behavior:}
+
+Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). They cannot be disabled via the
+interrupt enable bits in the status register, and will preempt any lower-priority exception handler. However, Level 5
+is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), a L5
+interrupt that arrives while a fault is being handled is \textit{queued} in the pending hardware exceptions register
+rather than serviced immediately.
+
+Once the fault handler returns via \texttt{RETE} and the exception level drops back below 6, the pending L5
+interrupt fires normally.
+
+This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use
+of the NMI line, fault handlers should be kept as short as possible.
+
+Keep in mind that if a second L5 interrupt arrives \textit{while the CPU is already executing an L5 handler}
+(exception level 6), it is not queued. It will raise a Level Five Hardware Exception Conflict fault instead.
+See the fault descriptions above.
+
+These two rules compose in a non-obvious way: if a fault is raised \textit{inside} an L5 handler and a second L5
+interrupt arrives while that fault is being serviced, the interrupt is queued (priority 7 blocks priority 6). Once
+the fault handler returns via \texttt{RETE} and the exception level drops back to 6, the queued L5 fires — and
+since the CPU is already at level 6 at that point, a Level Five Hardware Exception Conflict fault is raised then,
+not during the inner fault handler.
+
 \section{Exception Processing}
 
 \subsection{Exception Priority}

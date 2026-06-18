@@ -29,9 +29,11 @@
 .ORG 0x000A
 .DQ @privilege_violation_fault_handler
 .ORG 0x000C
-.DQ @double_fault_handler
+.DQ @instruction_trace_fault_handler
 .ORG 0x000E
 .DQ @level_five_interrupt_conflict_handler
+.ORG 0x0010
+.DQ @double_fault_handler
 
 .ORG 0x0020
 .DQ @level_five_interrupt_handler
@@ -229,6 +231,10 @@ LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
 
+RETE
+
+:instruction_trace_fault_handler
+; Stub - instruction trace fault is not yet exercised in this test (it isn't implemented in the simulator yet)
 RETE
 
 ; Trampoline for faults-high to come back

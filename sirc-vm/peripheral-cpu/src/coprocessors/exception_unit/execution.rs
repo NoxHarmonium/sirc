@@ -170,8 +170,15 @@ pub fn get_cause_register_value(
     // exception_level 2-6 maps to interrupt lines 1-5
     // So we check bit (exception_level - 2) of the enable mask
     // Also check that this exception is higher priority than the current level
-    // (higher priority = higher exception level number)
-    if (2..=6).contains(&exception_level) && exception_level > eu_registers.current_exception_level
+    // (higher priority = higher exception level number).
+    // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
+    // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
+    // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
+    // by handle_exception's priority filter, which silently ignores lower-priority exceptions.
+    let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
+        && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
+    if (2..=6).contains(&exception_level)
+        && (exception_level > eu_registers.current_exception_level || is_nmi_reentry)
     {
         let interrupt_line = exception_level - 2;
         let hw_interrupt_enable = get_hardware_interrupt_enable(registers);
@@ -420,8 +427,16 @@ impl Executor for ExceptionUnitExecutor {
             }
             ExecutionPhase::MemoryAccessExecutor => {}
             ExecutionPhase::WriteBackExecutor => {
-                // TODO: Where should these go?
-                eu_registers.pending_fault = None;
+                // For Fault ops, pending_fault was set before this cycle and has now been
+                // dispatched at phase 3; clear it as cleanup.
+                // For HardwareException/SoftwareException ops, pending_fault starts as None
+                // but may have been raised by handle_exception mid-cycle (e.g. when a second
+                // L5 interrupt arrives while already at level 6, triggering
+                // LevelFiveInterruptConflict). In that case we must NOT clear it — the next
+                // InstructionFetchLow needs to see it and dispatch the fault.
+                if matches!(op_code, ExceptionUnitOpCodes::Fault) {
+                    eu_registers.pending_fault = None;
+                }
 
                 // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
                 registers.pending_coprocessor_command = 0x0;
