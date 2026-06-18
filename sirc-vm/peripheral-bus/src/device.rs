@@ -32,6 +32,9 @@ pub struct BusAssertions {
     /// Set to true to cause a bus fault in the CPU
     /// Usually used for invalid access on devices etc.
     pub bus_error: bool,
+    /// Set to true to cause a bus protection fault in the CPU
+    /// Used when the address is valid but the device disallowed the access (e.g. memory protection)
+    pub bus_protection_error: bool,
     /// Set to true in the first cycle of the execution unit instruction fetch
     /// Could be used as a hint to a memory controller that the next fetch will be sequential
     /// At the moment, just used as a checkpoint for the debugger

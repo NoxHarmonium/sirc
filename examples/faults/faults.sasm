@@ -5,9 +5,10 @@
 
 ;; Devices
 ; Debug
-.EQU $DEBUG_DEVICE_SEGMENT         #0x000B
-.EQU $DEBUG_DEVICE_BUS_ERROR       #0x0000
-.EQU $DEBUG_DEVICE_EXCEPTION_L5    #0x0005
+.EQU $DEBUG_DEVICE_SEGMENT              #0x000B
+.EQU $DEBUG_DEVICE_BUS_ERROR            #0x0000
+.EQU $DEBUG_DEVICE_EXCEPTION_L5         #0x0005
+.EQU $DEBUG_DEVICE_BUS_PROTECTION_ERROR #0x0006
 
 
 ;; Cpu Phases
@@ -34,6 +35,8 @@
 .DQ @level_five_interrupt_conflict_handler
 .ORG 0x0010
 .DQ @double_fault_handler
+.ORG 0x0012
+.DQ @bus_protection_fault_handler
 
 .ORG 0x0020
 .DQ @level_five_interrupt_handler
@@ -110,6 +113,12 @@ ORRI    sr, #0b1000_0000_0000_0000
 LOAD    r7, #0x1
 ; T bit was cleared by the trace handler, so no further instructions are traced
 
+; Bus protection fault test
+; Get the debug device to raise a protection error on the bus
+LOAD    ah, $DEBUG_DEVICE_SEGMENT
+LOAD    al, $DEBUG_DEVICE_BUS_PROTECTION_ERROR
+STOR    (a), r7
+
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
 COPI    r1, #0x4000
 
@@ -132,6 +141,10 @@ COPI    r1, #0b0001_0100_1111_1111
 
 :bus_fault_handler
 ADDI    r1, #1
+RETE
+
+:bus_protection_fault_handler
+ADDI    r5, #1
 RETE
 
 :alignment_fault_handler

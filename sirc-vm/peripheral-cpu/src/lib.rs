@@ -219,6 +219,13 @@ impl Device for CpuPeripheral {
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
             self.eu_registers.pending_fault =
                 raise_fault(&mut self.eu_registers, Faults::Bus, phase, &bus_assertions);
+        } else if bus_assertions.bus_protection_error {
+            self.eu_registers.pending_fault = raise_fault(
+                &mut self.eu_registers,
+                Faults::BusProtection,
+                phase,
+                &bus_assertions,
+            );
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {

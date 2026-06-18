@@ -12,6 +12,7 @@ use peripheral_bus::{
 ///
 pub struct DebugDevice {
     pub trigger_bus_error: bool,
+    pub trigger_protection_error: bool,
     pub trigger_interrupt: u8,
 }
 
@@ -19,6 +20,7 @@ pub struct DebugDevice {
 pub const fn new_debug_device() -> DebugDevice {
     DebugDevice {
         trigger_bus_error: false,
+        trigger_protection_error: false,
         trigger_interrupt: 0,
     }
 }
@@ -34,6 +36,15 @@ impl Device for DebugDevice {
             self.trigger_bus_error = false;
             return BusAssertions {
                 bus_error: true,
+                ..io_assertions
+            };
+        }
+        if self.trigger_protection_error {
+            debug!("Bus protection error triggered!");
+
+            self.trigger_protection_error = false;
+            return BusAssertions {
+                bus_protection_error: true,
                 ..io_assertions
             };
         }
@@ -60,6 +71,7 @@ impl MemoryMapped for DebugDevice {
         match address {
             0x0 => u16::from(self.trigger_bus_error),
             0x1..=0x5 => u16::from(address == u32::from(self.trigger_interrupt)),
+            0x6 => u16::from(self.trigger_protection_error),
             _ => 0x0,
         }
     }
@@ -72,6 +84,9 @@ impl MemoryMapped for DebugDevice {
             0x0 => self.trigger_bus_error = value == 0x1,
             0x1..=0x5 if value == 0x1 => {
                 self.trigger_interrupt = address as u8;
+            }
+            0x6 if value == 0x1 => {
+                self.trigger_protection_error = true;
             }
             _ => {}
         }

@@ -89,11 +89,14 @@ pub mod vectors {
     /// and at least have a reset COP instruction.
     pub const DOUBLE_FAULT_VECTOR: u8 = 0x08;
 
-    // TODO: Add a BUS_PROTECTION_FAULT which is raised when the BPRT pin is asserted. It is like a BUS_ERROR but
-    // is raised when the bus address is valid, but the device disallowed the I/O due to memory protection etc.
-    // pub const BUS_PROTECTION_FAULT: u8 = 0x09;
+    /// Raised when an external device raised a protection error via the BPER CPU pin.
+    ///
+    /// Unlike a Bus Fault (BERR), the address is valid and mapped but the device
+    /// disallowed the access, for example due to memory protection.
+    /// Priority: BERR > BPER > BACK.
+    pub const BUS_PROTECTION_FAULT: u8 = 0x09;
 
-    //  0x09-0x0F Reserved
+    //  0x0A-0x0F Reserved
 
     // Hardware Exceptions
 
@@ -173,4 +176,5 @@ pub enum Faults {
     InstructionTrace = 0x6,
     LevelFiveInterruptConflict = 0x7,
     DoubleFault = 0x8,
+    BusProtection = 0x9,
 }

@@ -4,8 +4,8 @@ use peripheral_cpu::{
     coprocessors::{
         exception_unit::definitions::{
             vectors::{
-                ALIGNMENT_FAULT, BUS_FAULT, DOUBLE_FAULT_VECTOR, INSTRUCTION_TRACE_FAULT,
-                INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
+                ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, DOUBLE_FAULT_VECTOR,
+                INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
                 LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
                 SEGMENT_OVERFLOW_FAULT,
             },
@@ -222,6 +222,101 @@ fn test_bus_fault() {
     run_expectations(
         &mut cpu_peripheral,
         &expect_bus_fault((0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+pub fn expect_bus_protection_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
+    let dummy_instruction = bytes_to_words(&encode_instruction(&build_test_instruction()));
+    let vector = u32::from(BUS_PROTECTION_FAULT);
+    let masked_vector_value = vector_value.to_full_address() & 0x00FF_FFFF;
+    let load_instruction_bytes: [u8; 4] = encode_instruction(&build_load_instruction());
+    let load_instruction_words = bytes_to_words(&load_instruction_bytes);
+
+    vec![
+        Some(expectation(None, None, Some(0x0000_0000), None)),
+        Some(expectation(
+            Some(load_instruction_words[0]),
+            None,
+            Some(0x0000_0001),
+            None,
+        )),
+        Some(expectation(
+            Some(load_instruction_words[1]),
+            None,
+            None,
+            None,
+        )),
+        None,
+        // Bus protection error when trying to load data from memory
+        Some(expectation(
+            None,
+            Some(BusAssertions {
+                address: 0x0000_CAFE,
+                op: peripheral_bus::device::BusOperation::Read,
+                ..BusAssertions::default()
+            }),
+            None,
+            None,
+        )),
+        Some(expectation(
+            Some(0x0),
+            Some(BusAssertions {
+                bus_protection_error: true,
+                ..BusAssertions::default()
+            }),
+            None,
+            None,
+        )),
+        // Fetch vector for bus protection fault (vector is 0x9 so address is 0x12)
+        // EU reads vector and jumps to it
+        Some(expectation(None, None, Some(vector * 2), None)),
+        Some(expectation(
+            Some(vector_value.0),
+            None,
+            Some((vector * 2) + 1),
+            None,
+        )),
+        Some(expectation(Some(vector_value.1), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        // PC should be pointing at contents of vector now
+        Some(expectation(None, None, Some(masked_vector_value), None)),
+        Some(expectation(
+            Some(dummy_instruction[0]),
+            None,
+            Some(masked_vector_value + 1),
+            None,
+        )),
+        Some(expectation(Some(dummy_instruction[1]), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+    ]
+}
+
+#[test]
+fn test_bus_protection_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Set protected mode to test if the fault flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_bus_protection_fault((0x00AB, 0xCDE0)),
         &mut clocks,
     );
 

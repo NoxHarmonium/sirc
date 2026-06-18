@@ -4,8 +4,9 @@ use peripheral_bus::device::{BusAssertions, BusOperation};
 use super::{
     super::shared::Executor,
     definitions::vectors::{
-        ALIGNMENT_FAULT, BUS_FAULT, INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT,
-        LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT, SEGMENT_OVERFLOW_FAULT,
+        ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, INSTRUCTION_TRACE_FAULT,
+        INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
+        SEGMENT_OVERFLOW_FAULT,
     },
 };
 use super::{
@@ -152,6 +153,7 @@ pub fn get_cause_register_value(
             Faults::InstructionTrace => INSTRUCTION_TRACE_FAULT,
             Faults::LevelFiveInterruptConflict => LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT,
             Faults::DoubleFault => DOUBLE_FAULT_VECTOR,
+            Faults::BusProtection => BUS_PROTECTION_FAULT,
         };
 
         return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);

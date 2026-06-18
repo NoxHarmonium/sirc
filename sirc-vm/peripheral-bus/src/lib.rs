@@ -241,6 +241,7 @@ impl BusPeripheral {
                     // The devices will have to be polled by the program to find the cause of the error at the moment
                     // (I don't really want to implement complex error signalling like the 68k has)
                     bus_error: prev.bus_error | curr.bus_error,
+                    bus_protection_error: prev.bus_protection_error | curr.bus_protection_error,
                     data: prev.data | curr.data,
                     device_was_activated: prev.device_was_activated | curr.device_was_activated,
                     ..prev
