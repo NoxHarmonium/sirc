@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::ops::BitOr;
 
 // TODO: Make sure at some point to not have duplicate exception level definitions
 // category=Refactoring
@@ -16,6 +17,37 @@ pub enum BusOperation {
     #[default]
     Read,
     Write,
+}
+
+impl BitOr for BusOperation {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            // In hardware, the bus access strobe output (BRW) is active high where high is "write"
+            (Self::Write, _) | (_, Self::Write) => Self::Write,
+            _ => Self::Read,
+        }
+    }
+}
+
+impl BitOr for BusAssertions {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self {
+            // Ensure that any new fields added to `BusAssertions` are added here.
+            address: self.address | rhs.address,
+            data: self.data | rhs.data,
+            op: self.op | rhs.op,
+            interrupt_assertion: self.interrupt_assertion | rhs.interrupt_assertion,
+            bus_access_strobe: self.bus_access_strobe | rhs.bus_access_strobe,
+            bus_acknowledge: self.bus_acknowledge | rhs.bus_acknowledge,
+            bus_error: self.bus_error | rhs.bus_error,
+            bus_protection_error: self.bus_protection_error | rhs.bus_protection_error,
+            instruction_fetch: self.instruction_fetch | rhs.instruction_fetch,
+            device_was_activated: self.device_was_activated | rhs.device_was_activated,
+            exit_simulation: self.exit_simulation | rhs.exit_simulation,
+        }
+    }
 }
 
 /// External interaction with the bus by devices.

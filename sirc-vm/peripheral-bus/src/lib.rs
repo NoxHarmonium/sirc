@@ -230,20 +230,7 @@ impl BusPeripheral {
                 let device = &mut segment.device;
                 device.poll(master_assertions, selected)
             })
-            .fold(master_assertions, |prev, curr| {
-                BusAssertions {
-                    // Interrupts are all merged together
-                    interrupt_assertion: prev.interrupt_assertion | curr.interrupt_assertion,
-                    // If at least one device has a bus error, then a fault will be raised
-                    // The devices will have to be polled by the program to find the cause of the error at the moment
-                    // (I don't really want to implement complex error signalling like the 68k has)
-                    bus_error: prev.bus_error | curr.bus_error,
-                    bus_protection_error: prev.bus_protection_error | curr.bus_protection_error,
-                    data: prev.data | curr.data,
-                    device_was_activated: prev.device_was_activated | curr.device_was_activated,
-                    ..prev
-                }
-            });
+            .fold(master_assertions, |prev, curr| prev | curr);
         if !out.device_was_activated {
             warn!("No device was mapped for address [0x{:X}]", out.address);
         }
