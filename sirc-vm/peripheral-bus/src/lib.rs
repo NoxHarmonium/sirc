@@ -220,9 +220,6 @@ impl BusPeripheral {
     ///
     #[must_use]
     pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
-        // TODO: Assert there are no bus conflicts (e.g. two devices asserting the address or data bus at the same time)
-        // category=Refactoring
-
         let master_assertions = self.bus_master.poll(assertions, true);
 
         let segments = &mut self.segments;
