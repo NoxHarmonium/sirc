@@ -110,7 +110,8 @@ ANDI    sr, #0b1011_1111_1111_1111
 ; Instruction trace fault test
 ; Set T bit - the next instruction will be traced and the handler will fire
 ORRI    sr, #0b1000_0000_0000_0000
-LOAD    r7, #0x1
+; This instruction is traced
+NOOP
 ; T bit was cleared by the trace handler, so no further instructions are traced
 
 ; Bus protection fault test
