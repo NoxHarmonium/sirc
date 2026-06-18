@@ -904,9 +904,10 @@ fn test_instruction_trace_fault() {
         &mut cpu_peripheral.registers,
     );
 
-    // Run a dummy instruction at PC=0x0. At WriteBackExecutor the T bit is set,
-    // so InstructionTrace is raised. PC has already advanced to 0x2 (next instruction)
-    // before the fault is set — this is the defining property of a post-instruction fault.
+    // Run a dummy instruction at PC=0x0. T was set before this instruction started,
+    // so it is sampled at InstructionFetchLow and InstructionTrace is raised at
+    // WriteBackExecutor after the instruction commits. PC has already advanced to 0x2
+    // (next instruction) — this is the defining property of a post-instruction fault.
     run_expectations(
         &mut cpu_peripheral,
         &expect_dummy_instruction(0x0, false),

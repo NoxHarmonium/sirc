@@ -117,6 +117,7 @@ LOAD    r7, #0x1
 ; Get the debug device to raise a protection error on the bus
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_BUS_PROTECTION_ERROR
+LOAD    r7, #0x1
 STOR    (a), r7
 
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault

@@ -95,6 +95,10 @@ pub struct CpuPeripheral {
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
     pub cause_register_value: u16,
+    // T bit sampled at InstructionFetchLow before any SR writes for the current instruction.
+    // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
+    // Only set when the processing unit is running (not during exception unit dispatch).
+    trace_mode_sampled: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -195,6 +199,7 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         processing_unit_executor: ProcessingUnitExecutor::default(),
         exception_unit_executor: ExceptionUnitExecutor::default(),
         cause_register_value: 0,
+        trace_mode_sampled: false,
     }
 }
 
@@ -236,6 +241,15 @@ impl Device for CpuPeripheral {
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
 
+        // Sample the T bit once at InstructionFetchLow, before this instruction can modify SR.
+        // In hardware, the trace decision reads the registered (committed) SR value from the
+        // previous clock edge, not the combinational new value being written this cycle.
+        // Only sample for processing-unit instructions; EU exception dispatch is not traced.
+        if phase == ExecutionPhase::InstructionFetchLow {
+            self.trace_mode_sampled = coprocessor_id == ProcessingUnitExecutor::COPROCESSOR_ID
+                && sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers);
+        }
+
         trace!(
             "coprocessor_id: {coprocessor_id} eu_registers.pending_fault: {:?}",
             self.eu_registers.pending_fault
@@ -274,7 +288,7 @@ impl Device for CpuPeripheral {
 
         if phase == ExecutionPhase::WriteBackExecutor
             && self.eu_registers.pending_fault.is_none()
-            && sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers)
+            && self.trace_mode_sampled
         {
             self.eu_registers.pending_fault = raise_fault(
                 &mut self.eu_registers,
