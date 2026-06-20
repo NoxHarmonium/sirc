@@ -359,8 +359,6 @@ impl CpuPeripheral {
             );
         }
 
-        // If the result requests a bus access, hold the phase until acknowledged.
-        // Otherwise advance immediately.
         // TODO: Investigate performance impact of unrolling the six CPU phases
         // category=Performance
         if result.bus_access_strobe {
