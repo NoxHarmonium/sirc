@@ -11,16 +11,16 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::AddressRegisterName;
 
 ///
-/// Parses meta instructions that don't have any operands
+/// Parses operandless meta-instructions.
 ///
 /// ```
-/// use toolchain::parsers::opcodes::implied::implied;
+/// use toolchain::parsers::opcodes::meta::meta;
 /// use toolchain::types::instruction::InstructionToken;
 /// use peripheral_cpu::coprocessors::processing_unit::definitions::{ConditionFlags, Instruction, InstructionData, RegisterInstructionData};
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(implied)("RETS|==\n") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(meta)("RETS|==\n") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -32,7 +32,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectImmediate);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
 /// ```
-pub fn implied(i: &str) -> AsmResult<InstructionToken> {
+pub fn meta(i: &str) -> AsmResult<InstructionToken> {
     let input_length = i.len();
     let mut instructions = alt((parse_instruction_tag("RETS"), parse_instruction_tag("NOOP")));
 

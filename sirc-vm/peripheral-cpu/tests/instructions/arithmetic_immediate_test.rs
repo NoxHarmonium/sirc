@@ -509,7 +509,7 @@ fn test_xor_immediate() {
             0xF0F0,
             0x0000,
             &vec![],
-            &vec![StatusRegisterFields::Zero, StatusRegisterFields::Overflow],
+            &vec![StatusRegisterFields::Zero],
         );
     }
 }
@@ -1026,7 +1026,7 @@ fn test_tsxi_immediate() {
             0xF0F0,
             0xF0F0,
             &vec![],
-            &vec![StatusRegisterFields::Zero, StatusRegisterFields::Overflow],
+            &vec![StatusRegisterFields::Zero],
         );
     }
 }

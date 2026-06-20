@@ -1,6 +1,6 @@
 use crate::coprocessors::processing_unit::definitions::{
-    ConditionFlags, ImmediateInstructionData, ImpliedInstructionData, InstructionData,
-    RegisterInstructionData, ShiftOperand, ShiftType, ShortImmediateInstructionData,
+    ConditionFlags, ImmediateInstructionData, InstructionData, RegisterInstructionData,
+    ShiftOperand, ShiftType, ShortImmediateInstructionData,
 };
 
 const INSTRUCTION_ID_LENGTH: u32 = 6; // bits
@@ -350,40 +350,6 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
     encode_shift_operand(shift_operand)
         | encode_shift_type(shift_type)
         | encode_shift_count(shift_count)
-}
-
-///
-/// Encodes an "implied" instruction (an instruction has no arguments)
-///
-/// 6 bit instruction identifier (max 64 instructions)
-/// 22 bit reserved
-/// 4 bit conditions flags
-///
-/// ```
-/// use peripheral_cpu::coprocessors::processing_unit::encoding::encode_implied_instruction;
-/// use peripheral_cpu::coprocessors::processing_unit::definitions::{ImpliedInstructionData, ConditionFlags, Instruction};
-///
-/// assert_eq!(encode_implied_instruction(&ImpliedInstructionData {
-///   op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
-///   condition_flag: ConditionFlags::LessThan,
-/// }), [0x60, 0x00, 0x00, 0x0C]);
-/// ```
-/// # Panics
-///
-/// Will panic if the opcode value can't be converted to a 32 bit value, which is probably impossible.
-#[must_use]
-pub fn encode_implied_instruction(
-    ImpliedInstructionData {
-        op_code,
-        condition_flag,
-    }: &ImpliedInstructionData,
-) -> [u8; 4] {
-    // TODO: Improve error handling in `encode_implied_instruction`
-    // category=Refactoring
-    let op_code_raw = num::ToPrimitive::to_u32(op_code).unwrap();
-    let a = (op_code_raw & INSTRUCTION_ID_MASK).rotate_right(INSTRUCTION_ID_LENGTH);
-    let b = encode_condition_flags(condition_flag);
-    u32::to_be_bytes(a | b)
 }
 
 ///

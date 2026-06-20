@@ -1,0 +1,38 @@
+\begin{table}[H]
+\centering
+\tiny
+\begin{tabular}{lcccccccccc}
+\toprule
+\textbf{Instruction} & \textbf{Op} & \textbf{R1} & \textbf{R2} & \textbf{R3} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex} \\
+\midrule
+\texttt{ADDR r1, r2, r3} & 0x30 & 0x1 & 0x2 & 0x3 & 0 & 000 & 0x0 & 0b01 & 0x0 & \texttt{0xC048C010} \\
+& (110000) & (0001) & (0010) & (0011) & (0) & (000) & (0000) & (01) & (0000) & \\
+\midrule
+\texttt{ADDR r1, r2, r3, LSL \#2} & 0x30 & 0x1 & 0x2 & 0x3 & 0 & 001 & 0x2 & 0b01 & 0x0 & \texttt{0xC048C490} \\
+& (110000) & (0001) & (0010) & (0011) & (0) & (001) & (0010) & (01) & (0000) & \\
+\midrule
+\texttt{LOAD r1, (r2, a)} & 0x15 & 0x1 & 0x0 & 0x2 & 0 & 000 & 0x0 & 0b01 & 0x0 & \texttt{0x54408010} \\
+& (010101) & (0001) & (0000) & (0010) & (0) & (000) & (0000) & (01) & (0000) & \\
+\midrule
+\texttt{STOR -(r2, s), r1} & 0x13 & 0x0 & 0x1 & 0x2 & 0 & 000 & 0x0 & 0b10 & 0x0 & \texttt{0x4C048020} \\
+& (010011) & (0000) & (0001) & (0010) & (0) & (000) & (0000) & (10) & (0000) & \\
+\midrule
+\texttt{CMPR r4, r5} & 0x3A & 0x4 & 0x4 & 0x5 & 0 & 000 & 0x0 & 0b01 & 0x0 & \texttt{0xE9114010} \\
+& (111010) & (0100) & (0100) & (0101) & (0) & (000) & (0000) & (01) & (0000) & \\
+\midrule
+\texttt{XORR r2, r3, r4, RTR \#1} & 0x36 & 0x2 & 0x3 & 0x4 & 0 & 110 & 0x1 & 0b01 & 0x0 & \texttt{0xD88D1850} \\
+& (110110) & (0010) & (0011) & (0100) & (0) & (110) & (0001) & (01) & (0000) & \\
+\midrule
+\texttt{SUBR|>> r1, r2, r3, ASR r4} & 0x32 & 0x1 & 0x2 & 0x3 & 1 & 100 & 0x4 & 0b01 & 0xD & \texttt{0xC848F11D} \\
+& (110010) & (0001) & (0010) & (0011) & (1) & (100) & (0100) & (01) & (1101) & \\
+\midrule
+\texttt{ANDR|CS r5, r6, r7, LSL r1} & 0x34 & 0x5 & 0x6 & 0x7 & 1 & 001 & 0x1 & 0b01 & 0x3 & \texttt{0xD159E453} \\
+& (110100) & (0101) & (0110) & (0111) & (1) & (001) & (0001) & (01) & (0011) & \\
+\midrule
+\texttt{SHFT r1, ASL \#3} & 0x25 & 0x1 & 0x0 & 0x0 & 0 & 011 & 0x3 & 0b10 & 0x0 & \texttt{0x94400CE0} \\
+& (100101) & (0001) & (0000) & (0000) & (0) & (011) & (0011) & (10) & (0000) & \\
+\bottomrule
+\end{tabular}
+\caption{Register Format Encoding Examples}
+\label{tab:register-format-examples}
+\end{table}

@@ -1,0 +1,72 @@
+; SIRC-1 reference manual encoding fixture.
+; Keep one instruction after each @manual-example annotation. The Makefile pairs
+; these annotations with the assembled 32-bit words emitted into the binary.
+
+; @manual-section immediate Immediate Format Encoding Examples
+; @manual-example ADDI r1, #100
+ADDI r1, #100
+
+; @manual-example CMPI r2, #0x8000
+CMPI r2, #0x8000
+
+; @manual-example LOAD r3, (#16, a)
+LOAD r3, (#16, a)
+
+; @manual-example STOR (#-2, s), r4
+STOR (#-2, s), r4
+
+; @manual-example ADDI|== r5, #42
+ADDI|== r5, #42
+
+; @manual-example SUBI|>= r6, #10
+SUBI|>= r6, #10
+
+; @manual-section short-immediate Short Immediate Format Encoding Examples
+; @manual-example ADDI r1, #2, LSL #3
+ADDI r1, #2, LSL #3
+
+; @manual-example ORRI r2, #1, LSL #10
+ORRI r2, #1, LSL #10
+
+; @manual-example ANDI r3, #7, ASR #2
+ANDI r3, #7, ASR #2
+
+; @manual-example SUBI r4, #5, LSL r2
+SUBI r4, #5, LSL r2
+
+; @manual-example XORI|!= r7, #15, LSR #4
+XORI|!= r7, #15, LSR #4
+
+; @manual-example CMPI|NS r1, #8, RTL r3
+CMPI|NS r1, #8, RTL r3
+
+; @manual-example SHFT r3, RTR #5
+SHFT r3, RTR #5
+
+; @manual-section register Register Format Encoding Examples
+; @manual-example ADDR r1, r2, r3
+ADDR r1, r2, r3
+
+; @manual-example ADDR r1, r2, r3, LSL #2
+ADDR r1, r2, r3, LSL #2
+
+; @manual-example LOAD r1, (r2, a)
+LOAD r1, (r2, a)
+
+; @manual-example STOR -(r2, s), r1
+STOR -(r2, s), r1
+
+; @manual-example CMPR r4, r5
+CMPR r4, r5
+
+; @manual-example XORR r2, r3, r4, RTR #1
+XORR r2, r3, r4, RTR #1
+
+; @manual-example SUBR|>> r1, r2, r3, ASR r4
+SUBR|>> r1, r2, r3, ASR r4
+
+; @manual-example ANDR|CS r5, r6, r7, LSL r1
+ANDR|CS r5, r6, r7, LSL r1
+
+; @manual-example SHFT r1, ASL #3
+SHFT r1, ASL #3

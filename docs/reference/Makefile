@@ -9,7 +9,8 @@ LATEX = pdflatex
 LATEX_FLAGS = -interaction=nonstopmode -halt-on-error
 
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-TEX := $(MAIN).tex preamble.tex $(wildcard chapters/*.tex)
+TEX := $(MAIN).tex preamble.tex $(wildcard chapters/*.tex) $(wildcard generated/*.tex)
+EXAMPLE_ASM := $(filter-out ../../examples/reference-encodings/%.sasm ../../examples/basic-video/data.sasm,$(wildcard ../../examples/*/*.sasm))
 DOT := $(wildcard diagrams/*.dot)
 DIAGRAM_PDF := $(DOT:.dot=.pdf)
 
@@ -19,7 +20,7 @@ DIAGRAM_PDF := $(DOT:.dot=.pdf)
 all: $(OUTPUT).pdf
 
 # Build the PDF (multiple passes for cross-references)
-$(OUTPUT).pdf: graphviz $(TEX)
+$(OUTPUT).pdf: graphviz $(TEX) $(EXAMPLE_ASM)
 	@echo "Building PDF (pass 1/3)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex > /dev/null || (cat $(MAIN).log && exit 1)
 	@echo "Building PDF (pass 2/3)..."
@@ -30,7 +31,7 @@ $(OUTPUT).pdf: graphviz $(TEX)
 	@echo "✓ PDF generated: $(OUTPUT).pdf"
 
 # Quick build (single pass, for drafts)
-quick: graphviz $(TEX)
+quick: graphviz $(TEX) $(EXAMPLE_ASM)
 	@echo "Quick build (single pass)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
 	@mv $(MAIN).pdf $(OUTPUT).pdf

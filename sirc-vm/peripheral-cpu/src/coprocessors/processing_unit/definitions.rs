@@ -2,11 +2,6 @@
 //
 // Instruction formats:
 //
-// Implied: (e.g. HALT)
-// 6 bit instruction identifier (max 64 instructions)
-// 22 bit reserved
-// 4 bit condition flags
-//
 // Immediate: (e.g. BRAN #-3)
 // 6 bit instruction identifier (max 64 instructions)
 // 4 bit register identifier
@@ -162,12 +157,6 @@ impl ConditionFlags {
 }
 
 // Instruction Types
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ImpliedInstructionData {
-    pub op_code: Instruction,
-    pub condition_flag: ConditionFlags,
-}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImmediateInstructionData {

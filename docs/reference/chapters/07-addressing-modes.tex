@@ -25,9 +25,6 @@ operand is an immediate value, register contents, or data in memory at a compute
 	\label{tab:addr-modes}
 \end{table}
 
-Note: There is also an "Implied" addressing mode that is not explicitly supported by the CPU itself, but it is included
-as many of the assembler meta instructions technically use it.
-
 \section{Immediate Addressing}
 
 \subsection{Description}
@@ -229,34 +226,6 @@ The shift is applied to the source operand, not the constant.
 	\item Arithmetic with known values
 	\item Bit manipulation with masks
 \end{itemize}
-
-\section{Implied Addressing}
-
-\subsection{Description}
-
-No operand is specified; the operation is fully defined by the mnemonic.
-
-This is not an addressing mode supported by the CPU hardware, there is no encoding for an implied instruction. However,
-it is supported by the assembler for meta instructions that assemble to other instructions that do have operands.
-
-\subsection{Usage}
-
-\begin{itemize}
-	\item Meta-instructions that assemble to instructions with operands
-\end{itemize}
-
-\subsection{Example}
-
-\begin{lstlisting}
-NOOP              ; No operation
-; Assembles to 'ADDI r1, #0' with status register update set to 0x0 (or 0x0000_0000)
-
-WAIT              ; Wait for interrupt
-; Assembles to 'COPI r1, #0x1900'
-
-RETS              ; Return from subroutine
-; Assembles to 'LDEA p, (l)
-\end{lstlisting}
 
 \section{Address Register Selection}
 

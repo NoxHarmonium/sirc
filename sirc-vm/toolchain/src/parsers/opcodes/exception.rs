@@ -59,7 +59,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
-    // Implied instructions
+    // Operandless meta-instructions
     match (tag.as_str(), operands.as_slice()) {
         ("EXCP", [AddressingMode::Immediate(immediate_type)]) => {
             if let ImmediateType::Value(value) = immediate_type {

@@ -18,7 +18,7 @@ The SIRC-1 adheres to Reduced Instruction Set Computer (RISC) design principles:
 
 	\item \textbf{Fixed Instruction Length:} All instructions are exactly 32 bits (2 words) in length, simplifying instruction fetch and decode logic.
 
-	\item \textbf{Simple Instruction Formats:} Only four instruction formats are supported: Implied, Immediate, Short Immediate with Shift, and Register.
+	\item \textbf{Simple Instruction Formats:} Only three instruction formats are supported: Immediate, Short Immediate with Shift, and Register.
 
 	\item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
 
@@ -65,8 +65,8 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 		General Purpose Registers   & 7 (r1--r7)                  \\
 		Address Register Pairs      & 4 (l, a, s, p)              \\
 		Total Addressable Registers & 16                          \\
-		Instruction Formats         & 4                           \\
-		Addressing Modes            & 8                           \\
+		Instruction Formats         & 3                           \\
+		Addressing Modes            & 7                           \\
 		Condition Codes             & 16                          \\
 		\bottomrule
 	\end{tabular}

@@ -200,14 +200,14 @@ result = operand1 - operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
-SR.C = NOT(borrow)  ; Set if no borrow
+SR.C = borrow
 SR.V = signed_overflow
 \end{verbatim}
 
 	\textbf{Description:}
 
 	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is cleared if a borrow occurs
+	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs
 	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
@@ -227,7 +227,7 @@ BRAN|!= loop               ; Branch if not zero
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item Carry flag behavior is inverted compared to ADD (set when no borrow)
+		\item Carry is set when the subtraction requires a borrow
 		\item For multi-precision subtraction, use \mnemonic{SBC}
 		\item Subtracting a value from itself (\texttt{SUBR r1, r1, r1}) clears the register
 	\end{itemize}
@@ -241,24 +241,24 @@ BRAN|!= loop               ; Branch if not zero
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-SBCI rD, #imm16                ; rD = rD - imm16 - !C
-SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - !C
-SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - !C
+SBCI rD, #imm16                ; rD = rD - imm16 - C
+SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
+SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - C
 \end{lstlisting}
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 - operand2 - (1 - SR.C)
+result = operand1 - operand2 - SR.C
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
-SR.C = NOT(borrow)
+SR.C = borrow
 SR.V = signed_overflow
 \end{verbatim}
 
 	\textbf{Description:}
 
-	Subtracts the second operand and borrow (inverse of carry) from the first operand. In short immediate format with
+	Subtracts the second operand and borrow from the first operand. In short immediate format with
 	shift, the destination register is shifted before subtracting the immediate. Used for multi-precision subtraction to
 	propagate borrows from lower-order to higher-order subtractions.
 
@@ -277,7 +277,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 	\textbf{Notes:}
 	\begin{itemize}
 		\item Always use after \mnemonic{SUB} for multi-word subtraction
-		\item Remember: carry flag is inverted for subtraction (C=1 means no borrow)
+		\item Carry is treated as the borrow input for multi-word subtraction
 	\end{itemize}
 \end{instructionbox}
 
@@ -529,7 +529,7 @@ result = operand1 - operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
-SR.C = NOT(borrow)
+SR.C = borrow
 SR.V = signed_overflow
 \end{verbatim}
 

@@ -66,7 +66,7 @@ fn test_no_input() {
         one of:
           expected "BRAN" at line 2, column 1, or
           expected "BRSR" at line 2, column 1, or
-        in section "Implied instruction" at line 2, column 1,
+        in section "Meta instruction" at line 2, column 1,
         one of:
           expected "RETS" at line 2, column 1, or
           expected "NOOP" at line 2, column 1, or
@@ -138,7 +138,7 @@ fn test_rets_invalid_addressing_mode_error_context() {
     3 | LOAD r2, #5
 
     in section "instruction" at line 2, column 1,
-    in section "Implied instruction" at line 2, column 1,
+    in section "Meta instruction" at line 2, column 1,
     external error:
       The [RETS] does not support any addressing modes (e.g. NOOP or RETE) at line 2, column 6
     "#);
