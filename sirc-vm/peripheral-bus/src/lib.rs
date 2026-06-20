@@ -226,17 +226,17 @@ impl BusPeripheral {
     ///
     #[must_use]
     pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
-        if self
+        let master_assertions = if self
             .reset_unit
             .should_reset(assertions, &mut *self.bus_master)
         {
-            return BusAssertions {
+            BusAssertions {
                 reset_devices_on_bus: true,
                 ..BusAssertions::default()
-            };
-        }
-
-        let master_assertions = self.bus_master.poll(assertions, true);
+            }
+        } else {
+            self.bus_master.poll(assertions, true)
+        };
         let segments = &mut self.segments;
         let out = segments
             .iter_mut()
