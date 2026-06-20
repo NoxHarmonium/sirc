@@ -1,4 +1,4 @@
-use peripheral_bus::device::{BusAssertions, BusOperation};
+use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
@@ -60,6 +60,7 @@ impl StageExecutor for MemoryAccessExecutor {
                     address: (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                     op: BusOperation::Read,
                     bus_access_strobe: true,
+                    bus_access_type: BusAccessType::DataRead,
                     ..BusAssertions::default()
                 };
             }
@@ -69,6 +70,7 @@ impl StageExecutor for MemoryAccessExecutor {
                     data: decoded.sr_a_,
                     op: BusOperation::Write,
                     bus_access_strobe: true,
+                    bus_access_type: BusAccessType::DataWrite,
                     ..BusAssertions::default()
                 };
             }

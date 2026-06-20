@@ -64,11 +64,15 @@ const ACK: BusAssertions = BusAssertions {
     bus_acknowledge: true,
     bus_error: false,
     bus_protection_error: false,
-    instruction_fetch: false,
+    bus_access_type: peripheral_bus::device::BusAccessType::None,
     device_was_activated: false,
     exit_simulation: false,
     reset_requested: false,
     reset_devices_on_bus: false,
+    halt_requested: false,
+    force_trace_mode: false,
+    instruction_sync: false,
+    protected_mode_active: false,
 };
 
 const RSTI_ASSERTED: BusAssertions = BusAssertions {

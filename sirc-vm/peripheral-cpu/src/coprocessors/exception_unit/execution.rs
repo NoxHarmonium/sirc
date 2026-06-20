@@ -1,5 +1,5 @@
 use log::{debug, trace};
-use peripheral_bus::device::{BusAssertions, BusOperation};
+use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use super::{
     super::shared::Executor,
@@ -243,8 +243,6 @@ fn handle_exception(
         eu_registers.pending_fault = raise_fault(
             eu_registers,
             Faults::LevelFiveInterruptConflict,
-            // TODO: Don't hardcode this
-            ExecutionPhase::ExecutionEffectiveAddressExecutor,
             bus_assertions,
         );
         return;
@@ -309,6 +307,7 @@ impl Executor for ExceptionUnitExecutor {
                     address: self.vector_address,
                     op: BusOperation::Read,
                     bus_access_strobe: true,
+                    bus_access_type: BusAccessType::ExceptionVectorFetch,
                     ..BusAssertions::default()
                 };
             }
@@ -318,6 +317,7 @@ impl Executor for ExceptionUnitExecutor {
                     address: self.vector_address + 1,
                     op: BusOperation::Read,
                     bus_access_strobe: true,
+                    bus_access_type: BusAccessType::ExceptionVectorFetch,
                     ..BusAssertions::default()
                 };
             }

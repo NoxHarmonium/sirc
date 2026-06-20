@@ -12,6 +12,50 @@ pub const LEVEL_THREE_INTERRUPT: u8 = 0x4;
 pub const LEVEL_FOUR_INTERRUPT: u8 = 0x8;
 pub const LEVEL_FIVE_INTERRUPT: u8 = 0x10;
 
+/// Bus Access Type bits (BAT0-BAT2): output by the CPU to describe what I/O operation it is performing.
+/// Spec: chapter 02 §Bus Access Type Bits (BAT0-BAT2).
+#[repr(u8)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum BusAccessType {
+    #[default]
+    None = 0b000,
+    InstructionFetch = 0b001,
+    DataRead = 0b010,
+    DataWrite = 0b011,
+    ExceptionVectorFetch = 0b100,
+    DmaReadBurst = 0b101,
+    DmaWriteBurst = 0b110,
+    Reserved = 0b111,
+}
+
+impl From<u8> for BusAccessType {
+    fn from(val: u8) -> Self {
+        match val & 0x7 {
+            0b001 => Self::InstructionFetch,
+            0b010 => Self::DataRead,
+            0b011 => Self::DataWrite,
+            0b100 => Self::ExceptionVectorFetch,
+            0b101 => Self::DmaReadBurst,
+            0b110 => Self::DmaWriteBurst,
+            0b111 => Self::Reserved,
+            _ => Self::None,
+        }
+    }
+}
+
+impl BitOr for BusAccessType {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        // The CPU is the only source of BAT; all other devices output None.
+        // Take whichever side is non-None; left (master) wins on conflict.
+        if self == Self::None {
+            rhs
+        } else {
+            self
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub enum BusOperation {
     #[default]
@@ -43,11 +87,15 @@ impl BitOr for BusAssertions {
             bus_acknowledge: self.bus_acknowledge | rhs.bus_acknowledge,
             bus_error: self.bus_error | rhs.bus_error,
             bus_protection_error: self.bus_protection_error | rhs.bus_protection_error,
-            instruction_fetch: self.instruction_fetch | rhs.instruction_fetch,
+            bus_access_type: self.bus_access_type | rhs.bus_access_type,
             device_was_activated: self.device_was_activated | rhs.device_was_activated,
             exit_simulation: self.exit_simulation | rhs.exit_simulation,
             reset_requested: self.reset_requested | rhs.reset_requested,
             reset_devices_on_bus: self.reset_devices_on_bus | rhs.reset_devices_on_bus,
+            halt_requested: self.halt_requested | rhs.halt_requested,
+            force_trace_mode: self.force_trace_mode | rhs.force_trace_mode,
+            instruction_sync: self.instruction_sync | rhs.instruction_sync,
+            protected_mode_active: self.protected_mode_active | rhs.protected_mode_active,
         }
     }
 }
@@ -102,11 +150,10 @@ pub struct BusAssertions {
     /// Set to true to cause a bus protection fault in the CPU
     /// Used when the address is valid but the device disallowed the access (e.g. memory protection)
     pub bus_protection_error: bool,
-    /// Set to true in the first cycle of the execution unit instruction fetch
-    /// Could be used as a hint to a memory controller that the next fetch will be sequential
-    /// At the moment, just used as a checkpoint for the debugger
-    /// TODO: Replace with output of BAT (bus access type) CPU pins
-    pub instruction_fetch: bool,
+    /// Bus access type pins BAT0-BAT2: output by the CPU to indicate the current operation type.
+    /// Used as a checkpoint for the debugger (`InstructionFetch`) and stored in fault metadata.
+    /// Pins: BAT0-BAT2
+    pub bus_access_type: BusAccessType,
     /// Set to true if any device was mapped to the address during polling
     /// Currently used to warn if no device is mapped for an address range,
     /// probably wouldn't have an equivalent in hardware
@@ -129,6 +176,23 @@ pub struct BusAssertions {
     /// logic to hold rsti active, or have the program add some delays in software.
     /// Pin: RSTO
     pub reset_devices_on_bus: bool,
+
+    /// When asserted by an external device, the CPU completes the current instruction then stops
+    /// fetching new ones. Resumes when deasserted. Useful for hardware debugging.
+    /// Pin: HALT
+    pub halt_requested: bool,
+    /// When asserted by an external device, forces the Trace Mode (T) SR bit high regardless of
+    /// what software has set. Cannot be cleared by the running program.
+    /// Pin: TRCE
+    pub force_trace_mode: bool,
+    /// Pulsed true by the CPU during the first bus cycle of each instruction (`InstructionFetchLow`).
+    /// Signals the start of a new instruction to external devices (e.g. logic analysers, debuggers).
+    /// Pin: SYNC
+    pub instruction_sync: bool,
+    /// Reflects the Protected Mode (P) bit of the CPU status register each cycle.
+    /// Allows external memory controllers to enforce access restrictions based on privilege level.
+    /// Pin: PROT
+    pub protected_mode_active: bool,
 }
 
 /// Something that interacts with the bus.

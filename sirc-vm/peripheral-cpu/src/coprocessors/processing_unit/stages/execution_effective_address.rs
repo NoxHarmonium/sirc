@@ -4,7 +4,6 @@ use peripheral_bus::device::BusAssertions;
 use crate::{
     coprocessors::{
         exception_unit::definitions::Faults, processing_unit::definitions::Instruction,
-        shared::ExecutionPhase,
     },
     raise_fault,
     registers::{sr_bit_is_set, ExceptionUnitRegisters, Registers, StatusRegisterFields},
@@ -111,12 +110,8 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
                     && (displacement_overflowed || displacement_overflowed_after_inc)
                 {
-                    eu_registers.pending_fault = raise_fault(
-                        eu_registers,
-                        Faults::SegmentOverflow,
-                        ExecutionPhase::ExecutionEffectiveAddressExecutor,
-                        &bus_assertions,
-                    );
+                    eu_registers.pending_fault =
+                        raise_fault(eu_registers, Faults::SegmentOverflow, &bus_assertions);
                 }
             }
 
