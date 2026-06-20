@@ -274,7 +274,7 @@ fn perform_and(a: u16, b: u16, intermediate_registers: &mut IntermediateRegister
         &mut intermediate_registers.alu_status_register,
         result,
         false,
-        Some((a, b, result)),
+        None,
     );
 
     intermediate_registers.alu_output = result;
@@ -286,7 +286,7 @@ fn perform_or(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters
         &mut intermediate_registers.alu_status_register,
         result,
         false,
-        Some((a, b, result)),
+        None,
     );
 
     intermediate_registers.alu_output = result;
@@ -298,7 +298,7 @@ fn perform_xor(a: u16, b: u16, intermediate_registers: &mut IntermediateRegister
         &mut intermediate_registers.alu_status_register,
         result,
         false,
-        Some((a, b, result)),
+        None,
     );
 
     intermediate_registers.alu_output = result;

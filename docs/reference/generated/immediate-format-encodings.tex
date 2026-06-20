@@ -1,0 +1,29 @@
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Instruction} & \textbf{Opcode} & \textbf{Reg} & \textbf{Immediate} & \textbf{AF} & \textbf{Cond} & \textbf{Hex} \\
+\midrule
+\texttt{ADDI r1, \#100} & 0x00 & 0x1 & 0x0064 & 0b01 & 0x0 & \texttt{0x00401910} \\
+& (000000) & (0001) & (0000 0000 0110 0100) & (01) & (0000) & \\
+\midrule
+\texttt{CMPI r2, \#0x8000} & 0x0A & 0x2 & 0x8000 & 0b01 & 0x0 & \texttt{0x28A00010} \\
+& (001010) & (0010) & (1000 0000 0000 0000) & (01) & (0000) & \\
+\midrule
+\texttt{LOAD r3, (\#16, a)} & 0x14 & 0x3 & 0x0010 & 0b01 & 0x0 & \texttt{0x50C00410} \\
+& (010100) & (0011) & (0000 0000 0001 0000) & (01) & (0000) & \\
+\midrule
+\texttt{STOR (\#-2, s), r4} & 0x10 & 0x4 & 0xFFFE & 0b10 & 0x0 & \texttt{0x413FFFA0} \\
+& (010000) & (0100) & (1111 1111 1111 1110) & (10) & (0000) & \\
+\midrule
+\texttt{ADDI|== r5, \#42} & 0x00 & 0x5 & 0x002A & 0b01 & 0x1 & \texttt{0x01400A91} \\
+& (000000) & (0101) & (0000 0000 0010 1010) & (01) & (0001) & \\
+\midrule
+\texttt{SUBI|>= r6, \#10} & 0x02 & 0x6 & 0x000A & 0b01 & 0xB & \texttt{0x0980029B} \\
+& (000010) & (0110) & (0000 0000 0000 1010) & (01) & (1011) & \\
+\bottomrule
+\end{tabular}
+\caption{Immediate Format Encoding Examples}
+\label{tab:immediate-format-examples}
+\end{table}

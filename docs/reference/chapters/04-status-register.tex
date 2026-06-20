@@ -64,11 +64,11 @@ privilege level.
 \subsection{Carry Flag (C) -- Bit 2}
 
 \begin{description}
-	\item[Set when:] An addition produces a carry out of bit 15, or a subtraction produces a borrow
+	\item[Set when:] An addition produces a carry out of bit 15, or a subtraction requires a borrow
 	\item[Cleared when:] No carry/borrow occurs
 	\item[Tested by:] Carry Set (\texttt{CS}), Carry Clear (\texttt{CC}), Unsigned Higher (\texttt{HI}), Unsigned Lower or Same
 	      (\texttt{LO}) condition codes
-	\item[Note:] For unsigned comparisons, the carry flag acts as an unsigned overflow indicator
+	\item[Note:] For unsigned comparisons, the carry flag acts as an unsigned overflow/borrow indicator
 \end{description}
 
 \subsection{Overflow Flag (V) -- Bit 3}
@@ -178,7 +178,7 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 
 \begin{itemize}
 	\item \textbf{Arithmetic Instructions} (\mnemonic{ADDI}, \mnemonic{SUBI}, \mnemonic{ADCI}, \mnemonic{SBCI}): Update all four condition flags
-	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z, N and V flags; C flag is cleared
+	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z and N flags; C and V flags are cleared
 	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Same as Arithmetic Instructions but does not update destination
 	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
 	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Does not update condition flags
