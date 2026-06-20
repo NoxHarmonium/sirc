@@ -46,6 +46,8 @@ impl BitOr for BusAssertions {
             instruction_fetch: self.instruction_fetch | rhs.instruction_fetch,
             device_was_activated: self.device_was_activated | rhs.device_was_activated,
             exit_simulation: self.exit_simulation | rhs.exit_simulation,
+            reset_requested: self.reset_requested | rhs.reset_requested,
+            reset_devices_on_bus: self.reset_devices_on_bus | rhs.reset_devices_on_bus,
         }
     }
 }
@@ -114,6 +116,19 @@ pub struct BusAssertions {
     /// Something that only exists in software and required because the hardware never stops
     /// Used to distinguish between programs that run successfully to completion and errors
     pub exit_simulation: bool,
+
+    /// External reset input
+    /// When asserted, the reset unit immediately halts the CPU and begins the 6-cycle RSTO hold.
+    /// Can be driven by external devices or by the CPU itself (software RSET signals its own RSTI
+    /// output to trigger the same reset unit path).
+    /// Pin: RSTI
+    pub reset_requested: bool,
+    /// Asserted during the 6-cycle post-reset hold.
+    /// External devices should treat this as a notification to reset their own state.
+    /// If 6 cycles is not enough for external devices to reset, you'll either have to have glue
+    /// logic to hold rsti active, or have the program add some delays in software.
+    /// Pin: RSTO
+    pub reset_devices_on_bus: bool,
 }
 
 /// Something that interacts with the bus.
@@ -130,6 +145,11 @@ pub struct BusAssertions {
 pub trait Device {
     /// Called every clock so the device can do work and raise interrupts etc.
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions;
+    /// Called by the reset unit to immediately halt the device and prepare it for a reset sequence.
+    /// For the CPU: aborts any pending bus transaction, resets phase to 0, seeds the reset cause
+    /// value so the EU fetches the reset vector when the hold expires.
+    /// Default is a no-op; non-CPU devices typically don't need to do anything here.
+    fn reset(&mut self) {}
     fn dump_diagnostic(&self) -> String {
         String::from("TODO")
     }

@@ -326,6 +326,17 @@ impl Device for CpuPeripheral {
 
         self.advance_phase();
 
+        // Software RSET: after WriteBack wraps phase back to 0, if pending_coprocessor_command
+        // was just set to the reset cause value, signal the reset unit via reset_requested so it starts
+        // the 6-cycle RSTO hold before the EU fetches the reset vector.
+        let reset_cause = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
+        if self.phase == 0 && self.registers.pending_coprocessor_command == reset_cause {
+            return BusAssertions {
+                reset_requested: true,
+                ..result
+            };
+        }
+
         result
     }
 
@@ -340,6 +351,10 @@ impl Device for CpuPeripheral {
         writeln!(s, "{eu_register_text}").unwrap();
 
         s
+    }
+
+    fn reset(&mut self) {
+        Self::reset(self);
     }
 
     fn as_any(&mut self) -> &mut dyn Any {
@@ -379,9 +394,12 @@ impl CpuPeripheral {
     }
 
     pub fn reset(&mut self) {
-        // Will cause the exception coprocessor to jump to reset vector
-        let reset_cause_value = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
-        self.registers.pending_coprocessor_command = reset_cause_value;
+        self.pending_bus_request = None;
+        self.eu_registers.waiting_for_exception = false;
+        self.phase = 0;
+        // Seeds the EU to fetch the reset vector when the RSTO hold expires
+        self.registers.pending_coprocessor_command =
+            construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
