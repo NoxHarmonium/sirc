@@ -21,13 +21,17 @@ pub mod conversion;
 pub mod device;
 pub mod helpers;
 pub mod memory_mapped_device;
+pub mod reset_unit;
 
 use std::fs::read;
 use std::path::Path;
 
+use std::ops::BitOr;
+
 use device::{BusAssertions, Device};
 use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
+use reset_unit::ResetUnit;
 
 pub struct Segment {
     pub label: String,
@@ -49,6 +53,7 @@ impl Segment {
 pub struct BusPeripheral {
     pub bus_master: Box<dyn Device>,
     segments: Vec<Segment>,
+    reset_unit: ResetUnit,
 }
 
 #[must_use]
@@ -56,6 +61,7 @@ pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
     BusPeripheral {
         bus_master,
         segments: vec![],
+        reset_unit: ResetUnit::new(),
     }
 }
 
@@ -220,35 +226,31 @@ impl BusPeripheral {
     ///
     #[must_use]
     pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
-        // TODO: Assert there are no bus conflicts (e.g. two devices asserting the address or data bus at the same time)
-        // category=Refactoring
-
-        let master_assertions = self.bus_master.poll(assertions, true);
-
+        let master_assertions = if self
+            .reset_unit
+            .should_reset(assertions, &mut *self.bus_master)
+        {
+            BusAssertions {
+                reset_devices_on_bus: true,
+                ..BusAssertions::default()
+            }
+        } else {
+            self.bus_master.poll(assertions, true)
+        };
         let segments = &mut self.segments;
         let out = segments
             .iter_mut()
             .map(|segment| {
                 let selected = segment.address_is_in_segment_range(master_assertions.address);
-                let device = &mut segment.device;
-                device.poll(master_assertions, selected)
+                segment.device.poll(master_assertions, selected)
             })
-            .fold(master_assertions, |prev, curr| {
-                BusAssertions {
-                    // Interrupts are all merged together
-                    interrupt_assertion: prev.interrupt_assertion | curr.interrupt_assertion,
-                    // If at least one device has a bus error, then a fault will be raised
-                    // The devices will have to be polled by the program to find the cause of the error at the moment
-                    // (I don't really want to implement complex error signalling like the 68k has)
-                    bus_error: prev.bus_error | curr.bus_error,
-                    bus_protection_error: prev.bus_protection_error | curr.bus_protection_error,
-                    data: prev.data | curr.data,
-                    device_was_activated: prev.device_was_activated | curr.device_was_activated,
-                    ..prev
-                }
-            });
-        if !out.device_was_activated {
+            .fold(master_assertions, BitOr::bitor);
+        if out.bus_access_strobe && !out.device_was_activated {
             warn!("No device was mapped for address [0x{:X}]", out.address);
+            return BusAssertions {
+                bus_error: true,
+                ..out
+            };
         }
         out
     }

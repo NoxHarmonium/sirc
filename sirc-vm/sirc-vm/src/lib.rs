@@ -86,7 +86,7 @@ pub fn run_vm_debug(vm: &Vm, register_dump_file: Option<PathBuf>, channels: VmCh
         loop {
             bus_assertions = bus_peripheral.poll_all(bus_assertions);
 
-            if !debug_state.disconnected && bus_assertions.instruction_fetch {
+            if !debug_state.disconnected && bus_assertions.instruction_sync {
                 yield_to_debugger(&mut bus_peripheral, &mut debug_state);
             }
 

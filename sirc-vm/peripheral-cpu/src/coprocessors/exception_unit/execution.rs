@@ -1,5 +1,5 @@
 use log::{debug, trace};
-use peripheral_bus::device::{BusAssertions, BusOperation};
+use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use super::{
     super::shared::Executor,
@@ -243,8 +243,6 @@ fn handle_exception(
         eu_registers.pending_fault = raise_fault(
             eu_registers,
             Faults::LevelFiveInterruptConflict,
-            // TODO: Don't hardcode this
-            ExecutionPhase::ExecutionEffectiveAddressExecutor,
             bus_assertions,
         );
         return;
@@ -281,9 +279,6 @@ pub struct ExceptionUnitExecutor {
 impl Executor for ExceptionUnitExecutor {
     const COPROCESSOR_ID: u8 = 1;
 
-    // TODO: When reset command is executed. Do nothing for 6 cycles and then fetch reset vector etc. after that
-    // TODO: When reset command is executed, assert RSTO pin to allow 6 cycles for external devices to reset.
-
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::cast_possible_truncation)]
     fn step<'a>(
@@ -311,6 +306,8 @@ impl Executor for ExceptionUnitExecutor {
                 return BusAssertions {
                     address: self.vector_address,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
+                    bus_access_type: BusAccessType::ExceptionVectorFetch,
                     ..BusAssertions::default()
                 };
             }
@@ -319,6 +316,8 @@ impl Executor for ExceptionUnitExecutor {
                 return BusAssertions {
                     address: self.vector_address + 1,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
+                    bus_access_type: BusAccessType::ExceptionVectorFetch,
                     ..BusAssertions::default()
                 };
             }

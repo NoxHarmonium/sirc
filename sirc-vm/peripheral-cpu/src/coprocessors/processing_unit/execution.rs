@@ -1,7 +1,7 @@
 use log::trace;
 use num::Integer;
 // use log::trace;
-use peripheral_bus::device::{BusAssertions, BusOperation};
+use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use super::stages::shared::DecodedInstruction;
 use crate::coprocessors::exception_unit::definitions::Faults;
@@ -82,7 +82,7 @@ impl Executor for ProcessingUnitExecutor {
 
         if registers.pl.is_odd() {
             eu_registers.pending_fault =
-                raise_fault(eu_registers, Faults::Alignment, *phase, &bus_assertions);
+                raise_fault(eu_registers, Faults::Alignment, &bus_assertions);
         }
 
         let result = match phase {
@@ -91,19 +91,16 @@ impl Executor for ProcessingUnitExecutor {
 
                 // PC Overflow check
                 if self.next_instruction_fetch_is_overflow {
-                    eu_registers.pending_fault = raise_fault(
-                        eu_registers,
-                        Faults::SegmentOverflow,
-                        *phase,
-                        &bus_assertions,
-                    );
+                    eu_registers.pending_fault =
+                        raise_fault(eu_registers, Faults::SegmentOverflow, &bus_assertions);
                 }
                 self.next_instruction_fetch_is_overflow = false;
 
                 BusAssertions {
                     address: registers.get_full_pc_address(),
                     op: BusOperation::Read,
-                    instruction_fetch: true,
+                    bus_access_strobe: true,
+                    bus_access_type: BusAccessType::InstructionFetch,
                     ..BusAssertions::default()
                 }
             }
@@ -113,6 +110,8 @@ impl Executor for ProcessingUnitExecutor {
                 BusAssertions {
                     address: registers.get_full_pc_address() + 1,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
+                    bus_access_type: BusAccessType::InstructionFetch,
                     ..BusAssertions::default()
                 }
             }
@@ -141,12 +140,8 @@ impl Executor for ProcessingUnitExecutor {
 
                 let privilege_violation = check_privilege(&self.decoded_instruction, registers);
                 if privilege_violation {
-                    eu_registers.pending_fault = raise_fault(
-                        eu_registers,
-                        Faults::PrivilegeViolation,
-                        *phase,
-                        &bus_assertions,
-                    );
+                    eu_registers.pending_fault =
+                        raise_fault(eu_registers, Faults::PrivilegeViolation, &bus_assertions);
                 }
 
                 // TODO: Define how PC will be incremented in hardware

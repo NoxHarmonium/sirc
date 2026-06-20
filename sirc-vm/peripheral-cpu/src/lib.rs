@@ -47,7 +47,7 @@ use coprocessors::{
 };
 use num::ToPrimitive;
 use num_traits::FromPrimitive;
-use peripheral_bus::device::{BusAssertions, Device};
+use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
 
 use crate::registers::{
@@ -59,7 +59,7 @@ use crate::registers::{
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
 /// Its always six baby!
-pub const CYCLES_PER_INSTRUCTION: u32 = 6;
+pub const CYCLES_PER_INSTRUCTION: u8 = 6;
 
 // Cause register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
@@ -67,14 +67,14 @@ pub const COPROCESSOR_ID_LENGTH: u16 = 12;
 pub const CAUSE_OPCODE_ID_MASK: u16 = 0x0F00;
 pub const CAUSE_OPCODE_ID_LENGTH: u16 = 8;
 
-// pub phase: u8, // 3 bits
+// pub bus_access_type: BusAccessType, // 3 bits (BAT0-BAT2)
 // pub double_fault: bool, // 1 bit
 // pub fault: Faults, // 4 bits (needs to hold values up to 0x8)
 // pub original_fault: Faults // 4 bits (needs to hold values up to 0x8)
 
 // Fault metadata components
-pub const PHASE_MASK: u16 = 0x7;
-pub const PHASE_LENGTH: u16 = 0;
+pub const BUS_ACCESS_TYPE_MASK: u16 = 0x7;
+pub const BUS_ACCESS_TYPE_LENGTH: u16 = 0;
 pub const DOUBLE_FAULT_FLAG_MASK: u16 = 0x8;
 pub const DOUBLE_FAULT_FLAG_LENGTH: u16 = 3;
 pub const CURRENT_FAULT_MASK: u16 = 0xF0;
@@ -99,24 +99,28 @@ pub struct CpuPeripheral {
     // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
     // Only set when the processing unit is running (not during exception unit dispatch).
     trace_mode_sampled: bool,
+    // When the CPU asserts bus_access_strobe, the request is held here until bus_acknowledge
+    // (or a bus error) is received. During the wait, the request is re-asserted each cycle
+    // without advancing the phase, simulating the CPU stalling on a slow device.
+    pending_bus_request: Option<BusAssertions>,
+    // Set when halt_requested is asserted at an instruction boundary. Cleared when deasserted.
+    is_halted: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct FaultMetadataRegister {
-    // TODO: Maybe phase should actually be the value of the BAT0-BAT2 status pins because they have more meaning
-    pub phase: u8,          // 3 bits (bits 0-2)
-    pub double_fault: bool, // 1 bit (bit 3)
-    pub fault: Faults,      // 4 bits (bits 4-7, needs to hold values up to 0x8)
-    // If double_fault holds the fault that caused the double fault
+    pub bus_access_type: BusAccessType, // 3 bits (bits 0-2, BAT0-BAT2)
+    pub double_fault: bool,             // 1 bit (bit 3)
+    pub fault: Faults,                  // 4 bits (bits 4-7, needs to hold values up to 0x8)
+    // If double_fault: holds the fault that caused the double fault
     pub original_fault: Faults, // 4 bits (bits 8-11, needs to hold values up to 0x8)
-                                // TODO: Maybe other metadata (whether I/O was read or write (I guess inferred from phase),
-                                //       whether we are in supervisor mode (probably already saved when SR was saved)
-                                // TODO: Do we store the address of the faulting I/O, or just the faulting instruction?
 }
 
 pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
     FaultMetadataRegister {
-        phase: ((val & PHASE_MASK) >> PHASE_LENGTH) as u8,
+        bus_access_type: BusAccessType::from(
+            ((val & BUS_ACCESS_TYPE_MASK) >> BUS_ACCESS_TYPE_LENGTH) as u8,
+        ),
         double_fault: ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1,
         fault: Faults::from_u16((val & CURRENT_FAULT_MASK) >> CURRENT_FAULT_LENGTH).unwrap(),
         original_fault: Faults::from_u16((val & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH)
@@ -128,17 +132,14 @@ pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
     (reg.original_fault.to_u16().unwrap()) << PREVIOUS_FAULT_LENGTH
         | (reg.fault.to_u16().unwrap()) << CURRENT_FAULT_LENGTH
         | u16::from(reg.double_fault) << DOUBLE_FAULT_FLAG_LENGTH
-        | u16::from(reg.phase)
+        | u16::from(reg.bus_access_type as u8)
 }
 
 pub fn raise_fault(
     eu_registers: &mut ExceptionUnitRegisters,
     fault: Faults,
-    phase: ExecutionPhase,
     bus_assertions: &BusAssertions,
 ) -> Option<Faults> {
-    // Disabled during refactor
-
     if let Some(pending_fault) = eu_registers.pending_fault {
         // TODO: What would happen in hardware if a fault was raised when one was already pending
         // category=Hardware
@@ -147,8 +148,8 @@ pub fn raise_fault(
     }
 
     debug!(
-        "raise_fault: fault: {fault:?} address: 0x{:X} phase: {phase:?}",
-        bus_assertions.address,
+        "raise_fault: fault: {fault:?} address: 0x{:X} bus_access_type: {:?}",
+        bus_assertions.address, bus_assertions.bus_access_type,
     );
 
     let current_exception_level = eu_registers.current_exception_level;
@@ -166,12 +167,8 @@ pub fn raise_fault(
         return_address: bus_assertions.address,
         // TODO: Find a use for unused bits in `return_status_register`
         // category=Hardware
-        // 1 bit for phase
-        // 1 bit for double fault flag
-        // 3 bits for fault type
-        // 3 bits for original fault type (if double fault)
         return_status_register: encode_fault_metadata_register(&FaultMetadataRegister {
-            phase: phase as u8,
+            bus_access_type: bus_assertions.bus_access_type,
             double_fault: is_double_fault,
             fault: resolved_fault,
             original_fault: fault,
@@ -200,14 +197,80 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         exception_unit_executor: ExceptionUnitExecutor::default(),
         cause_register_value: 0,
         trace_mode_sampled: false,
+        pending_bus_request: None,
+        is_halted: false,
     }
 }
 
 impl Device for CpuPeripheral {
+    fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        let result = self.poll_internal(bus_assertions, selected);
+        BusAssertions {
+            protected_mode_active: sr_bit_is_set(
+                StatusRegisterFields::ProtectedMode,
+                &self.registers,
+            ),
+            ..result
+        }
+    }
+
+    fn dump_diagnostic(&self) -> String {
+        let register_text = format!("{:#x?}", self.registers);
+        let eu_register_text = format!("{:#x?}", self.eu_registers);
+
+        let mut s = String::new();
+        writeln!(s, "===REGISTERS===").unwrap();
+        writeln!(s, "{register_text}").unwrap();
+        writeln!(s, "===EXCEPTION UNIT REGISTERS===").unwrap();
+        writeln!(s, "{eu_register_text}").unwrap();
+
+        s
+    }
+
+    fn reset(&mut self) {
+        Self::reset(self);
+    }
+
+    fn as_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
-    fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+    fn poll_internal(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        // If we have a pending bus request, stall until the device acknowledges (or errors).
+        // Bus errors and protection errors also release the stall so fault handling can proceed.
+        if let Some(pending_request) = self.pending_bus_request {
+            let bus_access_complete = bus_assertions.bus_acknowledge
+                || bus_assertions.bus_error
+                || bus_assertions.bus_protection_error;
+            if !bus_access_complete {
+                return BusAssertions {
+                    instruction_sync: self.phase == ExecutionPhase::InstructionFetchLow as u8,
+                    ..pending_request
+                };
+            }
+            // Access complete: advance to the next phase and fall through to run it
+            self.pending_bus_request = None;
+        }
+
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
+
+        // Check for halt at instruction boundaries (phase 0). Latch halt when first asserted;
+        // stall each subsequent cycle while still asserted; resume when deasserted.
+        if phase == ExecutionPhase::InstructionFetchLow {
+            if bus_assertions.halt_requested {
+                self.is_halted = true;
+            }
+            if self.is_halted {
+                if bus_assertions.halt_requested {
+                    return BusAssertions::default();
+                }
+                self.is_halted = false;
+            }
+        }
 
         // Allow wake up if there is a hardware interrupt
         if bus_assertions.interrupt_assertion > 0 {
@@ -223,12 +286,11 @@ impl Device for CpuPeripheral {
             // category=Refactoring
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
             self.eu_registers.pending_fault =
-                raise_fault(&mut self.eu_registers, Faults::Bus, phase, &bus_assertions);
+                raise_fault(&mut self.eu_registers, Faults::Bus, &bus_assertions);
         } else if bus_assertions.bus_protection_error {
             self.eu_registers.pending_fault = raise_fault(
                 &mut self.eu_registers,
                 Faults::BusProtection,
-                phase,
                 &bus_assertions,
             );
         }
@@ -247,7 +309,8 @@ impl Device for CpuPeripheral {
         // Only sample for processing-unit instructions; EU exception dispatch is not traced.
         if phase == ExecutionPhase::InstructionFetchLow {
             self.trace_mode_sampled = coprocessor_id == ProcessingUnitExecutor::COPROCESSOR_ID
-                && sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers);
+                && (sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers)
+                    || bus_assertions.force_trace_mode);
         }
 
         trace!(
@@ -277,7 +340,6 @@ impl Device for CpuPeripheral {
                     self.eu_registers.pending_fault = raise_fault(
                         &mut self.eu_registers,
                         Faults::InvalidOpCode,
-                        phase,
                         &bus_assertions,
                     );
                 }
@@ -293,37 +355,38 @@ impl Device for CpuPeripheral {
             self.eu_registers.pending_fault = raise_fault(
                 &mut self.eu_registers,
                 Faults::InstructionTrace,
-                phase,
                 &bus_assertions,
             );
         }
 
         // TODO: Investigate performance impact of unrolling the six CPU phases
         // category=Performance
-        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
+        if result.bus_access_strobe {
+            self.pending_bus_request = Some(result);
+        }
+
+        self.advance_phase();
+
+        // instruction_sync uses the phase captured before advance_phase() above.
+        let result = BusAssertions {
+            instruction_sync: phase == ExecutionPhase::InstructionFetchLow,
+            ..result
+        };
+
+        // Software RSET: after WriteBack wraps phase back to 0, if pending_coprocessor_command
+        // was just set to the reset cause value, signal the reset unit via reset_requested so it starts
+        // the 6-cycle RSTO hold before the EU fetches the reset vector.
+        let reset_cause = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
+        if self.phase == 0 && self.registers.pending_coprocessor_command == reset_cause {
+            return BusAssertions {
+                reset_requested: true,
+                ..result
+            };
+        }
 
         result
     }
 
-    fn dump_diagnostic(&self) -> String {
-        let register_text = format!("{:#x?}", self.registers);
-        let eu_register_text = format!("{:#x?}", self.eu_registers);
-
-        let mut s = String::new();
-        writeln!(s, "===REGISTERS===").unwrap();
-        writeln!(s, "{register_text}").unwrap();
-        writeln!(s, "===EXCEPTION UNIT REGISTERS===").unwrap();
-        writeln!(s, "{eu_register_text}").unwrap();
-
-        s
-    }
-
-    fn as_any(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-impl CpuPeripheral {
     /// Works out which coprocessor should run on this cycle
     fn decode_processor_id(cause_register_value: u16) -> u8 {
         ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
@@ -350,10 +413,18 @@ impl CpuPeripheral {
         }
     }
 
+    fn advance_phase(&mut self) {
+        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION;
+    }
+
     pub fn reset(&mut self) {
-        // Will cause the exception coprocessor to jump to reset vector
-        let reset_cause_value = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
-        self.registers.pending_coprocessor_command = reset_cause_value;
+        self.pending_bus_request = None;
+        self.is_halted = false;
+        self.eu_registers.waiting_for_exception = false;
+        self.phase = 0;
+        // Seeds the EU to fetch the reset vector when the RSTO hold expires
+        self.registers.pending_coprocessor_command =
+            construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed
@@ -368,7 +439,14 @@ impl CpuPeripheral {
         // TODO: Investigate if spinning is the best way to wait for exception
         // category=Performance
         for _ in 0..CYCLES_PER_INSTRUCTION {
-            self.poll(BusAssertions::default(), true);
+            // Simulate an always-ready bus so the CPU never stalls waiting for bus_acknowledge
+            self.poll(
+                BusAssertions {
+                    bus_acknowledge: true,
+                    ..BusAssertions::default()
+                },
+                true,
+            );
         }
     }
 }

@@ -41,17 +41,19 @@ pub trait MemoryMappedDevice: MemoryMapped + Device {
     }
 
     fn perform_bus_io(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        if selected {
+        if selected && bus_assertions.bus_access_strobe {
             let address = bus_assertions.address & ADDRESS_MASK;
             match bus_assertions.op {
                 BusOperation::Read => BusAssertions {
                     data: self.read_address(address),
+                    bus_acknowledge: true,
                     device_was_activated: true,
                     ..BusAssertions::default()
                 },
                 BusOperation::Write => {
                     self.write_address(address, bus_assertions.data);
                     BusAssertions {
+                        bus_acknowledge: true,
                         device_was_activated: true,
                         ..BusAssertions::default()
                     }

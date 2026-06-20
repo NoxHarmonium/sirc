@@ -63,6 +63,11 @@ pub fn run_expectations(
                     data: expectation.bus_data.unwrap_or(0),
                     ..expectation.bus_assertions.unwrap_or_default()
                 });
+        // Always acknowledge: these tests drive the CPU directly without a real bus peripheral
+        let input_bus_assertions = BusAssertions {
+            bus_acknowledge: true,
+            ..input_bus_assertions
+        };
         let output_bus_assertions = cpu.poll(input_bus_assertions, true);
         if let Some(expectation) = expectation {
             if let Some(expected_cpu_address) = expectation.cpu_address {
