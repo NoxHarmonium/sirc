@@ -61,7 +61,6 @@ are not legal for this instruction family.
 		AND             & \texttt{ANDI rD, \#imm16} & \texttt{ANDI rD, \#imm8, shift} & \texttt{ANDR rD, rS1, rS2[, shift]} & Yes \\
 		ORR             & \texttt{ORRI rD, \#imm16} & \texttt{ORRI rD, \#imm8, shift} & \texttt{ORRR rD, rS1, rS2[, shift]} & Yes \\
 		XOR             & \texttt{XORI rD, \#imm16} & \texttt{XORI rD, \#imm8, shift} & \texttt{XORR rD, rS1, rS2[, shift]} & Yes \\
-		LOAD            & \texttt{LOAD rD, \#imm16} & \texttt{LOAD rD, \#imm8, shift} & \texttt{LOAD rD, rS}                 & Yes \\
 		CMP             & \texttt{CMPI rS, \#imm16} & \texttt{CMPI rS, \#imm8, shift} & \texttt{CMPR rS1, rS2[, shift]}      & No  \\
 		TSA             & \texttt{TSAI rS, \#imm16} & \texttt{TSAI rS, \#imm8, shift} & \texttt{TSAR rS1, rS2[, shift]}      & No  \\
 		TSX             & \texttt{TSXI rS, \#imm16} & \texttt{TSXI rS, \#imm8, shift} & \texttt{TSXR rS1, rS2[, shift]}      & No  \\
@@ -74,6 +73,11 @@ are not legal for this instruction family.
 \noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
 \texttt{ADDR r1, r1, r2}.
+
+\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} is a valid CPU encoding, but the assembler does not expose a
+\texttt{LOAD rD, \#imm8, shift} form. In the CPU datapath the short-immediate shift applies to the destination register
+side of the ALU input, while \mnemonic{LOAD} writes the unshifted immediate operand. The encoded shift therefore has no
+useful effect on the loaded value.
 
 \section{Common ALU Semantics}
 
@@ -541,7 +545,6 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LOAD rD, #imm16                ; rD = imm16 (via add)
-LOAD rD, #imm8, shift          ; rD = imm8 << shift
 LOAD rD, rS                    ; rD = rS (via add)
 \end{lstlisting}
 
@@ -556,7 +559,8 @@ destination = operand
 
 	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
-	registers.
+	registers. The CPU defines a short-immediate \mnemonic{LOAD} encoding at opcode \texttt{0x27}, but the assembler does
+	not expose it because its shift field does not affect the loaded value.
 
 	\textbf{Flags:} None
 
