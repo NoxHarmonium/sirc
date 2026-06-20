@@ -41,14 +41,14 @@ pub fn set_up_instruction_test(
     bus_peripheral.map_segment(
         DUMMY_SEGMENT,
         0x0,
-        u16::MAX as u32,
+        u16::MAX as u32 + 1,
         false,
         Box::new(new_stub_memory_mapped_device()),
     );
     bus_peripheral.map_segment(
         PROGRAM_SEGMENT,
         program_offset,
-        u16::MAX as u32,
+        u16::MAX as u32 + 1,
         false,
         Box::new(new_stub_memory_mapped_device()),
     );
@@ -56,7 +56,7 @@ pub fn set_up_instruction_test(
     bus_peripheral.map_segment(
         SCRATCH_SEGMENT,
         SCRATCH_SEGMENT_BEGIN,
-        u16::MAX as u32,
+        u16::MAX as u32 + 1,
         true,
         Box::new(new_stub_memory_mapped_device()),
     );
@@ -119,7 +119,7 @@ where
     setup_test(&mut bus, register_setup, program_offset);
 
     let previous = capture_cpu_state(&mut bus);
-    bus.run_full_cycle(CYCLES_PER_INSTRUCTION);
+    bus.run_full_cycle(u32::from(CYCLES_PER_INSTRUCTION));
     let current = capture_cpu_state(&mut bus);
     (previous, current)
 }

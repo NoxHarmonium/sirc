@@ -59,6 +59,7 @@ impl StageExecutor for MemoryAccessExecutor {
                 return BusAssertions {
                     address: (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
                     ..BusAssertions::default()
                 };
             }
@@ -67,6 +68,7 @@ impl StageExecutor for MemoryAccessExecutor {
                     address: (decoded.ad_h_, intermediate_registers.alu_output).to_full_address(),
                     data: decoded.sr_a_,
                     op: BusOperation::Write,
+                    bus_access_strobe: true,
                     ..BusAssertions::default()
                 };
             }

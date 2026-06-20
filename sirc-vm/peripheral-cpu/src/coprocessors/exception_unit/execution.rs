@@ -311,6 +311,7 @@ impl Executor for ExceptionUnitExecutor {
                 return BusAssertions {
                     address: self.vector_address,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
                     ..BusAssertions::default()
                 };
             }
@@ -319,6 +320,7 @@ impl Executor for ExceptionUnitExecutor {
                 return BusAssertions {
                     address: self.vector_address + 1,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
                     ..BusAssertions::default()
                 };
             }

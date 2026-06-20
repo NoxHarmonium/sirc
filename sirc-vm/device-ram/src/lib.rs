@@ -5,6 +5,7 @@ use std::{
     path::PathBuf,
 };
 
+use log::{trace, warn};
 use memmap::{MmapMut, MmapOptions};
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
@@ -23,12 +24,30 @@ pub struct RamDevice {
     // TODO: Does this still need to be RefCell?
     // category=Refactoring
     pub mem_cell: RefCell<SegmentMemCell>,
+    /// How many clock cycles a bus access takes (1 = respond immediately, 2+ = wait states).
+    access_latency_clocks: u32,
+    /// Saved bus assertions from when the current operation started. `Some` means an operation
+    /// is in progress and the countdown runs every poll regardless of external bus state.
+    active_request: Option<BusAssertions>,
+    clocks_remaining: u32,
 }
 
 #[must_use]
 pub fn new_ram_device_standard() -> RamDevice {
+    new_ram_device_with_latency(1)
+}
+
+#[must_use]
+pub fn new_ram_device_with_latency(access_latency_clocks: u32) -> RamDevice {
+    assert!(
+        access_latency_clocks >= 1,
+        "access_latency_clocks must be at least 1"
+    );
     RamDevice {
         mem_cell: RefCell::new(SegmentMemCell::RawMemory(Box::new([0; (0xFFFF * 2) + 2]))),
+        access_latency_clocks,
+        active_request: None,
+        clocks_remaining: 0,
     }
 }
 
@@ -51,11 +70,46 @@ pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
 
     RamDevice {
         mem_cell: RefCell::new(SegmentMemCell::FileMapped(Box::new(file), Box::new(mmap))),
+        access_latency_clocks: 1,
+        active_request: None,
+        clocks_remaining: 0,
     }
 }
+
 impl Device for RamDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
-        self.perform_bus_io(bus_assertions, selected)
+        if selected && bus_assertions.bus_access_strobe && self.active_request.is_none() {
+            trace!("Starting new request: assertions: {:?}", bus_assertions);
+            self.active_request = Some(bus_assertions);
+            self.clocks_remaining = self.access_latency_clocks - 1;
+        }
+
+        if let Some(saved) = self.active_request {
+            if bus_assertions.bus_acknowledge {
+                warn!(
+                    "Another device is asserting BACK. \
+                    Are there two conflicting devices on the bus? \
+                    Previous request will be discarded. \
+                    Active Request: {:?} \
+                    Current Bus Assertions: {:?}",
+                    self.active_request, bus_assertions
+                );
+                self.active_request = None;
+            } else if self.clocks_remaining == 0 {
+                trace!("clocks_remaining == 0, finishing request...");
+
+                self.active_request = None;
+                return self.perform_bus_io(saved, true);
+            } else {
+                self.clocks_remaining -= 1;
+            }
+            BusAssertions {
+                device_was_activated: true,
+                ..BusAssertions::default()
+            }
+        } else {
+            BusAssertions::default()
+        }
     }
     fn as_any(&mut self) -> &mut dyn Any {
         self

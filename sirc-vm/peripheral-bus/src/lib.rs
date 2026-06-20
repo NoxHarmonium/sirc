@@ -25,6 +25,8 @@ pub mod memory_mapped_device;
 use std::fs::read;
 use std::path::Path;
 
+use std::ops::BitOr;
+
 use device::{BusAssertions, Device};
 use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
@@ -227,12 +229,15 @@ impl BusPeripheral {
             .iter_mut()
             .map(|segment| {
                 let selected = segment.address_is_in_segment_range(master_assertions.address);
-                let device = &mut segment.device;
-                device.poll(master_assertions, selected)
+                segment.device.poll(master_assertions, selected)
             })
-            .fold(master_assertions, |prev, curr| prev | curr);
-        if !out.device_was_activated {
+            .fold(master_assertions, BitOr::bitor);
+        if out.bus_access_strobe && !out.device_was_activated {
             warn!("No device was mapped for address [0x{:X}]", out.address);
+            return BusAssertions {
+                bus_error: true,
+                ..out
+            };
         }
         out
     }

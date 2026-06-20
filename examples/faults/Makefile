@@ -2,7 +2,7 @@
 
 # --no-default-features disables the video device
 CARGO_ARGS=--manifest-path=../../sirc-vm/Cargo.toml
-RUN_ARGS=-vv --program-file ./faults.bin --segment SCRATCH:00010000:FFFF --segment FAULTS_HIGH:00020000:FFFF:./faults-high.bin --register-dump-file ./faults.register-dump
+RUN_ARGS=-vv --program-file ./faults.bin --segment SCRATCH:00010000:10000 --segment FAULTS_HIGH:00020000:10000:./faults-high.bin --register-dump-file ./faults.register-dump
 
 all: faults.bin
 

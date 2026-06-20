@@ -59,7 +59,7 @@ use crate::registers::{
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
 /// Its always six baby!
-pub const CYCLES_PER_INSTRUCTION: u32 = 6;
+pub const CYCLES_PER_INSTRUCTION: u8 = 6;
 
 // Cause register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
@@ -99,6 +99,10 @@ pub struct CpuPeripheral {
     // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
     // Only set when the processing unit is running (not during exception unit dispatch).
     trace_mode_sampled: bool,
+    // When the CPU asserts bus_access_strobe, the request is held here until bus_acknowledge
+    // (or a bus error) is received. During the wait, the request is re-asserted each cycle
+    // without advancing the phase, simulating the CPU stalling on a slow device.
+    pending_bus_request: Option<BusAssertions>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -200,12 +204,26 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         exception_unit_executor: ExceptionUnitExecutor::default(),
         cause_register_value: 0,
         trace_mode_sampled: false,
+        pending_bus_request: None,
     }
 }
 
 impl Device for CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        // If we have a pending bus request, stall until the device acknowledges (or errors).
+        // Bus errors and protection errors also release the stall so fault handling can proceed.
+        if let Some(pending_request) = self.pending_bus_request {
+            let bus_access_complete = bus_assertions.bus_acknowledge
+                || bus_assertions.bus_error
+                || bus_assertions.bus_protection_error;
+            if !bus_access_complete {
+                return pending_request;
+            }
+            // Access complete: advance to the next phase and fall through to run it
+            self.pending_bus_request = None;
+        }
+
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
 
@@ -298,9 +316,15 @@ impl Device for CpuPeripheral {
             );
         }
 
+        // If the result requests a bus access, hold the phase until acknowledged.
+        // Otherwise advance immediately.
         // TODO: Investigate performance impact of unrolling the six CPU phases
         // category=Performance
-        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION as u8;
+        if result.bus_access_strobe {
+            self.pending_bus_request = Some(result);
+        }
+
+        self.advance_phase();
 
         result
     }
@@ -350,6 +374,10 @@ impl CpuPeripheral {
         }
     }
 
+    fn advance_phase(&mut self) {
+        self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION;
+    }
+
     pub fn reset(&mut self) {
         // Will cause the exception coprocessor to jump to reset vector
         let reset_cause_value = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
@@ -368,7 +396,14 @@ impl CpuPeripheral {
         // TODO: Investigate if spinning is the best way to wait for exception
         // category=Performance
         for _ in 0..CYCLES_PER_INSTRUCTION {
-            self.poll(BusAssertions::default(), true);
+            // Simulate an always-ready bus so the CPU never stalls waiting for bus_acknowledge
+            self.poll(
+                BusAssertions {
+                    bus_acknowledge: true,
+                    ..BusAssertions::default()
+                },
+                true,
+            );
         }
     }
 }

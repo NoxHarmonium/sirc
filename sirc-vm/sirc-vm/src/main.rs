@@ -23,7 +23,9 @@ use sirc_vm::debug_adapter::server::{create_server_channels, start_server};
 use sirc_vm::{run_vm, run_vm_debug, Vm};
 
 use device_debug::new_debug_device;
-use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
+use device_ram::{
+    new_ram_device_file_mapped, new_ram_device_standard, new_ram_device_with_latency,
+};
 use device_terminal::new_terminal_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
@@ -186,7 +188,7 @@ fn setup_vm(args: &Args) -> Vm {
     cpu_peripheral.reset();
 
     let mut bus_peripheral = new_bus_peripheral(Box::new(cpu_peripheral));
-    let program_ram_device = new_ram_device_standard();
+    let program_ram_device = new_ram_device_with_latency(2);
     let terminal_device = new_terminal_device(master_clock_freq);
     let debug_device = new_debug_device();
 

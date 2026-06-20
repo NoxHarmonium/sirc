@@ -103,6 +103,7 @@ impl Executor for ProcessingUnitExecutor {
                 BusAssertions {
                     address: registers.get_full_pc_address(),
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
                     instruction_fetch: true,
                     ..BusAssertions::default()
                 }
@@ -113,6 +114,7 @@ impl Executor for ProcessingUnitExecutor {
                 BusAssertions {
                     address: registers.get_full_pc_address() + 1,
                     op: BusOperation::Read,
+                    bus_access_strobe: true,
                     ..BusAssertions::default()
                 }
             }
