@@ -21,6 +21,7 @@ pub mod conversion;
 pub mod device;
 pub mod helpers;
 pub mod memory_mapped_device;
+pub mod reset_unit;
 
 use std::fs::read;
 use std::path::Path;
@@ -30,6 +31,7 @@ use std::ops::BitOr;
 use device::{BusAssertions, Device};
 use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
+use reset_unit::ResetUnit;
 
 pub struct Segment {
     pub label: String,
@@ -51,9 +53,7 @@ impl Segment {
 pub struct BusPeripheral {
     pub bus_master: Box<dyn Device>,
     segments: Vec<Segment>,
-    /// Countdown for the RSTO hold (reset unit state).
-    /// When > 0, the bus master is not polled; RSTO is asserted each cycle until it reaches 0.
-    reset_hold_cycles: u8,
+    reset_unit: ResetUnit,
 }
 
 #[must_use]
@@ -61,7 +61,7 @@ pub fn new_bus_peripheral(bus_master: Box<dyn Device>) -> BusPeripheral {
     BusPeripheral {
         bus_master,
         segments: vec![],
-        reset_hold_cycles: 0,
+        reset_unit: ResetUnit::new(),
     }
 }
 
@@ -226,22 +226,10 @@ impl BusPeripheral {
     ///
     #[must_use]
     pub fn poll_all(&mut self, assertions: BusAssertions) -> BusAssertions {
-        // Reset unit: hardware RSTI takes priority. The bus master is not polled while RSTI is
-        // asserted; instead bus_master.reset() is called each cycle to abort in-flight state and
-        // keep the CPU seeded with the reset cause value. RSTO is driven for as long as RSTI is
-        // high and for 5 additional cycles after it deasserts (6 total).
-        if assertions.reset_requested {
-            self.bus_master.reset();
-            self.reset_hold_cycles = 5;
-            return BusAssertions {
-                reset_devices_on_bus: true,
-                ..BusAssertions::default()
-            };
-        }
-
-        // RSTO hold countdown (tail of hardware RSTI or entirety of software RSET hold).
-        if self.reset_hold_cycles > 0 {
-            self.reset_hold_cycles -= 1;
+        if self
+            .reset_unit
+            .should_reset(assertions, &mut *self.bus_master)
+        {
             return BusAssertions {
                 reset_devices_on_bus: true,
                 ..BusAssertions::default()
