@@ -42,6 +42,60 @@ ALU instructions are available in three format variants:
 	\item \mnemonic{TSX} -- Test XOR (XOR without saving result)
 \end{itemize}
 
+\section{Legal Forms}
+
+ALU instructions are register-only operations. Immediate operands are encoded in the instruction word; memory operands
+are not legal for this instruction family.
+
+\begin{table}[H]
+	\centering
+	\tiny
+	\begin{tabular}{lllll}
+		\toprule
+		\textbf{Family} & \textbf{Immediate} & \textbf{Short Immediate} & \textbf{Register} & \textbf{Writes Result} \\
+		\midrule
+		ADD             & \texttt{ADDI rD, \#imm16} & \texttt{ADDI rD, \#imm8, shift} & \texttt{ADDR rD, rS1, rS2[, shift]} & Yes \\
+		ADC             & \texttt{ADCI rD, \#imm16} & \texttt{ADCI rD, \#imm8, shift} & \texttt{ADCR rD, rS1, rS2[, shift]} & Yes \\
+		SUB             & \texttt{SUBI rD, \#imm16} & \texttt{SUBI rD, \#imm8, shift} & \texttt{SUBR rD, rS1, rS2[, shift]} & Yes \\
+		SBC             & \texttt{SBCI rD, \#imm16} & \texttt{SBCI rD, \#imm8, shift} & \texttt{SBCR rD, rS1, rS2[, shift]} & Yes \\
+		AND             & \texttt{ANDI rD, \#imm16} & \texttt{ANDI rD, \#imm8, shift} & \texttt{ANDR rD, rS1, rS2[, shift]} & Yes \\
+		ORR             & \texttt{ORRI rD, \#imm16} & \texttt{ORRI rD, \#imm8, shift} & \texttt{ORRR rD, rS1, rS2[, shift]} & Yes \\
+		XOR             & \texttt{XORI rD, \#imm16} & \texttt{XORI rD, \#imm8, shift} & \texttt{XORR rD, rS1, rS2[, shift]} & Yes \\
+		LOAD            & \texttt{LOAD rD, \#imm16} & \texttt{LOAD rD, \#imm8, shift} & \texttt{LOAD rD, rS}                 & Yes \\
+		CMP             & \texttt{CMPI rS, \#imm16} & \texttt{CMPI rS, \#imm8, shift} & \texttt{CMPR rS1, rS2[, shift]}      & No  \\
+		TSA             & \texttt{TSAI rS, \#imm16} & \texttt{TSAI rS, \#imm8, shift} & \texttt{TSAR rS1, rS2[, shift]}      & No  \\
+		TSX             & \texttt{TSXI rS, \#imm16} & \texttt{TSXI rS, \#imm8, shift} & \texttt{TSXR rS1, rS2[, shift]}      & No  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal ALU Instruction Forms}
+	\label{tab:alu-legal-forms}
+\end{table}
+
+\noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
+\texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
+\texttt{ADDR r1, r1, r2}.
+
+\section{Common ALU Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic} & \textbf{Definition} \\
+		\midrule
+		Condition false & The instruction is skipped and has no side effects. Registers and status flags are preserved. \\
+		Immediate format & The left operand is the named register. The right operand is the encoded 16-bit immediate. \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
+		Register format & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}. \\
+		Test variants & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back. \\
+		LOAD & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags. \\
+		Exceptions & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common ALU Semantics}
+	\label{tab:alu-common-semantics}
+\end{table}
+
 \section{Status Flag Updates}
 
 Most ALU instructions update the status register flags:
@@ -51,6 +105,33 @@ Most ALU instructions update the status register flags:
 	\item[Logical (AND, ORR, XOR, TSA, TSX)] Update N and Z; clear C and V
 	\item[Load (LOAD)] Do not update flags
 \end{description}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llllllp{5.5cm}}
+		\toprule
+		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning} \\
+		\midrule
+		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow. \\
+		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out. \\
+		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs. \\
+		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
+		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded. \\
+		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded. \\
+		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded. \\
+		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved. \\
+		\bottomrule
+	\end{tabular}
+	\caption{ALU Status Flag Effects}
+	\label{tab:alu-status-flag-effects}
+\end{table}
+
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
+flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result; see
+Chapter~\ref{ch:shift-operations} for the shifter flag rules.
 
 \subsection{Manual Flag Update Control}
 
