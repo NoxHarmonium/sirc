@@ -93,6 +93,7 @@ useful effect on the loaded value.
 		Register format & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}. \\
 		Test variants & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back. \\
 		LOAD & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags. \\
+		Timing & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states. \\
 		Exceptions & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
 		\bottomrule
 	\end{tabular}
@@ -192,6 +193,10 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Simple addition
@@ -247,6 +252,10 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; 32-bit addition (r1:r2 = r3:r4 + r5:r6)
@@ -296,6 +305,10 @@ SR.V = signed_overflow
 	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -349,6 +362,10 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; 32-bit subtraction (r1:r2 = r3:r4 - r5:r6)
@@ -397,6 +414,10 @@ SR.V = 0
 	for bit masking and clearing specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -451,6 +472,10 @@ SR.V = 0
 	setting specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -509,6 +534,10 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Toggle bit 3
@@ -564,6 +593,10 @@ destination = operand
 
 	\textbf{Flags:} None
 
+	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Load constant
@@ -590,7 +623,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\item Does not update flags, unlike \mnemonic{ADD}
 		\item Most efficient way to move data between registers
 		\item For 16-bit constants, use immediate form
-		\item For larger or shifted constants, use short immediate with shift
+		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or \mnemonic{ORRI}
 	\end{itemize}
 \end{instructionbox}
 
@@ -626,6 +659,10 @@ SR.V = signed_overflow
 	the operands.
 
 	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -691,6 +728,10 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Test if bit 5 is set
@@ -751,6 +792,10 @@ SR.V = 0
 	values for equality. Z=1 indicates the values are identical.
 
 	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
