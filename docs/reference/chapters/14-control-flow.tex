@@ -27,11 +27,11 @@ described in Chapter~\ref{ch:reading-instructions}.
 		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
 		\midrule
 		BRAN & \texttt{BRAN \#disp} & 0x1A & PC-relative immediate displacement \\
-		BRAN & \texttt{BRAN label} & 0x1A & PC-relative linker-computed displacement \\
+		BRAN & \texttt{BRAN @label} & 0x1A & PC-relative linker-computed displacement \\
 		BRAN & \texttt{BRAN (\#disp, addr)} & 0x1A & Address-register-relative immediate displacement \\
 		BRAN & \texttt{BRAN (rS, addr)} & 0x1B & Address-register-relative register displacement \\
 		BRSR & \texttt{BRSR \#disp} & 0x1E & PC-relative call \\
-		BRSR & \texttt{BRSR label} & 0x1E & PC-relative linker-computed call \\
+		BRSR & \texttt{BRSR @label} & 0x1E & PC-relative linker-computed call \\
 		BRSR & \texttt{BRSR (\#disp, addr)} & 0x1E & Address-register-relative call \\
 		BRSR & \texttt{BRSR (rS, addr)} & 0x1F & Address-register-relative register call \\
 		LDEA & \texttt{LDEA dest, (\#offset, src)} & 0x18 & Immediate-offset effective address \\
@@ -49,8 +49,8 @@ described in Chapter~\ref{ch:reading-instructions}.
 \end{table}
 
 \noindent\textbf{Address registers:} \texttt{addr}, \texttt{src}, and \texttt{dest} are address register pairs:
-\reg{l}, \reg{a}, \reg{s}, or \reg{p}. The \texttt{BRAN \#disp}, \texttt{BRAN label}, \texttt{BRSR \#disp}, and
-\texttt{BRSR label} shorthands use \reg{p} as the base address register.
+\reg{l}, \reg{a}, \reg{s}, or \reg{p}. The \texttt{BRAN \#disp}, \texttt{BRAN @label}, \texttt{BRSR \#disp}, and
+\texttt{BRSR @label} shorthands use \reg{p} as the base address register.
 
 \noindent\textbf{Shift suffixes:} Control-flow displacements are not shifted. Some instruction encodings can make it look
 like a shift suffix on register-displacement branch forms is valid, but the encoded shift is not applied to the displacement
@@ -87,7 +87,7 @@ and should not be used.
 	\textbf{Syntax:}
 	\begin{lstlisting}
 BRAN #disp                    ; p = p + disp
-BRAN label                    ; p = p + label offset
+BRAN @label                   ; p = p + label offset
 BRAN (#disp, addr)            ; p = addr + disp
 BRAN (rS, addr)               ; p = addr + rS
 BRAN|cond #disp               ; Conditional PC-relative branch
@@ -133,7 +133,7 @@ BRAN (r2, a)                  ; p = a + r2
 	\textbf{Syntax:}
 	\begin{lstlisting}
 BRSR #disp                    ; l = next PC; p = p + disp
-BRSR label                    ; l = next PC; p = p + label offset
+BRSR @label                   ; l = next PC; p = p + label offset
 BRSR (#disp, addr)            ; l = next PC; p = addr + disp
 BRSR (rS, addr)               ; l = next PC; p = addr + rS
 BRSR|cond #disp               ; Conditional PC-relative call
@@ -162,7 +162,7 @@ if condition:
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; PC-relative call
-BRSR function
+BRSR @function
 
 ; Call through a table relative to a
 LOAD r1, #8
@@ -312,10 +312,10 @@ LJSR a, r1                    ; p = a + r1
 \begin{lstlisting}
 ; if (r1 > r2) { ... } else { ... }
 CMPR r1, r2
-BRAN|<= else_part
+BRAN|<= @else_part
 ; Then part
 ; ...
-BRAN end
+BRAN @end
 else_part:
 ; Else part
 ; ...
@@ -327,10 +327,10 @@ end:
 ; while (r1 > 0) { ... }
 while_start:
     CMPI r1, #0
-    BRAN|<= while_end
+    BRAN|<= @while_end
     ; Loop body
     ; ...
-    BRAN while_start
+    BRAN @while_start
 while_end:
 \end{lstlisting}
 

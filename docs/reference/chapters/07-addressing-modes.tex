@@ -272,7 +272,7 @@ loop:
   LOAD r1, (#0, a)+   ; Load element, advance by 1
   ; ... process r1 ...
   SUBI r7, #1
-  BRAN|!= loop
+  BRAN|!= @loop
 \end{lstlisting}
 
 \subsection{Stack Frame}

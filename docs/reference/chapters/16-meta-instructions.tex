@@ -85,7 +85,7 @@ EXCP #0x80                    ; Trap to OS print routine
 main_loop:
     WAIT                      ; Sleep until interrupt
     ; ... process interrupt ...
-    BRAN main_loop
+    BRAN @main_loop
 \end{lstlisting}
 
 \section{RETE -- Return from Exception}
@@ -181,11 +181,11 @@ SHFT r1, LSL #3               ; r1 = r1 << 3, flags = status of shift
 
 ; Shift right and test result
 SHFT r3, LSR #2               ; r3 = r3 >> 2
-BRAN|== zero_result           ; Branch if shifted result is zero
+BRAN|== @zero_result          ; Branch if shifted result is zero
 
 ; Arithmetic shift with sign check
 SHFT r6, ASR #4               ; r6 = r6 >> 4 (signed)
-BRAN|NS negative_value        ; Branch if result is negative
+BRAN|NS @negative_value       ; Branch if result is negative
 \end{lstlisting}
 
 \textbf{Notes:}

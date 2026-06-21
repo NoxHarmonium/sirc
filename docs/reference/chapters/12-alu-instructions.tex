@@ -179,7 +179,7 @@ ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
 ; Preserve flags during operation
 CMPI r2, r3                   ; Set comparison flags
 ADDI[N] r4, #1                ; Increment without changing flags
-BRAN|>= branch_if_r2_gte_r3   ; Use flags from CMPI
+BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
 \end{lstlisting}
 
 % ============================================================================
@@ -342,7 +342,7 @@ SUBR r3, r1, r2            ; r3 = r1 - r2
 
 ; Loop counter
 SUBI r7, #1                ; Decrement counter
-BRAN|!= loop               ; Branch if not zero
+BRAN|!= @loop              ; Branch if not zero
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -452,7 +452,7 @@ ANDI r2, #~(1<<5)          ; r2 = r2 & 0xFFDF
 ; Check if two registers share any set bits
 ANDR r3, r1, r2            ; r3 = r1 & r2
 CMPI r3, #0
-BRAN|!= common_bits        ; Branch if any bits in common
+BRAN|!= @common_bits       ; Branch if any bits in common
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -690,21 +690,21 @@ SR.V = signed_overflow
 	\begin{lstlisting}
 ; Test if r1 is zero
 CMPI r1, #0
-BRAN|== is_zero            ; Branch if r1 == 0
+BRAN|== @is_zero           ; Branch if r1 == 0
 
 ; Test if r1 > r2 (unsigned)
 CMPR r1, r2
-BRAN|HI r1_greater
+BRAN|HI @r1_greater
 
 ; Test if r1 >= r2 (signed)
 CMPR r1, r2
-BRAN|>= r1_greater_or_equal
+BRAN|>= @r1_greater_or_equal
 
 ; Range check: if (r1 >= 10 && r1 < 20)
 CMPI r1, #10
-BRAN|<< out_of_range       ; Branch if r1 < 10
+BRAN|<< @out_of_range      ; Branch if r1 < 10
 CMPI r1, #20
-BRAN|>= out_of_range       ; Branch if r1 >= 20
+BRAN|>= @out_of_range      ; Branch if r1 >= 20
 ; r1 is in range [10, 20)
 \end{lstlisting}
 
@@ -758,19 +758,19 @@ SR.V = 0
 	\begin{lstlisting}
 ; Test if bit 5 is set
 TSAI r1, #0x0020           ; Test r1 & 0x20
-BRAN|!= bit5_set           ; Branch if bit 5 was set
+BRAN|!= @bit5_set          ; Branch if bit 5 was set
 
 ; Test if any upper byte bits are set
 TSAI r2, #0xFF00
-BRAN|!= has_upper_bits
+BRAN|!= @has_upper_bits
 
 ; Test if r1 and r2 have any bits in common
 TSAR r1, r2
-BRAN|== no_common_bits     ; Branch if no bits in common
+BRAN|== @no_common_bits    ; Branch if no bits in common
 
 ; Test multiple bits
 TSAI r3, #0xF000           ; Test upper nibble
-BRAN|== upper_clear        ; Branch if all tested bits clear
+BRAN|== @upper_clear       ; Branch if all tested bits clear
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -823,16 +823,16 @@ SR.V = 0
 	\begin{lstlisting}
 ; Test if r1 equals specific value
 TSXI r1, #0x1234           ; Test r1 ^ 0x1234
-BRAN|== is_0x1234          ; Branch if r1 == 0x1234
+BRAN|== @is_0x1234         ; Branch if r1 == 0x1234
 
 ; Test if two registers are equal
 TSXR r1, r2                ; Test r1 ^ r2
-BRAN|== registers_equal    ; Branch if r1 == r2
+BRAN|== @registers_equal   ; Branch if r1 == r2
 
 ; Test if bit pattern matches
 TSAI r3, #0xFF             ; Mask to lower byte
 TSXI r3, #0xAA             ; Test if lower byte == 0xAA
-BRAN|== pattern_match
+BRAN|== @pattern_match
 \end{lstlisting}
 
 	\textbf{Notes:}
