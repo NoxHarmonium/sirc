@@ -2,7 +2,9 @@ use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use crate::{
     coprocessors::processing_unit::definitions::Instruction,
-    registers::{ExceptionUnitRegisters, Registers, SegmentedAddress},
+    registers::{
+        sr_bit_is_set, ExceptionUnitRegisters, Registers, SegmentedAddress, StatusRegisterFields,
+    },
 };
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
@@ -81,7 +83,9 @@ impl StageExecutor for MemoryAccessExecutor {
                 // category=Hardware
                 // This should probably be in the write back stage?
                 registers.ll = decoded.npc_l_;
-                registers.lh = decoded.npc_h_;
+                if !sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) {
+                    registers.lh = decoded.npc_h_;
+                }
             }
         }
         BusAssertions::default()
