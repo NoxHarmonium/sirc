@@ -130,6 +130,18 @@ BRSR    @print_exit
 ; Halt CPU
 COPI    r1, #0x14FF
 
+; Control-flow and effective-address syntax examples
+:syntax_examples
+LDEA    a, (#16, s)
+LDEA    p, -(#1, a)
+LDEL    a, (#16, s)
+LDEL    p, (r3, a)+
+LJMP    a
+LJSR    a
+BRAN    @wait_for_char
+BRSR    @print_exit
+RETS
+
 ;;;;;;; EXCEPTION HANDLERS
 
 .ORG 0x0400

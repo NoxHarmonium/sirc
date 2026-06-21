@@ -253,7 +253,10 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 4. Regenerate any generated encoding/opcode tables. Complete for the reference-encodings fixture.
 5. Rebuild the reference manual. Complete.
 
-### Phase 7: Assembler/Manual Coverage Audit (Pending)
+### Phase 7: Assembler/Manual Coverage Audit (Deferred)
+
+Defer this until the reference manual is closer to complete, so the audit checks the final intended surface rather than
+temporary draft forms.
 
 1. Audit every instruction, alias, and addressing mode documented in the manual against the assembler parsers.
 2. Add parser tests for any documented instruction form that is missing test coverage.
@@ -305,7 +308,6 @@ Documentation tests:
 - `LJSR` and `BRSR` are documented as aliases.
 - Examples use `@label` for symbolic label references.
 - Undefined behavior rules are stated consistently in the instruction chapter and appendix.
-- The manual's documented instruction forms are audited against assembler acceptance.
 
 VS Code extension tests:
 
@@ -332,7 +334,7 @@ cd vscode-sirc && npm test
 - `docs/reference/chapters/appendix-c-undocumented.tex` -- updated
 - `docs/reference/control-flow-opcode-rework-handover.md` -- updated
 - Generated opcode/encoding tables -- updated
-- Assembler/manual instruction coverage audit -- pending
+- Assembler/manual instruction coverage audit -- deferred until the manual is closer to complete
 - `vscode-sirc/syntaxes/sirc.tmLanguage.json` -- pending
 - `vscode-sirc/syntaxes/example.sasm` -- pending
 - `vscode-sirc/test/syntax.test.sasm` -- pending

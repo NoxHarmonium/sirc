@@ -152,12 +152,12 @@
 #        ^^ source.sirc-asm constant.language.register.sirc
 #          ^^ source.sirc-asm
 #            ^^^ source.sirc-asm constant.numeric.decimal.sirc
->BRAN|NS :label
+>BRAN|NS @some_label
 #^^^^ source.sirc-asm keyword.control.mnemonic.sirc
 #    ^ source.sirc-asm keyword.control.condition.sirc
 #     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
 #       ^ source.sirc-asm
-#        ^^^^^^ source.sirc-asm entity.name.function.sirc
+#        ^^^^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
 >
 >; Edge cases - should still match mnemonic at word boundary
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
@@ -225,6 +225,64 @@
 #                 ^^^ source.sirc-asm keyword.control.shift-definition.sirc
 #                    ^ source.sirc-asm
 #                     ^^ source.sirc-asm constant.numeric.decimal.sirc
+>
+>; Effective address and control-flow forms
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>LDEA a, (#16, s)
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+#      ^^ source.sirc-asm
+#        ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#         ^^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+>LDEA p, -(r3, a)
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+#      ^^^ source.sirc-asm
+#         ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#          ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+>LDEL a, (#16, s)
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+#      ^^ source.sirc-asm
+#        ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#         ^^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+>LDEL p, (r3, a)+
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+#      ^^ source.sirc-asm
+#        ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#         ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#           ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#             ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#              ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#               ^^ source.sirc-asm
+>LJMP a
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+>LJSR a
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^ source.sirc-asm constant.language.register.sirc
+>BRSR @some_label
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^^^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>RETS
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
 >
 >; Constants
 #^^^^^^^^^^^ source.sirc-asm comment.line.sirc
@@ -349,7 +407,7 @@
 #            ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
 #              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
 #               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
->STOR r2, (#0, p)+
+>LOAD r2, (#0, p)+
 #^^^^ source.sirc-asm keyword.control.mnemonic.sirc
 #    ^ source.sirc-asm
 #     ^^ source.sirc-asm constant.language.register.sirc
@@ -360,4 +418,14 @@
 #              ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
 #               ^ source.sirc-asm keyword.control.indirect-addressing.sirc
 #                ^^ source.sirc-asm
+>STOR -(#0, s), r2
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^^ source.sirc-asm
+#      ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#       ^^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.numeric.decimal.sirc
+#         ^^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#           ^ source.sirc-asm keyword.control.indirect-addressing.sirc constant.language.register.sirc
+#            ^ source.sirc-asm keyword.control.indirect-addressing.sirc
+#             ^^ source.sirc-asm
+#               ^^ source.sirc-asm constant.language.register.sirc
 >
