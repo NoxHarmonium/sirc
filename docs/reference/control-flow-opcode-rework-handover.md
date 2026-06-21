@@ -71,10 +71,12 @@ A previous option was to make all new `LDEA`/`LDEL` auto-update forms use the sa
 The control-flow mnemonics become assembler conveniences over those primitives:
 
 ```asm
-LJMP src         ; alias for LDEA p, (#0, src)
-LJSR src         ; alias for LDEL p, (#0, src)
-BRAN @label      ; alias for LDEA p, (#offset, p)
-BRSR @function   ; alias for LDEL p, (#offset, p)
+LJMP src          ; alias for LDEA p, (#0, src)
+LJSR src          ; alias for LDEL p, (#0, src)
+BRAN #offset      ; alias for LDEA p, (#offset, p)
+BRAN @label       ; alias for LDEA p, (#offset, p)
+BRSR #offset      ; alias for LDEL p, (#offset, p)
+BRSR @function    ; alias for LDEL p, (#offset, p)
 ```
 
 Reusing the opcodes as auto-update forms makes the `0x1_` table more regular and potentially gives optimizers useful addressing idioms, even if the direction split limits the most obvious cursor-copy use case.
@@ -117,12 +119,15 @@ These decisions were made during review.
 - Segment-overflow faults suppress write-back side effects. This matches the existing effective-address behavior: the fault is raised during effective-address execution and later phases abort while a pending fault exists.
 - `LDEL` auto-update forms should be documented. If hardware proves too difficult, the architecture can publish an addendum later.
 
-## Remaining Implementation Ambiguities
+## Phase 1 Implementation Choices
 
-The main design questions are now resolved. Remaining choices are implementation details:
+The main design questions are resolved. These implementation choices lock Phase 1:
 
-- What exact TODO/diagnostic text should be used for deferred aliased-register-write rejection?
-- Should assembler tests assert current permissiveness for aliased register writes until rejection is implemented, or simply add TODO comments near the parser cases?
+- Defer aliased-register-write rejection.
+- Add parser-local TODO comments where new `LDEA`/`LDEL` auto-update forms are parsed.
+- Do not add tests asserting aliased-register-write permissiveness; that would accidentally bless the temporary behavior.
+- If a shared assembler validation pass exists later, move the aliased-register-write rejection there so all affected instructions share the same rule.
+- Suggested TODO text: `TODO: Reject aliased register writes once operand validation is centralised. These forms are architecturally undefined.`
 
 ## Aliased Register Writes
 
@@ -186,7 +191,9 @@ LJSR src          ; LDEL p, (#0, src)
 LJSR src, #offset ; LDEL p, (#offset, src)
 LJSR src, rN      ; LDEL p, (rN, src)
 
+BRAN #offset      ; LDEA p, (#offset, p)
 BRAN @label       ; LDEA p, (#offset, p)
+BRSR #offset      ; LDEL p, (#offset, p)
 BRSR @label       ; LDEL p, (#offset, p)
 ```
 
@@ -199,8 +206,8 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 ### Phase 1: Lock the Design Contract
 
 1. Keep this handover as the source of truth for the rework.
-2. Confirm final syntax for `LDEL`, `LJMP`, `LJSR`, `BRAN`, and `BRSR`.
-3. Decide where TODO-backed aliased-register-write rejection should live: parser, validation pass, or both.
+2. Confirm final syntax for `LDEL`, `LJMP`, `LJSR`, `BRAN`, and `BRSR`. Complete.
+3. Decide where TODO-backed aliased-register-write rejection should live. Complete: parser-local TODOs first, shared validation pass later if one exists.
 
 ### Phase 2: Parser and Encoding Tests
 
@@ -300,5 +307,5 @@ make -C docs/reference
 
 ## Recommended Review Questions
 
-- Does the proposed `LDEL` syntax parse cleanly alongside `LJSR` shorthand alias forms?
-- Should the alias-rejection TODO live in the parser, a validation pass, or both?
+- Before starting Phase 2, scan the parser grammar for ambiguity between `LDEL dest, (...)` and `LJSR src` shorthand forms.
+- Before starting Phase 2, decide whether parser tests should be added near existing opcode parser unit tests or in a new control-flow parser test module.
