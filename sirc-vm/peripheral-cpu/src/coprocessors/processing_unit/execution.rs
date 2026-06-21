@@ -31,6 +31,10 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
         return false;
     }
 
+    if !instruction.con_ {
+        return false;
+    }
+
     let writing_to_privileged_registers = PRIVILEGED_REGISTERS.contains(&instruction.des);
     // TODO: Magic numbers in `check_privilege`
     // category=Refactoring
