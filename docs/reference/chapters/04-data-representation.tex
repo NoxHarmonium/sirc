@@ -1,0 +1,153 @@
+\chapter[Data Representation and Memory Model]{Data Representation\\and Memory Model}
+\label{ch:data-representation}
+
+\section{Overview}
+
+This chapter defines the representation rules used by registers, memory, program images, exception vectors, and
+multi-word values. These rules are architectural: assemblers, loaders, emulators, hardware implementations, and
+debuggers must agree on them.
+
+\section{Word and Byte Ordering}
+
+The SIRC-1 is a word-addressed processor. Each architectural memory address names one 16-bit word. Byte addressing is
+not provided by the CPU instruction set.
+
+When a word is represented outside the CPU as bytes, such as in a ROM image or debugger dump, the word is stored in
+big-endian byte order: the most significant byte appears first.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Value} & \textbf{First byte} & \textbf{Second byte} \\
+		\midrule
+		\texttt{0x1234} & \texttt{0x12}       & \texttt{0x34}        \\
+		\texttt{0xFF80} & \texttt{0xFF}       & \texttt{0x80}        \\
+		\bottomrule
+	\end{tabular}
+	\caption{External Byte Order for 16-bit Words}
+	\label{tab:external-byte-order}
+\end{table}
+
+Multi-word quantities are stored with the most significant word at the lowest word address. This applies to
+instructions, exception vectors, saved addresses, and any software-defined multi-word integer convention that chooses to
+use the architectural order.
+
+\section{Address Values}
+
+Architectural addresses are 24-bit word addresses. The four address-register pairs (\reg{l}, \reg{a}, \reg{s}, and
+\reg{p}) represent an address by combining the low byte of the high register with the full low register:
+
+\begin{equation}
+	\text{Address} = ((\text{HighRegister} \mathbin{\&} \texttt{0x00FF}) \ll 16) \mid \text{LowRegister}
+\end{equation}
+
+Bits 15--8 of the high register are not driven on the address bus and do not participate in address comparisons,
+effective-address calculation, instruction fetch, or exception vector dispatch. They are preserved as ordinary register
+storage unless an instruction explicitly writes the high register.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Pair value} & \textbf{High register} & \textbf{Low register} & \textbf{Address bus value} \\
+		\midrule
+		\reg{ah:al}         & \texttt{0x0012}        & \texttt{0x3456}       & \texttt{0x123456}          \\
+		\reg{ah:al}         & \texttt{0xAB12}        & \texttt{0x3456}       & \texttt{0x123456}          \\
+		\reg{ph:pl}         & \texttt{0x0000}        & \texttt{0x0100}       & \texttt{0x000100}          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Address Register Pair Interpretation}
+	\label{tab:address-pair-interpretation}
+\end{table}
+
+When a 24-bit address is stored in memory as a 32-bit quantity, the high word is stored first and the low word second.
+Only bits 7--0 of the high word are significant when the value is loaded as an address.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Stored address} & \textbf{Word at address N} & \textbf{Word at address N+1} \\
+		\midrule
+		\texttt{0x123456}       & \texttt{0x0012}            & \texttt{0x3456}              \\
+		\texttt{0xFECAFE}       & \texttt{0x00FE}            & \texttt{0xCAFE}              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Stored 24-bit Address Format}
+	\label{tab:stored-address-format}
+\end{table}
+
+\section{Instruction Storage}
+
+Every instruction is 32 bits, stored as two consecutive 16-bit words:
+
+\begin{itemize}
+	\item Word at \reg{p}: instruction bits 31--16
+	\item Word at \reg{p}+1: instruction bits 15--0
+\end{itemize}
+
+Instruction fetch reads the high word first, increments \reg{p} by one word, reads the low word, then increments
+\reg{p} by one word again. Instruction addresses must be even word addresses. Fetching from an odd word address raises
+an alignment fault.
+
+\section{Exception Vector Storage}
+\label{sec:exception-vector-storage}
+
+Each exception vector table entry is a stored 24-bit address in the format shown in
+Table~\ref{tab:stored-address-format}. Vector entry \texttt{V} starts at word address \texttt{V * 2}:
+
+\begin{itemize}
+	\item Word at \texttt{V * 2}: target address high word
+	\item Word at \texttt{V * 2 + 1}: target address low word
+\end{itemize}
+
+For example, vector \texttt{0x06} occupies word addresses \texttt{0x00000C} and \texttt{0x00000D}. If it should jump to
+\texttt{0x123456}, those two words contain \texttt{0x0012} and \texttt{0x3456}.
+
+\section{Immediate Values}
+
+Immediate fields are encoded as raw two's-complement bit patterns. The consuming instruction defines whether the field
+is interpreted as signed, unsigned, or bitwise data.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{llX}
+		\toprule
+		\textbf{Use} & \textbf{Width} & \textbf{Interpretation} \\
+		\midrule
+		ALU arithmetic immediate & 16 bits & Two's-complement operand; result is truncated to 16 bits \\
+		ALU arithmetic short immediate & 8 bits & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF} \\
+		ALU logical immediates & 16 or 8 bits & Bit mask; no sign interpretation is applied by the logical operation \\
+		Memory displacements & 16 bits & Two's-complement offset added to the low address word \\
+		Coprocessor operands & 16 or 8 bits & Coprocessor-defined command or parameter bits \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Immediate Field Interpretation}
+	\label{tab:immediate-interpretation}
+\end{table}
+
+Short immediates occupy an 8-bit field and are zero-extended before use by ALU arithmetic. They are therefore suitable
+for compact non-negative constants and bit masks, not for encoding negative arithmetic operands. Assemblers must reject
+values that cannot be represented in the selected immediate field width unless they deliberately offer a documented
+truncation mode.
+
+\section{Arithmetic and Address Wraparound}
+
+General-purpose register arithmetic is performed modulo $2^{16}$. Arithmetic condition flags describe the truncated
+16-bit result: C records unsigned carry or borrow, and V records signed overflow.
+
+Address calculation for memory, effective-address, branch, jump, and auto-update operations adds offsets to the low
+word of the selected address register pair. The high address-register word is not changed by ordinary displacement,
+pre-decrement, or post-increment calculation. If the low word overflows or underflows and \statusbit{TrapOnAddressOverflow}
+is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps modulo $2^{16}$.
+
+The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
+words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
+alignment fault.
+
+\section{Memory Ordering}
+
+The SIRC-1 has no architectural cache, store buffer, memory reordering, or speculative memory access. Bus reads and
+writes issued by the CPU are externally visible in program order. A bus device may delay completion by withholding bus
+acknowledgement, but this stalls the current execution phase rather than allowing later bus accesses to pass it.

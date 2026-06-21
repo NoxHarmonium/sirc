@@ -386,8 +386,9 @@ enabled) will be serviced before the next instruction executes.
 
 \subsection{Vector Table}
 
-The exception vectors are stored starting at address 0x0. Each vector is a 32-bit address stored as two consecutive
-16-bit words. The vector table layout is:
+The exception vectors are stored starting at address 0x0. Each vector is a 24-bit target address stored as two
+consecutive 16-bit words in the address format described in Section~\ref{sec:exception-vector-storage}. The vector
+table layout is:
 
 \begin{itemize}
 	\item \textbf{0x00:} Reset vector

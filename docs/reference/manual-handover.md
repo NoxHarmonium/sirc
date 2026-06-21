@@ -25,7 +25,7 @@ These should be fixed before expanding the manual, because they create contradic
 - Fix the `LJSR` assembler lowering. The CPU write-back path appears to use the instruction destination address-register field for subroutine control-flow targets, and CPU tests construct `LongJumpToSubroutine*` with destination `p`. The toolchain `ljsr` parser currently marks the immediate-form destination field as `0x0`/unused, which likely assembles `LJSR a` to update the wrong address-register pair. Add parser tests that assemble `LJSR a`, `LJSR a, #offset`, and `LJSR a, rN`, then verify they encode destination `p`, source `a`, and preserve the expected link-register behavior.
 
 - Verify all encoding examples.
-  - Some examples in `chapters/06-instruction-formats.tex` appear to have inconsistent hex widths for 32-bit instructions.
+  - Some examples in `chapters/07-instruction-formats.tex` appear to have inconsistent hex widths for 32-bit instructions.
   - Generate examples from the assembler or a small shared encoder so the manual cannot drift from implementation.
 
 ### P1: Make the ISA contract complete
@@ -190,6 +190,14 @@ Acceptance criteria:
 
 Goal: match the M68k manual's useful distinction between effective address forms and where they are legal.
 
+Progress:
+
+- Added an addressing mode matrix with syntax, effective value/address, memory access behavior, auto-update side effects,
+  and legal instruction families.
+- Added operand category definitions and common address calculation rules, including word-sized auto-update behavior and
+  the PC-relative rule that `p`-relative displacements are relative to the next instruction address after fetch.
+- Corrected addressing examples that implied byte offsets in word-addressed memory.
+
 Tasks:
 
 - Add an addressing mode summary matrix.
@@ -225,6 +233,13 @@ Acceptance criteria:
 ## Workstream 5: Data Representation and Memory Model
 
 Goal: define how values are represented in registers and memory.
+
+Progress:
+
+- Added `chapters/04-data-representation.tex` and included it in the main manual. It now defines external word byte
+  order, multi-word storage order, address-register-pair interpretation, stored 24-bit address/vector order,
+  instruction storage, immediate interpretation, address wraparound, and program-order memory visibility.
+- Cross-referenced the new chapter from the introduction, register model, and exception vector table.
 
 Tasks:
 

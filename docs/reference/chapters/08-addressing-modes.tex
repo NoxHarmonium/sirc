@@ -25,6 +25,57 @@ operand is an immediate value, register contents, or data in memory at a compute
 	\label{tab:addr-modes}
 \end{table}
 
+\section{Addressing Mode Matrix}
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.8cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}X}
+		\toprule
+		\textbf{Mode} & \textbf{Syntax} & \textbf{Effective value or address} & \textbf{Memory access} & \textbf{Legal families} \\
+		\midrule
+		Immediate & \texttt{\#imm16} & 16-bit encoded value & None & ALU, LOAD-immediate, COPI, branch aliases \\
+		Short Immediate & \texttt{\#imm8, shift} & 8-bit zero-extended value; shift applies to register source & None & ALU short-immediate, COPI short-immediate \\
+		Register Direct & \texttt{rN} & 16-bit register value & None & ALU, LOAD register-copy, COPR, register-offset forms \\
+		Indirect Immediate & \texttt{(\#offset, addr)} & \texttt{addr.high : (addr.low + offset)} & LOAD reads; STOR writes & Memory, LDEA, LDEL \\
+		Indirect Register & \texttt{(rO, addr)} & \texttt{addr.high : (addr.low + rO)} & LOAD reads; STOR writes & Memory, LDEA, LDEL \\
+		Post-Increment & \texttt{(\#offset, addr)+}, \texttt{(rO, addr)+} & Address is calculated from original \texttt{addr}; \texttt{addr.low += 1} after access & LOAD reads & LOAD, LDEL \\
+		Pre-Decrement & \texttt{-(\#offset, addr)}, \texttt{-(rO, addr)} & \texttt{addr.low -= 1}; address then uses decremented \texttt{addr.low + offset} & STOR writes & STOR, LDEA \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Addressing Mode Side Effects and Legal Instruction Families}
+	\label{tab:addressing-mode-matrix}
+\end{table}
+
+\section{Operand Categories}
+
+Instruction descriptions use these operand categories:
+
+\begin{description}
+	\item[Register value] A 16-bit general-purpose, status, or address-component register operand used directly by an ALU,
+	      load, store, or coprocessor instruction.
+	\item[Immediate value] A constant encoded in the instruction. Full immediates are 16 bits; short immediates are 8 bits.
+	\item[Memory source] An effective address read by \mnemonic{LOAD}.
+	\item[Memory destination] An effective address written by \mnemonic{STOR}.
+	\item[Branch target] An effective address written to the program-counter pair \reg{p}.
+	\item[Address destination] An address-register pair written by \mnemonic{LDEA} or \mnemonic{LDEL}.
+	\item[Alterable destination] Any destination register, address-register pair, or memory location that the instruction can
+	      modify when its condition is true.
+\end{description}
+
+\section{Common Address Calculation Rules}
+
+For indirect, post-increment, pre-decrement, branch, jump, and effective-address forms, address arithmetic is performed
+on the low word of the selected address-register pair. The high word supplies the segment and is preserved unless the
+instruction explicitly writes an address-register pair destination.
+
+Post-increment and pre-decrement change the selected address register by exactly one word. The displacement or index
+register participates only in the effective address calculation; it does not change the auto-update amount.
+
+When \reg{p} is used as the source address register, the value used for address calculation is the program counter after
+the current instruction has been fetched. Since every instruction is two words, PC-relative branch displacements are
+relative to the next instruction address, not to the address of the branch instruction itself.
+
 \section{Immediate Addressing}
 
 \subsection{Description}
@@ -40,7 +91,8 @@ ADDI r2, #-50         ; Signed 16-bit immediate
 
 \subsection{Effective Value}
 
-16-bit value encoded into the instruction.
+16-bit value encoded into the instruction. Arithmetic instructions interpret this field according to
+Chapter~\ref{ch:data-representation}.
 
 \subsection{Usage}
 
@@ -80,7 +132,7 @@ The 16-bit value currently stored in the specified register.
 
 \subsection{Description}
 
-The effective address is computed by adding a 16-bit signed immediate offset to an address register pair. Memory
+The effective address is computed by adding a 16-bit signed immediate offset to an address register pair low word. Memory
 instructions use the computed address for a load or store; effective-address instructions write the computed address to
 an address-register pair.
 
@@ -95,7 +147,7 @@ LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 \subsection{Effective Address}
 
 \begin{equation}
-	\text{EA} = \text{AddressRegister} + \text{Offset}
+	\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{Offset})
 \end{equation}
 
 The address register can be: \reg{l} (link), \reg{a} (address), \reg{s} (stack), or \reg{p} (program counter).
@@ -126,7 +178,7 @@ STOR (r4, s), r3      ; Store to address (s + r4)
 \subsection{Effective Address}
 
 \begin{equation}
-	\text{EA} = \text{AddressRegister} + \text{IndexRegister}
+	\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{IndexRegister})
 \end{equation}
 
 \subsection{Usage}
@@ -156,9 +208,9 @@ LOAD r1, (#2, s)+     ; Load from (s + 2), then s = s + 1
 \subsection{Operation Sequence}
 
 \begin{enumerate}
-	\item Compute EA = AddressRegister + Offset
+	\item Compute EA = AddressRegister.high : (AddressRegister.low + Offset)
 	\item Perform memory operation (load)
-	\item AddressRegister = AddressRegister + 1
+	\item AddressRegister.low = AddressRegister.low + 1
 \end{enumerate}
 
 \subsection{Usage}
@@ -187,8 +239,8 @@ STOR -(#2, s), r3     ; s = s - 1, then store to (s + 2)
 \subsection{Operation Sequence}
 
 \begin{enumerate}
-	\item AddressRegister = AddressRegister - 1
-	\item Compute EA = AddressRegister + Offset
+	\item AddressRegister.low = AddressRegister.low - 1
+	\item Compute EA = AddressRegister.high : (AddressRegister.low + Offset)
 	\item Perform memory operation (store)
 \end{enumerate}
 
@@ -216,7 +268,7 @@ SUBI r2, #1, LSL #8   ; r2 = (r2 << 8) - 1
 
 \subsection{Effective Value}
 
-8-bit value encoded into the instruction.
+8-bit value encoded into the instruction and zero-extended before ALU arithmetic.
 
 The shift is applied to the source operand, not the constant.
 
@@ -255,12 +307,12 @@ Many addressing modes require specifying which address register pair to use. The
 \begin{lstlisting}
 ; Assume 'a' points to a struct:
 ; struct Point {
-;   int16_t x;  // offset 0
-;   int16_t y;  // offset 2
+;   word 0: int16_t x
+;   word 1: int16_t y
 ; }
 
 LOAD r1, (#0, a)      ; r1 = point.x
-LOAD r2, (#2, a)      ; r2 = point.y
+LOAD r2, (#1, a)      ; r2 = point.y
 \end{lstlisting}
 
 \subsection{Array Iteration}
@@ -282,13 +334,13 @@ loop:
 :begin_subroutine
 
 ; Function prologue - save registers
-STOR -(#2, s), r1
-STOR -(#2, s), r2
-STOR -(#2, s), r3
+STOR -(#0, s), r1
+STOR -(#0, s), r2
+STOR -(#0, s), r3
 
 ; Access parameters (above saved regs)
-LOAD r4, (#6, s)      ; First parameter
-LOAD r5, (#8, s)      ; Second parameter
+LOAD r4, (#3, s)      ; First parameter
+LOAD r5, (#4, s)      ; Second parameter
 
 ; Function epilogue - restore registers
 LOAD r3, (#0, s)+
