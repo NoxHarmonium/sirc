@@ -28,7 +28,7 @@ where
 {
     let mut bus = common::set_up_instruction_test(instruction_data, 0x00CC_0000);
     common::setup_test(&mut bus, register_setup, 0x00CC_0000);
-    bus.run_full_cycle(CYCLES_PER_INSTRUCTION);
+    bus.run_full_cycle(CYCLES_PER_INSTRUCTION.into());
 
     let cpu: &mut CpuPeripheral = bus
         .bus_master
