@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::{direct_register_aliases_address_register, reject_aliased_address_register_write};
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
 use crate::{
@@ -234,7 +235,16 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // LOAD r1, (#0, a)+
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] => {
+        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] =>
+        {
+            if direct_register_aliases_address_register(dest_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LOAD",
+                    "destination register overlaps the post-increment address register",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -284,6 +294,14 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             displacement_register,
             address_register,
         ), AddressingMode::ShiftDefinition(shift_definition_data)] => {
+            if direct_register_aliases_address_register(dest_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LOAD",
+                    "destination register overlaps the post-increment address register",
+                )?;
+            }
+
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((
@@ -310,6 +328,14 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             displacement_register,
             address_register,
         )] => {
+            if direct_register_aliases_address_register(dest_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LOAD",
+                    "destination register overlaps the post-increment address register",
+                )?;
+            }
+
             Ok((
                 i,
                 InstructionToken {

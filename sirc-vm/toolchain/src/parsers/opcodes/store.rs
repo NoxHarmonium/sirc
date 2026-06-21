@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::{direct_register_aliases_address_register, reject_aliased_address_register_write};
 use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
@@ -154,7 +155,16 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         // STOR -(#0, a), r1
-        [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] => {
+        [AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register), AddressingMode::DirectRegister(src_register)] =>
+        {
+            if direct_register_aliases_address_register(src_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "STOR",
+                    "source register overlaps the pre-decrement address register",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -204,6 +214,14 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             displacement_register,
             address_register,
         ), AddressingMode::DirectRegister(src_register)] => {
+            if direct_register_aliases_address_register(src_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "STOR",
+                    "source register overlaps the pre-decrement address register",
+                )?;
+            }
+
             Ok((i, {
                 InstructionToken {
                     input_length,
@@ -228,6 +246,14 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             address_register,
         ), AddressingMode::DirectRegister(src_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
         {
+            if direct_register_aliases_address_register(src_register, address_register) {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "STOR",
+                    "source register overlaps the pre-decrement address register",
+                )?;
+            }
+
             let (shift_operand, shift_type, shift_count) =
                 split_shift_definition_data(shift_definition_data);
             Ok((i, {

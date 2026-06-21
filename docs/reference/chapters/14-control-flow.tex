@@ -58,7 +58,7 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 
 \noindent\textbf{Aliased register writes:} Instructions that write the same address-register pair through more than one
 write-back path have architecturally undefined behavior. Avoid forms such as \texttt{LDEA a, -(\#0, a)} and
-\texttt{LDEL l, (\#0, l)+}.
+\texttt{LDEL l, (\#0, l)+}. The assembler rejects known hazardous aliased forms.
 
 \noindent\textbf{Shift suffixes:} Control-flow and effective-address displacements are not shifted. Register-offset
 forms do not accept shift suffixes in the assembler.

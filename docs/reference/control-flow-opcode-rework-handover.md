@@ -14,7 +14,7 @@ The proposed direction is:
 - Rename the real link-writing effective-address instruction to `LDEL` ("Load Effective Address and Link").
 - Make `BRAN`, `BRSR`, `LJMP`, and `LJSR` assembler conveniences rather than real CPU opcodes.
 - Reuse the freed opcodes `0x1A`, `0x1B`, `0x1E`, and `0x1F` as auto-update forms of `LDEA` and `LDEL`, following the existing `STOR`/`LOAD` bit pattern.
-- Document aliased register writes as undefined behavior unless the hardware implementation later proves a stable behavior worth specifying. Rejecting those forms in the assembler is desirable but can be deferred.
+- Document aliased register writes as undefined behavior unless the hardware implementation later proves a stable behavior worth specifying. The assembler rejects the known hazardous forms.
 
 ## Current Opcode Map
 
@@ -112,7 +112,7 @@ These decisions were made during review.
 - `LDEL` should support explicit destination address-register forms matching `LDEA`.
 - The common control-flow forms are `BRAN`, `BRSR`, `LJMP`, and `LJSR`, because they all default destination/source behavior around `p`.
 - Explicit-destination `LDEL` is neither encouraged nor discouraged; it is a normal documented option for programmers who want it.
-- Aliased register writes are undefined behavior. Rejecting them in the assembler is preferred but deferred with a TODO.
+- Aliased register writes are undefined behavior. The assembler rejects the known hazardous forms at parse time.
 - Undefined aliasing covers both direct register-half overlap and whole address-register-pair overlap, unless later implementation experience shows that this makes the ISA impractical.
 - Protected mode allows address-register-pair write-back only when all written high words remain unchanged. If any high word would change, the instruction raises a privilege violation fault and does not complete its write-back.
 - Conditional-false auto-update forms skip all side effects, including destination write-back, source address-register update, link-register update, and memory access. This matches the existing LOAD/STOR stage behavior.
@@ -123,11 +123,9 @@ These decisions were made during review.
 
 The main design questions are resolved. These implementation choices lock Phase 1:
 
-- Defer aliased-register-write rejection.
-- Add parser-local TODO comments where new `LDEA`/`LDEL` auto-update forms are parsed.
+- Reject known aliased-register-write forms at parse time.
 - Do not add tests asserting aliased-register-write permissiveness; that would accidentally bless the temporary behavior.
 - If a shared assembler validation pass exists later, move the aliased-register-write rejection there so all affected instructions share the same rule.
-- Suggested TODO text: `TODO: Reject aliased register writes once operand validation is centralised. These forms are architecturally undefined.`
 
 ## Aliased Register Writes
 
@@ -136,16 +134,17 @@ Any instruction that would write the same architectural register through more th
 Examples to treat as undefined:
 
 ```asm
-LDEA a, (#0, a)+
-LDEA p, (#0, p)+
+LDEA a, -(#0, a)
+LDEA p, -(#0, p)
 LDEL l, (#0, a)
+LDEL p, (#0, l)+
 LOAD al, (#0, a)+
 STOR -(#0, a), al
 ```
 
 Rationale: the eventual hardware may overlay write-enable/data paths in a way that is not equivalent to the simulator's current ordered writes. The ISA should not promise deterministic behavior until the hardware implementation is known.
 
-Assemblers and compiler backends should avoid generating these forms. The assembler should eventually reject them; this can be deferred with an implementation TODO if needed.
+Assemblers and compiler backends should avoid generating these forms. The assembler rejects the known hazardous forms at parse time.
 
 ## Known Existing Bug
 
@@ -221,7 +220,7 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
    - `LJSR src`
    - `BRAN @label`
    - `BRSR @label`
-3. Add TODO-backed diagnostics for aliased register writes, or implement rejection immediately.
+3. Reject known aliased register writes at parse time.
 
 ### Phase 3: Simulator Opcode Rename (Complete)
 
@@ -254,6 +253,26 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 4. Regenerate any generated encoding/opcode tables. Complete for the reference-encodings fixture.
 5. Rebuild the reference manual. Complete.
 
+### Phase 7: Assembler/Manual Coverage Audit (Pending)
+
+1. Audit every instruction, alias, and addressing mode documented in the manual against the assembler parsers.
+2. Add parser tests for any documented instruction form that is missing test coverage.
+3. Fix or document any mismatch where the manual describes a form the assembler does not accept.
+4. Pay particular attention to meta-instructions and aliases, because some may be missing or only partially covered.
+
+### Phase 8: VS Code Extension Grammar and Fixtures (Pending)
+
+1. Update `vscode-sirc/syntaxes/sirc.tmLanguage.json` so the mnemonic list includes `LDEL` and any current control-flow aliases/forms that should highlight as instructions.
+2. Update `vscode-sirc/syntaxes/example.sasm` to demonstrate current control-flow syntax:
+   - `LDEA dest, (#offset, src)`
+   - `LDEA dest, -(#offset, src)`
+   - `LDEL dest, (#offset, src)`
+   - `LDEL dest, (#offset, src)+`
+   - `LJMP src`, `LJSR src`, `BRAN @label`, and `BRSR @label`
+3. Update `vscode-sirc/test/syntax.test.sasm` with the same forms, including label references with `@`.
+4. Regenerate `vscode-sirc/test/syntax.test.sasm.snap` using the extension snapshot script.
+5. Run the VS Code grammar test suite from `vscode-sirc`.
+
 ## Test Plan
 
 CPU/simulator tests:
@@ -276,7 +295,7 @@ Assembler/parser tests:
 - `BRSR @label` lowers to an `LDEL p, ...` form with `RefType::Offset`.
 - New `LDEA` auto-update syntax encodes `0x1A/0x1B`.
 - New `LDEL` auto-update syntax encodes `0x1E/0x1F`.
-- Aliased register writes have TODO-backed diagnostics or are rejected according to the chosen assembler policy.
+- Aliased register writes are rejected at parse time for the known hazardous `LDEA`, `LDEL`/`LJSR`, `LOAD`, and `STOR` forms.
 
 Documentation tests:
 
@@ -286,6 +305,14 @@ Documentation tests:
 - `LJSR` and `BRSR` are documented as aliases.
 - Examples use `@label` for symbolic label references.
 - Undefined behavior rules are stated consistently in the instruction chapter and appendix.
+- The manual's documented instruction forms are audited against assembler acceptance.
+
+VS Code extension tests:
+
+- TextMate grammar highlights `LDEL` as a mnemonic.
+- TextMate grammar still highlights existing aliases: `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS`.
+- Syntax fixtures include new `LDEA` pre-decrement and `LDEL` post-increment forms.
+- Syntax fixtures use `@label` for symbolic label references.
 
 Minimum commands:
 
@@ -293,6 +320,7 @@ Minimum commands:
 cargo test -p peripheral_cpu --test mod
 cargo test -p toolchain
 make -C docs/reference
+cd vscode-sirc && npm test
 ```
 
 ## Documentation Update Checklist
@@ -304,8 +332,8 @@ make -C docs/reference
 - `docs/reference/chapters/appendix-c-undocumented.tex` -- updated
 - `docs/reference/control-flow-opcode-rework-handover.md` -- updated
 - Generated opcode/encoding tables -- updated
-
-## Recommended Review Questions
-
-- Should aliased register writes remain documented-only undefined behavior for now, or should the assembler reject them in a follow-up change?
-- Should the broader manual example audit move into `docs/reference/manual-handover.md` or a new documentation cleanup handover?
+- Assembler/manual instruction coverage audit -- pending
+- `vscode-sirc/syntaxes/sirc.tmLanguage.json` -- pending
+- `vscode-sirc/syntaxes/example.sasm` -- pending
+- `vscode-sirc/test/syntax.test.sasm` -- pending
+- `vscode-sirc/test/syntax.test.sasm.snap` -- pending

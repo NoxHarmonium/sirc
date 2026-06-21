@@ -4,9 +4,7 @@ use peripheral_cpu::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
         RegisterInstructionData, ShiftOperand, ShiftType,
     },
-    registers::{
-        AddressRegisterIndexing, AddressRegisterName, RegisterName, Registers,
-    },
+    registers::{AddressRegisterIndexing, AddressRegisterName, RegisterName, Registers},
 };
 
 use crate::instructions::common;

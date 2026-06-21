@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::reject_aliased_address_register_write;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
@@ -148,6 +149,21 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             ))
         }
         [AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] => {
+            if address_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LJSR",
+                    "post-increment source address register overlaps the implicit link-register write",
+                )?;
+            }
+            if address_register == &AddressRegisterName::ProgramCounter {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LJSR",
+                    "post-increment source address register overlaps the implied program-counter destination",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -192,25 +208,42 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
         [AddressingMode::IndirectRegisterDisplacementPostIncrement(
             displacement_register,
             address_register,
-        )] => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Register(RegisterInstructionData {
-                    op_code:
-                        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement,
-                    r1: AddressRegisterName::ProgramCounter.to_register_index(),
-                    r2: 0x0, // Unused
-                    r3: displacement_register.to_register_index(),
-                    shift_operand: ShiftOperand::Immediate,
-                    shift_type: ShiftType::None,
-                    shift_count: 0,
-                    condition_flag,
-                    additional_flags: address_register.to_register_index(),
-                }),
-                ..Default::default()
-            },
-        )),
+        )] => {
+            if address_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LJSR",
+                    "post-increment source address register overlaps the implicit link-register write",
+                )?;
+            }
+            if address_register == &AddressRegisterName::ProgramCounter {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LJSR",
+                    "post-increment source address register overlaps the implied program-counter destination",
+                )?;
+            }
+
+            Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code:
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement,
+                        r1: AddressRegisterName::ProgramCounter.to_register_index(),
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    ..Default::default()
+                },
+            ))
+        }
         modes => {
             let error_string = format!("Invalid addressing mode for LJSR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(

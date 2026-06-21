@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::reject_aliased_address_register_write;
 use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
@@ -131,8 +132,14 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
         }
         [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register)] =>
         {
-            // TODO: Reject aliased register writes once operand validation is centralised.
-            // These forms are architecturally undefined.
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEA",
+                    "pre-decrement source and destination address registers overlap",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -181,8 +188,14 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
             displacement_register,
             address_register,
         )] => {
-            // TODO: Reject aliased register writes once operand validation is centralised.
-            // These forms are architecturally undefined.
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEA",
+                    "pre-decrement source and destination address registers overlap",
+                )?;
+            }
+
             Ok((
                 i,
                 InstructionToken {

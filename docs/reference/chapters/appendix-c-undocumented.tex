@@ -30,7 +30,8 @@ LDEL p, (#0, l)+
 LDEL l, (#0, a)
 \end{lstlisting}
 
-Programs should avoid aliased register writes. Future assemblers may reject these forms.
+Programs should avoid aliased register writes. The assembler rejects the known hazardous forms so that programs do not
+accidentally depend on undefined write-back ordering.
 
 \section{Undocumented Opcode List}
 

@@ -290,3 +290,21 @@ fn branch_aliases_reject_non_pc_relative_forms() {
     assert!(parse_result("BRAN (r3, a)\n").is_err());
     assert!(parse_result("BRSR (r3, a)\n").is_err());
 }
+
+#[test]
+fn auto_update_forms_reject_aliased_register_writes() {
+    assert!(parse_result("LDEA a, -(#0, a)\n").is_err());
+    assert!(parse_result("LDEA p, -(r3, p)\n").is_err());
+
+    assert!(parse_result("LDEL l, (#0, a)\n").is_err());
+    assert!(parse_result("LDEL a, (#0, a)+\n").is_err());
+    assert!(parse_result("LDEL a, (#0, l)+\n").is_err());
+    assert!(parse_result("LJSR (#0, p)+\n").is_err());
+    assert!(parse_result("LJSR (#0, l)+\n").is_err());
+
+    assert!(parse_result("LOAD al, (#0, a)+\n").is_err());
+    assert!(parse_result("LOAD ah, (r3, a)+\n").is_err());
+
+    assert!(parse_result("STOR -(#0, a), al\n").is_err());
+    assert!(parse_result("STOR -(r3, a), ah\n").is_err());
+}

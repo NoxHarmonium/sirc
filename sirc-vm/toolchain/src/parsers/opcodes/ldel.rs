@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::reject_aliased_address_register_write;
 use crate::parsers::data::override_ref_token_type_if_implied;
 use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
@@ -45,7 +46,16 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
         };
 
     match operands.as_slice() {
-        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
+        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] =>
+        {
+            if dest_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "destination address register overlaps the implicit link-register write",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -95,6 +105,14 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
         }
         [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register)] =>
         {
+            if dest_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "destination address register overlaps the implicit link-register write",
+                )?;
+            }
+
             Ok((
                 i,
                 InstructionToken {
@@ -116,8 +134,28 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
         }
         [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] =>
         {
-            // TODO: Reject aliased register writes once operand validation is centralised.
-            // These forms are architecturally undefined.
+            if dest_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "destination address register overlaps the implicit link-register write",
+                )?;
+            }
+            if address_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "post-increment source address register overlaps the implicit link-register write",
+                )?;
+            }
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "post-increment source and destination address registers overlap",
+                )?;
+            }
+
             match offset {
                 ImmediateType::Value(offset) => Ok((
                     i,
@@ -169,8 +207,28 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
             displacement_register,
             address_register,
         )] => {
-            // TODO: Reject aliased register writes once operand validation is centralised.
-            // These forms are architecturally undefined.
+            if dest_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "destination address register overlaps the implicit link-register write",
+                )?;
+            }
+            if address_register == &AddressRegisterName::LinkRegister {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "post-increment source address register overlaps the implicit link-register write",
+                )?;
+            }
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEL",
+                    "post-increment source and destination address registers overlap",
+                )?;
+            }
+
             Ok((
                 i,
                 InstructionToken {
