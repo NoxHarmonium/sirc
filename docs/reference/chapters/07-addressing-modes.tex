@@ -300,12 +300,12 @@ RETS
 
 \subsection{Privilege Mode Restrictions}
 
-In protected mode, indirect addressing modes that would write to the high byte of an address register are restricted:
+Protected mode restricts writes to the high word of an address register:
 
 \begin{itemize}
-	\item \textbf{LDEA with both registers}: Privileged in protected mode
-	\item \textbf{LDEA with low register only}: Allowed (can't change segment)
-	\item \textbf{Post-increment/Pre-decrement}: Can only modify low register in protected mode
+	\item \textbf{Direct high-register writes}: Trigger a privilege violation fault
+	\item \textbf{Address-register-pair write-back}: Preserves the high word and updates only the low word
+	\item \textbf{Post-increment/Pre-decrement}: Can only modify the low word in protected mode
 \end{itemize}
 
 \subsection{Alignment}

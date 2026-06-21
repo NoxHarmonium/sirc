@@ -54,7 +54,7 @@ LJMP a                        ; Assembles to: LDEA p, (#0, a)
 LJMP a, #16                   ; Assembles to: LDEA p, (#16, a)
 
 ; Jump with register displacement
-LJMP b, r1                    ; Assembles to: LDEA p, (r1, b)
+LJMP a, r1                    ; Assembles to: LDEA p, (r1, a)
 \end{lstlisting}
 
 \section{EXCP -- User Exception (Trap)}

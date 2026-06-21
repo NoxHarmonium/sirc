@@ -202,16 +202,19 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 	\item In \textbf{protected mode}:
 	      \begin{itemize}
 		      \item Reading is allowed
-		      \item Writing triggers a privilege exception
+		      \item Direct writes trigger a privilege exception
+		      \item Address-register-pair write-back preserves the high word and updates only the low word
 	      \end{itemize}
 \end{itemize}
 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
+Instructions such as \mnemonic{LDEA}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP}, \mnemonic{LJSR}, and
+\mnemonic{RETS} remain usable in protected mode, but their address-register-pair write-back cannot alter the high word.
 
 The status register differs slightly from the high address registers:
 \begin{itemize}
-	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but writes trigger a privilege violation fault.
+	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but direct writes trigger a privilege violation fault.
 	\item The status register's privileged byte is hidden on reads in protected mode, and cannot be modified directly from protected mode writes.
 \end{itemize}
 

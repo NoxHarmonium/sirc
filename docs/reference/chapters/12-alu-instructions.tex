@@ -49,21 +49,43 @@ are not legal for this instruction family.
 
 \begin{table}[H]
 	\centering
-	\tiny
-	\begin{tabular}{lllll}
+	\scriptsize
+	\begin{tabular}{llll}
 		\toprule
-		\textbf{Family} & \textbf{Immediate} & \textbf{Short Immediate} & \textbf{Register} & \textbf{Writes Result} \\
+		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
 		\midrule
-		ADD             & \texttt{ADDI rD, \#imm16} & \texttt{ADDI rD, \#imm8, shift} & \texttt{ADDR rD, rS1, rS2[, shift]} & Yes \\
-		ADC             & \texttt{ADCI rD, \#imm16} & \texttt{ADCI rD, \#imm8, shift} & \texttt{ADCR rD, rS1, rS2[, shift]} & Yes \\
-		SUB             & \texttt{SUBI rD, \#imm16} & \texttt{SUBI rD, \#imm8, shift} & \texttt{SUBR rD, rS1, rS2[, shift]} & Yes \\
-		SBC             & \texttt{SBCI rD, \#imm16} & \texttt{SBCI rD, \#imm8, shift} & \texttt{SBCR rD, rS1, rS2[, shift]} & Yes \\
-		AND             & \texttt{ANDI rD, \#imm16} & \texttt{ANDI rD, \#imm8, shift} & \texttt{ANDR rD, rS1, rS2[, shift]} & Yes \\
-		ORR             & \texttt{ORRI rD, \#imm16} & \texttt{ORRI rD, \#imm8, shift} & \texttt{ORRR rD, rS1, rS2[, shift]} & Yes \\
-		XOR             & \texttt{XORI rD, \#imm16} & \texttt{XORI rD, \#imm8, shift} & \texttt{XORR rD, rS1, rS2[, shift]} & Yes \\
-		CMP             & \texttt{CMPI rS, \#imm16} & \texttt{CMPI rS, \#imm8, shift} & \texttt{CMPR rS1, rS2[, shift]}      & No  \\
-		TSA             & \texttt{TSAI rS, \#imm16} & \texttt{TSAI rS, \#imm8, shift} & \texttt{TSAR rS1, rS2[, shift]}      & No  \\
-		TSX             & \texttt{TSXI rS, \#imm16} & \texttt{TSXI rS, \#imm8, shift} & \texttt{TSXR rS1, rS2[, shift]}      & No  \\
+		ADD  & \texttt{ADDI rD, \#imm16} & 0x00 & Writes result \\
+		ADD  & \texttt{ADDI rD, \#imm8, shift} & 0x20 & Writes result \\
+		ADD  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30 & Writes result \\
+		ADC  & \texttt{ADCI rD, \#imm16} & 0x01 & Writes result \\
+		ADC  & \texttt{ADCI rD, \#imm8, shift} & 0x21 & Writes result \\
+		ADC  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31 & Writes result \\
+		SUB  & \texttt{SUBI rD, \#imm16} & 0x02 & Writes result \\
+		SUB  & \texttt{SUBI rD, \#imm8, shift} & 0x22 & Writes result \\
+		SUB  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32 & Writes result \\
+		SBC  & \texttt{SBCI rD, \#imm16} & 0x03 & Writes result \\
+		SBC  & \texttt{SBCI rD, \#imm8, shift} & 0x23 & Writes result \\
+		SBC  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33 & Writes result \\
+		AND  & \texttt{ANDI rD, \#imm16} & 0x04 & Writes result \\
+		AND  & \texttt{ANDI rD, \#imm8, shift} & 0x24 & Writes result \\
+		AND  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34 & Writes result \\
+		ORR  & \texttt{ORRI rD, \#imm16} & 0x05 & Writes result \\
+		ORR  & \texttt{ORRI rD, \#imm8, shift} & 0x25 & Writes result \\
+		ORR  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35 & Writes result \\
+		XOR  & \texttt{XORI rD, \#imm16} & 0x06 & Writes result \\
+		XOR  & \texttt{XORI rD, \#imm8, shift} & 0x26 & Writes result \\
+		XOR  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36 & Writes result \\
+		LOAD & \texttt{LOAD rD, \#imm16} & 0x07 & Writes result; preserves flags \\
+		LOAD & \texttt{LOAD rD, rS} & 0x37 & Writes result; preserves flags \\
+		CMP  & \texttt{CMPI rS, \#imm16} & 0x0A & Updates flags only \\
+		CMP  & \texttt{CMPI rS, \#imm8, shift} & 0x2A & Updates flags only \\
+		CMP  & \texttt{CMPR rS1, rS2[, shift]} & 0x3A & Updates flags only \\
+		TSA  & \texttt{TSAI rS, \#imm16} & 0x0C & Updates flags only \\
+		TSA  & \texttt{TSAI rS, \#imm8, shift} & 0x2C & Updates flags only \\
+		TSA  & \texttt{TSAR rS1, rS2[, shift]} & 0x3C & Updates flags only \\
+		TSX  & \texttt{TSXI rS, \#imm16} & 0x0E & Updates flags only \\
+		TSX  & \texttt{TSXI rS, \#imm8, shift} & 0x2E & Updates flags only \\
+		TSX  & \texttt{TSXR rS1, rS2[, shift]} & 0x3E & Updates flags only \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}

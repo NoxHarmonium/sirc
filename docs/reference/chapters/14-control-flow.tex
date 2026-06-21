@@ -3,74 +3,244 @@
 
 \section{Overview}
 
-Control flow instructions modify the program counter to change the execution flow. The SIRC-1 provides several types of
-control flow operations:
+Control-flow instructions change the program counter or compute address-register values used by later control-flow
+instructions. The SIRC-1 provides these control-flow operations:
 
 \begin{itemize}
-	\item \mnemonic{BRAN} -- Branch (unconditional or conditional jump)
-	\item \mnemonic{LJMP} -- Long Jump (transfer address register to PC)
-	\item \mnemonic{LJSR} -- Long Jump to Subroutine (with link)
-	\item \mnemonic{BRSR} -- Branch to Subroutine (relative, with link)
-	\item \mnemonic{LDEA} -- Load Effective Address (can be used for jumps)
+	\item \mnemonic{BRAN} -- Branch by adding a displacement to an address register, usually \reg{p}
+	\item \mnemonic{BRSR} -- Branch to subroutine, saving a return address in \reg{l}
+	\item \mnemonic{LDEA} -- Load Effective Address into an address register pair
+	\item \mnemonic{LJMP} -- Long Jump assembler convenience for \texttt{LDEA p, ...}
+	\item \mnemonic{LJSR} -- Long Jump to Subroutine, saving a return address in \reg{l}
 \end{itemize}
 
-All control flow instructions can be conditional, allowing efficient implementation of if-then-else and loop
-constructs.
+All encoded control-flow instructions can be conditional. If the condition is false, the instruction is skipped as
+described in Chapter~\ref{ch:reading-instructions}.
+
+\section{Legal Forms}
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\midrule
+		BRAN & \texttt{BRAN \#disp} & 0x1A & PC-relative immediate displacement \\
+		BRAN & \texttt{BRAN label} & 0x1A & PC-relative linker-computed displacement \\
+		BRAN & \texttt{BRAN (\#disp, addr)} & 0x1A & Address-register-relative immediate displacement \\
+		BRAN & \texttt{BRAN (rS, addr)} & 0x1B & Address-register-relative register displacement \\
+		BRSR & \texttt{BRSR \#disp} & 0x1E & PC-relative call \\
+		BRSR & \texttt{BRSR label} & 0x1E & PC-relative linker-computed call \\
+		BRSR & \texttt{BRSR (\#disp, addr)} & 0x1E & Address-register-relative call \\
+		BRSR & \texttt{BRSR (rS, addr)} & 0x1F & Address-register-relative register call \\
+		LDEA & \texttt{LDEA dest, (\#offset, src)} & 0x18 & Immediate-offset effective address \\
+		LDEA & \texttt{LDEA dest, (rS, src)} & 0x19 & Register-offset effective address \\
+		LJMP & \texttt{LJMP src} & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)} \\
+		LJMP & \texttt{LJMP src, \#offset} & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)} \\
+		LJMP & \texttt{LJMP src, rS} & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rS, src)} \\
+		LJSR & \texttt{LJSR src} & 0x1C & Absolute call through address register \\
+		LJSR & \texttt{LJSR src, \#offset} & 0x1C & Immediate-offset absolute call \\
+		LJSR & \texttt{LJSR src, rS} & 0x1D & Register-offset absolute call \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal Control-Flow Instruction Forms}
+	\label{tab:control-flow-legal-forms}
+\end{table}
+
+\noindent\textbf{Address registers:} \texttt{addr}, \texttt{src}, and \texttt{dest} are address register pairs:
+\reg{l}, \reg{a}, \reg{s}, or \reg{p}. The \texttt{BRAN \#disp}, \texttt{BRAN label}, \texttt{BRSR \#disp}, and
+\texttt{BRSR label} shorthands use \reg{p} as the base address register.
+
+\noindent\textbf{Shift suffixes:} Control-flow displacements are not shifted. Some instruction encodings can make it look
+like a shift suffix on register-displacement branch forms is valid, but the encoded shift is not applied to the displacement
+and should not be used.
+
+\section{Common Control-Flow Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic} & \textbf{Definition} \\
+		\midrule
+		Condition false & The instruction is skipped and has no side effects. The program counter advances to the next instruction normally. \\
+		Address calculation & The selected address register high word supplies the segment. The target low word is the selected address register low word plus the immediate or register displacement. \\
+		Branch shorthand & \texttt{BRAN \#disp} and \texttt{BRSR \#disp} are PC-relative forms equivalent to using \reg{p} as the base address register. \\
+		Subroutine link & \mnemonic{BRSR} and \mnemonic{LJSR} save the normal next-instruction address in \reg{l} before transferring control. \\
+		Status flags & Control-flow instructions preserve all status flags and do not support status update override syntax. \\
+		Timing & Control-flow instructions complete in 6 cycles, plus any instruction-fetch wait states. They do not perform a data-memory bus access. \\
+		Exceptions & Control-flow address calculation can raise segment-overflow faults when trap-on-address-overflow is enabled. \\
+		Privilege & In protected mode, control-flow address-register-pair write-back preserves the destination high word and updates only the low word. Direct writes to high address registers still raise a privilege-violation fault. \\
+		Fault side effects & Program-counter, destination address-register, and link-register updates occur after condition evaluation. If a fault aborts execution before those updates, the architectural side effects do not complete. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Control-Flow Instruction Semantics}
+	\label{tab:control-flow-common-semantics}
+\end{table}
 
 \section{Branch Instructions}
 
 \begin{instructionbox}{BRAN -- Branch}
-	\textbf{Opcodes:} 0x1A (Imm Displacement), 0x1B (Reg Displacement)
+	\textbf{Opcodes:} 0x1A (Immediate Displacement), 0x1B (Register Displacement)
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-BRAN (#disp, p)               ; PC = PC + disp
-BRAN (rS, p)                  ; PC = PC + rS
-BRAN|cond (#disp, p)          ; Conditional branch
+BRAN #disp                    ; p = p + disp
+BRAN label                    ; p = p + label offset
+BRAN (#disp, addr)            ; p = addr + disp
+BRAN (rS, addr)               ; p = addr + rS
+BRAN|cond #disp               ; Conditional PC-relative branch
 \end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition:
+    p.high = addr.high
+    p.low  = addr.low + displacement
+\end{verbatim}
 
 	\textbf{Description:}
 
-	Branches to a new location by adding a displacement to the program counter. The displacement can be an immediate value
-	(for fixed jumps) or a register value (for computed jumps). Branches are typically PC-relative. \textbf{Examples:}
+	Branches to a new address by adding a displacement to the selected address register. The shorthand form is
+	PC-relative and uses \reg{p} as the base. The full forms can branch relative to any address register pair.
+
+	\textbf{Write-back:} If the condition is true, writes the computed address to \reg{p}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Privilege:} See Table~\ref{tab:control-flow-common-semantics}.
+
+	\textbf{Examples:}
 	\begin{lstlisting}
 ; Unconditional branch forward
-BRAN (#20, p)                 ; Jump ahead 20 words
+BRAN #20                      ; Jump ahead 20 words
 
 ; Backward branch (loop)
 loop:
     ; ... loop body ...
-    BRAN|!= (#-16, p)         ; Jump back if not zero
+    BRAN|!= @loop             ; Jump back if not zero
 
-; Conditional branch
-CMPI r1, #10
-BRAN|>= (#8, p)               ; Branch if r1 >= 10
+; Branch relative to a table base in a
+BRAN (r2, a)                  ; p = a + r2
 \end{lstlisting}
 
 \end{instructionbox}
 
-\section{Long Jump}
-
-\begin{instructionbox}{LJMP -- Long Jump}
-	\textbf{Opcodes:} 0x18 (Imm Offset), 0x19 (Reg Offset)
+\begin{instructionbox}{BRSR -- Branch to Subroutine}
+	\textbf{Opcodes:} 0x1E (Immediate Displacement), 0x1F (Register Displacement)
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LJMP src                      ; PC = src
-LJMP src, #offset             ; PC = src + offset
-LJMP src, rS                  ; PC = src + rS
+BRSR #disp                    ; l = next PC; p = p + disp
+BRSR label                    ; l = next PC; p = p + label offset
+BRSR (#disp, addr)            ; l = next PC; p = addr + disp
+BRSR (rS, addr)               ; l = next PC; p = addr + rS
+BRSR|cond #disp               ; Conditional PC-relative call
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition:
+    l = address_of_next_instruction
+    p.high = addr.high
+    p.low  = addr.low + displacement
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Calls a nearby or computed subroutine by saving the return address in the link register and branching to the computed
+	target. Return with \mnemonic{RETS}, which assembles to \texttt{LDEA p, (\#0, l)}.
+
+	\textbf{Write-back:} If the condition is true, writes the return address to \reg{l} and the computed target address to
+	\reg{p}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Privilege:} See Table~\ref{tab:control-flow-common-semantics}.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; PC-relative call
+BRSR function
+
+; Call through a table relative to a
+LOAD r1, #8
+BRSR (r1, a)
+
+; Return from the subroutine
+RETS
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Load Effective Address}
+
+\begin{instructionbox}{LDEA -- Load Effective Address}
+	\textbf{Opcodes:} 0x18 (Immediate Offset), 0x19 (Register Offset)
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+LDEA dest, (#offset, src)     ; dest = src + offset
+LDEA dest, (rS, src)          ; dest = src + rS
+LDEA|cond dest, (#offset, src)
+\end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition:
+    dest.high = src.high
+    dest.low  = src.low + offset
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Computes an effective address and loads it into the destination address register pair. This is useful for pointer
+	arithmetic and for control flow when the destination is \reg{p}.
+
+	\textbf{Write-back:} If the condition is true, writes the computed address to \texttt{dest}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Privilege:} See Table~\ref{tab:control-flow-common-semantics}.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Pointer arithmetic
+LDEA a, (#16, a)              ; a = a + 16
+
+; Computed jump
+LDEA p, (r1, p)               ; p = p + r1
+
+; Return from subroutine
+LDEA p, (#0, l)               ; p = l
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Long Jump Instructions}
+
+\begin{instructionbox}{LJMP -- Long Jump}
+	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+LJMP src                      ; p = src
+LJMP src, #offset             ; p = src + offset
+LJMP src, rS                  ; p = src + rS
+LJMP|cond src                 ; Conditional long jump
 \end{lstlisting}
 
 	\textbf{Description:}
 
-	Jumps to an absolute address by transferring the contents of an address register to the program counter. This is a
-	meta-instruction that assembles to \mnemonic{LDEA} with \reg{p} as the hardcoded destination. Unlike \mnemonic{BRAN}
-	which uses PC-relative addressing, \mnemonic{LJMP} performs absolute jumps using address registers.
+	Performs an absolute jump through an address register. \mnemonic{LJMP} is an assembler convenience, not a separate CPU
+	opcode; it assembles to the corresponding \mnemonic{LDEA p, ...} form.
 
-	The instruction supports optional immediate or register offsets. Note that shift operations cannot be applied to the
-	displacement operand for this instruction.
+	\textbf{Write-back:} If the condition is true, writes the computed address to \reg{p}.
 
-	\textbf{Privilege:} Privileged instruction (like \mnemonic{LDEA}).
+	\textbf{Flags:} Preserved.
+
+	\textbf{Privilege:} Same as \mnemonic{LDEA p, ...}. See Table~\ref{tab:control-flow-common-semantics}.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -80,79 +250,58 @@ LOAD al, #0x0000              ; a = 0x00400000
 LJMP a                        ; Jump to 0x00400000
 
 ; Jump with immediate offset
-LJMP a, #16                   ; Jump to a + 16
+LJMP a, #16                   ; p = a + 16
 
-; Jump with register offset (jump table)
-LOAD r1, #8                   ; Table index * 2
-LJMP b, r1                    ; Jump to b + r1
+; Jump with register offset
+LOAD r1, #8
+LJMP a, r1                    ; p = a + r1
 \end{lstlisting}
 
 \end{instructionbox}
 
-\section{Subroutine Call Instructions}
-
 \begin{instructionbox}{LJSR -- Long Jump to Subroutine}
-	\textbf{Opcodes:} 0x1C (Imm), 0x1D (Reg)
+	\textbf{Opcodes:} 0x1C (Immediate Offset), 0x1D (Register Offset)
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LJSR src                      ; l = PC; PC = src
-LJSR src, #offset             ; l = PC; PC = src + offset
-LJSR src, rS                  ; l = PC; PC = src + rS
+LJSR src                      ; l = next PC; p = src
+LJSR src, #offset             ; l = next PC; p = src + offset
+LJSR src, rS                  ; l = next PC; p = src + rS
+LJSR|cond src                 ; Conditional long call
 \end{lstlisting}
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition:
+    l = address_of_next_instruction
+    p.high = src.high
+    p.low  = src.low + offset
+\end{verbatim}
 
 	\textbf{Description:}
 
-	Calls a subroutine by saving the return address to the link register (\reg{l}) and jumping to the target address. The
-	return address can later be restored using \mnemonic{RETS}. Supports optional immediate or register offsets, similar to
-	\mnemonic{LJMP}.
+	Calls a subroutine through an address register. The return address is saved in \reg{l}; return with \mnemonic{RETS}.
+
+	\textbf{Write-back:} If the condition is true, writes the return address to \reg{l} and the computed target address to
+	\reg{p}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Privilege:} See Table~\ref{tab:control-flow-common-semantics}.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
-; Call function at address in 'a'
+; Call function at address in a
 LOAD ah, #0x0040
 LOAD al, #0x0000              ; a = 0x00400000
 LJSR a                        ; Call 0x00400000
 
 ; Call with offset
-LJSR a, #function_offset      ; Call a + offset
+LJSR a, #function_offset      ; p = a + function_offset
 
-; Call with register displacement (function pointer table)
+; Call with register displacement
 LOAD r1, #8
-LJSR b, r1                    ; Call b + r1
-
-; Return from subroutine
-RETS                          ; Assembles to: LDEA p, (#0, l)
-\end{lstlisting}
-
-\end{instructionbox}
-
-\section{Load Effective Address}
-
-\begin{instructionbox}{LDEA -- Load Effective Address}
-	\textbf{Opcodes:} 0x18 (Imm), 0x19 (Reg)
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-LDEA dest, (#offset, src)     ; dest = src + offset
-LDEA dest, (rS, src)          ; dest = src + rS
-\end{lstlisting}
-
-	\textbf{Description:}
-
-	Computes an effective address and loads it into the destination address register pair. Can be used for pointer
-	arithmetic or, when the destination is the program counter, as a jump instruction.
-
-	\textbf{Examples:}
-	\begin{lstlisting}
-; Pointer arithmetic
-LDEA a, (#16, a)              ; a = a + 16
-
-; Computed jump
-LDEA p, (r1, p)               ; PC = PC + r1 (jump table)
-
-; Return from subroutine
-LDEA p, (#0, l)               ; PC = l (RETS pseudo-instruction)
+LJSR a, r1                    ; p = a + r1
 \end{lstlisting}
 
 \end{instructionbox}
@@ -166,7 +315,7 @@ CMPR r1, r2
 BRAN|<= else_part
 ; Then part
 ; ...
-BRAN (#end, p)
+BRAN end
 else_part:
 ; Else part
 ; ...
@@ -181,7 +330,7 @@ while_start:
     BRAN|<= while_end
     ; Loop body
     ; ...
-    BRAN (#while_start, p)
+    BRAN while_start
 while_end:
 \end{lstlisting}
 
@@ -198,5 +347,3 @@ jump_table:
     DW case2 - jump_table
     DW case3 - jump_table
 \end{lstlisting}
-
-\textit{(Additional control flow details would follow)}

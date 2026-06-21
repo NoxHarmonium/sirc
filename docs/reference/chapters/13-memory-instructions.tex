@@ -47,29 +47,20 @@ The resulting 24-bit address is used to access memory.
 	\small
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Immediate Offset} & \textbf{Register Offset}  \\
+		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
 		\midrule
-		LOAD & \texttt{LOAD rD, (\#offset, addr)} & \texttt{LOAD rD, (rO, addr)[, shift]} \\
-		STOR & \texttt{STOR (\#offset, addr), rS} & \texttt{STOR (rO, addr), rS[, shift]} \\
+		LOAD & \texttt{LOAD rD, (\#offset, addr)} & 0x14 & Immediate offset \\
+		LOAD & \texttt{LOAD rD, (rO, addr)[, shift]} & 0x15 & Register offset; optional load-result shift \\
+		LOAD & \texttt{LOAD rD, (\#offset, addr)+} & 0x16 & Immediate offset; post-increment \\
+		LOAD & \texttt{LOAD rD, (rO, addr)+[, shift]} & 0x17 & Register offset; optional shift; post-increment \\
+		STOR & \texttt{STOR (\#offset, addr), rS} & 0x10 & Immediate offset \\
+		STOR & \texttt{STOR (rO, addr), rS[, shift]} & 0x11 & Register offset; optional source shift \\
+		STOR & \texttt{STOR -(\#offset, addr), rS} & 0x12 & Immediate offset; pre-decrement \\
+		STOR & \texttt{STOR -(rO, addr), rS[, shift]} & 0x13 & Register offset; optional shift; pre-decrement \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Memory Instruction Forms}
 	\label{tab:memory-legal-forms}
-\end{table}
-
-\begin{table}[H]
-	\centering
-	\small
-	\begin{tabular}{lll}
-		\toprule
-		\textbf{Instruction} & \textbf{Immediate Offset} & \textbf{Register Offset}  \\
-		\midrule
-		LOAD & \texttt{LOAD rD, (\#offset, addr)+} & \texttt{LOAD rD, (rO, addr)+[, shift]} \\
-		STOR & \texttt{STOR -(\#offset, addr), rS} & \texttt{STOR -(rO, addr), rS[, shift]} \\
-		\bottomrule
-	\end{tabular}
-	\caption{Legal Memory Auto-update Forms}
-	\label{tab:memory-auto-update-forms}
 \end{table}
 
 \section{Common Memory Semantics}
