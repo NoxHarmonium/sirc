@@ -235,7 +235,7 @@ ADDI|!= r2, #1           ; Increment r2 if r1 != 0
 \begin{lstlisting}
 ; if (r1 > 0) call_function()
 CMPI r1, #0
-LJSR|>> (#0, a)          ; Call function if r1 > 0 (signed)
+LJSR|>> a                ; Call function if r1 > 0 (signed)
 \end{lstlisting}
 
 \subsection{Loop Construction}

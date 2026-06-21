@@ -8,6 +8,30 @@ hardware, but their behaviour is not officially specified and may vary between C
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
+\section{Undefined Operand Combinations}
+
+Undefined operand combinations are different from undocumented opcodes: the opcode is documented, but a particular
+choice of operands creates multiple architectural writes to the same address-register pair during the same instruction.
+
+\subsection{Aliased Address-Register Writes}
+
+The auto-update effective-address forms can write both a destination address-register pair and an updated source
+address-register pair. \mnemonic{LDEL} also writes the link-register pair. If two of those write-back targets are the
+same address-register pair, the final value is architecturally undefined.
+
+\begin{lstlisting}
+; Undefined: a is both destination and auto-updated source
+LDEA a, -(#0, a)
+
+; Undefined: l is both link register and auto-updated source
+LDEL p, (#0, l)+
+
+; Undefined: l is both link register and destination
+LDEL l, (#0, a)
+\end{lstlisting}
+
+Programs should avoid aliased register writes. Future assemblers may reject these forms.
+
 \section{Undocumented Opcode List}
 
 \begin{table}[H]

@@ -82,8 +82,8 @@ same by STOR/LOAD instructions and they can all be used for indirect addressing 
 
 In fact, you can perform a jump by simply loading a value in to the Program Counter registers.
 
-However, it is worth noting that the Link Register pair will be updated automatically though specific instructions
-(LJSR, BRSR) and the Program Counter pair is incremented after every instruction.
+However, it is worth noting that the Link Register pair will be updated automatically through link-writing instructions
+(\mnemonic{LDEL}, \mnemonic{LJSR}, and \mnemonic{BRSR}) and the Program Counter pair is incremented after every instruction.
 
 \subsection{Link Register (l)}
 
@@ -98,8 +98,8 @@ However, it is worth noting that the Link Register pair will be updated automati
 	\end{tabular}
 \end{center}
 
-The link register pair stores return addresses for subroutine calls. When a subroutine is called using \mnemonic{LJSR}
-or \mnemonic{BRSR}, the return address is automatically saved to this register pair.
+The link register pair stores return addresses for subroutine calls. When a subroutine is called using \mnemonic{LDEL},
+\mnemonic{LJSR}, or \mnemonic{BRSR}, the return address is automatically saved to this register pair.
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -209,7 +209,7 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
-Instructions such as \mnemonic{LDEA}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP}, \mnemonic{LJSR}, and
+Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP}, \mnemonic{LJSR}, and
 \mnemonic{RETS} remain usable in protected mode, but their address-register-pair write-back cannot alter the high word.
 
 The status register differs slightly from the high address registers:
@@ -288,7 +288,7 @@ LOAD r2, (s)+
 \begin{lstlisting}
 ; Call subroutine at address in 'a' register
 ; Return address saved to 'l' register automatically
-LJSR (a)
+LJSR a
 
 ; ...subroutine code...
 

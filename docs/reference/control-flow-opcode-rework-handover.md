@@ -203,13 +203,13 @@ The alias forms are the common flow-control cases. Explicit `LDEL` forms are ava
 
 This should be handled as a staged change. Avoid doing the simulator, assembler, linker, examples, and manual rewrite in one unreviewable diff.
 
-### Phase 1: Lock the Design Contract
+### Phase 1: Lock the Design Contract (Complete)
 
 1. Keep this handover as the source of truth for the rework.
 2. Confirm final syntax for `LDEL`, `LJMP`, `LJSR`, `BRAN`, and `BRSR`. Complete.
 3. Decide where TODO-backed aliased-register-write rejection should live. Complete: parser-local TODOs first, shared validation pass later if one exists.
 
-### Phase 2: Parser and Encoding Tests
+### Phase 2: Parser and Encoding Tests (Complete)
 
 1. Add parser tests for real `LDEL` forms:
    - `LDEL dest, (#offset, src)`
@@ -223,14 +223,14 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
    - `BRSR @label`
 3. Add TODO-backed diagnostics for aliased register writes, or implement rejection immediately.
 
-### Phase 3: Simulator Opcode Rename
+### Phase 3: Simulator Opcode Rename (Complete)
 
 1. Rename `LongJumpToSubroutine*` CPU enum variants to `LoadEffectiveAddressAndLink*` or equivalent `LDEL` names while keeping opcode values stable for `0x1C` and `0x1D`.
 2. Rename or replace CPU enum variants for `0x1A`, `0x1B`, `0x1E`, and `0x1F`.
 3. Update fetch/decode tests and encoding round-trip opcode lists.
 4. Keep behavior-preserving tests for old `LJSR`-style manually constructed instructions until alias/parser tests cover the replacement surface.
 
-### Phase 4: Execution and Write-Back Semantics
+### Phase 4: Execution and Write-Back Semantics (Complete)
 
 1. Update effective-address execution so new auto-update forms compute both the target address and source address-register update.
 2. Update write-back so new `LDEA` auto-update forms write destination address pair plus updated source pair.
@@ -238,7 +238,7 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 4. Preserve protected-mode high-word masking for all address-pair write-back paths.
 5. Preserve current conditional-false and segment-overflow side-effect behavior.
 
-### Phase 5: Alias Lowering and Linker Behavior
+### Phase 5: Alias Lowering and Linker Behavior (Complete)
 
 1. Convert assembler `LJMP` parsing to emit `LDEA p, ...`.
 2. Convert assembler `LJSR` parsing to emit `LDEL p, ...`.
@@ -246,13 +246,13 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 4. Convert assembler `BRSR` parsing to emit `LDEL p, (#offset, p)` for immediate/label PC-relative forms only.
 5. Preserve linker support for PC-relative `RefType::Offset` label references.
 
-### Phase 6: Documentation and Examples
+### Phase 6: Documentation and Examples (In Progress)
 
-1. Update opcode map, instruction summary, addressing modes, control-flow chapter, and undefined-behavior appendix.
-2. Replace assembly examples that treat `LJSR` as a real primitive with either `LDEL` or an alias form, depending on context.
-3. Ensure examples keep using `@label` for symbolic label references.
-4. Regenerate any generated encoding/opcode tables.
-5. Rebuild the reference manual.
+1. Update opcode map, instruction summary, addressing modes, control-flow chapter, and undefined-behavior appendix. Mostly complete; do one final pass for addressing-mode prose.
+2. Replace assembly examples that treat `LJSR` as a real primitive with either `LDEL` or an alias form, depending on context. Complete for invalid old `LJSR (...)` forms found in the manual.
+3. Ensure examples keep using `@label` for symbolic label references. Ongoing broader documentation audit item.
+4. Regenerate any generated encoding/opcode tables. Complete for the reference-encodings fixture.
+5. Rebuild the reference manual. Pending verification in the documentation phase.
 
 ## Test Plan
 
@@ -297,13 +297,13 @@ make -C docs/reference
 
 ## Documentation Update Checklist
 
-- `docs/reference/chapters/11-instruction-summary.tex`
-- `docs/reference/chapters/14-control-flow.tex`
-- `docs/reference/chapters/07-addressing-modes.tex`
-- `docs/reference/chapters/appendix-a-opcode-map.tex`
-- `docs/reference/chapters/appendix-c-undocumented.tex`
-- `docs/reference/manual-handover.md`
-- Generated opcode/encoding tables, if applicable
+- `docs/reference/chapters/11-instruction-summary.tex` -- updated
+- `docs/reference/chapters/14-control-flow.tex` -- updated
+- `docs/reference/chapters/07-addressing-modes.tex` -- final prose audit still useful
+- `docs/reference/chapters/appendix-a-opcode-map.tex` -- updated
+- `docs/reference/chapters/appendix-c-undocumented.tex` -- final undefined-behavior audit still useful
+- `docs/reference/control-flow-opcode-rework-handover.md` -- updated
+- Generated opcode/encoding tables -- updated
 
 ## Recommended Review Questions
 

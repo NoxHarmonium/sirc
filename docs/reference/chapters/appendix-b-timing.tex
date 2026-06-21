@@ -68,7 +68,7 @@ loop:
     ADDI r1, #1               ; 6 cycles
     STOR (#-2, a), r1         ; 6 cycles
     SUBI r7, #1               ; 6 cycles
-    BRAN|!= (#loop, p)        ; 6 cycles
+    BRAN|!= @loop             ; 6 cycles
 ; Total per iteration: 30 cycles
 ; Total for 10 iterations: 6 + (10 * 30) = 306 cycles
 \end{lstlisting}
@@ -76,7 +76,7 @@ loop:
 \subsection{Function Call Overhead}
 \begin{lstlisting}
 ; Call function
-LJSR (#0, a)                  ; 6 cycles
+LJSR a                        ; 6 cycles
 
 ; Function body executes...
 
