@@ -235,12 +235,12 @@ pub enum Instruction {
     LoadRegisterFromIndirectRegisterPostIncrement = 0x17,
     LoadEffectiveAddressFromIndirectImmediate = 0x18,
     LoadEffectiveAddressFromIndirectRegister = 0x19,
-    BranchWithImmediateDisplacement = 0x1A,
-    BranchWithRegisterDisplacement = 0x1B,
-    LongJumpToSubroutineWithImmediateDisplacement = 0x1C,
-    LongJumpToSubroutineWithRegisterDisplacement = 0x1D,
-    BranchToSubroutineWithImmediateDisplacement = 0x1E,
-    BranchToSubroutineWithRegisterDisplacement = 0x1F,
+    LoadEffectiveAddressFromIndirectImmediatePreDecrement = 0x1A,
+    LoadEffectiveAddressFromIndirectRegisterPreDecrement = 0x1B,
+    LoadEffectiveAddressAndLinkFromIndirectImmediate = 0x1C,
+    LoadEffectiveAddressAndLinkFromIndirectRegister = 0x1D,
+    LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement = 0x1E,
+    LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement = 0x1F,
 
     // ALU (Short Immediate)
     AddShortImmediate = 0x20,

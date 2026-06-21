@@ -53,7 +53,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
          dest_register: &AddressRegisterName,
          address_register: &AddressRegisterName| {
             InstructionData::Immediate(ImmediateInstructionData {
-                op_code: Instruction::BranchWithImmediateDisplacement,
+                op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
                 register: dest_register.to_register_index(),
                 value,
                 condition_flag,
@@ -188,7 +188,7 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::BranchWithRegisterDisplacement,
+                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: displacement_register.to_register_index(),

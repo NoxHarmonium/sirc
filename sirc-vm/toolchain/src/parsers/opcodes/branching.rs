@@ -21,7 +21,7 @@ use peripheral_cpu::{
 fn tag_to_alias_instruction(tag: &str) -> Instruction {
     match tag {
         "BRAN" => Instruction::LoadEffectiveAddressFromIndirectImmediate,
-        "BRSR" => Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        "BRSR" => Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }

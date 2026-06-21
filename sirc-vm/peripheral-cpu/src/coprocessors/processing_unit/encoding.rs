@@ -368,7 +368,7 @@ pub fn encode_shift(shift_operand: &ShiftOperand, shift_type: &ShiftType, shift_
 ///
 ///
 /// assert_eq!(encode_immediate_instruction(&ImmediateInstructionData {
-///   op_code: Instruction::BranchWithImmediateDisplacement,
+///   op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
 ///   register: 0x4,
 ///   value: 0xCAFE,
 ///   condition_flag: ConditionFlags::LessThan,
@@ -565,9 +565,9 @@ mod tests {
         Instruction::LoadRegisterFromIndirectImmediate,
         Instruction::LoadRegisterFromIndirectImmediatePostIncrement,
         Instruction::LoadEffectiveAddressFromIndirectImmediate,
-        Instruction::BranchWithImmediateDisplacement,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement,
-        Instruction::BranchToSubroutineWithImmediateDisplacement,
+        Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
     ];
 
     const VALID_SHORT_IMMEDIATE_OP_CODES: &[Instruction] = &[
@@ -595,9 +595,9 @@ mod tests {
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
         Instruction::LoadRegisterFromIndirectRegister,
         Instruction::LoadEffectiveAddressFromIndirectRegister,
-        Instruction::BranchWithRegisterDisplacement,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement,
-        Instruction::BranchToSubroutineWithRegisterDisplacement,
+        Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement,
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister,
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement,
         Instruction::AddRegister,
         Instruction::AddRegisterWithCarry,
         Instruction::SubtractRegister,

@@ -34,7 +34,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// assert_eq!(op_code, Instruction::LongJumpToSubroutineWithImmediateDisplacement);
+/// assert_eq!(op_code, Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate);
 /// assert_eq!(register, 0x03);
 /// assert_eq!(value, 0xFFFC);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
@@ -59,7 +59,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
 
     let construct_immediate_instruction = |offset: u16, address_register: &AddressRegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {
-            op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+            op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
             register: AddressRegisterName::ProgramCounter.to_register_index(),
             value: offset,
             condition_flag,
@@ -70,7 +70,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let construct_post_increment_immediate_instruction =
         |offset: u16, address_register: &AddressRegisterName| {
             InstructionData::Immediate(ImmediateInstructionData {
-                op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
+                op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
                 register: AddressRegisterName::ProgramCounter.to_register_index(),
                 value: offset,
                 condition_flag,
@@ -133,7 +133,7 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
+                        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister,
                         r1: AddressRegisterName::ProgramCounter.to_register_index(),
                         r2: 0x0, // Unused
                         r3: displacement_register.to_register_index(),
@@ -197,7 +197,8 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
             InstructionToken {
                 input_length,
                 instruction: InstructionData::Register(RegisterInstructionData {
-                    op_code: Instruction::BranchToSubroutineWithRegisterDisplacement,
+                    op_code:
+                        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement,
                     r1: AddressRegisterName::ProgramCounter.to_register_index(),
                     r2: 0x0, // Unused
                     r3: displacement_register.to_register_index(),

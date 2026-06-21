@@ -53,7 +53,7 @@ fn ldel_parses_normal_forms() {
     let data = immediate_data("LDEL a, (#5, s)\n");
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
     );
     assert_eq!(data.op_code as u8, 0x1C);
     assert_eq!(
@@ -69,7 +69,7 @@ fn ldel_parses_normal_forms() {
     let data = register_data("LDEL p, (r3, a)\n");
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister
     );
     assert_eq!(data.op_code as u8, 0x1D);
     assert_eq!(
@@ -88,7 +88,7 @@ fn ldel_parses_post_increment_forms() {
     let data = immediate_data("LDEL a, (#0, s)+\n");
     assert_eq!(
         data.op_code,
-        Instruction::BranchToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement
     );
     assert_eq!(data.op_code as u8, 0x1E);
     assert_eq!(
@@ -104,7 +104,7 @@ fn ldel_parses_post_increment_forms() {
     let data = register_data("LDEL p, (r3, a)+\n");
     assert_eq!(
         data.op_code,
-        Instruction::BranchToSubroutineWithRegisterDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement
     );
     assert_eq!(data.op_code as u8, 0x1F);
     assert_eq!(
@@ -121,7 +121,10 @@ fn ldel_parses_post_increment_forms() {
 #[test]
 fn ldea_parses_pre_decrement_forms() {
     let data = immediate_data("LDEA a, -(#2, s)\n");
-    assert_eq!(data.op_code, Instruction::BranchWithImmediateDisplacement);
+    assert_eq!(
+        data.op_code,
+        Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement
+    );
     assert_eq!(data.op_code as u8, 0x1A);
     assert_eq!(
         data.register,
@@ -134,7 +137,10 @@ fn ldea_parses_pre_decrement_forms() {
     );
 
     let data = register_data("LDEA p, -(r3, a)\n");
-    assert_eq!(data.op_code, Instruction::BranchWithRegisterDisplacement);
+    assert_eq!(
+        data.op_code,
+        Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement
+    );
     assert_eq!(data.op_code as u8, 0x1B);
     assert_eq!(
         data.r1,
@@ -152,7 +158,7 @@ fn ljsr_alias_parses_normal_forms() {
     let data = immediate_data("LJSR a\n");
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
     );
     assert_eq!(data.op_code as u8, 0x1C);
     assert_eq!(
@@ -168,7 +174,7 @@ fn ljsr_alias_parses_normal_forms() {
     let data = immediate_data("LJSR a, #4\n");
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
     );
     assert_eq!(data.value, 4);
     assert_eq!(
@@ -183,7 +189,7 @@ fn ljsr_alias_parses_normal_forms() {
     let data = register_data("LJSR a, r3\n");
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithRegisterDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister
     );
     assert_eq!(data.op_code as u8, 0x1D);
     assert_eq!(
@@ -202,7 +208,7 @@ fn ljsr_alias_parses_post_increment_forms() {
     let data = immediate_data("LJSR (#0, a)+\n");
     assert_eq!(
         data.op_code,
-        Instruction::BranchToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement
     );
     assert_eq!(data.op_code as u8, 0x1E);
     assert_eq!(
@@ -218,7 +224,7 @@ fn ljsr_alias_parses_post_increment_forms() {
     let data = register_data("LJSR (r3, a)+\n");
     assert_eq!(
         data.op_code,
-        Instruction::BranchToSubroutineWithRegisterDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement
     );
     assert_eq!(data.op_code as u8, 0x1F);
     assert_eq!(
@@ -263,7 +269,7 @@ fn branch_aliases_parse_pc_relative_labels() {
     };
     assert_eq!(
         data.op_code,
-        Instruction::LongJumpToSubroutineWithImmediateDisplacement
+        Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
     );
     assert_eq!(data.op_code as u8, 0x1C);
     assert_eq!(

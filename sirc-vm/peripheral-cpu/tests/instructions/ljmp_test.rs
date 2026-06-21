@@ -78,7 +78,7 @@ fn test_immediate_branch_with_subroutine_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
 ) {
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: offset as u16,
         condition_flag,
@@ -180,7 +180,7 @@ fn test_register_branch_with_subroutine_instruction(
 ) {
     for src_register_index in get_non_address_register_index_range() {
         let instruction_data = InstructionData::Register(RegisterInstructionData {
-            op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
+            op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister,
             r1: AddressRegisterName::ProgramCounter.to_register_index(),
             r2: AddressRegisterName::ProgramCounter.to_register_index(),
             r3: src_register_index,

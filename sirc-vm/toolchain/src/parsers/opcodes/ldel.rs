@@ -52,7 +52,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
                             offset.to_owned(),
                             dest_register,
                             address_register,
@@ -65,7 +65,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
                             0x0,
                             dest_register,
                             address_register,
@@ -82,7 +82,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
                             0x0,
                             dest_register,
                             address_register,
@@ -100,7 +100,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LongJumpToSubroutineWithRegisterDisplacement,
+                        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectRegister,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: displacement_register.to_register_index(),
@@ -124,7 +124,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::BranchToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
                             offset.to_owned(),
                             dest_register,
                             address_register,
@@ -137,7 +137,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::BranchToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
                             0x0,
                             dest_register,
                             address_register,
@@ -154,7 +154,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(
-                            Instruction::BranchToSubroutineWithImmediateDisplacement,
+                            Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
                             0x0,
                             dest_register,
                             address_register,
@@ -176,7 +176,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::BranchToSubroutineWithRegisterDisplacement,
+                        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: displacement_register.to_register_index(),

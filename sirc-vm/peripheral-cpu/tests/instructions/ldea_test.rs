@@ -5,7 +5,8 @@ use peripheral_cpu::{
         RegisterInstructionData, ShiftOperand, ShiftType,
     },
     registers::{
-        AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, Registers, SegmentedAddress,
+        AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, RegisterName, Registers,
+        SegmentedAddress,
     },
 };
 
@@ -134,4 +135,94 @@ fn test_ldea_indirect_register() {
             }
         }
     }
+}
+
+#[allow(clippy::cast_sign_loss)]
+#[test]
+fn test_ldea_indirect_immediate_pre_decrement_updates_source_and_destination() {
+    let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
+        register: AddressRegisterName::Address.to_register_index(),
+        value: 0x0004,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::StackPointer.to_register_index(),
+    });
+    let (previous, current) = common::run_instruction(
+        &instruction_data,
+        |registers: &mut Registers, _: &mut BusPeripheral| {
+            registers.set_address_register_at_index(
+                AddressRegisterName::Address.to_register_index(),
+                0xBBBB_2222,
+            );
+            registers.set_address_register_at_index(
+                AddressRegisterName::StackPointer.to_register_index(),
+                0xAAAA_1000,
+            );
+        },
+        0xFACE_0000,
+    );
+    let expected_registers =
+        get_expected_registers(&previous.registers, |registers: &mut Registers| {
+            registers.set_address_register_at_index(
+                AddressRegisterName::Address.to_register_index(),
+                0x00AA_1003,
+            );
+            registers.set_address_register_at_index(
+                AddressRegisterName::StackPointer.to_register_index(),
+                0x00AA_0FFF,
+            );
+        });
+    assert_eq!(
+        expected_registers, current.registers,
+        "Not equal:\nleft: {:X?}\nright:{:X?}\n",
+        expected_registers, current.registers
+    );
+}
+
+#[allow(clippy::cast_sign_loss)]
+#[test]
+fn test_ldea_indirect_register_pre_decrement_updates_source_and_destination() {
+    let instruction_data = InstructionData::Register(RegisterInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement,
+        r1: AddressRegisterName::Address.to_register_index(),
+        r2: 0x0,
+        r3: RegisterName::R1.to_register_index(),
+        shift_operand: ShiftOperand::Immediate,
+        shift_type: ShiftType::None,
+        shift_count: 0,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::StackPointer.to_register_index(),
+    });
+    let (previous, current) = common::run_instruction(
+        &instruction_data,
+        |registers: &mut Registers, _: &mut BusPeripheral| {
+            registers.r1 = 0x0004;
+            registers.set_address_register_at_index(
+                AddressRegisterName::Address.to_register_index(),
+                0xBBBB_2222,
+            );
+            registers.set_address_register_at_index(
+                AddressRegisterName::StackPointer.to_register_index(),
+                0xAAAA_1000,
+            );
+        },
+        0xFACE_0000,
+    );
+    let expected_registers =
+        get_expected_registers(&previous.registers, |registers: &mut Registers| {
+            registers.r1 = 0x0004;
+            registers.set_address_register_at_index(
+                AddressRegisterName::Address.to_register_index(),
+                0x00AA_1003,
+            );
+            registers.set_address_register_at_index(
+                AddressRegisterName::StackPointer.to_register_index(),
+                0x00AA_0FFF,
+            );
+        });
+    assert_eq!(
+        expected_registers, current.registers,
+        "Not equal:\nleft: {:X?}\nright:{:X?}\n",
+        expected_registers, current.registers
+    );
 }

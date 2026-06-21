@@ -21,8 +21,10 @@ enum WriteBackInstructionType {
     AluStatusOnly,
     AddressWrite,
     AddressWriteSubroutine,
-    AddressWriteLoadPostDecrement,
-    AddressWriteStorePreIncrement,
+    AddressWriteWithSourceUpdate,
+    AddressWriteSubroutineWithSourceUpdate,
+    AddressWriteLoadPostIncrement,
+    AddressWriteStorePreDecrement,
     CoprocessorCall,
 }
 
@@ -109,11 +111,13 @@ fn decode_write_back_step_instruction_type(
         0x08..=0x0E => WriteBackInstructionType::AluStatusOnly,
         0x0F => WriteBackInstructionType::CoprocessorCall,
         0x10..=0x11 => WriteBackInstructionType::NoOp,
-        0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreIncrement,
+        0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreDecrement,
         0x14..=0x15 => WriteBackInstructionType::MemoryLoad,
-        0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostDecrement,
-        0x18..=0x1B => WriteBackInstructionType::AddressWrite,
-        0x1C..=0x1F => WriteBackInstructionType::AddressWriteSubroutine,
+        0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostIncrement,
+        0x18..=0x19 => WriteBackInstructionType::AddressWrite,
+        0x1A..=0x1B => WriteBackInstructionType::AddressWriteWithSourceUpdate,
+        0x1C..=0x1D => WriteBackInstructionType::AddressWriteSubroutine,
+        0x1E..=0x1F => WriteBackInstructionType::AddressWriteSubroutineWithSourceUpdate,
         0x20..=0x27 => WriteBackInstructionType::AluToRegister,
         0x28..=0x2E => WriteBackInstructionType::AluStatusOnly,
         0x2F => WriteBackInstructionType::CoprocessorCall,
@@ -179,7 +183,23 @@ impl StageExecutor for WriteBackExecutor {
                     decoded.des_ad_h,
                     decoded.des_ad_l,
                     decoded.ad_h_,
+                    intermediate_registers.alu_output,
+                );
+            }
+            WriteBackInstructionType::AddressWriteWithSourceUpdate => {
+                set_address_register_value(
+                    registers,
+                    decoded.ad_h,
+                    decoded.ad_l,
+                    decoded.ad_h_,
                     intermediate_registers.address_output,
+                );
+                set_address_register_value(
+                    registers,
+                    decoded.des_ad_h,
+                    decoded.des_ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.alu_output,
                 );
             }
             WriteBackInstructionType::AddressWriteSubroutine => {
@@ -195,11 +215,34 @@ impl StageExecutor for WriteBackExecutor {
                     decoded.des_ad_h,
                     decoded.des_ad_l,
                     decoded.ad_h_,
-                    intermediate_registers.address_output,
+                    intermediate_registers.alu_output,
                 );
             }
-            WriteBackInstructionType::AddressWriteLoadPostDecrement
-            | WriteBackInstructionType::AddressWriteStorePreIncrement => {
+            WriteBackInstructionType::AddressWriteSubroutineWithSourceUpdate => {
+                set_address_register_value(
+                    registers,
+                    RegisterName::Lh as u8,
+                    RegisterName::Ll as u8,
+                    decoded.npc_h_,
+                    decoded.npc_l_,
+                );
+                set_address_register_value(
+                    registers,
+                    decoded.ad_h,
+                    decoded.ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.address_output,
+                );
+                set_address_register_value(
+                    registers,
+                    decoded.des_ad_h,
+                    decoded.des_ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.alu_output,
+                );
+            }
+            WriteBackInstructionType::AddressWriteLoadPostIncrement
+            | WriteBackInstructionType::AddressWriteStorePreDecrement => {
                 set_address_register_value(
                     registers,
                     decoded.ad_h,
@@ -216,7 +259,7 @@ impl StageExecutor for WriteBackExecutor {
         // Load from Memory
         match write_back_step_instruction_type {
             WriteBackInstructionType::MemoryLoad
-            | WriteBackInstructionType::AddressWriteLoadPostDecrement => {
+            | WriteBackInstructionType::AddressWriteLoadPostIncrement => {
                 // LOAD instructions never update the status register, so status register updates are ignored, regardless of the status register update source parameter
                 let (shifted, _) = do_shift(registers, bus_assertions.data, &decoded.shift_params);
 
@@ -226,8 +269,10 @@ impl StageExecutor for WriteBackExecutor {
             | WriteBackInstructionType::AluToRegister
             | WriteBackInstructionType::AluStatusOnly
             | WriteBackInstructionType::AddressWrite
+            | WriteBackInstructionType::AddressWriteWithSourceUpdate
             | WriteBackInstructionType::AddressWriteSubroutine
-            | WriteBackInstructionType::AddressWriteStorePreIncrement
+            | WriteBackInstructionType::AddressWriteSubroutineWithSourceUpdate
+            | WriteBackInstructionType::AddressWriteStorePreDecrement
             | WriteBackInstructionType::CoprocessorCall => {}
         }
         BusAssertions::default()

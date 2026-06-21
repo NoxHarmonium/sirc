@@ -181,15 +181,15 @@ fn long_jump_masks_program_counter_high_word_in_protected_mode() {
 }
 
 #[test]
-fn branch_masks_program_counter_high_word_in_protected_mode() {
-    let branch = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::BranchWithImmediateDisplacement,
+fn ldea_pre_decrement_masks_program_counter_and_source_high_words_in_protected_mode() {
+    let ldea_pre_decrement = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: 0x0004,
         condition_flag: ConditionFlags::Always,
         additional_flags: AddressRegisterName::Address.to_register_index(),
     });
-    let result = run_instruction(&branch, |registers, _| {
+    let result = run_instruction(&ldea_pre_decrement, |registers, _| {
         enable_protected_mode(registers);
         registers.ph = 0x00CC;
         registers.set_address_register_at_index(
@@ -199,13 +199,15 @@ fn branch_masks_program_counter_high_word_in_protected_mode() {
     });
     assert_no_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
-    assert_eq!(0x1004, result.registers.pl);
+    assert_eq!(0x1003, result.registers.pl);
+    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0x0FFF, result.registers.al);
 }
 
 #[test]
 fn subroutine_calls_mask_link_and_program_counter_high_words_in_protected_mode() {
     let branch_subroutine = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: 0x0004,
         condition_flag: ConditionFlags::Always,
@@ -224,11 +226,13 @@ fn subroutine_calls_mask_link_and_program_counter_high_words_in_protected_mode()
     assert_no_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
     assert_eq!(0x1004, result.registers.pl);
+    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0x1001, result.registers.al);
     assert_eq!(0x7777, result.registers.lh);
     assert_eq!(0x0002, result.registers.ll);
 
     let long_subroutine = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: 0x0006,
         condition_flag: ConditionFlags::Always,
@@ -254,7 +258,7 @@ fn subroutine_calls_mask_link_and_program_counter_high_words_in_protected_mode()
 #[test]
 fn subroutine_calls_write_high_words_in_supervisor_mode() {
     let branch_subroutine = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
         value: 0x0004,
         condition_flag: ConditionFlags::Always,
@@ -272,6 +276,8 @@ fn subroutine_calls_write_high_words_in_supervisor_mode() {
     assert_no_fault(&result);
     assert_eq!(0x00AA, result.registers.ph);
     assert_eq!(0x1004, result.registers.pl);
+    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0x1001, result.registers.al);
     assert_eq!(0x00CC, result.registers.lh);
     assert_eq!(0x0002, result.registers.ll);
 }
