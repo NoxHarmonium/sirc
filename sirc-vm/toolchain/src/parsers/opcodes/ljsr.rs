@@ -14,7 +14,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::AddressRegisterName;
 
 ///
-/// Parses a long jump to subroutine instruction
+/// Parses a long jump-to-subroutine alias (LDEL with p implied as the destination)
 ///
 /// Syntax: LJSR src [, offset]
 ///
@@ -35,7 +35,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// };
 ///
 /// assert_eq!(op_code, Instruction::LongJumpToSubroutineWithImmediateDisplacement);
-/// assert_eq!(register, 0x0);
+/// assert_eq!(register, 0x03);
 /// assert_eq!(value, 0xFFFC);
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// assert_eq!(additional_flags, 1);
@@ -60,12 +60,23 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
     let construct_immediate_instruction = |offset: u16, address_register: &AddressRegisterName| {
         InstructionData::Immediate(ImmediateInstructionData {
             op_code: Instruction::LongJumpToSubroutineWithImmediateDisplacement,
-            register: 0x0, // unused
+            register: AddressRegisterName::ProgramCounter.to_register_index(),
             value: offset,
             condition_flag,
             additional_flags: address_register.to_register_index(),
         })
     };
+
+    let construct_post_increment_immediate_instruction =
+        |offset: u16, address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::BranchToSubroutineWithImmediateDisplacement,
+                register: AddressRegisterName::ProgramCounter.to_register_index(),
+                value: offset,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
 
     match operands.as_slice() {
         // LJSR a - simple direct addressing (no offset)
@@ -136,6 +147,69 @@ pub fn ljsr(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        [AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] => {
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_post_increment_immediate_instruction(
+                            offset.to_owned(),
+                            address_register,
+                        ),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_post_increment_immediate_instruction(
+                            0x0,
+                            address_register,
+                        ),
+                        symbol_ref: Some(override_ref_token_type_if_implied(
+                            ref_token,
+                            RefType::LowerWord,
+                        )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_post_increment_immediate_instruction(
+                            0x0,
+                            address_register,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
+                    },
+                )),
+            }
+        }
+        [AddressingMode::IndirectRegisterDisplacementPostIncrement(
+            displacement_register,
+            address_register,
+        )] => Ok((
+            i,
+            InstructionToken {
+                input_length,
+                instruction: InstructionData::Register(RegisterInstructionData {
+                    op_code: Instruction::BranchToSubroutineWithRegisterDisplacement,
+                    r1: AddressRegisterName::ProgramCounter.to_register_index(),
+                    r2: 0x0, // Unused
+                    r3: displacement_register.to_register_index(),
+                    shift_operand: ShiftOperand::Immediate,
+                    shift_type: ShiftType::None,
+                    shift_count: 0,
+                    condition_flag,
+                    additional_flags: address_register.to_register_index(),
+                }),
+                ..Default::default()
+            },
+        )),
         modes => {
             let error_string = format!("Invalid addressing mode for LJSR: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(

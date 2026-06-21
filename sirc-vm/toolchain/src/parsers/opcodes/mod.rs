@@ -3,6 +3,7 @@ pub mod arithmetic_register;
 pub mod branching;
 pub mod exception;
 pub mod ldea;
+pub mod ldel;
 pub mod ljmp;
 pub mod ljsr;
 pub mod load;

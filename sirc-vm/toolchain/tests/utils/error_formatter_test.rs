@@ -72,6 +72,8 @@ fn test_no_input() {
           expected "NOOP" at line 2, column 1, or
         in section "LDEA instruction" at line 2, column 1,
         expected "LDEA" at line 2, column 1, or
+        in section "LDEL instruction" at line 2, column 1,
+        expected "LDEL" at line 2, column 1, or
         in section "LJMP instruction" at line 2, column 1,
         expected "LJMP" at line 2, column 1, or
         in section "LJSR instruction" at line 2, column 1,
@@ -272,7 +274,7 @@ fn test_branching_invalid_mode_error_context() {
             in section "instruction" at line 2, column 1,
             in section "Branching instruction" at line 2, column 1,
             external error:
-              The [BRAN] opcode only supports immediate addressing mode (e.g. BRAN #-3) at line 2, column 6
+              The [BRAN] alias only supports PC-relative immediate or label operands (e.g. BRAN #-3 or BRAN @label) at line 2, column 6
             "#);
 }
 

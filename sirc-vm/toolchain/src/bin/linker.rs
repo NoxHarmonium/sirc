@@ -144,6 +144,8 @@ fn main() -> io::Result<()> {
                 InstructionData::Immediate(data) => match data.op_code {
                     Instruction::BranchToSubroutineWithImmediateDisplacement
                     | Instruction::BranchWithImmediateDisplacement
+                    | Instruction::LoadEffectiveAddressFromIndirectImmediate
+                    | Instruction::LongJumpToSubroutineWithImmediateDisplacement
                     | Instruction::LoadRegisterFromImmediate
                     | Instruction::LoadRegisterFromIndirectImmediate
                     | Instruction::StoreRegisterToIndirectImmediate => {
