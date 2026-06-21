@@ -12,15 +12,17 @@ The SIRC-1 provides two primary memory operations:
 	\item \mnemonic{STOR} -- Write from a register to memory
 \end{itemize}
 
-Both instructions support multiple addressing modes:
+Both instructions support four memory addressing forms:
 \begin{itemize}
 	\item Indirect with immediate offset: \texttt{(\#offset, addr)}
 	\item Indirect with register offset: \texttt{(reg, addr)}
-	\item Post-increment: \texttt{(\#offset, addr)+}
-	\item Pre-decrement: \texttt{-(\#offset, addr)}
+	\item Post-increment load: \texttt{(\#offset, addr)+} or \texttt{(reg, addr)+}
+	\item Pre-decrement store: \texttt{-(\#offset, addr)} or \texttt{-(reg, addr)}
 \end{itemize}
 
-\textbf{Important:} When using indirect addressing modes (with memory access), \mnemonic{LOAD} and \mnemonic{STOR} instructions support optional shift operations on the data being loaded or stored. See Section~\ref{sec:memory-shifts} for details. Note that shifts are \textbf{not} supported when loading immediate values or copying register values directly.
+\textbf{Important:} Register-offset memory forms support optional shift operations on the data being loaded or stored.
+Immediate-offset memory forms do not encode a shift field. See Section~\ref{sec:memory-shifts} for details. Shifts are
+also \textbf{not} supported when loading immediate values or copying register values directly.
 
 \section{Effective Address Calculation}
 
@@ -38,6 +40,51 @@ Where:
 
 The resulting 24-bit address is used to access memory.
 
+\section{Legal Forms}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\midrule
+		LOAD & \texttt{LOAD rD, (\#offset, addr)} & 0x14 & Immediate offset \\
+		LOAD & \texttt{LOAD rD, (rO, addr)[, shift]} & 0x15 & Register offset; optional load-result shift \\
+		LOAD & \texttt{LOAD rD, (\#offset, addr)+} & 0x16 & Immediate offset; post-increment \\
+		LOAD & \texttt{LOAD rD, (rO, addr)+[, shift]} & 0x17 & Register offset; optional shift; post-increment \\
+		STOR & \texttt{STOR (\#offset, addr), rS} & 0x10 & Immediate offset \\
+		STOR & \texttt{STOR (rO, addr), rS[, shift]} & 0x11 & Register offset; optional source shift \\
+		STOR & \texttt{STOR -(\#offset, addr), rS} & 0x12 & Immediate offset; pre-decrement \\
+		STOR & \texttt{STOR -(rO, addr), rS[, shift]} & 0x13 & Register offset; optional shift; pre-decrement \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal Memory Instruction Forms}
+	\label{tab:memory-legal-forms}
+\end{table}
+
+\section{Common Memory Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic} & \textbf{Definition} \\
+		\midrule
+		Condition false & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved. \\
+		Address calculation & Immediate-offset forms add the 16-bit encoded offset to the selected address register low word. Register-offset forms add \texttt{rO} to the selected address register low word. The selected address register high word supplies the segment. \\
+		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access. \\
+		Pre-decrement STOR & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access. \\
+		Status flags & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register. \\
+		Timing & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase. \\
+		Exceptions & Memory instructions can raise bus, bus-protection, and segment-overflow faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
+		Fault side effects & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase. If a fault aborts execution before write-back, those write-back effects do not occur. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Memory Instruction Semantics}
+	\label{tab:memory-common-semantics}
+\end{table}
+
 \section{LOAD Instructions}
 
 \begin{instructionbox}{LOAD -- Load from Memory}
@@ -50,10 +97,8 @@ LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
 LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
 LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += 1
 
-; With optional shift (memory addressing modes only)
-LOAD rD, (#offset, addr), shift      ; Load and shift
+; With optional shift (register-offset memory forms only)
 LOAD rD, (rS, addr), shift           ; Load and shift
-LOAD rD, (#offset, addr)+, shift     ; Load, shift, then increment
 LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 \end{lstlisting}
 
@@ -61,6 +106,16 @@ LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 
 	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
 	the load, useful for array traversal.
+
+	\textbf{Write-back:} If the condition is true, writes the loaded value to \texttt{rD}. Post-increment forms also write
+	the incremented address-register low word.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} May raise bus, bus-protection, segment-overflow, or invalid-instruction faults.
+
+	\textbf{Timing:} 6 cycles when the memory read is acknowledged without wait states; wait states extend the memory-access
+	phase.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -78,7 +133,7 @@ LOAD r5, (#0, s)+             ; r5 = *s; s += 1
 
 ; Load and shift (for bit manipulation)
 LOAD r3, (r2, a), LSL #2      ; r3 = memory[a + r2] << 2
-LOAD r6, (#0, a), ASR #2      ; r6 = memory[a] >> 2 (signed)
+LOAD r6, (r2, a), ASR #2      ; r6 = memory[a + r2] >> 2 (signed)
 \end{lstlisting}
 
 \end{instructionbox}
@@ -95,17 +150,25 @@ STOR (rD, addr), rS           ; memory[addr + rD] = rS
 STOR -(#offset, addr), rS     ; addr -= 1; memory[addr + offset] = rS
 STOR -(rD, addr), rS          ; addr -= 1; memory[addr + rD] = rS
 
-; With optional shift (memory addressing modes only)
-STOR (#offset, addr), rS, shift      ; Shift and store
+; With optional shift (register-offset memory forms only)
 STOR (rD, addr), rS, shift           ; Shift and store
-STOR -(#offset, addr), rS, shift     ; Decrement, shift, and store
 STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
 \end{lstlisting}
 
 	\textbf{Description:}
 
-	Stores a 16-bit value from a register into memory. Pre-decrement forms update the address register before the store,
-	useful for stack push operations.
+	Stores a 16-bit value from a register into memory. Pre-decrement forms use the decremented address for the store and
+	write the decremented address register value back after the memory access, useful for stack push operations.
+
+	\textbf{Write-back:} If the condition is true, writes the source value to memory. Pre-decrement forms also write the
+	decremented address-register low word.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} May raise bus, bus-protection, segment-overflow, or invalid-instruction faults.
+
+	\textbf{Timing:} 6 cycles when the memory write is acknowledged without wait states; wait states extend the memory-access
+	phase.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -117,7 +180,7 @@ STOR (r3, a), r2              ; memory[a + r3] = r2
 
 ; Store with shift (data shifted before storing)
 STOR (r2, a), r1, LSL #1      ; memory[a + r2] = r1 << 1
-STOR (#0, a), r1, LSR #3      ; memory[a] = r1 >> 3
+STOR (r3, a), r1, LSR #3      ; memory[a + r3] = r1 >> 3
 
 ; Stack push
 STOR -(#0, s), r4             ; s -= 1; memory[s] = r4
@@ -144,7 +207,7 @@ loop:
     LOAD r1, (#0, a)+         ; Load element, advance
     ; ... process r1 ...
     SUBI r7, #1
-    BRAN|!= loop
+    BRAN|!= @loop
 \end{lstlisting}
 
 \subsection{Stack Operations}
@@ -163,9 +226,9 @@ LOAD r1, (#0, s)+
 \section{Shift Operations with Memory Instructions}
 \label{sec:memory-shifts}
 
-When using indirect addressing modes (memory access), both \mnemonic{LOAD} and \mnemonic{STOR} instructions support
-optional shift operations. This feature allows data to be shifted during the load or store operation, which is
-particularly useful for bit manipulation and working with the CPU's word-addressed memory architecture.
+Register-offset memory forms of \mnemonic{LOAD} and \mnemonic{STOR} support optional shift operations. This feature
+allows data to be shifted during the load or store operation, which is particularly useful for bit manipulation and
+working with the CPU's word-addressed memory architecture.
 
 \subsection{LOAD with Shift}
 
@@ -174,9 +237,8 @@ written to the destination register:
 
 \begin{lstlisting}
 LOAD r3, (r2, a), LSL #2      ; r3 = (memory[a + r2]) << 2
-LOAD r4, (#0, a), LSR #4      ; r4 = (memory[a]) >> 4
 LOAD r5, (r2, a), ASL #3      ; r5 = (memory[a + r2]) << 3
-LOAD r6, (#0, a), ASR #2      ; r6 = (memory[a]) >> 2 (sign-extend)
+LOAD r6, (r4, a), ASR #2      ; r6 = (memory[a + r4]) >> 2 (sign-extend)
 \end{lstlisting}
 
 \subsection{STOR with Shift}
@@ -186,9 +248,8 @@ register value is \textbf{not} modified:
 
 \begin{lstlisting}
 STOR (r2, a), r1, LSL #1      ; memory[a + r2] = r1 << 1 (r1 unchanged)
-STOR (#0, a), r1, LSR #3      ; memory[a] = r1 >> 3 (r1 unchanged)
 STOR (r2, a), r1, ASL #2      ; memory[a + r2] = r1 << 2 (r1 unchanged)
-STOR (#0, a), r1, ASR #4      ; memory[a] = r1 >> 4 (r1 unchanged)
+STOR (r4, a), r1, ASR #4      ; memory[a + r4] = r1 >> 4 (r1 unchanged)
 \end{lstlisting}
 
 \subsection{Supported Shift Types}
@@ -205,25 +266,26 @@ All standard shift types are supported:
 
 \subsection{Shift Limitations}
 
-\textbf{Important:} Shift operations are \textbf{only} supported when using indirect addressing modes (accessing memory). The following \mnemonic{LOAD} modes do \textbf{not} support shifts:
+\textbf{Important:} Shift operations are \textbf{only} supported when using register-offset memory forms. The following modes do \textbf{not} support shifts:
 \begin{itemize}
 	\item Loading immediate values: \texttt{LOAD r1, \#0x1234} -- No shift allowed
 	\item Copying registers: \texttt{LOAD r1, r2} -- No shift allowed
+	\item Immediate-offset memory load: \texttt{LOAD r1, (\#0, a)} -- No shift allowed
+	\item Immediate-offset memory store: \texttt{STOR (\#0, a), r1} -- No shift allowed
 \end{itemize}
 
-For these non-memory operations, use regular ALU instructions with shifts instead (e.g., \texttt{ADDI r1, \#0, LSL
-	\#2}).
+For unsupported shift forms, load or store the unshifted value and use an ALU instruction or \mnemonic{SHFT} for the
+shift operation.
 
 \subsection{Use Cases}
 
-\subsubsection{Word-Addressed Memory}
+\subsubsection{Packed Data}
 
-The SIRC-1 uses word addressing, so shifting during load/store can save cycles when converting between byte and word
-addresses:
+Shifting during load/store can save cycles when extracting or placing fields in packed words:
 
 \begin{lstlisting}
-; Convert byte offset to word address and load
-LOAD r3, (r2, a), LSR #1      ; Divide byte offset by 2
+; Load a packed word and move the high byte into the low byte position
+LOAD r3, (r2, a), LSR #8
 \end{lstlisting}
 
 \subsubsection{Bit Manipulation}
@@ -232,10 +294,10 @@ Shifting during memory access enables efficient bit manipulation:
 
 \begin{lstlisting}
 ; Extract upper byte from memory
-LOAD r1, (#0, a), LSR #8      ; r1 = (memory[a] >> 8) & 0xFF
+LOAD r1, (r3, a), LSR #8      ; r1 = (memory[a + r3] >> 8) & 0xFF
 
 ; Store scaled value
-STOR (#0, a), r2, LSL #2      ; memory[a] = r2 * 4
+STOR (r3, a), r2, LSL #2      ; memory[a + r3] = r2 * 4
 \end{lstlisting}
 
 \subsubsection{Combined with Auto-Increment/Decrement}

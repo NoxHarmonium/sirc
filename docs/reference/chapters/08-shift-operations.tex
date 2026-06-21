@@ -391,7 +391,7 @@ ANDR r1, r1, r3           ; r1 = r1 & ~(1 << N)
 LOAD r3, #1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 TSAR r1, r3               ; Test r1 & (1 << N)
-BRAN|!= bit_was_set       ; Branch if bit set
+BRAN|!= @bit_was_set      ; Branch if bit set
 \end{lstlisting}
 
 \section{Multi-Word Shifts}
@@ -496,7 +496,7 @@ ADDI[N] r1, #5, LSL #1        ; r1 = (r1 << 1) + 5
 ; Useful when preserving flags from previous operation
 CMPI r4, r5                   ; Set flags based on comparison
 ADDI[N] r6, #1                ; Increment r6 without changing flags
-BRAN|== equal_branch          ; Branch using flags from CMPI
+BRAN|== @equal_branch         ; Branch using flags from CMPI
 \end{lstlisting}
 
 \subsection{Use Cases}
@@ -508,7 +508,7 @@ When you need to know properties of a shifted value without performing a subsequ
 \begin{lstlisting}
 ; Check if r1 << 3 would be negative
 ADDI[S] r1, #0, LSL #3        ; r1 = r1 << 3, flags from shift
-BRAN|NS overflow_detected     ; Branch if sign bit set
+BRAN|NS @overflow_detected    ; Branch if sign bit set
 \end{lstlisting}
 
 \subsubsection{Preserving Flags}
@@ -524,7 +524,7 @@ ADDI[N] r3, #1                ; Increment counter (flags unchanged)
 LOAD[N] r4, (#0, a)+          ; Load next value (flags unchanged)
 
 ; Branch using original comparison flags
-BRAN|>= r1_was_greater
+BRAN|>= @r1_was_greater
 \end{lstlisting}
 
 \subsubsection{SHFT Meta-Instruction}

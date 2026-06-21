@@ -12,7 +12,6 @@ enum MemoryAccessInstructionType {
     NoOp,
     MemoryLoad,
     MemoryStore,
-    BranchOrJumpSubroutine,
 }
 
 pub struct MemoryAccessExecutor;
@@ -32,8 +31,7 @@ fn decode_memory_access_step_instruction_type(
         0x00..=0x0F => MemoryAccessInstructionType::NoOp,
         0x10..=0x13 => MemoryAccessInstructionType::MemoryStore,
         0x14..=0x17 => MemoryAccessInstructionType::MemoryLoad,
-        0x18..=0x1B => MemoryAccessInstructionType::NoOp, // LDEA/BRAN
-        0x1C..=0x1F => MemoryAccessInstructionType::BranchOrJumpSubroutine, // LJSR/BRSR
+        0x18..=0x1F => MemoryAccessInstructionType::NoOp,
         0x20..=0x3F => MemoryAccessInstructionType::NoOp,
         _ => panic!("No mapping for [{instruction:?}] to MemoryAccessInstructionType"),
     }
@@ -42,7 +40,7 @@ fn decode_memory_access_step_instruction_type(
 impl StageExecutor for MemoryAccessExecutor {
     fn execute(
         decoded: &DecodedInstruction,
-        registers: &mut Registers,
+        _registers: &mut Registers,
         _: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         _: BusAssertions,
@@ -73,15 +71,6 @@ impl StageExecutor for MemoryAccessExecutor {
                     bus_access_type: BusAccessType::DataWrite,
                     ..BusAssertions::default()
                 };
-            }
-
-            MemoryAccessInstructionType::BranchOrJumpSubroutine => {
-                // Also store next instruction in link registers so RETS can jump back to after the branch/jump
-                // TODO: Clarify if link registers should be set in the memory access phase or not
-                // category=Hardware
-                // This should probably be in the write back stage?
-                registers.ll = decoded.npc_l_;
-                registers.lh = decoded.npc_h_;
             }
         }
         BusAssertions::default()

@@ -122,7 +122,7 @@ simultaneously. Instead:
 	      \begin{lstlisting}
 ; Instead of:
 CMPR r1, r2
-BRAN|<= skip
+BRAN|<= @skip
 ADDI r3, #1
 skip:
 
@@ -162,7 +162,7 @@ loop:
     LOAD r4, (#0, a)+
     ; Process 4 items...
     SUBI r7, #4
-    BRAN|HI loop
+    BRAN|HI @loop
     \end{lstlisting}
 \end{enumerate}
 

@@ -20,6 +20,7 @@ enum WriteBackInstructionType {
     AluToRegister,
     AluStatusOnly,
     AddressWrite,
+    AddressWriteSubroutine,
     AddressWriteLoadPostDecrement,
     AddressWriteStorePreIncrement,
     CoprocessorCall,
@@ -56,6 +57,19 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
     } else {
         registers[index] = value;
     }
+}
+
+fn set_address_register_value(
+    registers: &mut Registers,
+    high_index: u8,
+    low_index: u8,
+    high_value: u16,
+    low_value: u16,
+) {
+    if !sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) {
+        registers[high_index] = high_value;
+    }
+    registers[low_index] = low_value;
 }
 
 fn do_shift(
@@ -98,7 +112,8 @@ fn decode_write_back_step_instruction_type(
         0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreIncrement,
         0x14..=0x15 => WriteBackInstructionType::MemoryLoad,
         0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostDecrement,
-        0x18..=0x1F => WriteBackInstructionType::AddressWrite,
+        0x18..=0x1B => WriteBackInstructionType::AddressWrite,
+        0x1C..=0x1F => WriteBackInstructionType::AddressWriteSubroutine,
         0x20..=0x27 => WriteBackInstructionType::AluToRegister,
         0x28..=0x2E => WriteBackInstructionType::AluStatusOnly,
         0x2F => WriteBackInstructionType::CoprocessorCall,
@@ -159,13 +174,39 @@ impl StageExecutor for WriteBackExecutor {
                 update_status_flags(decoded, registers, intermediate_registers);
             }
             WriteBackInstructionType::AddressWrite => {
-                registers[decoded.des_ad_h] = decoded.ad_h_;
-                registers[decoded.des_ad_l] = intermediate_registers.address_output;
+                set_address_register_value(
+                    registers,
+                    decoded.des_ad_h,
+                    decoded.des_ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.address_output,
+                );
+            }
+            WriteBackInstructionType::AddressWriteSubroutine => {
+                set_address_register_value(
+                    registers,
+                    RegisterName::Lh as u8,
+                    RegisterName::Ll as u8,
+                    decoded.npc_h_,
+                    decoded.npc_l_,
+                );
+                set_address_register_value(
+                    registers,
+                    decoded.des_ad_h,
+                    decoded.des_ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.address_output,
+                );
             }
             WriteBackInstructionType::AddressWriteLoadPostDecrement
             | WriteBackInstructionType::AddressWriteStorePreIncrement => {
-                registers[decoded.ad_h] = decoded.ad_h_;
-                registers[decoded.ad_l] = intermediate_registers.address_output;
+                set_address_register_value(
+                    registers,
+                    decoded.ad_h,
+                    decoded.ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.address_output,
+                );
             }
             WriteBackInstructionType::CoprocessorCall => {
                 registers.pending_coprocessor_command = intermediate_registers.alu_output;
@@ -185,6 +226,7 @@ impl StageExecutor for WriteBackExecutor {
             | WriteBackInstructionType::AluToRegister
             | WriteBackInstructionType::AluStatusOnly
             | WriteBackInstructionType::AddressWrite
+            | WriteBackInstructionType::AddressWriteSubroutine
             | WriteBackInstructionType::AddressWriteStorePreIncrement
             | WriteBackInstructionType::CoprocessorCall => {}
         }

@@ -264,7 +264,7 @@ ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
 ; Preserve flags across operations
 CMPI r1, r2                   ; Set comparison flags
 ADDI[N] r3, #1                ; Increment without changing flags
-BRAN|== still_uses_cmpi_flags ; Branch uses CMPI flags
+BRAN|== @still_uses_cmpi_flags ; Branch uses CMPI flags
 \end{lstlisting}
 
 \subsection{Testing Bits}
@@ -274,7 +274,7 @@ BRAN|== still_uses_cmpi_flags ; Branch uses CMPI flags
 TSAI r1, #0x0020  ; AND with 0x0020, update flags only
 
 ; Branch if bit was set (result non-zero)
-BRAN|!= bit_was_set
+BRAN|!= @bit_was_set
 \end{lstlisting}
 
 \subsection{Enabling Protected Mode}

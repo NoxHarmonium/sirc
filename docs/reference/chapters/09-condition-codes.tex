@@ -119,7 +119,7 @@ ADDI r1, #10
 ADDI|== r2, #20
 
 ; Conditional branch
-BRAN|!= loop_start
+BRAN|!= @loop_start
 
 ; Multiple conditions
 ADDR|HI r3, r4, r5
@@ -139,7 +139,7 @@ LOAD|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
 
 ; if (r1 <= 100) { branch } (unsigned)
 CMPI r1, #100
-BRAN|LO target
+BRAN|LO @target
 \end{lstlisting}
 
 \subsection{Signed Comparison}
@@ -151,7 +151,7 @@ LOAD|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
 
 ; if (r1 < -10) { branch } (signed)
 CMPI r1, #-10
-BRAN|<< negative_case
+BRAN|<< @negative_case
 \end{lstlisting}
 
 \subsection{Equality Testing}
@@ -159,11 +159,11 @@ BRAN|<< negative_case
 \begin{lstlisting}
 ; if (r1 == r2) { branch }
 CMPR r1, r2
-BRAN|== equal_case
+BRAN|== @equal_case
 
 ; if (r1 != 0) { branch }
 CMPI r1, #0
-BRAN|!= non_zero_case
+BRAN|!= @non_zero_case
 \end{lstlisting}
 
 \section{Condition Code Truth Tables}
@@ -246,7 +246,7 @@ ADDI r1, #0, #10         ; i = 10
 loop:
     ; ... loop body ...
     SUBI r1, #1          ; i--
-    BRAN|HI loop         ; Continue if i > 0 (unsigned)
+    BRAN|HI @loop        ; Continue if i > 0 (unsigned)
 \end{lstlisting}
 
 \section{Condition Code Selection Guide}
@@ -298,11 +298,11 @@ loop:
 ; WRONG - flags clobbered
 CMPR r1, r2
 ADDI r3, #100         ; Modifies flags!
-BRAN|HI target        ; Tests wrong flags
+BRAN|HI @target       ; Tests wrong flags
 
 ; CORRECT - flags preserved
 CMPR r1, r2
-BRAN|HI target
+BRAN|HI @target
 ADDI r3, #100         ; After the branch
 \end{lstlisting}
 

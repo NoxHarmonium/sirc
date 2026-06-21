@@ -42,6 +42,87 @@ ALU instructions are available in three format variants:
 	\item \mnemonic{TSX} -- Test XOR (XOR without saving result)
 \end{itemize}
 
+\section{Legal Forms}
+
+ALU instructions are register-only operations. Immediate operands are encoded in the instruction word; memory operands
+are not legal for this instruction family.
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\midrule
+		ADD  & \texttt{ADDI rD, \#imm16} & 0x00 & Writes result \\
+		ADD  & \texttt{ADDI rD, \#imm8, shift} & 0x20 & Writes result \\
+		ADD  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30 & Writes result \\
+		ADC  & \texttt{ADCI rD, \#imm16} & 0x01 & Writes result \\
+		ADC  & \texttt{ADCI rD, \#imm8, shift} & 0x21 & Writes result \\
+		ADC  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31 & Writes result \\
+		SUB  & \texttt{SUBI rD, \#imm16} & 0x02 & Writes result \\
+		SUB  & \texttt{SUBI rD, \#imm8, shift} & 0x22 & Writes result \\
+		SUB  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32 & Writes result \\
+		SBC  & \texttt{SBCI rD, \#imm16} & 0x03 & Writes result \\
+		SBC  & \texttt{SBCI rD, \#imm8, shift} & 0x23 & Writes result \\
+		SBC  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33 & Writes result \\
+		AND  & \texttt{ANDI rD, \#imm16} & 0x04 & Writes result \\
+		AND  & \texttt{ANDI rD, \#imm8, shift} & 0x24 & Writes result \\
+		AND  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34 & Writes result \\
+		ORR  & \texttt{ORRI rD, \#imm16} & 0x05 & Writes result \\
+		ORR  & \texttt{ORRI rD, \#imm8, shift} & 0x25 & Writes result \\
+		ORR  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35 & Writes result \\
+		XOR  & \texttt{XORI rD, \#imm16} & 0x06 & Writes result \\
+		XOR  & \texttt{XORI rD, \#imm8, shift} & 0x26 & Writes result \\
+		XOR  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36 & Writes result \\
+		LOAD & \texttt{LOAD rD, \#imm16} & 0x07 & Writes result; preserves flags \\
+		LOAD & \texttt{LOAD rD, rS} & 0x37 & Writes result; preserves flags \\
+		CMP  & \texttt{CMPI rS, \#imm16} & 0x0A & Updates flags only \\
+		CMP  & \texttt{CMPI rS, \#imm8, shift} & 0x2A & Updates flags only \\
+		CMP  & \texttt{CMPR rS1, rS2[, shift]} & 0x3A & Updates flags only \\
+		TSA  & \texttt{TSAI rS, \#imm16} & 0x0C & Updates flags only \\
+		TSA  & \texttt{TSAI rS, \#imm8, shift} & 0x2C & Updates flags only \\
+		TSA  & \texttt{TSAR rS1, rS2[, shift]} & 0x3C & Updates flags only \\
+		TSX  & \texttt{TSXI rS, \#imm16} & 0x0E & Updates flags only \\
+		TSX  & \texttt{TSXI rS, \#imm8, shift} & 0x2E & Updates flags only \\
+		TSX  & \texttt{TSXR rS1, rS2[, shift]} & 0x3E & Updates flags only \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal ALU Instruction Forms}
+	\label{tab:alu-legal-forms}
+\end{table}
+
+\noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
+\texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
+\texttt{ADDR r1, r1, r2}.
+
+\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} is a valid CPU encoding, but the assembler does not expose a
+\texttt{LOAD rD, \#imm8, shift} form. In the CPU datapath the short-immediate shift applies to the destination register
+side of the ALU input, while \mnemonic{LOAD} writes the unshifted immediate operand. The encoded shift therefore has no
+useful effect on the loaded value.
+
+\section{Common ALU Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic} & \textbf{Definition} \\
+		\midrule
+		Condition false & The instruction is skipped and has no side effects. Registers and status flags are preserved. \\
+		Immediate format & The left operand is the named register. The right operand is the encoded 16-bit immediate. \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
+		Register format & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}. \\
+		Test variants & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back. \\
+		LOAD & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags. \\
+		Timing & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states. \\
+		Exceptions & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common ALU Semantics}
+	\label{tab:alu-common-semantics}
+\end{table}
+
 \section{Status Flag Updates}
 
 Most ALU instructions update the status register flags:
@@ -51,6 +132,33 @@ Most ALU instructions update the status register flags:
 	\item[Logical (AND, ORR, XOR, TSA, TSX)] Update N and Z; clear C and V
 	\item[Load (LOAD)] Do not update flags
 \end{description}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llllllp{5.5cm}}
+		\toprule
+		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning} \\
+		\midrule
+		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow. \\
+		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out. \\
+		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs. \\
+		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
+		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded. \\
+		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
+		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded. \\
+		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded. \\
+		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved. \\
+		\bottomrule
+	\end{tabular}
+	\caption{ALU Status Flag Effects}
+	\label{tab:alu-status-flag-effects}
+\end{table}
+
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
+flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result; see
+Chapter~\ref{ch:shift-operations} for the shifter flag rules.
 
 \subsection{Manual Flag Update Control}
 
@@ -71,7 +179,7 @@ ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
 ; Preserve flags during operation
 CMPI r2, r3                   ; Set comparison flags
 ADDI[N] r4, #1                ; Increment without changing flags
-BRAN|>= branch_if_r2_gte_r3   ; Use flags from CMPI
+BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
 \end{lstlisting}
 
 % ============================================================================
@@ -106,6 +214,10 @@ SR.V = signed_overflow
 	the operation).
 
 	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -162,6 +274,10 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; 32-bit addition (r1:r2 = r3:r4 + r5:r6)
@@ -212,6 +328,10 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Decrement by 1
@@ -222,7 +342,7 @@ SUBR r3, r1, r2            ; r3 = r1 - r2
 
 ; Loop counter
 SUBI r7, #1                ; Decrement counter
-BRAN|!= loop               ; Branch if not zero
+BRAN|!= @loop              ; Branch if not zero
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -263,6 +383,10 @@ SR.V = signed_overflow
 	propagate borrows from lower-order to higher-order subtractions.
 
 	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -313,6 +437,10 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Mask lower byte
@@ -324,7 +452,7 @@ ANDI r2, #~(1<<5)          ; r2 = r2 & 0xFFDF
 ; Check if two registers share any set bits
 ANDR r3, r1, r2            ; r3 = r1 & r2
 CMPI r3, #0
-BRAN|!= common_bits        ; Branch if any bits in common
+BRAN|!= @common_bits       ; Branch if any bits in common
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -366,6 +494,10 @@ SR.V = 0
 	setting specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -424,6 +556,10 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Toggle bit 3
@@ -460,7 +596,6 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LOAD rD, #imm16                ; rD = imm16 (via add)
-LOAD rD, #imm8, shift          ; rD = imm8 << shift
 LOAD rD, rS                    ; rD = rS (via add)
 \end{lstlisting}
 
@@ -475,9 +610,14 @@ destination = operand
 
 	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
-	registers.
+	registers. The CPU defines a short-immediate \mnemonic{LOAD} encoding at opcode \texttt{0x27}, but the assembler does
+	not expose it because its shift field does not affect the loaded value.
 
 	\textbf{Flags:} None
+
+	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -505,7 +645,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\item Does not update flags, unlike \mnemonic{ADD}
 		\item Most efficient way to move data between registers
 		\item For 16-bit constants, use immediate form
-		\item For larger or shifted constants, use short immediate with shift
+		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or \mnemonic{ORRI}
 	\end{itemize}
 \end{instructionbox}
 
@@ -542,25 +682,29 @@ SR.V = signed_overflow
 
 	\textbf{Flags:} N Z C V
 
+	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Test if r1 is zero
 CMPI r1, #0
-BRAN|== is_zero            ; Branch if r1 == 0
+BRAN|== @is_zero           ; Branch if r1 == 0
 
 ; Test if r1 > r2 (unsigned)
 CMPR r1, r2
-BRAN|HI r1_greater
+BRAN|HI @r1_greater
 
 ; Test if r1 >= r2 (signed)
 CMPR r1, r2
-BRAN|>= r1_greater_or_equal
+BRAN|>= @r1_greater_or_equal
 
 ; Range check: if (r1 >= 10 && r1 < 20)
 CMPI r1, #10
-BRAN|<< out_of_range       ; Branch if r1 < 10
+BRAN|<< @out_of_range      ; Branch if r1 < 10
 CMPI r1, #20
-BRAN|>= out_of_range       ; Branch if r1 >= 20
+BRAN|>= @out_of_range      ; Branch if r1 >= 20
 ; r1 is in range [10, 20)
 \end{lstlisting}
 
@@ -606,23 +750,27 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Test if bit 5 is set
 TSAI r1, #0x0020           ; Test r1 & 0x20
-BRAN|!= bit5_set           ; Branch if bit 5 was set
+BRAN|!= @bit5_set          ; Branch if bit 5 was set
 
 ; Test if any upper byte bits are set
 TSAI r2, #0xFF00
-BRAN|!= has_upper_bits
+BRAN|!= @has_upper_bits
 
 ; Test if r1 and r2 have any bits in common
 TSAR r1, r2
-BRAN|== no_common_bits     ; Branch if no bits in common
+BRAN|== @no_common_bits    ; Branch if no bits in common
 
 ; Test multiple bits
 TSAI r3, #0xF000           ; Test upper nibble
-BRAN|== upper_clear        ; Branch if all tested bits clear
+BRAN|== @upper_clear       ; Branch if all tested bits clear
 \end{lstlisting}
 
 	\textbf{Notes:}
@@ -667,20 +815,24 @@ SR.V = 0
 
 	\textbf{Flags:} N Z (C and V cleared)
 
+	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
 	\textbf{Example:}
 	\begin{lstlisting}
 ; Test if r1 equals specific value
 TSXI r1, #0x1234           ; Test r1 ^ 0x1234
-BRAN|== is_0x1234          ; Branch if r1 == 0x1234
+BRAN|== @is_0x1234         ; Branch if r1 == 0x1234
 
 ; Test if two registers are equal
 TSXR r1, r2                ; Test r1 ^ r2
-BRAN|== registers_equal    ; Branch if r1 == r2
+BRAN|== @registers_equal   ; Branch if r1 == r2
 
 ; Test if bit pattern matches
 TSAI r3, #0xFF             ; Mask to lower byte
 TSXI r3, #0xAA             ; Test if lower byte == 0xAA
-BRAN|== pattern_match
+BRAN|== @pattern_match
 \end{lstlisting}
 
 	\textbf{Notes:}

@@ -31,19 +31,17 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
         return false;
     }
 
+    if !instruction.con_ {
+        return false;
+    }
+
     let writing_to_privileged_registers = PRIVILEGED_REGISTERS.contains(&instruction.des);
     // TODO: Magic numbers in `check_privilege`
     // category=Refactoring
     let cop_opcode = instruction.sr_b_ & 0x0F00;
-    // TODO: Double check privileged op code logic
-    // category=Hardware
-    // Is this brittle? Should we use the writeback decoder to determine if the instruction will write
-    // to the pending cop register? Mainly worried about undefined instructions will inadvertently write to that
-    // register and allow for privilege escalation
-    // Should `CompareShortImmediate` be in this list?
     let is_cop_instruction = instruction.ins == Instruction::CoprocessorCallImmediate
         || instruction.ins == Instruction::CoprocessorCallRegister
-        || instruction.ins == Instruction::CompareShortImmediate;
+        || instruction.ins == Instruction::CoprocessorCallShortImmediate;
     // Top half of the COP opcodes are privileged
     let calling_privileged_cop_opcode = is_cop_instruction && (cop_opcode > 0x0700);
 
