@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::reject_aliased_address_register_write;
 use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
@@ -41,6 +42,19 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
          address_register: &AddressRegisterName| {
             InstructionData::Immediate(ImmediateInstructionData {
                 op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+                register: dest_register.to_register_index(),
+                value,
+                condition_flag,
+                additional_flags: address_register.to_register_index(),
+            })
+        };
+
+    let construct_load_effective_address_pre_decrement_instruction =
+        |value: u16,
+         dest_register: &AddressRegisterName,
+         address_register: &AddressRegisterName| {
+            InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
                 register: dest_register.to_register_index(),
                 value,
                 condition_flag,
@@ -103,6 +117,91 @@ pub fn ldea(i: &str) -> AsmResult<InstructionToken> {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::LoadEffectiveAddressFromIndirectRegister,
+                        r1: dest_register.to_register_index(),
+                        r2: 0x0, // Unused
+                        r3: displacement_register.to_register_index(),
+                        shift_operand: ShiftOperand::Immediate,
+                        shift_type: ShiftType::None,
+                        shift_count: 0,
+                        condition_flag,
+                        additional_flags: address_register.to_register_index(),
+                    }),
+                    ..Default::default()
+                },
+            ))
+        }
+        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPreDecrement(offset, address_register)] =>
+        {
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEA",
+                    "pre-decrement source and destination address registers overlap",
+                )?;
+            }
+
+            match offset {
+                ImmediateType::Value(offset) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_load_effective_address_pre_decrement_instruction(
+                            offset.to_owned(),
+                            dest_register,
+                            address_register,
+                        ),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::SymbolRef(ref_token) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_load_effective_address_pre_decrement_instruction(
+                            0x0, // Will be replaced by linker
+                            dest_register,
+                            address_register,
+                        ),
+                        symbol_ref: Some(override_ref_token_type_if_implied(
+                            ref_token,
+                            RefType::LowerWord,
+                        )),
+                        ..Default::default()
+                    },
+                )),
+                ImmediateType::PlaceHolder(placeholder_name) => Ok((
+                    i,
+                    InstructionToken {
+                        input_length,
+                        instruction: construct_load_effective_address_pre_decrement_instruction(
+                            0x0, // Will be replaced by linker
+                            dest_register,
+                            address_register,
+                        ),
+                        placeholder_name: Some(placeholder_name.clone()),
+                        ..Default::default()
+                    },
+                )),
+            }
+        }
+        [AddressingMode::DirectAddressRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPreDecrement(
+            displacement_register,
+            address_register,
+        )] => {
+            if dest_register == address_register {
+                reject_aliased_address_register_write(
+                    i_after_instruction,
+                    "LDEA",
+                    "pre-decrement source and destination address registers overlap",
+                )?;
+            }
+
+            Ok((
+                i,
+                InstructionToken {
+                    input_length,
+                    instruction: InstructionData::Register(RegisterInstructionData {
+                        op_code: Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: displacement_register.to_register_index(),

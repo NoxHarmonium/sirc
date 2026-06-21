@@ -142,8 +142,10 @@ fn main() -> io::Result<()> {
             let instruction = decode_instruction(raw_instruction);
             let patched_instruction = match instruction {
                 InstructionData::Immediate(data) => match data.op_code {
-                    Instruction::BranchToSubroutineWithImmediateDisplacement
-                    | Instruction::BranchWithImmediateDisplacement
+                    Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement
+                    | Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement
+                    | Instruction::LoadEffectiveAddressFromIndirectImmediate
+                    | Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
                     | Instruction::LoadRegisterFromImmediate
                     | Instruction::LoadRegisterFromIndirectImmediate
                     | Instruction::StoreRegisterToIndirectImmediate => {

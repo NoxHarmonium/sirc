@@ -145,9 +145,13 @@ pub fn decode_and_register_fetch(
 
     let addr_inc: i16 = match op_code {
         Instruction::LoadRegisterFromIndirectRegisterPostIncrement
-        | Instruction::LoadRegisterFromIndirectImmediatePostIncrement => 1,
+        | Instruction::LoadRegisterFromIndirectImmediatePostIncrement
+        | Instruction::LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement
+        | Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement => 1,
         Instruction::StoreRegisterToIndirectRegisterPreDecrement
-        | Instruction::StoreRegisterToIndirectImmediatePreDecrement => -1,
+        | Instruction::StoreRegisterToIndirectImmediatePreDecrement
+        | Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement
+        | Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement => -1,
         _ => 0,
     };
 

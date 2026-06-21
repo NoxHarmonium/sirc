@@ -25,7 +25,7 @@ SHFT[s]|!= r4, LSL #3
 
 ; Mnemonics with just condition (no status override)
 ADDI|CC r1, #10
-BRAN|NS :label
+BRAN|NS @some_label
 
 ; Edge cases - should still match mnemonic at word boundary
 ADDI
@@ -41,6 +41,16 @@ ADDIx r1, #5
 SHFT r1, LSL #3
 ADDI r2, #1, LSR #2
 ADDR r3, r4, r5, ASR #1
+
+; Effective address and control-flow forms
+LDEA a, (#16, s)
+LDEA p, -(r3, a)
+LDEL a, (#16, s)
+LDEL p, (r3, a)+
+LJMP a
+LJSR a
+BRSR @some_label
+RETS
 
 ; Constants
 #0xFF
@@ -79,4 +89,5 @@ $test123
 
 ; Indirect addressing
 LOAD r1, (#5, a)
-STOR r2, (#0, p)+
+LOAD r2, (#0, p)+
+STOR -(#0, s), r2

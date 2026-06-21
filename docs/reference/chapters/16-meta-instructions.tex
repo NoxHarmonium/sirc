@@ -43,7 +43,7 @@ my_function:
 
 \textbf{Assembles to:} \texttt{LDEA p, ...} (various forms)
 
-\textbf{Description:} Performs an absolute jump by transferring an address register to the program counter. Supports optional immediate or register offsets. Unlike \mnemonic{BRAN} which is PC-relative, \mnemonic{LJMP} uses absolute addressing via address registers.
+\textbf{Description:} Performs an absolute jump by transferring an address register to the program counter. Supports optional immediate or register offsets. Unlike \mnemonic{BRAN}, which is PC-relative, \mnemonic{LJMP} uses absolute addressing via address registers.
 
 \textbf{Examples:}
 \begin{lstlisting}
@@ -56,6 +56,45 @@ LJMP a, #16                   ; Assembles to: LDEA p, (#16, a)
 ; Jump with register displacement
 LJMP a, r1                    ; Assembles to: LDEA p, (r1, a)
 \end{lstlisting}
+
+\section{LJSR -- Long Jump to Subroutine}
+
+\textbf{Syntax:} \texttt{LJSR src [, offset]}
+
+\textbf{Assembles to:} \texttt{LDEL p, ...} (various forms)
+
+\textbf{Description:} Performs an absolute call through an address register. The return address is saved to \reg{l}; the
+computed target address is written to \reg{p}. Supports optional immediate or register offsets.
+
+\textbf{Examples:}
+\begin{lstlisting}
+; Simple call to address in register
+LJSR a                        ; Assembles to: LDEL p, (#0, a)
+
+; Call with immediate offset
+LJSR a, #16                   ; Assembles to: LDEL p, (#16, a)
+
+; Call with register displacement
+LJSR a, r1                    ; Assembles to: LDEL p, (r1, a)
+\end{lstlisting}
+
+\section{BRAN -- PC-Relative Branch}
+
+\textbf{Syntax:} \texttt{BRAN \#disp} or \texttt{BRAN @label}
+
+\textbf{Assembles to:} \texttt{LDEA p, (\#disp, p)}
+
+\textbf{Description:} Branches relative to the current program counter. Label references are resolved by the linker as
+PC-relative offsets.
+
+\section{BRSR -- PC-Relative Branch to Subroutine}
+
+\textbf{Syntax:} \texttt{BRSR \#disp} or \texttt{BRSR @label}
+
+\textbf{Assembles to:} \texttt{LDEL p, (\#disp, p)}
+
+\textbf{Description:} Calls a PC-relative subroutine, saving the return address to \reg{l}. Label references are resolved
+by the linker as PC-relative offsets.
 
 \section{EXCP -- User Exception (Trap)}
 

@@ -9,7 +9,7 @@ documented and assigned. The instructions are organized into logical groups:
 \begin{itemize}
 	\item \textbf{ALU Instructions (0x00--0x0F, 0x20--0x2F, 0x30--0x3F)}: Arithmetic, logical, and comparison operations
 	\item \textbf{Memory Instructions (0x10--0x17)}: Load and store operations
-	\item \textbf{Control Flow (0x18--0x1F)}: Branches, jumps, and address loading
+	\item \textbf{Address and Control Flow (0x18--0x1F)}: Effective-address calculation, jumps, and calls
 	\item \textbf{Coprocessor (0x0F, 0x2F, 0x3F)}: Coprocessor interface
 \end{itemize}
 
@@ -49,12 +49,12 @@ documented and assigned. The instructions are organized into logical groups:
 		0x17            & LOAD              & Post-Inc Reg    & --             & Load with post-inc (reg)      \\
 		0x18            & LDEA              & Indirect Imm    & --             & Load effective address        \\
 		0x19            & LDEA              & Indirect Reg    & --             & Load effective address (reg)  \\
-		0x1A            & BRAN              & Indirect Imm    & --             & Branch (imm displacement)     \\
-		0x1B            & BRAN              & Indirect Reg    & --             & Branch (reg displacement)     \\
-		0x1C            & LJSR              & Indirect Imm    & --             & Long jump to subroutine       \\
-		0x1D            & LJSR              & Indirect Reg    & --             & Long jump to subroutine (reg) \\
-		0x1E            & BRSR              & Indirect Imm    & --             & Branch to subroutine          \\
-		0x1F            & BRSR              & Indirect Reg    & --             & Branch to subroutine (reg)    \\
+		0x1A            & LDEA              & Pre-Dec Imm     & --             & Load effective address, pre-dec \\
+		0x1B            & LDEA              & Pre-Dec Reg     & --             & Load effective address, pre-dec (reg) \\
+		0x1C            & LDEL              & Indirect Imm    & --             & Load effective address and link \\
+		0x1D            & LDEL              & Indirect Reg    & --             & Load effective address and link (reg) \\
+		0x1E            & LDEL              & Post-Inc Imm    & --             & Load effective address and link, post-inc \\
+		0x1F            & LDEL              & Post-Inc Reg    & --             & Load effective address and link, post-inc (reg) \\
 		\midrule
 		0x20            & ADDI              & Short Imm+Shift & NZCV           & Add short immediate           \\
 		0x21            & ADCI              & Short Imm+Shift & NZCV           & Add short imm with carry      \\

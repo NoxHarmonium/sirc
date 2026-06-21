@@ -80,8 +80,9 @@ The 16-bit value currently stored in the specified register.
 
 \subsection{Description}
 
-The effective address is computed by adding a 16-bit signed immediate offset to an address register pair. The operand
-is then loaded from or stored to this computed address.
+The effective address is computed by adding a 16-bit signed immediate offset to an address register pair. Memory
+instructions use the computed address for a load or store; effective-address instructions write the computed address to
+an address-register pair.
 
 \subsection{Syntax}
 
@@ -304,8 +305,8 @@ Protected mode restricts writes to the high word of an address register:
 
 \begin{itemize}
 	\item \textbf{Direct high-register writes}: Trigger a privilege violation fault
-	\item \textbf{Address-register-pair write-back}: Preserves the high word and updates only the low word
-	\item \textbf{Post-increment/Pre-decrement}: Can only modify the low word in protected mode
+	\item \textbf{Address-register-pair write-back}: Allowed only when the high word would remain unchanged; otherwise triggers a privilege violation fault
+	\item \textbf{Post-increment/Pre-decrement}: Allowed in protected mode only when the high word would remain unchanged
 \end{itemize}
 
 \subsection{Alignment}

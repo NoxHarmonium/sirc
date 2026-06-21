@@ -1,0 +1,153 @@
+;; Protected-mode address write-back test
+;;
+;; Reference for the expected register dump:
+;; r1 = final success marker
+;; r2 = number of expected privilege faults handled
+;; r3 = value loaded by protected-mode LOAD post-increment
+;; r4 = final same-segment LDEA result low word
+;; r5 = final same-segment LDEL result low word
+;; r6 = expected-fault flag, cleared by the handler
+;; r7 = normal-fallthrough-to-handler guard counter
+
+.EQU $PROGRAM_SEGMENT #0x0000
+.EQU $SCRATCH_SEGMENT #0x0001
+
+.ORG 0x0000
+.DQ @start
+
+.ORG 0x000A
+.DQ @privilege_violation_handler
+
+.ORG 0x0200
+:start
+
+LOAD r1, #0
+LOAD r2, #0
+LOAD r3, #0
+LOAD r4, #0
+LOAD r5, #0
+LOAD r6, #0
+LOAD r7, #0
+
+; Supervisor setup can assign protected-mode segment registers.
+LOAD ah, $PROGRAM_SEGMENT
+LOAD al, #0
+LOAD lh, $PROGRAM_SEGMENT
+LOAD ll, #0
+LOAD sh, $PROGRAM_SEGMENT
+LOAD sl, #0x0800
+
+LOAD r3, #0xCAFE
+STOR (#0, s), r3
+LOAD r3, #0
+
+; Enable protected mode
+ORRI sr, #0x0100
+
+; Positive protected-mode cases. These stay within their current high words.
+
+; Conditional-false direct high-register writes are skipped and do not fault.
+CMPI r1, #0
+LOAD|!= ph, #0x1234
+
+; Same-segment memory post-increment is legal in protected mode.
+LOAD r3, (#0, s)+
+
+; Same-segment LDEA is legal.
+LOAD ll, #0x0400
+LDEA a, (#4, l)
+
+; Same-segment LDEA pre-decrement updates both source and destination lows.
+LOAD ll, #0x0500
+LDEA a, -(#2, l)
+LOAD r4, al
+
+; Same-segment LDEL post-increment writes link, destination, and source lows.
+LOAD sl, #0x0600
+LDEL a, (#3, s)+
+LOAD r5, al
+
+; Negative protected-mode cases. These stay within their current high words.
+
+; Direct high-register write should cause fault.
+LOAD r6, #2
+LOAD ph, #0x1234
+
+; Address-pair write-back faults if the destination high word would change.
+LOAD ah, $SCRATCH_SEGMENT
+LOAD al, #0x1000
+LOAD sh, $PROGRAM_SEGMENT
+LOAD sl, #0x2222
+ORRI sr, #0x0100
+LOAD r6, #2
+LDEA s, (#0, a)
+
+; Jumping across segments in protected mode faults instead of jumping.
+LOAD ah, $SCRATCH_SEGMENT
+LOAD al, #0x1000
+ORRI sr, #0x0100
+LOAD r6, #2
+LJMP a
+
+; LDEL faults before writing link or destination if the target high word changes.
+LOAD ah, $SCRATCH_SEGMENT
+LOAD al, #0x1000
+LOAD lh, $PROGRAM_SEGMENT
+LOAD ll, #0x5555
+ORRI sr, #0x0100
+LOAD r6, #2
+LDEL p, (#0, a)
+
+; LDEL also faults if only the link-register high word would change.
+LOAD ah, $PROGRAM_SEGMENT
+LOAD al, #0x1000
+LOAD lh, #0x7777
+LOAD ll, #0x8888
+ORRI sr, #0x0100
+LOAD r6, #2
+LDEL a, (#0, a)
+
+; RETS faults if it would restore a different high program-counter word.
+LOAD lh, $SCRATCH_SEGMENT
+LOAD ll, #0x4321
+ORRI sr, #0x0100
+LOAD r6, #2
+RETS
+
+; Supervisor mode still writes both high and low words for address-pair writes.
+LOAD ah, $SCRATCH_SEGMENT
+LOAD al, #0x1000
+LOAD sh, $PROGRAM_SEGMENT
+LOAD sl, #0
+LDEA s, (#1, a)
+
+LOAD r1, #0x600D
+
+; Halt CPU.
+COPI r1, #0x14FF
+
+.ORG 0x0300
+:privilege_violation_handler
+
+; If normal execution ever reaches this page, stop with a visible guard count.
+LOAD r7, sr
+ANDI r7, #0x2000
+CMPI r7, #0
+BRAN|!= @privilege_violation_handler_active
+ADDI r7, #1
+COPI r1, #0x14FF
+
+:privilege_violation_handler_active
+
+ADDI r2, #1
+
+; r6 == 2 means this fault should return to supervisor mode.
+CMPI r6, #2
+BRAN|!= @privilege_violation_handler_return
+ETFR r7, #6
+ANDI r7, #0xFEFF
+ETTR #6, r7
+
+:privilege_violation_handler_return
+LOAD r6, #0
+RETE

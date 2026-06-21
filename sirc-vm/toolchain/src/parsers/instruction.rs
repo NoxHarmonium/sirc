@@ -425,6 +425,7 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::branching::branching.context("Branching instruction"),
         opcodes::meta::meta.context("Meta instruction"),
         opcodes::ldea::ldea.context("LDEA instruction"),
+        opcodes::ldel::ldel.context("LDEL instruction"),
         opcodes::ljmp::ljmp.context("LJMP instruction"),
         opcodes::ljsr::ljsr.context("LJSR instruction"),
         opcodes::load::load.context("LOAD instruction"),

@@ -15,6 +15,24 @@ LOAD r3, (#16, a)
 ; @manual-example STOR (#-2, s), r4
 STOR (#-2, s), r4
 
+; @manual-example LDEA a, (#4, s)
+LDEA a, (#4, s)
+
+; @manual-example LDEA a, -(#0, s)
+LDEA a, -(#0, s)
+
+; @manual-example LDEL p, (#0, a)
+LDEL p, (#0, a)
+
+; @manual-example LDEL p, (#0, a)+
+LDEL p, (#0, a)+
+
+; @manual-example BRAN #4
+BRAN #4
+
+; @manual-example BRSR #4
+BRSR #4
+
 ; @manual-example ADDI|== r5, #42
 ADDI|== r5, #42
 
@@ -55,6 +73,24 @@ LOAD r1, (r2, a)
 
 ; @manual-example STOR -(r2, s), r1
 STOR -(r2, s), r1
+
+; @manual-example LDEA a, (r2, s)
+LDEA a, (r2, s)
+
+; @manual-example LDEA a, -(r2, s)
+LDEA a, -(r2, s)
+
+; @manual-example LDEL p, (r2, a)
+LDEL p, (r2, a)
+
+; @manual-example LDEL p, (r2, a)+
+LDEL p, (r2, a)+
+
+; @manual-example LJMP a, r2
+LJMP a, r2
+
+; @manual-example LJSR a, r2
+LJSR a, r2
 
 ; @manual-example CMPR r4, r5
 CMPR r4, r5
