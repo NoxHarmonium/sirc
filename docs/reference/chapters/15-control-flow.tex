@@ -27,26 +27,26 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}   & \textbf{Notes}                                \\
 		\midrule
-		LDEA & \texttt{LDEA dest, (\#offset, src)} & 0x18 & Immediate-offset effective address \\
-		LDEA & \texttt{LDEA dest, (rS, src)} & 0x19 & Register-offset effective address \\
-		LDEA & \texttt{LDEA dest, -(\#offset, src)} & 0x1A & Pre-decrement source, immediate offset \\
-		LDEA & \texttt{LDEA dest, -(rS, src)} & 0x1B & Pre-decrement source, register offset \\
-		LDEL & \texttt{LDEL dest, (\#offset, src)} & 0x1C & Immediate-offset effective address and link \\
-		LDEL & \texttt{LDEL dest, (rS, src)} & 0x1D & Register-offset effective address and link \\
-		LDEL & \texttt{LDEL dest, (\#offset, src)+} & 0x1E & Post-increment source, immediate offset \\
-		LDEL & \texttt{LDEL dest, (rS, src)+} & 0x1F & Post-increment source, register offset \\
-		BRAN & \texttt{BRAN \#disp} & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#disp, p)} \\
-		BRAN & \texttt{BRAN @label} & \texttt{LDEA} alias & PC-relative linker-computed displacement \\
-		BRSR & \texttt{BRSR \#disp} & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#disp, p)} \\
-		BRSR & \texttt{BRSR @label} & \texttt{LDEL} alias & PC-relative linker-computed call \\
-		LJMP & \texttt{LJMP src} & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#0, src)} \\
-		LJMP & \texttt{LJMP src, \#offset} & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#offset, src)} \\
-		LJMP & \texttt{LJMP src, rS} & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (rS, src)} \\
-		LJSR & \texttt{LJSR src} & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#0, src)} \\
-		LJSR & \texttt{LJSR src, \#offset} & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)} \\
-		LJSR & \texttt{LJSR src, rS} & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)} \\
+		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18                & Immediate-offset effective address            \\
+		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19                & Register-offset effective address             \\
+		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A                & Pre-decrement source, immediate offset        \\
+		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B                & Pre-decrement source, register offset         \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C                & Immediate-offset effective address and link   \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D                & Register-offset effective address and link    \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E                & Post-increment source, immediate offset       \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F                & Post-increment source, register offset        \\
+		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#disp, p)}     \\
+		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} alias & PC-relative linker-computed displacement      \\
+		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#disp, p)}     \\
+		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} alias & PC-relative linker-computed call              \\
+		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#0, src)}      \\
+		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#offset, src)} \\
+		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (rS, src)}       \\
+		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#0, src)}      \\
+		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)} \\
+		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Control-Flow and Effective-Address Forms}
@@ -69,18 +69,18 @@ forms do not accept shift suffixes in the assembler.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic} & \textbf{Definition} \\
+		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                                                                                                          \\
 		\midrule
-		Condition false & The instruction is skipped and has no side effects. The program counter advances to the next instruction normally. \\
-		Address calculation & The selected source address-register high word supplies the segment. The target low word is the selected source low word plus the immediate or register displacement. \\
-		Pre-decrement LDEA & The source low word is decremented by one word before the displacement is applied. The decremented source low word is written back. \\
-		Post-increment LDEL & The target address is calculated from the original source value. The source low word is incremented by one word in write-back. \\
-		Subroutine link & \mnemonic{LDEL}, \mnemonic{BRSR}, and \mnemonic{LJSR} save the normal next-instruction address in \reg{l}. \\
-		Status flags & Preserved. Control-flow instructions do not support status update override syntax. \\
-		Timing & 6 cycles, plus any instruction-fetch wait states. These instructions do not perform a data-memory bus access. \\
-		Exceptions & Address calculation can raise segment-overflow faults when trap-on-address-overflow is enabled. \\
-		Privilege & In protected mode, address-register-pair write-back is allowed only when every written high word would remain unchanged. If any high word would change, the instruction raises a privilege-violation fault instead of completing write-back. Direct writes to high address registers also raise a privilege-violation fault. \\
-		Fault side effects & Program-counter, destination address-register, source auto-update, and link-register updates occur after condition evaluation. If a fault aborts execution before write-back, those effects do not complete. \\
+		Condition false     & The instruction is skipped and has no side effects. The program counter advances to the next instruction normally.                                                                                                                                                                                                           \\
+		Address calculation & The selected source address-register high word supplies the segment. The target low word is the selected source low word plus the immediate or register displacement.                                                                                                                                                        \\
+		Pre-decrement LDEA  & The source low word is decremented by one word before the displacement is applied. The decremented source low word is written back.                                                                                                                                                                                          \\
+		Post-increment LDEL & The target address is calculated from the original source value. The source low word is incremented by one word in write-back.                                                                                                                                                                                               \\
+		Subroutine link     & \mnemonic{LDEL}, \mnemonic{BRSR}, and \mnemonic{LJSR} save the normal next-instruction address in \reg{l}.                                                                                                                                                                                                                   \\
+		Status flags        & Preserved. Control-flow instructions do not support status update override syntax.                                                                                                                                                                                                                                           \\
+		Timing              & 6 cycles, plus any instruction-fetch wait states. These instructions do not perform a data-memory bus access.                                                                                                                                                                                                                \\
+		Exceptions          & Address calculation can raise segment-overflow faults when trap-on-address-overflow is enabled.                                                                                                                                                                                                                              \\
+		Privilege           & In protected mode, address-register-pair write-back is allowed only when every written high word would remain unchanged. If any high word would change, the instruction raises a privilege-violation fault instead of completing write-back. Direct writes to high address registers also raise a privilege-violation fault. \\
+		Fault side effects  & Program-counter, destination address-register, source auto-update, and link-register updates occur after condition evaluation. If a fault aborts execution before write-back, those effects do not complete.                                                                                                                 \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Control-Flow Instruction Semantics}
@@ -101,8 +101,8 @@ BRAN|cond #disp               ; Conditional PC-relative branch
 
 	\textbf{Description:}
 
-	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler alias, not a distinct CPU opcode.
-	Use \mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p, (rS, src)} for non-PC-relative computed jumps.
+	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler alias, not a distinct CPU opcode. Use
+	\mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p, (rS, src)} for non-PC-relative computed jumps.
 
 	\textbf{Examples:}
 	\begin{lstlisting}

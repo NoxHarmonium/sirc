@@ -20,75 +20,75 @@ documented and assigned. The instructions are organized into logical groups:
 	\tiny
 	\begin{tabular}{clllp{4cm}}
 		\toprule
-		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Format} & \textbf{Flags} & \textbf{Operation}            \\
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Format} & \textbf{Flags} & \textbf{Operation}                              \\
 		\midrule
-		0x00            & ADDI              & Immediate       & NZCV           & Add immediate                 \\
-		0x01            & ADCI              & Immediate       & NZCV           & Add immediate with carry      \\
-		0x02            & SUBI              & Immediate       & NZCV           & Subtract immediate            \\
-		0x03            & SBCI              & Immediate       & NZCV           & Subtract immediate with carry \\
-		0x04            & ANDI              & Immediate       & NZ             & AND immediate                 \\
-		0x05            & ORRI              & Immediate       & NZ             & OR immediate                  \\
-		0x06            & XORI              & Immediate       & NZ             & XOR immediate                 \\
-		0x07            & LOAD              & Immediate       & --             & Load immediate (move)         \\
-		0x08            & --                & --              & --             & Undocumented                  \\
-		0x09            & --                & --              & --             & Undocumented                  \\
-		0x0A            & CMPI              & Immediate       & NZCV           & Compare immediate             \\
-		0x0B            & --                & --              & --             & Undocumented                  \\
-		0x0C            & TSAI              & Immediate       & NZ             & Test AND immediate            \\
-		0x0D            & --                & --              & --             & Undocumented                  \\
-		0x0E            & TSXI              & Immediate       & NZ             & Test XOR immediate            \\
-		0x0F            & COPI              & Immediate       & --             & Coprocessor call immediate    \\
+		0x00            & ADDI              & Immediate       & NZCV           & Add immediate                                   \\
+		0x01            & ADCI              & Immediate       & NZCV           & Add immediate with carry                        \\
+		0x02            & SUBI              & Immediate       & NZCV           & Subtract immediate                              \\
+		0x03            & SBCI              & Immediate       & NZCV           & Subtract immediate with carry                   \\
+		0x04            & ANDI              & Immediate       & NZ             & AND immediate                                   \\
+		0x05            & ORRI              & Immediate       & NZ             & OR immediate                                    \\
+		0x06            & XORI              & Immediate       & NZ             & XOR immediate                                   \\
+		0x07            & LOAD              & Immediate       & --             & Load immediate (move)                           \\
+		0x08            & --                & --              & --             & Undocumented                                    \\
+		0x09            & --                & --              & --             & Undocumented                                    \\
+		0x0A            & CMPI              & Immediate       & NZCV           & Compare immediate                               \\
+		0x0B            & --                & --              & --             & Undocumented                                    \\
+		0x0C            & TSAI              & Immediate       & NZ             & Test AND immediate                              \\
+		0x0D            & --                & --              & --             & Undocumented                                    \\
+		0x0E            & TSXI              & Immediate       & NZ             & Test XOR immediate                              \\
+		0x0F            & COPI              & Immediate       & --             & Coprocessor call immediate                      \\
 		\midrule
-		0x10            & STOR              & Indirect Imm    & --             & Store to (addr + imm)         \\
-		0x11            & STOR              & Indirect Reg    & --             & Store to (addr + reg)         \\
-		0x12            & STOR              & Pre-Dec         & --             & Store with pre-decrement      \\
-		0x13            & STOR              & Pre-Dec Reg     & --             & Store with pre-dec (reg)      \\
-		0x14            & LOAD              & Indirect Imm    & --             & Load from (addr + imm)        \\
-		0x15            & LOAD              & Indirect Reg    & --             & Load from (addr + reg)        \\
-		0x16            & LOAD              & Post-Inc        & --             & Load with post-increment      \\
-		0x17            & LOAD              & Post-Inc Reg    & --             & Load with post-inc (reg)      \\
-		0x18            & LDEA              & Indirect Imm    & --             & Load effective address        \\
-		0x19            & LDEA              & Indirect Reg    & --             & Load effective address (reg)  \\
-		0x1A            & LDEA              & Pre-Dec Imm     & --             & Load effective address, pre-dec \\
-		0x1B            & LDEA              & Pre-Dec Reg     & --             & Load effective address, pre-dec (reg) \\
-		0x1C            & LDEL              & Indirect Imm    & --             & Load effective address and link \\
-		0x1D            & LDEL              & Indirect Reg    & --             & Load effective address and link (reg) \\
-		0x1E            & LDEL              & Post-Inc Imm    & --             & Load effective address and link, post-inc \\
+		0x10            & STOR              & Indirect Imm    & --             & Store to (addr + imm)                           \\
+		0x11            & STOR              & Indirect Reg    & --             & Store to (addr + reg)                           \\
+		0x12            & STOR              & Pre-Dec         & --             & Store with pre-decrement                        \\
+		0x13            & STOR              & Pre-Dec Reg     & --             & Store with pre-dec (reg)                        \\
+		0x14            & LOAD              & Indirect Imm    & --             & Load from (addr + imm)                          \\
+		0x15            & LOAD              & Indirect Reg    & --             & Load from (addr + reg)                          \\
+		0x16            & LOAD              & Post-Inc        & --             & Load with post-increment                        \\
+		0x17            & LOAD              & Post-Inc Reg    & --             & Load with post-inc (reg)                        \\
+		0x18            & LDEA              & Indirect Imm    & --             & Load effective address                          \\
+		0x19            & LDEA              & Indirect Reg    & --             & Load effective address (reg)                    \\
+		0x1A            & LDEA              & Pre-Dec Imm     & --             & Load effective address, pre-dec                 \\
+		0x1B            & LDEA              & Pre-Dec Reg     & --             & Load effective address, pre-dec (reg)           \\
+		0x1C            & LDEL              & Indirect Imm    & --             & Load effective address and link                 \\
+		0x1D            & LDEL              & Indirect Reg    & --             & Load effective address and link (reg)           \\
+		0x1E            & LDEL              & Post-Inc Imm    & --             & Load effective address and link, post-inc       \\
 		0x1F            & LDEL              & Post-Inc Reg    & --             & Load effective address and link, post-inc (reg) \\
 		\midrule
-		0x20            & ADDI              & Short Imm+Shift & NZCV           & Add short immediate           \\
-		0x21            & ADCI              & Short Imm+Shift & NZCV           & Add short imm with carry      \\
-		0x22            & SUBI              & Short Imm+Shift & NZCV           & Subtract short immediate      \\
-		0x23            & SBCI              & Short Imm+Shift & NZCV           & Subtract short imm with carry \\
-		0x24            & ANDI              & Short Imm+Shift & NZ             & AND short immediate           \\
-		0x25            & ORRI              & Short Imm+Shift & NZ             & OR short immediate            \\
-		0x26            & XORI              & Short Imm+Shift & NZ             & XOR short immediate           \\
-		0x27            & LOAD              & Short Imm+Shift & --             & Undocumented				   \\
-		0x28            & --                & --              & --             & Undocumented                  \\
-		0x29            & --                & --              & --             & Undocumented                  \\
-		0x2A            & CMPI              & Short Imm+Shift & NZCV           & Compare short immediate       \\
-		0x2B            & --                & --              & --             & Undocumented                  \\
-		0x2C            & TSAI              & Short Imm+Shift & NZ             & Test AND short immediate      \\
-		0x2D            & --                & --              & --             & Undocumented                  \\
-		0x2E            & TSXI              & Short Imm+Shift & NZ             & Test XOR short immediate      \\
-		0x2F            & COPI              & Short Imm+Shift & --             & Coprocessor call short imm    \\
+		0x20            & ADDI              & Short Imm+Shift & NZCV           & Add short immediate                             \\
+		0x21            & ADCI              & Short Imm+Shift & NZCV           & Add short imm with carry                        \\
+		0x22            & SUBI              & Short Imm+Shift & NZCV           & Subtract short immediate                        \\
+		0x23            & SBCI              & Short Imm+Shift & NZCV           & Subtract short imm with carry                   \\
+		0x24            & ANDI              & Short Imm+Shift & NZ             & AND short immediate                             \\
+		0x25            & ORRI              & Short Imm+Shift & NZ             & OR short immediate                              \\
+		0x26            & XORI              & Short Imm+Shift & NZ             & XOR short immediate                             \\
+		0x27            & LOAD              & Short Imm+Shift & --             & Undocumented                                    \\
+		0x28            & --                & --              & --             & Undocumented                                    \\
+		0x29            & --                & --              & --             & Undocumented                                    \\
+		0x2A            & CMPI              & Short Imm+Shift & NZCV           & Compare short immediate                         \\
+		0x2B            & --                & --              & --             & Undocumented                                    \\
+		0x2C            & TSAI              & Short Imm+Shift & NZ             & Test AND short immediate                        \\
+		0x2D            & --                & --              & --             & Undocumented                                    \\
+		0x2E            & TSXI              & Short Imm+Shift & NZ             & Test XOR short immediate                        \\
+		0x2F            & COPI              & Short Imm+Shift & --             & Coprocessor call short imm                      \\
 		\midrule
-		0x30            & ADDR              & Register        & NZCV           & Add register                  \\
-		0x31            & ADCR              & Register        & NZCV           & Add register with carry       \\
-		0x32            & SUBR              & Register        & NZCV           & Subtract register             \\
-		0x33            & SBCR              & Register        & NZCV           & Subtract register with carry  \\
-		0x34            & ANDR              & Register        & NZ             & AND register                  \\
-		0x35            & ORRR              & Register        & NZ             & OR register                   \\
-		0x36            & XORR              & Register        & NZ             & XOR register                  \\
-		0x37            & LOAD              & Register        & --             & Load from register (move)     \\
-		0x38            & --                & --              & --             & Undocumented                  \\
-		0x39            & --                & --              & --             & Undocumented                  \\
-		0x3A            & CMPR              & Register        & NZCV           & Compare register              \\
-		0x3B            & --                & --              & --             & Undocumented                  \\
-		0x3C            & TSAR              & Register        & NZ             & Test AND register             \\
-		0x3D            & --                & --              & --             & Undocumented                  \\
-		0x3E            & TSXR              & Register        & NZ             & Test XOR register             \\
-		0x3F            & COPR              & Register        & --             & Coprocessor call register     \\
+		0x30            & ADDR              & Register        & NZCV           & Add register                                    \\
+		0x31            & ADCR              & Register        & NZCV           & Add register with carry                         \\
+		0x32            & SUBR              & Register        & NZCV           & Subtract register                               \\
+		0x33            & SBCR              & Register        & NZCV           & Subtract register with carry                    \\
+		0x34            & ANDR              & Register        & NZ             & AND register                                    \\
+		0x35            & ORRR              & Register        & NZ             & OR register                                     \\
+		0x36            & XORR              & Register        & NZ             & XOR register                                    \\
+		0x37            & LOAD              & Register        & --             & Load from register (move)                       \\
+		0x38            & --                & --              & --             & Undocumented                                    \\
+		0x39            & --                & --              & --             & Undocumented                                    \\
+		0x3A            & CMPR              & Register        & NZCV           & Compare register                                \\
+		0x3B            & --                & --              & --             & Undocumented                                    \\
+		0x3C            & TSAR              & Register        & NZ             & Test AND register                               \\
+		0x3D            & --                & --              & --             & Undocumented                                    \\
+		0x3E            & TSXR              & Register        & NZ             & Test XOR register                               \\
+		0x3F            & COPR              & Register        & --             & Coprocessor call register                       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Complete SIRCIS Instruction Set}
@@ -132,12 +132,12 @@ opcodes:
 	\centering
 	\begin{tabular}{llp{7cm}}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Assembles To}     & \textbf{Purpose}       \\
+		\textbf{Meta-Instruction} & \textbf{Assembles To}      & \textbf{Purpose}       \\
 		\midrule
-		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
-		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
+		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}      & No operation           \\
+		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)}  & Return from subroutine \\
 		\mnemonic{WAIT}           & \texttt{COPI r1, \#0x1900} & Wait for interrupt     \\
-		\mnemonic{RETE}           & \texttt{COP \#0x1A00}     & Return from exception  \\
+		\mnemonic{RETE}           & \texttt{COP \#0x1A00}      & Return from exception  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instructions}

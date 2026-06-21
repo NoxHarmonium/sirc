@@ -9,8 +9,8 @@ multiply or divide values by powers of 2, extract bit fields, or perform bit rot
 Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
 before being used in an ALU operation—all within a single instruction.
 
-Shift operations are only applied to source operands. A shift cannot be applied to the result of an
-operation before register writeback.
+Shift operations are only applied to source operands. A shift cannot be applied to the result of an operation before
+register writeback.
 
 \textbf{Note:} By default, when shifts are used with ALU instructions (apart from the SHFT meta instruction), the status register flags are updated based on the ALU operation result, not the shift. However, you can manually control this behavior using the status override syntax (see Section~\ref{sec:status-override}).
 

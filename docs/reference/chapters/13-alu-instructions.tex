@@ -52,40 +52,40 @@ are not legal for this instruction family.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                 \\
 		\midrule
-		ADD  & \texttt{ADDI rD, \#imm16} & 0x00 & Writes result \\
-		ADD  & \texttt{ADDI rD, \#imm8, shift} & 0x20 & Writes result \\
-		ADD  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30 & Writes result \\
-		ADC  & \texttt{ADCI rD, \#imm16} & 0x01 & Writes result \\
-		ADC  & \texttt{ADCI rD, \#imm8, shift} & 0x21 & Writes result \\
-		ADC  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31 & Writes result \\
-		SUB  & \texttt{SUBI rD, \#imm16} & 0x02 & Writes result \\
-		SUB  & \texttt{SUBI rD, \#imm8, shift} & 0x22 & Writes result \\
-		SUB  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32 & Writes result \\
-		SBC  & \texttt{SBCI rD, \#imm16} & 0x03 & Writes result \\
-		SBC  & \texttt{SBCI rD, \#imm8, shift} & 0x23 & Writes result \\
-		SBC  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33 & Writes result \\
-		AND  & \texttt{ANDI rD, \#imm16} & 0x04 & Writes result \\
-		AND  & \texttt{ANDI rD, \#imm8, shift} & 0x24 & Writes result \\
-		AND  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34 & Writes result \\
-		ORR  & \texttt{ORRI rD, \#imm16} & 0x05 & Writes result \\
-		ORR  & \texttt{ORRI rD, \#imm8, shift} & 0x25 & Writes result \\
-		ORR  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35 & Writes result \\
-		XOR  & \texttt{XORI rD, \#imm16} & 0x06 & Writes result \\
-		XOR  & \texttt{XORI rD, \#imm8, shift} & 0x26 & Writes result \\
-		XOR  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36 & Writes result \\
-		LOAD & \texttt{LOAD rD, \#imm16} & 0x07 & Writes result; preserves flags \\
-		LOAD & \texttt{LOAD rD, rS} & 0x37 & Writes result; preserves flags \\
-		CMP  & \texttt{CMPI rS, \#imm16} & 0x0A & Updates flags only \\
-		CMP  & \texttt{CMPI rS, \#imm8, shift} & 0x2A & Updates flags only \\
-		CMP  & \texttt{CMPR rS1, rS2[, shift]} & 0x3A & Updates flags only \\
-		TSA  & \texttt{TSAI rS, \#imm16} & 0x0C & Updates flags only \\
-		TSA  & \texttt{TSAI rS, \#imm8, shift} & 0x2C & Updates flags only \\
-		TSA  & \texttt{TSAR rS1, rS2[, shift]} & 0x3C & Updates flags only \\
-		TSX  & \texttt{TSXI rS, \#imm16} & 0x0E & Updates flags only \\
-		TSX  & \texttt{TSXI rS, \#imm8, shift} & 0x2E & Updates flags only \\
-		TSX  & \texttt{TSXR rS1, rS2[, shift]} & 0x3E & Updates flags only \\
+		ADD                  & \texttt{ADDI rD, \#imm16}           & 0x00              & Writes result                  \\
+		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & 0x20              & Writes result                  \\
+		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30              & Writes result                  \\
+		ADC                  & \texttt{ADCI rD, \#imm16}           & 0x01              & Writes result                  \\
+		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & 0x21              & Writes result                  \\
+		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31              & Writes result                  \\
+		SUB                  & \texttt{SUBI rD, \#imm16}           & 0x02              & Writes result                  \\
+		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & 0x22              & Writes result                  \\
+		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32              & Writes result                  \\
+		SBC                  & \texttt{SBCI rD, \#imm16}           & 0x03              & Writes result                  \\
+		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & 0x23              & Writes result                  \\
+		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33              & Writes result                  \\
+		AND                  & \texttt{ANDI rD, \#imm16}           & 0x04              & Writes result                  \\
+		AND                  & \texttt{ANDI rD, \#imm8, shift}     & 0x24              & Writes result                  \\
+		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34              & Writes result                  \\
+		ORR                  & \texttt{ORRI rD, \#imm16}           & 0x05              & Writes result                  \\
+		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & 0x25              & Writes result                  \\
+		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35              & Writes result                  \\
+		XOR                  & \texttt{XORI rD, \#imm16}           & 0x06              & Writes result                  \\
+		XOR                  & \texttt{XORI rD, \#imm8, shift}     & 0x26              & Writes result                  \\
+		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36              & Writes result                  \\
+		LOAD                 & \texttt{LOAD rD, \#imm16}           & 0x07              & Writes result; preserves flags \\
+		LOAD                 & \texttt{LOAD rD, rS}                & 0x37              & Writes result; preserves flags \\
+		CMP                  & \texttt{CMPI rS, \#imm16}           & 0x0A              & Updates flags only             \\
+		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & 0x2A              & Updates flags only             \\
+		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & 0x3A              & Updates flags only             \\
+		TSA                  & \texttt{TSAI rS, \#imm16}           & 0x0C              & Updates flags only             \\
+		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & 0x2C              & Updates flags only             \\
+		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & 0x3C              & Updates flags only             \\
+		TSX                  & \texttt{TSXI rS, \#imm16}           & 0x0E              & Updates flags only             \\
+		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & 0x2E              & Updates flags only             \\
+		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & 0x3E              & Updates flags only             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}
@@ -107,16 +107,16 @@ useful effect on the loaded value.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic} & \textbf{Definition} \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                    \\
 		\midrule
-		Condition false & The instruction is skipped and has no side effects. Registers and status flags are preserved. \\
-		Immediate format & The left operand is the named register. The right operand is the encoded 16-bit immediate. \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
-		Register format & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}. \\
-		Test variants & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back. \\
-		LOAD & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags. \\
-		Timing & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states. \\
-		Exceptions & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                          \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                             \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                           \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                         \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                           \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                         \\
+		Exceptions             & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
@@ -137,19 +137,19 @@ Most ALU instructions update the status register flags:
 	\centering
 	\begin{tabular}{llllllp{5.5cm}}
 		\toprule
-		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning} \\
+		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning}                                                   \\
 		\midrule
-		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow. \\
-		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out. \\
-		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs. \\
+		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow.                              \\
+		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out.                                   \\
+		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs.                                     \\
 		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
-		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded. \\
-		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded. \\
-		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded. \\
-		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved. \\
+		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded.                            \\
+		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded.                            \\
+		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded.                            \\
+		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved.                                        \\
 		\bottomrule
 	\end{tabular}
 	\caption{ALU Status Flag Effects}
@@ -157,8 +157,8 @@ Most ALU instructions update the status register flags:
 \end{table}
 
 See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
-flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result; see
-Chapter~\ref{ch:shift-operations} for the shifter flag rules.
+flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result;
+see Chapter~\ref{ch:shift-operations} for the shifter flag rules.
 
 \subsection{Manual Flag Update Control}
 
@@ -323,8 +323,8 @@ SR.V = signed_overflow
 	\textbf{Description:}
 
 	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs
-	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
+	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
+	operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
 
@@ -378,9 +378,9 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Subtracts the second operand and borrow from the first operand. In short immediate format with
-	shift, the destination register is shifted before subtracting the immediate. Used for multi-precision subtraction to
-	propagate borrows from lower-order to higher-order subtractions.
+	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
+	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
+	lower-order to higher-order subtractions.
 
 	\textbf{Flags:} N Z C V
 
@@ -645,7 +645,8 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\item Does not update flags, unlike \mnemonic{ADD}
 		\item Most efficient way to move data between registers
 		\item For 16-bit constants, use immediate form
-		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or \mnemonic{ORRI}
+		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or
+		      \mnemonic{ORRI}
 	\end{itemize}
 \end{instructionbox}
 

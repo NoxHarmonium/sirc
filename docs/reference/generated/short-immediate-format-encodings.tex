@@ -1,32 +1,32 @@
 \begin{table}[H]
-\centering
-\tiny
-\begin{tabular}{lccccccccc}
-\toprule
-\textbf{Instruction} & \textbf{Op} & \textbf{Reg} & \textbf{Imm} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex} \\
-\midrule
-\texttt{ADDI r1, \#2, LSL \#3} & 0x20 & 0x1 & 0x02 & 0 & 001 & 0x3 & 0b01 & 0x0 & \texttt{0x804084D0} \\
-& (100000) & (0001) & (00000010) & (0) & (001) & (0011) & (01) & (0000) & \\
-\midrule
-\texttt{ORRI r2, \#1, LSL \#10} & 0x25 & 0x2 & 0x01 & 0 & 001 & 0xA & 0b01 & 0x0 & \texttt{0x94804690} \\
-& (100101) & (0010) & (00000001) & (0) & (001) & (1010) & (01) & (0000) & \\
-\midrule
-\texttt{ANDI r3, \#7, ASR \#2} & 0x24 & 0x3 & 0x07 & 0 & 100 & 0x2 & 0b01 & 0x0 & \texttt{0x90C1D090} \\
-& (100100) & (0011) & (00000111) & (0) & (100) & (0010) & (01) & (0000) & \\
-\midrule
-\texttt{SUBI r4, \#5, LSL r2} & 0x22 & 0x4 & 0x05 & 1 & 001 & 0x2 & 0b01 & 0x0 & \texttt{0x89016490} \\
-& (100010) & (0100) & (00000101) & (1) & (001) & (0010) & (01) & (0000) & \\
-\midrule
-\texttt{XORI|!= r7, \#15, LSR \#4} & 0x26 & 0x7 & 0x0F & 0 & 010 & 0x4 & 0b01 & 0x2 & \texttt{0x99C3C912} \\
-& (100110) & (0111) & (00001111) & (0) & (010) & (0100) & (01) & (0010) & \\
-\midrule
-\texttt{CMPI|NS r1, \#8, RTL r3} & 0x2A & 0x1 & 0x08 & 1 & 101 & 0x3 & 0b01 & 0x5 & \texttt{0xA84234D5} \\
-& (101010) & (0001) & (00001000) & (1) & (101) & (0011) & (01) & (0101) & \\
-\midrule
-\texttt{SHFT r3, RTR \#5} & 0x25 & 0x3 & 0x00 & 0 & 110 & 0x5 & 0b10 & 0x0 & \texttt{0x94C01960} \\
-& (100101) & (0011) & (00000000) & (0) & (110) & (0101) & (10) & (0000) & \\
-\bottomrule
-\end{tabular}
-\caption{Short Immediate Format Encoding Examples}
-\label{tab:short-imm-format-examples}
+	\centering
+	\tiny
+	\begin{tabular}{lccccccccc}
+		\toprule
+		\textbf{Instruction}               & \textbf{Op} & \textbf{Reg} & \textbf{Imm} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex}        \\
+		\midrule
+		\texttt{ADDI r1, \#2, LSL \#3}     & 0x20        & 0x1          & 0x02         & 0           & 001         & 0x3         & 0b01        & 0x0           & \texttt{0x804084D0} \\
+		                                   & (100000)    & (0001)       & (00000010)   & (0)         & (001)       & (0011)      & (01)        & (0000)        &                     \\
+		\midrule
+		\texttt{ORRI r2, \#1, LSL \#10}    & 0x25        & 0x2          & 0x01         & 0           & 001         & 0xA         & 0b01        & 0x0           & \texttt{0x94804690} \\
+		                                   & (100101)    & (0010)       & (00000001)   & (0)         & (001)       & (1010)      & (01)        & (0000)        &                     \\
+		\midrule
+		\texttt{ANDI r3, \#7, ASR \#2}     & 0x24        & 0x3          & 0x07         & 0           & 100         & 0x2         & 0b01        & 0x0           & \texttt{0x90C1D090} \\
+		                                   & (100100)    & (0011)       & (00000111)   & (0)         & (100)       & (0010)      & (01)        & (0000)        &                     \\
+		\midrule
+		\texttt{SUBI r4, \#5, LSL r2}      & 0x22        & 0x4          & 0x05         & 1           & 001         & 0x2         & 0b01        & 0x0           & \texttt{0x89016490} \\
+		                                   & (100010)    & (0100)       & (00000101)   & (1)         & (001)       & (0010)      & (01)        & (0000)        &                     \\
+		\midrule
+		\texttt{XORI|!= r7, \#15, LSR \#4} & 0x26        & 0x7          & 0x0F         & 0           & 010         & 0x4         & 0b01        & 0x2           & \texttt{0x99C3C912} \\
+		                                   & (100110)    & (0111)       & (00001111)   & (0)         & (010)       & (0100)      & (01)        & (0010)        &                     \\
+		\midrule
+		\texttt{CMPI|NS r1, \#8, RTL r3}   & 0x2A        & 0x1          & 0x08         & 1           & 101         & 0x3         & 0b01        & 0x5           & \texttt{0xA84234D5} \\
+		                                   & (101010)    & (0001)       & (00001000)   & (1)         & (101)       & (0011)      & (01)        & (0101)        &                     \\
+		\midrule
+		\texttt{SHFT r3, RTR \#5}          & 0x25        & 0x3          & 0x00         & 0           & 110         & 0x5         & 0b10        & 0x0           & \texttt{0x94C01960} \\
+		                                   & (100101)    & (0011)       & (00000000)   & (0)         & (110)       & (0101)      & (10)        & (0000)        &                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Short Immediate Format Encoding Examples}
+	\label{tab:short-imm-format-examples}
 \end{table}

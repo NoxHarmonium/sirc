@@ -19,7 +19,7 @@ big-endian byte order: the most significant byte appears first.
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Value} & \textbf{First byte} & \textbf{Second byte} \\
+		\textbf{Value}  & \textbf{First byte} & \textbf{Second byte} \\
 		\midrule
 		\texttt{0x1234} & \texttt{0x12}       & \texttt{0x34}        \\
 		\texttt{0xFF80} & \texttt{0xFF}       & \texttt{0x80}        \\
@@ -30,8 +30,8 @@ big-endian byte order: the most significant byte appears first.
 \end{table}
 
 Multi-word quantities are stored with the most significant word at the lowest word address. This applies to
-instructions, exception vectors, saved addresses, and any software-defined multi-word integer convention that chooses to
-use the architectural order.
+instructions, exception vectors, saved addresses, and any software-defined multi-word integer convention that chooses
+to use the architectural order.
 
 \section{Address Values}
 
@@ -114,13 +114,13 @@ is interpreted as signed, unsigned, or bitwise data.
 	\centering
 	\begin{tabularx}{\textwidth}{llX}
 		\toprule
-		\textbf{Use} & \textbf{Width} & \textbf{Interpretation} \\
+		\textbf{Use}                   & \textbf{Width} & \textbf{Interpretation}                                              \\
 		\midrule
-		ALU arithmetic immediate & 16 bits & Two's-complement operand; result is truncated to 16 bits \\
-		ALU arithmetic short immediate & 8 bits & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF} \\
-		ALU logical immediates & 16 or 8 bits & Bit mask; no sign interpretation is applied by the logical operation \\
-		Memory displacements & 16 bits & Two's-complement offset added to the low address word \\
-		Coprocessor operands & 16 or 8 bits & Coprocessor-defined command or parameter bits \\
+		ALU arithmetic immediate       & 16 bits        & Two's-complement operand; result is truncated to 16 bits             \\
+		ALU arithmetic short immediate & 8 bits         & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF}      \\
+		ALU logical immediates         & 16 or 8 bits   & Bit mask; no sign interpretation is applied by the logical operation \\
+		Memory displacements           & 16 bits        & Two's-complement offset added to the low address word                \\
+		Coprocessor operands           & 16 or 8 bits   & Coprocessor-defined command or parameter bits                        \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Immediate Field Interpretation}
@@ -139,8 +139,9 @@ General-purpose register arithmetic is performed modulo $2^{16}$. Arithmetic con
 
 Address calculation for memory, effective-address, branch, jump, and auto-update operations adds offsets to the low
 word of the selected address register pair. The high address-register word is not changed by ordinary displacement,
-pre-decrement, or post-increment calculation. If the low word overflows or underflows and \statusbit{TrapOnAddressOverflow}
-is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps modulo $2^{16}$.
+pre-decrement, or post-increment calculation. If the low word overflows or underflows and
+\statusbit{TrapOnAddressOverflow} is set, the instruction raises a segment-overflow fault. If the bit is clear, the low
+word wraps modulo $2^{16}$.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an

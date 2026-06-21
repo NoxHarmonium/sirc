@@ -7,20 +7,20 @@ entry usable as an implementation contract, not only as programmer guidance.
 \section{Instruction Entry Fields}
 
 \begin{description}
-	\item[Mnemonic] The assembly mnemonic or mnemonic family. Immediate and register variants are listed together when
-	      they perform the same operation.
+	\item[Mnemonic] The assembly mnemonic or mnemonic family. Immediate and register variants are listed together when they
+	      perform the same operation.
 	\item[Opcodes] The 6-bit opcode values for each supported instruction format.
-	\item[Syntax] The accepted assembler forms. Meta-instructions and assembler conveniences are called out separately
-	      from real CPU instruction encodings.
+	\item[Syntax] The accepted assembler forms. Meta-instructions and assembler conveniences are called out separately from real
+	      CPU instruction encodings.
 	\item[Operands] The permitted operand kinds and addressing modes for the instruction.
-	\item[Operation] Pseudocode for the architectural effect of the instruction. Arithmetic is performed on 16-bit word
-	      values unless otherwise stated.
+	\item[Operation] Pseudocode for the architectural effect of the instruction. Arithmetic is performed on 16-bit word values
+	      unless otherwise stated.
 	\item[Write-back] Whether the computed result is written to a register, discarded, or used to update control state.
 	\item[Status Flags] The effect on the condition flags in the status register.
 	\item[Condition Codes] All normal instructions may be conditional. If the condition is false, the instruction has no
 	      architectural side effects unless a later instruction description explicitly states otherwise.
-	\item[Exceptions] Faults or traps that can be raised by the instruction. When an exception can occur, the entry should
-	      state whether partial side effects are possible.
+	\item[Exceptions] Faults or traps that can be raised by the instruction. When an exception can occur, the entry should state
+	      whether partial side effects are possible.
 	\item[Timing] The base execution time and any circumstances that add wait states.
 	\item[Privilege] Whether the instruction is available in protected mode, supervisor mode, or both.
 \end{description}
@@ -31,16 +31,16 @@ entry usable as an implementation contract, not only as programmer guidance.
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Notation} & \textbf{Meaning}                                      \\
+		\textbf{Notation} & \textbf{Meaning}                                       \\
 		\midrule
-		\texttt{rD}       & Destination general-purpose register                  \\
-		\texttt{rS}       & Source general-purpose register                       \\
+		\texttt{rD}       & Destination general-purpose register                   \\
+		\texttt{rS}       & Source general-purpose register                        \\
 		\texttt{rS1}      & First source register, usually the left-hand operand   \\
 		\texttt{rS2}      & Second source register, usually the right-hand operand \\
 		\texttt{\#imm16}  & 16-bit immediate word encoded in immediate format      \\
 		\texttt{\#imm8}   & 8-bit immediate encoded in short immediate format      \\
 		\texttt{shift}    & Optional SIRCIS shift definition                       \\
-		\texttt{SR.X}     & Status register field \texttt{X}                      \\
+		\texttt{SR.X}     & Status register field \texttt{X}                       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Description Notation}
@@ -56,12 +56,12 @@ Flag tables use the following symbols:
 	\centering
 	\begin{tabular}{cp{9cm}}
 		\toprule
-		\textbf{Symbol} & \textbf{Meaning}                                         \\
+		\textbf{Symbol} & \textbf{Meaning}                                          \\
 		\midrule
-		\texttt{*}      & Updated from the instruction result                      \\
-		\texttt{0}      & Cleared to zero                                          \\
-		\texttt{1}      & Set to one                                               \\
-		\texttt{-}      & Preserved                                                \\
+		\texttt{*}      & Updated from the instruction result                       \\
+		\texttt{0}      & Cleared to zero                                           \\
+		\texttt{1}      & Set to one                                                \\
+		\texttt{-}      & Preserved                                                 \\
 		\texttt{S}      & Updated from the shifter result when \texttt{[S]} is used \\
 		\bottomrule
 	\end{tabular}
@@ -72,8 +72,8 @@ Flag tables use the following symbols:
 \section{Conditional Execution}
 
 Every encoded instruction contains a condition-code field. If the condition evaluates true, the instruction executes
-normally. If the condition evaluates false, the instruction is skipped: destination registers, address registers, memory,
-the program counter, link register, coprocessor state, and status flags are not modified by that instruction.
+normally. If the condition evaluates false, the instruction is skipped: destination registers, address registers,
+memory, the program counter, link register, coprocessor state, and status flags are not modified by that instruction.
 
 \section{Status Update Overrides}
 
@@ -83,17 +83,17 @@ ALU instructions can select the source of status flag updates with the status up
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Syntax} & \textbf{Encoded AF} & \textbf{Effect}                       \\
+		\textbf{Syntax} & \textbf{Encoded AF} & \textbf{Effect}                      \\
 		\midrule
-		\texttt{[N]}    & \texttt{00}         & Preserve status flags                 \\
-		\texttt{[A]}    & \texttt{01}         & Update flags from the ALU result      \\
-		\texttt{[S]}    & \texttt{10}         & Update flags from the shifter result  \\
-		Reserved        & \texttt{11}         & Reserved for future use               \\
+		\texttt{[N]}    & \texttt{00}         & Preserve status flags                \\
+		\texttt{[A]}    & \texttt{01}         & Update flags from the ALU result     \\
+		\texttt{[S]}    & \texttt{10}         & Update flags from the shifter result \\
+		Reserved        & \texttt{11}         & Reserved for future use              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Status Update Source Encoding}
 	\label{tab:status-update-source-encoding}
 \end{table}
 
-When no override is written, ALU instructions use \texttt{[A]}. Instructions that do not support status updates must not
-use status update override syntax.
+When no override is written, ALU instructions use \texttt{[A]}. Instructions that do not support status updates must
+not use status update override syntax.

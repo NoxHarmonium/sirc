@@ -30,24 +30,23 @@ Not all faults behave the same way with respect to the faulting instruction and 
 three categories:
 
 \begin{description}
-	\item[Retryable faults] The instruction that triggered the fault is cancelled before it takes effect. The link
-	      register stores the address of the faulting instruction. RETE returns to that instruction so it can be
-	      retried (possibly after the fault handler has corrected the conditions that caused the fault, e.g.\ mapping a
-	      page in response to a bus fault).
+	\item[Retryable faults] The instruction that triggered the fault is cancelled before it takes effect. The link register
+	      stores the address of the faulting instruction. RETE returns to that instruction so it can be retried (possibly after
+	      the fault handler has corrected the conditions that caused the fault, e.g.\ mapping a page in response to a bus fault).
 
 	      \textit{Bus Fault, Bus Protection Fault, Alignment Fault, Segment Overflow Fault, Invalid Opcode Fault,
 		      Privilege Violation Fault.}
 
-	\item[Post-instruction faults] The instruction completes normally and its effects are committed before the fault
-	      fires. The link register stores the address of the \textit{next} instruction. RETE advances to that
-	      instruction; the traced instruction is not re-executed.
+	\item[Post-instruction faults] The instruction completes normally and its effects are committed before the fault fires. The
+	      link register stores the address of the \textit{next} instruction. RETE advances to that instruction; the traced
+	      instruction is not re-executed.
 
 	      \textit{Instruction Trace Fault.}
 
-	\item[Exception dispatch faults] Raised during the exception handling machinery itself, not during normal
-	      instruction execution. The link register stores the program counter at the point the fault was detected
-	      within the exception handler. Recovery may require careful state management; these faults often indicate a
-	      hardware misconfiguration or a programming error in an exception handler.
+	\item[Exception dispatch faults] Raised during the exception handling machinery itself, not during normal instruction
+	      execution. The link register stores the program counter at the point the fault was detected within the exception
+	      handler. Recovery may require careful state management; these faults often indicate a hardware misconfiguration or a
+	      programming error in an exception handler.
 
 	      \textit{Level Five Hardware Exception Conflict, Double Fault.}
 \end{description}
@@ -57,34 +56,34 @@ three categories:
 \begin{itemize}
 	\item \textbf{Bus Fault} \textit{(Retryable)} — Raised when an external device asserts the bus error CPU pin.
 
-	      This could happen, for example, if an unmapped address is presented by the CPU and another chip detects this
-	      and raises an error. It could also be used to implement virtual memory: the instruction is aborted and the
-	      program counter is not incremented, so the address can be re-calculated and the operation retried.
+	      This could happen, for example, if an unmapped address is presented by the CPU and another chip detects this and raises
+	      an error. It could also be used to implement virtual memory: the instruction is aborted and the program counter is not
+	      incremented, so the address can be re-calculated and the operation retried.
 
 	\item \textbf{Bus Protection Fault} \textit{(Retryable)} — Raised when an external device asserts the bus
 	      protection error CPU pin.
 
-	      This indicates that the requested address and device are valid, but the operation is disallowed. Examples
-	      include writing to ROM or accessing a protected memory region while the CPU is in protected mode.
+	      This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
+	      writing to ROM or accessing a protected memory region while the CPU is in protected mode.
 
 	\item \textbf{Alignment Fault} \textit{(Retryable)} — Raised when fetching instructions if the program counter
 	      contains an odd word address.
 
-	      This is to simplify fetching: the second word of an instruction is always at \texttt{pl | 0x1}, which
-	      ensures that instructions can never overflow a segment boundary.
+	      This is to simplify fetching: the second word of an instruction is always at \texttt{pl | 0x1}, which ensures that
+	      instructions can never overflow a segment boundary.
 
 	\item \textbf{Segment Overflow Fault} \textit{(Retryable)} — Raised when a computed address would fall outside
 	      the current segment.
 
-	      Only raised if the \texttt{TrapOnAddressOverflow} SR bit is set, since some programs intentionally rely on
-	      address wrap-around. Also raised if the program counter overflows; the phase field of the fault metadata
-	      register distinguishes the two cases.
+	      Only raised if the \texttt{TrapOnAddressOverflow} SR bit is set, since some programs intentionally rely on address
+	      wrap-around. Also raised if the program counter overflows; the phase field of the fault metadata register distinguishes
+	      the two cases.
 
 	\item \textbf{Invalid Opcode Fault} \textit{(Retryable)} — Raised when a co-processor call targets a
 	      non-existent co-processor or uses an invalid opcode.
 
-	      Can be used for forward compatibility: programs written for a future co-processor (e.g.\ a floating-point
-	      unit) will trap on older hardware, and the handler can emulate the operation in software.
+	      Can be used for forward compatibility: programs written for a future co-processor (e.g.\ a floating-point unit) will
+	      trap on older hardware, and the handler can emulate the operation in software.
 
 	\item \textbf{Privilege Violation Fault} \textit{(Retryable)} — Raised when a privileged operation is attempted
 	      while not in supervisor mode:
@@ -98,29 +97,28 @@ three categories:
 	\item \textbf{Instruction Trace Fault} \textit{(Post-instruction)} — Raised after every instruction completes
 	      when the \texttt{TraceMode} SR bit is set.
 
-	      Used for single-step debugging. Because the fault fires after the instruction commits, RETE returns to the
-	      instruction \textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with
-	      all exceptions), so the handler itself is not traced. RETE restores the saved SR, which re-enables tracing
-	      unless the handler explicitly clears T from the saved status register via \texttt{ETTR} before returning.
+	      Used for single-step debugging. Because the fault fires after the instruction commits, RETE returns to the instruction
+	      \textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the
+	      handler itself is not traced. RETE restores the saved SR, which re-enables tracing unless the handler explicitly clears
+	      T from the saved status register via \texttt{ETTR} before returning.
 
 	\item \textbf{Level Five Hardware Exception Conflict} \textit{(Exception dispatch)} — Raised when a level five
 	      hardware exception arrives while one is already being serviced.
 
-	      The windowed link register scheme has no spare register above level 6, so a second L5 cannot be handled
-	      normally. Rather than silently dropping it (which could mask a hardware misconfiguration), the CPU raises
-	      this fault. Level 5 interrupts should be treated as NMIs.
+	      The windowed link register scheme has no spare register above level 6, so a second L5 cannot be handled normally.
+	      Rather than silently dropping it (which could mask a hardware misconfiguration), the CPU raises this fault. Level 5
+	      interrupts should be treated as NMIs.
 
 	\item \textbf{Double Fault} \textit{(Exception dispatch)} — Raised when a fault occurs while another fault is
 	      already being handled.
 
-	      When the CPU is already at fault level (priority 7) and another fault occurs, there is no additional banked
-	      link register available. The fault link register (register 6) is overwritten with the new return address,
-	      losing the original fault's return address. The fault metadata register (register 7) is also overwritten;
-	      it encodes a double-fault flag along with both the current and original fault types.
+	      When the CPU is already at fault level (priority 7) and another fault occurs, there is no additional banked link
+	      register available. The fault link register (register 6) is overwritten with the new return address, losing the
+	      original fault's return address. The fault metadata register (register 7) is also overwritten; it encodes a
+	      double-fault flag along with both the current and original fault types.
 
-	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If a
-	      fault occurs while handling a double fault, another double fault is raised, continuously overwriting the
-	      link registers.
+	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If a fault
+	      occurs while handling a double fault, another double fault is raised, continuously overwriting the link registers.
 
 \end{itemize}
 
@@ -307,25 +305,25 @@ interrupt.
 
 Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). They cannot be disabled via the
 interrupt enable bits in the status register, and will preempt any lower-priority exception handler. However, Level 5
-is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), a L5
-interrupt that arrives while a fault is being handled is \textit{queued} in the pending hardware exceptions register
-rather than serviced immediately.
+is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), a L5 interrupt
+that arrives while a fault is being handled is \textit{queued} in the pending hardware exceptions register rather than
+serviced immediately.
 
-Once the fault handler returns via \texttt{RETE} and the exception level drops back below 6, the pending L5
-interrupt fires normally.
+Once the fault handler returns via \texttt{RETE} and the exception level drops back below 6, the pending L5 interrupt
+fires normally.
 
-This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use
-of the NMI line, fault handlers should be kept as short as possible.
+This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use of the
+NMI line, fault handlers should be kept as short as possible.
 
-Keep in mind that if a second L5 interrupt arrives \textit{while the CPU is already executing an L5 handler}
-(exception level 6), it is not queued. It will raise a Level Five Hardware Exception Conflict fault instead.
-See the fault descriptions above.
+Keep in mind that if a second L5 interrupt arrives \textit{while the CPU is already executing an L5 handler} (exception
+level 6), it is not queued. It will raise a Level Five Hardware Exception Conflict fault instead. See the fault
+descriptions above.
 
 These two rules compose in a non-obvious way: if a fault is raised \textit{inside} an L5 handler and a second L5
-interrupt arrives while that fault is being serviced, the interrupt is queued (priority 7 blocks priority 6). Once
-the fault handler returns via \texttt{RETE} and the exception level drops back to 6, the queued L5 fires — and
-since the CPU is already at level 6 at that point, a Level Five Hardware Exception Conflict fault is raised then,
-not during the inner fault handler.
+interrupt arrives while that fault is being serviced, the interrupt is queued (priority 7 blocks priority 6). Once the
+fault handler returns via \texttt{RETE} and the exception level drops back to 6, the queued L5 fires — and since the
+CPU is already at level 6 at that point, a Level Five Hardware Exception Conflict fault is raised then, not during the
+inner fault handler.
 
 \section{Exception Processing}
 
@@ -448,14 +446,14 @@ system control.
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege} & \textbf{Purpose} \\
+		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege} & \textbf{Purpose}                                 \\
 		\midrule
-		\mnemonic{EXCP}      & 0x1             & User                & Trigger a software exception (trap) \\
-		\mnemonic{WAIT}      & 0x9             & Supervisor          & Enter wait state until an exception occurs \\
-		\mnemonic{RETE}      & 0xA             & Supervisor          & Return from an exception handler \\
-		\mnemonic{RSET}      & 0xB             & Supervisor          & Reset CPU state and jump to reset vector \\
-		\mnemonic{ETFR}      & 0xC             & Supervisor          & Copy saved exception state from a link register \\
-		\mnemonic{ETTR}      & 0xD             & Supervisor          & Write CPU register state back to a link register \\
+		\mnemonic{EXCP}      & 0x1             & User               & Trigger a software exception (trap)              \\
+		\mnemonic{WAIT}      & 0x9             & Supervisor         & Enter wait state until an exception occurs       \\
+		\mnemonic{RETE}      & 0xA             & Supervisor         & Return from an exception handler                 \\
+		\mnemonic{RSET}      & 0xB             & Supervisor         & Reset CPU state and jump to reset vector         \\
+		\mnemonic{ETFR}      & 0xC             & Supervisor         & Copy saved exception state from a link register  \\
+		\mnemonic{ETTR}      & 0xD             & Supervisor         & Write CPU register state back to a link register \\
 		\bottomrule
 	\end{tabular}
 	\caption{Exception Coprocessor Instruction Summary}
