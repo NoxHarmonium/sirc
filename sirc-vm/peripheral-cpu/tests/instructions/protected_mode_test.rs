@@ -110,7 +110,32 @@ fn conditional_false_privileged_writes_do_not_fault() {
 }
 
 #[test]
-fn ldea_masks_destination_high_word_in_protected_mode() {
+fn ldea_allows_same_segment_address_write_in_protected_mode() {
+    let ldea = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: AddressRegisterName::Address.to_register_index(),
+        value: 0x0004,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::StackPointer.to_register_index(),
+    });
+    let result = run_instruction(&ldea, |registers, _| {
+        enable_protected_mode(registers);
+        registers.set_address_register_at_index(
+            AddressRegisterName::Address.to_register_index(),
+            0x00AA_2222,
+        );
+        registers.set_address_register_at_index(
+            AddressRegisterName::StackPointer.to_register_index(),
+            0xAAAA_1000,
+        );
+    });
+    assert_no_fault(&result);
+    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0x1004, result.registers.al);
+}
+
+#[test]
+fn ldea_faults_when_destination_high_word_would_change_in_protected_mode() {
     let ldea = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
         register: AddressRegisterName::Address.to_register_index(),
@@ -129,9 +154,9 @@ fn ldea_masks_destination_high_word_in_protected_mode() {
             0xAAAA_1000,
         );
     });
-    assert_no_fault(&result);
+    assert_privilege_fault(&result);
     assert_eq!(0x0011, result.registers.ah);
-    assert_eq!(0x1004, result.registers.al);
+    assert_eq!(0x2222, result.registers.al);
 }
 
 #[test]
@@ -159,7 +184,29 @@ fn ldea_writes_destination_high_word_in_supervisor_mode() {
 }
 
 #[test]
-fn long_jump_masks_program_counter_high_word_in_protected_mode() {
+fn long_jump_allows_same_segment_target_in_protected_mode() {
+    let ljmp = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
+        value: 0x0004,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::Address.to_register_index(),
+    });
+    let result = run_instruction(&ljmp, |registers, _| {
+        enable_protected_mode(registers);
+        registers.ph = 0x00CC;
+        registers.set_address_register_at_index(
+            AddressRegisterName::Address.to_register_index(),
+            0x00CC_1000,
+        );
+    });
+    assert_no_fault(&result);
+    assert_eq!(0x00CC, result.registers.ph);
+    assert_eq!(0x1004, result.registers.pl);
+}
+
+#[test]
+fn long_jump_faults_when_program_counter_high_word_would_change_in_protected_mode() {
     let ljmp = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -175,13 +222,13 @@ fn long_jump_masks_program_counter_high_word_in_protected_mode() {
             0xAAAA_1000,
         );
     });
-    assert_no_fault(&result);
+    assert_privilege_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
-    assert_eq!(0x1004, result.registers.pl);
+    assert_ne!(0x1004, result.registers.pl);
 }
 
 #[test]
-fn ldea_pre_decrement_masks_program_counter_and_source_high_words_in_protected_mode() {
+fn ldea_pre_decrement_allows_same_segment_source_and_target_in_protected_mode() {
     let ldea_pre_decrement = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -194,18 +241,69 @@ fn ldea_pre_decrement_masks_program_counter_and_source_high_words_in_protected_m
         registers.ph = 0x00CC;
         registers.set_address_register_at_index(
             AddressRegisterName::Address.to_register_index(),
-            0xAAAA_1000,
+            0x00CC_1000,
         );
     });
     assert_no_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
     assert_eq!(0x1003, result.registers.pl);
-    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0x00CC, result.registers.ah);
     assert_eq!(0x0FFF, result.registers.al);
 }
 
 #[test]
-fn subroutine_calls_mask_link_and_program_counter_high_words_in_protected_mode() {
+fn subroutine_calls_allow_same_segment_writes_in_protected_mode() {
+    let branch_subroutine = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
+        value: 0x0004,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::Address.to_register_index(),
+    });
+    let result = run_instruction(&branch_subroutine, |registers, _| {
+        enable_protected_mode(registers);
+        registers.ph = 0x00CC;
+        registers.lh = 0x00CC;
+        registers.ll = 0x8888;
+        registers.set_address_register_at_index(
+            AddressRegisterName::Address.to_register_index(),
+            0x00CC_1000,
+        );
+    });
+    assert_no_fault(&result);
+    assert_eq!(0x00CC, result.registers.ph);
+    assert_eq!(0x1004, result.registers.pl);
+    assert_eq!(0x00CC, result.registers.ah);
+    assert_eq!(0x1001, result.registers.al);
+    assert_eq!(0x00CC, result.registers.lh);
+    assert_eq!(0x0002, result.registers.ll);
+
+    let long_subroutine = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
+        value: 0x0006,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::Address.to_register_index(),
+    });
+    let result = run_instruction(&long_subroutine, |registers, _| {
+        enable_protected_mode(registers);
+        registers.ph = 0x00CC;
+        registers.lh = 0x00CC;
+        registers.ll = 0x8888;
+        registers.set_address_register_at_index(
+            AddressRegisterName::Address.to_register_index(),
+            0x00CC_4000,
+        );
+    });
+    assert_no_fault(&result);
+    assert_eq!(0x00CC, result.registers.ph);
+    assert_eq!(0x4006, result.registers.pl);
+    assert_eq!(0x00CC, result.registers.lh);
+    assert_eq!(0x0002, result.registers.ll);
+}
+
+#[test]
+fn subroutine_calls_fault_when_link_high_word_would_change_in_protected_mode() {
     let branch_subroutine = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -220,39 +318,16 @@ fn subroutine_calls_mask_link_and_program_counter_high_words_in_protected_mode()
         registers.ll = 0x8888;
         registers.set_address_register_at_index(
             AddressRegisterName::Address.to_register_index(),
-            0xAAAA_1000,
+            0x00CC_1000,
         );
     });
-    assert_no_fault(&result);
+    assert_privilege_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
-    assert_eq!(0x1004, result.registers.pl);
-    assert_eq!(0x00AA, result.registers.ah);
-    assert_eq!(0x1001, result.registers.al);
+    assert_ne!(0x1004, result.registers.pl);
+    assert_eq!(0x00CC, result.registers.ah);
+    assert_eq!(0x1000, result.registers.al);
     assert_eq!(0x7777, result.registers.lh);
-    assert_eq!(0x0002, result.registers.ll);
-
-    let long_subroutine = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate,
-        register: AddressRegisterName::ProgramCounter.to_register_index(),
-        value: 0x0006,
-        condition_flag: ConditionFlags::Always,
-        additional_flags: AddressRegisterName::Address.to_register_index(),
-    });
-    let result = run_instruction(&long_subroutine, |registers, _| {
-        enable_protected_mode(registers);
-        registers.ph = 0x00CC;
-        registers.lh = 0x7777;
-        registers.ll = 0x8888;
-        registers.set_address_register_at_index(
-            AddressRegisterName::Address.to_register_index(),
-            0xBBBB_4000,
-        );
-    });
-    assert_no_fault(&result);
-    assert_eq!(0x00CC, result.registers.ph);
-    assert_eq!(0x4006, result.registers.pl);
-    assert_eq!(0x7777, result.registers.lh);
-    assert_eq!(0x0002, result.registers.ll);
+    assert_eq!(0x8888, result.registers.ll);
 }
 
 #[test]
@@ -283,7 +358,27 @@ fn subroutine_calls_write_high_words_in_supervisor_mode() {
 }
 
 #[test]
-fn rets_restores_only_program_counter_low_word_in_protected_mode() {
+fn rets_restores_same_segment_return_address_in_protected_mode() {
+    let rets = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: AddressRegisterName::ProgramCounter.to_register_index(),
+        value: 0x0000,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::LinkRegister.to_register_index(),
+    });
+    let result = run_instruction(&rets, |registers, _| {
+        enable_protected_mode(registers);
+        registers.ph = 0x00CC;
+        registers.lh = 0x00CC;
+        registers.ll = 0x4320;
+    });
+    assert_no_fault(&result);
+    assert_eq!(0x00CC, result.registers.ph);
+    assert_eq!(0x4320, result.registers.pl);
+}
+
+#[test]
+fn rets_faults_when_return_address_high_word_would_change_in_protected_mode() {
     let rets = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
         register: AddressRegisterName::ProgramCounter.to_register_index(),
@@ -297,9 +392,9 @@ fn rets_restores_only_program_counter_low_word_in_protected_mode() {
         registers.lh = 0xAAAA;
         registers.ll = 0x4320;
     });
-    assert_no_fault(&result);
+    assert_privilege_fault(&result);
     assert_eq!(0x00CC, result.registers.ph);
-    assert_eq!(0x4320, result.registers.pl);
+    assert_ne!(0x4320, result.registers.pl);
 }
 
 #[test]

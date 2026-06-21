@@ -1,10 +1,14 @@
 use peripheral_bus::device::BusAssertions;
 
 use crate::{
-    coprocessors::processing_unit::{
-        definitions::{Instruction, ShiftOperand, StatusRegisterUpdateSource},
-        stages::{alu::perform_shift, shared::ShiftParameters},
+    coprocessors::{
+        exception_unit::definitions::Faults,
+        processing_unit::{
+            definitions::{Instruction, ShiftOperand, StatusRegisterUpdateSource},
+            stages::{alu::perform_shift, shared::ShiftParameters},
+        },
     },
+    raise_fault,
     registers::{
         sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, StatusRegisterFields,
         SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
@@ -29,6 +33,14 @@ enum WriteBackInstructionType {
 }
 
 pub struct WriteBackExecutor;
+
+#[derive(Clone, Copy)]
+struct AddressRegisterWrite {
+    high_index: u8,
+    low_index: u8,
+    high_value: u16,
+    low_value: u16,
+}
 
 fn get_register_value(registers: &Registers, index: u8) -> u16 {
     let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
@@ -61,17 +73,30 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
     }
 }
 
-fn set_address_register_value(
+fn set_address_register_values(
     registers: &mut Registers,
-    high_index: u8,
-    low_index: u8,
-    high_value: u16,
-    low_value: u16,
+    eu_registers: &mut ExceptionUnitRegisters,
+    bus_assertions: &BusAssertions,
+    writes: &[AddressRegisterWrite],
 ) {
-    if !sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) {
-        registers[high_index] = high_value;
+    let protected_mode = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
+    let changes_protected_high_word = protected_mode
+        && writes
+            .iter()
+            .any(|write| registers[write.high_index] != write.high_value);
+
+    if changes_protected_high_word {
+        eu_registers.pending_fault =
+            raise_fault(eu_registers, Faults::PrivilegeViolation, bus_assertions);
+        return;
     }
-    registers[low_index] = low_value;
+
+    for write in writes {
+        if !protected_mode {
+            registers[write.high_index] = write.high_value;
+        }
+        registers[write.low_index] = write.low_value;
+    }
 }
 
 fn do_shift(
@@ -160,7 +185,7 @@ impl StageExecutor for WriteBackExecutor {
     fn execute(
         decoded: &DecodedInstruction,
         registers: &mut Registers,
-        _: &mut ExceptionUnitRegisters,
+        eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
@@ -178,82 +203,108 @@ impl StageExecutor for WriteBackExecutor {
                 update_status_flags(decoded, registers, intermediate_registers);
             }
             WriteBackInstructionType::AddressWrite => {
-                set_address_register_value(
+                set_address_register_values(
                     registers,
-                    decoded.des_ad_h,
-                    decoded.des_ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.alu_output,
+                    eu_registers,
+                    &bus_assertions,
+                    &[AddressRegisterWrite {
+                        high_index: decoded.des_ad_h,
+                        low_index: decoded.des_ad_l,
+                        high_value: decoded.ad_h_,
+                        low_value: intermediate_registers.alu_output,
+                    }],
                 );
             }
             WriteBackInstructionType::AddressWriteWithSourceUpdate => {
-                set_address_register_value(
+                set_address_register_values(
                     registers,
-                    decoded.ad_h,
-                    decoded.ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.address_output,
-                );
-                set_address_register_value(
-                    registers,
-                    decoded.des_ad_h,
-                    decoded.des_ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.alu_output,
+                    eu_registers,
+                    &bus_assertions,
+                    &[
+                        AddressRegisterWrite {
+                            high_index: decoded.ad_h,
+                            low_index: decoded.ad_l,
+                            high_value: decoded.ad_h_,
+                            low_value: intermediate_registers.address_output,
+                        },
+                        AddressRegisterWrite {
+                            high_index: decoded.des_ad_h,
+                            low_index: decoded.des_ad_l,
+                            high_value: decoded.ad_h_,
+                            low_value: intermediate_registers.alu_output,
+                        },
+                    ],
                 );
             }
             WriteBackInstructionType::AddressWriteSubroutine => {
-                set_address_register_value(
+                set_address_register_values(
                     registers,
-                    RegisterName::Lh as u8,
-                    RegisterName::Ll as u8,
-                    decoded.npc_h_,
-                    decoded.npc_l_,
-                );
-                set_address_register_value(
-                    registers,
-                    decoded.des_ad_h,
-                    decoded.des_ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.alu_output,
+                    eu_registers,
+                    &bus_assertions,
+                    &[
+                        AddressRegisterWrite {
+                            high_index: RegisterName::Lh as u8,
+                            low_index: RegisterName::Ll as u8,
+                            high_value: decoded.npc_h_,
+                            low_value: decoded.npc_l_,
+                        },
+                        AddressRegisterWrite {
+                            high_index: decoded.des_ad_h,
+                            low_index: decoded.des_ad_l,
+                            high_value: decoded.ad_h_,
+                            low_value: intermediate_registers.alu_output,
+                        },
+                    ],
                 );
             }
             WriteBackInstructionType::AddressWriteSubroutineWithSourceUpdate => {
-                set_address_register_value(
+                set_address_register_values(
                     registers,
-                    RegisterName::Lh as u8,
-                    RegisterName::Ll as u8,
-                    decoded.npc_h_,
-                    decoded.npc_l_,
-                );
-                set_address_register_value(
-                    registers,
-                    decoded.ad_h,
-                    decoded.ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.address_output,
-                );
-                set_address_register_value(
-                    registers,
-                    decoded.des_ad_h,
-                    decoded.des_ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.alu_output,
+                    eu_registers,
+                    &bus_assertions,
+                    &[
+                        AddressRegisterWrite {
+                            high_index: RegisterName::Lh as u8,
+                            low_index: RegisterName::Ll as u8,
+                            high_value: decoded.npc_h_,
+                            low_value: decoded.npc_l_,
+                        },
+                        AddressRegisterWrite {
+                            high_index: decoded.ad_h,
+                            low_index: decoded.ad_l,
+                            high_value: decoded.ad_h_,
+                            low_value: intermediate_registers.address_output,
+                        },
+                        AddressRegisterWrite {
+                            high_index: decoded.des_ad_h,
+                            low_index: decoded.des_ad_l,
+                            high_value: decoded.ad_h_,
+                            low_value: intermediate_registers.alu_output,
+                        },
+                    ],
                 );
             }
             WriteBackInstructionType::AddressWriteLoadPostIncrement
             | WriteBackInstructionType::AddressWriteStorePreDecrement => {
-                set_address_register_value(
+                set_address_register_values(
                     registers,
-                    decoded.ad_h,
-                    decoded.ad_l,
-                    decoded.ad_h_,
-                    intermediate_registers.address_output,
+                    eu_registers,
+                    &bus_assertions,
+                    &[AddressRegisterWrite {
+                        high_index: decoded.ad_h,
+                        low_index: decoded.ad_l,
+                        high_value: decoded.ad_h_,
+                        low_value: intermediate_registers.address_output,
+                    }],
                 );
             }
             WriteBackInstructionType::CoprocessorCall => {
                 registers.pending_coprocessor_command = intermediate_registers.alu_output;
             }
+        }
+
+        if eu_registers.pending_fault.is_some() {
+            return BusAssertions::default();
         }
 
         // Load from Memory

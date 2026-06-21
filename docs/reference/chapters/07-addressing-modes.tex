@@ -305,8 +305,8 @@ Protected mode restricts writes to the high word of an address register:
 
 \begin{itemize}
 	\item \textbf{Direct high-register writes}: Trigger a privilege violation fault
-	\item \textbf{Address-register-pair write-back}: Preserves the high word and updates only the low word
-	\item \textbf{Post-increment/Pre-decrement}: Can only modify the low word in protected mode
+	\item \textbf{Address-register-pair write-back}: Allowed only when the high word would remain unchanged; otherwise triggers a privilege violation fault
+	\item \textbf{Post-increment/Pre-decrement}: Allowed in protected mode only when the high word would remain unchanged
 \end{itemize}
 
 \subsection{Alignment}

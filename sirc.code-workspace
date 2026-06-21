@@ -35,6 +35,9 @@
     },
     {
       "path": "docs"
+    },
+    {
+      "path": "examples/protected-mode-writeback"
     }
   ],
   "settings": {

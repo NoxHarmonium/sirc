@@ -79,7 +79,7 @@ forms do not accept shift suffixes in the assembler.
 		Status flags & Preserved. Control-flow instructions do not support status update override syntax. \\
 		Timing & 6 cycles, plus any instruction-fetch wait states. These instructions do not perform a data-memory bus access. \\
 		Exceptions & Address calculation can raise segment-overflow faults when trap-on-address-overflow is enabled. \\
-		Privilege & In protected mode, address-register-pair write-back preserves the destination high word and updates only the low word. Direct writes to high address registers still raise a privilege-violation fault. \\
+		Privilege & In protected mode, address-register-pair write-back is allowed only when every written high word would remain unchanged. If any high word would change, the instruction raises a privilege-violation fault instead of completing write-back. Direct writes to high address registers also raise a privilege-violation fault. \\
 		Fault side effects & Program-counter, destination address-register, source auto-update, and link-register updates occur after condition evaluation. If a fault aborts execution before write-back, those effects do not complete. \\
 		\bottomrule
 	\end{tabular}

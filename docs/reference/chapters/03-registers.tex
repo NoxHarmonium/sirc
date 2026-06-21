@@ -203,14 +203,15 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 	      \begin{itemize}
 		      \item Reading is allowed
 		      \item Direct writes trigger a privilege exception
-		      \item Address-register-pair write-back preserves the high word and updates only the low word
+		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a privilege exception
 	      \end{itemize}
 \end{itemize}
 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
 Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP}, \mnemonic{LJSR}, and
-\mnemonic{RETS} remain usable in protected mode, but their address-register-pair write-back cannot alter the high word.
+\mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If their address-register-pair
+write-back would alter a high word, the CPU raises a privilege violation fault.
 
 The status register differs slightly from the high address registers:
 \begin{itemize}

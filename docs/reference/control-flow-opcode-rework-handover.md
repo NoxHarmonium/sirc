@@ -6,7 +6,7 @@ Date: 2026-06-21
 
 This handover covers the proposed cleanup of SIRC-1 control-flow opcodes and the related `0x1_` opcode-map regularisation.
 
-The current ISA has real `BRAN`, `BRSR`, and `LJSR` opcodes, but their architectural behavior overlaps with more general effective-address operations. Now that protected mode handles all address-register-pair control-flow writes by preserving the high word, the original privilege distinction between branch and long-jump forms no longer appears necessary.
+The current ISA has real `BRAN`, `BRSR`, and `LJSR` opcodes, but their architectural behavior overlaps with more general effective-address operations. Now that protected mode checks all address-register-pair control-flow writes by faulting only when a high word would change, the original privilege distinction between branch and long-jump forms no longer appears necessary.
 
 The proposed direction is:
 
@@ -114,7 +114,7 @@ These decisions were made during review.
 - Explicit-destination `LDEL` is neither encouraged nor discouraged; it is a normal documented option for programmers who want it.
 - Aliased register writes are undefined behavior. Rejecting them in the assembler is preferred but deferred with a TODO.
 - Undefined aliasing covers both direct register-half overlap and whole address-register-pair overlap, unless later implementation experience shows that this makes the ISA impractical.
-- Protected mode masks all high address-register writes, including auto-updated source address-register writes.
+- Protected mode allows address-register-pair write-back only when all written high words remain unchanged. If any high word would change, the instruction raises a privilege violation fault and does not complete its write-back.
 - Conditional-false auto-update forms skip all side effects, including destination write-back, source address-register update, link-register update, and memory access. This matches the existing LOAD/STOR stage behavior.
 - Segment-overflow faults suppress write-back side effects. This matches the existing effective-address behavior: the fault is raised during effective-address execution and later phases abort while a pending fault exists.
 - `LDEL` auto-update forms should be documented. If hardware proves too difficult, the architecture can publish an addendum later.
@@ -235,7 +235,7 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 1. Update effective-address execution so new auto-update forms compute both the target address and source address-register update.
 2. Update write-back so new `LDEA` auto-update forms write destination address pair plus updated source pair.
 3. Update write-back so new `LDEL` auto-update forms write link, destination address pair, and updated source pair.
-4. Preserve protected-mode high-word masking for all address-pair write-back paths.
+4. Preserve protected-mode segment safety for all address-pair write-back paths by faulting when a high word would change.
 5. Preserve current conditional-false and segment-overflow side-effect behavior.
 
 ### Phase 5: Alias Lowering and Linker Behavior (Complete)
@@ -246,13 +246,13 @@ This should be handled as a staged change. Avoid doing the simulator, assembler,
 4. Convert assembler `BRSR` parsing to emit `LDEL p, (#offset, p)` for immediate/label PC-relative forms only.
 5. Preserve linker support for PC-relative `RefType::Offset` label references.
 
-### Phase 6: Documentation and Examples (In Progress)
+### Phase 6: Documentation and Examples (Complete)
 
-1. Update opcode map, instruction summary, addressing modes, control-flow chapter, and undefined-behavior appendix. Mostly complete; do one final pass for addressing-mode prose.
+1. Update opcode map, instruction summary, addressing modes, control-flow chapter, and undefined-behavior appendix. Complete.
 2. Replace assembly examples that treat `LJSR` as a real primitive with either `LDEL` or an alias form, depending on context. Complete for invalid old `LJSR (...)` forms found in the manual.
-3. Ensure examples keep using `@label` for symbolic label references. Ongoing broader documentation audit item.
+3. Ensure examples keep using `@label` for symbolic label references. Complete for the examples touched by this change.
 4. Regenerate any generated encoding/opcode tables. Complete for the reference-encodings fixture.
-5. Rebuild the reference manual. Pending verification in the documentation phase.
+5. Rebuild the reference manual. Complete.
 
 ## Test Plan
 
@@ -264,7 +264,7 @@ CPU/simulator tests:
 - New `LDEA` pre-decrement register form updates destination and source pair for non-aliasing registers.
 - New `LDEL` post-increment immediate/register forms update link, explicit destination, and source pair.
 - `LJSR` alias forms update link and program counter through emitted `LDEL p, ...`.
-- Protected mode preserves all high words touched through address-pair write-back.
+- Protected mode permits same-segment address-pair write-back and raises a privilege violation fault when any address-pair write-back would change a high word.
 - Conditional-false forms produce no write-back.
 - Segment-overflow faults suppress write-back side effects.
 
@@ -299,13 +299,13 @@ make -C docs/reference
 
 - `docs/reference/chapters/11-instruction-summary.tex` -- updated
 - `docs/reference/chapters/14-control-flow.tex` -- updated
-- `docs/reference/chapters/07-addressing-modes.tex` -- final prose audit still useful
+- `docs/reference/chapters/07-addressing-modes.tex` -- updated
 - `docs/reference/chapters/appendix-a-opcode-map.tex` -- updated
-- `docs/reference/chapters/appendix-c-undocumented.tex` -- final undefined-behavior audit still useful
+- `docs/reference/chapters/appendix-c-undocumented.tex` -- updated
 - `docs/reference/control-flow-opcode-rework-handover.md` -- updated
 - Generated opcode/encoding tables -- updated
 
 ## Recommended Review Questions
 
-- Before starting Phase 2, scan the parser grammar for ambiguity between `LDEL dest, (...)` and `LJSR src` shorthand forms.
-- Before starting Phase 2, decide whether parser tests should be added near existing opcode parser unit tests or in a new control-flow parser test module.
+- Should aliased register writes remain documented-only undefined behavior for now, or should the assembler reject them in a follow-up change?
+- Should the broader manual example audit move into `docs/reference/manual-handover.md` or a new documentation cleanup handover?
