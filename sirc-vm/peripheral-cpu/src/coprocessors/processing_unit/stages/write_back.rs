@@ -20,6 +20,7 @@ enum WriteBackInstructionType {
     AluToRegister,
     AluStatusOnly,
     AddressWrite,
+    AddressWriteSubroutine,
     AddressWriteLoadPostDecrement,
     AddressWriteStorePreIncrement,
     CoprocessorCall,
@@ -111,7 +112,8 @@ fn decode_write_back_step_instruction_type(
         0x12..=0x13 => WriteBackInstructionType::AddressWriteStorePreIncrement,
         0x14..=0x15 => WriteBackInstructionType::MemoryLoad,
         0x16..=0x17 => WriteBackInstructionType::AddressWriteLoadPostDecrement,
-        0x18..=0x1F => WriteBackInstructionType::AddressWrite,
+        0x18..=0x1B => WriteBackInstructionType::AddressWrite,
+        0x1C..=0x1F => WriteBackInstructionType::AddressWriteSubroutine,
         0x20..=0x27 => WriteBackInstructionType::AluToRegister,
         0x28..=0x2E => WriteBackInstructionType::AluStatusOnly,
         0x2F => WriteBackInstructionType::CoprocessorCall,
@@ -180,6 +182,22 @@ impl StageExecutor for WriteBackExecutor {
                     intermediate_registers.address_output,
                 );
             }
+            WriteBackInstructionType::AddressWriteSubroutine => {
+                set_address_register_value(
+                    registers,
+                    RegisterName::Lh as u8,
+                    RegisterName::Ll as u8,
+                    decoded.npc_h_,
+                    decoded.npc_l_,
+                );
+                set_address_register_value(
+                    registers,
+                    decoded.des_ad_h,
+                    decoded.des_ad_l,
+                    decoded.ad_h_,
+                    intermediate_registers.address_output,
+                );
+            }
             WriteBackInstructionType::AddressWriteLoadPostDecrement
             | WriteBackInstructionType::AddressWriteStorePreIncrement => {
                 set_address_register_value(
@@ -208,6 +226,7 @@ impl StageExecutor for WriteBackExecutor {
             | WriteBackInstructionType::AluToRegister
             | WriteBackInstructionType::AluStatusOnly
             | WriteBackInstructionType::AddressWrite
+            | WriteBackInstructionType::AddressWriteSubroutine
             | WriteBackInstructionType::AddressWriteStorePreIncrement
             | WriteBackInstructionType::CoprocessorCall => {}
         }
