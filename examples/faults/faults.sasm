@@ -122,7 +122,7 @@ LOAD    r7, #0x1
 STOR    (a), r7
 
 ; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
-COPI    r1, #0x4000
+COPI    #0x4000
 
 ; Switch to non privileged mode
 ORRI     sr, #0b0000_0001_0000_0000
@@ -137,7 +137,7 @@ LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
 
 ; Halt CPU
-COPI    r1, #0b0001_0100_1111_1111
+COPI    #0b0001_0100_1111_1111
 
 .ORG 0x0300
 
@@ -210,7 +210,7 @@ ETFR #6
 ADDI    r4, #1
 ; Trigger another invalid opcode fault to test double fault handling
 ; This will cause a fault while already handling a fault
-COPI    r1, #0xF000
+COPI    #0xF000
 
 ; Restore link register
 ETTR #6

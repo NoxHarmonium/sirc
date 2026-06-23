@@ -9,8 +9,8 @@ multiply or divide values by powers of 2, extract bit fields, or perform bit rot
 Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
 before being used in an ALU operation—all within a single instruction.
 
-Shift operations are only applied to source operands. A shift cannot be applied to the result of an
-operation before register writeback.
+Shift operations are only applied to source operands. A shift cannot be applied to the result of an operation before
+register writeback.
 
 \textbf{Note:} By default, when shifts are used with ALU instructions (apart from the SHFT meta instruction), the status register flags are updated based on the ALU operation result, not the shift. However, you can manually control this behavior using the status override syntax (see Section~\ref{sec:status-override}).
 
@@ -305,7 +305,8 @@ When shift operations are used with ALU instructions, the status flags are \text
 reflect the comparison result, not the shift.
 
 To update flags based on the shift operation instead, use the \texttt{[S]} status override modifier (see
-Section~\ref{sec:status-override}), or use the \mnemonic{SHFT} meta-instruction (Chapter~\\ref{ch:meta-instructions}).
+Section~\ref{sec:status-override}), or use the \mnemonic{SHFT} meta-instruction documented in
+Chapter~\ref{ch:alu-instructions}.
 
 \subsection{Carry Flag}
 
@@ -529,13 +530,13 @@ BRAN|>= @r1_was_greater
 
 \subsubsection{SHFT Meta-Instruction}
 
-The \mnemonic{SHFT} meta-instruction (see Chapter~\ref{ch:meta-instructions}) uses the {[}S{]} modifier internally:
+The \mnemonic{SHFT} meta-instruction is the ALU-family shorthand for this common case:
 
 \begin{lstlisting}
-SHFT r1, ASL #3               ; Expands to: ORRI[S] r1, #0, ASL #3
+SHFT r1, LSL #3               ; ORRI[S] r1, #0, LSL #3
 \end{lstlisting}
 
-This provides a clean syntax for shift-only operations with flag updates.
+See Chapter~\ref{ch:alu-instructions} for the full \mnemonic{SHFT} instruction entry.
 
 \subsection{Assembler Syntax Notes}
 

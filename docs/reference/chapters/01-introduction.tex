@@ -76,14 +76,14 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 
 \subsection{Execution Model}
 
-The SIRC-1 executes every instruction through six sequential execution phases (normally one phase per clock cycle).
-For a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
+The SIRC-1 executes every instruction through six sequential execution phases (normally one phase per clock cycle). For
+a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 This fixed six-stage model means that all instructions take 6 clock cycles to complete when bus operations do not
 require wait states, regardless of their complexity. A bus device may hold the current phase by delaying bus
 acknowledgement, adding wait cycles without adding execution phases. While this may seem wasteful for simple register
-operations that don't require memory access, it dramatically simplifies the hardware design by eliminating the need
-for variable-length execution sequences or microcode.
+operations that don't require memory access, it dramatically simplifies the hardware design by eliminating the need for
+variable-length execution sequences or microcode.
 
 \subsection{Coprocessors}
 
@@ -92,10 +92,10 @@ register file. Only one coprocessor can be active at one time and are usually ac
 (except for the "exception unit" which can be activated when physical pins are asserted on the chip). All
 implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor
 0x1. Other coprocessors are optional and will vary depending on which SIRC-1 model you have. The instruction set
-supports up to 16 coprocessors.
-The coprocessor IDs are stable between models, so that programs are cross compatible. For example, coprocessor 0x2 will
-always be the DMA unit. This means if the CPU model is missing a particular coprocessor, and a program requires it,
-the CPU will raise an exception so that the behaviour can be emulated in software.
+supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that programs are cross compatible.
+For example, coprocessor 0x2 will always be the DMA unit. This means if the CPU model is missing a particular
+coprocessor, and a program requires it, the CPU will raise an exception so that the behaviour can be emulated in
+software.
 
 \begin{table}[H]
 	\centering
@@ -107,18 +107,18 @@ the CPU will raise an exception so that the behaviour can be emulated in softwar
 		0x1         & Exception Unit  & No                & Handles interrupts and exceptions            \\
 		0x2         & DMA Unit        & Yes               & Transfers large amounts of data via the bus  \\
 		0x3         & Maths Unit      & Yes               & Performs mathematical operations in hardware \\
-		0x4         & Reserved        & Yes               & TBA 									     \\
-		0x5         & Reserved        & Yes               & TBA 									     \\
-		0x6         & Reserved        & Yes               & TBA 									     \\
-		0x7         & Reserved        & Yes               & TBA 									     \\
-		0x8         & Reserved        & Yes               & TBA 									     \\
-		0x9         & Reserved        & Yes               & TBA 									     \\
-		0xA         & Reserved        & Yes               & TBA 									     \\
-		0xB         & Reserved        & Yes               & TBA 									     \\
-		0xC         & Reserved        & Yes               & TBA 									     \\
-		0xD         & Reserved        & Yes               & TBA 									     \\
-		0xE         & Reserved        & Yes               & TBA 									     \\
-		0xF         & Reserved        & Yes               & TBA 									     \\
+		0x4         & Reserved        & Yes               & TBA                                          \\
+		0x5         & Reserved        & Yes               & TBA                                          \\
+		0x6         & Reserved        & Yes               & TBA                                          \\
+		0x7         & Reserved        & Yes               & TBA                                          \\
+		0x8         & Reserved        & Yes               & TBA                                          \\
+		0x9         & Reserved        & Yes               & TBA                                          \\
+		0xA         & Reserved        & Yes               & TBA                                          \\
+		0xB         & Reserved        & Yes               & TBA                                          \\
+		0xC         & Reserved        & Yes               & TBA                                          \\
+		0xD         & Reserved        & Yes               & TBA                                          \\
+		0xE         & Reserved        & Yes               & TBA                                          \\
+		0xF         & Reserved        & Yes               & TBA                                          \\
 		\bottomrule
 	\end{tabular}
 	\caption{List of coprocessors}
@@ -148,7 +148,7 @@ The privilege level is controlled by the Protected Mode bit in the status regist
 \subsection{Address Space}
 
 The SIRC-1 uses word addressing, where each address refers to a 16-bit word. With a 24-bit address space, this allows
-access to $2^24$ = 16,777,216 words, or 32 megabytes of memory. Addresses are formed by combining the 8-bit  high byte
+access to $2^24$ = 16,777,216 words, or 32 megabytes of memory. Addresses are formed by combining the 8-bit high byte
 and 16-bit low word of address register pairs:
 
 \begin{equation}
@@ -157,6 +157,9 @@ and 16-bit low word of address register pairs:
 
 Note that the upper 8 bits of the high register (bits 15--8) are not used for addressing but are available for storage,
 enabling techniques like tagged pointers.
+
+For normative byte order, multi-word storage, exception vector layout, immediate interpretation, and wraparound rules,
+see Chapter~\ref{ch:data-representation}.
 
 \subsection{Memory Map}
 

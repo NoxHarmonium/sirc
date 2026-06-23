@@ -77,13 +77,16 @@ register.
 The upper 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
 enabling techniques such as tagged pointers.
 
+The exact address composition and stored-address layout are specified in Chapter~\ref{ch:data-representation}.
+
 Although each address register pair has a specific name, and a suggested usage by convention, they are all treated the
 same by STOR/LOAD instructions and they can all be used for indirect addressing the same way.
 
 In fact, you can perform a jump by simply loading a value in to the Program Counter registers.
 
 However, it is worth noting that the Link Register pair will be updated automatically through link-writing instructions
-(\mnemonic{LDEL}, \mnemonic{LJSR}, and \mnemonic{BRSR}) and the Program Counter pair is incremented after every instruction.
+(\mnemonic{LDEL}, \mnemonic{LJSR}, and \mnemonic{BRSR}) and the Program Counter pair is incremented after every
+instruction.
 
 \subsection{Link Register (l)}
 
@@ -92,8 +95,8 @@ However, it is worth noting that the Link Register pair will be updated automati
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Register     & \reg{lh} (privileged) \\
-		Low Register      & \reg{ll}              \\
+		High Register      & \reg{lh} (privileged) \\
+		Low Register       & \reg{ll}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -114,8 +117,8 @@ The link register pair stores return addresses for subroutine calls. When a subr
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Register     & \reg{ah} (privileged) \\
-		Low Register      & \reg{al}              \\
+		High Register      & \reg{ah} (privileged) \\
+		Low Register       & \reg{al}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -136,8 +139,8 @@ A general-purpose address register pair used for pointer operations and memory a
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Register     & \reg{sh} (privileged) \\
-		Low Register      & \reg{sl}              \\
+		High Register      & \reg{sh} (privileged) \\
+		Low Register       & \reg{sl}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -159,8 +162,8 @@ modes are particularly useful with this register.
 		\toprule
 		\textbf{Component} & \textbf{Register}     \\
 		\midrule
-		High Register     & \reg{ph} (privileged) \\
-		Low Register      & \reg{pl}              \\
+		High Register      & \reg{ph} (privileged) \\
+		Low Register       & \reg{pl}              \\
 		\bottomrule
 	\end{tabular}
 \end{center}
@@ -203,20 +206,23 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 	      \begin{itemize}
 		      \item Reading is allowed
 		      \item Direct writes trigger a privilege exception
-		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a privilege exception
+		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a
+		            privilege exception
 	      \end{itemize}
 \end{itemize}
 
 This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
-Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP}, \mnemonic{LJSR}, and
-\mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If their address-register-pair
-write-back would alter a high word, the CPU raises a privilege violation fault.
+Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP},
+\mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If
+their address-register-pair write-back would alter a high word, the CPU raises a privilege violation fault.
 
 The status register differs slightly from the high address registers:
 \begin{itemize}
-	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but direct writes trigger a privilege violation fault.
-	\item The status register's privileged byte is hidden on reads in protected mode, and cannot be modified directly from protected mode writes.
+	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but direct writes
+	      trigger a privilege violation fault.
+	\item The status register's privileged byte is hidden on reads in protected mode, and cannot be modified directly from
+	      protected mode writes.
 \end{itemize}
 
 \section{Register Addressing}

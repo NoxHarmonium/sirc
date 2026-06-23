@@ -78,6 +78,8 @@ pub fn new_ram_device_file_mapped(file_path: PathBuf) -> RamDevice {
 
 impl Device for RamDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
+        // TODO: What happens on a reset from the bus? Discard request?
+
         if selected && bus_assertions.bus_access_strobe && self.active_request.is_none() {
             trace!("Starting new request: assertions: {:?}", bus_assertions);
             self.active_request = Some(bus_assertions);

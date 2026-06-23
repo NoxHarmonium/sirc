@@ -18,6 +18,8 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// Parses a long jump-to-subroutine alias (LDEL with p implied as the destination)
 ///
 /// Syntax: LJSR src [, offset]
+///         LJSR (#offset, src)+
+///         LJSR (rS, src)+
 ///
 /// ```
 /// use toolchain::parsers::opcodes::ljsr::ljsr;

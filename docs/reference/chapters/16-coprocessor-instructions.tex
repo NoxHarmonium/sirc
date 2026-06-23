@@ -1,0 +1,290 @@
+\chapter{Coprocessor Instructions}
+\label{ch:coprocessor}
+
+\section{Overview}
+
+The SIRC-1 CPU includes a coprocessor interface that allows delegation of certain operations to specialized
+coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and
+privileged operations.
+
+Coprocessor calls are ordinary conditional instructions. If the instruction's condition is true, the processing unit
+computes a command operand and writes it to the 16-bit pending coprocessor-command latch during write-back. The
+selected coprocessor then interprets the command value. If the selected coprocessor is not present in the CPU model or
+does not implement the requested operation, the exception unit raises an invalid-opcode fault so the operation can be
+emulated or rejected by software.
+
+\section{Legal Forms}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Syntax}       & \textbf{Encoding} & \textbf{Notes}                           \\
+		\midrule
+		COPI                 & \texttt{COPI \#imm16} & 0x0F              & 16-bit coprocessor command operand       \\
+		COPR                 & \texttt{COPR rS}      & 0x3F              & Command operand is read from \texttt{rS} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal Coprocessor Instruction Forms}
+	\label{tab:coprocessor-legal-forms}
+\end{table}
+
+\noindent The CPU encoding reserves register and shift fields inherited from the immediate and
+register instruction formats. The programmer-facing \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields;
+assemblers emit canonical values and coprocessors must not interpret them as destination-register writes. Opcode 0x2F has
+no public assembly syntax and is undocumented.
+
+\section{Common Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                              \\
+		\midrule
+		Condition false    & The instruction is skipped and has no side effects. The pending coprocessor command, registers, memory, address registers, program counter, and status flags are preserved.                                                      \\
+		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                          \\
+		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                       \\
+		Write-back         & The processing unit writes the command operand to the pending coprocessor-command latch. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored. \\
+		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                     \\
+		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                \\
+		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                             \\
+		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing coprocessors and unimplemented or reserved coprocessor operations raise invalid-opcode faults.                               \\
+		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Coprocessor Instruction Semantics}
+	\label{tab:coprocessor-common-semantics}
+\end{table}
+
+\begin{instructionbox}{COPI/COPR -- Coprocessor Call}
+	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is undocumented.
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+COPI #opcode                  ; Call coprocessor with 16-bit command
+COPR rS                       ; Call coprocessor with command in rS
+\end{lstlisting}
+
+	\textbf{Operands:} \mnemonic{COPI} takes a 16-bit immediate command operand. \mnemonic{COPR} takes a general-purpose
+	source register whose 16-bit value is used as the command operand. Hidden encoded register and shift fields are
+	canonicalized by the assembler and are not programmer-visible operands.
+
+	\textbf{Description:}
+
+	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
+	next nibble selects that coprocessor's operation. The remaining low byte is defined by the selected operation.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+if condition_true then
+    pending_coprocessor_command = command_operand
+endif
+\end{lstlisting}
+
+	\textbf{Write-back:} Writes the command operand to the pending coprocessor-command latch.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} May raise privilege-violation faults, or invalid-opcode faults for missing coprocessors and
+	unimplemented coprocessor operations.
+
+	\textbf{Condition codes:} If the condition is false, no command is dispatched, the pending command latch is preserved,
+	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus any instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
+	0x8--0xF are supervisor-only and raise privilege-violation faults when executed.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Wait for interrupt (Exception Unit)
+COPI #0x1900                  ; Coprocessor 1, operation 0x9
+; Prefer the WAIT meta-instruction for normal assembly code.
+
+; Return from exception
+COPI #0x1A00                  ; Coprocessor 1, operation 0xA
+; Prefer the RETE meta-instruction for normal assembly code.
+
+; User exception (system call)
+COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
+; Prefer EXCP #0x80 for normal assembly code.
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Exception Unit (Coprocessor 1)}
+
+The Exception Unit handles:
+\begin{itemize}
+	\item Faults (abort exceptions, highest priority)
+	\item Hardware exceptions (interrupts, multiple priority levels)
+	\item Software exceptions (traps)
+	\item Privileged operations
+\end{itemize}
+
+\subsection{Common Operations}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{8cm}}
+		\toprule
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                        \\
+		\midrule
+		0x1100-0x11FF   & EXCP              & User exception (trap) at vector 0x60-0xFF \\
+		0x1900          & WAIT              & Wait for interrupt                        \\
+		0x1A00          & RETE              & Return from exception                     \\
+		0x1B00          & RSET              & System reset                              \\
+		0x1C00-0x1C7F   & ETFR              & Transfer from exception link register     \\
+		0x1D00-0x1D7F   & ETTR              & Transfer to exception link register       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Unit Operations}
+\end{table}
+
+\section{Exception Unit Meta-Instructions}
+
+\begin{instructionbox}{EXCP -- User Exception Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}
+
+	\textbf{Syntax:} \texttt{EXCP \#vector}
+
+	\textbf{Operands:} \texttt{\#vector} is the low 8-bit user exception vector selector.
+
+	\textbf{Description:} Triggers a software exception at the specified user vector, normally 0x60--0xFF. Used by
+	user-mode programs to invoke system calls or request supervisor-mode services.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction; exception entry effects are defined by the exception
+	unit.
+
+	\textbf{Exceptions:} Dispatches a software exception through the exception unit.
+
+	\textbf{Condition codes:} If the condition is false, no trap is dispatched and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles for the coprocessor call, plus exception-unit follow-up work.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
+	\textbf{Example:}
+	\begin{lstlisting}
+LOAD r1, #'A'                 ; Character to print
+EXCP #0x80                    ; Trap to OS print routine
+\end{lstlisting}
+\end{instructionbox}
+
+\begin{instructionbox}{WAIT -- Wait for Interrupt Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1900}
+
+	\textbf{Syntax:} \texttt{WAIT}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Puts the CPU into wait state until an exception occurs. Only valid in supervisor mode.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, the CPU does not enter wait state and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before the wait-state request is dispatched.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{RETE -- Return from Exception Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1A00}
+
+	\textbf{Syntax:} \texttt{RETE}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Restored by the exception unit as part of exception return.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no exception return occurs and current status flags are
+	preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before exception-unit return processing.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{RSET -- System Reset Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1B00}
+
+	\textbf{Syntax:} \texttt{RSET}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Performs a software reset of the processor by clearing the status register and jumping to the
+	reset vector.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Reset by the exception unit as part of reset processing.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no reset occurs and current status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before reset processing begins.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{ETFR/ETTR -- Exception Link Transfer Meta-Instructions}
+	\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} or \texttt{COPI \#0x1Dxy}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ETFR #n                       ; Transfer saved address and status to a and r7
+ETFR a, #n                    ; Transfer saved address to a only
+ETFR r7, #n                   ; Transfer saved status to r7 only
+ETTR #n                       ; Transfer a and r7 to saved address and status
+ETTR #n, a                    ; Transfer a to saved address only
+ETTR #n, r7                   ; Transfer r7 to saved status only
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{\#n} selects an exception link register. Optional operands select whether to transfer the
+	saved return address, saved status register, or both.
+
+	\textbf{Description:} \mnemonic{ETFR} copies saved exception state from an exception link register to CPU registers.
+	\mnemonic{ETTR} copies CPU register state back to the selected exception link register before returning.
+
+	\textbf{Write-back:} \mnemonic{ETFR} writes selected saved state to \reg{a}, \reg{r7}, or both. \mnemonic{ETTR} writes
+	\reg{a}, \reg{r7}, or both to selected saved exception state.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no transfer occurs and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before exception-unit transfer processing.
+
+	\textbf{Privilege:} Supervisor mode only.
+
+	\textbf{Example:}
+	\begin{lstlisting}
+alignment_fault_handler:
+    ETFR a, #6                ; Get faulting return address
+    LOAD al, @fixed_address   ; Correct the address
+    ETTR #6, a                ; Write corrected address back
+    RETE
+\end{lstlisting}
+\end{instructionbox}
+
+See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
+instructions.

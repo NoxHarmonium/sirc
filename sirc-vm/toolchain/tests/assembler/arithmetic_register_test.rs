@@ -19,7 +19,6 @@ XORR r7, lh
 CMPR ll, r7
 TSAR ah, r6
 TSXR al, r5
-COPR sh, r4
 ADDR sl, r3
 ADCR ph, r2
 SUBR pl, r1
@@ -35,7 +34,6 @@ XORR r7, lh, ph
 CMPR ll, r7, r1
 TSAR ah, r6, r2
 TSXR al, r5, r3
-COPR sh, r4, r4
 ADDR sl, r3, r5
 ADCR ph, r2, r6
 SUBR pl, r1, r7

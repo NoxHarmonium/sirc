@@ -52,40 +52,40 @@ are not legal for this instruction family.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax} & \textbf{Encoding} & \textbf{Notes} \\
+		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                 \\
 		\midrule
-		ADD  & \texttt{ADDI rD, \#imm16} & 0x00 & Writes result \\
-		ADD  & \texttt{ADDI rD, \#imm8, shift} & 0x20 & Writes result \\
-		ADD  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30 & Writes result \\
-		ADC  & \texttt{ADCI rD, \#imm16} & 0x01 & Writes result \\
-		ADC  & \texttt{ADCI rD, \#imm8, shift} & 0x21 & Writes result \\
-		ADC  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31 & Writes result \\
-		SUB  & \texttt{SUBI rD, \#imm16} & 0x02 & Writes result \\
-		SUB  & \texttt{SUBI rD, \#imm8, shift} & 0x22 & Writes result \\
-		SUB  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32 & Writes result \\
-		SBC  & \texttt{SBCI rD, \#imm16} & 0x03 & Writes result \\
-		SBC  & \texttt{SBCI rD, \#imm8, shift} & 0x23 & Writes result \\
-		SBC  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33 & Writes result \\
-		AND  & \texttt{ANDI rD, \#imm16} & 0x04 & Writes result \\
-		AND  & \texttt{ANDI rD, \#imm8, shift} & 0x24 & Writes result \\
-		AND  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34 & Writes result \\
-		ORR  & \texttt{ORRI rD, \#imm16} & 0x05 & Writes result \\
-		ORR  & \texttt{ORRI rD, \#imm8, shift} & 0x25 & Writes result \\
-		ORR  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35 & Writes result \\
-		XOR  & \texttt{XORI rD, \#imm16} & 0x06 & Writes result \\
-		XOR  & \texttt{XORI rD, \#imm8, shift} & 0x26 & Writes result \\
-		XOR  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36 & Writes result \\
-		LOAD & \texttt{LOAD rD, \#imm16} & 0x07 & Writes result; preserves flags \\
-		LOAD & \texttt{LOAD rD, rS} & 0x37 & Writes result; preserves flags \\
-		CMP  & \texttt{CMPI rS, \#imm16} & 0x0A & Updates flags only \\
-		CMP  & \texttt{CMPI rS, \#imm8, shift} & 0x2A & Updates flags only \\
-		CMP  & \texttt{CMPR rS1, rS2[, shift]} & 0x3A & Updates flags only \\
-		TSA  & \texttt{TSAI rS, \#imm16} & 0x0C & Updates flags only \\
-		TSA  & \texttt{TSAI rS, \#imm8, shift} & 0x2C & Updates flags only \\
-		TSA  & \texttt{TSAR rS1, rS2[, shift]} & 0x3C & Updates flags only \\
-		TSX  & \texttt{TSXI rS, \#imm16} & 0x0E & Updates flags only \\
-		TSX  & \texttt{TSXI rS, \#imm8, shift} & 0x2E & Updates flags only \\
-		TSX  & \texttt{TSXR rS1, rS2[, shift]} & 0x3E & Updates flags only \\
+		ADD                  & \texttt{ADDI rD, \#imm16}           & 0x00              & Writes result                  \\
+		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & 0x20              & Writes result                  \\
+		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30              & Writes result                  \\
+		ADC                  & \texttt{ADCI rD, \#imm16}           & 0x01              & Writes result                  \\
+		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & 0x21              & Writes result                  \\
+		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31              & Writes result                  \\
+		SUB                  & \texttt{SUBI rD, \#imm16}           & 0x02              & Writes result                  \\
+		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & 0x22              & Writes result                  \\
+		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32              & Writes result                  \\
+		SBC                  & \texttt{SBCI rD, \#imm16}           & 0x03              & Writes result                  \\
+		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & 0x23              & Writes result                  \\
+		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33              & Writes result                  \\
+		AND                  & \texttt{ANDI rD, \#imm16}           & 0x04              & Writes result                  \\
+		AND                  & \texttt{ANDI rD, \#imm8, shift}     & 0x24              & Writes result                  \\
+		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34              & Writes result                  \\
+		ORR                  & \texttt{ORRI rD, \#imm16}           & 0x05              & Writes result                  \\
+		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & 0x25              & Writes result                  \\
+		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35              & Writes result                  \\
+		XOR                  & \texttt{XORI rD, \#imm16}           & 0x06              & Writes result                  \\
+		XOR                  & \texttt{XORI rD, \#imm8, shift}     & 0x26              & Writes result                  \\
+		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36              & Writes result                  \\
+		LOAD                 & \texttt{LOAD rD, \#imm16}           & 0x07              & Writes result; preserves flags \\
+		LOAD                 & \texttt{LOAD rD, rS}                & 0x37              & Writes result; preserves flags \\
+		CMP                  & \texttt{CMPI rS, \#imm16}           & 0x0A              & Updates flags only             \\
+		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & 0x2A              & Updates flags only             \\
+		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & 0x3A              & Updates flags only             \\
+		TSA                  & \texttt{TSAI rS, \#imm16}           & 0x0C              & Updates flags only             \\
+		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & 0x2C              & Updates flags only             \\
+		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & 0x3C              & Updates flags only             \\
+		TSX                  & \texttt{TSXI rS, \#imm16}           & 0x0E              & Updates flags only             \\
+		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & 0x2E              & Updates flags only             \\
+		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & 0x3E              & Updates flags only             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}
@@ -96,10 +96,7 @@ are not legal for this instruction family.
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
 \texttt{ADDR r1, r1, r2}.
 
-\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} is a valid CPU encoding, but the assembler does not expose a
-\texttt{LOAD rD, \#imm8, shift} form. In the CPU datapath the short-immediate shift applies to the destination register
-side of the ALU input, while \mnemonic{LOAD} writes the unshifted immediate operand. The encoded shift therefore has no
-useful effect on the loaded value.
+\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
 \section{Common ALU Semantics}
 
@@ -107,16 +104,16 @@ useful effect on the loaded value.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic} & \textbf{Definition} \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                                                                                            \\
 		\midrule
-		Condition false & The instruction is skipped and has no side effects. Registers and status flags are preserved. \\
-		Immediate format & The left operand is the named register. The right operand is the encoded 16-bit immediate. \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
-		Register format & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}. \\
-		Test variants & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back. \\
-		LOAD & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags. \\
-		Timing & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states. \\
-		Exceptions & ALU instructions do not access memory and do not raise bus, protection, or alignment faults. Invalid or reserved encodings raise the normal invalid-instruction fault. \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                                                                                                  \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                                                                                                     \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                                                                                                   \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                                                                                                        \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                                                                                                 \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                                                                                                   \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                                                                                                 \\
+		Exceptions             & ALU instructions do not access memory and do not raise bus, bus-protection, or alignment faults. Processing-unit encodings outside the documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault. \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
@@ -137,19 +134,19 @@ Most ALU instructions update the status register flags:
 	\centering
 	\begin{tabular}{llllllp{5.5cm}}
 		\toprule
-		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning} \\
+		\textbf{Family} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Default AF} & \textbf{Meaning}                                                   \\
 		\midrule
-		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow. \\
-		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out. \\
-		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs. \\
+		ADD             & *          & *          & *          & *          & \texttt{[A]}        & C is carry out; V is signed overflow.                              \\
+		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out.                                   \\
+		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs.                                     \\
 		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
-		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded. \\
-		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared. \\
-		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded. \\
-		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded. \\
-		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved. \\
+		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded.                            \\
+		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
+		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded.                            \\
+		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded.                            \\
+		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved.                                        \\
 		\bottomrule
 	\end{tabular}
 	\caption{ALU Status Flag Effects}
@@ -157,8 +154,8 @@ Most ALU instructions update the status register flags:
 \end{table}
 
 See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
-flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result; see
-Chapter~\ref{ch:shift-operations} for the shifter flag rules.
+flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result;
+see Chapter~\ref{ch:shift-operations} for the shifter flag rules.
 
 \subsection{Manual Flag Update Control}
 
@@ -182,6 +179,60 @@ ADDI[N] r4, #1                ; Increment without changing flags
 BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
 \end{lstlisting}
 
+\begin{instructionbox}{SHFT -- Shift with Status Update Meta-Instruction}
+	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SHFT rD, shift                ; rD = shifted rD; flags from shift
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is both the destination and shifted source register. \texttt{shift} may use any
+	standard immediate or register shift count supported by short-immediate ALU instructions.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+shifted = shift(rD)
+rD = shifted OR 0
+SR = flags_from_shift_result
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Provides concise syntax for shifting a register value while taking status flags from the shifter result. It is not a
+	separate CPU operation. The zero OR operation preserves the shifted source value, while \texttt{[S]} makes the status
+	flags reflect the shift result instead of the OR result.
+
+	\textbf{Flags:} Updated from the shifter result by default.
+
+	\textbf{Write-back:} Inherits \mnemonic{ORRI} write-back to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no shift result is written and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Shift r1 left by 3 and update flags
+SHFT r1, LSL #3               ; ORRI[S] r1, #0, LSL #3
+
+; Shift right and test result
+SHFT r3, LSR #2               ; r3 = r3 >> 2
+BRAN|== @zero_result          ; Branch if shifted result is zero
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Because the lowering uses the short-immediate format, \mnemonic{SHFT} has the same shift field limits as other
+		      short-immediate ALU instructions.
+		\item All shift types are supported: LSL, LSR, ASL, ASR, RTL, and RTR.
+	\end{itemize}
+\end{instructionbox}
+
 % ============================================================================
 \section{ADD -- Addition}
 
@@ -195,6 +246,10 @@ ADDI rD, #imm8, shift          ; rD = (rD << shift) + imm8
 ADDR rD, rS1, rS2              ; rD = rS1 + rS2
 ADDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2
 \end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is the destination and first source in immediate forms. Register forms use \texttt{rS1}
+	as the first source and \texttt{rS2} as the second source; assembler shorthand may omit \texttt{rS1}. Short-immediate
+	and register forms may apply a shift to the first source operand.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -218,6 +273,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -256,6 +317,9 @@ ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
 ADCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2 + C
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 + operand2 + SR.C
@@ -277,6 +341,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -310,6 +380,8 @@ SUBR rD, rS1, rS2              ; rD = rS1 - rS2
 SUBR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2
@@ -323,14 +395,20 @@ SR.V = signed_overflow
 	\textbf{Description:}
 
 	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs
-	(operand2 > operand1 for unsigned). The overflow flag indicates signed overflow.
+	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
+	operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
 
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -362,9 +440,12 @@ BRAN|!= @loop              ; Branch if not zero
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SBCI rD, #imm16                ; rD = rD - imm16 - C
+SBCI rD, #imm8, shift          ; rD = (rD << shift) - imm8 - C
 SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
 SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - C
 \end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -378,15 +459,21 @@ SR.V = signed_overflow
 
 	\textbf{Description:}
 
-	Subtracts the second operand and borrow from the first operand. In short immediate format with
-	shift, the destination register is shifted before subtracting the immediate. Used for multi-precision subtraction to
-	propagate borrows from lower-order to higher-order subtractions.
+	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
+	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
+	lower-order to higher-order subtractions.
 
 	\textbf{Flags:} N Z C V
 
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -419,6 +506,9 @@ ANDR rD, rS1, rS2              ; rD = rS1 & rS2
 ANDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) & rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 AND operand2
@@ -440,6 +530,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -477,6 +573,9 @@ ORRR rD, rS1, rS2              ; rD = rS1 | rS2
 ORRR rD, rS1, rS2, shift       ; rD = (rS1 << shift) | rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 OR operand2
@@ -498,6 +597,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -538,6 +643,9 @@ XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
 XORR rD, rS1, rS2, shift       ; rD = (rS1 << shift) ^ rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 XOR operand2
@@ -559,6 +667,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -591,13 +705,16 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 \section{LOAD -- Load Immediate / Move Register}
 
 \begin{instructionbox}{LOAD -- Load/Move}
-	\textbf{Opcodes:} 0x07 (Imm), 0x27 (Short Imm), 0x37 (Reg)
+	\textbf{Opcodes:} 0x07 (Imm), 0x37 (Reg). Opcode 0x27 is undocumented.
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LOAD rD, #imm16                ; rD = imm16 (via add)
 LOAD rD, rS                    ; rD = rS (via add)
 \end{lstlisting}
+
+	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
+	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -610,14 +727,19 @@ destination = operand
 
 	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
-	registers. The CPU defines a short-immediate \mnemonic{LOAD} encoding at opcode \texttt{0x27}, but the assembler does
-	not expose it because its shift field does not affect the loaded value.
+	registers. Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
 	\textbf{Flags:} None
 
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -645,7 +767,8 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\item Does not update flags, unlike \mnemonic{ADD}
 		\item Most efficient way to move data between registers
 		\item For 16-bit constants, use immediate form
-		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or \mnemonic{ORRI}
+		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or
+		      \mnemonic{ORRI}
 	\end{itemize}
 \end{instructionbox}
 
@@ -662,6 +785,9 @@ CMPI rS, #imm8, shift          ; Compare (rS << shift) with imm8
 CMPR rS1, rS2                  ; Compare rS1 with rS2
 CMPR rS1, rS2, shift           ; Compare (rS1 << shift) with rS2
 \end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
+	no destination register is written.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -685,6 +811,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -732,6 +864,9 @@ TSAR rS1, rS2                  ; Test rS1 & rS2
 TSAR rS1, rS2, shift           ; Test (rS1 << shift) & rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
+	destination register is written.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 AND operand2
@@ -753,6 +888,12 @@ SR.V = 0
 	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -797,6 +938,9 @@ TSXR rS1, rS2                  ; Test rS1 ^ rS2
 TSXR rS1, rS2, shift           ; Test (rS1 << shift) ^ rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
+	destination register is written.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 XOR operand2
@@ -818,6 +962,12 @@ SR.V = 0
 	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}

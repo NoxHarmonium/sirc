@@ -3,8 +3,10 @@
 
 \section{Overview}
 
-The SIRCIS instruction set includes 12 undocumented instruction opcodes. These opcodes are valid and will execute in
-hardware, but their behaviour is not officially specified and may vary between CPU implementations or revisions.
+The SIRCIS instruction set includes 14 undocumented instruction opcodes. These opcodes are valid encodings and will
+execute in hardware, but their architectural behaviour is undefined. Software must not depend on their results, side
+effects, timing, flag behaviour, or fault behaviour. Undocumented opcodes are reserved for future CPU revisions and may
+be repurposed without preserving their current simulator or hardware behaviour.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -39,20 +41,22 @@ accidentally depend on undefined write-back ordering.
 	\centering
 	\begin{tabular}{clll}
 		\toprule
-		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}         \\
+		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}            \\
 		\midrule
-		0x08            & Immediate       & ADD-like + 0x8   & Test variant (no save) \\
-		0x09            & Immediate       & ADC-like + 0x8   & Test variant (no save) \\
-		0x0B            & Immediate       & SUB-like + 0x8   & Test variant (no save) \\
-		0x0D            & Immediate       & SBC-like + 0x8   & Test variant (no save) \\
-		0x28            & Short Imm       & ADD-like + 0x8   & Test variant (no save) \\
-		0x29            & Short Imm       & ADC-like + 0x8   & Test variant (no save) \\
-		0x2B            & Short Imm       & SUB-like + 0x8   & Test variant (no save) \\
-		0x2D            & Short Imm       & SBC-like + 0x8   & Test variant (no save) \\
-		0x38            & Register        & ADD-like + 0x8   & Test variant (no save) \\
-		0x39            & Register        & ADC-like + 0x8   & Test variant (no save) \\
-		0x3B            & Register        & SUB-like + 0x8   & Test variant (no save) \\
-		0x3D            & Register        & SBC-like + 0x8   & Test variant (no save) \\
+		0x08            & Immediate       & ADD-like + 0x8   & Test variant (no save)    \\
+		0x09            & Immediate       & ADC-like + 0x8   & Test variant (no save)    \\
+		0x0B            & Immediate       & SUB-like + 0x8   & Test variant (no save)    \\
+		0x0D            & Immediate       & SBC-like + 0x8   & Test variant (no save)    \\
+		0x27            & Short Imm       & LOAD-like        & No public assembly syntax \\
+		0x28            & Short Imm       & ADD-like + 0x8   & Test variant (no save)    \\
+		0x29            & Short Imm       & ADC-like + 0x8   & Test variant (no save)    \\
+		0x2B            & Short Imm       & SUB-like + 0x8   & Test variant (no save)    \\
+		0x2D            & Short Imm       & SBC-like + 0x8   & Test variant (no save)    \\
+		0x2F            & Short Imm       & COP-like         & No public assembly syntax \\
+		0x38            & Register        & ADD-like + 0x8   & Test variant (no save)    \\
+		0x39            & Register        & ADC-like + 0x8   & Test variant (no save)    \\
+		0x3B            & Register        & SUB-like + 0x8   & Test variant (no save)    \\
+		0x3D            & Register        & SBC-like + 0x8   & Test variant (no save)    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Undocumented Instruction Opcodes}
@@ -60,8 +64,8 @@ accidentally depend on undefined write-back ordering.
 
 \section{Likely Behavior}
 
-Based on the systematic opcode organization, these undocumented instructions likely behave as "test" variants of
-arithmetic instructions:
+Based on the systematic opcode organization, the undocumented opcodes with bit 3 set in the ALU operation field likely
+behave as "test" variants of arithmetic instructions:
 
 \subsection{0x08, 0x28, 0x38 (ADD Test)}
 
@@ -117,7 +121,7 @@ In the current SIRC-VM simulator (as of version 1.0):
 
 \begin{itemize}
 	\item Undocumented instructions are recognized and decoded
-	\item They execute following the "test variant" pattern (no write-back)
+	\item The undocumented ALU test-variant opcodes execute following the "test variant" pattern (no write-back)
 	\item Flag updates may or may not be implemented correctly
 	\item Behavior may change in future versions
 \end{itemize}
@@ -133,8 +137,8 @@ In a hardware implementation:
 	\item The write-back stage is simply disabled
 \end{itemize}
 
-This means the instructions \textit{will} work, but their exact behavior depends on the hardware implementation
-details.
+This means undocumented encodings may execute, but their exact behavior depends on the hardware implementation details
+and is not part of the architectural contract.
 
 \section{Why Undocumented?}
 
@@ -204,7 +208,7 @@ Others (SUB Test, which duplicates CMP) will likely remain undocumented or be re
 The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
-	\item 12 undocumented opcodes (could be formally specified)
+	\item 14 undocumented opcodes (could be formally specified)
 	\item Reserved shift type (0x111) could enable additional shift modes
 	\item Reserved address register encoding could enable more address modes
 	\item Additional coprocessors could provide extended functionality

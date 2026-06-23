@@ -124,7 +124,7 @@ LDEA s, (#1, a)
 LOAD r1, #0x600D
 
 ; Halt CPU.
-COPI r1, #0x14FF
+COPI #0x14FF
 
 .ORG 0x0300
 :privilege_violation_handler
@@ -135,7 +135,7 @@ ANDI r7, #0x2000
 CMPI r7, #0
 BRAN|!= @privilege_violation_handler_active
 ADDI r7, #1
-COPI r1, #0x14FF
+COPI #0x14FF
 
 :privilege_violation_handler_active
 

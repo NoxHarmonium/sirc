@@ -84,7 +84,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
 
     if let [AddressingMode::Immediate(offset)] = operands.as_slice() {
         match offset {
-            // Shorthand, always immediate offset to PC. Can also use other address registers with full syntax below
+            // BRAN/BRSR aliases are intentionally limited to PC-relative immediate operands.
             ImmediateType::Value(offset) => Ok((
                 i,
                 InstructionToken {

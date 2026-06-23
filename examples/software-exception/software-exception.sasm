@@ -20,7 +20,7 @@ EXCP    #0x40
 ; r1 should be 0x0FF here after exception handler runs
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    #0x14FF
 
 .ORG 0x0300
 :exception_handler
