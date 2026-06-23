@@ -143,4 +143,4 @@ LOAD r7, #0xFA11
 :pass
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    #0x14FF

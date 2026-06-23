@@ -24,8 +24,6 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
         "CMPI" => Instruction::CompareImmediate,
         "TSAI" => Instruction::TestAndImmediate,
         "TSXI" => Instruction::TestXorImmediate,
-        "COPI" => Instruction::CoprocessorCallImmediate,
-
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
@@ -44,8 +42,6 @@ fn tag_to_instruction_short(tag: &String) -> Instruction {
         "CMPI" => Instruction::CompareShortImmediate,
         "TSAI" => Instruction::TestAndShortImmediate,
         "TSXI" => Instruction::TestXorShortImmediate,
-        "COPI" => Instruction::CoprocessorCallShortImmediate,
-
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
 }
@@ -89,7 +85,6 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("CMPI"),
         parse_instruction_tag("TSAI"),
         parse_instruction_tag("TSXI"),
-        parse_instruction_tag("COPI"),
         // Meta instruction - for shifting values between registers
         parse_instruction_tag("SHFT"),
     ));

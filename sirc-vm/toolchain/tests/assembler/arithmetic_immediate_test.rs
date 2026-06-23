@@ -24,7 +24,6 @@ XORI r7, #0xFA
 CMPI ll, #0xF
 TSAI ah, #100
 TSXI al, #0x10
-COPI sh, #0xF0
 ADDI sl, #0
 ADCI ph, #0x0
 SUBI pl, #1
@@ -40,7 +39,6 @@ XORI r7, #0xFA, NUL #6
 CMPI ll, #0xF, LSR #8
 TSAI ah, #100, ASL #9
 TSXI al, #0x10, ASR #10
-COPI sh, #0xF0, RTL #11
 ADDI sl, #0, RTR #12
 ADCI ph, #0x0, NUL #13
 SUBI pl, #1, NUL #14

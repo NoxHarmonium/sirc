@@ -23,7 +23,6 @@ emulated or rejected by software.
 		\textbf{Instruction} & \textbf{Syntax}       & \textbf{Encoding} & \textbf{Notes}                           \\
 		\midrule
 		COPI                 & \texttt{COPI \#imm16} & 0x0F              & 16-bit coprocessor command operand       \\
-		COPI                 & \texttt{COPI \#imm8}  & 0x2F              & Zero-extended 8-bit command operand      \\
 		COPR                 & \texttt{COPR rS}      & 0x3F              & Command operand is read from \texttt{rS} \\
 		\bottomrule
 	\end{tabular}
@@ -33,7 +32,8 @@ emulated or rejected by software.
 
 \noindent The CPU encoding reserves register and shift fields inherited from the immediate, short-immediate, and
 register instruction formats. The programmer-facing \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields;
-assemblers emit canonical values and coprocessors must not interpret them as destination-register writes.
+assemblers emit canonical values and coprocessors must not interpret them as destination-register writes. Opcode 0x2F is
+an encoding-level short-immediate COPI form, but this assembler revision does not expose public syntax for it.
 
 \section{Common Semantics}
 
@@ -41,17 +41,17 @@ assemblers emit canonical values and coprocessors must not interpret them as des
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                            \\
+		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                              \\
 		\midrule
-		Condition false    & The instruction is skipped and has no side effects. The pending coprocessor command, registers, memory, address registers, program counter, and status flags are preserved.                                                                    \\
-		Command operand    & Immediate \mnemonic{COPI} uses the 16-bit immediate value. Short-immediate \mnemonic{COPI} uses the zero-extended encoded 8-bit immediate value as the command operand. \mnemonic{COPR} uses its source register value as the command operand. \\
-		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                     \\
-		Write-back         & The processing unit writes the command operand to the pending coprocessor-command latch. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.               \\
-		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                   \\
-		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                              \\
-		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                                           \\
-		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing coprocessors and unimplemented or reserved coprocessor operations raise invalid-opcode faults.                                             \\
-		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                                     \\
+		Condition false    & The instruction is skipped and has no side effects. The pending coprocessor command, registers, memory, address registers, program counter, and status flags are preserved.                                                      \\
+		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                          \\
+		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                       \\
+		Write-back         & The processing unit writes the command operand to the pending coprocessor-command latch. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored. \\
+		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                     \\
+		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                \\
+		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                             \\
+		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing coprocessors and unimplemented or reserved coprocessor operations raise invalid-opcode faults.                               \\
+		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Coprocessor Instruction Semantics}
@@ -59,12 +59,11 @@ assemblers emit canonical values and coprocessors must not interpret them as des
 \end{table}
 
 \begin{instructionbox}{COPI/COPR -- Coprocessor Call}
-	\textbf{Opcodes:} 0x0F (Immediate), 0x2F (Short Immediate), 0x3F (Register)
+	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is reserved for an encoding-level short-immediate form.
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 COPI #opcode                  ; Call coprocessor with 16-bit command
-COPI #value                   ; Call coprocessor with 8-bit command operand
 COPR rS                       ; Call coprocessor with command in rS
 \end{lstlisting}
 

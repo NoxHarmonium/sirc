@@ -194,9 +194,9 @@ Tasks:
     - Progress: Chapter 16 now has coprocessor legal forms and common semantics. The spec hides inherited register and
       shift fields from programmers: `COPI` takes an immediate command operand, `COPR` takes a source register operand,
       and hidden encoding fields are reserved/canonicalized by the assembler.
-    - Follow-up implementation note: the current toolchain parser still exposes a destination-register operand for raw
-      `COPI`/`COPR` forms. Update the parser and tests later so the assembler accepts the source-only syntax described
-      by the manual.
+    - Parser follow-up resolved: the toolchain now accepts source-only `COPI #value` and `COPR rS` syntax, rejects the
+      old destination-register forms, and keeps COPI opcode 0x2F as an encoding-level form with no public assembler
+      syntax.
 
 - Complete the control-flow opcode rework.
   - See `control-flow-opcode-rework-handover.md` for the dedicated design handover covering `LDEL`, `LDEA`, `BRAN`, `BRSR`, `LJMP`, `LJSR`, opcode reuse, implementation staging, and remaining implementation choices.

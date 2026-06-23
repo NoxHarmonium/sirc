@@ -18,4 +18,4 @@ BRAN|>= @loop
 NOOP
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    #0x14FF

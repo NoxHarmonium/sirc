@@ -961,7 +961,7 @@
     LOAD r3, #72            ; Expected count
 
 ; Halt CPU
-    COPI r1, #0x14FF
+    COPI #0x14FF
 
 ;;;;;;; DATA
 

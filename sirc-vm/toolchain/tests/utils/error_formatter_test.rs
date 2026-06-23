@@ -35,6 +35,10 @@ fn test_no_input() {
       expected ';' at line 2, column 1, or
       in section "instruction" at line 2, column 1,
       one of:
+        in section "Coprocessor instruction" at line 2, column 1,
+        one of:
+          expected "COPI" at line 2, column 1, or
+          expected "COPR" at line 2, column 1, or
         in section "Arithmetic Immediate Instruction" at line 2, column 1,
         one of:
           expected "ADDI" at line 2, column 1, or
@@ -47,7 +51,6 @@ fn test_no_input() {
           expected "CMPI" at line 2, column 1, or
           expected "TSAI" at line 2, column 1, or
           expected "TSXI" at line 2, column 1, or
-          expected "COPI" at line 2, column 1, or
           expected "SHFT" at line 2, column 1, or
         in section "Arithmetic Register Instruction" at line 2, column 1,
         one of:
@@ -61,7 +64,6 @@ fn test_no_input() {
           expected "CMPR" at line 2, column 1, or
           expected "TSAR" at line 2, column 1, or
           expected "TSXR" at line 2, column 1, or
-          expected "COPR" at line 2, column 1, or
         in section "Branching instruction" at line 2, column 1,
         one of:
           expected "BRAN" at line 2, column 1, or

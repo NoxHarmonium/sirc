@@ -57,4 +57,4 @@ BRAN|<= @2
 :DONE
 
 ; Halt CPU
-COPI    r1, #0x14FF
+COPI    #0x14FF

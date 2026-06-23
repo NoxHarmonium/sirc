@@ -418,6 +418,7 @@ pub fn parse_instruction_tag(
 pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
     // Nested alts are to avoid hitting the maximum number of parsers that can be parsed in a single alt statement
     let (i, instruction_token) = alt((
+        opcodes::coprocessor::coprocessor.context("Coprocessor instruction"),
         opcodes::arithmetic_immediate::arithmetic_immediate
             .context("Arithmetic Immediate Instruction"),
         opcodes::arithmetic_register::arithmetic_register
