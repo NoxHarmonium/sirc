@@ -9,8 +9,9 @@ privileged operations.
 
 Coprocessor calls are ordinary conditional instructions. If the instruction's condition is true, the processing unit
 computes a command operand and writes it to the 16-bit pending coprocessor-command latch during write-back. The
-selected coprocessor then interprets the command value. If the selected coprocessor is not present in the CPU model,
-the exception unit raises an invalid-opcode fault so the operation can be emulated or rejected by software.
+selected coprocessor then interprets the command value. If the selected coprocessor is not present in the CPU model or
+does not implement the requested operation, the exception unit raises an invalid-opcode fault so the operation can be
+emulated or rejected by software.
 
 \section{Legal Forms}
 
@@ -49,7 +50,7 @@ assemblers emit canonical values and coprocessors must not interpret them as des
 		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                   \\
 		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                              \\
 		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                                           \\
-		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing, invalid, or reserved coprocessor IDs and operations raise invalid-opcode faults.                                                          \\
+		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing coprocessors and unimplemented or reserved coprocessor operations raise invalid-opcode faults.                                             \\
 		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                                     \\
 		\bottomrule
 	\end{tabular}
@@ -83,7 +84,8 @@ endif
 
 	\textbf{Flags:} Preserved by the coprocessor-call instruction.
 
-	\textbf{Exceptions:} May raise privilege-violation or invalid-opcode faults.
+	\textbf{Exceptions:} May raise privilege-violation faults, or invalid-opcode faults for missing coprocessors and
+	unimplemented coprocessor operations.
 
 	\textbf{Timing:} 6 cycles, plus any instruction-fetch wait states.
 

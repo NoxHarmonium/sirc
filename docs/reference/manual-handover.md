@@ -120,6 +120,9 @@ Acceptance criteria:
 - No chapter gives a different count or meaning for instruction formats, addressing modes, flags, vectors, or privilege modes.
 - The intro/spec table matches the detailed chapters.
 - Reserved/undefined behavior uses a consistent vocabulary.
+- Invalid-opcode faults are scoped to coprocessor dispatch: missing coprocessors and unimplemented/reserved
+  coprocessor operations. Normal processing-unit encodings outside the documented spec are reserved or architecturally
+  undefined and are not required to trap.
 
 ## Workstream 2: Machine-Checked Encodings
 
@@ -224,7 +227,7 @@ Tasks:
   - bus protection fault
   - alignment fault
   - segment overflow fault
-  - invalid opcode fault
+  - invalid opcode fault (coprocessor dispatch only; not a normal processing-unit reserved-encoding trap)
   - privilege violation fault
   - trace fault
 

@@ -69,16 +69,16 @@ The resulting 24-bit address is used to access memory.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                            \\
+		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                              \\
 		\midrule
-		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved.                                                                                                                      \\
-		Address calculation & Immediate-offset forms add the 16-bit encoded offset to the selected address register low word. Register-offset forms add \texttt{rO} to the selected address register low word. The selected address register high word supplies the segment. \\
-		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                     \\
-		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access.                                       \\
-		Status flags        & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register.                                                                                                                           \\
-		Timing              & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase.                                                                                              \\
-		Exceptions          & Memory instructions can raise bus, bus-protection, and segment-overflow faults. Invalid or reserved encodings raise the normal invalid-instruction fault.                                                                                      \\
-		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase. If a fault aborts execution before write-back, those write-back effects do not occur.                                         \\
+		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved.                                                                                                                        \\
+		Address calculation & Immediate-offset forms add the 16-bit encoded offset to the selected address register low word. Register-offset forms add \texttt{rO} to the selected address register low word. The selected address register high word supplies the segment.   \\
+		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                       \\
+		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access.                                         \\
+		Status flags        & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register.                                                                                                                             \\
+		Timing              & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase.                                                                                                \\
+		Exceptions          & Memory instructions can raise bus, bus-protection, and segment-overflow faults. Processing-unit encodings outside the documented memory forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault. \\
+		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase. If a fault aborts execution before write-back, those write-back effects do not occur.                                           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Memory Instruction Semantics}
@@ -112,7 +112,7 @@ LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} May raise bus, bus-protection, segment-overflow, or invalid-instruction faults.
+	\textbf{Exceptions:} May raise bus, bus-protection, or segment-overflow faults.
 
 	\textbf{Timing:} 6 cycles when the memory read is acknowledged without wait states; wait states extend the memory-access
 	phase.
@@ -165,7 +165,7 @@ STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} May raise bus, bus-protection, segment-overflow, or invalid-instruction faults.
+	\textbf{Exceptions:} May raise bus, bus-protection, or segment-overflow faults.
 
 	\textbf{Timing:} 6 cycles when the memory write is acknowledged without wait states; wait states extend the memory-access
 	phase.

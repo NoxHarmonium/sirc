@@ -79,11 +79,14 @@ three categories:
 	      wrap-around. Also raised if the program counter overflows; the phase field of the fault metadata register distinguishes
 	      the two cases.
 
-	\item \textbf{Invalid Opcode Fault} \textit{(Retryable)} — Raised when a co-processor call targets a
-	      non-existent co-processor or uses an invalid opcode.
+	\item \textbf{Invalid Opcode Fault} \textit{(Retryable)} — Raised when a coprocessor call targets a non-existent
+	      coprocessor or requests an operation that the selected coprocessor does not implement.
 
 	      Can be used for forward compatibility: programs written for a future co-processor (e.g.\ a floating-point unit) will
 	      trap on older hardware, and the handler can emulate the operation in software.
+
+	      Normal processing-unit encodings outside the documented instruction set are reserved or architecturally undefined. They
+	      are not required to raise an invalid-opcode fault.
 
 	\item \textbf{Privilege Violation Fault} \textit{(Retryable)} — Raised when a privileged operation is attempted
 	      while not in supervisor mode:
@@ -245,8 +248,8 @@ Fault types use the following values:
 \end{itemize}
 
 The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
-faults that involve memory access). For faults like invalid opcode that occur before bus access, this field will be
-zero.
+faults that involve memory access). For coprocessor invalid-opcode faults that occur before bus access, this field will
+be zero.
 
 Exception handlers can use the \texttt{ETFR} instruction to read the fault metadata register and decode this
 information to determine how to handle the fault appropriately.
