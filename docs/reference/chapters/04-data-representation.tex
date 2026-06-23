@@ -120,7 +120,7 @@ is interpreted as signed, unsigned, or bitwise data.
 		ALU arithmetic short immediate & 8 bits         & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF}      \\
 		ALU logical immediates         & 16 or 8 bits   & Bit mask; no sign interpretation is applied by the logical operation \\
 		Memory displacements           & 16 bits        & Two's-complement offset added to the low address word                \\
-		Coprocessor operands           & 16 or 8 bits   & Coprocessor-defined command or parameter bits                        \\
+		Coprocessor operands           & 16 bits        & Coprocessor-defined command or parameter bits                        \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Immediate Field Interpretation}
@@ -131,6 +131,9 @@ Short immediates occupy an 8-bit field and are zero-extended before use by ALU a
 for compact non-negative constants and bit masks, not for encoding negative arithmetic operands. Assemblers must reject
 values that cannot be represented in the selected immediate field width unless they deliberately offer a documented
 truncation mode.
+
+Short immediates are not used for memory, effective-address, branch, jump, or subroutine-call displacements. Those
+forms use 16-bit immediate displacements, register displacements, or assembler-resolved full-width branch offsets.
 
 \section{Arithmetic and Address Wraparound}
 

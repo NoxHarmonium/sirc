@@ -30,10 +30,10 @@ emulated or rejected by software.
 	\label{tab:coprocessor-legal-forms}
 \end{table}
 
-\noindent The CPU encoding reserves register and shift fields inherited from the immediate, short-immediate, and
+\noindent The CPU encoding reserves register and shift fields inherited from the immediate and
 register instruction formats. The programmer-facing \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields;
-assemblers emit canonical values and coprocessors must not interpret them as destination-register writes. Opcode 0x2F is
-an encoding-level short-immediate COPI form, but this assembler revision does not expose public syntax for it.
+assemblers emit canonical values and coprocessors must not interpret them as destination-register writes. Opcode 0x2F has
+no public assembly syntax and is undocumented.
 
 \section{Common Semantics}
 
@@ -59,7 +59,7 @@ an encoding-level short-immediate COPI form, but this assembler revision does no
 \end{table}
 
 \begin{instructionbox}{COPI/COPR -- Coprocessor Call}
-	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is reserved for an encoding-level short-immediate form.
+	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is undocumented.
 
 	\textbf{Syntax:}
 	\begin{lstlisting}

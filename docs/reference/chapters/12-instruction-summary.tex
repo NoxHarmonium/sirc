@@ -10,7 +10,7 @@ documented and assigned. The instructions are organized into logical groups:
 	\item \textbf{ALU Instructions (0x00--0x0F, 0x20--0x2F, 0x30--0x3F)}: Arithmetic, logical, and comparison operations
 	\item \textbf{Memory Instructions (0x10--0x17)}: Load and store operations
 	\item \textbf{Address and Control Flow (0x18--0x1F)}: Effective-address calculation, jumps, and calls
-	\item \textbf{Coprocessor (0x0F, 0x2F, 0x3F)}: Coprocessor interface
+	\item \textbf{Coprocessor (0x0F, 0x3F)}: Coprocessor interface
 \end{itemize}
 
 \section{Complete Instruction List}
@@ -71,7 +71,7 @@ documented and assigned. The instructions are organized into logical groups:
 		0x2C            & TSAI              & Short Imm+Shift & NZ             & Test AND short immediate                        \\
 		0x2D            & --                & --              & --             & Undocumented                                    \\
 		0x2E            & TSXI              & Short Imm+Shift & NZ             & Test XOR short immediate                        \\
-		0x2F            & COPI              & Short Imm+Shift & --             & Encoding-only coprocessor short immediate       \\
+		0x2F            & COPI              & Short Imm+Shift & --             & Undocumented                                    \\
 		\midrule
 		0x30            & ADDR              & Register        & NZCV           & Add register                                    \\
 		0x31            & ADCR              & Register        & NZCV           & Add register with carry                         \\

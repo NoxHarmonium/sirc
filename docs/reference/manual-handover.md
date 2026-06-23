@@ -52,6 +52,8 @@ These are important for emulator, hardware, OS, debugger, and compiler work.
 - Data layout rules. Mostly resolved: Chapter 4 now defines vector word order, stored address layout, immediate
   sign/zero behavior, address wraparound, and memory ordering. Remaining work is to audit older examples for byte-style
   offsets and decide whether to add non-normative software conventions for multi-word integers and stack layout.
+  Short immediates are documented as zero-extended ALU operands only; memory, effective-address, branch, jump, and
+  subroutine-call displacements use 16-bit or register displacement forms.
 - Add ABI/calling convention guidance or explicitly state that it is outside the ISA.
 - Add assembler/object/binary format appendix if SIRC has a canonical ROM or object representation.
 - Add revision/model compatibility tables for optional coprocessors.
@@ -120,6 +122,8 @@ Acceptance criteria:
 - No chapter gives a different count or meaning for instruction formats, addressing modes, flags, vectors, or privilege modes.
 - The intro/spec table matches the detailed chapters.
 - Reserved/undefined behavior uses a consistent vocabulary.
+- Undocumented opcodes are documented as valid encodings that execute with architecturally undefined behavior; software
+  must not depend on their effects, and future CPU revisions may repurpose them.
 - Invalid-opcode faults are scoped to coprocessor dispatch: missing coprocessors and unimplemented/reserved
   coprocessor operations. Normal processing-unit encodings outside the documented spec are reserved or architecturally
   undefined and are not required to trap.
@@ -194,9 +198,9 @@ Tasks:
     - Progress: Chapter 16 now has coprocessor legal forms and common semantics. The spec hides inherited register and
       shift fields from programmers: `COPI` takes an immediate command operand, `COPR` takes a source register operand,
       and hidden encoding fields are reserved/canonicalized by the assembler.
-    - Parser follow-up resolved: the toolchain now accepts source-only `COPI #value` and `COPR rS` syntax, rejects the
-      old destination-register forms, and keeps COPI opcode 0x2F as an encoding-level form with no public assembler
-      syntax.
+    - Parser follow-up resolved: the toolchain now accepts source-only `COPI #value` and `COPR rS` syntax and rejects
+      the old destination-register forms. Opcode 0x2F has no public assembler syntax and should be labelled
+      undocumented rather than specified as a programmer-visible form.
 
 - Complete the control-flow opcode rework.
   - See `control-flow-opcode-rework-handover.md` for the dedicated design handover covering `LDEL`, `LDEA`, `BRAN`, `BRSR`, `LJMP`, `LJSR`, opcode reuse, implementation staging, and remaining implementation choices.

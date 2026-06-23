@@ -96,10 +96,7 @@ are not legal for this instruction family.
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
 \texttt{ADDR r1, r1, r2}.
 
-\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} is a valid CPU encoding, but the assembler does not expose a
-\texttt{LOAD rD, \#imm8, shift} form. In the CPU datapath the short-immediate shift applies to the destination register
-side of the ALU input, while \mnemonic{LOAD} writes the unshifted immediate operand. The encoded shift therefore has no
-useful effect on the loaded value.
+\noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
 \section{Common ALU Semantics}
 
@@ -591,7 +588,7 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 \section{LOAD -- Load Immediate / Move Register}
 
 \begin{instructionbox}{LOAD -- Load/Move}
-	\textbf{Opcodes:} 0x07 (Imm), 0x27 (Short Imm), 0x37 (Reg)
+	\textbf{Opcodes:} 0x07 (Imm), 0x37 (Reg). Opcode 0x27 is undocumented.
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -610,8 +607,7 @@ destination = operand
 
 	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
-	registers. The CPU defines a short-immediate \mnemonic{LOAD} encoding at opcode \texttt{0x27}, but the assembler does
-	not expose it because its shift field does not affect the loaded value.
+	registers. Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
 	\textbf{Flags:} None
 

@@ -59,7 +59,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 		24           & 100100          & ANDI              & AND Short Immediate                                      \\
 		25           & 100101          & ORRI              & OR Short Immediate                                       \\
 		26           & 100110          & XORI              & XOR Short Immediate                                      \\
-		27           & 100111          & LOAD              & Load Short Immediate                                     \\
+		27           & 100111          & LOAD              & Undocumented                                             \\
 		28           & 101000          & --                & Undocumented                                             \\
 		29           & 101001          & --                & Undocumented                                             \\
 		2A           & 101010          & CMPI              & Compare Short Immediate                                  \\
@@ -67,7 +67,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 		2C           & 101100          & TSAI              & Test AND Short Immediate                                 \\
 		2D           & 101101          & --                & Undocumented                                             \\
 		2E           & 101110          & TSXI              & Test XOR Short Immediate                                 \\
-		2F           & 101111          & COPI              & Coprocessor Short Immediate                              \\
+		2F           & 101111          & COPI              & Undocumented                                             \\
 		\hline
 		\multicolumn{4}{|c|}{\textbf{ALU Register (0x30--0x3F)}}                                                      \\
 		\hline
@@ -160,11 +160,10 @@ revisions. See Appendix~\ref{appendix:undocumented} for details.
 		CMP                & 0x0A               & 0x2A                    & 0x3A              \\
 		TSA                & 0x0C               & 0x2C                    & 0x3C              \\
 		TSX                & 0x0E               & 0x2E                    & 0x3E              \\
-		COP                & 0x0F               & 0x2F                    & 0x3F              \\
+		COP                & 0x0F               & 0x2F\textsuperscript{*} & 0x3F              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Variant Quick Reference}
 \end{table}
 
-\textsuperscript{*} Opcode \texttt{0x27} is an encoded CPU form but is not exposed by the assembler because its shift
-field has no useful effect on the loaded value.
+\textsuperscript{*} These opcodes have no public assembly syntax and are undocumented.
