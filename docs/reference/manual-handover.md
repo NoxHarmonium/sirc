@@ -22,7 +22,11 @@ These should be fixed before expanding the manual, because they create contradic
 
 - Resolve protected-mode privilege semantics for control-flow address-register write-back. Resolved: direct writes to high address registers fault, while address-register-pair write-back preserves the high word and updates only the low word in protected mode.
 
-- Fix the `LJSR` assembler lowering. The CPU write-back path appears to use the instruction destination address-register field for subroutine control-flow targets, and CPU tests construct `LongJumpToSubroutine*` with destination `p`. The toolchain `ljsr` parser currently marks the immediate-form destination field as `0x0`/unused, which likely assembles `LJSR a` to update the wrong address-register pair. Add parser tests that assemble `LJSR a`, `LJSR a, #offset`, and `LJSR a, rN`, then verify they encode destination `p`, source `a`, and preserve the expected link-register behavior.
+- Fix the `LJSR` assembler lowering. Resolved: `sirc-vm/toolchain/src/parsers/opcodes/ljsr.rs` now encodes `LJSR`
+  normal and post-increment forms with destination address-register `p`. Verified by
+  `sirc-vm/toolchain/tests/assembler/control_flow_test.rs`, including `LJSR a`, `LJSR a, #4`, `LJSR a, r3`,
+  `LJSR (#0, a)+`, and `LJSR (r3, a)+`. Targeted verification command passed:
+  `cargo test -p toolchain --test mod assembler::control_flow_test -- --nocapture`.
 
 - Verify all encoding examples.
   - Some examples in `chapters/07-instruction-formats.tex` appear to have inconsistent hex widths for 32-bit instructions.
@@ -32,7 +36,7 @@ These should be fixed before expanding the manual, because they create contradic
 
 These are the biggest gaps compared to the M68k manual.
 
-- Add a formal instruction-description template and apply it consistently.
+- Apply the existing instruction-description template consistently across all instruction entries.
 - Add legal operand/addressing-mode tables per instruction.
 - Add exact flag-effect tables per instruction.
 - Add exception/fault behavior per instruction.
@@ -45,15 +49,33 @@ These are the biggest gaps compared to the M68k manual.
 These are important for emulator, hardware, OS, debugger, and compiler work.
 
 - Add bus timing diagrams and signal sequencing.
-- Add data layout rules: vector word order, 32-bit address storage, sign extension, stack layout, and multi-word conventions.
+- Data layout rules. Mostly resolved: Chapter 4 now defines vector word order, stored address layout, immediate
+  sign/zero behavior, address wraparound, and memory ordering. Remaining work is to audit older examples for byte-style
+  offsets and decide whether to add non-normative software conventions for multi-word integers and stack layout.
 - Add ABI/calling convention guidance or explicitly state that it is outside the ISA.
 - Add assembler/object/binary format appendix if SIRC has a canonical ROM or object representation.
 - Add revision/model compatibility tables for optional coprocessors.
 
 ### P3: Polish and maintainability
 
-- Add list of figures and list of tables.
-- Add notation/glossary section.
+- Fix PDF layout issues in the instruction summary and instruction reference pages.
+  - Section 12.2, "Complete Instruction List", does not fit cleanly on one page. Convert it to a multi-page table
+    (`longtable`, `ltablex`, or a generated split table), or split it into separate opcode-family tables if that reads
+    better.
+  - Some `instructionbox` sections are too tall for the remaining page space, for example "XORI / XORR - XOR
+    Immediate / XOR Register", "LOAD - Load/Move", and "CMPI / CMPR - Compare Immediate / Compare Register". This is
+    not exhaustive.
+  - Review `tcolorbox` layout options such as `breakable` plus a consistent page-start/need-space policy so instruction
+    boxes do not appear unpredictably centered or stranded at the bottom of a page.
+
+- Modernize the manual's visual design.
+  - Move toward a cleaner modern serif technical-manual style, closer to the original reference manual inspiration and
+    other CPU manuals.
+  - Revisit the current font package, heading style, color palette, table styling, box styling, and listing styling as a
+    coherent design pass rather than isolated tweaks.
+
+- List of figures and list of tables. Resolved: `main.tex` includes both.
+- Add notation/glossary section beyond the instruction-notation material already in Chapter 11.
 - Add quick-reference appendices.
 - Add manual lint/check scripts.
 - Add generated tables where possible.
@@ -80,6 +102,8 @@ Tasks:
   - "fault" vs "abort exception"
   - "word address" vs "byte address"
   - "high byte", "high word", and "upper byte" when describing registers
+  - "meta instruction" vs "alias" vs "convenience"; prefer "meta instruction" consistently for assembler-level
+    instructions such as `BRAN`, `BRSR`, `LJMP`, `LJSR`, `SHFT`, `RETS`, `NOOP`, `WAIT`, `RETE`, and `EXCP`
 
 - Make reserved behavior consistent:
   - reserved bits
@@ -98,15 +122,21 @@ Acceptance criteria:
 
 Goal: ensure every binary and hex encoding in the manual is correct.
 
+Progress:
+
+- `examples/reference-encodings` assembles the annotated manual encoding examples and generates the instruction-format
+  LaTeX tables under `docs/reference/generated/`.
+- Added `make check` support in `examples/reference-encodings` to verify the checked-in generated LaTeX tables match the
+  assembler/linker output. The comparison ignores whitespace so generated-table formatting can be maintained separately
+  from semantic drift detection.
+- Added `make check` in `docs/reference`, which runs the reference-encoding check and then builds the PDF.
+
 Tasks:
 
-- Create a small encoder/verifier for the manual examples.
-  - Best option: call into the existing assembler/toolchain tests if feasible.
-  - Alternative: create a focused script that encodes examples from a structured source file.
+- Expand machine checking beyond the generated instruction-format tables by auditing all remaining literal instruction
+  encodings in the manual and moving them into generated or verified sources.
 
-- Replace manually typed encoding examples with generated values where possible.
-
-- Add checks for:
+- Add or extend checks for:
   - 32-bit instruction width
   - opcode values
   - register field values
@@ -115,7 +145,7 @@ Tasks:
   - additional flags
   - shift operand/type/amount fields
 
-- Add a CI or `make check` target for reference-manual validation.
+- Add CI coverage for `make -C docs/reference check`.
 
 Acceptance criteria:
 
@@ -148,7 +178,9 @@ Recommended instruction template:
 
 Tasks:
 
-- Add a "How to Read Instruction Descriptions" section before the instruction reference, similar to the M68k manual's instruction-description format explanation.
+- "How to Read Instruction Descriptions" chapter. Resolved: Chapter 11 defines the instruction entry fields, notation,
+  flag-effect symbols, conditional execution behavior, and status update overrides. Remaining work is to apply the
+  template consistently to every instruction entry.
 
 - Create per-instruction legality tables:
   - ALU instructions: immediate, short immediate, register forms.
@@ -167,6 +199,13 @@ Tasks:
   - whether PC/link registers are modified
   - whether the instruction can fault
   - whether partial side effects are possible on faults
+
+- Clarify Chapter 17 meta-instruction descriptions.
+  - `SHFT` should be described as a meta instruction that saves the programmer from spelling the status-register source
+    override `[S]` manually.
+  - Make clear that `SHFT rD, shift` lowers to an operation that does not need to change the register value through a
+    meaningful ALU operation; the point is to apply the shift and take status flags from the shift result.
+  - Avoid describing `SHFT` as a separate CPU operation where the assembler lowering is the actual architectural fact.
 
 - Add exact flag-effect tables.
   - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
@@ -197,33 +236,23 @@ Progress:
 - Added operand category definitions and common address calculation rules, including word-sized auto-update behavior and
   the PC-relative rule that `p`-relative displacements are relative to the next instruction address after fetch.
 - Corrected addressing examples that implied byte offsets in word-addressed memory.
+- Renumbered chapter source files after adding the new data-representation chapter so source filenames again match manual
+  order: data representation is Chapter 4, status register is Chapter 5, exceptions is Chapter 6, and later chapters are
+  shifted accordingly.
 
 Tasks:
-
-- Add an addressing mode summary matrix.
-  - Columns should include syntax, encoding source, effective value/address, whether it reads memory, whether it writes memory, whether it alters an address register, and legal instruction families.
-
-- Add operand category definitions.
-  - Suggested categories:
-    - register value
-    - immediate value
-    - memory source
-    - memory destination
-    - branch target
-    - coprocessor operand
-    - privileged register
-    - alterable destination
 
 - Add "legal mode by instruction family" tables.
   - This is one of the most useful patterns from real CPU manuals.
 
-- Clarify pre-decrement/post-increment units.
-  - State whether increments/decrements are in words, bytes, or instruction words.
-  - State whether the offset participates before or after the address register update.
-  - State whether the high address byte can carry/borrow and when segment-overflow faults occur.
-
-- Clarify PC-relative addressing.
-  - Define the PC value used for effective address calculations: instruction address, next word, next instruction, or post-fetch PC.
+- Document omitted zero-displacement shorthand for memory indirect forms.
+  - Any instruction that accepts memory indirect access with immediate displacement should allow the displacement to be
+    omitted when it is zero.
+  - For example, `LOAD rD, (a)` must be specified as equivalent to `LOAD rD, (#0, a)`.
+  - Audit all affected instructions and parser tests so this shorthand is accepted consistently, not only for the forms
+    that currently happen to support it.
+  - Cover normal, post-increment, and pre-decrement immediate-displacement forms where applicable, and state clearly
+    whether omitted displacement is allowed for each syntax family.
 
 Acceptance criteria:
 
@@ -243,34 +272,11 @@ Progress:
 
 Tasks:
 
-- Add a data formats chapter or subsection.
-  - 16-bit word
-  - signed two's complement word
-  - 8-bit high/low byte within a word
-  - 24-bit address
-  - 32-bit stored address/vector
-  - multi-word integer conventions
-
-- Define memory word order for 32-bit quantities.
-  - Exception vectors are 32-bit addresses stored as two 16-bit words; specify which word comes first.
-  - Define how `ph:pl`, `ah:al`, etc. map to memory if stored manually.
-
-- Define immediate interpretation.
-  - Which immediates are sign-extended?
-  - Which are zero-extended?
-  - Are ALU immediates interpreted differently by arithmetic vs logical instructions?
-  - How does 8-bit short immediate behave?
-
-- Define overflow and wraparound.
-  - register arithmetic
-  - address arithmetic
-  - PC increment
-  - pre-decrement/post-increment
-  - segment crossing
-
-- Define memory ordering.
-  - If there are no caches or reordering, say so.
-  - If external devices can observe every bus access in program order, say so.
+- Audit examples in other chapters for byte-oriented offset assumptions, especially stack, structure, vector, and
+  multi-word address examples. Prefer word offsets everywhere unless a section is explicitly discussing external byte
+  representation.
+- Decide whether to add more non-normative software conventions for multi-word integers beyond the architectural
+  high-word-first convention already documented.
 
 Acceptance criteria:
 
@@ -508,6 +514,13 @@ Tasks:
   - check glossary/terminology
   - optionally render selected pages for visual inspection
 
+- Add visual PDF QA for known problem pages.
+  - Render and inspect the page containing Section 12.2, "Complete Instruction List".
+  - Render instruction reference pages containing tall boxes such as "XORI / XORR", "LOAD - Load/Move", and
+    "CMPI / CMPR".
+  - Treat overfull tables, clipped boxes, and awkward bottom-of-page instructionbox placement as documentation build
+    defects.
+
 - Generate tables from source where possible.
   - opcode map
   - register map
@@ -535,16 +548,15 @@ Acceptance criteria:
 
 ## Suggested Execution Order
 
-1. Fix P0 contradictions and flag semantics.
-2. Add machine-checked encoding verification.
-3. Define the instruction-description template.
-4. Upgrade ALU instructions first, since they drive flag/condition-code correctness.
-5. Upgrade memory/control-flow instructions next, since they touch addressing, PC, link register, and bus behavior.
-6. Upgrade exceptions/reset, including diagrams and quick-reference tables.
-7. Add bus timing diagrams and signal tables.
-8. Add data representation and ABI/software convention appendices.
-9. Add compatibility, binary/object format, and quick-reference appendices.
-10. Add QA automation and generated tables.
+1. Add machine-checked encoding verification for all manual encoding examples.
+2. Finish the instruction-description template rollout and close remaining per-instruction legality/flag/exception gaps.
+3. Upgrade ALU instructions first, since they drive flag/condition-code correctness.
+4. Upgrade memory/control-flow instructions next, since they touch addressing, PC, link register, and bus behavior.
+5. Upgrade exceptions/reset, including diagrams and quick-reference tables.
+6. Add bus timing diagrams and signal tables.
+7. Add ABI/software convention guidance or explicitly move it out of the ISA manual.
+8. Add compatibility, binary/object format, and quick-reference appendices.
+9. Add QA automation and generated tables.
 
 ## Definition of Done
 
