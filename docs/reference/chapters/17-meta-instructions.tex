@@ -59,12 +59,13 @@ LJMP a, r1                    ; Assembles to: LDEA p, (r1, a)
 
 \section{LJSR -- Long Jump to Subroutine}
 
-\textbf{Syntax:} \texttt{LJSR src [, offset]}
+\textbf{Syntax:} \texttt{LJSR src [, offset]}, \texttt{LJSR (\#offset, src)+}, or \texttt{LJSR (rS, src)+}
 
 \textbf{Assembles to:} \texttt{LDEL p, ...} (various forms)
 
 \textbf{Description:} Performs an absolute call through an address register. The return address is saved to \reg{l}; the
-computed target address is written to \reg{p}. Supports optional immediate or register offsets.
+computed target address is written to \reg{p}. Supports optional immediate or register offsets, plus post-increment
+forms that advance the source address register after computing the call target.
 
 \textbf{Examples:}
 \begin{lstlisting}
@@ -76,6 +77,10 @@ LJSR a, #16                   ; Assembles to: LDEL p, (#16, a)
 
 ; Call with register displacement
 LJSR a, r1                    ; Assembles to: LDEL p, (r1, a)
+
+; Call and post-increment the source pointer
+LJSR (#0, a)+                 ; Assembles to: LDEL p, (#0, a)+
+LJSR (r1, a)+                 ; Assembles to: LDEL p, (r1, a)+
 \end{lstlisting}
 
 \section{BRAN -- PC-Relative Branch}

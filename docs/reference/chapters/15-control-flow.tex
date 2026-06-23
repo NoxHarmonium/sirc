@@ -27,26 +27,28 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}   & \textbf{Notes}                                \\
+		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}   & \textbf{Notes}                                 \\
 		\midrule
-		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18                & Immediate-offset effective address            \\
-		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19                & Register-offset effective address             \\
-		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A                & Pre-decrement source, immediate offset        \\
-		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B                & Pre-decrement source, register offset         \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C                & Immediate-offset effective address and link   \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D                & Register-offset effective address and link    \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E                & Post-increment source, immediate offset       \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F                & Post-increment source, register offset        \\
-		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#disp, p)}     \\
-		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} alias & PC-relative linker-computed displacement      \\
-		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#disp, p)}     \\
-		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} alias & PC-relative linker-computed call              \\
-		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#0, src)}      \\
-		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#offset, src)} \\
-		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (rS, src)}       \\
-		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#0, src)}      \\
-		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)} \\
-		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)}       \\
+		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18                & Immediate-offset effective address             \\
+		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19                & Register-offset effective address              \\
+		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A                & Pre-decrement source, immediate offset         \\
+		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B                & Pre-decrement source, register offset          \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C                & Immediate-offset effective address and link    \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D                & Register-offset effective address and link     \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E                & Post-increment source, immediate offset        \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F                & Post-increment source, register offset         \\
+		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#disp, p)}      \\
+		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} alias & PC-relative linker-computed displacement       \\
+		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#disp, p)}      \\
+		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} alias & PC-relative linker-computed call               \\
+		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#0, src)}       \\
+		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#offset, src)}  \\
+		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (rS, src)}        \\
+		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#0, src)}       \\
+		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)}  \\
+		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)}        \\
+		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)+} \\
+		LJSR                 & \texttt{LJSR (rS, src)+}             & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)+}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Control-Flow and Effective-Address Forms}
@@ -265,12 +267,16 @@ LJMP|cond src                 ; Conditional long jump
 LJSR src                      ; l = next PC; p = src
 LJSR src, #offset             ; l = next PC; p = src + offset
 LJSR src, rS                  ; l = next PC; p = src + rS
+LJSR (#offset, src)+          ; l = next PC; p = src + offset; src += 1
+LJSR (rS, src)+               ; l = next PC; p = src + rS; src += 1
 LJSR|cond src                 ; Conditional long call
 \end{lstlisting}
 
 	\textbf{Description:}
 
 	Calls a subroutine through an address register. The return address is saved in \reg{l}; return with \mnemonic{RETS}.
+	Post-increment forms advance \texttt{src} after computing the target. Because \mnemonic{LJSR} implicitly writes \reg{l}
+	and \reg{p}, post-increment source registers cannot be \reg{l} or \reg{p}.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -285,6 +291,10 @@ LJSR a, #function_offset      ; p = a + function_offset
 ; Call with register displacement
 LOAD r1, #8
 LJSR a, r1                    ; p = a + r1
+
+; Call through a table entry and advance to the next entry
+LJSR (#0, a)+                 ; p = old a; a += 1
+LJSR (r1, a)+                 ; p = a + r1; a += 1
 \end{lstlisting}
 
 \end{instructionbox}
