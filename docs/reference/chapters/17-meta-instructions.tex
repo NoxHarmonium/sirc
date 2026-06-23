@@ -3,9 +3,27 @@
 
 \section{Overview}
 
-Meta-instructions (also called pseudo-instructions) are assembly mnemonics that don't directly correspond to unique
-opcodes. Instead, they assemble to specific forms of existing instructions, providing more intuitive syntax for common
-operations.
+Meta-instructions are assembly mnemonics that do not directly correspond to unique opcodes. Instead, they assemble to
+specific forms of existing instructions, providing more intuitive syntax for common operations.
+
+\section{Common Meta-Instruction Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic}   & \textbf{Definition}                                                                                                                                                       \\
+		\midrule
+		Encoding         & A meta-instruction has no dedicated CPU opcode. The assembler emits the real instruction shown by the entry's \textbf{Assembles to} line.                                 \\
+		Condition codes  & Meta-instructions use the condition-code field of their emitted instruction. If the condition is false, the emitted instruction is skipped and has no side effects.       \\
+		Status overrides & Operandless control and exception meta-instructions do not accept status-update override syntax. \mnemonic{SHFT} uses \texttt{[S]} by default, as documented below.       \\
+		Flags and faults & Flag effects, privilege checks, bus behavior, and faults are inherited from the emitted instruction form unless the meta-instruction entry states a stricter rule.        \\
+		Timing           & A meta-instruction takes the same time as the single instruction it emits: normally 6 cycles plus any instruction-fetch or data-bus wait states used by that instruction. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Meta-Instruction Semantics}
+	\label{tab:meta-common-semantics}
+\end{table}
 
 \section{NOOP -- No Operation}
 
@@ -120,7 +138,7 @@ EXCP #0x80                    ; Trap to OS print routine
 
 \textbf{Syntax:} \texttt{WAIT}
 
-\textbf{Assembles to:} \texttt{COPI r1, \#0x1900}
+\textbf{Assembles to:} \texttt{COPI \#0x1900}
 
 \textbf{Description:} Puts the CPU into a low-power wait state until an exception occurs. Sets the waiting\_for\_exception flag in the exception unit. Only valid in supervisor mode.
 

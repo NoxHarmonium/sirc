@@ -104,6 +104,9 @@ Tasks:
   - "high byte", "high word", and "upper byte" when describing registers
   - "meta instruction" vs "alias" vs "convenience"; prefer "meta instruction" consistently for assembler-level
     instructions such as `BRAN`, `BRSR`, `LJMP`, `LJSR`, `SHFT`, `RETS`, `NOOP`, `WAIT`, `RETE`, and `EXCP`
+    - Progress: Chapter 15 and the instruction summary now use "meta-instruction" for assembler-level instruction
+      forms. Remaining "aliased register writes" wording refers to architectural register write hazards, not
+      assembler-level instruction naming.
 
 - Make reserved behavior consistent:
   - reserved bits
@@ -185,6 +188,12 @@ Tasks:
   - Memory instructions: indirect immediate, indirect register, post-increment, pre-decrement.
   - Control flow: branch, long jump, subroutine call, return, effective address load.
   - Coprocessor/meta-instructions: immediate/register forms, privilege rules.
+    - Progress: Chapter 16 now has coprocessor legal forms and common semantics. The spec hides inherited register and
+      shift fields from programmers: `COPI` takes an immediate command operand, `COPR` takes a source register operand,
+      and hidden encoding fields are reserved/canonicalized by the assembler.
+    - Follow-up implementation note: the current toolchain parser still exposes a destination-register operand for raw
+      `COPI`/`COPR` forms. Update the parser and tests later so the assembler accepts the source-only syntax described
+      by the manual.
 
 - Complete the control-flow opcode rework.
   - See `control-flow-opcode-rework-handover.md` for the dedicated design handover covering `LDEL`, `LDEA`, `BRAN`, `BRSR`, `LJMP`, `LJSR`, opcode reuse, implementation staging, and remaining implementation choices.
@@ -201,6 +210,8 @@ Tasks:
 - Clarify Chapter 17 meta-instruction descriptions.
   - `SHFT` resolved: documented as a meta instruction that lowers to `ORRI[S] rD, #0, shift`, preserving the shifted
     value while taking status flags from the shifter result. It is no longer described as a separate CPU operation.
+  - Common meta-instruction semantics added: meta-instructions inherit condition-code, timing, flag, fault, and
+    privilege behavior from the emitted instruction unless explicitly stated otherwise.
   - Continue auditing the remaining meta-instructions so every entry distinguishes assembler syntax from real CPU
     encodings and privilege rules.
 

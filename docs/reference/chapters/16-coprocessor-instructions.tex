@@ -7,39 +7,99 @@ The SIRC-1 CPU includes a coprocessor interface that allows delegation of certai
 coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and
 privileged operations.
 
-\begin{instructionbox}{COP -- Coprocessor Call}
-	\textbf{Opcodes:} 0x0F (Imm), 0x2F (Short Imm), 0x3F (Reg)
+Coprocessor calls are ordinary conditional instructions. If the instruction's condition is true, the processing unit
+computes a command operand and writes it to the 16-bit pending coprocessor-command latch during write-back. The
+selected coprocessor then interprets the command value. If the selected coprocessor is not present in the CPU model,
+the exception unit raises an invalid-opcode fault so the operation can be emulated or rejected by software.
+
+\section{Legal Forms}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Syntax}       & \textbf{Encoding} & \textbf{Notes}                           \\
+		\midrule
+		COPI                 & \texttt{COPI \#imm16} & 0x0F              & 16-bit coprocessor command operand       \\
+		COPI                 & \texttt{COPI \#imm8}  & 0x2F              & Zero-extended 8-bit command operand      \\
+		COPR                 & \texttt{COPR rS}      & 0x3F              & Command operand is read from \texttt{rS} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Legal Coprocessor Instruction Forms}
+	\label{tab:coprocessor-legal-forms}
+\end{table}
+
+\noindent The CPU encoding reserves register and shift fields inherited from the immediate, short-immediate, and
+register instruction formats. The programmer-facing \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields;
+assemblers emit canonical values and coprocessors must not interpret them as destination-register writes.
+
+\section{Common Semantics}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                            \\
+		\midrule
+		Condition false    & The instruction is skipped and has no side effects. The pending coprocessor command, registers, memory, address registers, program counter, and status flags are preserved.                                                                    \\
+		Command operand    & Immediate \mnemonic{COPI} uses the 16-bit immediate value. Short-immediate \mnemonic{COPI} uses the zero-extended encoded 8-bit immediate value as the command operand. \mnemonic{COPR} uses its source register value as the command operand. \\
+		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                     \\
+		Write-back         & The processing unit writes the command operand to the pending coprocessor-command latch. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.               \\
+		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                   \\
+		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                              \\
+		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                                           \\
+		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing, invalid, or reserved coprocessor IDs and operations raise invalid-opcode faults.                                                          \\
+		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Coprocessor Instruction Semantics}
+	\label{tab:coprocessor-common-semantics}
+\end{table}
+
+\begin{instructionbox}{COPI/COPR -- Coprocessor Call}
+	\textbf{Opcodes:} 0x0F (Immediate), 0x2F (Short Immediate), 0x3F (Register)
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-COPI #opcode                  ; Call coprocessor with 16-bit opcode
-COPR rS                       ; Call coprocessor with register value
+COPI #opcode                  ; Call coprocessor with 16-bit command
+COPI #value                   ; Call coprocessor with 8-bit command operand
+COPR rS                       ; Call coprocessor with command in rS
 \end{lstlisting}
 
 	\textbf{Description:}
 
-	Transfers control to a coprocessor. The coprocessor ID and operation code are encoded in the immediate value or
-	register. Coprocessor operations may be privileged.
+	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
+	next nibble selects that coprocessor's operation. The remaining low byte is defined by the selected operation.
 
-	\textbf{Format:}
-	\begin{itemize}
-		\item Bits 15--12: Coprocessor ID
-		\item Bits 11--0: Operation code
-	\end{itemize}
+	\textbf{Operation:}
+	\begin{lstlisting}
+if condition_true then
+    pending_coprocessor_command = command_operand
+endif
+\end{lstlisting}
+
+	\textbf{Write-back:} Writes the command operand to the pending coprocessor-command latch.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} May raise privilege-violation or invalid-opcode faults.
+
+	\textbf{Timing:} 6 cycles, plus any instruction-fetch wait states.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
 ; Wait for interrupt (Exception Unit)
-COPI #0x1900                  ; Coprocessor 1, opcode 0x900
-; Assembled as WAIT meta-instruction
+COPI #0x1900                  ; Coprocessor 1, operation 0x9
+; Prefer the WAIT meta-instruction for normal assembly code.
 
 ; Return from exception
-COPI #0x1A00                  ; Coprocessor 1, opcode 0xA00
-; Assembled as RETE meta-instruction
+COPI #0x1A00                  ; Coprocessor 1, operation 0xA
+; Prefer the RETE meta-instruction for normal assembly code.
 
 ; User exception (system call)
-COPI #0x1180                  ; Coprocessor 1, opcode 0x180 (vector 0x80)
-; Assembled as EXCP #0x80 meta-instruction
+COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
+; Prefer EXCP #0x80 for normal assembly code.
 \end{lstlisting}
 
 \end{instructionbox}

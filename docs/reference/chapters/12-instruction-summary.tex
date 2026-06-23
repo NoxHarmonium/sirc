@@ -125,19 +125,18 @@ Examples:
 
 \section{Meta-Instructions}
 
-Several commonly-used operations are implemented as meta-instructions (pseudo-instructions) that assemble to specific
-opcodes:
+Several commonly-used operations are implemented as assembler meta-instructions that assemble to specific opcodes:
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{llp{7cm}}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Assembles To}      & \textbf{Purpose}       \\
+		\textbf{Meta-Instruction} & \textbf{Assembles To}     & \textbf{Purpose}       \\
 		\midrule
-		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}      & No operation           \\
-		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)}  & Return from subroutine \\
-		\mnemonic{WAIT}           & \texttt{COPI r1, \#0x1900} & Wait for interrupt     \\
-		\mnemonic{RETE}           & \texttt{COP \#0x1A00}      & Return from exception  \\
+		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
+		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
+		\mnemonic{WAIT}           & \texttt{COPI \#0x1900}    & Wait for interrupt     \\
+		\mnemonic{RETE}           & \texttt{COPI \#0x1A00}    & Return from exception  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instructions}
@@ -168,5 +167,5 @@ The following chapters provide detailed documentation for each instruction group
 	\item \textbf{Chapter~\ref{ch:memory-instructions}}: Load and store operations
 	\item \textbf{Chapter~\ref{ch:control-flow}}: Branches, jumps, and address operations
 	\item \textbf{Chapter~\ref{ch:coprocessor}}: Coprocessor interface
-	\item \textbf{Chapter~\ref{ch:meta-instructions}}: Meta-instructions and pseudo-ops
+	\item \textbf{Chapter~\ref{ch:meta-instructions}}: Meta-instructions
 \end{itemize}

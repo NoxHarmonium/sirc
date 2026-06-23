@@ -11,10 +11,10 @@ The SIRC-1 provides these control-flow and address-calculation operations:
 \begin{itemize}
 	\item \mnemonic{LDEA} -- Load Effective Address into an address-register pair
 	\item \mnemonic{LDEL} -- Load Effective Address and Link; also saves the return address in \reg{l}
-	\item \mnemonic{BRAN} -- PC-relative assembler alias for \texttt{LDEA p, ...}
-	\item \mnemonic{BRSR} -- PC-relative assembler alias for \texttt{LDEL p, ...}
-	\item \mnemonic{LJMP} -- Absolute-jump assembler alias for \texttt{LDEA p, ...}
-	\item \mnemonic{LJSR} -- Absolute-call assembler alias for \texttt{LDEL p, ...}
+	\item \mnemonic{BRAN} -- PC-relative assembler meta-instruction for \texttt{LDEA p, ...}
+	\item \mnemonic{BRSR} -- PC-relative assembler meta-instruction for \texttt{LDEL p, ...}
+	\item \mnemonic{LJMP} -- Absolute-jump assembler meta-instruction for \texttt{LDEA p, ...}
+	\item \mnemonic{LJSR} -- Absolute-call assembler meta-instruction for \texttt{LDEL p, ...}
 \end{itemize}
 
 All encoded control-flow instructions can be conditional. If the condition is false, the instruction is skipped and has
@@ -27,28 +27,28 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}   & \textbf{Notes}                                 \\
+		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}  & \textbf{Notes}                                 \\
 		\midrule
-		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18                & Immediate-offset effective address             \\
-		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19                & Register-offset effective address              \\
-		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A                & Pre-decrement source, immediate offset         \\
-		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B                & Pre-decrement source, register offset          \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C                & Immediate-offset effective address and link    \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D                & Register-offset effective address and link     \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E                & Post-increment source, immediate offset        \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F                & Post-increment source, register offset         \\
-		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#disp, p)}      \\
-		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} alias & PC-relative linker-computed displacement       \\
-		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#disp, p)}      \\
-		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} alias & PC-relative linker-computed call               \\
-		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#0, src)}       \\
-		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (\#offset, src)}  \\
-		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} alias & Assembles to \texttt{LDEA p, (rS, src)}        \\
-		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#0, src)}       \\
-		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)}  \\
-		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)}        \\
-		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (\#offset, src)+} \\
-		LJSR                 & \texttt{LJSR (rS, src)+}             & \texttt{LDEL} alias & Assembles to \texttt{LDEL p, (rS, src)+}       \\
+		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18               & Immediate-offset effective address             \\
+		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19               & Register-offset effective address              \\
+		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A               & Pre-decrement source, immediate offset         \\
+		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B               & Pre-decrement source, register offset          \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C               & Immediate-offset effective address and link    \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D               & Register-offset effective address and link     \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E               & Post-increment source, immediate offset        \\
+		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F               & Post-increment source, register offset         \\
+		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}      \\
+		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement       \\
+		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}      \\
+		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} meta & PC-relative linker-computed call               \\
+		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}       \\
+		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)}  \\
+		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rS, src)}        \\
+		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#0, src)}       \\
+		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)}  \\
+		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rS, src)}        \\
+		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)+} \\
+		LJSR                 & \texttt{LJSR (rS, src)+}             & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rS, src)+}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Control-Flow and Effective-Address Forms}
@@ -56,7 +56,8 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 \end{table}
 
 \noindent\textbf{Address registers:} \texttt{src} and \texttt{dest} are address-register pairs: \reg{l}, \reg{a},
-\reg{s}, or \reg{p}. The branch aliases always use \reg{p} as both the source and destination address-register pair.
+\reg{s}, or \reg{p}. The branch meta-instructions always use \reg{p} as both the source and destination address-register
+pair.
 
 \noindent\textbf{Aliased register writes:} Instructions that write the same address-register pair through more than one
 write-back path have architecturally undefined behavior. Avoid forms such as \texttt{LDEA a, -(\#0, a)} and
@@ -89,9 +90,9 @@ forms do not accept shift suffixes in the assembler.
 	\label{tab:control-flow-common-semantics}
 \end{table}
 
-\section{Branch Aliases}
+\section{Branch Meta-Instructions}
 
-\begin{instructionbox}{BRAN -- Branch Alias}
+\begin{instructionbox}{BRAN -- Branch Meta-Instruction}
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination
 
 	\textbf{Syntax:}
@@ -103,8 +104,8 @@ BRAN|cond #disp               ; Conditional PC-relative branch
 
 	\textbf{Description:}
 
-	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler alias, not a distinct CPU opcode. Use
-	\mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p, (rS, src)} for non-PC-relative computed jumps.
+	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler meta-instruction, not a distinct CPU
+	opcode. Use \mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p, (rS, src)} for non-PC-relative computed jumps.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -119,7 +120,7 @@ loop:
 
 \end{instructionbox}
 
-\begin{instructionbox}{BRSR -- Branch to Subroutine Alias}
+\begin{instructionbox}{BRSR -- Branch to Subroutine Meta-Instruction}
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination
 
 	\textbf{Syntax:}
@@ -239,9 +240,9 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 
 \end{instructionbox}
 
-\section{Long Jump Aliases}
+\section{Long Jump Meta-Instructions}
 
-\begin{instructionbox}{LJMP -- Long Jump Alias}
+\begin{instructionbox}{LJMP -- Long Jump Meta-Instruction}
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination
 
 	\textbf{Syntax:}
@@ -254,12 +255,12 @@ LJMP|cond src                 ; Conditional long jump
 
 	\textbf{Description:}
 
-	Performs an absolute jump through an address register. \mnemonic{LJMP} is an assembler alias, not a separate CPU
-	opcode.
+	Performs an absolute jump through an address register. \mnemonic{LJMP} is an assembler meta-instruction, not a separate
+	CPU opcode.
 
 \end{instructionbox}
 
-\begin{instructionbox}{LJSR -- Long Jump to Subroutine Alias}
+\begin{instructionbox}{LJSR -- Long Jump to Subroutine Meta-Instruction}
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination
 
 	\textbf{Syntax:}
