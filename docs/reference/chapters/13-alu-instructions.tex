@@ -193,6 +193,10 @@ ADDR rD, rS1, rS2              ; rD = rS1 + rS2
 ADDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2
 \end{lstlisting}
 
+	\textbf{Operands:} \texttt{rD} is the destination and first source in immediate forms. Register forms use \texttt{rS1}
+	as the first source and \texttt{rS2} as the second source; assembler shorthand may omit \texttt{rS1}. Short-immediate
+	and register forms may apply a shift to the first source operand.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 + operand2
@@ -215,6 +219,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -253,6 +263,9 @@ ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
 ADCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2 + C
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 + operand2 + SR.C
@@ -274,6 +287,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -307,6 +326,8 @@ SUBR rD, rS1, rS2              ; rD = rS1 - rS2
 SUBR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2
@@ -328,6 +349,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -359,9 +386,12 @@ BRAN|!= @loop              ; Branch if not zero
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SBCI rD, #imm16                ; rD = rD - imm16 - C
+SBCI rD, #imm8, shift          ; rD = (rD << shift) - imm8 - C
 SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
 SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - C
 \end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -384,6 +414,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -416,6 +452,9 @@ ANDR rD, rS1, rS2              ; rD = rS1 & rS2
 ANDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) & rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 AND operand2
@@ -437,6 +476,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -474,6 +519,9 @@ ORRR rD, rS1, rS2              ; rD = rS1 | rS2
 ORRR rD, rS1, rS2, shift       ; rD = (rS1 << shift) | rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 OR operand2
@@ -495,6 +543,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -535,6 +589,9 @@ XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
 XORR rD, rS1, rS2, shift       ; rD = (rS1 << shift) ^ rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 XOR operand2
@@ -556,6 +613,12 @@ SR.V = 0
 	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -596,6 +659,9 @@ LOAD rD, #imm16                ; rD = imm16 (via add)
 LOAD rD, rS                    ; rD = rS (via add)
 \end{lstlisting}
 
+	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
+	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 ; Implemented as: rD = 0 + operand
@@ -614,6 +680,12 @@ destination = operand
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 
 	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -660,6 +732,9 @@ CMPR rS1, rS2                  ; Compare rS1 with rS2
 CMPR rS1, rS2, shift           ; Compare (rS1 << shift) with rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
+	no destination register is written.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2
@@ -682,6 +757,12 @@ SR.V = signed_overflow
 	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -729,6 +810,9 @@ TSAR rS1, rS2                  ; Test rS1 & rS2
 TSAR rS1, rS2, shift           ; Test (rS1 << shift) & rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
+	destination register is written.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 AND operand2
@@ -750,6 +834,12 @@ SR.V = 0
 	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}
@@ -794,6 +884,9 @@ TSXR rS1, rS2                  ; Test rS1 ^ rS2
 TSXR rS1, rS2, shift           ; Test (rS1 << shift) ^ rS2
 \end{lstlisting}
 
+	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
+	destination register is written.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 XOR operand2
@@ -815,6 +908,12 @@ SR.V = 0
 	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Example:}
 	\begin{lstlisting}

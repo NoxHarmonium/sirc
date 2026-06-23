@@ -67,6 +67,10 @@ COPI #opcode                  ; Call coprocessor with 16-bit command
 COPR rS                       ; Call coprocessor with command in rS
 \end{lstlisting}
 
+	\textbf{Operands:} \mnemonic{COPI} takes a 16-bit immediate command operand. \mnemonic{COPR} takes a general-purpose
+	source register whose 16-bit value is used as the command operand. Hidden encoded register and shift fields are
+	canonicalized by the assembler and are not programmer-visible operands.
+
 	\textbf{Description:}
 
 	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
@@ -86,7 +90,13 @@ endif
 	\textbf{Exceptions:} May raise privilege-violation faults, or invalid-opcode faults for missing coprocessors and
 	unimplemented coprocessor operations.
 
+	\textbf{Condition codes:} If the condition is false, no command is dispatched, the pending command latch is preserved,
+	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
+
 	\textbf{Timing:} 6 cycles, plus any instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
+	0x8--0xF are supervisor-only and raise privilege-violation faults when executed.
 
 	\textbf{Examples:}
 	\begin{lstlisting}

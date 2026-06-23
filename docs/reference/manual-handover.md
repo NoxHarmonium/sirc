@@ -189,6 +189,20 @@ Tasks:
 - "How to Read Instruction Descriptions" chapter. Resolved: Chapter 11 defines the instruction entry fields, notation,
   flag-effect symbols, conditional execution behavior, and status update overrides. Remaining work is to apply the
   template consistently to every instruction entry.
+  - Progress: Chapter 13 ALU instruction entries now include per-entry operands, condition-code behavior, timing, and
+    privilege fields, alongside existing syntax, operation, flags, write-back, exceptions, examples, and notes. The SBC
+    entry also now lists its short-immediate form.
+  - Progress: Chapter 14 memory instruction entries now include per-entry operands, operation pseudocode,
+    condition-code behavior, and privilege fields for `LOAD` and `STOR`, alongside existing write-back, flags,
+    exceptions, timing, and examples.
+  - Progress: Chapter 15 control-flow and effective-address entries now include per-entry operands, operation
+    pseudocode, write-back, flags, exceptions, condition-code behavior, timing, and privilege fields for `BRAN`, `BRSR`,
+    `LDEA`, `LDEL`, `LJMP`, and `LJSR`.
+  - Progress: Chapter 16 coprocessor entry now includes per-entry operands, condition-code behavior, and privilege
+    fields for `COPI` and `COPR`, alongside existing operation, write-back, flags, exceptions, timing, and examples.
+  - Progress: Chapter 17 meta-instruction entries now include per-entry operands, write-back, flags, exceptions,
+    condition-code behavior, timing, and privilege fields. The `NOOP` entry was corrected to document the current
+    lowering as `ADDI[N] r1, #0`.
 
 - Create per-instruction legality tables:
   - ALU instructions: immediate, short immediate, register forms.
@@ -219,6 +233,11 @@ Tasks:
     value while taking status flags from the shifter result. It is no longer described as a separate CPU operation.
   - Common meta-instruction semantics added: meta-instructions inherit condition-code, timing, flag, fault, and
     privilege behavior from the emitted instruction unless explicitly stated otherwise.
+  - Consider restructuring the instruction reference so meta-instructions live with their relevant families instead of
+    being duplicated in Chapter 17: `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` with control flow; `EXCP`, `WAIT`,
+    `RETE`, `RSET`, `ETFR`, and `ETTR` with exception/coprocessor instructions; `SHFT` with shift or ALU instructions.
+    Chapter 17 could then become a short cross-reference/assembler conveniences appendix, or be removed if all entries
+    have natural homes.
   - Continue auditing the remaining meta-instructions so every entry distinguishes assembler syntax from real CPU
     encodings and privilege rules.
 

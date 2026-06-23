@@ -102,6 +102,25 @@ LOAD rD, (rS, addr), shift           ; Load and shift
 LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 \end{lstlisting}
 
+	\textbf{Operands:} \texttt{rD} is the destination general-purpose register. \texttt{addr} is the address-register
+	pair that supplies the segment and base low word. Immediate-offset forms use a 16-bit displacement. Register-offset
+	forms use \texttt{rS} as the displacement register and may apply a shift to the loaded memory value before write-back.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if post_increment then
+    effective_address = addr + offset
+    loaded_value = memory[effective_address]
+    destination = shift_if_encoded(loaded_value)
+    addr.low = addr.low + 1
+else
+    effective_address = addr + offset
+    loaded_value = memory[effective_address]
+    destination = shift_if_encoded(loaded_value)
+endif
+; Flags are preserved
+\end{verbatim}
+
 	\textbf{Description:}
 
 	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
@@ -116,6 +135,12 @@ LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
 
 	\textbf{Timing:} 6 cycles when the memory read is acknowledged without wait states; wait states extend the memory-access
 	phase.
+
+	\textbf{Condition codes:} If the condition is false, no memory read occurs, no destination register is written, no
+	address register is incremented, and status flags are preserved.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
+	bus protection.
 
 	\textbf{Examples:}
 	\begin{lstlisting}
@@ -155,6 +180,24 @@ STOR (rD, addr), rS, shift           ; Shift and store
 STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
 \end{lstlisting}
 
+	\textbf{Operands:} \texttt{rS} is the source general-purpose register. \texttt{addr} is the address-register pair that
+	supplies the segment and base low word. Immediate-offset forms use a 16-bit displacement. Register-offset forms use
+	\texttt{rD} as the displacement register and may apply a shift to the source value before storing it.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if pre_decrement then
+    decremented_low = addr.low - 1
+    effective_address = (addr.high : decremented_low) + offset
+    memory[effective_address] = shift_if_encoded(source)
+    addr.low = decremented_low
+else
+    effective_address = addr + offset
+    memory[effective_address] = shift_if_encoded(source)
+endif
+; Source register and flags are preserved
+\end{verbatim}
+
 	\textbf{Description:}
 
 	Stores a 16-bit value from a register into memory. Pre-decrement forms use the decremented address for the store and
@@ -169,6 +212,12 @@ STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
 
 	\textbf{Timing:} 6 cycles when the memory write is acknowledged without wait states; wait states extend the memory-access
 	phase.
+
+	\textbf{Condition codes:} If the condition is false, no memory write occurs, no address register is decremented, and
+	status flags are preserved.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
+	bus protection.
 
 	\textbf{Examples:}
 	\begin{lstlisting}

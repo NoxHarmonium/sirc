@@ -133,7 +133,7 @@ Several commonly-used operations are implemented as assembler meta-instructions 
 		\toprule
 		\textbf{Meta-Instruction} & \textbf{Assembles To}     & \textbf{Purpose}       \\
 		\midrule
-		\mnemonic{NOOP}           & \texttt{ADDI r1, \#0}     & No operation           \\
+		\mnemonic{NOOP}           & \texttt{ADDI[N] r1, \#0}  & No operation           \\
 		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
 		\mnemonic{WAIT}           & \texttt{COPI \#0x1900}    & Wait for interrupt     \\
 		\mnemonic{RETE}           & \texttt{COPI \#0x1A00}    & Return from exception  \\
