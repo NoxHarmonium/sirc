@@ -200,9 +200,9 @@ Tasks:
     `LDEA`, `LDEL`, `LJMP`, and `LJSR`.
   - Progress: Chapter 16 coprocessor entry now includes per-entry operands, condition-code behavior, and privilege
     fields for `COPI` and `COPR`, alongside existing operation, write-back, flags, exceptions, timing, and examples.
-  - Progress: Chapter 17 meta-instruction entries now include per-entry operands, write-back, flags, exceptions,
-    condition-code behavior, timing, and privilege fields. The `NOOP` entry was corrected to document the current
-    lowering as `ADDI[N] r1, #0`.
+  - Progress: meta-instruction entries now include per-entry operands, write-back, flags, exceptions, condition-code
+    behavior, timing, and privilege fields in their relevant instruction-family chapters. The `NOOP` entry remains in
+    Chapter 17 and documents the current lowering as `ADDI[N] r1, #0`.
 
 - Create per-instruction legality tables:
   - ALU instructions: immediate, short immediate, register forms.
@@ -231,15 +231,13 @@ Tasks:
 - Clarify Chapter 17 meta-instruction descriptions.
   - `SHFT` resolved: documented as a meta instruction that lowers to `ORRI[S] rD, #0, shift`, preserving the shifted
     value while taking status flags from the shifter result. It is no longer described as a separate CPU operation.
-  - Common meta-instruction semantics added: meta-instructions inherit condition-code, timing, flag, fault, and
-    privilege behavior from the emitted instruction unless explicitly stated otherwise.
-  - Consider restructuring the instruction reference so meta-instructions live with their relevant families instead of
-    being duplicated in Chapter 17: `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` with control flow; `EXCP`, `WAIT`,
-    `RETE`, `RSET`, `ETFR`, and `ETTR` with exception/coprocessor instructions; `SHFT` with shift or ALU instructions.
-    Chapter 17 could then become a short cross-reference/assembler conveniences appendix, or be removed if all entries
-    have natural homes.
-  - Continue auditing the remaining meta-instructions so every entry distinguishes assembler syntax from real CPU
-    encodings and privilege rules.
+  - Common meta-instruction semantics are now expressed by the entries in their relevant instruction-family chapters:
+    meta-instructions inherit condition-code, timing, flag, fault, and privilege behavior from the emitted instruction
+    unless explicitly stated otherwise.
+  - Resolved: meta-instructions now live with their relevant instruction families. `SHFT` is documented in the
+    ALU chapter; `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` are documented with control flow; `EXCP`, `WAIT`, `RETE`,
+    `RSET`, `ETFR`, and `ETTR` are documented with coprocessor/exception-unit instructions. Chapter 17 is now a short
+    meta-instruction cross-reference plus the standalone `NOOP` entry.
 
 - Add exact flag-effect tables.
   - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
@@ -257,7 +255,7 @@ Tasks:
 Acceptance criteria:
 
 - A reader can implement each instruction without guessing legal operands, flag effects, exceptions, or side effects.
-- The manual distinguishes assembler conveniences from real CPU instructions.
+- The manual distinguishes meta-instructions from real CPU instructions.
 
 ## Workstream 4: Addressing Modes and Operand Legality
 

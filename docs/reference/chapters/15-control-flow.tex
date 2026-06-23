@@ -13,6 +13,7 @@ The SIRC-1 provides these control-flow and address-calculation operations:
 	\item \mnemonic{LDEL} -- Load Effective Address and Link; also saves the return address in \reg{l}
 	\item \mnemonic{BRAN} -- PC-relative assembler meta-instruction for \texttt{LDEA p, ...}
 	\item \mnemonic{BRSR} -- PC-relative assembler meta-instruction for \texttt{LDEL p, ...}
+	\item \mnemonic{RETS} -- Return meta-instruction for \texttt{LDEA p, (\#0, l)}
 	\item \mnemonic{LJMP} -- Absolute-jump assembler meta-instruction for \texttt{LDEA p, ...}
 	\item \mnemonic{LJSR} -- Absolute-call assembler meta-instruction for \texttt{LDEL p, ...}
 \end{itemize}
@@ -41,6 +42,7 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement       \\
 		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}      \\
 		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} meta & PC-relative linker-computed call               \\
+		RETS                 & \texttt{RETS}                        & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, l)}         \\
 		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}       \\
 		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)}  \\
 		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rS, src)}        \\
@@ -189,6 +191,54 @@ BRSR @function
 
 ; Return from the subroutine
 RETS
+\end{lstlisting}
+
+\end{instructionbox}
+
+\section{Return Meta-Instruction}
+
+\begin{instructionbox}{RETS -- Return from Subroutine Meta-Instruction}
+	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+RETS                          ; p = l
+RETS|cond                     ; Conditional return
+\end{lstlisting}
+
+	\textbf{Operands:} None. The source address-register pair is implicitly \reg{l}; the destination is implicitly \reg{p}.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+; Assembles to LDEA p, (#0, l)
+if condition:
+    p = l
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Returns from a subroutine by copying the link register to the program counter. Used after \mnemonic{LJSR} or
+	\mnemonic{BRSR}.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise protected-mode privilege faults if the return would change
+	\reg{p}'s high word.
+
+	\textbf{Condition codes:} If the condition is false, no return occurs and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{LDEA}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
+	write-back restrictions.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+my_function:
+    ; ... function body ...
+    RETS                      ; Return to caller
 \end{lstlisting}
 
 \end{instructionbox}

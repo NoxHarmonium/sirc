@@ -179,6 +179,60 @@ ADDI[N] r4, #1                ; Increment without changing flags
 BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
 \end{lstlisting}
 
+\begin{instructionbox}{SHFT -- Shift with Status Update Meta-Instruction}
+	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SHFT rD, shift                ; rD = shifted rD; flags from shift
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is both the destination and shifted source register. \texttt{shift} may use any
+	standard immediate or register shift count supported by short-immediate ALU instructions.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+shifted = shift(rD)
+rD = shifted OR 0
+SR = flags_from_shift_result
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Provides concise syntax for shifting a register value while taking status flags from the shifter result. It is not a
+	separate CPU operation. The zero OR operation preserves the shifted source value, while \texttt{[S]} makes the status
+	flags reflect the shift result instead of the OR result.
+
+	\textbf{Flags:} Updated from the shifter result by default.
+
+	\textbf{Write-back:} Inherits \mnemonic{ORRI} write-back to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition codes:} If the condition is false, no shift result is written and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
+
+	\textbf{Examples:}
+	\begin{lstlisting}
+; Shift r1 left by 3 and update flags
+SHFT r1, LSL #3               ; ORRI[S] r1, #0, LSL #3
+
+; Shift right and test result
+SHFT r3, LSR #2               ; r3 = r3 >> 2
+BRAN|== @zero_result          ; Branch if shifted result is zero
+\end{lstlisting}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Because the lowering uses the short-immediate format, \mnemonic{SHFT} has the same shift field limits as other
+		      short-immediate ALU instructions.
+		\item All shift types are supported: LSL, LSR, ASL, ASR, RTL, and RTR.
+	\end{itemize}
+\end{instructionbox}
+
 % ============================================================================
 \section{ADD -- Addition}
 

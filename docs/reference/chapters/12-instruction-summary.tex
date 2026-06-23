@@ -129,14 +129,24 @@ Several commonly-used operations are implemented as assembler meta-instructions 
 
 \begin{table}[H]
 	\centering
+	\small
 	\begin{tabular}{llp{7cm}}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Assembles To}     & \textbf{Purpose}       \\
+		\textbf{Meta-Instruction} & \textbf{Assembles To}           & \textbf{Purpose}         \\
 		\midrule
-		\mnemonic{NOOP}           & \texttt{ADDI[N] r1, \#0}  & No operation           \\
-		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)} & Return from subroutine \\
-		\mnemonic{WAIT}           & \texttt{COPI \#0x1900}    & Wait for interrupt     \\
-		\mnemonic{RETE}           & \texttt{COPI \#0x1A00}    & Return from exception  \\
+		\mnemonic{NOOP}           & \texttt{ADDI[N] r1, \#0}        & No operation             \\
+		\mnemonic{RETS}           & \texttt{LDEA p, (\#0, l)}       & Return from subroutine   \\
+		\mnemonic{SHFT}           & \texttt{ORRI[S] rD, \#0, shift} & Shift with status update \\
+		\mnemonic{BRAN}           & \texttt{LDEA p, ...}            & PC-relative branch       \\
+		\mnemonic{BRSR}           & \texttt{LDEL p, ...}            & PC-relative call         \\
+		\mnemonic{LJMP}           & \texttt{LDEA p, ...}            & Long jump                \\
+		\mnemonic{LJSR}           & \texttt{LDEL p, ...}            & Long call                \\
+		\mnemonic{EXCP}           & \texttt{COPI \#0x11vv}          & User exception           \\
+		\mnemonic{WAIT}           & \texttt{COPI \#0x1900}          & Wait for interrupt       \\
+		\mnemonic{RETE}           & \texttt{COPI \#0x1A00}          & Return from exception    \\
+		\mnemonic{RSET}           & \texttt{COPI \#0x1B00}          & System reset             \\
+		\mnemonic{ETFR}           & \texttt{COPI \#0x1Cxy}          & Read exception state     \\
+		\mnemonic{ETTR}           & \texttt{COPI \#0x1Dxy}          & Write exception state    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instructions}
@@ -167,5 +177,5 @@ The following chapters provide detailed documentation for each instruction group
 	\item \textbf{Chapter~\ref{ch:memory-instructions}}: Load and store operations
 	\item \textbf{Chapter~\ref{ch:control-flow}}: Branches, jumps, and address operations
 	\item \textbf{Chapter~\ref{ch:coprocessor}}: Coprocessor interface
-	\item \textbf{Chapter~\ref{ch:meta-instructions}}: Meta-instructions
+	\item \textbf{Chapter~\ref{ch:meta-instructions}}: Meta-instruction cross-reference
 \end{itemize}

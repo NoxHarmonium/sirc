@@ -144,5 +144,147 @@ The Exception Unit handles:
 	\caption{Exception Unit Operations}
 \end{table}
 
+\section{Exception Unit Meta-Instructions}
+
+\begin{instructionbox}{EXCP -- User Exception Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}
+
+	\textbf{Syntax:} \texttt{EXCP \#vector}
+
+	\textbf{Operands:} \texttt{\#vector} is the low 8-bit user exception vector selector.
+
+	\textbf{Description:} Triggers a software exception at the specified user vector, normally 0x60--0xFF. Used by
+	user-mode programs to invoke system calls or request supervisor-mode services.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction; exception entry effects are defined by the exception
+	unit.
+
+	\textbf{Exceptions:} Dispatches a software exception through the exception unit.
+
+	\textbf{Condition codes:} If the condition is false, no trap is dispatched and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles for the coprocessor call, plus exception-unit follow-up work.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
+	\textbf{Example:}
+	\begin{lstlisting}
+LOAD r1, #'A'                 ; Character to print
+EXCP #0x80                    ; Trap to OS print routine
+\end{lstlisting}
+\end{instructionbox}
+
+\begin{instructionbox}{WAIT -- Wait for Interrupt Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1900}
+
+	\textbf{Syntax:} \texttt{WAIT}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Puts the CPU into wait state until an exception occurs. Only valid in supervisor mode.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, the CPU does not enter wait state and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before the wait-state request is dispatched.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{RETE -- Return from Exception Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1A00}
+
+	\textbf{Syntax:} \texttt{RETE}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Restored by the exception unit as part of exception return.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no exception return occurs and current status flags are
+	preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before exception-unit return processing.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{RSET -- System Reset Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x1B00}
+
+	\textbf{Syntax:} \texttt{RSET}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Performs a software reset of the processor by clearing the status register and jumping to the
+	reset vector.
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Reset by the exception unit as part of reset processing.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no reset occurs and current status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before reset processing begins.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{ETFR/ETTR -- Exception Link Transfer Meta-Instructions}
+	\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} or \texttt{COPI \#0x1Dxy}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ETFR #n                       ; Transfer saved address and status to a and r7
+ETFR a, #n                    ; Transfer saved address to a only
+ETFR r7, #n                   ; Transfer saved status to r7 only
+ETTR #n                       ; Transfer a and r7 to saved address and status
+ETTR #n, a                    ; Transfer a to saved address only
+ETTR #n, r7                   ; Transfer r7 to saved status only
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{\#n} selects an exception link register. Optional operands select whether to transfer the
+	saved return address, saved status register, or both.
+
+	\textbf{Description:} \mnemonic{ETFR} copies saved exception state from an exception link register to CPU registers.
+	\mnemonic{ETTR} copies CPU register state back to the selected exception link register before returning.
+
+	\textbf{Write-back:} \mnemonic{ETFR} writes selected saved state to \reg{a}, \reg{r7}, or both. \mnemonic{ETTR} writes
+	\reg{a}, \reg{r7}, or both to selected saved exception state.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition codes:} If the condition is false, no transfer occurs and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{COPI}: 6 cycles before exception-unit transfer processing.
+
+	\textbf{Privilege:} Supervisor mode only.
+
+	\textbf{Example:}
+	\begin{lstlisting}
+alignment_fault_handler:
+    ETFR a, #6                ; Get faulting return address
+    LOAD al, @fixed_address   ; Correct the address
+    ETTR #6, a                ; Write corrected address back
+    RETE
+\end{lstlisting}
+\end{instructionbox}
+
 See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
 instructions.
