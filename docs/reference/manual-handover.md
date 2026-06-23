@@ -126,17 +126,15 @@ Progress:
 
 - `examples/reference-encodings` assembles the annotated manual encoding examples and generates the instruction-format
   LaTeX tables under `docs/reference/generated/`.
-- Added `make check` support in `examples/reference-encodings` to verify the checked-in generated LaTeX tables match the
-  assembler/linker output. The comparison ignores whitespace so generated-table formatting can be maintained separately
-  from semantic drift detection.
-- Added `make check` in `docs/reference`, which runs the reference-encoding check and then builds the PDF.
+- Decision: do not add Makefile/CI automation for this yet. A prototype stale-generated-table check was intentionally
+  removed because it was more machinery than wanted right now. Do not re-add it unless explicitly requested.
 
 Tasks:
 
 - Expand machine checking beyond the generated instruction-format tables by auditing all remaining literal instruction
   encodings in the manual and moving them into generated or verified sources.
 
-- Add or extend checks for:
+- Later, if desired, add or extend checks for:
   - 32-bit instruction width
   - opcode values
   - register field values
@@ -145,7 +143,7 @@ Tasks:
   - additional flags
   - shift operand/type/amount fields
 
-- Add CI coverage for `make -C docs/reference check`.
+- Later, if desired, add CI coverage for a reference-manual validation command.
 
 Acceptance criteria:
 
@@ -201,11 +199,10 @@ Tasks:
   - whether partial side effects are possible on faults
 
 - Clarify Chapter 17 meta-instruction descriptions.
-  - `SHFT` should be described as a meta instruction that saves the programmer from spelling the status-register source
-    override `[S]` manually.
-  - Make clear that `SHFT rD, shift` lowers to an operation that does not need to change the register value through a
-    meaningful ALU operation; the point is to apply the shift and take status flags from the shift result.
-  - Avoid describing `SHFT` as a separate CPU operation where the assembler lowering is the actual architectural fact.
+  - `SHFT` resolved: documented as a meta instruction that lowers to `ORRI[S] rD, #0, shift`, preserving the shifted
+    value while taking status flags from the shifter result. It is no longer described as a separate CPU operation.
+  - Continue auditing the remaining meta-instructions so every entry distinguishes assembler syntax from real CPU
+    encodings and privilege rules.
 
 - Add exact flag-effect tables.
   - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
@@ -548,15 +545,15 @@ Acceptance criteria:
 
 ## Suggested Execution Order
 
-1. Add machine-checked encoding verification for all manual encoding examples.
-2. Finish the instruction-description template rollout and close remaining per-instruction legality/flag/exception gaps.
-3. Upgrade ALU instructions first, since they drive flag/condition-code correctness.
-4. Upgrade memory/control-flow instructions next, since they touch addressing, PC, link register, and bus behavior.
-5. Upgrade exceptions/reset, including diagrams and quick-reference tables.
-6. Add bus timing diagrams and signal tables.
-7. Add ABI/software convention guidance or explicitly move it out of the ISA manual.
-8. Add compatibility, binary/object format, and quick-reference appendices.
-9. Add QA automation and generated tables.
+1. Finish the instruction-description template rollout and close remaining per-instruction legality/flag/exception gaps.
+2. Upgrade ALU instructions first, since they drive flag/condition-code correctness.
+3. Upgrade memory/control-flow instructions next, since they touch addressing, PC, link register, and bus behavior.
+4. Upgrade exceptions/reset, including diagrams and quick-reference tables.
+5. Add bus timing diagrams and signal tables.
+6. Add ABI/software convention guidance or explicitly move it out of the ISA manual.
+7. Add compatibility, binary/object format, and quick-reference appendices.
+8. Add QA automation and generated tables when the desired workflow is clear.
+9. Return to machine-checked encoding verification only when the lightweight workflow is agreed.
 
 ## Definition of Done
 
