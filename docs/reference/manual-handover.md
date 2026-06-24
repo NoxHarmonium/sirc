@@ -413,6 +413,8 @@ Acceptance criteria:
 
 Goal: make the hardware interface precise enough for board/device designers.
 
+Status: Complete.
+
 Progress:
 
 - Chapter 2 now defines cycle-level logical bus timing rules for A, D, BRW, BAT, PROT, BAS, SYNC, BACK, BERR, BPER,
@@ -431,9 +433,9 @@ Progress:
 - The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
   memory access, and exception vector fetch can all add wait states.
 
-Tasks:
+Completed scope:
 
-- Add bus timing diagrams. Resolved in Chapter 2 with `tikz-timing` figures for:
+- Bus timing diagrams are resolved in Chapter 2 with `tikz-timing` figures for:
   - two-word instruction fetch
   - data read
   - data write
@@ -445,46 +447,45 @@ Tasks:
   - hardware reset through reset-vector fetch
   - enabled IRQ sampled at an instruction boundary
 
-- Choose a timing-diagram authoring path. Resolved: use `tikz-timing` directly in LaTeX. The package is documented in
+- Timing-diagram authoring path is resolved: use `tikz-timing` directly in LaTeX. The package is documented in
   `docs/reference/README.md`, and a missing package fails clearly during the normal PDF build.
 
-- Define signal timing relative to `CLKI`.
+- Signal timing relative to `CLKI` is resolved at the architectural level:
   - when A, D, BRW, BAT, PROT, and BAS become valid
   - when data is sampled on reads
   - when data is driven/released on writes
-  - setup/hold requirements for BACK, BERR, BPER, IRQ, NMI, HALT, TRCE, and RSTI
-  - Progress: cycle-level logical timing is documented. Exact electrical setup/hold and propagation numbers remain out
-    of scope for the current reference manual and should be handled in a future datasheet/hardware implementation note.
+  - how BACK, BERR, BPER, IRQ, NMI, HALT, TRCE, and RSTI are sampled
+  - Exact electrical setup/hold and propagation numbers remain out of scope for the current reference manual and should
+    be handled in a future datasheet/hardware implementation note.
 
-- Define bus ownership.
+- Bus ownership is resolved:
   - when data bus is input, output, or high impedance
-  - whether address bus is always driven
+  - when address/control outputs are valid
   - behavior during reset and halt
-  - Progress: Chapter 2 now states that external devices must qualify address/data/control pins with BAS, and defines
-    data-bus ownership for read, write, wait-state, and no-bus cycles. Reset and halt behavior are described at the
-    signal level, and the common bus-cycle waveforms are now diagrammed.
+  - Chapter 2 states that external devices must qualify address/data/control pins with BAS, defines data-bus ownership
+    for read, write, wait-state, and no-bus cycles, and diagrams the common bus-cycle waveforms.
 
-- Define interrupt sampling.
+- Interrupt sampling is resolved:
   - level-triggered vs edge-triggered
   - sampled at instruction boundary or clock edge
   - minimum assertion duration
   - behavior when pin remains asserted
-  - Progress: Chapter 2 now matches Chapter 6 by documenting IRQ1--IRQ4 and NMI as level-sensitive, instruction-boundary
-    sampled inputs.
+  - Chapter 2 matches Chapter 6 by documenting IRQ1--IRQ4 and NMI as level-sensitive, instruction-boundary sampled
+    inputs, with an enabled IRQ timing example.
 
-- Define electrical assumptions or intentionally defer them.
+- Electrical assumptions are intentionally deferred:
   - voltage levels
   - fanout/current
   - decoupling recommendations
   - maximum clock rate basis
-  - if this is out of scope for the ISA manual, split into a datasheet appendix.
-  - Progress: Chapter 2 now explicitly defers setup/hold, propagation delay, voltage, fanout, and board-loading
-    requirements to a future datasheet or hardware implementation note.
+  - Chapter 2 explicitly defers setup/hold, propagation delay, voltage, fanout, and board-loading requirements to a
+    future datasheet or hardware implementation note.
 
 Acceptance criteria:
 
-- External memory and peripherals can be designed against the manual without guessing signal order.
-- Timing notes are diagrams and tables, not just prose.
+- Met: External memory and peripherals can be designed against the manual without guessing signal order at the
+  architectural timing level.
+- Met: Timing notes are diagrams and tables, not just prose.
 
 ## Workstream 8: Coprocessor and Model Compatibility
 
