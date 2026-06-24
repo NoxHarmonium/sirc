@@ -19,6 +19,7 @@ use crate::registers::{
 };
 
 const PRIVILEGED_REGISTERS: &[u8] = &[
+    RegisterName::Sr as u8,
     RegisterName::Ah as u8,
     RegisterName::Lh as u8,
     RegisterName::Ph as u8,
@@ -35,13 +36,14 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
         return false;
     }
 
-    let writing_to_privileged_registers = PRIVILEGED_REGISTERS.contains(&instruction.des);
-    // TODO: Magic numbers in `check_privilege`
-    // category=Refactoring
-    let cop_opcode = instruction.sr_b_ & 0x0F00;
     let is_cop_instruction = instruction.ins == Instruction::CoprocessorCallImmediate
         || instruction.ins == Instruction::CoprocessorCallRegister
         || instruction.ins == Instruction::CoprocessorCallShortImmediate;
+    let writing_to_privileged_registers =
+        !is_cop_instruction && PRIVILEGED_REGISTERS.contains(&instruction.des);
+    // TODO: Magic numbers in `check_privilege`
+    // category=Refactoring
+    let cop_opcode = instruction.sr_b_ & 0x0F00;
     // Top half of the COP opcodes are privileged
     let calling_privileged_cop_opcode = is_cop_instruction && (cop_opcode > 0x0700);
 

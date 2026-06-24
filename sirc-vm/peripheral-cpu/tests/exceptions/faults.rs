@@ -1,18 +1,21 @@
 use assert_hex::assert_eq_hex;
 use peripheral_bus::{
     conversion::bytes_to_words,
-    device::{BusAccessType, BusAssertions},
+    device::{BusAccessType, BusAssertions, Device},
 };
 use peripheral_cpu::{
     coprocessors::{
-        exception_unit::definitions::{
-            vectors::{
-                ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, DOUBLE_FAULT_VECTOR,
-                INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
-                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
-                SEGMENT_OVERFLOW_FAULT,
+        exception_unit::{
+            definitions::{
+                vectors::{
+                    ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, DOUBLE_FAULT_VECTOR,
+                    INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
+                    LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
+                    SEGMENT_OVERFLOW_FAULT,
+                },
+                ExceptionUnitOpCodes, Faults,
             },
-            Faults,
+            execution::construct_cause_value,
         },
         processing_unit::{
             definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
@@ -211,6 +214,31 @@ pub fn expect_fault(vector: u8, vector_value: (u16, u16)) -> Vec<Option<Expectat
     ]
 }
 
+// Note: bus_error alone is sufficient to release the CPU stall (see poll_internal stall logic:
+// bus_access_complete = bus_acknowledge || bus_error || bus_protection_error). bus_acknowledge
+// is intentionally omitted here — real hardware would not assert both simultaneously.
+fn bus_fault_for_request(
+    request: BusAssertions,
+    bus_error: bool,
+    bus_protection_error: bool,
+) -> BusAssertions {
+    BusAssertions {
+        address: request.address,
+        bus_access_type: request.bus_access_type,
+        bus_error,
+        bus_protection_error,
+        ..BusAssertions::default()
+    }
+}
+
+fn bus_error_for_request(request: BusAssertions) -> BusAssertions {
+    bus_fault_for_request(request, true, false)
+}
+
+fn bus_protection_error_for_request(request: BusAssertions) -> BusAssertions {
+    bus_fault_for_request(request, false, true)
+}
+
 #[test]
 fn test_bus_fault() {
     let mut cpu_peripheral = new_cpu_peripheral(0x0);
@@ -329,6 +357,235 @@ fn test_bus_protection_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    cpu_peripheral.registers.pending_coprocessor_command =
+        construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x60);
+
+    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert_eq_hex!(u32::from(0x60_u8) * 2, vector_request.address);
+    assert_eq!(
+        BusAccessType::ExceptionVectorFetch,
+        vector_request.bus_access_type
+    );
+
+    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
+    assert!(
+        !fault_response.bus_access_strobe,
+        "original exception dispatch should abort after vector-fetch failure"
+    );
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::Bus),
+        "vector-fetch bus error should raise a bus fault"
+    );
+    assert_eq!(
+        0, cpu_peripheral.eu_registers.current_exception_level,
+        "original software exception should not enter before the vector fetch succeeds"
+    );
+    assert_eq_hex!(
+        0x0,
+        cpu_peripheral.eu_registers.link_registers[0].return_address,
+        "software exception link register should not be written"
+    );
+    assert_eq!(
+        FaultMetadataRegister {
+            bus_access_type: BusAccessType::ExceptionVectorFetch,
+            double_fault: false,
+            fault: Faults::Bus,
+            original_fault: Faults::Bus,
+        },
+        decode_fault_metadata_register(
+            cpu_peripheral.eu_registers.link_registers[7].return_status_register,
+        ),
+    );
+    assert_eq_hex!(
+        u32::from(0x60_u8) * 2,
+        cpu_peripheral.eu_registers.link_registers[7].return_address
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+    cpu_peripheral.reset();
+
+    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert_eq_hex!(0x0, vector_request.address);
+    assert_eq!(
+        BusAccessType::ExceptionVectorFetch,
+        vector_request.bus_access_type
+    );
+
+    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
+    assert!(
+        !fault_response.reset_requested,
+        "reset-vector fetch failure should enter normal fault dispatch, not a reset-failed state"
+    );
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::Bus),
+        "reset-vector fetch bus error should raise a bus fault"
+    );
+    assert_eq!(
+        FaultMetadataRegister {
+            bus_access_type: BusAccessType::ExceptionVectorFetch,
+            double_fault: false,
+            fault: Faults::Bus,
+            original_fault: Faults::Bus,
+        },
+        decode_fault_metadata_register(
+            cpu_peripheral.eu_registers.link_registers[7].return_status_register,
+        ),
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+    cpu_peripheral.eu_registers.pending_fault = Some(Faults::InvalidOpCode);
+
+    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert_eq_hex!(u32::from(INVALID_OPCODE_FAULT) * 2, vector_request.address);
+    assert_eq!(
+        BusAccessType::ExceptionVectorFetch,
+        vector_request.bus_access_type
+    );
+
+    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
+    assert!(
+        !fault_response.reset_requested,
+        "ordinary fault-vector fetch failure should escalate to double fault, not reset"
+    );
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::DoubleFault),
+        "fault-vector fetch bus error should escalate to double fault"
+    );
+    assert_eq!(
+        FaultMetadataRegister {
+            bus_access_type: BusAccessType::ExceptionVectorFetch,
+            double_fault: true,
+            fault: Faults::DoubleFault,
+            original_fault: Faults::Bus,
+        },
+        decode_fault_metadata_register(
+            cpu_peripheral.eu_registers.link_registers[7].return_status_register,
+        ),
+    );
+    assert_eq_hex!(
+        u32::from(INVALID_OPCODE_FAULT) * 2,
+        cpu_peripheral.eu_registers.link_registers[7].return_address
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(DOUBLE_FAULT_VECTOR, (0x00BA, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x00BA_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    cpu_peripheral.eu_registers.pending_fault = Some(Faults::DoubleFault);
+
+    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert_eq_hex!(u32::from(DOUBLE_FAULT_VECTOR) * 2, vector_request.address);
+    assert_eq!(
+        BusAccessType::ExceptionVectorFetch,
+        vector_request.bus_access_type
+    );
+
+    let fault_response =
+        cpu_peripheral.poll(bus_protection_error_for_request(vector_request), true);
+    assert!(
+        fault_response.reset_requested,
+        "fault while fetching the double-fault vector should request reset"
+    );
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "triple-fault reset request should abandon the pending double fault"
+    );
+}
+
+// Reproduces a bug: after a triple-fault requests reset, current_exception_level is not cleared.
+// If poll() is called again before reset() with a persistent bus error on the bus (no pending CPU
+// request, so bus_access_type defaults to None / non-ExceptionVectorFetch), handle_vector_fetch_
+// bus_fault returns None and raise_fault is called. With current_exception_level still at 7
+// (Fault level), raise_fault re-queues DoubleFault instead of leaving pending_fault empty.
+// The fix should clear current_exception_level in the triple-fault path (or add an "awaiting
+// reset" guard that suppresses fault dispatch until reset() is called).
+#[test]
+fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    // Simulate already being inside a fault handler so that a spurious raise_fault call
+    // after triple-fault would produce DoubleFault rather than a plain Bus fault.
+    cpu_peripheral.eu_registers.current_exception_level = 7;
+    cpu_peripheral.eu_registers.pending_fault = Some(Faults::DoubleFault);
+
+    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert_eq_hex!(u32::from(DOUBLE_FAULT_VECTOR) * 2, vector_request.address);
+
+    // Triple-fault: bus error while fetching the double-fault vector.
+    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
+    assert!(
+        fault_response.reset_requested,
+        "bus error during double-fault vector fetch should request reset"
+    );
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "triple-fault should clear pending_fault"
+    );
+
+    // Simulate a persistent bus error arriving on the cycle before the ResetUnit calls reset().
+    // The CPU must keep asserting reset_requested and must not re-queue a fault.
+    let repeat_response = cpu_peripheral.poll(
+        BusAssertions {
+            bus_error: true,
+            ..BusAssertions::default()
+        },
+        true,
+    );
+    assert!(
+        repeat_response.reset_requested,
+        "CPU must keep asserting reset_requested until reset() is called"
+    );
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "persistent bus error between reset_requested and reset() must not re-queue a fault"
+    );
 }
 
 #[test]

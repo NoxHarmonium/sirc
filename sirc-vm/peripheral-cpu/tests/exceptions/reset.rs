@@ -3,6 +3,7 @@ use peripheral_bus::{
     device::BusAssertions, memory_mapped_device::new_stub_memory_mapped_device, new_bus_peripheral,
 };
 use peripheral_cpu::{
+    coprocessors::exception_unit::definitions::Faults,
     coprocessors::processing_unit::{
         definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
         encoding::encode_instruction,
@@ -243,6 +244,36 @@ fn test_rsti_during_wfe() {
     assert!(
         !get_cpu(&mut bus).eu_registers.waiting_for_exception,
         "WFE flag should be cleared by RSTI"
+    );
+}
+
+/// Reset is a clean exception boundary: pending faults, pending hardware exceptions, and the
+/// active exception level are cleared before reset-vector fetch can occur.
+#[test]
+fn test_reset_clears_pending_exception_state() {
+    let mut bus = set_up_reset_test();
+
+    {
+        let cpu = get_cpu(&mut bus);
+        cpu.eu_registers.pending_fault = Some(Faults::BusProtection);
+        cpu.eu_registers.pending_hardware_exceptions = 0x1F;
+        cpu.eu_registers.current_exception_level = 7;
+        cpu.eu_registers.waiting_for_exception = true;
+    }
+
+    let out = bus.poll_all(RSTI_ASSERTED);
+    assert!(
+        out.reset_devices_on_bus,
+        "RSTO should be asserted after RSTI"
+    );
+
+    let cpu = get_cpu(&mut bus);
+    assert_eq!(None, cpu.eu_registers.pending_fault);
+    assert_eq!(0, cpu.eu_registers.pending_hardware_exceptions);
+    assert_eq!(0, cpu.eu_registers.current_exception_level);
+    assert!(
+        !cpu.eu_registers.waiting_for_exception,
+        "WFE flag should be cleared by reset"
     );
 }
 

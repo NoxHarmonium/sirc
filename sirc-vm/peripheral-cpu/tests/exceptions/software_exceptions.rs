@@ -1,5 +1,6 @@
 use assert_hex::assert_eq_hex;
 use peripheral_cpu::{
+    coprocessors::exception_unit::definitions::ExceptionPriorities,
     coprocessors::processing_unit::definitions::{
         ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
     },
@@ -8,8 +9,8 @@ use peripheral_cpu::{
 };
 
 use crate::exceptions::common::{
-    expect_exception_handler, expect_exception_handler_masked,
-    expect_main_program_cycle_with_instruction, run_expectations, run_return_from_exception,
+    expect_exception_handler, expect_main_program_cycle_with_instruction, run_expectations,
+    run_return_from_exception,
 };
 
 use super::common::build_test_instruction;
@@ -102,19 +103,43 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_exception_handler_masked(0x0, 0x70, (0x00FF, 0xCCC0)),
-        &mut clocks,
-    );
-
-    assert_eq_hex!(0x00CD_AB04, cpu_peripheral.registers.get_full_pc_address());
-
-    run_expectations(
-        &mut cpu_peripheral,
         &expect_main_program_cycle_with_instruction(0x00CD_AB04, &test_instruction),
         &mut clocks,
     );
 
     assert_eq!(0x00CD_AB06, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq!(0x0, cpu_peripheral.registers.pending_coprocessor_command);
+}
+
+#[test]
+fn test_software_exception_is_ignored_during_fault_handler() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    let software_exception: InstructionData = build_software_exception_instruction();
+    let test_instruction: InstructionData = build_test_instruction();
+    cpu_peripheral.eu_registers.current_exception_level = ExceptionPriorities::Fault as u8;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0000_0000, &software_exception),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x0000_0002, cpu_peripheral.registers.get_full_pc_address());
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0000_0002, &test_instruction),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x0000_0004, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq!(0x0, cpu_peripheral.registers.pending_coprocessor_command);
+    assert_eq!(
+        ExceptionPriorities::Fault as u8,
+        cpu_peripheral.eu_registers.current_exception_level
+    );
 }
 
 // TODO: Unit test software exception priorities

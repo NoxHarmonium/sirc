@@ -29,8 +29,8 @@ register writeback.
 		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros     \\
 		011           & ASL               & Arithmetic Shift Left  & Same as LSL (shifts in zeros)    \\
 		100           & ASR               & Arithmetic Shift Right & Shift right, preserving sign bit \\
-		101           & RTL               & Rotate Left            & Rotate left through carry        \\
-		110           & RTR               & Rotate Right           & Rotate right through carry       \\
+		101           & RTL               & Rotate Left            & Rotate left within the operand   \\
+		110           & RTR               & Rotate Right           & Rotate right within the operand  \\
 		111           & --                & Reserved               & Reserved for future use          \\
 		\bottomrule
 	\end{tabular}
@@ -177,15 +177,14 @@ ADDI r3, #0, ASR #1  ; r3 = (r3 >> 1) = (r4 + r5) / 2
 
 \subsection{Rotate Left (RTL)}
 
-\textbf{Operation:} Rotate bits to the left through the carry flag.
+\textbf{Operation:} Rotate bits to the left within the 16-bit operand. The bit that wraps from bit 15 to bit 0 is also
+copied into the carry flag. The incoming carry flag is not used as an input.
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=1.2em]{18}
-		\bitbox{1}{C}
+	\begin{bytefield}[bitwidth=1.2em]{17}
 		\bitheader{0-15} \\
 		\bitbox{1}{$\curvearrowleft$}
-		\bitbox{1}{$\leftarrow$}
 		\bitbox{15}{\small Rotate Left}
 		\bitbox{1}{$\curvearrowleft$}
 	\end{bytefield}
@@ -193,53 +192,51 @@ ADDI r3, #0, ASR #1  ; r3 = (r3 >> 1) = (r4 + r5) / 2
 \end{figure}
 
 \begin{itemize}
-	\item Bit 15 moves into the carry flag
-	\item Previous carry flag value moves into bit 0
+	\item Bit 15 wraps into bit 0 and is copied into the carry flag
+	\item The previous carry flag value is ignored
 	\item No data is lost
-	\item Useful for multi-word shifts and bit manipulation
+	\item Useful for bit manipulation, circular buffers, and cyclic bit patterns
 \end{itemize}
 
 \textbf{Example:}
 \begin{lstlisting}
 ; Rotate r1 left by 1
-ADDI r1, #0, ROL #1
+SHFT r1, RTL #1
 
-; Multi-word left shift (32-bit value in r1:r2)
-ADDI r2, #0, LSL #1  ; Shift low word, bit 15 -> carry
-ADDI r1, #0, RTL #1  ; Shift high word, carry -> bit 0
+; Circular rotate of one word
+SHFT r3, RTL #4
 \end{lstlisting}
 
 \subsection{Rotate Right (RTR)}
 
-\textbf{Operation:} Rotate bits to the right through the carry flag.
+\textbf{Operation:} Rotate bits to the right within the 16-bit operand. The bit that wraps from bit 0 to bit 15 is also
+copied into the carry flag. The incoming carry flag is not used as an input.
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=1.2em]{18}
-		\bitheader{0-15}
-		\bitbox{1}{C} \\
+	\begin{bytefield}[bitwidth=1.2em]{17}
+		\bitheader{0-15} \\
 		\bitbox{1}{$\curvearrowright$}
 		\bitbox{15}{\small Rotate Right}
-		\bitbox{1}{$\rightarrow$}
 		\bitbox{1}{$\curvearrowright$}
 	\end{bytefield}
 	\caption{Rotate Right}
 \end{figure}
 
 \begin{itemize}
-	\item Bit 0 moves into the carry flag
-	\item Previous carry flag value moves into bit 15
+	\item Bit 0 wraps into bit 15 and is copied into the carry flag
+	\item The previous carry flag value is ignored
 	\item No data is lost
 \end{itemize}
 
 \textbf{Example:}
 \begin{lstlisting}
 ; Rotate r1 right by 1
-ADDI r1, #0, RTR #1
+SHFT r1, RTR #1
 
 ; Check if bit 0 is set
-ADDI r2, #0, RTR #1  ; Bit 0 -> carry
-; Now branch on carry to test bit 0
+SHFT r2, RTR #1      ; Bit 0 -> carry
+; Now branch on carry to test the old bit 0
 \end{lstlisting}
 
 \section{Shift Operands}
@@ -404,24 +401,26 @@ For operations on values larger than 16 bits, shifts and rotates can be combined
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 left by 1
 ; r1 = high word, r2 = low word
-ADDI r2, #0, LSL #1   ; Shift low, MSB -> carry
-ADDI r1, #0, RTL #1   ; Rotate high with carry
+SHFT r2, LSL #1       ; Shift low, MSB -> carry
+ADCI r1, #0, LSL #1   ; Shift high and add carry into bit 0
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Unsigned)}
 
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (unsigned)
-ADDI r1, #0, LSR #1   ; Shift high, LSB -> carry
-ADDI r2, #0, RTR #1   ; Rotate low with carry
+SHFT r1, LSR #1       ; Shift high, LSB -> carry
+SHFT[N] r2, LSR #1    ; Shift low while preserving carry from high word
+ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Signed)}
 
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (signed)
-ADDI r1, #0, ASR #1   ; Arithmetic shift high
-ADDI r2, #0, RTR #1   ; Rotate low with carry
+SHFT r1, ASR #1       ; Arithmetic shift high, LSB -> carry
+SHFT[N] r2, LSR #1    ; Shift low while preserving carry from high word
+ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \end{lstlisting}
 
 \section{Performance Considerations}
@@ -439,7 +438,7 @@ ADDI r2, #0, RTR #1   ; Rotate low with carry
 \begin{itemize}
 	\item Maximum shift count is 15 (4-bit field)
 	\item For shifts $>$ 15, multiple shift instructions must be used
-	\item Rotates include the carry flag, so rotating by 16 does not equal original value
+	\item Rotates do not consume the carry flag; \mnemonic{RTL} and \mnemonic{RTR} rotate only within the 16-bit operand
 	\item Some shift types (e.g., reserved type 111) may have undefined behavior
 \end{itemize}
 
@@ -495,9 +494,9 @@ ADDI[N] r1, #5, LSL #1        ; r1 = (r1 << 1) + 5
                               ; Flags: unchanged
 
 ; Useful when preserving flags from previous operation
-CMPI r4, r5                   ; Set flags based on comparison
+CMPR r4, r5                   ; Set flags based on comparison
 ADDI[N] r6, #1                ; Increment r6 without changing flags
-BRAN|== @equal_branch         ; Branch using flags from CMPI
+BRAN|== @equal_branch         ; Branch using flags from CMPR
 \end{lstlisting}
 
 \subsection{Use Cases}
@@ -518,7 +517,7 @@ When performing operations that should not affect condition codes:
 
 \begin{lstlisting}
 ; Test condition
-CMPI r1, r2                   ; Compare r1 and r2
+CMPR r1, r2                   ; Compare r1 and r2
 
 ; Do some work without affecting flags
 ADDI[N] r3, #1                ; Increment counter (flags unchanged)

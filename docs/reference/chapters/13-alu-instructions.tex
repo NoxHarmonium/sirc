@@ -104,21 +104,27 @@ are not legal for this instruction family.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                                                                                            \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                          \\
 		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                                                                                                  \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                                                                                                     \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                                                                                                   \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                                                                                                        \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                                                                                                 \\
-		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                                                                                                   \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                                                                                                 \\
-		Exceptions             & ALU instructions do not access memory and do not raise bus, bus-protection, or alignment faults. Processing-unit encodings outside the documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault. \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                   \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                      \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.               \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                 \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                               \\
+		Exceptions             & ALU execution raises no instruction-specific faults; see the notes below.                                                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
 	\label{tab:alu-common-semantics}
 \end{table}
+
+\noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
+bus-protection, data alignment, segment-overflow, privilege-violation, or invalid-opcode faults. Instruction fetch can
+still raise the normal fetch faults before an ALU instruction executes. If trace mode was enabled when the instruction
+began, an instruction-trace fault is raised after the instruction commits. Processing-unit encodings outside the
+documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault.
 
 \section{Status Flag Updates}
 
@@ -153,14 +159,17 @@ Most ALU instructions update the status register flags:
 	\label{tab:alu-status-flag-effects}
 \end{table}
 
-See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
-flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result;
-see Chapter~\ref{ch:shift-operations} for the shifter flag rules.
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. The table shows the effect when the
+instruction uses its default status update source. If \texttt{[N]} is encoded, all status flags are preserved. If
+\texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
+encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
+the shifter flag rules. Public \mnemonic{LOAD} forms do not support status update override syntax and always preserve
+the status flags.
 
 \subsection{Manual Flag Update Control}
 
-ALU instructions support manual control over how status flags are updated using the status override syntax. See
-Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
+ALU instructions except \mnemonic{LOAD} support manual control over how status flags are updated using the status
+override syntax. See Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
 
 \begin{itemize}
 	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
@@ -174,9 +183,9 @@ Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for compl
 ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
 
 ; Preserve flags during operation
-CMPI r2, r3                   ; Set comparison flags
+CMPR r2, r3                   ; Set comparison flags
 ADDI[N] r4, #1                ; Increment without changing flags
-BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
+BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \end{lstlisting}
 
 \begin{instructionbox}{SHFT -- Shift with Status Update Meta-Instruction}
@@ -617,7 +626,7 @@ ORRR r3, r1, r2            ; r3 = r1 | r2
 
 ; Set bit N (variable)
 ADDI r4, #1
-ADDR r4, r4, r5, LSL       ; r4 = 1 << r5
+SHFT r4, LSL r5            ; r4 = 1 << r5
 ORRR r1, r4                ; r1 |= (1 << r5)
 \end{lstlisting}
 
@@ -729,7 +738,7 @@ destination = operand
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
 	registers. Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
-	\textbf{Flags:} None
+	\textbf{Flags:} Preserved.
 
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 

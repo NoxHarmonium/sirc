@@ -50,13 +50,21 @@ no public assembly syntax and is undocumented.
 		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                     \\
 		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true.                                                \\
 		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. The selected coprocessor may perform follow-up work after the command is latched.                             \\
-		Exceptions         & Supervisor-only coprocessor operations raise a privilege-violation fault in protected mode. Missing coprocessors and unimplemented or reserved coprocessor operations raise invalid-opcode faults.                               \\
+		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors and unimplemented operations can raise invalid-opcode faults. See the notes below.                                                         \\
 		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault.                                                                                       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Coprocessor Instruction Semantics}
 	\label{tab:coprocessor-common-semantics}
 \end{table}
+
+\noindent Coprocessor-call instructions do not perform data-memory access and do not raise data bus, data
+bus-protection, data alignment, or segment-overflow faults in documented forms. Instruction fetch can still raise the
+normal fetch faults before the call executes. If trace mode was enabled when the instruction began, an instruction-trace
+fault is raised after the processing-unit call commits, unless an earlier fault prevents the instruction from completing.
+In protected mode, supervisor-only coprocessor operation nibbles are rejected before the command is dispatched. Missing
+coprocessors and unimplemented coprocessor operations are detected after the command has been latched for dispatch and
+raise invalid-opcode faults through the exception unit.
 
 \begin{instructionbox}{COPI/COPR -- Coprocessor Call}
 	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is undocumented.
@@ -87,8 +95,8 @@ endif
 
 	\textbf{Flags:} Preserved by the coprocessor-call instruction.
 
-	\textbf{Exceptions:} May raise privilege-violation faults, or invalid-opcode faults for missing coprocessors and
-	unimplemented coprocessor operations.
+	\textbf{Exceptions:} May raise privilege-violation faults for supervisor-only operations in protected mode. May raise
+	invalid-opcode faults for missing coprocessors and unimplemented coprocessor operations.
 
 	\textbf{Condition codes:} If the condition is false, no command is dispatched, the pending command latch is preserved,
 	no coprocessor privilege or opcode checks are performed, and status flags are preserved.

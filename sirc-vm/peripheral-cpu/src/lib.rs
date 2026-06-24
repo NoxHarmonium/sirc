@@ -39,8 +39,13 @@ use log::{debug, error, trace, warn};
 
 use coprocessors::{
     exception_unit::{
-        definitions::{ExceptionPriorities, ExceptionUnitOpCodes, Faults},
-        execution::{construct_cause_value, get_cause_register_value, ExceptionUnitExecutor},
+        definitions::{
+            vectors::DOUBLE_FAULT_VECTOR, ExceptionPriorities, ExceptionUnitOpCodes, Faults,
+        },
+        execution::{
+            construct_cause_value, deconstruct_cause_value, get_cause_register_value,
+            ExceptionUnitExecutor,
+        },
     },
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
@@ -105,6 +110,10 @@ pub struct CpuPeripheral {
     pending_bus_request: Option<BusAssertions>,
     // Set when halt_requested is asserted at an instruction boundary. Cleared when deasserted.
     is_halted: bool,
+    // Set by a triple fault (bus error during double-fault vector fetch). Gates all CPU logic
+    // and re-asserts reset_requested every cycle until reset() clears it. Models the hardware
+    // flip-flop that a triple fault would set to hold the reset line.
+    reset_pending: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -199,6 +208,7 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         trace_mode_sampled: false,
         pending_bus_request: None,
         is_halted: false,
+        reset_pending: false,
     }
 }
 
@@ -239,9 +249,16 @@ impl Device for CpuPeripheral {
 impl CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll_internal(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
+        if self.reset_pending {
+            return BusAssertions {
+                reset_requested: true,
+                ..BusAssertions::default()
+            };
+        }
+
         // If we have a pending bus request, stall until the device acknowledges (or errors).
         // Bus errors and protection errors also release the stall so fault handling can proceed.
-        if let Some(pending_request) = self.pending_bus_request {
+        let completed_bus_request = if let Some(pending_request) = self.pending_bus_request {
             let bus_access_complete = bus_assertions.bus_acknowledge
                 || bus_assertions.bus_error
                 || bus_assertions.bus_protection_error;
@@ -253,7 +270,10 @@ impl CpuPeripheral {
             }
             // Access complete: advance to the next phase and fall through to run it
             self.pending_bus_request = None;
-        }
+            Some(pending_request)
+        } else {
+            None
+        };
 
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
@@ -281,22 +301,41 @@ impl CpuPeripheral {
             return BusAssertions::default();
         }
 
-        if bus_assertions.bus_error {
+        let fault_bus_assertions =
+            completed_bus_request.map_or(bus_assertions, |request| BusAssertions {
+                address: request.address,
+                op: request.op,
+                bus_access_type: request.bus_access_type,
+                ..bus_assertions
+            });
+
+        if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
+            if let Some(vector_fetch_fault_response) =
+                self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
+            {
+                return vector_fetch_fault_response;
+            }
+
             // TODO: Reduce number of mutable references in `CpuPeripheral` poll
             // category=Refactoring
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
             self.eu_registers.pending_fault =
-                raise_fault(&mut self.eu_registers, Faults::Bus, &bus_assertions);
-        } else if bus_assertions.bus_protection_error {
-            self.eu_registers.pending_fault = raise_fault(
-                &mut self.eu_registers,
-                Faults::BusProtection,
-                &bus_assertions,
-            );
+                raise_fault(&mut self.eu_registers, bus_fault, &fault_bus_assertions);
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
             // Only reset the cause register every full instruction cycle
+            let pending_coprocessor_command = self.registers.pending_coprocessor_command;
+            let pending_cop_opcode =
+                (pending_coprocessor_command & CAUSE_OPCODE_ID_MASK) >> CAUSE_OPCODE_ID_LENGTH;
+            let ignored_software_exception = self.eu_registers.current_exception_level != 0
+                && Self::decode_processor_id(pending_coprocessor_command)
+                    == ExceptionUnitExecutor::COPROCESSOR_ID
+                && pending_cop_opcode == ExceptionUnitOpCodes::SoftwareException as u16;
+            if ignored_software_exception {
+                self.registers.pending_coprocessor_command = 0x0;
+            }
+
             self.cause_register_value =
                 get_cause_register_value(&self.registers, &mut self.eu_registers);
         }
@@ -392,6 +431,64 @@ impl CpuPeripheral {
         ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
     }
 
+    fn fault_from_bus_assertions(bus_assertions: BusAssertions) -> Option<Faults> {
+        if bus_assertions.bus_error {
+            Some(Faults::Bus)
+        } else if bus_assertions.bus_protection_error {
+            Some(Faults::BusProtection)
+        } else {
+            None
+        }
+    }
+
+    fn handle_vector_fetch_bus_fault(
+        &mut self,
+        fault: Faults,
+        fault_bus_assertions: BusAssertions,
+    ) -> Option<BusAssertions> {
+        if fault_bus_assertions.bus_access_type != BusAccessType::ExceptionVectorFetch {
+            return None;
+        }
+
+        let (op_code, vector, _) = deconstruct_cause_value(self.cause_register_value);
+        // Abort the current exception-unit dispatch. The next dispatch starts at phase 0 and
+        // overwrites any partially fetched vector scratch state in the exception-unit executor.
+        self.phase = 0;
+
+        if op_code == ExceptionUnitOpCodes::Fault && vector == DOUBLE_FAULT_VECTOR {
+            error!("Triple fault! [{fault:?}] raised while fetching the double fault vector. Requesting reset.");
+            self.eu_registers.pending_fault = None;
+            self.reset_pending = true;
+            return Some(BusAssertions {
+                reset_requested: true,
+                ..BusAssertions::default()
+            });
+        }
+
+        if op_code == ExceptionUnitOpCodes::Fault {
+            error!("Double fault! [{fault:?}] raised while fetching a fault vector. Jumping to double fault vector.");
+            self.eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] =
+                ExceptionLinkRegister {
+                    return_address: fault_bus_assertions.address,
+                    return_status_register: encode_fault_metadata_register(
+                        &FaultMetadataRegister {
+                            bus_access_type: fault_bus_assertions.bus_access_type,
+                            double_fault: true,
+                            fault: Faults::DoubleFault,
+                            original_fault: fault,
+                        },
+                    ),
+                    saved_exception_level: 0,
+                };
+            self.eu_registers.pending_fault = Some(Faults::DoubleFault);
+            return Some(BusAssertions::default());
+        }
+
+        self.eu_registers.pending_fault =
+            raise_fault(&mut self.eu_registers, fault, &fault_bus_assertions);
+        Some(BusAssertions::default())
+    }
+
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
         // This level is a bitmask
         if level > 0 {
@@ -421,6 +518,9 @@ impl CpuPeripheral {
         self.pending_bus_request = None;
         self.is_halted = false;
         self.eu_registers.waiting_for_exception = false;
+        self.eu_registers.pending_fault = None;
+        self.eu_registers.pending_hardware_exceptions = 0;
+        self.eu_registers.current_exception_level = 0;
         self.phase = 0;
         // Seeds the EU to fetch the reset vector when the RSTO hold expires
         self.registers.pending_coprocessor_command =

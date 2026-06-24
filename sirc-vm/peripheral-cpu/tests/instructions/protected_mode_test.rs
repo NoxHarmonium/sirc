@@ -92,6 +92,46 @@ fn direct_high_address_register_writes_fault_in_protected_mode() {
 }
 
 #[test]
+fn direct_status_register_writes_fault_in_protected_mode() {
+    let load_sr = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadRegisterFromImmediate,
+        register: RegisterName::Sr.to_register_index(),
+        value: 0x0000,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    });
+    let result = run_instruction(&load_sr, |registers, _| {
+        enable_protected_mode(registers);
+    });
+    assert_privilege_fault(&result);
+    assert_eq!(
+        StatusRegisterFields::ProtectedMode as u16,
+        result.registers.sr
+    );
+
+    let register_load_sr = InstructionData::Register(RegisterInstructionData {
+        op_code: Instruction::LoadRegisterFromRegister,
+        r1: RegisterName::Sr.to_register_index(),
+        r2: RegisterName::R1.to_register_index(),
+        r3: RegisterName::R1.to_register_index(),
+        shift_operand: ShiftOperand::Immediate,
+        shift_type: ShiftType::None,
+        shift_count: 0,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    });
+    let result = run_instruction(&register_load_sr, |registers, _| {
+        enable_protected_mode(registers);
+        registers.r1 = 0x0000;
+    });
+    assert_privilege_fault(&result);
+    assert_eq!(
+        StatusRegisterFields::ProtectedMode as u16,
+        result.registers.sr
+    );
+}
+
+#[test]
 fn conditional_false_privileged_writes_do_not_fault() {
     let load_ph = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadRegisterFromImmediate,

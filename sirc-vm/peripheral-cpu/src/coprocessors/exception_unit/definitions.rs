@@ -32,8 +32,8 @@ pub mod vectors {
     /// an address that overflows, it is probably a stack overflow.
     /// There might be situations where you want address calculations to wrap around
     /// so it is only raised if the `TrapOnAddressOverflow` SR bit is set.
-    /// It is also raised if the program counter overflows, you can tell the difference by reading
-    /// which phase the fault was raised from the fault metadata register
+    /// It is also raised if the program counter overflows; the captured bus address and bus
+    /// access type in the fault metadata register help identify where the overflow occurred.
     pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x03;
     /// Raised when a co-processor call is done for a non-existant co-processor
     /// or if the co-processor opcode is invalid.
@@ -50,8 +50,9 @@ pub mod vectors {
 
     /// Raised when not in supervisor mode and a privileged operation is performed:
     /// 1. Writing to the high word of any address registers
-    /// 2. Writing to the high byte of the SR register
-    /// 3. Triggering exception below 0x80
+    /// 2. Writing to the status register
+    /// 3. Executing a supervisor-only coprocessor operation
+    /// 4. Triggering a software exception below 0x60
     pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
     /// Raised after every instruction when the `TraceMode` SR bit is set
@@ -80,13 +81,9 @@ pub mod vectors {
     /// There is only one fault metadata register so that gets clobbered
     /// and you lose the original fault's bus address.
     ///
-    /// If a fault occurs when already handling a double fault, it will just
-    /// double fault again and will keep overwriting the return address/
-    /// metadata registers.
-    ///
-    /// If you leave it at zero it will reset the program, but will still be
-    /// in an exception handler state, so you should probably provide a vector
-    /// and at least have a reset COP instruction.
+    /// If another fault occurs while already at fault level, the CPU attempts
+    /// to dispatch this vector again. If fetching this vector fails, the CPU
+    /// requests reset.
     pub const DOUBLE_FAULT_VECTOR: u8 = 0x08;
 
     /// Raised when an external device raised a protection error via the BPER CPU pin.

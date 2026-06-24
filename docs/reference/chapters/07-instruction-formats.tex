@@ -161,7 +161,7 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
-	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
+	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
 	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7)
 	\item Condition code examples: 0x0 = Always, 0x2 = Not Equal (!=), 0x5 = Negative (<0)
 	\item SHFT is a meta instruction using ORRI opcode (0x25) with AF=0b10
@@ -245,7 +245,7 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 \begin{itemize}
 	\item When R3 is not specified in assembly, it defaults to R1 (e.g., \texttt{ADDR r4, r5} uses R1=0x4, R2=0x4, R3=0x5)
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 7 and 8)
-	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=ROL, 110=ROR
+	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
 	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift (see
 	      SHFT row 9)
 	\item Condition code examples: 0x0 = Always, 0xD = Signed > (>>), 0x3 = Carry Set (CS)

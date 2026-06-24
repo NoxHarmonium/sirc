@@ -242,15 +242,29 @@ Tasks:
 - Add exact flag-effect tables.
   - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
   - Example columns: `Z`, `N`, `C`, `V`, reserved lower bits, privileged bits.
+  - Progress: Chapter 13 now has an implementation-backed ALU flag-effect table and explicit status override wording.
+    Public `LOAD` forms are documented as preserving flags and not accepting status update override syntax. Clear
+    syntax mismatches found during the audit were fixed (`CMPR` for register comparisons, `RTL`/`RTR` shift names, and
+    `SHFT` for variable-count pure shifts).
+  - Resolved: `RTL`/`RTR` follow the simulator and are documented as normal 16-bit circular rotates. The incoming carry
+    flag is not consumed; `C` is an output copied from the bit that wrapped around.
 
-- Add exact exception behavior per instruction.
-  - bus fault
-  - bus protection fault
-  - alignment fault
-  - segment overflow fault
-  - invalid opcode fault (coprocessor dispatch only; not a normal processing-unit reserved-encoding trap)
-  - privilege violation fault
-  - trace fault
+- Resolve per-instruction exception behavior for Chapters 13--17.
+  - Resolved: Chapter 13 ALU instructions distinguish instruction-specific faults from global instruction-fetch and
+    trace behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path.
+  - Resolved: Chapter 14 memory instructions distinguish data bus, data bus-protection, and `SR.A`-gated
+    segment-overflow faults from global fetch/trace behavior. Destination writes and address-register auto-updates occur
+    only in write-back after a successful memory-access phase.
+  - Resolved: Chapter 15 control-flow/effective-address instructions document `SR.A`-gated segment-overflow faults and
+    protected-mode address-register write-back privilege faults, while excluding data bus, data bus-protection, and
+    invalid-opcode faults from documented forms.
+  - Resolved: Chapter 16 coprocessor calls document privilege faults before dispatch and invalid-opcode faults during
+    coprocessor dispatch, while excluding data-memory, bus-protection, alignment, and segment-overflow faults from
+    documented `COPI`/`COPR` forms.
+  - Resolved: Chapter 17 `NOOP` inherits `ADDI[N]` exception behavior: no data-memory access or instruction-specific
+    faults, while global instruction-fetch and trace faults still apply.
+  - Remaining exception work has moved to Workstream 6: exception-entry side effects, reset/vector fetch behavior, link
+    register diagrams, pending interrupt behavior, and reset-state tables.
 
 Acceptance criteria:
 
@@ -319,54 +333,75 @@ Acceptance criteria:
 
 Goal: make exception handling as implementation-ready as the M68k exception appendix.
 
+Progress:
+
+- Chapter 6 now documents the privilege-violation cases consistently with the simulator and status-register chapter:
+  direct high address-register writes fault, protected address-register-pair write-back faults if it would change a
+  high word, supervisor-only coprocessor operations fault in protected mode, and software exception vectors below
+  0x60 are privileged. Protected-mode direct writes to the status register fault.
+- Chapter 6 now documents the fault metadata low bits as the captured bus access type (`BAT0`--`BAT2`), not the internal
+  CPU execution phase.
+- Chapter 6 now clarifies exception vector-table lookup as a high-word then low-word fetch from
+  `system_ram_offset + vector * 2`, followed by loading the fetched target address into PC.
+- The fault-handler link-register preservation example in Chapter 6 now uses current public memory syntax and restores
+  the level 7 metadata and level 6 fault link registers in the correct order.
+- Chapter 6 now includes a reset-state table, documents hardware `RSTI` and software `RSET` reset-output hold behavior,
+  and defines reset-vector fetch as an `ExceptionVectorFetch` of vector 0x00 high word then low word. Chapter 2 reset
+  pin wording now defers to Chapter 6 for the detailed reset sequence.
+- Chapter 6 now makes reset a clean exception boundary: pending hardware exceptions and pending faults are cleared by
+  reset. External interrupt pins that remain asserted after reset may be sampled again through the normal interrupt
+  rules.
+
 Tasks:
 
-- Add an exception quick-reference appendix.
-  - vector number
-  - vector address
-  - priority
-  - source
-  - maskability
-  - retryable/post-instruction/dispatch category
-  - saved return address meaning
-  - metadata available
-  - whether it can occur in protected mode
+- Add an exception quick-reference appendix/table. Resolved: Chapter 6 now includes an exception quick-reference table
+  covering vector number, vector-table address, priority, source, maskability, saved return-address meaning, metadata,
+  and protected-mode availability.
 
-- Add link-register/saved-state diagrams.
-  - Show return address high/low words.
-  - Show saved status register.
-  - Show fault metadata register fields.
-  - Show which exception level uses which banked link register.
+- Add link-register/saved-state diagrams. Resolved: Chapter 6 now includes a saved-state bitfield for exception link
+  registers, a link-register assignment table for software/hardware/fault levels, and a fault metadata bitfield.
 
-- Add reset-state table.
-  - all general-purpose registers
-  - address register pairs
-  - status register
-  - exception unit registers
-  - pending interrupt state
-  - bus pins during and after reset
-  - PC load sequence
-  - RSTO behavior
+- Add reset-state table. Resolved: Chapter 6 now has an implementation-backed reset-state table covering general
+  registers, address register pairs, status register, exception unit state, pending interrupt/fault state, reset-output
+  hold behavior, and PC load sequence.
 
-- Clarify reset vector fetch.
-  - vector word order
-  - bus access type
-  - behavior if reset vector fetch faults
-  - behavior if RSTI is asserted during another exception
+- Clarify reset vector fetch. Resolved: Chapter 6 now says reset vector 0x00 is fetched high word first from
+  `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`, using bus access type
+  `ExceptionVectorFetch`. If reset-vector fetch gets a bus/protection fault, the CPU raises the corresponding fault
+  using the normal exception-vector fetch fault path rather than entering a separate reset-failed state.
 
-- Clarify pending interrupt behavior.
-  - disabled interrupts are ignored, not queued
-  - lower-priority interrupts while higher-priority handlers run
-  - repeated level-triggered interrupt pins
-  - NMI/level 5 conflict behavior
-  - trace mode interaction
+- Align simulator reset internals with the reset-state table. Resolved: `CpuPeripheral::reset()` clears
+  `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
+  state being cleared before reset-vector fetch.
 
-- Define exact exception-entry side effects.
-  - when P, T, EA, and interrupt-enable bits change
-  - whether condition flags are preserved
-  - when link registers are written
-  - when PC changes
-  - what happens if vector fetch faults
+- Clarify pending interrupt behavior. Resolved: Chapter 6 now documents enabled-line latching, disabled-line ignoring,
+  repeated level-sensitive pin coalescing, lower-priority pending interrupts, level 5 conflict behavior, and trace/fault
+  priority over hardware interrupts.
+
+- Define exact exception-entry side effects. Resolved: Chapter 6 now states that entry commits after vector-target fetch
+  and acceptance, writes the selected link register first, clears `SR.P` and `SR.T`, sets `SR.EA`, preserves condition
+  flags, interrupt-enable bits, and `SR.A`, updates current exception level, and loads PC from the fetched vector
+  target. Chapter 6 now defines vector-fetch bus/protection fault behavior, and simulator tests cover normal
+  exception-vector, reset-vector, fault-vector, and double-fault-vector fetch failures.
+
+- Decide whether lower/equal-priority software exceptions should be screened before vector fetch. Resolved: software
+  exceptions are accepted only from normal execution. If an `EXCP` executes while an exception/fault handler is active,
+  it is ignored, not queued, and no vector fetch occurs.
+
+- Decide final protected-mode status-register write behavior. Resolved: protected-mode reads of `sr` still mask the
+  privileged byte, but any direct protected-mode write to `sr` raises a privilege violation fault. ALU and shift
+  instructions may still update condition flags as normal instruction side effects.
+
+- Define exception-vector fetch fault behavior.
+  - Resolved: if exception-vector fetch fails before entry commits, the original exception does not enter; raise a
+    bus/protection fault with `BAT = ExceptionVectorFetch`.
+  - Resolved: if a fault-vector fetch fails, escalate to double fault.
+  - Resolved: if the double-fault vector fetch fails, request reset.
+  - Resolved: reset-vector fetch failures use the same bus/protection fault path; there is no special reset-failed
+    architectural state.
+  - Simulator coverage: `peripheral_cpu` exception tests cover software-exception vector fetch bus faults,
+    reset-vector fetch bus faults, fault-vector fetch escalation to double fault, and double-fault-vector fetch reset
+    requests.
 
 Acceptance criteria:
 
