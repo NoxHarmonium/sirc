@@ -510,6 +510,66 @@ Acceptance criteria:
 
 Goal: clarify optional coprocessors and future CPU variants.
 
+Status: Design direction agreed; manual/spec updates pending.
+
+Design decisions to carry forward:
+
+- Keep the standard coprocessor command layout: bits 15--12 select the coprocessor ID, bits 11--8 select the operation,
+  and bits 7--0 are the operation operand. The public assembler surface should use meta-instructions for standard
+  coprocessor services where possible, while `COPI`/`COPR` remain the raw command forms.
+- Coprocessor 0x2 is the optional standard DMA unit. It should be useful but simple: no autonomous descriptor engine,
+  no hidden DMA registers, and no architectural chunk/prefetch semantics beyond ordered word transfers. Smart memory
+  controllers may optimize the existing DMA read/write burst bus access types, but software observes the simple word
+  transfer contract.
+- Define three DMA meta-instructions:
+  - `DMAR #n` reads sequential words from memory at address register `a` into `r1` through `rn`. It is limited to at
+    most 7 words because the general-purpose register window is `r1`--`r7`.
+  - `DMAW #n` writes sequential words from `r1` through `rn` to memory at address register `a`. It is limited to at
+    most 7 words.
+  - `DMAT #n` copies sequential words from memory at address register `a` to memory at address register `l`, using
+    `r1`--`r7` as a transfer window internally. It transfers up to one 8-bit count operand per command; larger copies
+    are done by looping in software.
+- Proposed DMA command encodings:
+  - `DMAR #n` -> `COPI #0x2800 | n`
+  - `DMAW #n` -> `COPI #0x2900 | n`
+  - `DMAT #n` -> `COPI #0x2A00 | n`
+  These operation nibbles are supervisor-only by the existing coprocessor privilege rule.
+- DMA register convention:
+  - `a` is the memory pointer for `DMAR` and `DMAW`.
+  - `a` is the source pointer for `DMAT`.
+  - `l` is the destination pointer for `DMAT`.
+  - `r1`--`r7` are the transfer window; `DMAT` clobbers them.
+  - Successful operations advance the relevant address-register low words by the number of words transferred.
+- DMA fault policy to specify: data bus and bus-protection failures raise normal faults with DMA read/write `BAT`
+  values. Partial side effects are possible for a fault that occurs mid-transfer, and DMA operations are not guaranteed
+  to be restartable by simply re-executing the same instruction.
+- DMA overlap policy to specify: overlapping `DMAT` source/destination ranges are architecturally undefined unless
+  source and destination are identical.
+- DMA count encoding decision: operand value `0x00` means no-op. `DMAR` and `DMAW` accept counts 0--7, where counts
+  above 7 are invalid DMA operations. `DMAT` accepts counts 0--255, with larger transfers done by software loops.
+- Coprocessor 0x3 is the optional standard integer maths unit. It should provide a stable software-visible convention
+  so missing hardware can be emulated through invalid-opcode faults and later CPU models can accelerate the same
+  binaries.
+- Define maths meta-instructions initially for integer multiply/divide only:
+  - `MULU`: unsigned `r1 * r2 -> r1:r2`, high word in `r1`, low word in `r2`.
+  - `MULS`: signed `r1 * r2 -> r1:r2`, high word in `r1`, low word in `r2`.
+  - `DIVU`: unsigned `r1:r2 / r3 -> r1` remainder, `r2` quotient, `r3` status.
+  - `DIVS`: signed `r1:r2 / r3 -> r1` remainder, `r2` quotient, `r3` status.
+- Proposed maths command encodings:
+  - `MULU` -> `COPI #0x3000`
+  - `MULS` -> `COPI #0x3100`
+  - `DIVU` -> `COPI #0x3200`
+  - `DIVS` -> `COPI #0x3300`
+  These operation nibbles are user-callable by the existing coprocessor privilege rule.
+- Maths status convention: `r3` is written as a status word. Bit 0 means any maths error, bit 1 means divide by zero,
+  bit 2 means quotient overflow, and bits 3--15 are reserved/written as zero. On successful divide, `r1` receives the
+  remainder, `r2` receives the quotient, and `r3` is zero. On divide-by-zero or quotient overflow, set the relevant
+  status bits and leave `r1:r2` unchanged. Signed division uses two's-complement arithmetic, quotient truncated toward
+  zero, and remainder with the sign of the dividend; `-2147483648 / -1` is quotient overflow.
+- Reference maths emulation routines should live in an examples directory and be testable there. The rendered manual
+  should document the ABI and may include compact pseudocode or short excerpts, but should not carry long hand-maintained
+  multiplication/division listings.
+
 Tasks:
 
 - Add a coprocessor compatibility table.
@@ -535,10 +595,37 @@ Tasks:
   - invalid coprocessor/opcode behavior
   - supervisor-only operation behavior
 
+- Add the DMA unit specification.
+  - ID 0x2, optional standard coprocessor
+  - `DMAR`, `DMAW`, and `DMAT` meta-instructions and encodings
+  - implicit register conventions
+  - legal counts and `0x00` no-op behavior
+  - address-register update rules
+  - `r1`--`r7` clobber behavior
+  - bus access type usage and fault side effects
+  - source/destination overlap behavior
+
+- Add the integer maths unit specification.
+  - ID 0x3, optional standard coprocessor
+  - `MULU`, `MULS`, `DIVU`, and `DIVS` meta-instructions and encodings
+  - implicit register conventions
+  - result and status behavior
+  - divide-by-zero and quotient-overflow handling
+  - software-emulation compatibility story for missing hardware
+
+- Add reference maths emulation examples.
+  - Put full assembly routines in `examples/` rather than only in LaTeX.
+  - Make the examples assemble and, if practical, add tests around the expected register/status results.
+  - Document in the manual that these are reference software routines, not additional ISA requirements.
+
 Acceptance criteria:
 
 - Software can detect and handle absent optional coprocessors.
 - Future revisions have a documented compatibility contract.
+- DMA programmers can use block register/memory transfers without guessing implicit registers, clobbers, counts, fault
+  behavior, or bus-visible transfer type.
+- Maths code can call standard multiply/divide operations and rely on the same ABI whether the operation is handled by
+  hardware or emulated after an invalid-opcode fault.
 
 ## Workstream 9: ABI, Calling Convention, and Software Conventions
 
