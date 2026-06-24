@@ -121,8 +121,9 @@ three categories:
 	      original fault's return address. The fault metadata register (register 7) is also overwritten; it encodes a
 	      double-fault flag along with both the current and original fault types.
 
-	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If a fault
-	      occurs while handling a double fault, another double fault is raised, continuously overwriting the link registers.
+	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If another
+	      fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector 0x08 again. If the
+	      double-fault vector fetch itself fails, the CPU requests reset.
 
 \end{itemize}
 
@@ -483,7 +484,7 @@ described above.
 If a bus or protection fault occurs during an exception-vector fetch before entry commits, the original exception does
 not enter. The CPU raises the corresponding fault with \texttt{BAT0}--\texttt{BAT2} set to
 \texttt{ExceptionVectorFetch}. If a fault-vector fetch itself fails, the CPU escalates to double fault. If the
-double-fault vector fetch fails, the CPU keeps attempting to dispatch the double fault.
+double-fault vector fetch fails, the CPU requests reset.
 
 \textbf{Returning from Exceptions:}
 
@@ -616,9 +617,10 @@ an exception-vector fetch with bus access type \texttt{ExceptionVectorFetch}:
 	\item Load the fetched target address into \reg{p}.
 \end{enumerate}
 
-If a bus or protection fault occurs during the reset-vector fetch, the CPU remains in a reset-failed state and does not
-execute program instructions. External hardware should assert \texttt{RSTI} again after making the reset vector
-available.
+If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded. The CPU raises the
+corresponding fault with \texttt{BAT0}--\texttt{BAT2} set to \texttt{ExceptionVectorFetch}. From that point the normal
+exception-vector fetch fault rules apply: a fault-vector fetch failure escalates to double fault, and a double-fault
+vector fetch failure requests reset.
 
 \section{Return from Exception}
 

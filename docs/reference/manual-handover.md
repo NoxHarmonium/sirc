@@ -365,11 +365,10 @@ Tasks:
   registers, address register pairs, status register, exception unit state, pending interrupt/fault state, reset-output
   hold behavior, and PC load sequence.
 
-- Clarify reset vector fetch. Mostly resolved: Chapter 6 now says reset vector 0x00 is fetched high word first from
+- Clarify reset vector fetch. Resolved: Chapter 6 now says reset vector 0x00 is fetched high word first from
   `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`, using bus access type
-  `ExceptionVectorFetch`.
-  - Remaining implementation update: if reset-vector fetch gets a bus/protection fault, enter a reset-failed state
-    rather than dispatching a normal exception.
+  `ExceptionVectorFetch`. If reset-vector fetch gets a bus/protection fault, the CPU raises the corresponding fault
+  using the normal exception-vector fetch fault path rather than entering a separate reset-failed state.
 
 - Align simulator reset internals with the reset-state table. Resolved: `CpuPeripheral::reset()` clears
   `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
@@ -382,7 +381,8 @@ Tasks:
 - Define exact exception-entry side effects. Resolved: Chapter 6 now states that entry commits after vector-target fetch
   and acceptance, writes the selected link register first, clears `SR.P` and `SR.T`, sets `SR.EA`, preserves condition
   flags, interrupt-enable bits, and `SR.A`, updates current exception level, and loads PC from the fetched vector
-  target. Chapter 6 now defines vector-fetch bus/protection fault behavior; the simulator still needs to be aligned.
+  target. Chapter 6 now defines vector-fetch bus/protection fault behavior, and simulator tests cover normal
+  exception-vector, reset-vector, fault-vector, and double-fault-vector fetch failures.
 
 - Decide whether lower/equal-priority software exceptions should be screened before vector fetch. Resolved: software
   exceptions are accepted only from normal execution. If an `EXCP` executes while an exception/fault handler is active,
@@ -393,13 +393,15 @@ Tasks:
   instructions may still update condition flags as normal instruction side effects.
 
 - Define exception-vector fetch fault behavior.
-  - Decision: if exception-vector fetch fails before entry commits, the original exception does not enter; raise a
+  - Resolved: if exception-vector fetch fails before entry commits, the original exception does not enter; raise a
     bus/protection fault with `BAT = ExceptionVectorFetch`.
-  - Decision: if a fault-vector fetch fails, escalate to double fault.
-  - Decision: if the double-fault vector fetch fails, keep retrying the double-fault vector fetch indefinitely rather
-    than entering a separate terminal halt state.
-  - Implementation follow-up: align simulator behavior. The current vector-fetch fault path can leave the original
-    exception dispatch in progress and can panic if another fault is already pending.
+  - Resolved: if a fault-vector fetch fails, escalate to double fault.
+  - Resolved: if the double-fault vector fetch fails, request reset.
+  - Resolved: reset-vector fetch failures use the same bus/protection fault path; there is no special reset-failed
+    architectural state.
+  - Simulator coverage: `peripheral_cpu` exception tests cover software-exception vector fetch bus faults,
+    reset-vector fetch bus faults, fault-vector fetch escalation to double fault, and double-fault-vector fetch reset
+    requests.
 
 Acceptance criteria:
 

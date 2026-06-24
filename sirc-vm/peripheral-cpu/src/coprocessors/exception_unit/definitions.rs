@@ -81,13 +81,9 @@ pub mod vectors {
     /// There is only one fault metadata register so that gets clobbered
     /// and you lose the original fault's bus address.
     ///
-    /// If a fault occurs when already handling a double fault, it will just
-    /// double fault again and will keep overwriting the return address/
-    /// metadata registers.
-    ///
-    /// If you leave it at zero it will reset the program, but will still be
-    /// in an exception handler state, so you should probably provide a vector
-    /// and at least have a reset COP instruction.
+    /// If another fault occurs while already at fault level, the CPU attempts
+    /// to dispatch this vector again. If fetching this vector fails, the CPU
+    /// requests reset.
     pub const DOUBLE_FAULT_VECTOR: u8 = 0x08;
 
     /// Raised when an external device raised a protection error via the BPER CPU pin.
