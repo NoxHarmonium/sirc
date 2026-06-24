@@ -338,7 +338,7 @@ Progress:
 - Chapter 6 now documents the privilege-violation cases consistently with the simulator and status-register chapter:
   direct high address-register writes fault, protected address-register-pair write-back faults if it would change a
   high word, supervisor-only coprocessor operations fault in protected mode, and software exception vectors below
-  0x60 are privileged. Protected-mode writes to privileged status-register bits are masked rather than faulting.
+  0x60 are privileged. Protected-mode direct writes to the status register fault.
 - Chapter 6 now documents the fault metadata low bits as the captured bus access type (`BAT0`--`BAT2`), not the internal
   CPU execution phase.
 - Chapter 6 now clarifies exception vector-table lookup as a high-word then low-word fetch from
@@ -368,9 +368,8 @@ Tasks:
 - Clarify reset vector fetch. Mostly resolved: Chapter 6 now says reset vector 0x00 is fetched high word first from
   `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`, using bus access type
   `ExceptionVectorFetch`.
-  - Remaining decision: define what happens if the reset-vector fetch itself gets a bus/protection fault.
-  - Remaining decision: define any additional guarantees for `RSTI` asserted while another exception handler is active,
-    beyond the current reset-state rule that reset clears pending fault/interrupt state and current exception level.
+  - Remaining implementation update: if reset-vector fetch gets a bus/protection fault, enter a reset-failed state
+    rather than dispatching a normal exception.
 
 - Align simulator reset internals with the reset-state table. Resolved: `CpuPeripheral::reset()` clears
   `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
@@ -383,27 +382,24 @@ Tasks:
 - Define exact exception-entry side effects. Resolved: Chapter 6 now states that entry commits after vector-target fetch
   and acceptance, writes the selected link register first, clears `SR.P` and `SR.T`, sets `SR.EA`, preserves condition
   flags, interrupt-enable bits, and `SR.A`, updates current exception level, and loads PC from the fetched vector
-  target. Vector-fetch bus/protection faults remain explicitly implementation-defined.
+  target. Chapter 6 now defines vector-fetch bus/protection fault behavior; the simulator still needs to be aligned.
 
-- Decide whether lower/equal-priority software exceptions should be screened before vector fetch.
-  - Hardware interrupts are priority-checked before vector fetch: disabled or insufficient-priority hardware interrupts
-    do not fetch their vectors.
-  - Current simulator behavior for a software exception instruction executed inside an equal-or-higher-priority handler:
-    the exception unit fetches the software exception vector, then the priority check rejects entry and no link-register,
-    status-register, current-level, or PC side effects occur. The software exception is then ignored rather than queued;
-    the pending coprocessor command is cleared and normal execution resumes at the next instruction.
-  - Consider aligning software exceptions with hardware interrupts by checking priority before vector fetch, or document
-    the current vector-fetch-without-entry behavior explicitly if it is intentional.
+- Decide whether lower/equal-priority software exceptions should be screened before vector fetch. Resolved: software
+  exceptions are accepted only from normal execution. If an `EXCP` executes while an exception/fault handler is active,
+  it is ignored, not queued, and no vector fetch occurs.
 
-- Decide final protected-mode status-register write behavior.
-  - Current simulator behavior: protected-mode reads of `sr` mask the privileged byte, and protected-mode writes to
-    `sr` update only the lower byte while preserving the privileged byte.
-  - Open design question: align `sr` with the other privileged registers by raising a privilege violation when a
-    protected-mode instruction attempts to write privileged `sr` bits, or make all protected-mode writes to `sr`
-    invalid/faulting for simplicity.
-  - Consider whether user-mode software has a legitimate need to write the lower status byte directly. ALU and shift
-    instructions already update condition flags through normal execution, and allowing direct lower-byte writes gives
-    user code explicit control over condition flags and reserved low-byte bits.
+- Decide final protected-mode status-register write behavior. Resolved: protected-mode reads of `sr` still mask the
+  privileged byte, but any direct protected-mode write to `sr` raises a privilege violation fault. ALU and shift
+  instructions may still update condition flags as normal instruction side effects.
+
+- Define exception-vector fetch fault behavior.
+  - Decision: if exception-vector fetch fails before entry commits, the original exception does not enter; raise a
+    bus/protection fault with `BAT = ExceptionVectorFetch`.
+  - Decision: if a fault-vector fetch fails, escalate to double fault.
+  - Decision: if the double-fault vector fetch fails, keep retrying the double-fault vector fetch indefinitely rather
+    than entering a separate terminal halt state.
+  - Implementation follow-up: align simulator behavior. The current vector-fetch fault path can leave the original
+    exception dispatch in progress and can panic if another fault is already pending.
 
 Acceptance criteria:
 

@@ -87,8 +87,8 @@ Bits 4 through 7 of the lower byte are reserved for future use. They should not 
 
 \section{Control Flags (Privileged)}
 
-These flags control CPU behavior and can only be modified in supervisor mode. Attempts to write these bits in protected
-mode will be ignored (the write affects only the lower byte).
+These flags control CPU behavior and can only be modified directly in supervisor mode. Attempts to write \reg{sr} in
+protected mode raise a privilege violation fault.
 
 \subsection{Protected Mode (P) -- Bit 8}
 
@@ -100,9 +100,8 @@ mode will be ignored (the write affects only the lower byte).
 		      \item Upper byte of status register
 		      \item Privileged coprocessor operations (opcodes > 0x07xx)
 	      \end{itemize}
-	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. With the
-	      exception of writing to the status register, performing a restricted operation will cause a "privilege violation"
-	      fault.
+	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. Performing a
+	      restricted operation will cause a "privilege violation" fault.
 \end{description}
 
 \subsection{Hardware Interrupt Enable Bits (E1-E4) -- Bits 9--12}
@@ -187,7 +186,7 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 
 \subsection{Manual Updates}
 
-The status register can be directly manipulated like any other register:
+In supervisor mode, the status register can be directly manipulated like any other register:
 
 \begin{lstlisting}
 ; Set protected mode bit (only in supervisor mode)
@@ -205,7 +204,9 @@ LOAD sr, (s)+
 
 \end{lstlisting}
 
-\textbf{Important:} When running in protected mode, writes to the status register only affect the lower byte (bits 7--0). The upper byte remains unchanged.
+\textbf{Important:} When running in protected mode, any direct write to the status register raises a privilege violation
+fault. Protected-mode programs can still affect condition flags through ordinary ALU and shift instruction execution;
+they cannot directly load or store \reg{sr}.
 
 \section{Reading the Status Register}
 

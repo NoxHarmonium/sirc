@@ -189,8 +189,8 @@ divided into two bytes:
 	\item \textbf{Upper Byte (bits 15--8):} Control and privileged state
 \end{itemize}
 
-In protected mode, reads of \reg{sr} are redacted to the lower byte (upper byte reads as zero). Writes in protected
-mode only update the lower byte and preserve the upper byte.
+In protected mode, reads of \reg{sr} are redacted to the lower byte (upper byte reads as zero). Direct writes to
+\reg{sr} raise a privilege violation fault.
 
 The status register is discussed in detail in Chapter~\ref{ch:status-register}.
 

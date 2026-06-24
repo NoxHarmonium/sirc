@@ -50,8 +50,9 @@ pub mod vectors {
 
     /// Raised when not in supervisor mode and a privileged operation is performed:
     /// 1. Writing to the high word of any address registers
-    /// 2. Executing a supervisor-only coprocessor operation
-    /// 3. Triggering a software exception below 0x60
+    /// 2. Writing to the status register
+    /// 3. Executing a supervisor-only coprocessor operation
+    /// 4. Triggering a software exception below 0x60
     pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
     /// Raised after every instruction when the `TraceMode` SR bit is set

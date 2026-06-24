@@ -297,6 +297,17 @@ impl CpuPeripheral {
 
         if phase == ExecutionPhase::InstructionFetchLow {
             // Only reset the cause register every full instruction cycle
+            let pending_coprocessor_command = self.registers.pending_coprocessor_command;
+            let pending_cop_opcode =
+                (pending_coprocessor_command & CAUSE_OPCODE_ID_MASK) >> CAUSE_OPCODE_ID_LENGTH;
+            let ignored_software_exception = self.eu_registers.current_exception_level != 0
+                && Self::decode_processor_id(pending_coprocessor_command)
+                    == ExceptionUnitExecutor::COPROCESSOR_ID
+                && pending_cop_opcode == ExceptionUnitOpCodes::SoftwareException as u16;
+            if ignored_software_exception {
+                self.registers.pending_coprocessor_command = 0x0;
+            }
+
             self.cause_register_value =
                 get_cause_register_value(&self.registers, &mut self.eu_registers);
         }

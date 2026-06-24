@@ -92,13 +92,11 @@ three categories:
 	      while not in supervisor mode:
 	      \begin{enumerate}
 		      \item Directly writing to the high word of any address register
+		      \item Directly writing to the status register
 		      \item Address-register-pair write-back that would change a high address-register word
 		      \item Executing a supervisor-only coprocessor operation
 		      \item Triggering a software exception with a vector below 0x60
 	      \end{enumerate}
-
-	      In protected mode, writes to the privileged byte of the status register are masked rather than faulting: the low byte
-	      is updated, while privileged status bits retain their previous values.
 
 	\item \textbf{Instruction Trace Fault} \textit{(Post-instruction)} — Raised after every instruction completes
 	      when the \texttt{TraceMode} SR bit is set.
@@ -139,6 +137,10 @@ different vectors based on the interrupt "priority". The vectors for hardware ex
 A user exception occurs when the program executes an EXCP instruction that signals the exception coprocessor that it
 should trigger an exception. They are usually used by programs running in protected mode to switch to supervisor mode
 in a controlled way. They are also referred to as "traps". The vectors for user exceptions are in the 0x60-0xFF range.
+
+Software exceptions are only accepted from normal execution. If an \mnemonic{EXCP} instruction is executed while any
+exception or fault handler is already active, the software exception is ignored, is not queued, and does not fetch its
+vector.
 
 \section{Exception Registers}
 
@@ -449,6 +451,9 @@ For pending hardware interrupts, priority and mask checks occur before the excep
 that is disabled or not high enough priority to preempt the current handler does not fetch its vector; if it is already
 latched as pending, it remains pending for later service according to the pending-interrupt rules above.
 
+Software exceptions are also screened before the exception-vector fetch. A software exception is accepted only when no
+exception handler is active.
+
 After an exception source is selected for service, the exception unit fetches the high word and low word of the handler
 target address from the vector table. Architectural entry side effects commit only after the vector target has been
 fetched and the exception is accepted for service.
@@ -475,8 +480,10 @@ If an exception is not accepted because its priority is not higher than the curr
 entry side effects occur. Pending hardware interrupts remain subject to the priority and pending-interrupt rules
 described above.
 
-The behavior of bus or protection faults during an exception-vector fetch is currently implementation-defined and
-should not be relied upon by software.
+If a bus or protection fault occurs during an exception-vector fetch before entry commits, the original exception does
+not enter. The CPU raises the corresponding fault with \texttt{BAT0}--\texttt{BAT2} set to
+\texttt{ExceptionVectorFetch}. If a fault-vector fetch itself fails, the CPU escalates to double fault. If the
+double-fault vector fetch fails, the CPU keeps attempting to dispatch the double fault.
 
 \textbf{Returning from Exceptions:}
 
@@ -587,11 +594,11 @@ active, then the exception unit fetches vector 0x00 and loads the fetched target
 
 While reset is active, the CPU asserts \texttt{RSTO} and performs no bus cycles.
 
-For hardware reset, asserting \texttt{RSTI} immediately aborts any current instruction, clears any pending bus wait,
-and asserts \texttt{RSTO}. If \texttt{RSTI} remains asserted, \texttt{RSTO} remains asserted and the CPU does not
-advance. After \texttt{RSTI} is released, the reset hold completes before the CPU resumes. The reset assertion cycle
-counts as the first reset-output cycle; after release, five additional countdown cycles occur before the exception unit
-starts the reset-vector fetch.
+For hardware reset, asserting \texttt{RSTI} immediately aborts any current instruction, exception handler, exception
+dispatch, or pending bus wait, then asserts \texttt{RSTO}. If \texttt{RSTI} remains asserted, \texttt{RSTO} remains
+asserted and the CPU does not advance. After \texttt{RSTI} is released, the reset hold completes before the CPU
+resumes. The reset assertion cycle counts as the first reset-output cycle; after release, five additional countdown
+cycles occur before the exception unit starts the reset-vector fetch.
 
 For software reset, \mnemonic{RSET} completes as a normal coprocessor meta-instruction. When its write-back phase
 commits the reset command, the CPU requests reset and \texttt{RSTO} is asserted for six cycles before the reset-vector
@@ -609,8 +616,9 @@ an exception-vector fetch with bus access type \texttt{ExceptionVectorFetch}:
 	\item Load the fetched target address into \reg{p}.
 \end{enumerate}
 
-The behavior of bus or protection faults during the reset-vector fetch is currently implementation-defined and should
-not be relied upon by software.
+If a bus or protection fault occurs during the reset-vector fetch, the CPU remains in a reset-failed state and does not
+execute program instructions. External hardware should assert \texttt{RSTI} again after making the reset vector
+available.
 
 \section{Return from Exception}
 
