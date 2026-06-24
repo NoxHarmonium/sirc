@@ -397,12 +397,19 @@ Tasks:
   repeated level-sensitive pin coalescing, lower-priority pending interrupts, level 5 conflict behavior, and trace/fault
   priority over hardware interrupts.
 
-- Define exact exception-entry side effects.
-  - when P, T, EA, and interrupt-enable bits change
-  - whether condition flags are preserved
-  - when link registers are written
-  - when PC changes
-  - what happens if vector fetch faults
+- Define exact exception-entry side effects. Resolved: Chapter 6 now states that entry commits after vector-target fetch
+  and acceptance, writes the selected link register first, clears `SR.P` and `SR.T`, sets `SR.EA`, preserves condition
+  flags, interrupt-enable bits, and `SR.A`, updates current exception level, and loads PC from the fetched vector
+  target. Vector-fetch bus/protection faults remain explicitly implementation-defined.
+
+- Decide whether lower/equal-priority software exceptions should be screened before vector fetch.
+  - Hardware interrupts are priority-checked before vector fetch: disabled or insufficient-priority hardware interrupts
+    do not fetch their vectors.
+  - Current simulator behavior for a software exception instruction executed inside an equal-or-higher-priority handler:
+    the exception unit fetches the software exception vector, then the priority check rejects entry and no link-register,
+    status-register, current-level, or PC side effects occur.
+  - Consider aligning software exceptions with hardware interrupts by checking priority before vector fetch, or document
+    the current vector-fetch-without-entry behavior explicitly if it is intentional.
 
 - Decide final protected-mode status-register write behavior.
   - Current simulator behavior: protected-mode reads of `sr` mask the privileged byte, and protected-mode writes to

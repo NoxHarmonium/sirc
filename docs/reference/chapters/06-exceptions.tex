@@ -400,6 +400,41 @@ When an exception occurs, the following steps are executed:
 	\item The program counter is set to the fetched vector target address, transferring control to the exception handler.
 \end{enumerate}
 
+\subsection{Exception Entry Side Effects}
+
+For pending hardware interrupts, priority and mask checks occur before the exception-vector fetch. A hardware interrupt
+that is disabled or not high enough priority to preempt the current handler does not fetch its vector; if it is already
+latched as pending, it remains pending for later service according to the pending-interrupt rules above.
+
+After an exception source is selected for service, the exception unit fetches the high word and low word of the handler
+target address from the vector table. Architectural entry side effects commit only after the vector target has been
+fetched and the exception is accepted for service.
+
+When entry commits, the exception unit performs the following state updates as one architectural action:
+
+\begin{itemize}
+	\item Writes the selected link register with the current program counter, current status register, and current exception
+	      level.
+	\item Clears \texttt{SR.P}, entering supervisor mode.
+	\item Clears \texttt{SR.T}, preventing trace faults from firing inside the handler.
+	\item Sets \texttt{SR.EA}, indicating that an exception handler is active.
+	\item Preserves the condition flags, reserved lower status bits, interrupt-enable bits, and \texttt{SR.A} in the live
+	      status register.
+	\item Updates the current exception level to the level of the exception being serviced.
+	\item Loads the program counter from the fetched vector target address.
+\end{itemize}
+
+The saved status register in the link register is the pre-entry value, before \texttt{SR.P}, \texttt{SR.T}, or
+\texttt{SR.EA} are modified. \mnemonic{RETE} restores that saved status register, so a handler can inspect or edit the
+saved value with \mnemonic{ETFR} and \mnemonic{ETTR} before returning.
+
+If an exception is not accepted because its priority is not higher than the current exception level, none of these
+entry side effects occur. Pending hardware interrupts remain subject to the priority and pending-interrupt rules
+described above.
+
+The behavior of bus or protection faults during an exception-vector fetch is currently implementation-defined and
+should not be relied upon by software.
+
 \textbf{Returning from Exceptions:}
 
 The RETE (Return from Exception) instruction restores the saved state from the link register:
