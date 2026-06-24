@@ -48,7 +48,9 @@ development.
 
 \textbf{Flags:} Preserved.
 
-\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
+instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
+occur after it commits.
 
 \textbf{Condition codes:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
 normally not useful.

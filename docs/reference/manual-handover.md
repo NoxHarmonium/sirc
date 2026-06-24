@@ -274,6 +274,8 @@ Tasks:
     bus-protection, alignment, or segment-overflow faults; protected-mode supervisor-only operation nibbles raise
     privilege faults before dispatch, while missing coprocessors and unimplemented coprocessor operations raise
     invalid-opcode faults during dispatch.
+  - Progress: Chapter 17 `NOOP` now states that it inherits `ADDI[N]` exception behavior: no data-memory access or
+    instruction-specific faults, while global instruction-fetch and trace faults still apply.
 
 Acceptance criteria:
 
