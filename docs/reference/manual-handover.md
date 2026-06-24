@@ -287,6 +287,8 @@ Acceptance criteria:
 
 Goal: match the M68k manual's useful distinction between effective address forms and where they are legal.
 
+Status: Complete.
+
 Progress:
 
 - Added an addressing mode matrix with syntax, effective value/address, memory access behavior, auto-update side effects,
@@ -297,20 +299,19 @@ Progress:
 - Renumbered chapter source files after adding the new data-representation chapter so source filenames again match manual
   order: data representation is Chapter 4, status register is Chapter 5, exceptions is Chapter 6, and later chapters are
   shifted accordingly.
-
-Tasks:
-
-- Add "legal mode by instruction family" tables.
-  - This is one of the most useful patterns from real CPU manuals.
-
-- Document omitted zero-displacement shorthand for memory indirect forms.
-  - Any instruction that accepts memory indirect access with immediate displacement should allow the displacement to be
-    omitted when it is zero.
-  - For example, `LOAD rD, (a)` must be specified as equivalent to `LOAD rD, (#0, a)`.
-  - Audit all affected instructions and parser tests so this shorthand is accepted consistently, not only for the forms
-    that currently happen to support it.
-  - Cover normal, post-increment, and pre-decrement immediate-displacement forms where applicable, and state clearly
-    whether omitted displacement is allowed for each syntax family.
+- Added a "Legal Modes by Instruction Family" table to Chapter 8 so the addressing chapter can be used as a compact
+  legality reference.
+- Documented zero-displacement shorthand for immediate-displacement indirect forms:
+  - `LOAD rD, (addr)` and `LOAD rD, (addr)+`
+  - `STOR (addr), rS` and `STOR -(addr), rS`
+  - `LDEA dest, (src)` and `LDEA dest, -(src)`
+  - `LDEL dest, (src)` and `LDEL dest, (src)+`
+  - `LJSR (src)+`
+- Clarified that shorthand does not create otherwise illegal addressing forms, and that non-auto-update `LJMP`/`LJSR`
+  use `LJMP src`/`LJSR src` rather than `LJMP (src)`/`LJSR (src)`.
+- Added assembler tests in `sirc-vm/toolchain/tests/assembler/addressing_mode_test.rs` for accepted shorthand forms and
+  rejected shorthand forms that would otherwise imply illegal addressing families. Verified with
+  `cargo test -p toolchain`.
 
 Acceptance criteria:
 
