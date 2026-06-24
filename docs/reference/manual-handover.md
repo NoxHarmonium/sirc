@@ -261,6 +261,10 @@ Tasks:
     behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path; fetch
     faults can still occur before execution, and trace faults occur after commit when trace mode was sampled at
     instruction start.
+  - Progress: Chapter 14 now distinguishes memory instruction-specific faults from global instruction-fetch and trace
+    behavior. Documented memory forms can raise data bus, data bus-protection, and `SR.A`-gated segment-overflow
+    faults; destination writes and address-register auto-updates happen only in write-back after a successful
+    memory-access phase.
 
 Acceptance criteria:
 

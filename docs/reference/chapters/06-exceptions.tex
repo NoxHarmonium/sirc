@@ -75,7 +75,7 @@ three categories:
 	\item \textbf{Segment Overflow Fault} \textit{(Retryable)} — Raised when a computed address would fall outside
 	      the current segment.
 
-	      Only raised if the \texttt{TrapOnAddressOverflow} SR bit is set, since some programs intentionally rely on address
+	      Only raised if \texttt{SR.A} (Trap on Address Overflow) is set, since some programs intentionally rely on address
 	      wrap-around. Also raised if the program counter overflows; the phase field of the fault metadata register distinguishes
 	      the two cases.
 

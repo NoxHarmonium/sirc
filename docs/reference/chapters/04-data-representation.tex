@@ -142,9 +142,9 @@ General-purpose register arithmetic is performed modulo $2^{16}$. Arithmetic con
 
 Address calculation for memory, effective-address, branch, jump, and auto-update operations adds offsets to the low
 word of the selected address register pair. The high address-register word is not changed by ordinary displacement,
-pre-decrement, or post-increment calculation. If the low word overflows or underflows and
-\statusbit{TrapOnAddressOverflow} is set, the instruction raises a segment-overflow fault. If the bit is clear, the low
-word wraps modulo $2^{16}$.
+pre-decrement, or post-increment calculation. If the low word overflows or underflows and \texttt{SR.A} (Trap on
+Address Overflow) is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps
+modulo $2^{16}$.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
