@@ -297,6 +297,25 @@ When an interrupt line is disabled (bit = 0), interrupts on that line are comple
 enabled (bit = 1), the interrupt can trigger an exception if its priority is higher than the currently executing
 exception level.
 
+\subsection{Pending Hardware Interrupts}
+
+Hardware interrupt pins are level-sensitive inputs. When an enabled interrupt line is observed, the corresponding bit
+is set in the pending hardware-exceptions register. Disabled maskable interrupt lines are ignored at this sampling
+point and are not latched for later service.
+
+The pending register stores one bit per hardware interrupt line, so repeated assertions of the same line coalesce into
+a single pending interrupt. If the external pin remains asserted after the interrupt is serviced, it may be sampled
+again and become pending again.
+
+At an instruction boundary, the exception unit selects the highest-priority pending hardware interrupt whose priority
+is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Pending
+lower-priority interrupts remain latched and are considered again after the current handler returns with \mnemonic{RETE}.
+
+Faults have priority over all hardware interrupts. If a fault is pending at the same instruction boundary as one or
+more hardware interrupts, the fault is dispatched first and the hardware interrupts remain pending. This includes
+instruction trace faults: when trace mode raises a post-instruction fault, that trace fault is serviced before pending
+hardware interrupts at the next boundary.
+
 \textbf{Hierarchical Exception Handling:}
 
 Exceptions in SIRC-1 are strictly hierarchical. A hardware interrupt can only interrupt the current execution if its

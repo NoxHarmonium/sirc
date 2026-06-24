@@ -393,12 +393,9 @@ Tasks:
   `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
   state being cleared before reset-vector fetch.
 
-- Clarify pending interrupt behavior.
-  - disabled interrupts are ignored, not queued
-  - lower-priority interrupts while higher-priority handlers run
-  - repeated level-triggered interrupt pins
-  - NMI/level 5 conflict behavior
-  - trace mode interaction
+- Clarify pending interrupt behavior. Resolved: Chapter 6 now documents enabled-line latching, disabled-line ignoring,
+  repeated level-sensitive pin coalescing, lower-priority pending interrupts, level 5 conflict behavior, and trace/fault
+  priority over hardware interrupts.
 
 - Define exact exception-entry side effects.
   - when P, T, EA, and interrupt-enable bits change
