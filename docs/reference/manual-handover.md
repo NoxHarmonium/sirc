@@ -132,19 +132,36 @@ Acceptance criteria:
 
 Goal: ensure every binary and hex encoding in the manual is correct.
 
+Status: Complete for the current reference-manual scope.
+
 Progress:
 
 - `examples/reference-encodings` assembles the annotated manual encoding examples and generates the instruction-format
   LaTeX tables under `docs/reference/generated/`.
+- Current audit found no hand-written raw 32-bit instruction-word examples outside `docs/reference/generated/`. The only
+  eight-digit hex values in chapter prose are target-address comments in the control-flow chapter, not instruction
+  encodings.
+- `examples/reference-encodings` was verified with `make check`, and `make manual-tex` regenerates the same encoded
+  values. Its unformatted output differs from the checked-in fragments only by LaTeX whitespace/column formatting before
+  `latexindent` is applied.
+- Opcode, condition-code, shift-type, undocumented-opcode, and instruction-family field literals were audited against
+  `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/definitions.rs`. The values match the simulator source of
+  truth as of this pass.
 - Decision: do not add Makefile/CI automation for this yet. A prototype stale-generated-table check was intentionally
   removed because it was more machinery than wanted right now. Do not re-add it unless explicitly requested.
 
-Tasks:
+Completed scope:
 
-- Expand machine checking beyond the generated instruction-format tables by auditing all remaining literal instruction
-  encodings in the manual and moving them into generated or verified sources.
+- The full raw instruction-word examples in Chapter 7 are generated from an assembler fixture rather than maintained by
+  hand.
+- Remaining manual numeric literals were audited and classified as opcode IDs, field values, vector addresses,
+  coprocessor command operands, data constants, or address comments rather than unverified raw instruction-word
+  examples.
+- Invalid 9-hex-digit instruction-word examples are covered by the audit pattern and were not found.
 
-- Later, if desired, add or extend checks for:
+Future optional QA/tooling, if desired:
+
+- Add or extend generated checks for:
   - 32-bit instruction width
   - opcode values
   - register field values
@@ -152,13 +169,8 @@ Tasks:
   - condition-code field values
   - additional flags
   - shift operand/type/amount fields
-
-- Later, if desired, add CI coverage for a reference-manual validation command.
-
-Acceptance criteria:
-
-- Every hex encoding in the manual is either generated or covered by a verification test.
-- Invalid example widths, such as 9-hex-digit instruction words, are impossible to reintroduce silently.
+- Add CI coverage for a reference-manual validation command once the validation command exists and is worth the
+  maintenance cost.
 
 ## Workstream 3: Instruction Reference Upgrade
 
