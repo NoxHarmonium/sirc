@@ -413,6 +413,14 @@ Acceptance criteria:
 
 Goal: make the hardware interface precise enough for board/device designers.
 
+Progress:
+
+- Chapter 2 now defines cycle-level logical bus timing rules for A, D, BRW, BAT, PROT, BAS, SYNC, BACK, BERR, BPER,
+  IRQ, NMI, HALT, TRCE, and RSTI. The timing tables specify stable bus outputs during wait states, read/write data-bus
+  ownership, bus response priority, and boundary-sampled versus asynchronous inputs.
+- The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
+  memory access, and exception vector fetch can all add wait states.
+
 Tasks:
 
 - Add bus timing diagrams.
@@ -434,17 +442,24 @@ Tasks:
   - when data is sampled on reads
   - when data is driven/released on writes
   - setup/hold requirements for BACK, BERR, BPER, IRQ, NMI, HALT, TRCE, and RSTI
+  - Progress: cycle-level logical timing is documented. Exact electrical setup/hold and propagation numbers remain out
+    of scope for the current reference manual and should be handled in a future datasheet/hardware implementation note.
 
 - Define bus ownership.
   - when data bus is input, output, or high impedance
   - whether address bus is always driven
   - behavior during reset and halt
+  - Progress: Chapter 2 now states that external devices must qualify address/data/control pins with BAS, and defines
+    data-bus ownership for read, write, wait-state, and no-bus cycles. Reset and halt behavior are described at the
+    signal level, but waveform diagrams remain to be added.
 
 - Define interrupt sampling.
   - level-triggered vs edge-triggered
   - sampled at instruction boundary or clock edge
   - minimum assertion duration
   - behavior when pin remains asserted
+  - Progress: Chapter 2 now matches Chapter 6 by documenting IRQ1--IRQ4 and NMI as level-sensitive, instruction-boundary
+    sampled inputs.
 
 - Define electrical assumptions or intentionally defer them.
   - voltage levels
@@ -452,6 +467,8 @@ Tasks:
   - decoupling recommendations
   - maximum clock rate basis
   - if this is out of scope for the ISA manual, split into a datasheet appendix.
+  - Progress: Chapter 2 now explicitly defers setup/hold, propagation delay, voltage, fanout, and board-loading
+    requirements to a future datasheet or hardware implementation note.
 
 Acceptance criteria:
 
