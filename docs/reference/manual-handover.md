@@ -49,11 +49,10 @@ These are the biggest gaps compared to the M68k manual.
 These are important for emulator, hardware, OS, debugger, and compiler work.
 
 - Add bus timing diagrams and signal sequencing.
-- Data layout rules. Mostly resolved: Chapter 4 now defines vector word order, stored address layout, immediate
-  sign/zero behavior, address wraparound, and memory ordering. Remaining work is to audit older examples for byte-style
-  offsets and decide whether to add non-normative software conventions for multi-word integers and stack layout.
-  Short immediates are documented as zero-extended ALU operands only; memory, effective-address, branch, jump, and
-  subroutine-call displacements use 16-bit or register displacement forms.
+- Data layout rules. Resolved: Chapter 4 defines vector word order, stored address layout, immediate sign/zero
+  behavior, address wraparound, memory ordering, and the boundary between architectural storage order and
+  non-normative software conventions. Short immediates are documented as zero-extended ALU operands only; memory,
+  effective-address, branch, jump, and subroutine-call displacements use 16-bit or register displacement forms.
 - Add ABI/calling convention guidance or explicitly state that it is outside the ISA.
 - Add assembler/object/binary format appendix if SIRC has a canonical ROM or object representation.
 - Add revision/model compatibility tables for optional coprocessors.
@@ -322,20 +321,27 @@ Acceptance criteria:
 
 Goal: define how values are represented in registers and memory.
 
+Status: Complete.
+
 Progress:
 
 - Added `chapters/04-data-representation.tex` and included it in the main manual. It now defines external word byte
   order, multi-word storage order, address-register-pair interpretation, stored 24-bit address/vector order,
   instruction storage, immediate interpretation, address wraparound, and program-order memory visibility.
 - Cross-referenced the new chapter from the introduction, register model, and exception vector table.
+- Audited older examples for byte-oriented offset assumptions. Stack, structure, vector, saved-address, control-flow,
+  and memory examples now either use word offsets or explicitly discuss external byte representation.
+- Clarified the introduction's memory map so vector IDs are not mistaken for word addresses. The table now gives each
+  vector range and its corresponding word-address range.
+- Added a short software-layout-conventions section. The ISA defines high-word-first architectural storage and word
+  offsets, while full ABI, stack-frame, argument-passing, and software integer conventions remain non-normative unless a
+  separate ABI or toolchain document defines them.
 
 Tasks:
 
-- Audit examples in other chapters for byte-oriented offset assumptions, especially stack, structure, vector, and
-  multi-word address examples. Prefer word offsets everywhere unless a section is explicitly discussing external byte
-  representation.
-- Decide whether to add more non-normative software conventions for multi-word integers beyond the architectural
-  high-word-first convention already documented.
+- Audit examples in other chapters for byte-oriented offset assumptions. Resolved.
+- Decide whether to add more non-normative software conventions for multi-word integers. Resolved for the ISA manual:
+  full ABI and software-integer conventions are deferred to Workstream 9 or a separate ABI/toolchain document.
 
 Acceptance criteria:
 

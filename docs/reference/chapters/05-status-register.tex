@@ -96,7 +96,7 @@ protected mode raise a privilege violation fault.
 	\item[When Clear (0):] CPU operates in supervisor mode with full privileges
 	\item[When Set (1):] CPU operates in protected mode with restricted access to:
 	      \begin{itemize}
-		      \item High bytes of address register pairs (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph})
+		      \item High address-register components (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph})
 		      \item Upper byte of status register
 		      \item Privileged coprocessor operations (opcodes > 0x07xx)
 	      \end{itemize}

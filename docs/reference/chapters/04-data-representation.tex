@@ -135,6 +135,16 @@ truncation mode.
 Short immediates are not used for memory, effective-address, branch, jump, or subroutine-call displacements. Those
 forms use 16-bit immediate displacements, register displacements, or assembler-resolved full-width branch offsets.
 
+\section{Software Layout Conventions}
+
+The architectural storage order for multi-word quantities is high word first. The SIRC-1 reference manual does not
+otherwise define a complete ABI, stack-frame layout, argument-passing convention, or software integer library format.
+Where examples show structures, arrays, saved registers, or stack use, offsets are word offsets and each push or pop
+moves the stack pointer by one 16-bit word.
+
+Software standards may build on the architectural high-word-first rule for wider integers and stored addresses, but
+those conventions are non-normative unless a separate ABI or toolchain document says otherwise.
+
 \section{Arithmetic and Address Wraparound}
 
 General-purpose register arithmetic is performed modulo $2^{16}$. Arithmetic condition flags describe the truncated
