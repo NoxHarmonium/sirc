@@ -655,6 +655,166 @@ priority, then BPER, then BACK.
 	\label{tab:bus-cycle-ownership}
 \end{table}
 
+\subsubsection{Bus Timing Diagrams}
+
+The timing diagrams below show cycle-level logical timing. Each labelled interval represents one CLKI cycle as observed
+between rising edges. Waveform rows show physical logic levels; for active-low signals, \texttt{L} means asserted and
+\texttt{H} means deasserted. Address, data, \texttt{BAT}, and phase rows are value bands rather than electrical
+setup/hold specifications. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data read, \texttt{DW}
+for data write, \texttt{EV} for exception vector fetch, and \texttt{EA} for effective address.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                         \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{} \\
+		SYNC        & H L L L                       \\
+		BAS         & L L H H                       \\
+		BRW         & H H H H                       \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None}   \\
+		A0--A23     & D{PC} D{PC+1} D{} D{}         \\
+		D0--D15     & D{high} D{low} Z Z            \\
+		BACK        & L L H H                       \\
+		BERR/BPER   & H H H H                       \\
+	\end{tikztimingtable}
+	\caption{Instruction-fetch high-word and low-word reads with no wait states}
+	\label{fig:instruction-fetch-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 3{C}                      \\
+		Phase       & D{Mem} D{next} D{}        \\
+		SYNC        & L L L                     \\
+		BAS         & H L H                     \\
+		BRW         & H H H                     \\
+		BAT0--BAT2  & D{None} D{DR} D{None}     \\
+		A0--A23     & D{} D{EA} D{}             \\
+		D0--D15     & Z D{data} Z               \\
+		BACK        & H L H                     \\
+		BERR/BPER   & H H H                     \\
+	\end{tikztimingtable}
+	\caption{Data read cycle with no wait state}
+	\label{fig:data-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 3{C}                       \\
+		Phase       & D{Mem} D{next} D{}         \\
+		SYNC        & L L L                      \\
+		BAS         & H L H                      \\
+		BRW         & H L H                      \\
+		BAT0--BAT2  & D{None} D{DW} D{None}      \\
+		A0--A23     & D{} D{EA} D{}              \\
+		D0--D15     & Z D{data} Z                \\
+		BACK        & H L H                      \\
+		BERR/BPER   & H H H                      \\
+	\end{tikztimingtable}
+	\caption{Data write cycle with no wait state}
+	\label{fig:data-write-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                                 \\
+		Phase       & D{EV high} D{EV low} D{next} D{} \\
+		SYNC        & H L L L                              \\
+		BAS         & L L H H                              \\
+		BRW         & H H H H                              \\
+		BAT0--BAT2  & D{EV} D{EV} D{None} D{None}          \\
+		A0--A23     & D{vec+0} D{vec+1} D{} D{}            \\
+		D0--D15     & D{high} D{low} Z Z                   \\
+		BACK        & L L H H                              \\
+		BERR/BPER   & H H H H                              \\
+	\end{tikztimingtable}
+	\caption{Exception-vector fetch with high-word then low-word reads}
+	\label{fig:exception-vector-fetch-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                              \\
+		Phase       & D{req} D{wait} D{done} D{next}        \\
+		SYNC        & L L L L                           \\
+		BAS         & L L L H                           \\
+		BRW         & H H H H                           \\
+		BAT0--BAT2  & D{DR} D{DR} D{DR} D{None}           \\
+		A0--A23     & D{addr} D{addr} D{addr} D{}         \\
+		D0--D15     & Z Z D{data} Z                       \\
+		BACK        & H H L H                           \\
+		BERR/BPER   & H H H H                           \\
+	\end{tikztimingtable}
+	\caption{Wait-state insertion when no bus response is asserted}
+	\label{fig:bus-wait-state-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                          \\
+		Case        & D{BERR} D{} D{BPER} D{}             \\
+		BAS         & L H L H                       \\
+		BRW         & H H H H                       \\
+		BACK        & H H H H                       \\
+		BERR        & L H H H                       \\
+		BPER        & H H L H                       \\
+		BAT0--BAT2  & D{active} D{None} D{active} D{None} \\
+		A0--A23     & D{addr} D{} D{addr} D{}             \\
+		D0--D15     & Z Z Z Z                       \\
+	\end{tikztimingtable}
+	\caption{Bus-error and bus-protection abort timing}
+	\label{fig:bus-abort-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 6{C}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{Execute} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		BAS         & L L H H H H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{None} D{None} \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{} D{}              \\
+		D0--D15     & D{high} D{low} Z Z Z Z                     \\
+		BACK        & L L H H H H                                \\
+		BERR/BPER   & H H H H H H                                \\
+	\end{tikztimingtable}
+	\caption{Complete register-only ALU instruction with no wait states}
+	\label{fig:alu-instruction-cycle-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 6{C}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{EA} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		BAS         & L L H H L H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{DR} D{None}  \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{EA} D{}            \\
+		D0--D15     & D{high} D{low} Z Z D{data} Z               \\
+		BACK        & L L H H L H                                \\
+		BERR/BPER   & H H H H H H                                \\
+	\end{tikztimingtable}
+	\caption{Complete LOAD instruction with no wait states}
+	\label{fig:load-instruction-cycle-timing}
+\end{figure}
+
 \subsubsection{Asynchronous and Boundary-Sampled Inputs}
 
 \begin{table}[H]

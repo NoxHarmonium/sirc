@@ -424,24 +424,27 @@ Progress:
 - Signal audit complete: Chapter 2, Chapter 6, Appendix B, and simulator-facing bus comments now use asserted/deasserted
   wording consistently for active-low pins, and SYNC is described as an instruction-start sync signal rather than an
   instruction-complete strobe.
+- Chapter 2 now includes `tikz-timing` waveform diagrams for the two-word instruction fetch sequence, data read, data
+  write, exception vector fetch, wait-state insertion, BERR/BPER abort timing, a complete register-only ALU instruction,
+  and a complete LOAD instruction. The normal `make all` docs build now acts as the package-availability smoke test for
+  `tikz-timing`.
 - The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
   memory access, and exception vector fetch can all add wait states.
 
 Tasks:
 
-- Add bus timing diagrams.
-  - instruction fetch read
+- Add bus timing diagrams. Resolved in Chapter 2 with `tikz-timing` figures for:
+  - two-word instruction fetch
   - data read
   - data write
   - exception vector fetch
   - wait-state insertion via BACK
   - BERR and BPER abort timing
+  - complete register-only ALU instruction
+  - complete LOAD instruction
 
-- Choose a timing-diagram authoring path.
-  - `tikz-timing` looks well suited for waveform diagrams, but it adds a LaTeX package dependency that must be available wherever the PDF is built.
-  - Prefer dependencies included in a normal TeX Live/MacTeX install, or document the exact package requirement in the docs build prerequisites.
-  - If avoiding extra LaTeX package requirements is more important, generate waveform PDFs/SVGs from a checked-in script and include the rendered assets from LaTeX.
-  - Whichever path is chosen, add a tiny build smoke test so missing timing-diagram tooling fails clearly.
+- Choose a timing-diagram authoring path. Resolved: use `tikz-timing` directly in LaTeX. The package is documented in
+  `docs/reference/README.md`, and a missing package fails clearly during the normal PDF build.
 
 - Define signal timing relative to `CLKI`.
   - when A, D, BRW, BAT, PROT, and BAS become valid
@@ -457,7 +460,7 @@ Tasks:
   - behavior during reset and halt
   - Progress: Chapter 2 now states that external devices must qualify address/data/control pins with BAS, and defines
     data-bus ownership for read, write, wait-state, and no-bus cycles. Reset and halt behavior are described at the
-    signal level, but waveform diagrams remain to be added.
+    signal level, and the common bus-cycle waveforms are now diagrammed.
 
 - Define interrupt sampling.
   - level-triggered vs edge-triggered
