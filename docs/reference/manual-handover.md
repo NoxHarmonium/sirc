@@ -418,6 +418,12 @@ Progress:
 - Chapter 2 now defines cycle-level logical bus timing rules for A, D, BRW, BAT, PROT, BAS, SYNC, BACK, BERR, BPER,
   IRQ, NMI, HALT, TRCE, and RSTI. The timing tables specify stable bus outputs during wait states, read/write data-bus
   ownership, bus response priority, and boundary-sampled versus asynchronous inputs.
+- Chapter 2 now aligns bus-facing pin polarity with an MC68000-style convention: address/data and value pins use
+  positive logic, BAS and bus response pins are active low, BRW is read-high/write-low, and reset/interrupt/halt/trace
+  controls are active low.
+- Signal audit complete: Chapter 2, Chapter 6, Appendix B, and simulator-facing bus comments now use asserted/deasserted
+  wording consistently for active-low pins, and SYNC is described as an instruction-start sync signal rather than an
+  instruction-complete strobe.
 - The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
   memory access, and exception vector fetch can all add wait states.
 

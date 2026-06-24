@@ -67,7 +67,7 @@ impl BitOr for BusOperation {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         match (self, rhs) {
-            // In hardware, the bus access strobe output (BRW) is active high where high is "write"
+            // This is a logical operation, not the physical BRW pin level.
             (Self::Write, _) | (_, Self::Write) => Self::Write,
             _ => Self::Read,
         }
@@ -103,7 +103,7 @@ impl BitOr for BusAssertions {
 /// External interaction with the bus by devices.
 ///
 /// To simulate that all the devices in the simulator are connected to the bus, they return this
-/// struct after they are "polled" by the bus and all the assertion are merged together to form
+/// struct after they are "polled" by the bus and all the assertions are merged together to form
 /// the state of the bus, which is then passed back into every device on the next poll.
 ///
 /// The CPU is the "bus master" so some of the fields should only be asserted by the CPU.
@@ -185,8 +185,8 @@ pub struct BusAssertions {
     /// what software has set. Cannot be cleared by the running program.
     /// Pin: TRCE
     pub force_trace_mode: bool,
-    /// Pulsed true by the CPU during the first bus cycle of each instruction (`InstructionFetchLow`).
-    /// Signals the start of a new instruction to external devices (e.g. logic analysers, debuggers).
+    /// Asserted by the CPU during the first execution phase (`InstructionFetchLow`).
+    /// Signals the start of an instruction or exception-unit dispatch to external devices.
     /// Pin: SYNC
     pub instruction_sync: bool,
     /// Reflects the Protected Mode (P) bit of the CPU status register each cycle.

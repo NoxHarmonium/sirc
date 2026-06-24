@@ -276,36 +276,37 @@ The SIRC CPU is most commonly provided as a DIP-64 package.
 \begin{table}[]
 	\centering
 	\begin{tabular}{rll}
-		\textbf{Pin} & \textbf{Name} & \textbf{Description}               \\
+		\textbf{Pin} & \textbf{Name} & \textbf{Description}          \\
 		\hline
-		1-8          & A0-A7         & Address bus bits 0-7               \\
-		9            & VCC1          & Power supply                       \\
-		10-25        & A8-A23        & Address bus bits 8-23              \\
-		26           & GND1          & Ground                             \\
-		27-42        & D0-D15        & Data bus bit 0-15                  \\
-		43           & VCC2          & Power supply                       \\
-		44           & GND2          & Ground                             \\
-		45           & CLKI          & Clock input                        \\
-		46           & SYNC          & Instruction-complete strobe output \\
-		47           & BAS           & Bus access strobe output           \\
-		48           & BRW           & Bus read/write output              \\
-		49           & BACK          & Bus acknowledge input              \\
-		50           & BERR          & Bus error input                    \\
-		51           & BPER          & Bus protection error               \\
-		52-54        & BAT0-BAT2     & Bus access type bits 0-2           \\
-		55           & PROT          & Protected-mode output              \\
-		56           & HALT          & External CPU halt input            \\
-		57           & TRCE          & Force trace mode input             \\
-		58-61        & IRQ1-IRQ4     & Maskable interrupt inputs 1-4      \\
-		62           & NMI           & Non-maskable interrupt input       \\
-		63           & RSTI          & Reset input                        \\
-		64           & RSTO          & Reset output                       \\
+		1-8          & A0-A7         & Address bus bits 0-7          \\
+		9            & VCC1          & Power supply                  \\
+		10-25        & A8-A23        & Address bus bits 8-23         \\
+		26           & GND1          & Ground                        \\
+		27-42        & D0-D15        & Data bus bit 0-15             \\
+		43           & VCC2          & Power supply                  \\
+		44           & GND2          & Ground                        \\
+		45           & CLKI          & Clock input                   \\
+		46           & SYNC          & Instruction-sync output       \\
+		47           & BAS           & Bus access strobe output      \\
+		48           & BRW           & Bus read/write output         \\
+		49           & BACK          & Bus acknowledge input         \\
+		50           & BERR          & Bus error input               \\
+		51           & BPER          & Bus protection error          \\
+		52-54        & BAT0-BAT2     & Bus access type bits 0-2      \\
+		55           & PROT          & Protected-mode output         \\
+		56           & HALT          & External CPU halt input       \\
+		57           & TRCE          & Force trace mode input        \\
+		58-61        & IRQ1-IRQ4     & Maskable interrupt inputs 1-4 \\
+		62           & NMI           & Non-maskable interrupt input  \\
+		63           & RSTI          & Reset input                   \\
+		64           & RSTO          & Reset output                  \\
 	\end{tabular}
 	\caption{SIRC CPU 64-pin DIP pinout}
 \end{table}
 
-Unless otherwise noted, control inputs are active low and control outputs are active high. The descriptions below use
-"asserted" and "deasserted" to refer to the logical state of a signal according to its signal type.
+Each signal lists its own assertion convention. Address, data, and bus-type value pins use positive logic, while bus
+control, handshake, interrupt, halt, trace, and reset pins generally use active-low conventions. The descriptions below
+use "asserted" and "deasserted" to refer to the logical state of a signal according to its signal type.
 
 \subsection{Pin Descriptions}
 
@@ -361,8 +362,8 @@ will be a full instruction execution (assuming no wait for bus devices).
 	\item \textbf{Signal Type:} Active High
 \end{itemize}
 
-Asserted during the first execution phase of an instruction or exception-unit dispatch. It will be high for phase 1 and
-low for every other phase.
+Asserted while the CPU is in the first execution phase of an instruction or exception-unit dispatch. It remains
+asserted if a wait state holds that phase, and is deasserted during every other phase.
 
 It can be useful for debugging purposes.
 
@@ -370,7 +371,7 @@ It can be useful for debugging purposes.
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Active High
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
 When the CPU is ready to perform a bus operation, BAS is asserted after the address pins, BRW, BAT, PROT, and any
@@ -383,12 +384,12 @@ current execution phase and repeats the same bus request on the following clock.
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Active High
+	\item \textbf{Signal Type:} Read High / Write Low
 \end{itemize}
 
 Only relevant when the BAS (Bus access strobe output) is asserted.
 
-When low, the CPU is requesting a read from the bus. Otherwise, when high, the CPU is requesting to write to the bus.
+When high, the CPU is requesting a read from the bus. When low, the CPU is requesting a write to the bus.
 
 \subsubsection{Bus Acknowledge Input (BACK)}
 
@@ -548,7 +549,7 @@ important non-interruptible events.
 
 \begin{itemize}
 	\item \textbf{Direction:} Input
-	\item \textbf{Signal Type:} Active low
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
 Can be used by external devices to force a reset of the CPU.
@@ -569,7 +570,7 @@ reset.
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Active high
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
 Asserted while the RSTI pin is asserted and during the reset-output hold before reset-vector fetch.
@@ -599,11 +600,11 @@ the next execution phase.
 		\midrule
 		A0--A23         & Valid whenever BAS is asserted. Stable until the request completes or aborts.                                                      \\
 		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when BACK is accepted. \\
-		BRW             & Valid whenever BAS is asserted. Low requests a read; high requests a write. Stable until the request completes or aborts.          \\
+		BRW             & Valid whenever BAS is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.          \\
 		BAT0--BAT2      & Valid whenever BAS is asserted. Encodes the access type for the active request and is stable until completion or abort.            \\
 		PROT            & Reflects the status register P bit and may be used with BAS, BAT, and A0--A23 by external protection logic.                        \\
 		BAS             & Asserted while a bus request is active. Remains asserted across wait states.                                                       \\
-		SYNC            & Asserted during phase 1 of an instruction or exception-unit dispatch.                                                              \\
+		SYNC            & Asserted while phase 1 of an instruction or exception-unit dispatch is active.                                                     \\
 		\bottomrule
 	\end{tabularx}
 	\caption{CPU bus output timing rules}
@@ -644,8 +645,8 @@ priority, then BPER, then BACK.
 		\toprule
 		\textbf{Cycle} & \textbf{CPU drives}                       & \textbf{External device drives}         & \textbf{Completion}                              \\
 		\midrule
-		Read           & A0--A23, BRW=0, BAT, BAS, PROT            & D0--D15 for the selected address        & BACK samples data; BERR/BPER aborts.             \\
-		Write          & A0--A23, D0--D15, BRW=1, BAT, BAS, PROT   & No data bus drive                       & BACK accepts write; BERR/BPER aborts.            \\
+		Read           & A0--A23, BRW=1, BAT, BAS, PROT            & D0--D15 for the selected address        & BACK samples data; BERR/BPER aborts.             \\
+		Write          & A0--A23, D0--D15, BRW=0, BAT, BAS, PROT   & No data bus drive                       & BACK accepts write; BERR/BPER aborts.            \\
 		Wait state     & Same values as the previous request cycle & Same ownership as the active request    & Continues until BACK, BERR, or BPER is asserted. \\
 		No bus cycle   & No active transaction                     & No selected device should drive D0--D15 & CPU advances internally.                         \\
 		\bottomrule
