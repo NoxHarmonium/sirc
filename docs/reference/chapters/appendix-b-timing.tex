@@ -5,7 +5,8 @@
 
 All SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
-adding execution phases. This fixed execution sequence greatly simplifies software development and hardware design.
+adding execution phases. This fixed execution sequence greatly simplifies software development and hardware design. See
+Chapter~\ref{ch:cpu-architecture} for the bus signal timing, wait-state, and response-priority rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -110,8 +111,10 @@ simultaneously. Instead:
 \subsection{Memory Access}
 
 \begin{itemize}
-	\item Memory access occupies one execution phase
-	\item If BACK is not asserted, the CPU holds that phase until the bus operation is acknowledged
+	\item Instruction fetch, data memory access, and exception vector fetch each occupy one execution phase per 16-bit word
+	      transferred.
+	\item If BACK is not asserted and neither BERR nor BPER aborts the request, the CPU holds that phase until the bus operation
+	      is acknowledged.
 	\item Each wait state adds one clock cycle to the instruction
 \end{itemize}
 

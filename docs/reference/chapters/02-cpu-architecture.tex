@@ -67,6 +67,8 @@ interconnections.
 	\label{fig:cpu-block-diagram}
 \end{figure}
 
+%TODO: Update the diagram so that the memory component is obviously separate to the other components that live together in the chip
+
 \subsection{Control Unit (CU)}
 
 The Control Unit sits at the heart of the SIRC-1 CPU, coordinating all other functional units throughout the
@@ -276,35 +278,37 @@ The SIRC CPU is most commonly provided as a DIP-64 package.
 \begin{table}[]
 	\centering
 	\begin{tabular}{rll}
-		\textbf{Pin} & \textbf{Name} & \textbf{Description}               \\
+		\textbf{Pin} & \textbf{Name} & \textbf{Description}          \\
 		\hline
-		1-8          & A0-A7         & Address bus bits 0-7               \\
-		9            & VCC1          & Power supply                       \\
-		10-25        & A8-A23        & Address bus bits 8-23              \\
-		26           & GND1          & Ground                             \\
-		27-42        & D0-D15        & Data bus bit 0-15                  \\
-		43           & VCC2          & Power supply                       \\
-		44           & GND2          & Ground                             \\
-		45           & CLKI          & Clock input                        \\
-		46           & SYNC          & Instruction-complete strobe output \\
-		47           & BAS           & Bus access strobe output           \\
-		48           & BRW           & Bus read/write output              \\
-		49           & BACK          & Bus acknowledge input              \\
-		50           & BERR          & Bus error input                    \\
-		51           & BPER          & Bus protection error               \\
-		52-54        & BAT0-BAT2     & Bus access type bits 0-2           \\
-		55           & PROT          & Protected-mode output              \\
-		56           & HALT          & External CPU halt input            \\
-		57           & TRCE          & Force trace mode input             \\
-		58-61        & IRQ1-IRQ4     & Maskable interrupt inputs 1-4      \\
-		62           & NMI           & Non-maskable interrupt input       \\
-		63           & RSTI          & Reset input                        \\
-		64           & RSTO          & Reset output                       \\
+		1-8          & A0-A7         & Address bus bits 0-7          \\
+		9            & VCC1          & Power supply                  \\
+		10-25        & A8-A23        & Address bus bits 8-23         \\
+		26           & GND1          & Ground                        \\
+		27-42        & D0-D15        & Data bus bit 0-15             \\
+		43           & VCC2          & Power supply                  \\
+		44           & GND2          & Ground                        \\
+		45           & CLKI          & Clock input                   \\
+		46           & SYNC          & Instruction-sync output       \\
+		47           & BAS           & Bus access strobe output      \\
+		48           & BRW           & Bus read/write output         \\
+		49           & BACK          & Bus acknowledge input         \\
+		50           & BERR          & Bus error input               \\
+		51           & BPER          & Bus protection error          \\
+		52-54        & BAT0-BAT2     & Bus access type bits 0-2      \\
+		55           & PROT          & Protected-mode output         \\
+		56           & HALT          & External CPU halt input       \\
+		57           & TRCE          & Force trace mode input        \\
+		58-61        & IRQ1-IRQ4     & Maskable interrupt inputs 1-4 \\
+		62           & NMI           & Non-maskable interrupt input  \\
+		63           & RSTI          & Reset input                   \\
+		64           & RSTO          & Reset output                  \\
 	\end{tabular}
 	\caption{SIRC CPU 64-pin DIP pinout}
 \end{table}
 
-All inputs are active low, all outputs are active high.
+Each signal lists its own assertion convention. Address, data, and bus-type value pins use positive logic, while bus
+control, handshake, interrupt, halt, trace, and reset pins generally use active-low conventions. The descriptions below
+use "asserted" and "deasserted" to refer to the logical state of a signal according to its signal type.
 
 \subsection{Pin Descriptions}
 
@@ -353,17 +357,15 @@ Progresses the CPU to the next cycle when the input transitions from low to high
 Each transition from low to high will progress the CPU internal six stage sequence, and so every six clock transitions
 will be a full instruction execution (assuming no wait for bus devices).
 
-\subsubsection{Bus Access Strobe Output (SYNC)}
+\subsubsection{Instruction Sync Output (SYNC)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Rising Edge
+	\item \textbf{Signal Type:} Active High
 \end{itemize}
 
-When the CPU completes a full instruction (six internal cycles) it will transition this pin from low to high to signal
-external devices.
-
-It will be high for cycle 1, and low for every other cycle.
+Asserted while the CPU is in the first execution phase of an instruction or exception-unit dispatch. It remains
+asserted if a wait state holds that phase, and is deasserted during every other phase.
 
 It can be useful for debugging purposes.
 
@@ -371,25 +373,25 @@ It can be useful for debugging purposes.
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Rising Edge
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When the CPU is ready to perform a bus operation (i.e. the address pins, data pins and BRW pin are all in the right
-state) it will transition this pin from low to high.
+When the CPU is ready to perform a bus operation, BAS is asserted after the address pins, BRW, BAT, PROT, and any
+CPU-driven data pins are valid.
 
-It will then not progress to the next cycle until the bus asserts the BACK (Bus acknowledge input) pin, allowing slow
-devices time to complete operations.
+BAS remains asserted until the bus responds with BACK, BERR, or BPER. If no response is asserted, the CPU holds the
+current execution phase and repeats the same bus request on the following clock.
 
-\subsubsection{Bus Access Strobe Output (BRW)}
+\subsubsection{Bus Read/Write Output (BRW)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Active High
+	\item \textbf{Signal Type:} Read High / Write Low
 \end{itemize}
 
 Only relevant when the BAS (Bus access strobe output) is asserted.
 
-When low, the CPU is requesting a read from the bus. Otherwise, when high, the CPU is requesting to write to the bus.
+When high, the CPU is requesting a read from the bus. When low, the CPU is requesting a write to the bus.
 
 \subsubsection{Bus Acknowledge Input (BACK)}
 
@@ -398,10 +400,10 @@ When low, the CPU is requesting a read from the bus. Otherwise, when high, the C
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, the bus is asserting that the previously requested read/write was successful, allowing the CPU I/O operation
-to complete.
+When asserted, the bus is reporting that the requested read/write completed successfully. On reads, the CPU samples
+D0-D15 on the clock edge that accepts BACK.
 
-If all bus devices are fast and can complete reads/writes in a single cycle, this pin can be permanently pulled low.
+If all bus devices are fast and can complete reads/writes in a single cycle, this pin can be permanently held asserted.
 
 \subsubsection{Bus Error Input (BERR)}
 
@@ -410,7 +412,7 @@ If all bus devices are fast and can complete reads/writes in a single cycle, thi
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, the bus is asserting that the previously requested read/write was unsuccessful.
+When asserted, the bus is reporting that the requested read/write was unsuccessful.
 
 This will cause the CPU to abort the I/O operation and raise a bus fault exception.
 
@@ -424,8 +426,8 @@ device.
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, the bus is asserting that the previously requested read/write was to a valid address/device, but that the I/O
-is disallowed given the current state of the CPU or bus.
+When asserted, the bus is reporting that the requested read/write was to a valid address/device, but that the I/O is
+disallowed given the current state of the CPU or bus.
 
 This will cause the CPU to abort the I/O operation and raise a bus protection fault exception.
 
@@ -493,10 +495,10 @@ of memory by raising bus protection errors.
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, the CPU will stop executing instructions.
+When asserted, the CPU will stop executing instructions.
 
-It will complete the current instruction and halt before the next instruction fetch. It will resume as normal when the
-input goes high.
+HALT is sampled at instruction boundaries. If asserted, the CPU completes the current instruction and halts before the
+next instruction fetch. It resumes as normal when the input is deasserted.
 
 This pin is useful for hardware driven debugging, as the CPU can be halted and the state of the system examined.
 
@@ -507,8 +509,8 @@ This pin is useful for hardware driven debugging, as the CPU can be halted and t
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, the Trace Mode (T) flag of the status register is forced to be 1, regardless of whether a program has cleared
-it or not.
+When asserted at an instruction boundary, the instruction being started is traced regardless of whether software has
+cleared the Trace Mode (T) flag in the status register.
 
 When in trace mode the CPU will raise exceptions every instruction to allow software debugging.
 
@@ -519,16 +521,13 @@ When in trace mode the CPU will raise exceptions every instruction to allow soft
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When low, a hardware exception will be raised by the CPU for the corresponding exception level.
+When asserted, the corresponding hardware interrupt line is sampled by the CPU.
 
 They can be "masked" by the Hardware Interrupt Enable Bits (E1-E4) of the status register, which will disable them.
 
-If an exception for the interrupt level or higher is already being handled, the exception will be "queued" and handled
-whenever all the higher level interrupts have been serviced.
-
-If a lower level interrupt is being handled, it will be interrupted and the higher level interrupt will be serviced.
-
-If an interrupt pin is held low continuously it will be serviced again as soon as the exception has been handled.
+Interrupt inputs are level-sensitive and are sampled at instruction boundaries. Enabled interrupt lines are latched in
+the pending hardware-exceptions register; disabled maskable lines are ignored and not queued. If an interrupt pin
+remains asserted after its handler returns, it may be sampled again through the normal interrupt rules.
 
 See the exceptions section for more details.
 
@@ -536,34 +535,33 @@ See the exceptions section for more details.
 
 \begin{itemize}
 	\item \textbf{Direction:} Input
-	\item \textbf{Signal Type:} Falling Edge
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When transitioning from high to low, will raise a level 5 hardware exception.
+When asserted, the CPU samples the Level 5 hardware exception line.
 
 This interrupt cannot be masked, and if this pin is asserted while another level 5 exception is being handled, a "level
 five hardware exception conflict" fault will be raised.
 
-If asserted again while that fault is being handled, it will trigger a double fault.
-
-Therefore, it is important that the level 5 exception handlers are executed quickly and that the NMI is only asserted
-for important non-interruptible events.
+If NMI remains asserted after its handler returns, it may be sampled again through the normal Level 5 interrupt rules.
+Therefore, it is important that the level 5 exception handlers are executed quickly and that NMI is only asserted for
+important non-interruptible events.
 
 \subsubsection{Reset input (RSTI)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Input
-	\item \textbf{Signal Type:} Active low
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
 Can be used by external devices to force a reset of the CPU.
 
-When low, the CPU immediately aborts the current instruction or bus wait, stops normal processing, resets to phase 0,
-and begins the reset sequence described in Chapter~\ref{ch:exceptions}.
+When asserted, the CPU immediately aborts the current instruction or bus wait, stops normal processing, resets to phase
+0, and begins the reset sequence described in Chapter~\ref{ch:exceptions}.
 
 The RSTO pin will also be asserted.
 
-When this pin becomes high, the CPU completes the reset-output hold, stops asserting the RSTO pin, and the exception
+When this pin is deasserted, the CPU completes the reset-output hold, stops asserting the RSTO pin, and the exception
 unit fetches the reset vector.
 
 If your system needs external devices to be reset for longer than the CPU reset-output hold, reset timing will have to
@@ -574,7 +572,7 @@ reset.
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
-	\item \textbf{Signal Type:} Active high
+	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
 Asserted while the RSTI pin is asserted and during the reset-output hold before reset-vector fetch.
@@ -589,5 +587,308 @@ controllers.
 
 \subsection{Timing Notes}
 
-BACK, BERR and BPER are all mutually exclusive. If they happen to be asserted by the bus at the same time, BERR will
-take first priority, then BPER, then BACK.
+\subsubsection{Clocked Bus Model}
+
+All bus timing is described relative to the rising edge of CLKI. The CPU presents a bus request during the execution
+phase that needs external access. If no response is asserted, the CPU repeats the same request and does not advance to
+the next execution phase.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Signal} & \textbf{Timing rule}                                                                                                               \\
+		\midrule
+		A0--A23         & Valid whenever BAS is asserted. Stable until the request completes or aborts.                                                      \\
+		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when BACK is accepted. \\
+		BRW             & Valid whenever BAS is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.          \\
+		BAT0--BAT2      & Valid whenever BAS is asserted. Encodes the access type for the active request and is stable until completion or abort.            \\
+		PROT            & Reflects the status register P bit and may be used with BAS, BAT, and A0--A23 by external protection logic.                        \\
+		BAS             & Asserted while a bus request is active. Remains asserted across wait states.                                                       \\
+		SYNC            & Asserted while phase 1 of an instruction or exception-unit dispatch is active.                                                     \\
+		\bottomrule
+	\end{tabularx}
+	\caption{CPU bus output timing rules}
+	\label{tab:bus-output-timing-rules}
+\end{table}
+
+When BAS is deasserted there is no active bus transaction. External devices must ignore A0--A23, D0--D15, BRW, and
+BAT0--BAT2 unless BAS is asserted.
+
+\subsubsection{Bus Transaction Completion}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Response} & \textbf{Effect when sampled while BAS is asserted}                                                                                                       \\
+		\midrule
+		BACK              & Completes the request successfully. For reads, D0--D15 is sampled on the accepting clock edge. For writes, the write is considered externally committed. \\
+		BERR              & Aborts the request and raises a bus fault. Read data is ignored and writes are not considered successfully committed by the CPU.                         \\
+		BPER              & Aborts the request and raises a bus protection fault. Read data is ignored and writes are not considered successfully committed by the CPU.              \\
+		No response       & Inserts a wait state. The CPU remains in the current execution phase and keeps A0--A23, D0--D15 for writes, BRW, BAT0--BAT2, PROT, and BAS stable.       \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Bus response timing rules}
+	\label{tab:bus-response-timing-rules}
+\end{table}
+
+BACK, BERR and BPER are logically mutually exclusive. If more than one is asserted for the same request, BERR has
+priority, then BPER, then BACK.
+
+\subsubsection{Bus Cycle Types}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lXXX}
+		\toprule
+		\textbf{Cycle} & \textbf{CPU drives}                       & \textbf{External device drives}         & \textbf{Completion}                              \\
+		\midrule
+		Read           & A0--A23, BRW=1, BAT, BAS, PROT            & D0--D15 for the selected address        & BACK samples data; BERR/BPER aborts.             \\
+		Write          & A0--A23, D0--D15, BRW=0, BAT, BAS, PROT   & No data bus drive                       & BACK accepts write; BERR/BPER aborts.            \\
+		Wait state     & Same values as the previous request cycle & Same ownership as the active request    & Continues until BACK, BERR, or BPER is asserted. \\
+		No bus cycle   & No active transaction                     & No selected device should drive D0--D15 & CPU advances internally.                         \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External bus cycle ownership}
+	\label{tab:bus-cycle-ownership}
+\end{table}
+
+\subsubsection{Bus Timing Diagrams}
+
+The timing diagrams below show cycle-level logical timing. Each labelled interval represents one CLKI cycle as observed
+between rising edges. Waveform rows show physical logic levels; for active-low signals, \texttt{L} means asserted and
+\texttt{H} means deasserted. Address, data, \texttt{BAT}, and phase rows are value bands rather than electrical
+setup/hold specifications. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data read, \texttt{DW}
+for data write, \texttt{EV} for exception vector fetch, \texttt{EA} for effective address, and \texttt{RV} for reset
+vector.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                         \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{} \\
+		SYNC        & H L L L                       \\
+		BAS         & L L H H                       \\
+		BRW         & H H H H                       \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None}   \\
+		A0--A23     & D{PC} D{PC+1} D{} D{}         \\
+		D0--D15     & D{high} D{low} Z Z            \\
+		BACK        & L L H H                       \\
+		BERR/BPER   & H H H H                       \\
+	\end{tikztimingtable}
+	\caption{Instruction-fetch high-word and low-word reads with no wait states}
+	\label{fig:instruction-fetch-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 3{C}                      \\
+		Phase       & D{Mem} D{next} D{}        \\
+		SYNC        & L L L                     \\
+		BAS         & H L H                     \\
+		BRW         & H H H                     \\
+		BAT0--BAT2  & D{None} D{DR} D{None}     \\
+		A0--A23     & D{} D{EA} D{}             \\
+		D0--D15     & Z D{data} Z               \\
+		BACK        & H L H                     \\
+		BERR/BPER   & H H H                     \\
+	\end{tikztimingtable}
+	\caption{Data read cycle with no wait state}
+	\label{fig:data-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 3{C}                       \\
+		Phase       & D{Mem} D{next} D{}         \\
+		SYNC        & L L L                      \\
+		BAS         & H L H                      \\
+		BRW         & H L H                      \\
+		BAT0--BAT2  & D{None} D{DW} D{None}      \\
+		A0--A23     & D{} D{EA} D{}              \\
+		D0--D15     & Z D{data} Z                \\
+		BACK        & H L H                      \\
+		BERR/BPER   & H H H                      \\
+	\end{tikztimingtable}
+	\caption{Data write cycle with no wait state}
+	\label{fig:data-write-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                                 \\
+		Phase       & D{EV high} D{EV low} D{next} D{} \\
+		SYNC        & H L L L                              \\
+		BAS         & L L H H                              \\
+		BRW         & H H H H                              \\
+		BAT0--BAT2  & D{EV} D{EV} D{None} D{None}          \\
+		A0--A23     & D{vec+0} D{vec+1} D{} D{}            \\
+		D0--D15     & D{high} D{low} Z Z                   \\
+		BACK        & L L H H                              \\
+		BERR/BPER   & H H H H                              \\
+	\end{tikztimingtable}
+	\caption{Exception-vector fetch with high-word then low-word reads}
+	\label{fig:exception-vector-fetch-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                              \\
+		Phase       & D{req} D{wait} D{done} D{next}        \\
+		SYNC        & L L L L                           \\
+		BAS         & L L L H                           \\
+		BRW         & H H H H                           \\
+		BAT0--BAT2  & D{DR} D{DR} D{DR} D{None}           \\
+		A0--A23     & D{addr} D{addr} D{addr} D{}         \\
+		D0--D15     & Z Z D{data} Z                       \\
+		BACK        & H H L H                           \\
+		BERR/BPER   & H H H H                           \\
+	\end{tikztimingtable}
+	\caption{Wait-state insertion when no bus response is asserted}
+	\label{fig:bus-wait-state-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 4{C}                          \\
+		Case        & D{BERR} D{} D{BPER} D{}             \\
+		BAS         & L H L H                       \\
+		BRW         & H H H H                       \\
+		BACK        & H H H H                       \\
+		BERR        & L H H H                       \\
+		BPER        & H H L H                       \\
+		BAT0--BAT2  & D{active} D{None} D{active} D{None} \\
+		A0--A23     & D{addr} D{} D{addr} D{}             \\
+		D0--D15     & Z Z Z Z                       \\
+	\end{tikztimingtable}
+	\caption{Bus-error and bus-protection abort timing}
+	\label{fig:bus-abort-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 6{C}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{Execute} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		BAS         & L L H H H H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{None} D{None} \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{} D{}              \\
+		D0--D15     & D{high} D{low} Z Z Z Z                     \\
+		BACK        & L L H H H H                                \\
+		BERR/BPER   & H H H H H H                                \\
+	\end{tikztimingtable}
+	\caption{Complete register-only ALU instruction with no wait states}
+	\label{fig:alu-instruction-cycle-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 6{C}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{EA} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		BAS         & L L H H L H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{DR} D{None}  \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{EA} D{}            \\
+		D0--D15     & D{high} D{low} Z Z D{data} Z               \\
+		BACK        & L L H H L H                                \\
+		BERR/BPER   & H H H H H H                                \\
+	\end{tikztimingtable}
+	\caption{Complete LOAD instruction with no wait states}
+	\label{fig:load-instruction-cycle-timing}
+\end{figure}
+
+\subsubsection{Reset and Interrupt Timing Examples}
+
+Figure~\ref{fig:hardware-reset-cycle-timing} shows a hardware reset where \texttt{RSTI} is asserted for one clock.
+Holding \texttt{RSTI} asserted for longer extends the reset-output interval; the reset-vector fetch does not begin
+until \texttt{RSTI} is deasserted and the reset-output hold has completed.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 8{C}                                         \\
+		Phase       & D{reset} D{hold} D{hold} D{hold} D{hold} D{hold} D{RV high} D{RV low} \\
+		RSTI        & L H H H H H H H                               \\
+		RSTO        & L L L L L L H H                               \\
+		BAS         & H H H H H H L L                               \\
+		BRW         & H H H H H H H H                               \\
+		BAT0--BAT2  & D{None} D{None} D{None} D{None} D{None} D{None} D{EV} D{EV} \\
+		A0--A23     & D{} D{} D{} D{} D{} D{} D{vec+0} D{vec+1}     \\
+		D0--D15     & Z Z Z Z Z Z D{high} D{low}                    \\
+		BACK        & H H H H H H L L                               \\
+		BERR/BPER   & H H H H H H H H                               \\
+	\end{tikztimingtable}
+	\caption{Hardware reset with one-cycle RSTI assertion and reset-vector fetch}
+	\label{fig:hardware-reset-cycle-timing}
+\end{figure}
+
+Figure~\ref{fig:irq-sampling-cycle-timing} shows an enabled maskable interrupt asserted before an instruction boundary.
+The CPU samples and latches the interrupt at the boundary. The following exception-unit dispatch fetches the selected
+hardware-interrupt vector instead of fetching the next processing-unit instruction. If an interrupt line is asserted
+after an instruction boundary, it is not sampled until the next boundary.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 5{C}                                  \\
+		Phase       & D{Prev WB} D{EV high} D{EV low} D{Decode} D{Enter} \\
+		IRQ1--IRQ4  & L L H H H                              \\
+		SYNC        & L H L L L                              \\
+		BAS         & H L L H H                              \\
+		BRW         & H H H H H                              \\
+		BAT0--BAT2  & D{None} D{EV} D{EV} D{None} D{None}    \\
+		A0--A23     & D{} D{vec+0} D{vec+1} D{} D{}          \\
+		D0--D15     & Z D{high} D{low} Z Z                   \\
+		BACK        & H L L H H                              \\
+		BERR/BPER   & H H H H H                              \\
+	\end{tikztimingtable}
+	\caption{Enabled IRQ sampled at an instruction boundary and dispatched with no wait states}
+	\label{fig:irq-sampling-cycle-timing}
+\end{figure}
+
+\subsubsection{Asynchronous and Boundary-Sampled Inputs}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Input}   & \textbf{Sampling rule}                                                                                                                     \\
+		\midrule
+		BACK, BERR, BPER & Sampled while BAS is asserted. They complete or abort the active bus request.                                                              \\
+		IRQ1--IRQ4, NMI  & Level-sensitive and sampled at instruction boundaries. Inputs should remain asserted until an instruction boundary if service is required. \\
+		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.               \\
+		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                   \\
+		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.             \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External input sampling rules}
+	\label{tab:external-input-sampling-rules}
+\end{table}
+
+This manual defines cycle-level logical timing only. Electrical setup, hold, propagation delay, voltage, fanout, and
+maximum-board-loading requirements are outside the architectural specification and should be defined by a future
+datasheet or hardware implementation note.

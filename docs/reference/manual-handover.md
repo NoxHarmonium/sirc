@@ -413,50 +413,79 @@ Acceptance criteria:
 
 Goal: make the hardware interface precise enough for board/device designers.
 
-Tasks:
+Status: Complete.
 
-- Add bus timing diagrams.
-  - instruction fetch read
+Progress:
+
+- Chapter 2 now defines cycle-level logical bus timing rules for A, D, BRW, BAT, PROT, BAS, SYNC, BACK, BERR, BPER,
+  IRQ, NMI, HALT, TRCE, and RSTI. The timing tables specify stable bus outputs during wait states, read/write data-bus
+  ownership, bus response priority, and boundary-sampled versus asynchronous inputs.
+- Chapter 2 now aligns bus-facing pin polarity with an MC68000-style convention: address/data and value pins use
+  positive logic, BAS and bus response pins are active low, BRW is read-high/write-low, and reset/interrupt/halt/trace
+  controls are active low.
+- Signal audit complete: Chapter 2, Chapter 6, Appendix B, and simulator-facing bus comments now use asserted/deasserted
+  wording consistently for active-low pins, and SYNC is described as an instruction-start sync signal rather than an
+  instruction-complete strobe.
+- Chapter 2 now includes `tikz-timing` waveform diagrams for the two-word instruction fetch sequence, data read, data
+  write, exception vector fetch, wait-state insertion, BERR/BPER abort timing, a complete register-only ALU instruction,
+  a complete LOAD instruction, hardware reset through reset-vector fetch, and an enabled IRQ sampled at an instruction
+  boundary. The normal `make all` docs build now acts as the package-availability smoke test for `tikz-timing`.
+- The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
+  memory access, and exception vector fetch can all add wait states.
+
+Completed scope:
+
+- Bus timing diagrams are resolved in Chapter 2 with `tikz-timing` figures for:
+  - two-word instruction fetch
   - data read
   - data write
   - exception vector fetch
   - wait-state insertion via BACK
   - BERR and BPER abort timing
+  - complete register-only ALU instruction
+  - complete LOAD instruction
+  - hardware reset through reset-vector fetch
+  - enabled IRQ sampled at an instruction boundary
 
-- Choose a timing-diagram authoring path.
-  - `tikz-timing` looks well suited for waveform diagrams, but it adds a LaTeX package dependency that must be available wherever the PDF is built.
-  - Prefer dependencies included in a normal TeX Live/MacTeX install, or document the exact package requirement in the docs build prerequisites.
-  - If avoiding extra LaTeX package requirements is more important, generate waveform PDFs/SVGs from a checked-in script and include the rendered assets from LaTeX.
-  - Whichever path is chosen, add a tiny build smoke test so missing timing-diagram tooling fails clearly.
+- Timing-diagram authoring path is resolved: use `tikz-timing` directly in LaTeX. The package is documented in
+  `docs/reference/README.md`, and a missing package fails clearly during the normal PDF build.
 
-- Define signal timing relative to `CLKI`.
+- Signal timing relative to `CLKI` is resolved at the architectural level:
   - when A, D, BRW, BAT, PROT, and BAS become valid
   - when data is sampled on reads
   - when data is driven/released on writes
-  - setup/hold requirements for BACK, BERR, BPER, IRQ, NMI, HALT, TRCE, and RSTI
+  - how BACK, BERR, BPER, IRQ, NMI, HALT, TRCE, and RSTI are sampled
+  - Exact electrical setup/hold and propagation numbers remain out of scope for the current reference manual and should
+    be handled in a future datasheet/hardware implementation note.
 
-- Define bus ownership.
+- Bus ownership is resolved:
   - when data bus is input, output, or high impedance
-  - whether address bus is always driven
+  - when address/control outputs are valid
   - behavior during reset and halt
+  - Chapter 2 states that external devices must qualify address/data/control pins with BAS, defines data-bus ownership
+    for read, write, wait-state, and no-bus cycles, and diagrams the common bus-cycle waveforms.
 
-- Define interrupt sampling.
+- Interrupt sampling is resolved:
   - level-triggered vs edge-triggered
   - sampled at instruction boundary or clock edge
   - minimum assertion duration
   - behavior when pin remains asserted
+  - Chapter 2 matches Chapter 6 by documenting IRQ1--IRQ4 and NMI as level-sensitive, instruction-boundary sampled
+    inputs, with an enabled IRQ timing example.
 
-- Define electrical assumptions or intentionally defer them.
+- Electrical assumptions are intentionally deferred:
   - voltage levels
   - fanout/current
   - decoupling recommendations
   - maximum clock rate basis
-  - if this is out of scope for the ISA manual, split into a datasheet appendix.
+  - Chapter 2 explicitly defers setup/hold, propagation delay, voltage, fanout, and board-loading requirements to a
+    future datasheet or hardware implementation note.
 
 Acceptance criteria:
 
-- External memory and peripherals can be designed against the manual without guessing signal order.
-- Timing notes are diagrams and tables, not just prose.
+- Met: External memory and peripherals can be designed against the manual without guessing signal order at the
+  architectural timing level.
+- Met: Timing notes are diagrams and tables, not just prose.
 
 ## Workstream 8: Coprocessor and Model Compatibility
 

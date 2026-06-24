@@ -22,7 +22,18 @@
 \usepackage{tcolorbox}
 \usepackage{float}
 \usepackage{tikz}
+\usepackage{tikz-timing}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc}
+
+\tikzset{
+	sirc timing diagram/.style={
+			timing/slope=0,
+			timing/dslope=0.15,
+			timing/xunit=3.4em,
+			timing/rowdist=2.2,
+			timing/coldist=2.2,
+		},
+}
 
 % Page geometry - similar to classic technical manuals
 \geometry{

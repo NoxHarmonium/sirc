@@ -200,7 +200,7 @@ fn test_rsti_held_keeps_rsto() {
         let out = bus.poll_all(RSTI_ASSERTED);
         assert!(
             out.reset_devices_on_bus,
-            "RSTO should be high on cycle {i} while RSTI held"
+            "RSTO should be asserted on cycle {i} while RSTI held"
         );
         assert!(
             !out.bus_access_strobe,
@@ -213,7 +213,7 @@ fn test_rsti_held_keeps_rsto() {
         let out = bus.poll_all(ACK);
         assert!(
             out.reset_devices_on_bus,
-            "RSTO should be high on countdown cycle {i} after RSTI release"
+            "RSTO should be asserted on countdown cycle {i} after RSTI release"
         );
     }
     let out = bus.poll_all(ACK);

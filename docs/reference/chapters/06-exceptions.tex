@@ -121,9 +121,9 @@ three categories:
 	      original fault's return address. The fault metadata register (register 7) is also overwritten; it encodes a
 	      double-fault flag along with both the current and original fault types.
 
-	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If another
-	      fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector 0x08 again. If the
-	      double-fault vector fetch itself fails, the CPU requests reset.
+	      The CPU jumps to vector 0x08. This is typically a last-chance handler that dumps registers and resets. If another fault
+	      occurs while the CPU is already at fault level, the CPU attempts to dispatch vector 0x08 again. If the double-fault
+	      vector fetch itself fails, the CPU requests reset.
 
 \end{itemize}
 
