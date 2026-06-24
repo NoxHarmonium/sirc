@@ -426,8 +426,8 @@ Progress:
   instruction-complete strobe.
 - Chapter 2 now includes `tikz-timing` waveform diagrams for the two-word instruction fetch sequence, data read, data
   write, exception vector fetch, wait-state insertion, BERR/BPER abort timing, a complete register-only ALU instruction,
-  and a complete LOAD instruction. The normal `make all` docs build now acts as the package-availability smoke test for
-  `tikz-timing`.
+  a complete LOAD instruction, hardware reset through reset-vector fetch, and an enabled IRQ sampled at an instruction
+  boundary. The normal `make all` docs build now acts as the package-availability smoke test for `tikz-timing`.
 - The timing appendix now points back to Chapter 2 for bus signal timing and clarifies that instruction fetch, data
   memory access, and exception vector fetch can all add wait states.
 
@@ -442,6 +442,8 @@ Tasks:
   - BERR and BPER abort timing
   - complete register-only ALU instruction
   - complete LOAD instruction
+  - hardware reset through reset-vector fetch
+  - enabled IRQ sampled at an instruction boundary
 
 - Choose a timing-diagram authoring path. Resolved: use `tikz-timing` directly in LaTeX. The package is documented in
   `docs/reference/README.md`, and a missing package fails clearly during the normal PDF build.

@@ -67,6 +67,8 @@ interconnections.
 	\label{fig:cpu-block-diagram}
 \end{figure}
 
+%TODO: Update the diagram so that the memory component is obviously separate to the other components that live together in the chip
+
 \subsection{Control Unit (CU)}
 
 The Control Unit sits at the heart of the SIRC-1 CPU, coordinating all other functional units throughout the
@@ -661,7 +663,8 @@ The timing diagrams below show cycle-level logical timing. Each labelled interva
 between rising edges. Waveform rows show physical logic levels; for active-low signals, \texttt{L} means asserted and
 \texttt{H} means deasserted. Address, data, \texttt{BAT}, and phase rows are value bands rather than electrical
 setup/hold specifications. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data read, \texttt{DW}
-for data write, \texttt{EV} for exception vector fetch, and \texttt{EA} for effective address.
+for data write, \texttt{EV} for exception vector fetch, \texttt{EA} for effective address, and \texttt{RV} for reset
+vector.
 
 \begin{figure}[H]
 	\centering
@@ -813,6 +816,57 @@ for data write, \texttt{EV} for exception vector fetch, and \texttt{EA} for effe
 	\end{tikztimingtable}
 	\caption{Complete LOAD instruction with no wait states}
 	\label{fig:load-instruction-cycle-timing}
+\end{figure}
+
+\subsubsection{Reset and Interrupt Timing Examples}
+
+Figure~\ref{fig:hardware-reset-cycle-timing} shows a hardware reset where \texttt{RSTI} is asserted for one clock.
+Holding \texttt{RSTI} asserted for longer extends the reset-output interval; the reset-vector fetch does not begin
+until \texttt{RSTI} is deasserted and the reset-output hold has completed.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 8{C}                                         \\
+		Phase       & D{reset} D{hold} D{hold} D{hold} D{hold} D{hold} D{RV high} D{RV low} \\
+		RSTI        & L H H H H H H H                               \\
+		RSTO        & L L L L L L H H                               \\
+		BAS         & H H H H H H L L                               \\
+		BRW         & H H H H H H H H                               \\
+		BAT0--BAT2  & D{None} D{None} D{None} D{None} D{None} D{None} D{EV} D{EV} \\
+		A0--A23     & D{} D{} D{} D{} D{} D{} D{vec+0} D{vec+1}     \\
+		D0--D15     & Z Z Z Z Z Z D{high} D{low}                    \\
+		BACK        & H H H H H H L L                               \\
+		BERR/BPER   & H H H H H H H H                               \\
+	\end{tikztimingtable}
+	\caption{Hardware reset with one-cycle RSTI assertion and reset-vector fetch}
+	\label{fig:hardware-reset-cycle-timing}
+\end{figure}
+
+Figure~\ref{fig:irq-sampling-cycle-timing} shows an enabled maskable interrupt asserted before an instruction boundary.
+The CPU samples and latches the interrupt at the boundary. The following exception-unit dispatch fetches the selected
+hardware-interrupt vector instead of fetching the next processing-unit instruction. If an interrupt line is asserted
+after an instruction boundary, it is not sampled until the next boundary.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & 5{C}                                  \\
+		Phase       & D{Prev WB} D{EV high} D{EV low} D{Decode} D{Enter} \\
+		IRQ1--IRQ4  & L L H H H                              \\
+		SYNC        & L H L L L                              \\
+		BAS         & H L L H H                              \\
+		BRW         & H H H H H                              \\
+		BAT0--BAT2  & D{None} D{EV} D{EV} D{None} D{None}    \\
+		A0--A23     & D{} D{vec+0} D{vec+1} D{} D{}          \\
+		D0--D15     & Z D{high} D{low} Z Z                   \\
+		BACK        & H L L H H                              \\
+		BERR/BPER   & H H H H H                              \\
+	\end{tikztimingtable}
+	\caption{Enabled IRQ sampled at an instruction boundary and dispatched with no wait states}
+	\label{fig:irq-sampling-cycle-timing}
 \end{figure}
 
 \subsubsection{Asynchronous and Boundary-Sampled Inputs}
