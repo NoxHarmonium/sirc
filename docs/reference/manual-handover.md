@@ -249,33 +249,22 @@ Tasks:
   - Resolved: `RTL`/`RTR` follow the simulator and are documented as normal 16-bit circular rotates. The incoming carry
     flag is not consumed; `C` is an output copied from the bit that wrapped around.
 
-- Add exact exception behavior per instruction.
-  - bus fault
-  - bus protection fault
-  - alignment fault
-  - segment overflow fault
-  - invalid opcode fault (coprocessor dispatch only; not a normal processing-unit reserved-encoding trap)
-  - privilege violation fault
-  - trace fault
-  - Progress: Chapter 13 now distinguishes ALU instruction-specific faults from global instruction-fetch and trace
-    behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path; fetch
-    faults can still occur before execution, and trace faults occur after commit when trace mode was sampled at
-    instruction start.
-  - Progress: Chapter 14 now distinguishes memory instruction-specific faults from global instruction-fetch and trace
-    behavior. Documented memory forms can raise data bus, data bus-protection, and `SR.A`-gated segment-overflow
-    faults; destination writes and address-register auto-updates happen only in write-back after a successful
-    memory-access phase.
-  - Progress: Chapter 15 now distinguishes control-flow/effective-address instruction-specific faults from global
-    instruction-fetch and trace behavior. Documented forms do not perform data-memory access and do not raise data bus,
-    data bus-protection, or invalid-opcode faults; they can raise `SR.A`-gated segment-overflow faults during
-    effective-address calculation and protected-mode privilege faults during address-register write-back.
-  - Progress: Chapter 16 now distinguishes coprocessor-call instruction-specific faults from global instruction-fetch
-    and trace behavior. Documented `COPI`/`COPR` forms do not perform data-memory access and do not raise data bus,
-    bus-protection, alignment, or segment-overflow faults; protected-mode supervisor-only operation nibbles raise
-    privilege faults before dispatch, while missing coprocessors and unimplemented coprocessor operations raise
-    invalid-opcode faults during dispatch.
-  - Progress: Chapter 17 `NOOP` now states that it inherits `ADDI[N]` exception behavior: no data-memory access or
-    instruction-specific faults, while global instruction-fetch and trace faults still apply.
+- Resolve per-instruction exception behavior for Chapters 13--17.
+  - Resolved: Chapter 13 ALU instructions distinguish instruction-specific faults from global instruction-fetch and
+    trace behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path.
+  - Resolved: Chapter 14 memory instructions distinguish data bus, data bus-protection, and `SR.A`-gated
+    segment-overflow faults from global fetch/trace behavior. Destination writes and address-register auto-updates occur
+    only in write-back after a successful memory-access phase.
+  - Resolved: Chapter 15 control-flow/effective-address instructions document `SR.A`-gated segment-overflow faults and
+    protected-mode address-register write-back privilege faults, while excluding data bus, data bus-protection, and
+    invalid-opcode faults from documented forms.
+  - Resolved: Chapter 16 coprocessor calls document privilege faults before dispatch and invalid-opcode faults during
+    coprocessor dispatch, while excluding data-memory, bus-protection, alignment, and segment-overflow faults from
+    documented `COPI`/`COPR` forms.
+  - Resolved: Chapter 17 `NOOP` inherits `ADDI[N]` exception behavior: no data-memory access or instruction-specific
+    faults, while global instruction-fetch and trace faults still apply.
+  - Remaining exception work has moved to Workstream 6: exception-entry side effects, reset/vector fetch behavior, link
+    register diagrams, pending interrupt behavior, and reset-state tables.
 
 Acceptance criteria:
 
@@ -344,6 +333,25 @@ Acceptance criteria:
 
 Goal: make exception handling as implementation-ready as the M68k exception appendix.
 
+Progress:
+
+- Chapter 6 now documents the privilege-violation cases consistently with the simulator and status-register chapter:
+  direct high address-register writes fault, protected address-register-pair write-back faults if it would change a
+  high word, supervisor-only coprocessor operations fault in protected mode, and software exception vectors below
+  0x60 are privileged. Protected-mode writes to privileged status-register bits are masked rather than faulting.
+- Chapter 6 now documents the fault metadata low bits as the captured bus access type (`BAT0`--`BAT2`), not the internal
+  CPU execution phase.
+- Chapter 6 now clarifies exception vector-table lookup as a high-word then low-word fetch from
+  `system_ram_offset + vector * 2`, followed by loading the fetched target address into PC.
+- The fault-handler link-register preservation example in Chapter 6 now uses current public memory syntax and restores
+  the level 7 metadata and level 6 fault link registers in the correct order.
+- Chapter 6 now includes a reset-state table, documents hardware `RSTI` and software `RSET` reset-output hold behavior,
+  and defines reset-vector fetch as an `ExceptionVectorFetch` of vector 0x00 high word then low word. Chapter 2 reset
+  pin wording now defers to Chapter 6 for the detailed reset sequence.
+- Chapter 6 now makes reset a clean exception boundary: pending hardware exceptions and pending faults are cleared by
+  reset. External interrupt pins that remain asserted after reset may be sampled again through the normal interrupt
+  rules.
+
 Tasks:
 
 - Add an exception quick-reference appendix.
@@ -363,7 +371,7 @@ Tasks:
   - Show fault metadata register fields.
   - Show which exception level uses which banked link register.
 
-- Add reset-state table.
+- Add reset-state table. Progress: Chapter 6 now has a first implementation-backed reset-state table.
   - all general-purpose registers
   - address register pairs
   - status register
@@ -374,10 +382,17 @@ Tasks:
   - RSTO behavior
 
 - Clarify reset vector fetch.
-  - vector word order
-  - bus access type
-  - behavior if reset vector fetch faults
+  - vector word order. Progress: Chapter 6 now says reset vector 0x00 is fetched high word first from
+    `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`.
+  - bus access type. Progress: Chapter 6 now says reset-vector reads use `ExceptionVectorFetch`.
+  - behavior if reset vector fetch faults. Progress: Chapter 6 now marks this implementation-defined; a future hardware
+    decision should make it fully normative.
   - behavior if RSTI is asserted during another exception
+
+- Align simulator reset internals with the reset-state table if needed.
+  - The manual now specifies that reset clears pending hardware exceptions and pending faults.
+  - Audit `CpuPeripheral::reset()` and reset-unit handling to ensure stale `pending_fault` and
+    `pending_hardware_exceptions` cannot survive reset and dispatch before reset code runs.
 
 - Clarify pending interrupt behavior.
   - disabled interrupts are ignored, not queued
@@ -392,6 +407,16 @@ Tasks:
   - when link registers are written
   - when PC changes
   - what happens if vector fetch faults
+
+- Decide final protected-mode status-register write behavior.
+  - Current simulator behavior: protected-mode reads of `sr` mask the privileged byte, and protected-mode writes to
+    `sr` update only the lower byte while preserving the privileged byte.
+  - Open design question: align `sr` with the other privileged registers by raising a privilege violation when a
+    protected-mode instruction attempts to write privileged `sr` bits, or make all protected-mode writes to `sr`
+    invalid/faulting for simplicity.
+  - Consider whether user-mode software has a legitimate need to write the lower status byte directly. ALU and shift
+    instructions already update condition flags through normal execution, and allowing direct lower-byte writes gives
+    user code explicit control over condition flags and reserved low-byte bits.
 
 Acceptance criteria:
 

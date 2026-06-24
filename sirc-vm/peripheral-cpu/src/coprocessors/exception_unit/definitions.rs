@@ -32,8 +32,8 @@ pub mod vectors {
     /// an address that overflows, it is probably a stack overflow.
     /// There might be situations where you want address calculations to wrap around
     /// so it is only raised if the `TrapOnAddressOverflow` SR bit is set.
-    /// It is also raised if the program counter overflows, you can tell the difference by reading
-    /// which phase the fault was raised from the fault metadata register
+    /// It is also raised if the program counter overflows; the captured bus address and bus
+    /// access type in the fault metadata register help identify where the overflow occurred.
     pub const SEGMENT_OVERFLOW_FAULT: u8 = 0x03;
     /// Raised when a co-processor call is done for a non-existant co-processor
     /// or if the co-processor opcode is invalid.
@@ -50,8 +50,8 @@ pub mod vectors {
 
     /// Raised when not in supervisor mode and a privileged operation is performed:
     /// 1. Writing to the high word of any address registers
-    /// 2. Writing to the high byte of the SR register
-    /// 3. Triggering exception below 0x80
+    /// 2. Executing a supervisor-only coprocessor operation
+    /// 3. Triggering a software exception below 0x60
     pub const PRIVILEGE_VIOLATION_FAULT: u8 = 0x05;
 
     /// Raised after every instruction when the `TraceMode` SR bit is set

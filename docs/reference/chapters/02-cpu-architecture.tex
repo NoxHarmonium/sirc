@@ -558,16 +558,16 @@ for important non-interruptible events.
 
 Can be used by external devices to force a reset of the CPU.
 
-When low, the CPU will immediately be interrupted and stop processing. It will be set to cycle 0 and the cause register
-will be set to 0x1B00 (RSET).
+When low, the CPU immediately aborts the current instruction or bus wait, stops normal processing, resets to phase 0,
+and begins the reset sequence described in Chapter~\ref{ch:exceptions}.
 
 The RSTO pin will also be asserted.
 
-When this pin becomes high, the CPU will wait 6 cycles, stop asserting the RSTO pin, and the the exception co-processor
-will execute the RSET instruction, resetting the CPU state and fetching the reset vector.
+When this pin becomes high, the CPU completes the reset-output hold, stops asserting the RSTO pin, and the exception
+unit fetches the reset vector.
 
-If your system needs external devices to be reset for longer than 6 cycles to allow the program, to run, the resets
-will have to be managed externally to the CPU and RSTI will need to be asserted for however long is needed for the
+If your system needs external devices to be reset for longer than the CPU reset-output hold, reset timing will have to
+be managed externally to the CPU and RSTI will need to be asserted for however long is needed for the
 other devices to reset.
 
 \subsubsection{Reset output (RSTO)}
@@ -577,9 +577,9 @@ other devices to reset.
 	\item \textbf{Signal Type:} Active high
 \end{itemize}
 
-Asserted while the RSTI pin is asserted, and for 6 cycles after the RSTI pin is no longer asserted.
+Asserted while the RSTI pin is asserted and during the reset-output hold before reset-vector fetch.
 
-It will also be asserted for 6 cycles after a software reset
+It will also be asserted for the reset-output hold after a software reset.
 
 A reset can be triggered by asserting the Reset input (RSTI) pin, or in software by a special exception co-processor
 meta instruction (RSET).
