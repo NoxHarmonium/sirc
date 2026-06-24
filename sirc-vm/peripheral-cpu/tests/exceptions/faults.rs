@@ -586,6 +586,18 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
         cpu_peripheral.eu_registers.pending_fault.is_none(),
         "persistent bus error between reset_requested and reset() must not re-queue a fault"
     );
+
+    // reset() must clear the latch so the CPU can resume (it seeds a reset-vector fetch).
+    cpu_peripheral.reset();
+    let post_reset_response = cpu_peripheral.poll(BusAssertions::default(), true);
+    assert!(
+        !post_reset_response.reset_requested,
+        "reset() must clear reset_pending so the CPU is no longer stuck"
+    );
+    assert!(
+        post_reset_response.bus_access_strobe,
+        "CPU must issue a bus request for the reset vector after reset()"
+    );
 }
 
 #[test]
