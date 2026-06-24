@@ -309,7 +309,8 @@ again and become pending again.
 
 At an instruction boundary, the exception unit selects the highest-priority pending hardware interrupt whose priority
 is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Pending
-lower-priority interrupts remain latched and are considered again after the current handler returns with \mnemonic{RETE}.
+lower-priority interrupts remain latched and are considered again after the current handler returns with
+\mnemonic{RETE}.
 
 Faults have priority over all hardware interrupts. If a fault is pending at the same instruction boundary as one or
 more hardware interrupts, the fault is dispatched first and the hardware interrupts remain pending. This includes
@@ -418,8 +419,8 @@ When entry commits, the exception unit performs the following state updates as o
 	\item Clears \texttt{SR.P}, entering supervisor mode.
 	\item Clears \texttt{SR.T}, preventing trace faults from firing inside the handler.
 	\item Sets \texttt{SR.EA}, indicating that an exception handler is active.
-	\item Preserves the condition flags, reserved lower status bits, interrupt-enable bits, and \texttt{SR.A} in the live
-	      status register.
+	\item Preserves the condition flags, reserved lower status bits, interrupt-enable bits, and \texttt{SR.A} in the live status
+	      register.
 	\item Updates the current exception level to the level of the exception being serviced.
 	\item Loads the program counter from the fetched vector target address.
 \end{itemize}
@@ -453,7 +454,8 @@ enabled) will be serviced before the next instruction executes.
 
 The exception vectors are stored starting at address 0x0. Each vector is a 24-bit target address stored as two
 consecutive 16-bit words in the address format described in Section~\ref{sec:exception-vector-storage}. The high word
-is stored first at \texttt{vector * 2}, followed by the low word at \texttt{vector * 2 + 1}. The vector table layout is:
+is stored first at \texttt{vector * 2}, followed by the low word at \texttt{vector * 2 + 1}. The vector table layout
+is:
 
 \begin{itemize}
 	\item \textbf{0x00:} Reset vector
@@ -487,20 +489,20 @@ active, then the exception unit fetches vector 0x00 and loads the fetched target
 	\centering
 	\begin{tabular}{lp{0.62\textwidth}}
 		\toprule
-		\textbf{State} & \textbf{Reset Behavior}                                                                              \\
+		\textbf{State}                         & \textbf{Reset Behavior}                                                                              \\
 		\midrule
-		Instruction phase & Set to phase 0.                                                                                   \\
-		Pending bus request & Cleared; an in-progress stalled bus request is abandoned.                                        \\
-		Halt state & Cleared.                                                                                              \\
-		Wait-for-exception state & Cleared.                                                                                 \\
-		Status register & Cleared to 0x0000 when the reset operation is executed by the exception unit.                         \\
-		Program counter & Loaded from reset vector 0x00.                                                                        \\
-		General registers & Not architecturally cleared by reset. Software should treat their contents as undefined after reset. \\
-		Address register pairs & Not architecturally cleared by reset.                                                            \\
-		Exception link registers & Not architecturally cleared by reset.                                                        \\
+		Instruction phase                      & Set to phase 0.                                                                                      \\
+		Pending bus request                    & Cleared; an in-progress stalled bus request is abandoned.                                            \\
+		Halt state                             & Cleared.                                                                                             \\
+		Wait-for-exception state               & Cleared.                                                                                             \\
+		Status register                        & Cleared to 0x0000 when the reset operation is executed by the exception unit.                        \\
+		Program counter                        & Loaded from reset vector 0x00.                                                                       \\
+		General registers                      & Not architecturally cleared by reset. Software should treat their contents as undefined after reset. \\
+		Address register pairs                 & Not architecturally cleared by reset.                                                                \\
+		Exception link registers               & Not architecturally cleared by reset.                                                                \\
 		Pending hardware exceptions and faults & Cleared. External interrupt pins that remain asserted after reset may be
-		sampled again according to the normal interrupt rules.                                                    \\
-		Pending coprocessor command & Set internally to the reset operation until the reset vector sequence completes.             \\
+		sampled again according to the normal interrupt rules.                                                                                        \\
+		Pending coprocessor command            & Set internally to the reset operation until the reset vector sequence completes.                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Reset State}
@@ -511,11 +513,11 @@ active, then the exception unit fetches vector 0x00 and loads the fetched target
 
 While reset is active, the CPU asserts \texttt{RSTO} and performs no bus cycles.
 
-For hardware reset, asserting \texttt{RSTI} immediately aborts any current instruction, clears any pending bus wait, and
-asserts \texttt{RSTO}. If \texttt{RSTI} remains asserted, \texttt{RSTO} remains asserted and the CPU does not advance.
-After \texttt{RSTI} is released, the reset hold completes before the CPU resumes. The reset assertion cycle counts as
-the first reset-output cycle; after release, five additional countdown cycles occur before the exception unit starts
-the reset-vector fetch.
+For hardware reset, asserting \texttt{RSTI} immediately aborts any current instruction, clears any pending bus wait,
+and asserts \texttt{RSTO}. If \texttt{RSTI} remains asserted, \texttt{RSTO} remains asserted and the CPU does not
+advance. After \texttt{RSTI} is released, the reset hold completes before the CPU resumes. The reset assertion cycle
+counts as the first reset-output cycle; after release, five additional countdown cycles occur before the exception unit
+starts the reset-vector fetch.
 
 For software reset, \mnemonic{RSET} completes as a normal coprocessor meta-instruction. When its write-back phase
 commits the reset command, the CPU requests reset and \texttt{RSTO} is asserted for six cycles before the reset-vector
