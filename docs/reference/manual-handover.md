@@ -404,7 +404,8 @@ Tasks:
     do not fetch their vectors.
   - Current simulator behavior for a software exception instruction executed inside an equal-or-higher-priority handler:
     the exception unit fetches the software exception vector, then the priority check rejects entry and no link-register,
-    status-register, current-level, or PC side effects occur.
+    status-register, current-level, or PC side effects occur. The software exception is then ignored rather than queued;
+    the pending coprocessor command is cleared and normal execution resumes at the next instruction.
   - Consider aligning software exceptions with hardware interrupts by checking priority before vector fetch, or document
     the current vector-fetch-without-entry behavior explicitly if it is intentional.
 
