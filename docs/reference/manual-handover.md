@@ -269,6 +269,11 @@ Tasks:
     instruction-fetch and trace behavior. Documented forms do not perform data-memory access and do not raise data bus,
     data bus-protection, or invalid-opcode faults; they can raise `SR.A`-gated segment-overflow faults during
     effective-address calculation and protected-mode privilege faults during address-register write-back.
+  - Progress: Chapter 16 now distinguishes coprocessor-call instruction-specific faults from global instruction-fetch
+    and trace behavior. Documented `COPI`/`COPR` forms do not perform data-memory access and do not raise data bus,
+    bus-protection, alignment, or segment-overflow faults; protected-mode supervisor-only operation nibbles raise
+    privilege faults before dispatch, while missing coprocessors and unimplemented coprocessor operations raise
+    invalid-opcode faults during dispatch.
 
 Acceptance criteria:
 
