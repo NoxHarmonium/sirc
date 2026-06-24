@@ -421,6 +421,9 @@ impl CpuPeripheral {
         self.pending_bus_request = None;
         self.is_halted = false;
         self.eu_registers.waiting_for_exception = false;
+        self.eu_registers.pending_fault = None;
+        self.eu_registers.pending_hardware_exceptions = 0;
+        self.eu_registers.current_exception_level = 0;
         self.phase = 0;
         // Seeds the EU to fetch the reset vector when the RSTO hold expires
         self.registers.pending_coprocessor_command =

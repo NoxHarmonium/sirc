@@ -389,10 +389,9 @@ Tasks:
     decision should make it fully normative.
   - behavior if RSTI is asserted during another exception
 
-- Align simulator reset internals with the reset-state table if needed.
-  - The manual now specifies that reset clears pending hardware exceptions and pending faults.
-  - Audit `CpuPeripheral::reset()` and reset-unit handling to ensure stale `pending_fault` and
-    `pending_hardware_exceptions` cannot survive reset and dispatch before reset code runs.
+- Align simulator reset internals with the reset-state table. Resolved: `CpuPeripheral::reset()` clears
+  `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
+  state being cleared before reset-vector fetch.
 
 - Clarify pending interrupt behavior.
   - disabled interrupts are ignored, not queued
