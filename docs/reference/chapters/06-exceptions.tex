@@ -519,6 +519,38 @@ is:
 	\item \textbf{0x60-0xFF:} User exception vectors (128 user-accessible trap vectors)
 \end{itemize}
 
+\subsection{Exception Quick Reference}
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.1cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.2cm}}
+		\toprule
+		\textbf{Vector} & \textbf{Address} & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address} & \textbf{Metadata} & \textbf{P Mode} \\
+		\midrule
+		0x00            & 0x0000--0x0001   & n/a               & Reset            & Not maskable         & n/a                     & None              & Yes             \\
+		0x01            & 0x0002--0x0003   & 7                 & Bus fault        & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
+		0x02            & 0x0004--0x0005   & 7                 & Alignment fault  & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
+		0x03            & 0x0006--0x0007   & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction    & Fault metadata    & Yes             \\
+		0x04            & 0x0008--0x0009   & 7                 & Invalid opcode   & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
+		0x05            & 0x000A--0x000B   & 7                 & Privilege fault  & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
+		0x06            & 0x000C--0x000D   & 7                 & Trace fault      & \mbox{SR.T gated}    & Next instruction        & Fault metadata    & Yes             \\
+		0x07            & 0x000E--0x000F   & 7                 & L5 conflict      & Not maskable         & Dispatch point          & Fault metadata    & Yes             \\
+		0x08            & 0x0010--0x0011   & 7                 & Double fault     & Not maskable         & Dispatch point          & Fault metadata    & Yes             \\
+		0x09            & 0x0012--0x0013   & 7                 & Bus protection   & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
+		0x0A--0x0F      & 0x0014--0x001F   & 7                 & Reserved faults  & Reserved             & Reserved                & Reserved          & Reserved        \\
+		0x10            & 0x0020--0x0021   & 6                 & Level 5 hardware & Not maskable         & Next instruction        & Link register 5   & Yes             \\
+		0x20            & 0x0040--0x0041   & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction        & Link register 4   & Yes             \\
+		0x30            & 0x0060--0x0061   & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction        & Link register 3   & Yes             \\
+		0x40            & 0x0080--0x0081   & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction        & Link register 2   & Yes             \\
+		0x50            & 0x00A0--0x00A1   & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction        & Link register 1   & Yes             \\
+		0x60--0xFF      & 0x00C0--0x01FF   & 1                 & Software trap    & Priority gated       & Next instruction        & Link register 0   & Yes             \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Exception Quick Reference}
+	\label{tab:exception-quick-reference}
+\end{table}
+
 \section{Reset and Startup}
 
 Reset can be initiated externally by asserting the \texttt{RSTI} pin, or in software by executing the privileged

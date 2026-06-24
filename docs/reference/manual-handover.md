@@ -354,37 +354,23 @@ Progress:
 
 Tasks:
 
-- Add an exception quick-reference appendix.
-  - vector number
-  - vector address
-  - priority
-  - source
-  - maskability
-  - retryable/post-instruction/dispatch category
-  - saved return address meaning
-  - metadata available
-  - whether it can occur in protected mode
+- Add an exception quick-reference appendix/table. Resolved: Chapter 6 now includes an exception quick-reference table
+  covering vector number, vector-table address, priority, source, maskability, saved return-address meaning, metadata,
+  and protected-mode availability.
 
 - Add link-register/saved-state diagrams. Resolved: Chapter 6 now includes a saved-state bitfield for exception link
   registers, a link-register assignment table for software/hardware/fault levels, and a fault metadata bitfield.
 
-- Add reset-state table. Progress: Chapter 6 now has a first implementation-backed reset-state table.
-  - all general-purpose registers
-  - address register pairs
-  - status register
-  - exception unit registers
-  - pending interrupt state
-  - bus pins during and after reset
-  - PC load sequence
-  - RSTO behavior
+- Add reset-state table. Resolved: Chapter 6 now has an implementation-backed reset-state table covering general
+  registers, address register pairs, status register, exception unit state, pending interrupt/fault state, reset-output
+  hold behavior, and PC load sequence.
 
-- Clarify reset vector fetch.
-  - vector word order. Progress: Chapter 6 now says reset vector 0x00 is fetched high word first from
-    `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`.
-  - bus access type. Progress: Chapter 6 now says reset-vector reads use `ExceptionVectorFetch`.
-  - behavior if reset vector fetch faults. Progress: Chapter 6 now marks this implementation-defined; a future hardware
-    decision should make it fully normative.
-  - behavior if RSTI is asserted during another exception
+- Clarify reset vector fetch. Mostly resolved: Chapter 6 now says reset vector 0x00 is fetched high word first from
+  `system_ram_offset + 0x0000`, then low word from `system_ram_offset + 0x0001`, using bus access type
+  `ExceptionVectorFetch`.
+  - Remaining decision: define what happens if the reset-vector fetch itself gets a bus/protection fault.
+  - Remaining decision: define any additional guarantees for `RSTI` asserted while another exception handler is active,
+    beyond the current reset-state rule that reset clears pending fault/interrupt state and current exception level.
 
 - Align simulator reset internals with the reset-state table. Resolved: `CpuPeripheral::reset()` clears
   `pending_fault`, `pending_hardware_exceptions`, and `current_exception_level`, and reset tests cover stale exception
