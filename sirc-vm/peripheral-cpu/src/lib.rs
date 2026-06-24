@@ -517,6 +517,7 @@ impl CpuPeripheral {
     pub fn reset(&mut self) {
         self.pending_bus_request = None;
         self.is_halted = false;
+        self.reset_pending = false;
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;
