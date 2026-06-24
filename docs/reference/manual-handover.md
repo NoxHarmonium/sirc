@@ -242,6 +242,12 @@ Tasks:
 - Add exact flag-effect tables.
   - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
   - Example columns: `Z`, `N`, `C`, `V`, reserved lower bits, privileged bits.
+  - Progress: Chapter 13 now has an implementation-backed ALU flag-effect table and explicit status override wording.
+    Public `LOAD` forms are documented as preserving flags and not accepting status update override syntax. Clear
+    syntax mismatches found during the audit were fixed (`CMPR` for register comparisons, `RTL`/`RTR` shift names, and
+    `SHFT` for variable-count pure shifts).
+  - Resolved: `RTL`/`RTR` follow the simulator and are documented as normal 16-bit circular rotates. The incoming carry
+    flag is not consumed; `C` is an output copied from the bit that wrapped around.
 
 - Add exact exception behavior per instruction.
   - bus fault

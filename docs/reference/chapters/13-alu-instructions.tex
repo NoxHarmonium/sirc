@@ -153,14 +153,17 @@ Most ALU instructions update the status register flags:
 	\label{tab:alu-status-flag-effects}
 \end{table}
 
-See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. If \texttt{[N]} is encoded, all status
-flags are preserved. If \texttt{[S]} is encoded, flags are updated from the shifter result instead of the ALU result;
-see Chapter~\ref{ch:shift-operations} for the shifter flag rules.
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. The table shows the effect when the
+instruction uses its default status update source. If \texttt{[N]} is encoded, all status flags are preserved. If
+\texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
+encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
+the shifter flag rules. Public \mnemonic{LOAD} forms do not support status update override syntax and always preserve
+the status flags.
 
 \subsection{Manual Flag Update Control}
 
-ALU instructions support manual control over how status flags are updated using the status override syntax. See
-Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
+ALU instructions except \mnemonic{LOAD} support manual control over how status flags are updated using the status
+override syntax. See Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
 
 \begin{itemize}
 	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
@@ -174,9 +177,9 @@ Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for compl
 ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
 
 ; Preserve flags during operation
-CMPI r2, r3                   ; Set comparison flags
+CMPR r2, r3                   ; Set comparison flags
 ADDI[N] r4, #1                ; Increment without changing flags
-BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPI
+BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \end{lstlisting}
 
 \begin{instructionbox}{SHFT -- Shift with Status Update Meta-Instruction}
@@ -617,7 +620,7 @@ ORRR r3, r1, r2            ; r3 = r1 | r2
 
 ; Set bit N (variable)
 ADDI r4, #1
-ADDR r4, r4, r5, LSL       ; r4 = 1 << r5
+SHFT r4, LSL r5            ; r4 = 1 << r5
 ORRR r1, r4                ; r1 |= (1 << r5)
 \end{lstlisting}
 
@@ -729,7 +732,7 @@ destination = operand
 	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
 	registers. Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
-	\textbf{Flags:} None
+	\textbf{Flags:} Preserved.
 
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 

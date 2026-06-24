@@ -239,7 +239,7 @@ When returning from an exception with \mnemonic{RETE}, the saved status register
 
 \begin{lstlisting}
 ; Compare r1 with r2
-CMPI r1, r2
+CMPR r1, r2
 
 ; Branch if equal
 BRAN|== @label_equal
@@ -262,9 +262,9 @@ Chapter~\ref{ch:shift-operations} for complete details.
 ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
 
 ; Preserve flags across operations
-CMPI r1, r2                   ; Set comparison flags
+CMPR r1, r2                   ; Set comparison flags
 ADDI[N] r3, #1                ; Increment without changing flags
-BRAN|== @still_uses_cmpi_flags ; Branch uses CMPI flags
+BRAN|== @still_uses_cmpr_flags ; Branch uses CMPR flags
 \end{lstlisting}
 
 \subsection{Testing Bits}
