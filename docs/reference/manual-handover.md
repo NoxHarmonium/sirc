@@ -265,6 +265,10 @@ Tasks:
     behavior. Documented memory forms can raise data bus, data bus-protection, and `SR.A`-gated segment-overflow
     faults; destination writes and address-register auto-updates happen only in write-back after a successful
     memory-access phase.
+  - Progress: Chapter 15 now distinguishes control-flow/effective-address instruction-specific faults from global
+    instruction-fetch and trace behavior. Documented forms do not perform data-memory access and do not raise data bus,
+    data bus-protection, or invalid-opcode faults; they can raise `SR.A`-gated segment-overflow faults during
+    effective-address calculation and protected-mode privilege faults during address-register write-back.
 
 Acceptance criteria:
 
