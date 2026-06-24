@@ -56,18 +56,18 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Feature}            & \textbf{Specification}      \\
+		\textbf{Feature}            & \textbf{Specification} \\
 		\midrule
-		Data Width                  & 16-bit                      \\
-		Addressing                  & Word Addressing             \\
-		Address Bus                 & 24-bit (32MB address space) \\
-		Instruction Size            & 32-bit fixed                \\
-		General Purpose Registers   & 7 (r1--r7)                  \\
-		Address Register Pairs      & 4 (l, a, s, p)              \\
-		Total Addressable Registers & 16                          \\
-		Instruction Formats         & 3                           \\
-		Addressing Modes            & 7                           \\
-		Condition Codes             & 16                          \\
+		Data Width                  & 16-bit                 \\
+		Addressing                  & Word Addressing        \\
+		Address Bus                 & 24-bit word address    \\
+		Instruction Size            & 32-bit fixed           \\
+		General Purpose Registers   & 7 (r1--r7)             \\
+		Address Register Pairs      & 4 (l, a, s, p)         \\
+		Total Addressable Registers & 16                     \\
+		Instruction Formats         & 3                      \\
+		Addressing Modes            & 7                      \\
+		Condition Codes             & 16                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{SIRC-1 CPU Specifications}
@@ -133,12 +133,12 @@ be called in supervisor mode.
 The SIRC-1 supports two privilege levels:
 
 \begin{description}
-	\item[Supervisor Mode] Full access to all registers and instructions. Can set the high bytes of address register pairs,
-	      access privileged status register bits, and execute privileged coprocessor operations.
+	\item[Supervisor Mode] Full access to all registers and instructions. Can set the high address-register components, access
+	      privileged status register bits, and execute privileged coprocessor operations.
 
-	\item[Protected Mode] Restricted access for user programs. Cannot write to the high bytes of address register pairs
-	      (providing memory segmentation/protection), cannot access privileged status register bits, and cannot execute
-	      privileged coprocessor instructions.
+	\item[Protected Mode] Restricted access for user programs. Cannot write to the high address-register components (providing
+	      memory segmentation/protection), cannot access privileged status register bits, and cannot execute privileged
+	      coprocessor instructions.
 \end{description}
 
 The privilege level is controlled by the Protected Mode bit in the status register.
@@ -148,8 +148,8 @@ The privilege level is controlled by the Protected Mode bit in the status regist
 \subsection{Address Space}
 
 The SIRC-1 uses word addressing, where each address refers to a 16-bit word. With a 24-bit address space, this allows
-access to $2^24$ = 16,777,216 words, or 32 megabytes of memory. Addresses are formed by combining the 8-bit high byte
-and 16-bit low word of address register pairs:
+access to $2^24$ = 16,777,216 words, or 32 megabytes of external byte storage. Addresses are formed by combining the
+low 8 bits of the high address-register component with the full 16-bit low address-register component:
 
 \begin{equation}
 	\text{Address} = (\text{RegHigh}[7:0] \ll 16) \mid \text{RegLow}[15:0]
@@ -163,14 +163,25 @@ see Chapter~\ref{ch:data-representation}.
 
 \subsection{Memory Map}
 
-The CPU expects certain memory regions to be defined:
+The CPU expects the exception vector table to begin at word address \addr{0x000000}. Each vector-table entry occupies
+two consecutive 16-bit words: the target address high word followed by the target address low word.
 
-\begin{itemize}
-	\item \textbf{Reset Vector} (\addr{0x000000}): Initial program counter after reset
-	\item \textbf{Fault Vectors} (\addr{0x000001}--\addr{0x00000F}): Fault vectors and reserved privileged exception vectors
-	\item \textbf{Hardware Vectors} (\addr{0x000010}--\addr{0x000050}): 5 x Hardware exception vectors (offset by 0x10 due to hardware implementation)
-	\item \textbf{User Vectors} (\addr{0x000060}--\addr{0x0000FF}): User exception vectors
-\end{itemize}
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lllX}
+		\toprule
+		\textbf{Region} & \textbf{Vector IDs}          & \textbf{Word addresses}          & \textbf{Purpose}                                \\
+		\midrule
+		Reset           & 0x00                         & \addr{0x000000}--\addr{0x000001} & Initial program counter after reset             \\
+		Faults          & 0x01--0x0F                   & \addr{0x000002}--\addr{0x00001F} & Fault and reserved privileged exception vectors \\
+		Hardware        & 0x10, 0x20, 0x30, 0x40, 0x50 & \addr{0x000020}--\addr{0x0000A1} & Hardware exception vectors, spaced by vector ID \\
+		User traps      & 0x60--0xFF                   & \addr{0x0000C0}--\addr{0x0001FF} & User software exception vectors                 \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Exception Vector Table Regions}
+	\label{tab:intro-vector-table-regions}
+\end{table}
 
 Beyond these reserved regions, the memory layout is flexible and can be defined by system software.
 

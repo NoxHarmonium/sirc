@@ -61,6 +61,13 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 \reg{s}, or \reg{p}. The branch meta-instructions always use \reg{p} as both the source and destination address-register
 pair.
 
+\noindent\textbf{Zero displacement:} Immediate-displacement forms may omit \texttt{\#0}. Thus
+\texttt{LDEA dest, (src)}, \texttt{LDEA dest, -(src)}, \texttt{LDEL dest, (src)}, and
+\texttt{LDEL dest, (src)+} assemble as the matching \texttt{\#0} forms. For non-auto-update absolute jumps and calls,
+use the meta-instruction syntax \texttt{LJMP src} or \texttt{LJSR src}; \texttt{LJMP (src)} and \texttt{LJSR (src)} are
+not public syntax. The post-increment call shorthand \texttt{LJSR (src)+} is legal and assembles as
+\texttt{LDEL p, (\#0, src)+}.
+
 \noindent\textbf{Aliased register writes:} Instructions that write the same address-register pair through more than one
 write-back path have architecturally undefined behavior. Avoid forms such as \texttt{LDEA a, -(\#0, a)} and
 \texttt{LDEL l, (\#0, l)+}. The assembler rejects known hazardous aliased forms.
@@ -257,8 +264,10 @@ my_function:
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LDEA dest, (#offset, src)     ; dest = src + offset
+LDEA dest, (src)              ; equivalent to LDEA dest, (#0, src)
 LDEA dest, (rS, src)          ; dest = src + rS
 LDEA dest, -(#offset, src)    ; src -= 1; dest = src + offset
+LDEA dest, -(src)             ; equivalent to LDEA dest, -(#0, src)
 LDEA dest, -(rS, src)         ; src -= 1; dest = src + rS
 LDEA|cond dest, (#offset, src)
 \end{lstlisting}
@@ -317,8 +326,10 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LDEL dest, (#offset, src)     ; l = next PC; dest = src + offset
+LDEL dest, (src)              ; equivalent to LDEL dest, (#0, src)
 LDEL dest, (rS, src)          ; l = next PC; dest = src + rS
 LDEL dest, (#offset, src)+    ; l = next PC; dest = src + offset; src += 1
+LDEL dest, (src)+             ; equivalent to LDEL dest, (#0, src)+
 LDEL dest, (rS, src)+         ; l = next PC; dest = src + rS; src += 1
 LDEL|cond dest, (#offset, src)
 \end{lstlisting}
@@ -422,6 +433,7 @@ LJSR src                      ; l = next PC; p = src
 LJSR src, #offset             ; l = next PC; p = src + offset
 LJSR src, rS                  ; l = next PC; p = src + rS
 LJSR (#offset, src)+          ; l = next PC; p = src + offset; src += 1
+LJSR (src)+                   ; equivalent to LJSR (#0, src)+
 LJSR (rS, src)+               ; l = next PC; p = src + rS; src += 1
 LJSR|cond src                 ; Conditional long call
 \end{lstlisting}

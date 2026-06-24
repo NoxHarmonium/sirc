@@ -63,6 +63,11 @@ The resulting 24-bit address is used to access memory.
 	\label{tab:memory-legal-forms}
 \end{table}
 
+\noindent\textbf{Zero displacement:} Immediate-displacement memory forms may omit \texttt{\#0}. Thus
+\texttt{LOAD rD, (addr)}, \texttt{LOAD rD, (addr)+}, \texttt{STOR (addr), rS}, and \texttt{STOR -(addr), rS} assemble
+as the matching \texttt{\#0} forms. This shorthand does not add new addressing modes: \mnemonic{LOAD} has no
+pre-decrement form and \mnemonic{STOR} has no post-increment form.
+
 \section{Common Memory Semantics}
 
 \begin{table}[H]
@@ -101,8 +106,10 @@ fault.
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
+LOAD rD, (addr)               ; equivalent to LOAD rD, (#0, addr)
 LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
 LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
+LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
 LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += 1
 
 ; With optional shift (register-offset memory forms only)
@@ -180,8 +187,10 @@ LOAD r6, (r2, a), ASR #2      ; r6 = memory[a + r2] >> 2 (signed)
 	\textbf{Syntax:}
 	\begin{lstlisting}
 STOR (#offset, addr), rS      ; memory[addr + offset] = rS
+STOR (addr), rS               ; equivalent to STOR (#0, addr), rS
 STOR (rD, addr), rS           ; memory[addr + rD] = rS
 STOR -(#offset, addr), rS     ; addr -= 1; memory[addr + offset] = rS
+STOR -(addr), rS              ; equivalent to STOR -(#0, addr), rS
 STOR -(rD, addr), rS          ; addr -= 1; memory[addr + rD] = rS
 
 ; With optional shift (register-offset memory forms only)

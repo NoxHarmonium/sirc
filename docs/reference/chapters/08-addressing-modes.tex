@@ -32,20 +32,72 @@ operand is an immediate value, register contents, or data in memory at a compute
 	\scriptsize
 	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.8cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}X}
 		\toprule
-		\textbf{Mode}      & \textbf{Syntax}                                  & \textbf{Effective value or address}                                                    & \textbf{Memory access}  & \textbf{Legal families}                              \\
+		\textbf{Mode}      & \textbf{Syntax}                                                    & \textbf{Effective value or address}                                                    & \textbf{Memory access}                  & \textbf{Legal families}                              \\
 		\midrule
-		Immediate          & \texttt{\#imm16}                                 & 16-bit encoded value                                                                   & None                    & ALU, LOAD-immediate, COPI, branch meta-instructions  \\
-		Short Immediate    & \texttt{\#imm8, shift}                           & 8-bit zero-extended value; shift applies to register source                            & None                    & ALU short-immediate                                  \\
-		Register Direct    & \texttt{rN}                                      & 16-bit register value                                                                  & None                    & ALU, LOAD register-copy, COPR, register-offset forms \\
-		Indirect Immediate & \texttt{(\#offset, addr)}                        & \texttt{addr.high : (addr.low + offset)}                                               & LOAD reads; STOR writes & Memory, LDEA, LDEL                                   \\
-		Indirect Register  & \texttt{(rO, addr)}                              & \texttt{addr.high : (addr.low + rO)}                                                   & LOAD reads; STOR writes & Memory, LDEA, LDEL                                   \\
-		Post-Increment     & \texttt{(\#offset, addr)+}, \texttt{(rO, addr)+} & Address is calculated from original \texttt{addr}; \texttt{addr.low += 1} after access & LOAD reads              & LOAD, LDEL                                           \\
-		Pre-Decrement      & \texttt{-(\#offset, addr)}, \texttt{-(rO, addr)} & \texttt{addr.low -= 1}; address then uses decremented \texttt{addr.low + offset}       & STOR writes             & STOR, LDEA                                           \\
+		Immediate          & \texttt{\#imm16}                                                   & 16-bit encoded value                                                                   & None                                    & ALU, LOAD-immediate, COPI, branch meta-instructions  \\
+		Short Immediate    & \texttt{\#imm8, shift}                                             & 8-bit zero-extended value; shift applies to register source                            & None                                    & ALU short-immediate                                  \\
+		Register Direct    & \texttt{rN}                                                        & 16-bit register value                                                                  & None                                    & ALU, LOAD register-copy, COPR, register-offset forms \\
+		Indirect Immediate & \texttt{(\#offset, addr)}, \texttt{(addr)}                         & \texttt{addr.high : (addr.low + offset)}                                               & LOAD reads; STOR writes; LDEA/LDEL none & Memory, LDEA, LDEL                                   \\
+		Indirect Register  & \texttt{(rO, addr)}                                                & \texttt{addr.high : (addr.low + rO)}                                                   & LOAD reads; STOR writes; LDEA/LDEL none & Memory, LDEA, LDEL                                   \\
+		Post-Increment     & \texttt{(\#offset, addr)+}, \texttt{(addr)+}, \texttt{(rO, addr)+} & Address is calculated from original \texttt{addr}; \texttt{addr.low += 1} after access & LOAD reads; LDEL none                   & LOAD, LDEL                                           \\
+		Pre-Decrement      & \texttt{-(\#offset, addr)}, \texttt{-(addr)}, \texttt{-(rO, addr)} & \texttt{addr.low -= 1}; address then uses decremented \texttt{addr.low + offset}       & STOR writes; LDEA none                  & STOR, LDEA                                           \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Addressing Mode Side Effects and Legal Instruction Families}
 	\label{tab:addressing-mode-matrix}
 \end{table}
+
+\section{Legal Modes by Instruction Family}
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+		\toprule
+		\textbf{Instruction family}    & \textbf{Legal operand forms}                                                                                                                                             & \textbf{Explicit exclusions and notes}                                                                                               \\
+		\midrule
+		ALU result instructions        & \texttt{OPI rD, \#imm16}; \texttt{OPI rD, \#imm8, shift}; \texttt{OPR rD, rS1, rS2[, shift]}; register shorthand \texttt{OPR rD, rS2}.                                   & No memory operands. Full 16-bit immediate forms do not encode shifts.                                                                \\
+		ALU test instructions          & \texttt{CMPI/TSAI/TSXI rS, \#imm16}; \texttt{CMPI/TSAI/TSXI rS, \#imm8, shift}; \texttt{CMPR/TSAR/TSXR rS1, rS2[, shift]}.                                               & No destination write-back. No memory operands.                                                                                       \\
+		LOAD value                     & \texttt{LOAD rD, \#imm16}; \texttt{LOAD rD, rS}.                                                                                                                         & No public short-immediate LOAD syntax. Direct register-copy forms do not accept shift suffixes.                                      \\
+		LOAD memory                    & \texttt{LOAD rD, (\#offset, addr)}; \texttt{LOAD rD, (rO, addr)[, shift]}; \texttt{LOAD rD, (\#offset, addr)+}; \texttt{LOAD rD, (rO, addr)+[, shift]}.                  & No pre-decrement LOAD form. Shift suffixes are only available on register-displacement memory forms.                                 \\
+		STOR memory                    & \texttt{STOR (\#offset, addr), rS}; \texttt{STOR (rO, addr), rS[, shift]}; \texttt{STOR -(\#offset, addr), rS}; \texttt{STOR -(rO, addr), rS[, shift]}.                  & No post-increment STOR form. Shift suffixes are only available on register-displacement memory forms.                                \\
+		LDEA                           & \texttt{LDEA dest, (\#offset, src)}; \texttt{LDEA dest, (rO, src)}; \texttt{LDEA dest, -(\#offset, src)}; \texttt{LDEA dest, -(rO, src)}.                                & No post-increment LDEA form. No shift suffixes.                                                                                      \\
+		LDEL                           & \texttt{LDEL dest, (\#offset, src)}; \texttt{LDEL dest, (rO, src)}; \texttt{LDEL dest, (\#offset, src)+}; \texttt{LDEL dest, (rO, src)+}.                                & No pre-decrement LDEL form. No shift suffixes.                                                                                       \\
+		Control-flow meta-instructions & \texttt{BRAN/BRSR \#disp}; \texttt{BRAN/BRSR @label}; \texttt{RETS}; \texttt{LJMP src[, \#offset|rO]}; \texttt{LJSR src[, \#offset|rO]}; \texttt{LJSR (\#offset, src)+}. & \texttt{LJMP (src)} and \texttt{LJSR (src)} are not public syntax; use \texttt{LJMP src} or \texttt{LJSR src} for zero displacement. \\
+		Coprocessor                    & \texttt{COPI \#imm16}; \texttt{COPR rS}.                                                                                                                                 & No hidden destination register syntax, no memory operands, no shifts, and no status-update override suffixes.                        \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Addressing Mode Legality by Instruction Family}
+	\label{tab:legal-modes-by-family}
+\end{table}
+
+\section{Zero-Displacement Shorthand}
+
+Immediate-displacement indirect forms may omit the displacement when it is zero. The following forms are exact
+assembler-level equivalents:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Shorthand} & \textbf{Canonical form} & \textbf{Meaning}                  \\
+		\midrule
+		\texttt{(addr)}    & \texttt{(\#0, addr)}    & Use the selected address register \\
+		\texttt{(addr)+}   & \texttt{(\#0, addr)+}   & Use the address, then increment   \\
+		\texttt{-(addr)}   & \texttt{-(\#0, addr)}   & Decrement, then use the address   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Zero-Displacement Shorthand}
+	\label{tab:zero-displacement-shorthand}
+\end{table}
+
+The shorthand does not change which instruction families are legal. For example, \texttt{LOAD r1, (a)+} is legal
+because \mnemonic{LOAD} has a post-increment immediate-displacement form, but \texttt{STOR (a)+, r1} is not legal
+because \mnemonic{STOR} has no post-increment form. Likewise, \texttt{STOR -(s), r1} is legal because \mnemonic{STOR}
+has a pre-decrement form, but the corresponding pre-decrement \mnemonic{LOAD} form is not legal.
+
+Register-displacement forms do not have a corresponding shorthand: \texttt{(rO, addr)}, \texttt{(rO, addr)+}, and
+\texttt{-(rO, addr)} always name the displacement register explicitly.
 
 \section{Operand Categories}
 

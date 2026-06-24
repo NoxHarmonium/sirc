@@ -49,11 +49,10 @@ These are the biggest gaps compared to the M68k manual.
 These are important for emulator, hardware, OS, debugger, and compiler work.
 
 - Add bus timing diagrams and signal sequencing.
-- Data layout rules. Mostly resolved: Chapter 4 now defines vector word order, stored address layout, immediate
-  sign/zero behavior, address wraparound, and memory ordering. Remaining work is to audit older examples for byte-style
-  offsets and decide whether to add non-normative software conventions for multi-word integers and stack layout.
-  Short immediates are documented as zero-extended ALU operands only; memory, effective-address, branch, jump, and
-  subroutine-call displacements use 16-bit or register displacement forms.
+- Data layout rules. Resolved: Chapter 4 defines vector word order, stored address layout, immediate sign/zero
+  behavior, address wraparound, memory ordering, and the boundary between architectural storage order and
+  non-normative software conventions. Short immediates are documented as zero-extended ALU operands only; memory,
+  effective-address, branch, jump, and subroutine-call displacements use 16-bit or register displacement forms.
 - Add ABI/calling convention guidance or explicitly state that it is outside the ISA.
 - Add assembler/object/binary format appendix if SIRC has a canonical ROM or object representation.
 - Add revision/model compatibility tables for optional coprocessors.
@@ -132,19 +131,36 @@ Acceptance criteria:
 
 Goal: ensure every binary and hex encoding in the manual is correct.
 
+Status: Complete for the current reference-manual scope.
+
 Progress:
 
 - `examples/reference-encodings` assembles the annotated manual encoding examples and generates the instruction-format
   LaTeX tables under `docs/reference/generated/`.
+- Current audit found no hand-written raw 32-bit instruction-word examples outside `docs/reference/generated/`. The only
+  eight-digit hex values in chapter prose are target-address comments in the control-flow chapter, not instruction
+  encodings.
+- `examples/reference-encodings` was verified with `make check`, and `make manual-tex` regenerates the same encoded
+  values. Its unformatted output differs from the checked-in fragments only by LaTeX whitespace/column formatting before
+  `latexindent` is applied.
+- Opcode, condition-code, shift-type, undocumented-opcode, and instruction-family field literals were audited against
+  `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/definitions.rs`. The values match the simulator source of
+  truth as of this pass.
 - Decision: do not add Makefile/CI automation for this yet. A prototype stale-generated-table check was intentionally
   removed because it was more machinery than wanted right now. Do not re-add it unless explicitly requested.
 
-Tasks:
+Completed scope:
 
-- Expand machine checking beyond the generated instruction-format tables by auditing all remaining literal instruction
-  encodings in the manual and moving them into generated or verified sources.
+- The full raw instruction-word examples in Chapter 7 are generated from an assembler fixture rather than maintained by
+  hand.
+- Remaining manual numeric literals were audited and classified as opcode IDs, field values, vector addresses,
+  coprocessor command operands, data constants, or address comments rather than unverified raw instruction-word
+  examples.
+- Invalid 9-hex-digit instruction-word examples are covered by the audit pattern and were not found.
 
-- Later, if desired, add or extend checks for:
+Future optional QA/tooling, if desired:
+
+- Add or extend generated checks for:
   - 32-bit instruction width
   - opcode values
   - register field values
@@ -152,13 +168,8 @@ Tasks:
   - condition-code field values
   - additional flags
   - shift operand/type/amount fields
-
-- Later, if desired, add CI coverage for a reference-manual validation command.
-
-Acceptance criteria:
-
-- Every hex encoding in the manual is either generated or covered by a verification test.
-- Invalid example widths, such as 9-hex-digit instruction words, are impossible to reintroduce silently.
+- Add CI coverage for a reference-manual validation command once the validation command exists and is worth the
+  maintenance cost.
 
 ## Workstream 3: Instruction Reference Upgrade
 
@@ -275,6 +286,8 @@ Acceptance criteria:
 
 Goal: match the M68k manual's useful distinction between effective address forms and where they are legal.
 
+Status: Complete.
+
 Progress:
 
 - Added an addressing mode matrix with syntax, effective value/address, memory access behavior, auto-update side effects,
@@ -285,20 +298,19 @@ Progress:
 - Renumbered chapter source files after adding the new data-representation chapter so source filenames again match manual
   order: data representation is Chapter 4, status register is Chapter 5, exceptions is Chapter 6, and later chapters are
   shifted accordingly.
-
-Tasks:
-
-- Add "legal mode by instruction family" tables.
-  - This is one of the most useful patterns from real CPU manuals.
-
-- Document omitted zero-displacement shorthand for memory indirect forms.
-  - Any instruction that accepts memory indirect access with immediate displacement should allow the displacement to be
-    omitted when it is zero.
-  - For example, `LOAD rD, (a)` must be specified as equivalent to `LOAD rD, (#0, a)`.
-  - Audit all affected instructions and parser tests so this shorthand is accepted consistently, not only for the forms
-    that currently happen to support it.
-  - Cover normal, post-increment, and pre-decrement immediate-displacement forms where applicable, and state clearly
-    whether omitted displacement is allowed for each syntax family.
+- Added a "Legal Modes by Instruction Family" table to Chapter 8 so the addressing chapter can be used as a compact
+  legality reference.
+- Documented zero-displacement shorthand for immediate-displacement indirect forms:
+  - `LOAD rD, (addr)` and `LOAD rD, (addr)+`
+  - `STOR (addr), rS` and `STOR -(addr), rS`
+  - `LDEA dest, (src)` and `LDEA dest, -(src)`
+  - `LDEL dest, (src)` and `LDEL dest, (src)+`
+  - `LJSR (src)+`
+- Clarified that shorthand does not create otherwise illegal addressing forms, and that non-auto-update `LJMP`/`LJSR`
+  use `LJMP src`/`LJSR src` rather than `LJMP (src)`/`LJSR (src)`.
+- Added assembler tests in `sirc-vm/toolchain/tests/assembler/addressing_mode_test.rs` for accepted shorthand forms and
+  rejected shorthand forms that would otherwise imply illegal addressing families. Verified with
+  `cargo test -p toolchain`.
 
 Acceptance criteria:
 
@@ -309,20 +321,27 @@ Acceptance criteria:
 
 Goal: define how values are represented in registers and memory.
 
+Status: Complete.
+
 Progress:
 
 - Added `chapters/04-data-representation.tex` and included it in the main manual. It now defines external word byte
   order, multi-word storage order, address-register-pair interpretation, stored 24-bit address/vector order,
   instruction storage, immediate interpretation, address wraparound, and program-order memory visibility.
 - Cross-referenced the new chapter from the introduction, register model, and exception vector table.
+- Audited older examples for byte-oriented offset assumptions. Stack, structure, vector, saved-address, control-flow,
+  and memory examples now either use word offsets or explicitly discuss external byte representation.
+- Clarified the introduction's memory map so vector IDs are not mistaken for word addresses. The table now gives each
+  vector range and its corresponding word-address range.
+- Added a short software-layout-conventions section. The ISA defines high-word-first architectural storage and word
+  offsets, while full ABI, stack-frame, argument-passing, and software integer conventions remain non-normative unless a
+  separate ABI or toolchain document defines them.
 
 Tasks:
 
-- Audit examples in other chapters for byte-oriented offset assumptions, especially stack, structure, vector, and
-  multi-word address examples. Prefer word offsets everywhere unless a section is explicitly discussing external byte
-  representation.
-- Decide whether to add more non-normative software conventions for multi-word integers beyond the architectural
-  high-word-first convention already documented.
+- Audit examples in other chapters for byte-oriented offset assumptions. Resolved.
+- Decide whether to add more non-normative software conventions for multi-word integers. Resolved for the ISA manual:
+  full ABI and software-integer conventions are deferred to Workstream 9 or a separate ABI/toolchain document.
 
 Acceptance criteria:
 
