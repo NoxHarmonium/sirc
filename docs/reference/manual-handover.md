@@ -365,11 +365,8 @@ Tasks:
   - metadata available
   - whether it can occur in protected mode
 
-- Add link-register/saved-state diagrams.
-  - Show return address high/low words.
-  - Show saved status register.
-  - Show fault metadata register fields.
-  - Show which exception level uses which banked link register.
+- Add link-register/saved-state diagrams. Resolved: Chapter 6 now includes a saved-state bitfield for exception link
+  registers, a link-register assignment table for software/hardware/fault levels, and a fault metadata bitfield.
 
 - Add reset-state table. Progress: Chapter 6 now has a first implementation-backed reset-state table.
   - all general-purpose registers

@@ -164,10 +164,41 @@ Each link register stores two pieces of information:
 	\item \textbf{Return Status Register:} The 16-bit status register value at the time of the exception
 \end{itemize}
 
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.35em]{32}
+		\bitheader{0,15,16,31} \\
+		\bitbox{32}{Return Address} \\
+		\bitbox{16}{Return Status Register} & \bitbox{8}{Saved Level} & \bitbox{8}{Reserved}
+	\end{bytefield}
+	\caption{Exception Link Register Saved-State Layout}
+	\label{fig:exception-link-register-layout}
+\end{figure}
+
 When an exception occurs, the appropriate link register (determined by the exception priority level) is populated with
 the current program counter and status register values. For abort exceptions (faults), the return address is the
 address of the faulting instruction so it can be retried. For regular exceptions (hardware and software exceptions),
 the return address is the address after the current instruction.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Register} & \textbf{Exception Source} & \textbf{Priority Level} \\
+		\midrule
+		0                 & Software exceptions       & 1                       \\
+		1                 & Level 1 hardware          & 2                       \\
+		2                 & Level 2 hardware          & 3                       \\
+		3                 & Level 3 hardware          & 4                       \\
+		4                 & Level 4 hardware          & 5                       \\
+		5                 & Level 5 hardware          & 6                       \\
+		6                 & Faults                    & 7                       \\
+		7                 & Fault metadata            & n/a                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Exception Link Register Assignment}
+	\label{tab:exception-link-register-assignment}
+\end{table}
 
 \subsubsection{Link Register Preservation}
 
@@ -221,6 +252,17 @@ to always be valid.
 
 The fault metadata register (register 7) stores additional information about faults beyond just the return address. The
 return\_status\_register field is used to encode fault-specific metadata in the following format:
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.5em]{16}
+		\bitheader{0,2,3,4,7,8,11,12,15} \\
+		\bitbox{3}{BAT} & \bitbox{1}{D} & \bitbox{4}{Current Fault} & \bitbox{4}{Original Fault} &
+		\bitbox{4}{Reserved}
+	\end{bytefield}
+	\caption{Fault Metadata Register Status Field Layout}
+	\label{fig:fault-metadata-register-layout}
+\end{figure}
 
 \begin{itemize}
 	\item \textbf{Bits 0-2:} Bus access type (\texttt{BAT0}--\texttt{BAT2}) captured when the fault was raised (3 bits)
