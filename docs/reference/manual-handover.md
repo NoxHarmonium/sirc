@@ -257,6 +257,10 @@ Tasks:
   - invalid opcode fault (coprocessor dispatch only; not a normal processing-unit reserved-encoding trap)
   - privilege violation fault
   - trace fault
+  - Progress: Chapter 13 now distinguishes ALU instruction-specific faults from global instruction-fetch and trace
+    behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path; fetch
+    faults can still occur before execution, and trace faults occur after commit when trace mode was sampled at
+    instruction start.
 
 Acceptance criteria:
 

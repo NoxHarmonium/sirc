@@ -104,21 +104,27 @@ are not legal for this instruction family.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                                                                                            \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                          \\
 		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                                                                                                  \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                                                                                                     \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                                                                                                   \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                                                                                                        \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                                                                                                 \\
-		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                                                                                                   \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                                                                                                 \\
-		Exceptions             & ALU instructions do not access memory and do not raise bus, bus-protection, or alignment faults. Processing-unit encodings outside the documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault. \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                   \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                      \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.               \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                 \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                               \\
+		Exceptions             & ALU execution raises no instruction-specific faults; see the notes below.                                                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
 	\label{tab:alu-common-semantics}
 \end{table}
+
+\noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
+bus-protection, data alignment, segment-overflow, privilege-violation, or invalid-opcode faults. Instruction fetch can
+still raise the normal fetch faults before an ALU instruction executes. If trace mode was enabled when the instruction
+began, an instruction-trace fault is raised after the instruction commits. Processing-unit encodings outside the
+documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault.
 
 \section{Status Flag Updates}
 
