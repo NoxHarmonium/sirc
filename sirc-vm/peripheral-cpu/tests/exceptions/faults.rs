@@ -33,7 +33,9 @@ use peripheral_cpu::{
 // TODO: Make sure that all test files have the same suffix
 // category=Testing
 
-use crate::exceptions::common::{build_test_instruction, expectation, run_expectations};
+use crate::exceptions::common::{
+    build_rete_instruction, build_test_instruction, expectation, run_expectations,
+};
 
 use super::common::Expectation;
 
@@ -814,6 +816,69 @@ fn test_invalid_opcode_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        0x0000_FFFF,
+        cpu_peripheral.eu_registers.link_registers[7].return_address
+    );
+}
+
+#[test]
+fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+    let handler_address = 0x00AB_CDE0;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_invalid_opcode_instruction(0x0, false),
+        &mut clocks,
+    );
+    // Let the invalid coprocessor dispatch raise the pending fault.
+    run_expectations(
+        &mut cpu_peripheral,
+        &vec![None, None, None, None, None, None],
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(INVALID_OPCODE_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(0x00FA, cpu_peripheral.registers.r1);
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_instruction(&build_rete_instruction(), handler_address + 2, false),
+        &mut clocks,
+    );
+    // Let the exception unit execute RETE.
+    run_expectations(
+        &mut cpu_peripheral,
+        &vec![None, None, None, None, None, None],
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x0000_0002, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq!(0, cpu_peripheral.eu_registers.current_exception_level);
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ExceptionActive,
+        &cpu_peripheral.registers
+    ));
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_dummy_instruction(0x0000_0002, false),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(0x01F4, cpu_peripheral.registers.r1);
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "invalid-opcode handler should return without leaving a pending fault"
+    );
 }
 
 #[test]
@@ -876,8 +941,8 @@ fn test_double_fault() {
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
     assert_eq_hex!(
-        // No bus address because invalid opcode happens before coprocessors are engaged
-        0x0000_0000,
+        // Invalid COP dispatch stores the faulting coprocessor command here for emulation.
+        0x0000_FFFF,
         cpu_peripheral.eu_registers.link_registers[7].return_address
     );
 
@@ -926,8 +991,8 @@ fn test_double_fault() {
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
     assert_eq_hex!(
-        // No bus address because invalid opcode happens before coprocessors are engaged
-        0x0000_0000,
+        // Invalid COP dispatch stores the faulting coprocessor command here for emulation.
+        0x0000_FFFF,
         cpu_peripheral.eu_registers.link_registers[7].return_address
     );
 }

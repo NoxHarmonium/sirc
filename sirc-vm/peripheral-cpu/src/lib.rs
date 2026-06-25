@@ -373,14 +373,21 @@ impl CpuPeripheral {
                 bus_assertions,
             ),
             _ => {
-                if phase == ExecutionPhase::InstructionFetchLow {
+                if self.eu_registers.pending_fault.is_none()
+                    && phase == ExecutionPhase::InstructionFetchLow
+                {
                     warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
+                    let invalid_coprocessor_command = self.cause_register_value;
                     // Can be used for forwards compatibility if co-processors are added in later models
                     self.eu_registers.pending_fault = raise_fault(
                         &mut self.eu_registers,
                         Faults::InvalidOpCode,
-                        &bus_assertions,
+                        &BusAssertions {
+                            address: u32::from(invalid_coprocessor_command),
+                            ..bus_assertions
+                        },
                     );
+                    self.registers.pending_coprocessor_command = 0x0;
                 }
 
                 BusAssertions::default()

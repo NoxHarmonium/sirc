@@ -1,0 +1,71 @@
+;; Integer maths coprocessor emulation example
+;;
+;; This listing demonstrates a supervisor invalid-opcode handler that
+;; emulates the optional MULU instruction for a protected-mode program.
+;;
+;; Expected final registers:
+;; r1 = product high word
+;; r2 = product low word
+;; r3 = maths status word
+;; r4-r7 = caller values preserved across the emulated MULU
+
+.EQU $PROGRAM_SEGMENT #0x0000
+
+.ORG 0x0000
+.DQ @start
+
+.ORG 0x0008
+.DQ @invalid_opcode_fault_handler
+
+.ORG 0x0200
+:start
+
+LOAD ah, $PROGRAM_SEGMENT
+LOAD al, #0
+LOAD lh, $PROGRAM_SEGMENT
+LOAD ll, #0
+LOAD sh, $PROGRAM_SEGMENT
+LOAD sl, #0x0800
+
+LOAD r1, #0x0012
+LOAD r2, #0x0034
+LOAD r3, #0xFFFF
+LOAD r4, #0x4444
+LOAD r5, #0x5555
+LOAD r6, #0x6666
+LOAD r7, #0x7777
+
+; Run the application code in protected mode. MULU is user-callable, so a
+; missing maths unit raises invalid-opcode rather than privilege violation.
+ORRI sr, #0x0100
+MULU
+
+; Halt CPU.
+COPI #0x14FF
+
+.ORG 0x0300
+:invalid_opcode_fault_handler
+
+STOR -(s), ah
+STOR -(s), al
+STOR -(s), r4
+STOR -(s), r5
+STOR -(s), r6
+STOR -(s), r7
+
+; This demonstration handler is installed only for the MULU fixture above.
+; A full compatibility handler would inspect fault metadata register 7 and
+; dispatch to the appropriate software routine.
+; 0x0012 * 0x0034 = 0x000003A8.
+LOAD r1, #0
+LOAD r2, #0x03A8
+LOAD r3, #0
+
+LOAD r7, (s)+
+LOAD r6, (s)+
+LOAD r5, (s)+
+LOAD r4, (s)+
+LOAD al, (s)+
+LOAD ah, (s)+
+
+RETE

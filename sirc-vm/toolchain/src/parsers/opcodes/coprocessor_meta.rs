@@ -88,10 +88,11 @@ pub fn coprocessor_meta(i: &str) -> AsmResult<InstructionToken> {
     };
 
     let parse_count = |immediate_type: &ImmediateType| -> Result<u16, nom::Err<ErrorTree<&str>>> {
-        if let ImmediateType::Value(value) = immediate_type { Ok(*value) } else {
-            let error_string = format!(
-                "The [{tag}] meta instruction only supports literal immediate operands"
-            );
+        if let ImmediateType::Value(value) = immediate_type {
+            Ok(*value)
+        } else {
+            let error_string =
+                format!("The [{tag}] meta instruction only supports literal immediate operands");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i_after_instruction,
                 ErrorKind::Fail,

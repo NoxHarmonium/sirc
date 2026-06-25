@@ -581,8 +581,9 @@ Design decisions to carry forward:
   status bits and leave `r1:r2` unchanged. Signed division uses two's-complement arithmetic, quotient truncated toward
   zero, and remainder with the sign of the dividend; `-2147483648 / -1` is quotient overflow.
 - Reference maths emulation routines should live in an examples directory and be testable there. The rendered manual
-  should document the ABI and may include compact pseudocode or short excerpts, but should not carry long hand-maintained
-  multiplication/division listings.
+  should describe them as source listings supplied with the SIRC-1 distribution media or an addendum, not as a modern
+  repository path. The manual may include compact pseudocode or short excerpts, but should not carry long
+  hand-maintained multiplication/division listings.
 
 Tasks:
 
@@ -627,10 +628,16 @@ Tasks:
   - divide-by-zero and quotient-overflow handling
   - software-emulation compatibility story for missing hardware
 
-- Add reference maths emulation examples. Pending.
+- Add reference maths emulation examples. In progress.
   - Put full assembly routines in `examples/` rather than only in LaTeX.
   - Make the examples assemble and, if practical, add tests around the expected register/status results.
   - Document in the manual that these are reference software routines, not additional ISA requirements.
+  - Progress: `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs` now has an end-to-end test for "absent coprocessor ->
+    invalid-opcode handler executes normal supervisor code -> RETE returns to protected caller".
+  - Progress: `examples/math-coprocessor-emulation` now contains a runnable protected-mode `MULU` emulation example
+    that exercises invalid-opcode dispatch, supervisor emulation, `RETE` return, caller register preservation, and the
+    expected register dump. It intentionally uses a compact fixture-specific multiply body; general `MULU`, `MULS`,
+    `DIVU`, and `DIVS` software routines remain to be written.
 
 Acceptance criteria:
 
