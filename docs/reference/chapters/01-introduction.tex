@@ -90,12 +90,12 @@ variable-length execution sequences or microcode.
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
 register file. Only one coprocessor can be active at one time and are usually activated using the COP instructions
 (except for the "exception unit" which can be activated when physical pins are asserted on the chip). All
-implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0 and "exception unit" as coprocessor
-0x1. Other coprocessors are optional and will vary depending on which SIRC-1 model you have. The instruction set
-supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that programs are cross compatible.
-For example, coprocessor 0x2 will always be the DMA unit. This means if the CPU model is missing a particular
-coprocessor, and a program requires it, the CPU will raise an exception so that the behaviour can be emulated in
-software.
+implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0, the "exception unit" as coprocessor
+0x1, and the DMA unit as coprocessor 0x2. Other coprocessors are optional and will vary depending on which SIRC-1 model
+you have. The instruction set supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that
+programs are cross compatible. For example, coprocessor 0x3 will always be the Integer Maths Unit. This means if the
+CPU model is missing an optional coprocessor, and a program requires it, the CPU will raise an exception so that the
+behaviour can be emulated in software where practical.
 
 \begin{table}[H]
 	\centering
@@ -105,7 +105,7 @@ software.
 		\midrule
 		0x0         & Processing Unit    & No                & Executes instructions                       \\
 		0x1         & Exception Unit     & No                & Handles interrupts and exceptions           \\
-		0x2         & DMA Unit           & Yes               & Transfers blocks of data via the bus        \\
+		0x2         & DMA Unit           & No                & Transfers blocks of data via the bus        \\
 		0x3         & Integer Maths Unit & Yes               & Multiplies and divides integer values       \\
 		0x4--0xF    & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
 		\bottomrule

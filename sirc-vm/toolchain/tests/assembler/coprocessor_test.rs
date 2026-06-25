@@ -134,11 +134,13 @@ fn coprocessor_rejects_status_update_overrides() {
 
 #[test]
 fn dma_meta_instructions_lower_to_supervisor_copi_commands() {
-    assert_copi_immediate("DMAR #0\n", 0x2800, ConditionFlags::Always);
-    assert_copi_immediate("DMAR #7\n", 0x2807, ConditionFlags::Always);
-    assert_copi_immediate("DMAW|== #5\n", 0x2905, ConditionFlags::Equal);
-    assert_copi_immediate("DMAT #0\n", 0x2A00, ConditionFlags::Always);
-    assert_copi_immediate("DMAT #255\n", 0x2AFF, ConditionFlags::Always);
+    assert_copi_immediate("DMAR a, #0\n", 0x2800, ConditionFlags::Always);
+    assert_copi_immediate("DMAR a, #7\n", 0x2807, ConditionFlags::Always);
+    assert_copi_immediate("DMAR l, #7\n", 0x2847, ConditionFlags::Always);
+    assert_copi_immediate("DMAR s, #-3\n", 0x28A3, ConditionFlags::Always);
+    assert_copi_immediate("DMAW|== s, #-5\n", 0x29A5, ConditionFlags::Equal);
+    assert_copi_immediate("DMAT a, l, #0\n", 0x2A00, ConditionFlags::Always);
+    assert_copi_immediate("DMAT a, l, #255\n", 0x2AFF, ConditionFlags::Always);
 }
 
 #[test]
@@ -151,22 +153,32 @@ fn maths_meta_instructions_lower_to_user_copi_commands() {
 
 #[test]
 fn dma_meta_instructions_reject_invalid_counts() {
-    assert_rejected("DMAR #8\n", "only supports counts in the range 0-7");
-    assert_rejected("DMAW #8\n", "only supports counts in the range 0-7");
-    assert_rejected("DMAT #256\n", "only supports counts in the range 0-255");
+    assert_rejected("DMAR a, #8\n", "only supports counts in the range -7..7");
+    assert_rejected("DMAW l, #-8\n", "only supports counts in the range -7..7");
+    assert_rejected(
+        "DMAT a, l, #256\n",
+        "only supports counts in the range 0-255",
+    );
 }
 
 #[test]
 fn standard_coprocessor_meta_instructions_reject_invalid_forms() {
+    assert_rejected("DMAR #1\n", "requires an explicit address register operand");
     assert_rejected("DMAR r1\n", "Invalid addressing mode for DMAR");
     assert_rejected("DMAR #1, r1\n", "Invalid addressing mode for DMAR");
+    assert_rejected("DMAR p, #1\n", "only supports address registers a, l, or s");
+    assert_rejected(
+        "DMAT #7\n",
+        "requires explicit source and destination address registers",
+    );
+    assert_rejected("DMAT l, a, #7\n", "only supports transfers from a to l");
+    assert_rejected(
+        "DMAT[N] a, l, #7\n",
+        "does not support an explicit status register update source",
+    );
     assert_rejected("MULU #1\n", "Invalid addressing mode for MULU");
     assert_rejected(
         "MULU[N]\n",
-        "does not support an explicit status register update source",
-    );
-    assert_rejected(
-        "DMAT[N] #7\n",
         "does not support an explicit status register update source",
     );
 }
