@@ -162,7 +162,8 @@ Several commonly-used operations are implemented as assembler meta-instructions 
 
 \section{Instruction Timing}
 
-All instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required:
+Ordinary processing-unit instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait
+states are required:
 
 \begin{enumerate}
 	\item Instruction Fetch (High Word)
@@ -173,7 +174,9 @@ All instructions use exactly 6 execution phases and complete in 6 clock cycles w
 	\item Write Back
 \end{enumerate}
 
-This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles.
+This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles. DMA
+meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path and then add DMA command and transfer
+cycles.
 
 \section{Next Chapters}
 

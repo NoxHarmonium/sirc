@@ -566,6 +566,11 @@ Design decisions to carry forward:
 - DMA count encoding decision: operand value `0x00` means no-op. `DMAR` and `DMAW` encode bits 7--6 as address register
   (`a`, `l`, `s`, reserved), bit 5 as direction, bits 2--0 as count magnitude, and bits 4--3 as reserved zero. `DMAT`
   accepts counts 0--255, with larger transfers done by software loops.
+- DMA timing decision: a dispatched DMA command takes the normal 6-cycle `COPI` dispatch plus at least one
+  post-dispatch DMA cycle to accept/decode the command and clear the pending cause. For non-zero transfers, that first
+  post-dispatch cycle may also be the first no-wait DMA bus access. Therefore `DMAR`/`DMAW` take
+  `6 + max(abs(n), 1)` cycles and `DMAT` takes `6 + max(2n, 1)` cycles. Conditional false DMA meta-instructions do not
+  dispatch and take the normal 6 cycles.
 - Coprocessor 0x3 is the optional standard integer maths unit. It should provide a stable software-visible convention
   so missing hardware can be emulated through invalid-opcode faults and later CPU models can accelerate the same
   binaries.

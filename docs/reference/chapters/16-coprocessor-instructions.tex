@@ -373,6 +373,14 @@ as a two's-complement count field. A zero count is encoded with the forward dire
 address registers are not advanced. CPU status flags are preserved. If the condition is false, no DMA command is
 dispatched, no coprocessor privilege or opcode checks are performed, and all CPU state is preserved.
 
+\noindent DMA timing assumes the command condition is true and every bus access is acknowledged without wait states. The
+\mnemonic{COPI} dispatch takes the normal 6 cycles, then the DMA unit gets at least one post-dispatch cycle. For a zero
+count, that cycle accepts the command, decodes the count, clears the pending cause, and resumes instruction fetch. For a
+non-zero count, the same first cycle may perform the first no-wait DMA bus access. Each additional DMA read or write bus
+access then takes one cycle in the no-wait case. Therefore \mnemonic{DMAR} and \mnemonic{DMAW} take
+$6 + \max(|n|, 1)$ cycles, and \mnemonic{DMAT} takes $6 + \max(2n, 1)$ cycles. A false condition skips the DMA command
+entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
+
 \noindent DMA memory reads and writes can raise data bus and bus-protection faults using DMA read/write bus access
 types. If an address-register low word overflows or underflows and \texttt{SR.A} is set, the DMA operation raises a
 segment-overflow fault; otherwise the low word wraps modulo $2^{16}$. Partial side effects are possible if a fault
@@ -418,8 +426,9 @@ if n > 0:
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA read bus cycles and may add wait states through normal bus acknowledgement.
+	\textbf{Timing:} $6 + \max(|n|, 1)$ cycles when the command condition is true and the DMA read cycles are acknowledged
+	without wait states. The $n = 0$ no-op form and one-word transfer forms take 7 cycles. Wait states add to the relevant
+	DMA read bus cycle. If the condition is false, the DMA command is not dispatched and the instruction takes 6 cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 \end{instructionbox}
@@ -465,8 +474,10 @@ if n > 0:
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA write bus cycles and may add wait states through normal bus acknowledgement.
+	\textbf{Timing:} $6 + \max(|n|, 1)$ cycles when the command condition is true and the DMA write cycles are
+	acknowledged without wait states. The $n = 0$ no-op form and one-word transfer forms take 7 cycles. Wait states add to
+	the relevant DMA write bus cycle. If the condition is false, the DMA command is not dispatched and the instruction
+	takes 6 cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 \end{instructionbox}
@@ -509,9 +520,11 @@ while remaining > 0:
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA read and write bus cycles and may add wait states through normal bus acknowledgement. Instruction fetch resumes
-	only after the DMA operation completes or faults.
+	\textbf{Timing:} $6 + \max(2n, 1)$ cycles when the command condition is true and all DMA read and write cycles are
+	acknowledged without wait states. The $n = 0$ no-op form takes 7 cycles, and a one-word memory transfer takes 8
+	cycles. Wait states add to the relevant DMA read or write bus cycle. Instruction fetch resumes only after the DMA
+	operation completes or faults. If the condition is false, the DMA command is not dispatched and the instruction takes 6
+	cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 

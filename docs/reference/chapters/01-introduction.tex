@@ -22,7 +22,7 @@ The SIRC-1 adheres to Reduced Instruction Set Computer (RISC) design principles:
 
 	\item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
 
-	\item \textbf{Consistent Execution Time:} All instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required, eliminating the need for microcode and simplifying hardware implementation.
+	\item \textbf{Consistent Execution Time:} Most instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required, eliminating the need for microcode and simplifying hardware implementation. DMA commands add transfer cycles after dispatch.
 \end{itemize}
 
 \subsection{Design Goals}
@@ -79,11 +79,13 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 The SIRC-1 executes every instruction through six sequential execution phases (normally one phase per clock cycle). For
 a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
-This fixed six-stage model means that all instructions take 6 clock cycles to complete when bus operations do not
-require wait states, regardless of their complexity. A bus device may hold the current phase by delaying bus
-acknowledgement, adding wait cycles without adding execution phases. While this may seem wasteful for simple register
-operations that don't require memory access, it dramatically simplifies the hardware design by eliminating the need for
-variable-length execution sequences or microcode.
+This fixed six-stage model means that ordinary processing-unit instructions take 6 clock cycles to complete when bus
+operations do not require wait states, regardless of their complexity. DMA commands are the main exception because the
+DMA unit holds instruction fetch after dispatch until its transfer has completed. A bus device may hold the current
+phase by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6 cycle
+instruction execution model may seem wasteful for simple register operations that don't require memory access, it
+dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or
+microcode.
 
 \subsection{Coprocessors}
 

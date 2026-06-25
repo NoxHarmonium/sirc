@@ -4,14 +4,15 @@
 \section{Overview}
 
 The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing six sequential execution phases to
-execute instructions in 6 clock cycles when no bus wait states are required. The architecture is composed of several
-key functional units that work together to fetch, decode, execute, and complete instructions.
+execute ordinary instructions in 6 clock cycles when no bus wait states are required. The architecture is composed of
+several key functional units that work together to fetch, decode, execute, and complete instructions.
 
 \section{Six-Stage Execution Phases}
 
-All SIRCIS instructions follow a six-phase execution model and complete in 6 clock cycles when no bus wait states are
-required. A phase that performs a bus operation may be held until the bus acknowledges it. This fixed execution
-sequence greatly simplifies software development and hardware design.
+Most SIRCIS instructions follow a six-phase execution model and complete in 6 clock cycles when no bus wait states are
+required. A phase that performs a bus operation may be held until the bus acknowledges it. DMA commands dispatch
+through the normal six-phase coprocessor-call path and then hold instruction fetch while the DMA unit completes its
+transfer. This fixed execution sequence greatly simplifies software development and hardware design.
 
 \begin{enumerate}
 	\item \textbf{Instruction Fetch (High Word)} -- 1 cycle
@@ -151,10 +152,11 @@ circuits that process data in a single clock cycle. This approach:
 
 \subsection{Fixed Execution Sequence}
 
-All instructions execute in exactly 6 phases, regardless of instruction type or operands, and complete in 6 clock
-cycles when no bus wait states are required. Delayed bus acknowledgement can hold a phase and add wait cycles. This
-design choice simplifies software timing and eliminates the need for branch prediction or complex multi-stage control
-logic found in variable-time architectures.
+Ordinary instructions execute in exactly 6 phases, regardless of instruction type or operands, and complete in 6 clock
+cycles when no bus wait states are required. Delayed bus acknowledgement can hold a phase and add wait cycles. DMA
+commands are the main exception: after the six-phase coprocessor-call dispatch, the DMA unit keeps instruction fetch
+stopped until its command and bus-transfer cycles have completed. This design choice simplifies software timing and
+eliminates the need for branch prediction or complex multi-stage control logic found in variable-time architectures.
 
 \subsection{Parallel Functional Units}
 
@@ -592,6 +594,11 @@ controllers.
 All bus timing is described relative to the rising edge of CLKI. The CPU presents a bus request during the execution
 phase that needs external access. If no response is asserted, the CPU repeats the same request and does not advance to
 the next execution phase.
+
+A no-wait-state bus access assumes that the selected external device can assert \texttt{BACK} and, for reads, drive
+valid data during the same CLKI interval in which \texttt{BAS} is asserted, so the CPU accepts the transfer on the next
+rising edge. A device that samples the request on one clock edge and cannot return \texttt{BACK} or read data until a
+later edge adds wait states; this is the normal way to attach slower synchronous memory or peripherals.
 
 \begin{table}[H]
 	\centering
