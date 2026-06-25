@@ -123,6 +123,43 @@ COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
 
 \end{instructionbox}
 
+\section{Coprocessor Compatibility}
+
+Standard coprocessor IDs are stable across SIRC-1 models. A CPU model may omit an optional coprocessor, but it must not
+assign that coprocessor ID to an incompatible unit. If software calls an absent coprocessor or an operation that the
+selected coprocessor does not implement, the CPU raises an invalid-opcode fault.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llclX}
+		\toprule
+		\textbf{ID} & \textbf{Name}        & \textbf{Required} & \textbf{Operations} & \textbf{Compatibility rule}                          \\
+		\midrule
+		0x0         & Processing Unit      & Yes               & Internal            & Executes SIRCIS processing-unit instructions         \\
+		0x1         & Exception Unit       & Yes               & 0x0--0xD            & Handles reset, faults, interrupts, traps, and links  \\
+		0x2         & DMA Unit             & No                & 0x8--0xA            & Optional standard DMA transfer unit                  \\
+		0x3         & Integer Maths Unit   & No                & 0x0--0x3            & Optional standard integer multiply/divide unit       \\
+		0x4--0xF    & Reserved/model space & No                & Model-defined       & Reserved unless a CPU model documents the assignment \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Standard Coprocessor IDs}
+	\label{tab:standard-coprocessor-ids}
+\end{table}
+
+\subsection{Model and Revision Policy}
+
+\begin{itemize}
+	\item Required coprocessors and documented operations must remain backward compatible within the SIRC-1 family.
+	\item Optional standard coprocessors keep their assigned IDs even on models that omit them.
+	\item Reserved coprocessor IDs, reserved operation nibbles, and reserved operand values must raise invalid-opcode faults when
+	      they are not implemented by the selected CPU model.
+	\item Software may probe optional coprocessors by executing the documented operation and handling an invalid-opcode fault, or
+	      by using a model-specific capability table if one is provided by system firmware.
+	\item Processing-unit undocumented opcodes are a separate case: they are accepted by the processing unit and have
+	      architecturally undefined effects unless a future CPU revision documents them.
+\end{itemize}
+
 \section{Exception Unit (Coprocessor 1)}
 
 The Exception Unit handles:
@@ -296,3 +333,304 @@ alignment_fault_handler:
 
 See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
 instructions.
+
+\section{DMA Unit (Coprocessor 2)}
+\label{sec:dma-unit}
+
+The optional DMA unit provides bulk word transfers using the existing address register pairs and the general-purpose
+register file. It is intentionally simple: it has no descriptor table, hidden parameter registers, or autonomous
+background execution. When a DMA command is accepted, the processing unit stops fetching further instructions until the
+DMA command completes or faults.
+
+DMA operations are supervisor-only because they perform memory access using supervisor-visible address state. In
+protected mode, they raise a privilege-violation fault before dispatch.
+
+\subsection{DMA Operations}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llllX}
+		\toprule
+		\textbf{Mnemonic} & \textbf{Command} & \textbf{Count} & \textbf{Registers}                   & \textbf{Operation}                          \\
+		\midrule
+		\mnemonic{DMAR}   & 0x2800 | n       & 0--7           & \reg{a}, \reg{r1}--\reg{r7}          & Read memory at \reg{a} into registers       \\
+		\mnemonic{DMAW}   & 0x2900 | n       & 0--7           & \reg{a}, \reg{r1}--\reg{r7}          & Write registers to memory at \reg{a}        \\
+		\mnemonic{DMAT}   & 0x2A00 | n       & 0--255         & \reg{a}, \reg{l}, \reg{r1}--\reg{r7} & Copy memory at \reg{a} to memory at \reg{l} \\
+		\bottomrule
+	\end{tabularx}
+	\caption{DMA Unit Operations}
+	\label{tab:dma-unit-operations}
+\end{table}
+
+\noindent For all DMA operations, a count of zero is a no-op: no memory access occurs, registers are preserved, and
+address registers are not advanced. CPU status flags are preserved. If the condition is false, no DMA command is
+dispatched, no coprocessor privilege or opcode checks are performed, and all CPU state is preserved.
+
+\noindent DMA memory reads and writes can raise data bus and bus-protection faults using DMA read/write bus access
+types. If an address-register low word overflows or underflows and \texttt{SR.A} is set, the DMA operation raises a
+segment-overflow fault; otherwise the low word wraps modulo $2^{16}$. Partial side effects are possible if a fault
+occurs mid-transfer, and software must not assume that re-executing the same DMA instruction restarts the original
+operation.
+
+\begin{instructionbox}{DMAR -- DMA Read To Registers Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x2800 | n}
+
+	\textbf{Syntax:} \texttt{DMAR \#n}
+
+	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--7. Counts above 7 are invalid DMA
+	operations.
+
+	\textbf{Description:} Reads sequential words from the address in \reg{a} into \reg{r1} through \reg{rn}.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+for i in 1..n:
+    r[i] = memory[a]
+    a.low = a.low + 1
+\end{lstlisting}
+
+	\textbf{Write-back:} A successful non-zero \mnemonic{DMAR} advances \reg{a} by the number of words transferred.
+	Address-register high words are not changed by the transfer increments.
+
+	\textbf{Clobbers:} Writes \reg{r1} through \reg{rn}.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, and invalid counts raise invalid-opcode faults.
+	In protected mode, raises a privilege-violation fault. DMA reads can raise data bus, bus-protection, and
+	segment-overflow faults.
+
+	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
+
+	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
+	DMA read bus cycles and may add wait states through normal bus acknowledgement.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{DMAW -- DMA Write From Registers Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x2900 | n}
+
+	\textbf{Syntax:} \texttt{DMAW \#n}
+
+	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--7. Counts above 7 are invalid DMA
+	operations.
+
+	\textbf{Description:} Writes \reg{r1} through \reg{rn} to sequential words starting at the address in \reg{a}.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+for i in 1..n:
+    memory[a] = r[i]
+    a.low = a.low + 1
+\end{lstlisting}
+
+	\textbf{Write-back:} A successful non-zero \mnemonic{DMAW} advances \reg{a} by the number of words transferred.
+	Address-register high words are not changed by the transfer increments.
+
+	\textbf{Clobbers:} General-purpose registers are preserved.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, and invalid counts raise invalid-opcode faults.
+	In protected mode, raises a privilege-violation fault. DMA writes can raise data bus, bus-protection, and
+	segment-overflow faults.
+
+	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
+
+	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
+	DMA write bus cycles and may add wait states through normal bus acknowledgement.
+
+	\textbf{Privilege:} Supervisor mode only.
+\end{instructionbox}
+
+\begin{instructionbox}{DMAT -- DMA Memory Transfer Meta-Instruction}
+	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}
+
+	\textbf{Syntax:} \texttt{DMAT \#n}
+
+	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--255. A count of zero is a no-op.
+
+	\textbf{Description:} Copies sequential words from the address in \reg{a} to the address in \reg{l}, using
+	\reg{r1}--\reg{r7} as an internal transfer window in chunks of up to seven words.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+while remaining > 0:
+    chunk = min(remaining, 7)
+    read chunk words from memory[a] into r1..r[chunk]
+    write chunk words from r1..r[chunk] to memory[l]
+    remaining = remaining - chunk
+\end{lstlisting}
+
+	\textbf{Write-back:} A successful non-zero \mnemonic{DMAT} advances \reg{a} and \reg{l} by the number of words
+	transferred. Address-register high words are not changed by the transfer increments.
+
+	\textbf{Clobbers:} Clobbers \reg{r1}--\reg{r7}; after completion they contain the final transfer window.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} Missing DMA hardware and unsupported DMA operations raise invalid-opcode faults. In protected
+	mode, raises a privilege-violation fault. DMA reads and writes can raise data bus, bus-protection, and
+	segment-overflow faults.
+
+	\textbf{Fault side effects:} Registers, memory, and address registers reflect the last completed word transfer if a
+	fault occurs mid-transfer.
+
+	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
+
+	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
+	DMA read and write bus cycles and may add wait states through normal bus acknowledgement. Instruction fetch resumes
+	only after the DMA operation completes or faults.
+
+	\textbf{Privilege:} Supervisor mode only.
+
+	\textbf{Overlap:} Overlapping source and destination ranges are architecturally undefined unless the source and
+	destination addresses are identical.
+\end{instructionbox}
+
+\section{Integer Maths Unit (Coprocessor 3)}
+\label{sec:integer-maths-unit}
+
+The optional integer maths unit provides a stable multiply/divide convention. CPU models without the hardware raise an
+invalid-opcode fault for these commands, allowing supervisor software to emulate the operation and return as if the
+coprocessor call had completed.
+
+Reference source listings for software emulation routines are supplied with the SIRC-1 distribution media. Those
+listings are examples of a supervisor compatibility handler, not additional instruction encodings.
+
+\subsection{Maths Operations}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llllX}
+		\toprule
+		\textbf{Mnemonic} & \textbf{Command} & \textbf{Inputs}             & \textbf{Outputs}             & \textbf{Operation}              \\
+		\midrule
+		\mnemonic{MULU}   & 0x3000           & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Unsigned 16 x 16 -> 32 multiply \\
+		\mnemonic{MULS}   & 0x3100           & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Signed 16 x 16 -> 32 multiply   \\
+		\mnemonic{DIVU}   & 0x3200           & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Unsigned divide                 \\
+		\mnemonic{DIVS}   & 0x3300           & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Signed divide                   \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Integer Maths Unit Operations}
+	\label{tab:integer-maths-unit-operations}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{cll}
+		\toprule
+		\textbf{Bit} & \textbf{Name} & \textbf{Meaning}             \\
+		\midrule
+		0            & E             & Any maths error              \\
+		1            & DZ            & Divide by zero               \\
+		2            & OV            & Quotient overflow            \\
+		3--15        & Reserved      & Written as zero, ignore read \\
+		\bottomrule
+	\end{tabular}
+	\caption{Maths Status Word in \reg{r3}}
+	\label{tab:maths-status-word}
+\end{table}
+
+\noindent Integer maths operations preserve CPU status flags. Missing maths hardware and unsupported maths operations
+raise invalid-opcode faults. Divide by zero and quotient overflow are reported in \reg{r3}, not as arithmetic
+exceptions. If the condition is false, no maths command is dispatched, no coprocessor opcode check is performed, and
+registers and status flags are preserved.
+
+\begin{instructionbox}{MULU/MULS -- Integer Multiply Meta-Instructions}
+	\textbf{Assembles to:} \texttt{COPI \#0x3000} or \texttt{COPI \#0x3100}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+MULU                          ; Unsigned multiply
+MULS                          ; Signed multiply
+\end{lstlisting}
+
+	\textbf{Operands:} None in assembly syntax. The operations multiply \reg{r1} by \reg{r2}.
+
+	\textbf{Description:} Multiplies two 16-bit operands and writes the 32-bit product to \reg{r1}:\reg{r2}, high word
+	first. \mnemonic{MULU} treats both inputs as unsigned. \mnemonic{MULS} treats both inputs as two's-complement signed
+	values.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+MULU:
+    product = unsigned(r1) * unsigned(r2)
+    r1 = product[31:16]
+    r2 = product[15:0]
+    r3 = 0
+
+MULS:
+    product = signed(r1) * signed(r2)
+    r1 = product[31:16]
+    r2 = product[15:0]
+    r3 = 0
+\end{lstlisting}
+
+	\textbf{Write-back:} Writes \reg{r1}, \reg{r2}, and \reg{r3}.
+
+	\textbf{Flags:} CPU status flags are preserved. \reg{r3} is written as zero.
+
+	\textbf{Exceptions:} Missing maths hardware and unsupported multiply operations raise invalid-opcode faults. These
+	operations perform no data-memory bus access.
+
+	\textbf{Condition codes:} If the condition is false, no maths command is dispatched and registers and status flags are
+	preserved.
+
+	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. Hardware maths operations
+	may take additional implementation-defined cycles before instruction fetch resumes.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+\end{instructionbox}
+
+\begin{instructionbox}{DIVU/DIVS -- Integer Divide Meta-Instructions}
+	\textbf{Assembles to:} \texttt{COPI \#0x3200} or \texttt{COPI \#0x3300}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+DIVU                          ; Unsigned divide
+DIVS                          ; Signed divide
+\end{lstlisting}
+
+	\textbf{Operands:} None in assembly syntax. The dividend is \reg{r1}:\reg{r2}, high word first. The divisor is
+	\reg{r3}.
+
+	\textbf{Description:} Divides a 32-bit dividend by a 16-bit divisor. Successful division writes the remainder to
+	\reg{r1}, the quotient to \reg{r2}, and zero to \reg{r3}.
+
+	\textbf{Operation:}
+	\begin{lstlisting}
+if divisor is zero:
+    r3 = E | DZ
+else if quotient does not fit in 16 bits:
+    r3 = E | OV
+else:
+    r1 = remainder
+    r2 = quotient
+    r3 = 0
+\end{lstlisting}
+
+	\textbf{Write-back:} Successful division writes \reg{r1}, \reg{r2}, and \reg{r3}. Divide-by-zero and
+	quotient-overflow cases leave \reg{r1}:\reg{r2} unchanged and write the maths status word to \reg{r3}.
+
+	\textbf{Flags:} CPU status flags are preserved. Maths errors are reported through \reg{r3}, not through \reg{sr}.
+
+	\textbf{Exceptions:} Missing maths hardware and unsupported divide operations raise invalid-opcode faults. Divide by
+	zero and quotient overflow do not raise arithmetic exceptions. These operations perform no data-memory bus access.
+
+	\textbf{Condition codes:} If the condition is false, no maths command is dispatched and registers and status flags are
+	preserved.
+
+	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. Hardware maths operations
+	may take additional implementation-defined cycles before instruction fetch resumes. Software emulation timing is
+	defined by the invalid-opcode handler.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
+	\textbf{Signed division:} \mnemonic{DIVS} treats \reg{r1}:\reg{r2} as a 32-bit two's-complement dividend and
+	\reg{r3} as a 16-bit two's-complement divisor. The quotient is truncated toward zero and the remainder has the sign
+	of the dividend. The case \texttt{-2147483648 / -1} is quotient overflow.
+\end{instructionbox}

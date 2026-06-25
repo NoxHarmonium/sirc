@@ -301,8 +301,9 @@ Fault types use the following values:
 \end{itemize}
 
 The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
-faults that involve memory access). For coprocessor invalid-opcode faults that occur before bus access, this field will
-be zero.
+faults that involve memory access). For coprocessor invalid-opcode faults that occur during coprocessor dispatch before
+bus access, the low word of this field stores the 16-bit coprocessor command that could not be dispatched, and the high
+word is zero. This lets an invalid-opcode handler emulate missing optional coprocessor operations.
 
 Exception handlers can use the \texttt{ETFR} instruction to read the fault metadata register and decode this
 information to determine how to handle the fault appropriately.
