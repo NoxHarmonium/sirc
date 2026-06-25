@@ -101,24 +101,13 @@ software.
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{ID} & \textbf{Name}   & \textbf{Optional} & \textbf{Purpose}                             \\
+		\textbf{ID} & \textbf{Name}      & \textbf{Optional} & \textbf{Purpose}                            \\
 		\midrule
-		0x0         & Processing Unit & No                & Executes instructions                        \\
-		0x1         & Exception Unit  & No                & Handles interrupts and exceptions            \\
-		0x2         & DMA Unit        & Yes               & Transfers large amounts of data via the bus  \\
-		0x3         & Maths Unit      & Yes               & Performs mathematical operations in hardware \\
-		0x4         & Reserved        & Yes               & TBA                                          \\
-		0x5         & Reserved        & Yes               & TBA                                          \\
-		0x6         & Reserved        & Yes               & TBA                                          \\
-		0x7         & Reserved        & Yes               & TBA                                          \\
-		0x8         & Reserved        & Yes               & TBA                                          \\
-		0x9         & Reserved        & Yes               & TBA                                          \\
-		0xA         & Reserved        & Yes               & TBA                                          \\
-		0xB         & Reserved        & Yes               & TBA                                          \\
-		0xC         & Reserved        & Yes               & TBA                                          \\
-		0xD         & Reserved        & Yes               & TBA                                          \\
-		0xE         & Reserved        & Yes               & TBA                                          \\
-		0xF         & Reserved        & Yes               & TBA                                          \\
+		0x0         & Processing Unit    & No                & Executes instructions                       \\
+		0x1         & Exception Unit     & No                & Handles interrupts and exceptions           \\
+		0x2         & DMA Unit           & Yes               & Transfers blocks of data via the bus        \\
+		0x3         & Integer Maths Unit & Yes               & Multiplies and divides integer values       \\
+		0x4--0xF    & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
 		\bottomrule
 	\end{tabular}
 	\caption{List of coprocessors}
