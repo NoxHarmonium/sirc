@@ -55,8 +55,8 @@ ExceptionUnitRegisters {
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x21e,
-            return_status_register: 0x100,
+            return_address: 0x328,
+            return_status_register: 0x0,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {

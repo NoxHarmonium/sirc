@@ -1,7 +1,10 @@
 ;; Integer maths coprocessor emulation example
 ;;
 ;; This listing demonstrates a supervisor invalid-opcode handler that
-;; emulates the optional MULU instruction for a protected-mode program.
+;; emulates the MULU co-processor instruction for a protected-mode program.
+;;
+;; If the CPU support MULU, it will just execute it in hardware, if it does not, it will fault and
+;; emulate it.
 ;;
 ;; Expected final registers:
 ;; r1 = product high word
@@ -10,6 +13,18 @@
 ;; r4-r7 = caller values preserved across the emulated MULU
 
 .EQU $PROGRAM_SEGMENT #0x0000
+.EQU $FRAME_CALLER_AH #0
+.EQU $FRAME_CALLER_AL #1
+.EQU $FRAME_CALLER_R4 #2
+.EQU $FRAME_CALLER_R5 #3
+.EQU $FRAME_CALLER_R6 #4
+.EQU $FRAME_CALLER_R7 #5
+.EQU $FRAME_RETURN_HIGH #6
+.EQU $FRAME_RETURN_LOW #7
+.EQU $FRAME_RETURN_STATUS #8
+.EQU $FRAME_WORDS #9
+.EQU $FRAME_RETURN_LOW_FROM_RESTORED_SP #0xFFFE
+.EQU $FRAME_RETURN_STATUS_FROM_RESTORED_SP #0xFFFF
 
 .ORG 0x0000
 .DQ @start
@@ -46,26 +61,90 @@ COPI #0x14FF
 .ORG 0x0300
 :invalid_opcode_fault_handler
 
-STOR -(s), ah
-STOR -(s), al
-STOR -(s), r4
-STOR -(s), r5
-STOR -(s), r6
-STOR -(s), r7
+; Reserve stack space
+SUBI sl, $FRAME_WORDS
+; Save registers that will be clobbered
+STOR ($FRAME_CALLER_AH, s), ah
+STOR ($FRAME_CALLER_AL, s), al
+STOR ($FRAME_CALLER_R4, s), r4
+STOR ($FRAME_CALLER_R5, s), r5
+STOR ($FRAME_CALLER_R6, s), r6
+STOR ($FRAME_CALLER_R7, s), r7
 
-; This demonstration handler is installed only for the MULU fixture above.
-; A full compatibility handler would inspect fault metadata register 7 and
-; dispatch to the appropriate software routine.
-; 0x0012 * 0x0034 = 0x000003A8.
-LOAD r1, #0
-LOAD r2, #0x03A8
-LOAD r3, #0
+; Read the unresolved COP command from fault metadata register 7. For invalid
+; COP faults, the metadata return-address field contains the COP command value.
+ETFR a, #7
+; 0x3000 is MULU
+CMPI al, #0x3000
+BRAN|== @dispatch_mulu
 
-LOAD r7, (s)+
-LOAD r6, (s)+
-LOAD r5, (s)+
-LOAD r4, (s)+
-LOAD al, (s)+
-LOAD ah, (s)+
+; This reference handler only implements MULU.
+; Halt CPU.
+COPI #0x14FF
 
+:dispatch_mulu
+; Save the original fault return state, then retarget the fault return so the
+; heavier emulation routine runs as normal supervisor code instead of fault code.
+
+; Transfer exception level 6 (fault) return registers to a/r7
+ETFR #6
+; Save the original fault return registers so we can return manually after the emulation code is done
+STOR ($FRAME_RETURN_HIGH, s), ah
+STOR ($FRAME_RETURN_LOW, s), al
+STOR ($FRAME_RETURN_STATUS, s), r7
+
+; Force RETE to return to the emulation routine, rather than the after the fault
+LOAD ah, $PROGRAM_SEGMENT
+LOAD al, @emulate_mulu
+LOAD r7, #0
+; Transfer a/r7 to exception level 6 (fault) return registers
+ETTR #6
+; Exit the fault
 RETE
+
+:emulate_mulu
+LOAD r4, r1
+LOAD r5, #0
+LOAD r6, r2
+LOAD r7, #16
+LOAD r1, #0
+LOAD r2, #0
+
+:mulu_loop
+TSAI r6, #1
+BRAN|== @mulu_skip_add
+ADDR r2, r2, r4
+ADCR r1, r1, r5
+
+:mulu_skip_add
+TSAI r4, #0x8000
+BRAN|== @mulu_shift_without_carry
+SHFT r4, LSL #1
+ORRI r5, #1, LSL #1
+BRAN @mulu_shift_done
+
+:mulu_shift_without_carry
+SHFT r4, LSL #1
+SHFT r5, LSL #1
+
+:mulu_shift_done
+SHFT r6, LSR #1
+SUBI r7, #1
+BRAN|!= @mulu_loop
+
+; Restore all the clobbered registers
+LOAD ah, ($FRAME_CALLER_AH, s)
+LOAD al, ($FRAME_CALLER_AL, s)
+LOAD r4, ($FRAME_CALLER_R4, s)
+LOAD r5, ($FRAME_CALLER_R5, s)
+LOAD r6, ($FRAME_CALLER_R6, s)
+LOAD r7, ($FRAME_CALLER_R7, s)
+
+; Restore program segment
+LOAD ph, ($FRAME_RETURN_HIGH, s)
+; Restore stack
+LDEA s, ($FRAME_WORDS, s)
+; Restore original SR which puts it back in protected mode
+LOAD sr, ($FRAME_RETURN_STATUS_FROM_RESTORED_SP, s)
+; Jump to the instruction after the MULU instruction which faulted
+LOAD pl, ($FRAME_RETURN_LOW_FROM_RESTORED_SP, s)

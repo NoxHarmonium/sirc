@@ -635,9 +635,10 @@ Tasks:
   - Progress: `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs` now has an end-to-end test for "absent coprocessor ->
     invalid-opcode handler executes normal supervisor code -> RETE returns to protected caller".
   - Progress: `examples/math-coprocessor-emulation` now contains a runnable protected-mode `MULU` emulation example
-    that exercises invalid-opcode dispatch, supervisor emulation, `RETE` return, caller register preservation, and the
-    expected register dump. It intentionally uses a compact fixture-specific multiply body; general `MULU`, `MULS`,
-    `DIVU`, and `DIVS` software routines remain to be written.
+    that exercises invalid-opcode dispatch, command dispatch from the fault metadata register, a normal-supervisor
+    trampoline out of the fault handler, a general unsigned shift-and-add multiply routine, protected-mode return-state
+    restoration, caller register preservation, and the expected register dump. `MULS`, `DIVU`, and `DIVS` software
+    routines remain to be written if we want the full optional maths unit covered by reference routines.
 
 Acceptance criteria:
 
