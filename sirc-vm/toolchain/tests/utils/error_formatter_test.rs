@@ -39,6 +39,15 @@ fn test_no_input() {
         one of:
           expected "COPI" at line 2, column 1, or
           expected "COPR" at line 2, column 1, or
+        in section "Standard Coprocessor Meta-Instruction" at line 2, column 1,
+        one of:
+          expected "DMAR" at line 2, column 1, or
+          expected "DMAW" at line 2, column 1, or
+          expected "DMAT" at line 2, column 1, or
+          expected "MULU" at line 2, column 1, or
+          expected "MULS" at line 2, column 1, or
+          expected "DIVU" at line 2, column 1, or
+          expected "DIVS" at line 2, column 1, or
         in section "Arithmetic Immediate Instruction" at line 2, column 1,
         one of:
           expected "ADDI" at line 2, column 1, or

@@ -2,6 +2,7 @@ pub mod arithmetic_immediate;
 pub mod arithmetic_register;
 pub mod branching;
 pub mod coprocessor;
+pub mod coprocessor_meta;
 pub mod exception;
 pub mod ldea;
 pub mod ldel;

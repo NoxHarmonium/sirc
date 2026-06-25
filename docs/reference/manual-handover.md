@@ -510,7 +510,20 @@ Acceptance criteria:
 
 Goal: clarify optional coprocessors and future CPU variants.
 
-Status: Design direction agreed; manual/spec updates pending.
+Status: In progress. Core manual/spec updates and assembler lowering are implemented; reference maths emulation examples
+remain.
+
+Progress:
+
+- Chapter 16 now has a standard coprocessor ID compatibility table and model/revision policy.
+- Chapter 16 now specifies the optional DMA unit (coprocessor 0x2), including `DMAR`, `DMAW`, and `DMAT` syntax,
+  encodings, implicit registers, clobbers, count rules, fault behavior, overlap behavior, and privilege rules.
+- Chapter 16 now specifies the optional integer maths unit (coprocessor 0x3), including `MULU`, `MULS`, `DIVU`, and
+  `DIVS` syntax, encodings, implicit registers, result/status behavior, and the software-emulation compatibility story.
+- The assembler now parses the DMA and maths meta-instructions and lowers them to canonical `COPI #command` forms.
+  Toolchain coverage lives in `sirc-vm/toolchain/tests/assembler/coprocessor_test.rs`.
+- The instruction summary, addressing-mode legality table, meta-instruction cross-reference, introduction coprocessor
+  table, and undocumented-opcode expansion notes now point to the standard coprocessor forms.
 
 Design decisions to carry forward:
 
@@ -529,7 +542,7 @@ Design decisions to carry forward:
   - `DMAT #n` copies sequential words from memory at address register `a` to memory at address register `l`, using
     `r1`--`r7` as a transfer window internally. It transfers up to one 8-bit count operand per command; larger copies
     are done by looping in software.
-- Proposed DMA command encodings:
+- DMA command encodings:
   - `DMAR #n` -> `COPI #0x2800 | n`
   - `DMAW #n` -> `COPI #0x2900 | n`
   - `DMAT #n` -> `COPI #0x2A00 | n`
@@ -540,11 +553,12 @@ Design decisions to carry forward:
   - `l` is the destination pointer for `DMAT`.
   - `r1`--`r7` are the transfer window; `DMAT` clobbers them.
   - Successful operations advance the relevant address-register low words by the number of words transferred.
-- DMA fault policy to specify: data bus and bus-protection failures raise normal faults with DMA read/write `BAT`
-  values. Partial side effects are possible for a fault that occurs mid-transfer, and DMA operations are not guaranteed
-  to be restartable by simply re-executing the same instruction.
-- DMA overlap policy to specify: overlapping `DMAT` source/destination ranges are architecturally undefined unless
-  source and destination are identical.
+- DMA fault policy: data bus and bus-protection failures raise normal faults with DMA read/write `BAT` values. If an
+  address-register low word overflows or underflows and `SR.A` is set, DMA raises a segment-overflow fault; otherwise
+  the low word wraps. Partial side effects are possible for a fault that occurs mid-transfer, and DMA operations are not
+  guaranteed to be restartable by simply re-executing the same instruction.
+- DMA overlap policy: overlapping `DMAT` source/destination ranges are architecturally undefined unless source and
+  destination are identical.
 - DMA count encoding decision: operand value `0x00` means no-op. `DMAR` and `DMAW` accept counts 0--7, where counts
   above 7 are invalid DMA operations. `DMAT` accepts counts 0--255, with larger transfers done by software loops.
 - Coprocessor 0x3 is the optional standard integer maths unit. It should provide a stable software-visible convention
@@ -555,7 +569,7 @@ Design decisions to carry forward:
   - `MULS`: signed `r1 * r2 -> r1:r2`, high word in `r1`, low word in `r2`.
   - `DIVU`: unsigned `r1:r2 / r3 -> r1` remainder, `r2` quotient, `r3` status.
   - `DIVS`: signed `r1:r2 / r3 -> r1` remainder, `r2` quotient, `r3` status.
-- Proposed maths command encodings:
+- Maths command encodings:
   - `MULU` -> `COPI #0x3000`
   - `MULS` -> `COPI #0x3100`
   - `DIVU` -> `COPI #0x3200`
@@ -572,7 +586,7 @@ Design decisions to carry forward:
 
 Tasks:
 
-- Add a coprocessor compatibility table.
+- Add a coprocessor compatibility table. Resolved in Chapter 16.
   - ID
   - name
   - required/optional
@@ -581,13 +595,13 @@ Tasks:
   - privilege restrictions
   - instruction/opcode space
 
-- Add model/revision policy.
+- Add model/revision policy. Resolved in Chapter 16.
   - what must remain backward compatible
   - what reserved fields must do
   - what optional features software can probe
   - how future revisions advertise capabilities
 
-- Expand the coprocessor instruction chapter.
+- Expand the coprocessor instruction chapter. Resolved for the current standard coprocessor scope.
   - exact COP operand encoding
   - coprocessor ID field
   - opcode field
@@ -595,7 +609,7 @@ Tasks:
   - invalid coprocessor/opcode behavior
   - supervisor-only operation behavior
 
-- Add the DMA unit specification.
+- Add the DMA unit specification. Resolved in Chapter 16 and assembler lowering.
   - ID 0x2, optional standard coprocessor
   - `DMAR`, `DMAW`, and `DMAT` meta-instructions and encodings
   - implicit register conventions
@@ -605,7 +619,7 @@ Tasks:
   - bus access type usage and fault side effects
   - source/destination overlap behavior
 
-- Add the integer maths unit specification.
+- Add the integer maths unit specification. Resolved in Chapter 16 and assembler lowering.
   - ID 0x3, optional standard coprocessor
   - `MULU`, `MULS`, `DIVU`, and `DIVS` meta-instructions and encodings
   - implicit register conventions
@@ -613,7 +627,7 @@ Tasks:
   - divide-by-zero and quotient-overflow handling
   - software-emulation compatibility story for missing hardware
 
-- Add reference maths emulation examples.
+- Add reference maths emulation examples. Pending.
   - Put full assembly routines in `examples/` rather than only in LaTeX.
   - Make the examples assemble and, if practical, add tests around the expected register/status results.
   - Document in the manual that these are reference software routines, not additional ISA requirements.
