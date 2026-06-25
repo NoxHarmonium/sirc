@@ -1,13 +1,13 @@
 ===REGISTERS===
 Registers {
     sr: 0x100,
-    r1: 0x0,
-    r2: 0x3a8,
+    r1: 0xfffe,
+    r2: 0x1,
     r3: 0x0,
-    r4: 0x4444,
-    r5: 0x5555,
-    r6: 0x6666,
-    r7: 0x7777,
+    r4: 0x600d,
+    r5: 0x3,
+    r6: 0x0,
+    r7: 0x7773,
     lh: 0x0,
     ll: 0x0,
     ah: 0x0,
@@ -15,7 +15,7 @@ Registers {
     sh: 0x0,
     sl: 0x800,
     ph: 0x0,
-    pl: 0x220,
+    pl: 0x294,
     system_ram_offset: 0x0,
     pending_coprocessor_command: 0x0,
 }
@@ -25,8 +25,8 @@ ExceptionUnitRegisters {
     pending_fault: None,
     link_registers: [
         ExceptionLinkRegister {
-            return_address: 0x0,
-            return_status_register: 0x0,
+            return_address: 0x272,
+            return_status_register: 0x100,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
@@ -55,8 +55,8 @@ ExceptionUnitRegisters {
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x328,
-            return_status_register: 0x0,
+            return_address: 0x272,
+            return_status_register: 0x100,
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {

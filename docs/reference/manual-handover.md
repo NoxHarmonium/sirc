@@ -636,9 +636,10 @@ Tasks:
     invalid-opcode handler executes normal supervisor code -> RETE returns to protected caller".
   - Progress: `examples/math-coprocessor-emulation` now contains a runnable protected-mode `MULU` emulation example
     that exercises invalid-opcode dispatch, command dispatch from the fault metadata register, a normal-supervisor
-    trampoline out of the fault handler, a general unsigned shift-and-add multiply routine, protected-mode return-state
-    restoration, caller register preservation, and the expected register dump. `MULS`, `DIVU`, and `DIVS` software
-    routines remain to be written if we want the full optional maths unit covered by reference routines.
+    trampoline out of the fault handler, a software-exception return gate for atomic `p`/`sr` restoration, a general
+    unsigned shift-and-add multiply routine, three dump-visible `MULU` assertions, caller register preservation, and
+    the expected register dump. `MULS`, `DIVU`, and `DIVS` software routines remain to be written if we want the full
+    optional maths unit covered by reference routines.
 
 Acceptance criteria:
 

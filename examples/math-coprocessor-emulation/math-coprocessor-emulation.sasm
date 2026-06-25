@@ -7,10 +7,13 @@
 ;; emulate it.
 ;;
 ;; Expected final registers:
-;; r1 = product high word
-;; r2 = product low word
-;; r3 = maths status word
-;; r4-r7 = caller values preserved across the emulated MULU
+;; r1 = 0xFFFE (final product high word)
+;; r2 = 0x0001 (final product low word)
+;; r3 = 0x0000 (maths status word)
+;; r4 = 0x600D (assertion success marker)
+;; r5 = 0x0003 (number of passing MULU examples)
+;; r6 = 0x0000 (failure code, zero means no failure)
+;; r7 = 0x7773 (caller value preserved across the final emulated MULU)
 
 .EQU $PROGRAM_SEGMENT #0x0000
 .EQU $FRAME_CALLER_AH #0
@@ -23,8 +26,6 @@
 .EQU $FRAME_RETURN_LOW #7
 .EQU $FRAME_RETURN_STATUS #8
 .EQU $FRAME_WORDS #9
-.EQU $FRAME_RETURN_LOW_FROM_RESTORED_SP #0xFFFE
-.EQU $FRAME_RETURN_STATUS_FROM_RESTORED_SP #0xFFFF
 
 .ORG 0x0000
 .DQ @start
@@ -32,7 +33,15 @@
 .ORG 0x0008
 .DQ @invalid_opcode_fault_handler
 
+.ORG 0x00E0
+.DQ @emulation_return_gate
+
 .ORG 0x0200
+
+;;
+;; "User" Code
+;;
+
 :start
 
 LOAD ah, $PROGRAM_SEGMENT
@@ -42,21 +51,95 @@ LOAD ll, #0
 LOAD sh, $PROGRAM_SEGMENT
 LOAD sl, #0x0800
 
-LOAD r1, #0x0012
-LOAD r2, #0x0034
-LOAD r3, #0xFFFF
-LOAD r4, #0x4444
-LOAD r5, #0x5555
-LOAD r6, #0x6666
-LOAD r7, #0x7777
+LOAD r4, #0x600D
+LOAD r5, #0
+LOAD r6, #0
 
 ; Run the application code in protected mode. MULU is user-callable, so a
 ; missing maths unit raises invalid-opcode rather than privilege violation.
 ORRI sr, #0x0100
+
+; MULU case 1: 0x0012 * 0x0034 = 0x000003A8.
+LOAD r1, #0x0012
+LOAD r2, #0x0034
+LOAD r3, #0xFFFF
+LOAD r7, #0x7771
 MULU
+CMPI r1, #0
+LOAD|!= r6, #0x0101
+BRAN|!= @assert_failed
+CMPI r2, #0x03A8
+LOAD|!= r6, #0x0102
+BRAN|!= @assert_failed
+CMPI r3, #0
+LOAD|!= r6, #0x0103
+BRAN|!= @assert_failed
+CMPI r4, #0x600D
+LOAD|!= r6, #0x0104
+BRAN|!= @assert_failed
+CMPI r7, #0x7771
+LOAD|!= r6, #0x0105
+BRAN|!= @assert_failed
+ADDI r5, #1
+
+; MULU case 2: 0x8000 * 0x0002 = 0x00010000.
+LOAD r1, #0x8000
+LOAD r2, #0x0002
+LOAD r3, #0xFFFF
+LOAD r7, #0x7772
+MULU
+CMPI r1, #0x0001
+LOAD|!= r6, #0x0201
+BRAN|!= @assert_failed
+CMPI r2, #0
+LOAD|!= r6, #0x0202
+BRAN|!= @assert_failed
+CMPI r3, #0
+LOAD|!= r6, #0x0203
+BRAN|!= @assert_failed
+CMPI r4, #0x600D
+LOAD|!= r6, #0x0204
+BRAN|!= @assert_failed
+CMPI r7, #0x7772
+LOAD|!= r6, #0x0205
+BRAN|!= @assert_failed
+ADDI r5, #1
+
+; MULU case 3: 0xFFFF * 0xFFFF = 0xFFFE0001.
+LOAD r1, #0xFFFF
+LOAD r2, #0xFFFF
+LOAD r3, #0xFFFF
+LOAD r7, #0x7773
+MULU
+CMPI r1, #0xFFFE
+LOAD|!= r6, #0x0301
+BRAN|!= @assert_failed
+CMPI r2, #0x0001
+LOAD|!= r6, #0x0302
+BRAN|!= @assert_failed
+CMPI r3, #0
+LOAD|!= r6, #0x0303
+BRAN|!= @assert_failed
+CMPI r4, #0x600D
+LOAD|!= r6, #0x0304
+BRAN|!= @assert_failed
+CMPI r7, #0x7773
+LOAD|!= r6, #0x0305
+BRAN|!= @assert_failed
+ADDI r5, #1
 
 ; Halt CPU.
 COPI #0x14FF
+
+:assert_failed
+LOAD r4, #0xBAD0
+COPI #0x14FF
+
+;;
+;; "System" Code
+;;
+
+;; Fault Handlers
 
 .ORG 0x0300
 :invalid_opcode_fault_handler
@@ -132,7 +215,30 @@ SHFT r6, LSR #1
 SUBI r7, #1
 BRAN|!= @mulu_loop
 
-; Restore all the clobbered registers
+LOAD r3, #0
+
+; Leave fault level by using a software-exception return gate. The gate rewrites
+; its own link register with the original protected-mode return address and SR,
+; then RETE restores both atomically.
+EXCP #0x70
+
+; EXCP #0x70 should not return here.
+; Halt CPU.
+COPI #0x14FF
+
+;; Software Exception Handlers
+
+:emulation_return_gate
+; Software exceptions run at level 1, so RETE will use link register 0. Rewrite
+; that link register with the original protected-mode return state saved by the
+; invalid-opcode shim.
+LOAD ah, ($FRAME_RETURN_HIGH, s)
+LOAD al, ($FRAME_RETURN_LOW, s)
+LOAD r7, ($FRAME_RETURN_STATUS, s)
+ETTR #6
+ETTR #0
+
+; Restore all the clobbered registers.
 LOAD ah, ($FRAME_CALLER_AH, s)
 LOAD al, ($FRAME_CALLER_AL, s)
 LOAD r4, ($FRAME_CALLER_R4, s)
@@ -140,11 +246,7 @@ LOAD r5, ($FRAME_CALLER_R5, s)
 LOAD r6, ($FRAME_CALLER_R6, s)
 LOAD r7, ($FRAME_CALLER_R7, s)
 
-; Restore program segment
-LOAD ph, ($FRAME_RETURN_HIGH, s)
-; Restore stack
+; Restore stack and return atomically through the software-exception link
+; register, so p and sr are restored together.
 LDEA s, ($FRAME_WORDS, s)
-; Restore original SR which puts it back in protected mode
-LOAD sr, ($FRAME_RETURN_STATUS_FROM_RESTORED_SP, s)
-; Jump to the instruction after the MULU instruction which faulted
-LOAD pl, ($FRAME_RETURN_LOW_FROM_RESTORED_SP, s)
+RETE
