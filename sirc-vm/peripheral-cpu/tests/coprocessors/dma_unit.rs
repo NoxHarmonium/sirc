@@ -5,9 +5,7 @@ use peripheral_cpu::{
     coprocessors::{
         exception_unit::definitions::Faults,
         processing_unit::{
-            definitions::{
-                ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
-            },
+            definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
             encoding::encode_instruction,
         },
     },
