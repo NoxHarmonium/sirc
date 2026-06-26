@@ -138,7 +138,7 @@ selected coprocessor does not implement, the CPU raises an invalid-opcode fault.
 		\midrule
 		0x0         & Processing Unit      & Yes               & Internal            & Executes SIRCIS processing-unit instructions         \\
 		0x1         & Exception Unit       & Yes               & 0x0--0xD            & Handles reset, faults, interrupts, traps, and links  \\
-		0x2         & DMA Unit             & No                & 0x8--0xA            & Optional standard DMA transfer unit                  \\
+		0x2         & DMA Unit             & Yes               & 0x8--0xA            & Required standard DMA transfer unit                  \\
 		0x3         & Integer Maths Unit   & No                & 0x0--0x3            & Optional standard integer multiply/divide unit       \\
 		0x4--0xF    & Reserved/model space & No                & Model-defined       & Reserved unless a CPU model documents the assignment \\
 		\bottomrule
@@ -337,7 +337,7 @@ instructions.
 \section{DMA Unit (Coprocessor 2)}
 \label{sec:dma-unit}
 
-The optional DMA unit provides bulk word transfers using the existing address register pairs and the general-purpose
+The required DMA unit provides bulk word transfers using the existing address register pairs and the general-purpose
 register file. It is intentionally simple: it has no descriptor table, hidden parameter registers, or autonomous
 background execution. When a DMA command is accepted, the processing unit stops fetching further instructions until the
 DMA command completes or faults.
@@ -352,20 +352,34 @@ protected mode, they raise a privilege-violation fault before dispatch.
 	\small
 	\begin{tabularx}{\textwidth}{llllX}
 		\toprule
-		\textbf{Mnemonic} & \textbf{Command} & \textbf{Count} & \textbf{Registers}                   & \textbf{Operation}                          \\
+		\textbf{Mnemonic} & \textbf{Command} & \textbf{Count}              & \textbf{Registers}                          & \textbf{Operation}                          \\
 		\midrule
-		\mnemonic{DMAR}   & 0x2800 | n       & 0--7           & \reg{a}, \reg{r1}--\reg{r7}          & Read memory at \reg{a} into registers       \\
-		\mnemonic{DMAW}   & 0x2900 | n       & 0--7           & \reg{a}, \reg{r1}--\reg{r7}          & Write registers to memory at \reg{a}        \\
-		\mnemonic{DMAT}   & 0x2A00 | n       & 0--255         & \reg{a}, \reg{l}, \reg{r1}--\reg{r7} & Copy memory at \reg{a} to memory at \reg{l} \\
+		\mnemonic{DMAR}   & 0x2800 | operand & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Read memory into registers                  \\
+		\mnemonic{DMAW}   & 0x2900 | operand & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Write registers to memory                   \\
+		\mnemonic{DMAT}   & 0x2A00 | n       & 0--255                      & \reg{a}, \reg{l}, \reg{r1}--\reg{r7}        & Copy memory at \reg{a} to memory at \reg{l} \\
 		\bottomrule
 	\end{tabularx}
 	\caption{DMA Unit Operations}
 	\label{tab:dma-unit-operations}
 \end{table}
 
+\noindent For \mnemonic{DMAR} and \mnemonic{DMAW}, the command operand byte is encoded as follows: bits 7--6 select the
+address register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved), bit 5
+selects direction (\texttt{0} = forward, \texttt{1} = backward), bits 2--0 hold the count magnitude, and bits 4--3 are
+reserved and written as zero. Negative counts are encoded as the backward direction bit plus the positive magnitude, not
+as a two's-complement count field. A zero count is encoded with the forward direction bit.
+
 \noindent For all DMA operations, a count of zero is a no-op: no memory access occurs, registers are preserved, and
 address registers are not advanced. CPU status flags are preserved. If the condition is false, no DMA command is
 dispatched, no coprocessor privilege or opcode checks are performed, and all CPU state is preserved.
+
+\noindent DMA timing assumes the command condition is true and every bus access is acknowledged without wait states. The
+\mnemonic{COPI} dispatch takes the normal 6 cycles, then the DMA unit gets at least one post-dispatch cycle. For a zero
+count, that cycle accepts the command, decodes the count, clears the pending cause, and resumes instruction fetch. For a
+non-zero count, the same first cycle may perform the first no-wait DMA bus access. Each additional DMA read or write bus
+access then takes one cycle in the no-wait case. Therefore \mnemonic{DMAR} and \mnemonic{DMAW} take
+$6 + \max(|n|, 1)$ cycles, and \mnemonic{DMAT} takes $6 + \max(2n, 1)$ cycles. A false condition skips the DMA command
+entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
 
 \noindent DMA memory reads and writes can raise data bus and bus-protection faults using DMA read/write bus access
 types. If an address-register low word overflows or underflows and \texttt{SR.A} is set, the DMA operation raises a
@@ -374,73 +388,96 @@ occurs mid-transfer, and software must not assume that re-executing the same DMA
 operation.
 
 \begin{instructionbox}{DMAR -- DMA Read To Registers Meta-Instruction}
-	\textbf{Assembles to:} \texttt{COPI \#0x2800 | n}
+	\textbf{Assembles to:} \texttt{COPI \#0x2800 | operand}
 
-	\textbf{Syntax:} \texttt{DMAR \#n}
+	\textbf{Syntax:} \texttt{DMAR addr, \#n}
 
-	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--7. Counts above 7 are invalid DMA
-	operations.
+	\textbf{Operands:} \texttt{addr} must be \reg{a}, \reg{l}, or \reg{s}. \texttt{\#n} is a literal count operand in the
+	range \texttt{\#-7}--\texttt{\#7}. Counts outside that range are invalid DMA operations.
 
-	\textbf{Description:} Reads sequential words from the address in \reg{a} into \reg{r1} through \reg{rn}.
+	\textbf{Description:} Reads sequential words from the selected address register into \reg{r1} through \reg{rn}.
+	Positive counts read from the current address and advance it. Negative counts first move the address register backward
+	by the count magnitude, then read the ascending memory block from that new address.
 
 	\textbf{Operation:}
 	\begin{lstlisting}
-for i in 1..n:
-    r[i] = memory[a]
-    a.low = a.low + 1
+count = abs(n)
+if n < 0:
+    addr.low = addr.low - count
+transfer = addr
+for i in 1..count:
+    r[i] = memory[transfer]
+    transfer.low = transfer.low + 1
+if n > 0:
+    addr.low = addr.low + count
 \end{lstlisting}
 
-	\textbf{Write-back:} A successful non-zero \mnemonic{DMAR} advances \reg{a} by the number of words transferred.
-	Address-register high words are not changed by the transfer increments.
+	\textbf{Write-back:} A successful positive-count \mnemonic{DMAR} advances the selected address register by the count
+	magnitude. A successful negative-count \mnemonic{DMAR} leaves the selected address register at its decremented start
+	address. Address-register high words are not changed by the transfer increments or decrements.
 
 	\textbf{Clobbers:} Writes \reg{r1} through \reg{rn}.
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, and invalid counts raise invalid-opcode faults.
-	In protected mode, raises a privilege-violation fault. DMA reads can raise data bus, bus-protection, and
+	\textbf{Exceptions:} Unsupported DMA operations, reserved operand encodings, and invalid counts raise invalid-opcode
+	faults. In protected mode, raises a privilege-violation fault. DMA reads can raise data bus, bus-protection, and
 	segment-overflow faults.
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA read bus cycles and may add wait states through normal bus acknowledgement.
+	\textbf{Timing:} $6 + \max(|n|, 1)$ cycles when the command condition is true and the DMA read cycles are acknowledged
+	without wait states. The $n = 0$ no-op form and one-word transfer forms take 7 cycles. Wait states add to the relevant
+	DMA read bus cycle. If the condition is false, the DMA command is not dispatched and the instruction takes 6 cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 \end{instructionbox}
 
 \begin{instructionbox}{DMAW -- DMA Write From Registers Meta-Instruction}
-	\textbf{Assembles to:} \texttt{COPI \#0x2900 | n}
+	\textbf{Assembles to:} \texttt{COPI \#0x2900 | operand}
 
-	\textbf{Syntax:} \texttt{DMAW \#n}
+	\textbf{Syntax:} \texttt{DMAW addr, \#n}
 
-	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--7. Counts above 7 are invalid DMA
-	operations.
+	\textbf{Operands:} \texttt{addr} must be \reg{a}, \reg{l}, or \reg{s}. \texttt{\#n} is a literal count operand in the
+	range \texttt{\#-7}--\texttt{\#7}. Counts outside that range are invalid DMA operations.
 
-	\textbf{Description:} Writes \reg{r1} through \reg{rn} to sequential words starting at the address in \reg{a}.
+	\textbf{Description:} Writes \reg{r1} through \reg{rn} to sequential words at the selected address register. Positive
+	counts write from the current address and advance it. Negative counts first move the address register backward by the
+	count magnitude, then write the ascending memory block from that new address. Register order always corresponds to
+	ascending memory addresses, so \texttt{DMAW s, \#-n} followed by \texttt{DMAR s, \#n} restores \reg{r1} through
+	\reg{rn}.
 
 	\textbf{Operation:}
 	\begin{lstlisting}
-for i in 1..n:
-    memory[a] = r[i]
-    a.low = a.low + 1
+count = abs(n)
+if n < 0:
+    addr.low = addr.low - count
+transfer = addr
+for i in 1..count:
+    memory[transfer] = r[i]
+    transfer.low = transfer.low + 1
+if n > 0:
+    addr.low = addr.low + count
 \end{lstlisting}
 
-	\textbf{Write-back:} A successful non-zero \mnemonic{DMAW} advances \reg{a} by the number of words transferred.
-	Address-register high words are not changed by the transfer increments.
+	\textbf{Write-back:} A successful positive-count \mnemonic{DMAW} advances the selected address register by the count
+	magnitude. A successful negative-count \mnemonic{DMAW} leaves the selected address register at its decremented start
+	address. Address-register high words are not changed by the transfer increments or decrements.
 
 	\textbf{Clobbers:} General-purpose registers are preserved.
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, and invalid counts raise invalid-opcode faults.
-	In protected mode, raises a privilege-violation fault. DMA writes can raise data bus, bus-protection, and
+	\textbf{Exceptions:} Unsupported DMA operations, reserved operand encodings, and invalid counts raise invalid-opcode
+	faults. In protected mode, raises a privilege-violation fault. DMA writes can raise data bus, bus-protection, and
 	segment-overflow faults.
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA write bus cycles and may add wait states through normal bus acknowledgement.
+	\textbf{Timing:} $6 + \max(|n|, 1)$ cycles when the command condition is true and the DMA write cycles are
+	acknowledged without wait states. The $n = 0$ no-op form and one-word transfer forms take 7 cycles. Wait states add to
+	the relevant DMA write bus cycle. If the condition is false, the DMA command is not dispatched and the instruction
+	takes 6 cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 \end{instructionbox}
@@ -448,9 +485,10 @@ for i in 1..n:
 \begin{instructionbox}{DMAT -- DMA Memory Transfer Meta-Instruction}
 	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}
 
-	\textbf{Syntax:} \texttt{DMAT \#n}
+	\textbf{Syntax:} \texttt{DMAT a, l, \#n}
 
-	\textbf{Operands:} \texttt{\#n} is an 8-bit literal count operand in the range 0--255. A count of zero is a no-op.
+	\textbf{Operands:} The source and destination address registers must be written explicitly as \reg{a} and \reg{l}.
+	\texttt{\#n} is an 8-bit literal count operand in the range 0--255. A count of zero is a no-op.
 
 	\textbf{Description:} Copies sequential words from the address in \reg{a} to the address in \reg{l}, using
 	\reg{r1}--\reg{r7} as an internal transfer window in chunks of up to seven words.
@@ -461,6 +499,8 @@ while remaining > 0:
     chunk = min(remaining, 7)
     read chunk words from memory[a] into r1..r[chunk]
     write chunk words from r1..r[chunk] to memory[l]
+    a.low = a.low + chunk
+    l.low = l.low + chunk
     remaining = remaining - chunk
 \end{lstlisting}
 
@@ -471,8 +511,8 @@ while remaining > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Missing DMA hardware and unsupported DMA operations raise invalid-opcode faults. In protected
-	mode, raises a privilege-violation fault. DMA reads and writes can raise data bus, bus-protection, and
+	\textbf{Exceptions:} Unsupported DMA operations and reserved operand encodings raise invalid-opcode faults. In
+	protected mode, raises a privilege-violation fault. DMA reads and writes can raise data bus, bus-protection, and
 	segment-overflow faults.
 
 	\textbf{Fault side effects:} Registers, memory, and address registers reflect the last completed word transfer if a
@@ -480,9 +520,11 @@ while remaining > 0:
 
 	\textbf{Condition codes:} If the condition is false, no DMA command is dispatched and all CPU state is preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. The DMA unit then performs
-	DMA read and write bus cycles and may add wait states through normal bus acknowledgement. Instruction fetch resumes
-	only after the DMA operation completes or faults.
+	\textbf{Timing:} $6 + \max(2n, 1)$ cycles when the command condition is true and all DMA read and write cycles are
+	acknowledged without wait states. The $n = 0$ no-op form takes 7 cycles, and a one-word memory transfer takes 8
+	cycles. Wait states add to the relevant DMA read or write bus cycle. Instruction fetch resumes only after the DMA
+	operation completes or faults. If the condition is false, the DMA command is not dispatched and the instruction takes 6
+	cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
 

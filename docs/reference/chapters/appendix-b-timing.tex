@@ -3,10 +3,12 @@
 
 \section{Overview}
 
-All SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
+Most SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
-adding execution phases. This fixed execution sequence greatly simplifies software development and hardware design. See
-Chapter~\ref{ch:cpu-architecture} for the bus signal timing, wait-state, and response-priority rules.
+adding execution phases. DMA meta-instructions are the main exception: after the normal coprocessor dispatch they hold
+instruction fetch until the DMA unit has completed its bus transfers. This fixed execution sequence greatly simplifies
+software development and hardware design. See Chapter~\ref{ch:cpu-architecture} for the bus signal timing, wait-state,
+and response-priority rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -27,23 +29,29 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 	\centering
 	\begin{tabular}{lc}
 		\toprule
-		\textbf{Instruction Type}  & \textbf{Cycles} \\
+		\textbf{Instruction Type}  & \textbf{Cycles}    \\
 		\midrule
-		ALU (Register)             & 6               \\
-		ALU (Immediate)            & 6               \\
-		Load from Memory           & 6               \\
-		Store to Memory            & 6               \\
-		Branch (taken)             & 6               \\
-		Branch (not taken)         & 6               \\
-		Conditional (executed)     & 6               \\
-		Conditional (not executed) & 6               \\
-		NOOP                       & 6               \\
+		ALU (Register)             & 6                  \\
+		ALU (Immediate)            & 6                  \\
+		Load from Memory           & 6                  \\
+		Store to Memory            & 6                  \\
+		Branch (taken)             & 6                  \\
+		Branch (not taken)         & 6                  \\
+		Conditional (executed)     & 6                  \\
+		Conditional (not executed) & 6                  \\
+		NOOP                       & 6                  \\
+		DMAR/DMAW                  & $6 + \max(|n|, 1)$ \\
+		DMAT                       & $6 + \max(2n, 1)$  \\
 		\bottomrule
 	\end{tabular}
-	\caption{Instruction Timing (All instructions)}
+	\caption{Instruction Timing}
 \end{table}
 
-The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state.
+The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
+\mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, the DMA unit gets at least one post-dispatch cycle after the
+6-cycle \mnemonic{COPI} dispatch. For non-zero transfers, that first post-dispatch cycle may also be the first no-wait
+DMA bus access. A conditional DMA meta-instruction whose condition is false does not dispatch to the DMA unit and takes
+only 6 cycles.
 
 \section{Conditional Execution}
 
@@ -188,13 +196,13 @@ These are theoretical maximums assuming perfect code with no inefficiencies.
 	\small
 	\begin{tabular}{lcp{6cm}}
 		\toprule
-		\textbf{CPU}   & \textbf{Avg CPI} & \textbf{Notes}             \\
+		\textbf{CPU}   & \textbf{Avg CPI} & \textbf{Notes}                                            \\
 		\midrule
-		SIRC-1         & 6.0              & Fixed, all instructions    \\
-		MOS 6502       & 2-7              & Variable by instruction    \\
-		Motorola 68000 & 4-158            & Highly variable            \\
-		ARM6           & 1.0              & Single-cycle with pipeline \\
-		MIPS R2000     & 1.0              & Single-cycle with pipeline \\
+		SIRC-1         & 6.0              & Fixed for ordinary instructions; DMA adds transfer cycles \\
+		MOS 6502       & 2-7              & Variable by instruction                                   \\
+		Motorola 68000 & 4-158            & Highly variable                                           \\
+		ARM6           & 1.0              & Single-cycle with pipeline                                \\
+		MIPS R2000     & 1.0              & Single-cycle with pipeline                                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Cycles Per Instruction Comparison}

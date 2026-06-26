@@ -510,13 +510,14 @@ Acceptance criteria:
 
 Goal: clarify optional coprocessors and future CPU variants.
 
-Status: In progress. Core manual/spec updates and assembler lowering are implemented; reference maths emulation examples
-remain.
+Status: Complete for the current manual pass. Core manual/spec updates, assembler lowering, and a representative maths
+emulation example are implemented; fuller software routines for every optional maths operation are deferred unless we
+decide they are worth carrying as reference source.
 
 Progress:
 
 - Chapter 16 now has a standard coprocessor ID compatibility table and model/revision policy.
-- Chapter 16 now specifies the optional DMA unit (coprocessor 0x2), including `DMAR`, `DMAW`, and `DMAT` syntax,
+- Chapter 16 now specifies the required DMA unit (coprocessor 0x2), including `DMAR`, `DMAW`, and `DMAT` syntax,
   encodings, implicit registers, clobbers, count rules, fault behavior, overlap behavior, and privilege rules.
 - Chapter 16 now specifies the optional integer maths unit (coprocessor 0x3), including `MULU`, `MULS`, `DIVU`, and
   `DIVS` syntax, encodings, implicit registers, result/status behavior, and the software-emulation compatibility story.
@@ -530,37 +531,46 @@ Design decisions to carry forward:
 - Keep the standard coprocessor command layout: bits 15--12 select the coprocessor ID, bits 11--8 select the operation,
   and bits 7--0 are the operation operand. The public assembler surface should use meta-instructions for standard
   coprocessor services where possible, while `COPI`/`COPR` remain the raw command forms.
-- Coprocessor 0x2 is the optional standard DMA unit. It should be useful but simple: no autonomous descriptor engine,
+- Coprocessor 0x2 is the required standard DMA unit. It should be useful but simple: no autonomous descriptor engine,
   no hidden DMA registers, and no architectural chunk/prefetch semantics beyond ordered word transfers. Smart memory
   controllers may optimize the existing DMA read/write burst bus access types, but software observes the simple word
   transfer contract.
 - Define three DMA meta-instructions:
-  - `DMAR #n` reads sequential words from memory at address register `a` into `r1` through `rn`. It is limited to at
-    most 7 words because the general-purpose register window is `r1`--`r7`.
-  - `DMAW #n` writes sequential words from `r1` through `rn` to memory at address register `a`. It is limited to at
-    most 7 words.
-  - `DMAT #n` copies sequential words from memory at address register `a` to memory at address register `l`, using
+  - `DMAR addr, #n` reads sequential words from memory at address register `a`, `l`, or `s` into `r1` through `rn`.
+    It accepts counts from `#-7` through `#7`; negative counts pre-decrement the selected address register by the
+    magnitude and then read the ascending memory block.
+  - `DMAW addr, #n` writes sequential words from `r1` through `rn` to memory at address register `a`, `l`, or `s`.
+    It accepts counts from `#-7` through `#7`; negative counts pre-decrement the selected address register by the
+    magnitude and then write the ascending memory block.
+  - `DMAT a, l, #n` copies sequential words from memory at address register `a` to memory at address register `l`, using
     `r1`--`r7` as a transfer window internally. It transfers up to one 8-bit count operand per command; larger copies
     are done by looping in software.
 - DMA command encodings:
-  - `DMAR #n` -> `COPI #0x2800 | n`
-  - `DMAW #n` -> `COPI #0x2900 | n`
-  - `DMAT #n` -> `COPI #0x2A00 | n`
+  - `DMAR addr, #n` -> `COPI #0x2800 | operand`
+  - `DMAW addr, #n` -> `COPI #0x2900 | operand`
+  - `DMAT a, l, #n` -> `COPI #0x2A00 | n`
   These operation nibbles are supervisor-only by the existing coprocessor privilege rule.
 - DMA register convention:
-  - `a` is the memory pointer for `DMAR` and `DMAW`.
+  - `a`, `l`, or `s` may be the memory pointer for `DMAR` and `DMAW`; `p` is not a public DMA register operand.
   - `a` is the source pointer for `DMAT`.
   - `l` is the destination pointer for `DMAT`.
   - `r1`--`r7` are the transfer window; `DMAT` clobbers them.
-  - Successful operations advance the relevant address-register low words by the number of words transferred.
+  - Successful positive-count register-window operations advance the relevant address-register low word by the count
+    magnitude. Successful negative-count register-window operations leave it at the decremented start address.
 - DMA fault policy: data bus and bus-protection failures raise normal faults with DMA read/write `BAT` values. If an
   address-register low word overflows or underflows and `SR.A` is set, DMA raises a segment-overflow fault; otherwise
   the low word wraps. Partial side effects are possible for a fault that occurs mid-transfer, and DMA operations are not
   guaranteed to be restartable by simply re-executing the same instruction.
 - DMA overlap policy: overlapping `DMAT` source/destination ranges are architecturally undefined unless source and
   destination are identical.
-- DMA count encoding decision: operand value `0x00` means no-op. `DMAR` and `DMAW` accept counts 0--7, where counts
-  above 7 are invalid DMA operations. `DMAT` accepts counts 0--255, with larger transfers done by software loops.
+- DMA count encoding decision: operand value `0x00` means no-op. `DMAR` and `DMAW` encode bits 7--6 as address register
+  (`a`, `l`, `s`, reserved), bit 5 as direction, bits 2--0 as count magnitude, and bits 4--3 as reserved zero. `DMAT`
+  accepts counts 0--255, with larger transfers done by software loops.
+- DMA timing decision: a dispatched DMA command takes the normal 6-cycle `COPI` dispatch plus at least one
+  post-dispatch DMA cycle to accept/decode the command and clear the pending cause. For non-zero transfers, that first
+  post-dispatch cycle may also be the first no-wait DMA bus access. Therefore `DMAR`/`DMAW` take
+  `6 + max(abs(n), 1)` cycles and `DMAT` takes `6 + max(2n, 1)` cycles. Conditional false DMA meta-instructions do not
+  dispatch and take the normal 6 cycles.
 - Coprocessor 0x3 is the optional standard integer maths unit. It should provide a stable software-visible convention
   so missing hardware can be emulated through invalid-opcode faults and later CPU models can accelerate the same
   binaries.
@@ -584,6 +594,10 @@ Design decisions to carry forward:
   should describe them as source listings supplied with the SIRC-1 distribution media or an addendum, not as a modern
   repository path. The manual may include compact pseudocode or short excerpts, but should not carry long
   hand-maintained multiplication/division listings.
+- Stretch goal: consider an explicit supervisor return instruction, such as a `RETE #n`-style form, that atomically
+  restores `p` and `sr` from a selected exception link register outside the currently active exception level. The current
+  software-exception return gate works, but this would make supervisor trampolines for software-emulated optional
+  coprocessors less indirect.
 
 Tasks:
 
@@ -611,7 +625,7 @@ Tasks:
   - supervisor-only operation behavior
 
 - Add the DMA unit specification. Resolved in Chapter 16 and assembler lowering.
-  - ID 0x2, optional standard coprocessor
+  - ID 0x2, required standard coprocessor
   - `DMAR`, `DMAW`, and `DMAT` meta-instructions and encodings
   - implicit register conventions
   - legal counts and `0x00` no-op behavior
@@ -628,7 +642,7 @@ Tasks:
   - divide-by-zero and quotient-overflow handling
   - software-emulation compatibility story for missing hardware
 
-- Add reference maths emulation examples. In progress.
+- Add reference maths emulation examples. Resolved for the current scope.
   - Put full assembly routines in `examples/` rather than only in LaTeX.
   - Make the examples assemble and, if practical, add tests around the expected register/status results.
   - Document in the manual that these are reference software routines, not additional ISA requirements.
@@ -638,8 +652,8 @@ Tasks:
     that exercises invalid-opcode dispatch, command dispatch from the fault metadata register, a normal-supervisor
     trampoline out of the fault handler, a software-exception return gate for atomic `p`/`sr` restoration, a general
     unsigned shift-and-add multiply routine, three dump-visible `MULU` assertions, caller register preservation, and
-    the expected register dump. `MULS`, `DIVU`, and `DIVS` software routines remain to be written if we want the full
-    optional maths unit covered by reference routines.
+    the expected register dump. Full `MULS`, `DIVU`, and `DIVS` software routines are optional future examples, not
+    blockers for this workstream.
 
 Acceptance criteria:
 
