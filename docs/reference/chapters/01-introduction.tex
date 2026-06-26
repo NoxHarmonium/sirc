@@ -90,14 +90,14 @@ microcode.
 \subsection{Coprocessors}
 
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
-register file. Only one coprocessor can be active at one time and are usually activated using the COP instructions
-(except for the "exception unit" which can be activated when physical pins are asserted on the chip). All
-implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0, the "exception unit" as coprocessor
-0x1, and the DMA unit as coprocessor 0x2. Other coprocessors are optional and will vary depending on which SIRC-1 model
-you have. The instruction set supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that
-programs are cross compatible. For example, coprocessor 0x3 will always be the Integer Maths Unit. This means if the
-CPU model is missing an optional coprocessor, and a program requires it, the CPU will raise an exception so that the
-behaviour can be emulated in software where practical.
+register file. Only one coprocessor can be active at one time and are usually activated using the \mnemonic{COPI} or
+\mnemonic{COPR} coprocessor-call instructions (except for the "exception unit" which can be activated when physical
+pins are asserted on the chip). All implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0,
+the "exception unit" as coprocessor 0x1, and the DMA unit as coprocessor 0x2. Other coprocessors are optional and will
+vary depending on which SIRC-1 model you have. The instruction set supports up to 16 coprocessors. The coprocessor IDs
+are stable between models, so that programs are cross compatible. For example, coprocessor 0x3 will always be the
+Integer Maths Unit. This means if the CPU model is missing an optional coprocessor, and a program requires it, the CPU
+will raise an invalid-opcode fault so that the behaviour can be emulated in software where practical.
 
 \begin{table}[H]
 	\centering
@@ -199,5 +199,12 @@ This manual is organized into three main parts:
 	      operation, and examples.
 \end{description}
 
-Appendices provide quick reference materials including complete opcode maps, timing diagrams, and notes on undocumented
-instructions.
+Appendices provide quick reference materials including complete opcode maps, timing diagrams, notes on undocumented
+instructions, and an alphabetical instruction index.
+
+\subsection{Scope}
+
+This manual covers the SIRC-1 hardware: the instruction set architecture, register model, bus interface, exception
+handling, and coprocessor interface. Software conventions --- including register usage, calling conventions, stack
+frame layout, object file format, and linker output format --- are outside the scope of this document. These topics are
+addressed in the SIRC-1 ABI and Toolchain documentation.

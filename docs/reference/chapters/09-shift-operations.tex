@@ -326,7 +326,7 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 
 \begin{itemize}
 	\item For \textbf{ASL}: Set if the sign bit changes during the shift (signed overflow)
-	\item For other shifts: Behavior is undefined; typically unchanged or cleared
+	\item For other shifts: Cleared to 0
 \end{itemize}
 
 \section{Common Use Cases}
@@ -439,7 +439,7 @@ ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 	\item Maximum shift count is 15 (4-bit field)
 	\item For shifts $>$ 15, multiple shift instructions must be used
 	\item Rotates do not consume the carry flag; \mnemonic{RTL} and \mnemonic{RTR} rotate only within the 16-bit operand
-	\item Some shift types (e.g., reserved type 111) may have undefined behavior
+	\item The reserved shift type (111) has architecturally undefined behavior
 \end{itemize}
 
 \section{Status Flag Update Control}
