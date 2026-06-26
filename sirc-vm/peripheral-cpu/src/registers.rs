@@ -72,7 +72,7 @@ impl RegisterName {
 
 /// These three registers are special in that they can be used
 /// as combined 32-bit wide registers, but only for addressing.
-#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
+#[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AddressRegisterName {
     // l (lh, ll)
     LinkRegister,

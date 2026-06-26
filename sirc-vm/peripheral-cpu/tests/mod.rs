@@ -47,4 +47,5 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 mod exceptions;
+mod coprocessors;
 mod instructions;

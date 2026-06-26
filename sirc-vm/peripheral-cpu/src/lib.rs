@@ -38,6 +38,7 @@ use std::{any::Any, fmt::Write};
 use log::{debug, error, trace, warn};
 
 use coprocessors::{
+    dma_unit::execution::DmaUnitExecutor,
     exception_unit::{
         definitions::{
             vectors::DOUBLE_FAULT_VECTOR, ExceptionPriorities, ExceptionUnitOpCodes, Faults,
@@ -99,6 +100,7 @@ pub struct CpuPeripheral {
     pub phase: u8,
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
+    pub dma_unit_executor: DmaUnitExecutor,
     pub cause_register_value: u16,
     // T bit sampled at InstructionFetchLow before any SR writes for the current instruction.
     // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
@@ -204,6 +206,7 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         phase: 0,
         processing_unit_executor: ProcessingUnitExecutor::default(),
         exception_unit_executor: ExceptionUnitExecutor::default(),
+        dma_unit_executor: DmaUnitExecutor::default(),
         cause_register_value: 0,
         trace_mode_sampled: false,
         pending_bus_request: None,
@@ -264,7 +267,8 @@ impl CpuPeripheral {
                 || bus_assertions.bus_protection_error;
             if !bus_access_complete {
                 return BusAssertions {
-                    instruction_sync: self.phase == ExecutionPhase::InstructionFetchLow as u8,
+                    instruction_sync: self.phase == ExecutionPhase::InstructionFetchLow as u8
+                        && pending_request.bus_access_type == BusAccessType::InstructionFetch,
                     ..pending_request
                 };
             }
@@ -310,6 +314,13 @@ impl CpuPeripheral {
             });
 
         if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
+            if matches!(
+                completed_bus_request.map(|request| request.bus_access_type),
+                Some(BusAccessType::DmaReadBurst | BusAccessType::DmaWriteBurst)
+            ) {
+                self.dma_unit_executor.abort(&mut self.registers);
+            }
+
             if let Some(vector_fetch_fault_response) =
                 self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
             {
@@ -321,6 +332,12 @@ impl CpuPeripheral {
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
             self.eu_registers.pending_fault =
                 raise_fault(&mut self.eu_registers, bus_fault, &fault_bus_assertions);
+        } else if matches!(
+            completed_bus_request.map(|request| request.bus_access_type),
+            Some(BusAccessType::DmaReadBurst | BusAccessType::DmaWriteBurst)
+        ) {
+            self.dma_unit_executor
+                .complete_bus_access(&mut self.registers, bus_assertions.data);
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
@@ -372,6 +389,13 @@ impl CpuPeripheral {
                 &mut self.eu_registers,
                 bus_assertions,
             ),
+            DmaUnitExecutor::COPROCESSOR_ID => self.dma_unit_executor.step(
+                &phase,
+                self.cause_register_value,
+                &mut self.registers,
+                &mut self.eu_registers,
+                bus_assertions,
+            ),
             _ => {
                 if self.eu_registers.pending_fault.is_none()
                     && phase == ExecutionPhase::InstructionFetchLow
@@ -409,6 +433,13 @@ impl CpuPeripheral {
         // category=Performance
         if result.bus_access_strobe {
             self.pending_bus_request = Some(result);
+        }
+
+        if coprocessor_id == DmaUnitExecutor::COPROCESSOR_ID {
+            return BusAssertions {
+                instruction_sync: false,
+                ..result
+            };
         }
 
         self.advance_phase();
@@ -523,6 +554,7 @@ impl CpuPeripheral {
 
     pub fn reset(&mut self) {
         self.pending_bus_request = None;
+        self.dma_unit_executor.abort(&mut self.registers);
         self.is_halted = false;
         self.reset_pending = false;
         self.eu_registers.waiting_for_exception = false;
