@@ -98,6 +98,28 @@ instruction began, an instruction-trace fault is raised after the instruction co
 the documented memory forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode
 fault.
 
+\section{Status Flag Effects}
+
+Memory instructions do not update status flags. All four condition flags are preserved regardless of addressing form,
+shift result, or auto-update side effect. Memory instructions do not support status update override syntax; the status
+override field is ignored.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllllp{5.5cm}}
+		\toprule
+		\textbf{Instruction} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Meaning}     \\
+		\midrule
+		LOAD                 & -          & -          & -          & -          & Flags are preserved. \\
+		STOR                 & -          & -          & -          & -          & Flags are preserved. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Memory Instruction Status Flag Effects}
+	\label{tab:memory-status-flag-effects}
+\end{table}
+
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
+
 \section{LOAD Instructions}
 
 \begin{instructionbox}{LOAD -- Load from Memory}

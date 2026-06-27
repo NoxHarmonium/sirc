@@ -105,6 +105,30 @@ segment-overflow fault when \texttt{SR.A} (Trap on Address Overflow) is set and 
 wraps. Instruction fetch can still raise the normal fetch faults before the instruction executes. If trace mode was
 enabled when the instruction began, an instruction-trace fault is raised after the instruction commits.
 
+\section{Status Flag Effects}
+
+Control-flow and effective-address instructions do not update status flags. All four condition flags are preserved
+regardless of whether the instruction branches, links, faults, or is skipped. Control-flow instructions do not support
+status update override syntax.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllllp{5.5cm}}
+		\toprule
+		\textbf{Instruction} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Meaning}     \\
+		\midrule
+		LDEA                 & -          & -          & -          & -          & Flags are preserved. \\
+		LDEL                 & -          & -          & -          & -          & Flags are preserved. \\
+		\bottomrule
+	\end{tabular}
+	\caption{Control-Flow Instruction Status Flag Effects}
+	\label{tab:control-flow-status-flag-effects}
+\end{table}
+
+See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. Meta-instructions (\mnemonic{BRAN},
+\mnemonic{BRSR}, \mnemonic{RETS}, \mnemonic{LJMP}, \mnemonic{LJSR}) inherit the flag-preservation behavior of the
+\mnemonic{LDEA} or \mnemonic{LDEL} form they assemble to.
+
 \section{Branch Meta-Instructions}
 
 \begin{instructionbox}{BRAN -- Branch Meta-Instruction}

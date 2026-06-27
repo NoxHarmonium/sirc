@@ -85,6 +85,25 @@ These are important for emulator, hardware, OS, debugger, and compiler work.
 
 Goal: remove contradictions and make the basic architecture summary agree across chapters.
 
+Status: Complete.
+
+Progress:
+
+- All top-level summary table counts verified correct (3 instruction formats, 7 addressing modes, 16 condition codes,
+  7 GPRs, 4 address pairs, 16 total registers). No changes needed.
+- Terminology fixed across five chapters:
+  - `05-status-register.tex`: code comment "Entering user mode (from supervisor mode)" corrected to "Entering
+    protected mode (from supervisor mode)".
+  - `02-cpu-architecture.tex`: BAT example description "(user mode)" corrected to "(protected mode)".
+  - `06-exceptions.tex`: link register table entry "Register 6: Faults (abort exceptions)" corrected to
+    "Register 6: Faults".
+  - `09-shift-operations.tex`: V-flag description for non-ASL shifts changed from "Behavior is undefined;
+    typically unchanged or cleared" to "Cleared to 0"; reserved shift type 111 wording changed from "may have
+    undefined behavior" to "has architecturally undefined behavior".
+  - `01-introduction.tex`: coprocessor activation wording changed from "using the COP instructions" to
+    "using the `COPI` or `COPR` coprocessor-call instructions"; "CPU will raise an exception" when a coprocessor
+    is missing changed to "CPU will raise an invalid-opcode fault".
+
 Tasks:
 
 - Audit all top-level summary tables against the detailed chapters:
@@ -175,6 +194,8 @@ Future optional QA/tooling, if desired:
 
 Goal: make each instruction description as precise as the M68k instruction reference.
 
+Status: Complete.
+
 Recommended instruction template:
 
 - Mnemonic and full name
@@ -198,8 +219,8 @@ Recommended instruction template:
 Tasks:
 
 - "How to Read Instruction Descriptions" chapter. Resolved: Chapter 11 defines the instruction entry fields, notation,
-  flag-effect symbols, conditional execution behavior, and status update overrides. Remaining work is to apply the
-  template consistently to every instruction entry.
+  flag-effect symbols, conditional execution behavior, and status update overrides. Template is now applied consistently
+  to every instruction entry in Chapters 13--17.
   - Progress: Chapter 13 ALU instruction entries now include per-entry operands, condition-code behavior, timing, and
     privilege fields, alongside existing syntax, operation, flags, write-back, exceptions, examples, and notes. The SBC
     entry also now lists its short-immediate form.
@@ -215,72 +236,35 @@ Tasks:
     behavior, timing, and privilege fields in their relevant instruction-family chapters. The `NOOP` entry remains in
     Chapter 17 and documents the current lowering as `ADDI[N] r1, #0`.
 
-- Create per-instruction legality tables:
-  - ALU instructions: immediate, short immediate, register forms.
-  - Memory instructions: indirect immediate, indirect register, post-increment, pre-decrement.
-  - Control flow: branch, long jump, subroutine call, return, effective address load.
-  - Coprocessor/meta-instructions: immediate/register forms, privilege rules.
-    - Progress: Chapter 16 now has coprocessor legal forms and common semantics. The spec hides inherited register and
-      shift fields from programmers: `COPI` takes an immediate command operand, `COPR` takes a source register operand,
-      and hidden encoding fields are reserved/canonicalized by the assembler.
-    - Parser follow-up resolved: the toolchain now accepts source-only `COPI #value` and `COPR rS` syntax and rejects
-      the old destination-register forms. Opcode 0x2F has no public assembler syntax and should be labelled
-      undocumented rather than specified as a programmer-visible form.
+- Create per-instruction legality tables. Resolved: all instruction chapters now have a Legal Forms table.
+  - Chapter 13 ALU: Table 13.1 covers all immediate, short-immediate, and register forms.
+  - Chapter 14 memory: Table 14.1 covers all indirect-immediate, indirect-register, post-increment, and pre-decrement forms.
+  - Chapter 15 control flow: Table 15.1 covers all LDEA, LDEL, and meta-instruction forms.
+  - Chapter 16 coprocessor: Table 16.1 covers COPI and COPR forms, with hidden encoding fields and undocumented opcode noted. Parser follow-up resolved: the toolchain now accepts source-only `COPI #value` and `COPR rS` syntax and rejects the old destination-register forms.
 
-- Complete the control-flow opcode rework.
-  - See `control-flow-opcode-rework-handover.md` for the dedicated design handover covering `LDEL`, `LDEA`, `BRAN`, `BRSR`, `LJMP`, `LJSR`, opcode reuse, implementation staging, and remaining implementation choices.
+- Complete the control-flow opcode rework. Resolved: the rework aligned control-flow opcodes with the instruction-format bit patterns and removed redundancy. `LDEA` (0x18--0x1B) and `LDEL` (0x1C--0x1F) are the real CPU opcodes; `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` are assembler meta-instructions that lower to these forms. Chapter 15 documents all forms and lowerings. The separate `control-flow-opcode-rework-handover.md` was never written because the design was resolved directly in implementation.
 
-- For each instruction, explicitly document:
-  - what happens when the condition code is false
-  - whether flags are updated
-  - whether memory is read or written
-  - whether address registers are modified
-  - whether PC/link registers are modified
-  - whether the instruction can fault
-  - whether partial side effects are possible on faults
+- For each instruction, explicitly document all side effects. Resolved: all entries in Chapters 13--17 now include Condition codes, Flags, Write-back, Exceptions, Timing, and Privilege fields covering all the required cases.
 
-- Clarify Chapter 17 meta-instruction descriptions.
-  - `SHFT` resolved: documented as a meta instruction that lowers to `ORRI[S] rD, #0, shift`, preserving the shifted
-    value while taking status flags from the shifter result. It is no longer described as a separate CPU operation.
-  - Common meta-instruction semantics are now expressed by the entries in their relevant instruction-family chapters:
-    meta-instructions inherit condition-code, timing, flag, fault, and privilege behavior from the emitted instruction
-    unless explicitly stated otherwise.
-  - Resolved: meta-instructions now live with their relevant instruction families. `SHFT` is documented in the
-    ALU chapter; `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` are documented with control flow; `EXCP`, `WAIT`, `RETE`,
-    `RSET`, `ETFR`, and `ETTR` are documented with coprocessor/exception-unit instructions. Chapter 17 is now a short
-    meta-instruction cross-reference plus the standalone `NOOP` entry.
+- Clarify Chapter 17 meta-instruction descriptions. Resolved: meta-instructions now live with their relevant instruction families. `SHFT` is documented in the ALU chapter; `BRAN`, `BRSR`, `LJMP`, `LJSR`, and `RETS` are documented with control flow; `EXCP`, `WAIT`, `RETE`, `RSET`, `ETFR`, and `ETTR` are documented with coprocessor/exception-unit instructions. Chapter 17 is now a short meta-instruction cross-reference plus the standalone `NOOP` entry.
 
-- Add exact flag-effect tables.
-  - Use symbols such as `0`, `1`, `-`, `*`, or `U`, but define them.
-  - Example columns: `Z`, `N`, `C`, `V`, reserved lower bits, privileged bits.
-  - Progress: Chapter 13 now has an implementation-backed ALU flag-effect table and explicit status override wording.
-    Public `LOAD` forms are documented as preserving flags and not accepting status update override syntax. Clear
-    syntax mismatches found during the audit were fixed (`CMPR` for register comparisons, `RTL`/`RTR` shift names, and
-    `SHFT` for variable-count pure shifts).
-  - Resolved: `RTL`/`RTR` follow the simulator and are documented as normal 16-bit circular rotates. The incoming carry
-    flag is not consumed; `C` is an output copied from the bit that wrapped around.
+- Add exact flag-effect tables. Resolved for all chapters.
+  - Chapter 13: implementation-backed ALU flag-effect table with N/Z/C/V columns, default AF column, and explicit status override wording. `RTL`/`RTR` documented as normal 16-bit circular rotates; incoming carry is not consumed.
+  - Chapter 14: flag-effect table added showing LOAD and STOR both preserve all flags. Memory instructions do not support status override syntax.
+  - Chapter 15: flag-effect table added showing LDEA and LDEL both preserve all flags. Meta-instructions inherit the same flag-preservation behavior. Control-flow instructions do not support status override syntax.
+  - Chapters 16--17: flag-preservation is documented per entry and in common semantics tables.
 
-- Resolve per-instruction exception behavior for Chapters 13--17.
-  - Resolved: Chapter 13 ALU instructions distinguish instruction-specific faults from global instruction-fetch and
-    trace behavior. ALU execution itself has no data-memory, privilege, segment-overflow, or invalid-opcode fault path.
-  - Resolved: Chapter 14 memory instructions distinguish data bus, data bus-protection, and `SR.A`-gated
-    segment-overflow faults from global fetch/trace behavior. Destination writes and address-register auto-updates occur
-    only in write-back after a successful memory-access phase.
-  - Resolved: Chapter 15 control-flow/effective-address instructions document `SR.A`-gated segment-overflow faults and
-    protected-mode address-register write-back privilege faults, while excluding data bus, data bus-protection, and
-    invalid-opcode faults from documented forms.
-  - Resolved: Chapter 16 coprocessor calls document privilege faults before dispatch and invalid-opcode faults during
-    coprocessor dispatch, while excluding data-memory, bus-protection, alignment, and segment-overflow faults from
-    documented `COPI`/`COPR` forms.
-  - Resolved: Chapter 17 `NOOP` inherits `ADDI[N]` exception behavior: no data-memory access or instruction-specific
-    faults, while global instruction-fetch and trace faults still apply.
-  - Remaining exception work has moved to Workstream 6: exception-entry side effects, reset/vector fetch behavior, link
-    register diagrams, pending interrupt behavior, and reset-state tables.
+- Resolve per-instruction exception behavior for Chapters 13--17. Resolved.
+  - Chapter 13: ALU instructions raise no instruction-specific faults; global fetch and trace faults still apply.
+  - Chapter 14: memory instructions distinguish data bus, bus-protection, and `SR.A`-gated segment-overflow faults; write-back and auto-update occur only after a successful memory-access phase.
+  - Chapter 15: control-flow instructions document `SR.A`-gated segment-overflow and protected-mode privilege faults; data bus and invalid-opcode faults are excluded from documented forms.
+  - Chapter 16: coprocessor calls document privilege faults before dispatch and invalid-opcode faults during coprocessor dispatch.
+  - Chapter 17: `NOOP` inherits `ADDI[N]` exception behavior.
 
 Acceptance criteria:
 
-- A reader can implement each instruction without guessing legal operands, flag effects, exceptions, or side effects.
-- The manual distinguishes meta-instructions from real CPU instructions.
+- A reader can implement each instruction without guessing legal operands, flag effects, exceptions, or side effects. Met.
+- The manual distinguishes meta-instructions from real CPU instructions. Met.
 
 ## Workstream 4: Addressing Modes and Operand Legality
 
@@ -351,6 +335,8 @@ Acceptance criteria:
 ## Workstream 6: Exceptions, Interrupts, and Reset
 
 Goal: make exception handling as implementation-ready as the M68k exception appendix.
+
+Status: Complete.
 
 Progress:
 
@@ -668,73 +654,62 @@ Acceptance criteria:
 
 Goal: separate hardware facts from software conventions and document the conventions that examples rely on.
 
-Tasks:
+Status: Out of scope — deferred to a separate programmer's manual.
 
-- Decide whether the reference manual should include an ABI appendix.
-  - If yes, document it.
-  - If no, state that register usage conventions are non-normative and belong in a separate ABI/toolchain document.
+Decision: The SIRC-1 reference manual covers hardware architecture only. Register usage conventions, calling
+conventions, stack frame layout, and interrupt handler save/restore expectations are not defined by the ISA and
+do not belong here. The manual should carry one sentence in the introduction stating that these are outside the
+ISA scope and directing readers to a future SIRC-1 ABI/toolchain document. Full ABI documentation is deferred
+to a separate programmer's manual.
 
-- If included, define:
-  - caller-saved registers
-  - callee-saved registers
-  - argument passing
-  - return values
-  - stack growth and alignment
-  - stack frame layout
-  - interrupt handler save/restore expectations
-  - use of link register for nested calls
-
-- Update examples to follow the documented convention.
-
-Acceptance criteria:
-
-- Examples do not imply an undocumented ABI.
-- Compiler and assembly programmers have a clear convention to follow, or a clear pointer to a separate document.
+Resolution: Add one sentence to the introduction (or a short "Scope" section) clarifying that software
+conventions are out of scope. That one-line addition closes this workstream.
 
 ## Workstream 10: Binary/Object/Loader Format Appendix
 
 Goal: provide an equivalent to the M68k manual's practical output-format appendix if SIRC has a canonical format.
 
-Tasks:
+Status: Out of scope — deferred to a separate programmer's manual or toolchain document.
 
-- Decide what belongs in the CPU reference manual:
-  - raw ROM image format
-  - assembler object format
-  - linker output format
-  - debug map format
-  - relocation records
-  - symbol tables
-
-- If there is a canonical format, document:
-  - file layout
-  - record types
-  - endianness/word order
-  - load addresses
-  - checksums
-  - relocation model
-  - examples
-
-- If not canonical, add a short "Program Image Format" appendix that defines the minimum boot ROM/vector layout.
-
-Acceptance criteria:
-
-- A user can understand how assembled code gets into memory and how reset finds the first instruction.
+Decision: The reference manual's scope is the CPU hardware and ISA. ROM image format, object file format,
+linker output, debug maps, and relocation records are toolchain and OS concerns, not ISA concerns. The boot
+ROM vector layout is already fully specified in Chapter 6 (reset vector fetch, exception vector table structure,
+and system RAM offset). No additional appendix is needed in this manual. Full format documentation belongs in a
+future toolchain or programmer's manual.
 
 ## Workstream 11: Quick Reference Appendices
 
 Goal: make the manual faster to use once the reader already understands the architecture.
 
+Status: Complete.
+
+Progress:
+
+- Created `chapters/appendix-e-quick-reference.tex` and wired it into `main.tex` as Appendix E.
+- Alphabetical instruction mnemonic index: all 46 distinct mnemonics (real CPU instructions and meta-instructions)
+  listed alphabetically with type, opcode/assembles-to, flags written, and description (Table E.1).
+- Status register bit summary: all 16 SR bits in one table with bit number, name, privilege level, reset state,
+  and function (Table E.2).
+- Bus access type (BAT) encoding: compact BAT[2:0] table with all 8 values (Table E.3).
+- "Where to Find" table: one-stop pointer to all other reference tables in the manual (register encoding,
+  condition codes, shift types, addressing modes, exception vectors, timing appendix, opcode map, flag-effect
+  symbols) with chapter/appendix references and cross-reference labels (Table E.4).
+- Existing tables elsewhere (opcode map in Appendix A, register encoding in Ch.3, condition codes in Ch.7,
+  shift types in Ch.7, addressing modes in Ch.8, exception vectors in Ch.6) are referenced rather than
+  duplicated.
+
 Tasks:
 
-- Add instruction summary by mnemonic.
-- Add instruction summary by opcode.
-- Add instruction summary by functional group.
-- Add condition code quick reference.
-- Add register encoding quick reference.
-- Add addressing mode quick reference.
-- Add exception vector quick reference.
-- Add status register bit quick reference.
-- Add bus access type quick reference.
+- Add instruction summary by mnemonic. Resolved: Table E.1 in Appendix E.
+- Add instruction summary by opcode. Resolved: covered by existing Appendix A opcode map.
+- Add instruction summary by functional group. Resolved: Table E.1 groups by initial letter with family headers;
+  functional grouping also in Chapter 12.
+- Add condition code quick reference. Resolved: pointed to from Table E.4 (Table 7.3 in Ch.7).
+- Add register encoding quick reference. Resolved: pointed to from Table E.4 (Table 3.2 in Ch.3).
+- Add addressing mode quick reference. Resolved: pointed to from Table E.4 (Ch.8).
+- Add exception vector quick reference. Resolved: pointed to from Table E.4 (Ch.6).
+- Add status register bit quick reference. Resolved: Table E.2 in Appendix E.
+- Add bus access type quick reference. Resolved: Table E.3 in Appendix E.
 
 Acceptance criteria:
 
@@ -785,6 +760,51 @@ Acceptance criteria:
 - Manual build failures catch broken references and stale generated content.
 - The manual distinguishes architectural specification from assembler usage examples.
 
+## Workstream 13: Typesetting and Visual Design
+
+Goal: make the rendered PDF look like a professional CPU reference manual rather than a research paper — readable,
+navigable, and visually consistent throughout.
+
+Tasks:
+
+- Fix page-layout issues in the instruction reference chapters.
+  - Convert the "Complete Instruction List" table (Section 12.2) from a single-page table to a multi-page
+    `longtable` or `ltablex` so it flows across pages without clipping.
+  - Enable `breakable` on `tcolorbox` instruction boxes (or set a consistent `\needspace` / `\pagebreak`
+    policy) so boxes do not get stranded at the bottom of a page or silently clip content.
+  - Known problem boxes: "XORI / XORR", "LOAD - Load/Move", "CMPI / CMPR". Treat the fix as exhaustive rather
+    than enumerating every case.
+
+- Coherent visual design pass.
+  - Choose and apply a single professional serif font package (e.g. `libertinus`, `newpxtext`, or similar) in
+    place of the current default Computer Modern / research-paper look.
+  - Establish consistent heading hierarchy: part, chapter, section, subsection — sizes, weights, spacing,
+    and optional rule lines.
+  - Redesign the color palette: a restrained two- or three-color scheme (one accent for headers/boxes, one
+    for code/mnemonics, neutral for body).
+  - Restyle tables: consistent `booktabs` rules, tighter column padding, and matching font size.
+  - Restyle `tcolorbox` instruction boxes: a clean frame with the mnemonic as a header bar rather than the
+    current style.
+  - Restyle `lstlisting` code blocks: matching font, subtle background, consistent spacing.
+  - Review chapter and part opening pages for visual consistency.
+
+- Add a notation and glossary section.
+  - Chapter 11 already defines instruction-notation symbols. Expand this into a short standalone glossary
+    appendix (or a "Notation and Conventions" section in the front matter) covering:
+    - architectural terms (supervisor mode, protected mode, fault, exception, meta-instruction, word address)
+    - register name conventions (rN, l/a/s/p, sr, lh/ll, etc.)
+    - typographic conventions used in the manual (mnemonic style, register style, opcode style, pseudocode
+      style, reserved/undefined vocabulary)
+  - This prevents readers having to hunt through chapters to understand notation.
+
+Acceptance criteria:
+
+- The PDF can be printed or read on screen without content being cut off or stranded.
+- A reader encountering the manual for the first time judges it as a professional reference document, not a
+  draft or academic paper.
+- All chapters use the same fonts, heading sizes, table style, box style, and code style with no exceptions.
+- Every term used in the manual is defined the first time it appears or is listed in the glossary.
+
 ## Suggested Execution Order
 
 1. Finish the instruction-description template rollout and close remaining per-instruction legality/flag/exception gaps.
@@ -810,3 +830,4 @@ The manual is "up to scratch" when:
 - Optional coprocessor behavior and compatibility rules are documented.
 - Quick-reference appendices cover the common lookup tasks.
 - The manual can be built and checked with a repeatable command.
+- The rendered PDF is visually consistent and professional throughout, with no clipped or stranded content.
