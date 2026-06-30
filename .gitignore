@@ -6,6 +6,9 @@
 *.bin.dbg
 *.o
 
+# Generated output files from examples
+render.pgm
+
 # Test files used in examples
 actual.hex
 mem.bin
