@@ -1,0 +1,455 @@
+; raytracer.sasm - SIRC ray tracer
+; Renders a 128x96 grayscale image in PGM P5 format via a file-mapped segment.
+; 
+; Memory layout:
+;   Segment 0x0000 (PROGRAM):  code + sq_table (loaded via --program-file)
+;   Segment 0x0002 (FRAMEBUF): render.pgm      (loaded via --segment file:...)
+; 
+; Address registers:
+;   a (ah:al) = framebuffer write pointer
+;   l (lh:ll) = sq_table base pointer (word 0x0400 in PROGRAM segment)
+;   s (sh:sl) = stack (grows down from top of FRAMEBUF segment)
+; 
+; SIRC carry/condition notes:
+;   carry is SET on borrow: CMPR a, b sets carry when a < b (unsigned).
+;   After CMPR r_n, r_sq: HI fires when n < sq_table[mid] (sq_table[mid] > n)
+;   -> hi = mid-1 is the correct response.
+;   Signed: << = LessThan (fires when CMPI result < 0).
+
+.EQU $FRAMEBUF_SEGMENT  #0x0002
+.EQU $WIDTH             #128
+.EQU $HEIGHT            #96
+.EQU $HEADER_WORDS      #7
+.EQU $CX                #64
+.EQU $CY                #48
+.EQU $RADIUS_SQ         #1024
+
+; Exception vector: CPU reads word-pair at 0x0000 as the reset address
+.ORG 0x0000
+.DQ @main
+
+.ORG 0x0200
+:main
+
+LOAD ah, $FRAMEBUF_SEGMENT
+LOAD al, #0x0000
+LOAD sh, $FRAMEBUF_SEGMENT
+LOAD sl, #0xFFFF
+LOAD lh, #0x0000
+LOAD ll, #0x0400
+
+; --- Write PGM P5 header "P5\n128 96\n255\n" (14 bytes = 7 big-endian words) ---
+; Word 0: 0x5035  'P','5'      Word 4: 0x360A  '6','\n'
+; Word 1: 0x0A31  '\n','1'     Word 5: 0x3235  '2','5'
+; Word 2: 0x3238  '2','8'      Word 6: 0x350A  '5','\n'
+; Word 3: 0x2039  ' ','9'
+LOAD r1, #0x5035
+STOR (#0, a), r1
+LOAD r1, #0x0A31
+STOR (#1, a), r1
+LOAD r1, #0x3238
+STOR (#2, a), r1
+LOAD r1, #0x2039
+STOR (#3, a), r1
+LOAD r1, #0x360A
+STOR (#4, a), r1
+LOAD r1, #0x3235
+STOR (#5, a), r1
+LOAD r1, #0x350A
+STOR (#6, a), r1
+ADDI al, $HEADER_WORDS
+
+; ============================================================
+; RENDER LOOP (2 pixels written per word per iteration)
+; 
+; r1 = x-pair start (0,2,4,...,126)   r2 = y (0..95)
+; r3 = pixel0 / isqrt-input / scratch  r4 = lo / z_hit / dx1
+; r5 = dx (signed) / mid / abs_dx      r6 = dy (signed) / hi
+; r7 = d_sq / sq_table[mid] / pixel1
+; 
+; Stack depth: at most 3 words (pixel0 + dx + dy during isqrt1)
+; ============================================================
+LOAD r2, #0
+
+:loop_y
+LOAD r1, #0
+
+:loop_x
+
+; === Pixel 0 at column r1 ===
+
+LOAD r5, r1
+SUBI r5, $CX             ; r5 = dx0 = r1 - CX  (signed)
+LOAD r6, r2
+SUBI r6, $CY             ; r6 = dy  = r2 - CY  (signed)
+
+; abs_dx0 -> r3
+LOAD r3, r5
+CMPI r3, #0
+BRAN|>= @abs_dx0_ok
+LOAD r3, #0
+SUBR r3, r5
+:abs_dx0_ok
+
+; abs_dy -> r4
+LOAD r4, r6
+CMPI r4, #0
+BRAN|>= @abs_dy0_ok
+LOAD r4, #0
+SUBR r4, r6
+:abs_dy0_ok
+
+CMPI r3, #64
+BRAN|<= @dx0_clamped
+LOAD r3, #64
+:dx0_clamped
+CMPI r4, #64
+BRAN|<= @dy0_clamped
+LOAD r4, #64
+:dy0_clamped
+
+; d_sq0 = sq_table[abs_dx0] + sq_table[abs_dy]  -> r7
+LOAD r7, (r3, l)
+LOAD r3, (r4, l)
+ADDR r7, r3
+
+CMPI r7, $RADIUS_SQ
+BRAN|<< @sphere0
+LOAD r3, #0
+BRAN @pixel0_done
+
+:sphere0
+STOR -(s), r5             ; save dx0
+STOR -(s), r6             ; save dy
+LOAD r3, $RADIUS_SQ
+SUBR r3, r7               ; r3 = n0 = RADIUS_SQ - d_sq0  (isqrt input)
+LOAD r4, #0               ; lo
+LOAD r6, #32              ; hi
+; --- isqrt0: 6 ceiling-div iterations; r3=n readonly; r4=lo; r5=mid; r6=hi; r7=sq[mid] ---
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_1h
+LOAD r4, r5
+BRAN @i0_2
+:i0_1h
+SUBI r5, #1
+LOAD r6, r5
+:i0_2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_2h
+LOAD r4, r5
+BRAN @i0_3
+:i0_2h
+SUBI r5, #1
+LOAD r6, r5
+:i0_3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_3h
+LOAD r4, r5
+BRAN @i0_4
+:i0_3h
+SUBI r5, #1
+LOAD r6, r5
+:i0_4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_4h
+LOAD r4, r5
+BRAN @i0_5
+:i0_4h
+SUBI r5, #1
+LOAD r6, r5
+:i0_5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_5h
+LOAD r4, r5
+BRAN @i0_6
+:i0_5h
+SUBI r5, #1
+LOAD r6, r5
+:i0_6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i0_6h
+LOAD r4, r5
+BRAN @isqrt0_done
+:i0_6h
+SUBI r5, #1
+LOAD r6, r5
+:isqrt0_done
+; r4 = z_hit0
+LOAD r6, (s)+             ; restore dy
+LOAD r5, (s)+             ; restore dx0
+
+; shade0 = clamp(128 + 2*z_hit0 - dx0 - dy, 0, 255) -> r3
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+SUBR r3, r6
+CMPI r3, #0
+BRAN|>= @p0_hi
+LOAD r3, #0
+BRAN @pixel0_done
+:p0_hi
+CMPI r3, #255
+BRAN|<= @pixel0_done
+LOAD r3, #255
+
+:pixel0_done
+; r3=pixel0  r5=dx0(signed)  r6=dy(signed)
+
+; === Pixel 1 at column r1+1 ===
+STOR -(s), r3             ; save pixel0;  stack=[pixel0]
+
+LOAD r4, r5
+ADDI r4, #1               ; r4 = dx1 = dx0+1  (signed)
+
+; abs_dx1 -> r5  (r4=dx1 unchanged)
+LOAD r5, r4
+CMPI r5, #0
+BRAN|>= @abs_dx1_ok
+LOAD r5, #0
+SUBR r5, r4
+:abs_dx1_ok
+
+; abs_dy -> r7  (r6=dy unchanged)
+LOAD r7, r6
+CMPI r7, #0
+BRAN|>= @abs_dy1_ok
+LOAD r7, #0
+SUBR r7, r6
+:abs_dy1_ok
+
+CMPI r5, #64
+BRAN|<= @dx1_clamped
+LOAD r5, #64
+:dx1_clamped
+CMPI r7, #64
+BRAN|<= @dy1_clamped
+LOAD r7, #64
+:dy1_clamped
+
+; d_sq1 = sq_table[abs_dx1] + sq_table[abs_dy]  -> r3
+LOAD r3, (r5, l)
+LOAD r5, (r7, l)
+ADDR r3, r5               ; r3 = d_sq1
+
+CMPI r3, $RADIUS_SQ
+BRAN|<< @sphere1
+LOAD r3, (s)+             ; restore pixel0
+LOAD r7, #0
+BRAN @pack_pixels
+
+:sphere1
+LOAD r5, $RADIUS_SQ
+SUBR r5, r3
+LOAD r3, r5               ; r3 = n1  (isqrt input, read-only)
+STOR -(s), r4             ; save dx1;  stack=[pixel0, dx1]
+STOR -(s), r6             ; save dy;   stack=[pixel0, dx1, dy]
+LOAD r4, #0
+LOAD r6, #32
+; --- isqrt1: 6 ceiling-div iterations ---
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_1h
+LOAD r4, r5
+BRAN @i1_2
+:i1_1h
+SUBI r5, #1
+LOAD r6, r5
+:i1_2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_2h
+LOAD r4, r5
+BRAN @i1_3
+:i1_2h
+SUBI r5, #1
+LOAD r6, r5
+:i1_3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_3h
+LOAD r4, r5
+BRAN @i1_4
+:i1_3h
+SUBI r5, #1
+LOAD r6, r5
+:i1_4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_4h
+LOAD r4, r5
+BRAN @i1_5
+:i1_4h
+SUBI r5, #1
+LOAD r6, r5
+:i1_5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_5h
+LOAD r4, r5
+BRAN @i1_6
+:i1_5h
+SUBI r5, #1
+LOAD r6, r5
+:i1_6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+LOAD r7, (r5, l)
+CMPR r3, r7
+BRAN|HI @i1_6h
+LOAD r4, r5
+BRAN @isqrt1_done
+:i1_6h
+SUBI r5, #1
+LOAD r6, r5
+:isqrt1_done
+; r4 = z_hit1
+LOAD r6, (s)+             ; restore dy
+LOAD r5, (s)+             ; restore dx1
+
+; shade1 = clamp(128 + 2*z_hit1 - dx1 - dy, 0, 255) -> r7
+LOAD r7, #128
+ADDR r7, r4
+ADDR r7, r4
+SUBR r7, r5
+SUBR r7, r6
+CMPI r7, #0
+BRAN|>= @p1_hi
+LOAD r7, #0
+BRAN @pixel1_done
+:p1_hi
+CMPI r7, #255
+BRAN|<= @pixel1_done
+LOAD r7, #255
+
+:pixel1_done
+; r7=pixel1
+LOAD r3, (s)+             ; restore pixel0;  stack=[]
+
+:pack_pixels
+SHFT r3, LSL #8
+ORRR r3, r7
+STOR (#0, a), r3
+ADDI al, #1
+
+ADDI r1, #2
+CMPI r1, $WIDTH
+BRAN|!= @loop_x
+
+ADDI r2, #1
+CMPI r2, $HEIGHT
+BRAN|!= @loop_y
+
+COPI #0x14FF
+
+; ============================================================
+; sq_table[i] = i*i, for i = 0..64
+; At word offset 0x0400 in PROGRAM segment.
+; ============================================================
+.ORG 0x0400
+:sq_table
+.DW #0
+.DW #1
+.DW #4
+.DW #9
+.DW #16
+.DW #25
+.DW #36
+.DW #49
+.DW #64
+.DW #81
+.DW #100
+.DW #121
+.DW #144
+.DW #169
+.DW #196
+.DW #225
+.DW #256
+.DW #289
+.DW #324
+.DW #361
+.DW #400
+.DW #441
+.DW #484
+.DW #529
+.DW #576
+.DW #625
+.DW #676
+.DW #729
+.DW #784
+.DW #841
+.DW #900
+.DW #961
+.DW #1024
+.DW #1089
+.DW #1156
+.DW #1225
+.DW #1296
+.DW #1369
+.DW #1444
+.DW #1521
+.DW #1600
+.DW #1681
+.DW #1764
+.DW #1849
+.DW #1936
+.DW #2025
+.DW #2116
+.DW #2209
+.DW #2304
+.DW #2401
+.DW #2500
+.DW #2601
+.DW #2704
+.DW #2809
+.DW #2916
+.DW #3025
+.DW #3136
+.DW #3249
+.DW #3364
+.DW #3481
+.DW #3600
+.DW #3721
+.DW #3844
+.DW #3969
+.DW #4096
