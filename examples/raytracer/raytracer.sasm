@@ -7,9 +7,15 @@
 ; 
 ; Address registers:
 ;   a (ah:al) = framebuffer write pointer
-;   l (lh:ll) = sq_table base pointer (word 0x0400 in PROGRAM segment)
+;   l (lh:ll) = sq_table base pointer (word 0x0601 in PROGRAM segment -
+;               one past the :sq_table label; see indexing note below)
 ;   s (sh:sl) = stack (grows down from top of FRAMEBUF segment)
-; 
+; sq_table indexing: the assembler pads every .DW entry to a full
+; instruction-width (4 byte / 2 word) slot, so logical entry i actually
+; lives at word (sq_table + 1 + i*2), not (sq_table + i). l is set to
+; sq_table+1 so every lookup just needs index*2 as the displacement.
+; See HANDOVER.md for details (this is a known toolchain limitation,
+; not something to "fix" here).
 ; SIRC carry/condition notes:
 ;   carry is SET on borrow: CMPR a, b sets carry when a < b (unsigned).
 ;   After CMPR r_n, r_sq: HI fires when n < sq_table[mid] (sq_table[mid] > n)
@@ -36,7 +42,7 @@ LOAD al, #0x0000
 LOAD sh, $FRAMEBUF_SEGMENT
 LOAD sl, #0xFFFF
 LOAD lh, #0x0000
-LOAD ll, #0x0400
+LOAD ll, #0x0601           ; sq_table+1: skip entry-0 padding word
 
 ; --- Write PGM P5 header "P5\n128 96\n255\n" (14 bytes = 7 big-endian words) ---
 ; Word 0: 0x5035  'P','5'      Word 4: 0x360A  '6','\n'
@@ -109,7 +115,9 @@ LOAD r4, #64
 :dy0_clamped
 
 ; d_sq0 = sq_table[abs_dx0] + sq_table[abs_dy]  -> r7
+SHFT r3, LSL #1           ; double index for .DW packing workaround
 LOAD r7, (r3, l)
+SHFT r4, LSL #1
 LOAD r3, (r4, l)
 ADDR r7, r3
 
@@ -129,7 +137,9 @@ LOAD r6, #32              ; hi
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_1h
 LOAD r4, r5
@@ -141,7 +151,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_2h
 LOAD r4, r5
@@ -153,7 +165,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_3h
 LOAD r4, r5
@@ -165,7 +179,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_4h
 LOAD r4, r5
@@ -177,7 +193,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_5h
 LOAD r4, r5
@@ -189,7 +207,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i0_6h
 LOAD r4, r5
@@ -252,7 +272,9 @@ LOAD r7, #64
 :dy1_clamped
 
 ; d_sq1 = sq_table[abs_dx1] + sq_table[abs_dy]  -> r3
+SHFT r5, LSL #1           ; double index for .DW packing workaround
 LOAD r3, (r5, l)
+SHFT r7, LSL #1
 LOAD r5, (r7, l)
 ADDR r3, r5               ; r3 = d_sq1
 
@@ -274,7 +296,9 @@ LOAD r6, #32
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_1h
 LOAD r4, r5
@@ -286,7 +310,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_2h
 LOAD r4, r5
@@ -298,7 +324,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_3h
 LOAD r4, r5
@@ -310,7 +338,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_4h
 LOAD r4, r5
@@ -322,7 +352,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_5h
 LOAD r4, r5
@@ -334,7 +366,9 @@ LOAD r6, r5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
+SHFT r5, LSL #1
 LOAD r7, (r5, l)
+SHFT r5, LSR #1
 CMPR r3, r7
 BRAN|HI @i1_6h
 LOAD r4, r5
@@ -384,9 +418,10 @@ COPI #0x14FF
 
 ; ============================================================
 ; sq_table[i] = i*i, for i = 0..64
-; At word offset 0x0400 in PROGRAM segment.
+; At word offset 0x0600 in PROGRAM segment (0x0400 was too close to
+; the end of the render loop; 0x0600 gives ~450 instruction slots of margin).
 ; ============================================================
-.ORG 0x0400
+.ORG 0x0600
 :sq_table
 .DW #0
 .DW #1
