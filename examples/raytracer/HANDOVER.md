@@ -12,7 +12,7 @@ bug or manual issue is found, stop and report it instead of patching it.
 
 Step 1 DONE — sphere + cylinder render correctly.
 Step 2 DONE — cone renders correctly.
-Step 3 TODO — add ground plane.
+Step 3 DONE — ground plane added.
 
 ## Important: use BRAN|>> (signed GreaterThan) for range checks, not BRAN|HI
 
@@ -94,6 +94,10 @@ Only keep `BRAN|HI` in the isqrt loops where firing on "first < second" is corre
       the cone boundary check (`CMPR r4, r6 / BRAN|>> @pixel_done`)
       Moved sq_table from .ORG 0x0600 to .ORG 0x0800 to accommodate larger code
 - [x] Committed and pushed step 2 working version (sphere+cylinder+cone)
+- [x] Step 3: added ground plane (GROUND_Y=76, gradient shade 90→52 toward bottom)
+      Cone-miss exits redirected to :try_groundN blocks inserted before each :pixelN_done.
+      Objects at y<=76 take priority; ground fills background below that row.
+- [x] Committed and pushed step 3 working version (sphere+cylinder+cone+ground)
 
 ## How to build/run (for whoever picks this up)
 

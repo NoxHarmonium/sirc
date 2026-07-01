@@ -39,6 +39,9 @@
 .EQU $CONE_TIP_Y        #28
 .EQU $CONE_HEIGHT       #48
 
+; Ground plane: flat surface at y=GROUND_Y (shade gradient 90..52 toward bottom)
+.EQU $GROUND_Y          #76
+
 ; Exception vector
 .ORG 0x0000
 .DQ @main
@@ -391,9 +394,9 @@ BRAN @pixel0_done
 LOAD r6, r2
 SUBI r6, $CONE_TIP_Y      ; r6 = dy_from_tip = y - tip_y
 CMPI r6, #0
-BRAN|<< @pixel0_done      ; above tip → skip
+BRAN|<< @try_ground0      ; above tip → try ground
 CMPI r6, $CONE_HEIGHT
-BRAN|>> @pixel0_done      ; below base → skip
+BRAN|>> @try_ground0      ; below base → try ground
 ; r_sq = sq_table[dy>>1]; displacement = (dy>>1)*2
 LOAD r4, r6
 SHFT r4, LSR #1
@@ -411,7 +414,7 @@ SUBR r4, r5
 :abs_dxk0_ok
 SHFT r4, LSL #1           ; r4 = 2*abs_dx_cone (= displacement for dx_sq lookup)
 CMPR r4, r6               ; flags: N/V set based on r4 - r6
-BRAN|>> @pixel0_done      ; signed GT: fires when r4 > r6 → outside cone
+BRAN|>> @try_ground0      ; signed GT: fires when r4 > r6 → outside cone
 ; n_k = r_sq - dx_sq
 LOAD r3, (r4, l)          ; r3 = dx_sq
 SUBR r7, r3               ; r7 = r_sq - dx_sq = n_k
@@ -519,6 +522,15 @@ BRAN @pixel0_done
 CMPI r3, #255
 BRAN|<= @pixel0_done
 LOAD r3, #255
+
+:try_ground0
+CMPI r2, $GROUND_Y
+BRAN|<< @pixel0_done      ; y < GROUND_Y → black
+LOAD r3, #90
+LOAD r4, r2
+SUBI r4, $GROUND_Y        ; r4 = y - GROUND_Y
+SHFT r4, LSL #1           ; r4 = 2*(y - GROUND_Y)
+SUBR r3, r4               ; r3 = 90 - 2*(y - GROUND_Y)
 
 :pixel0_done
 ; r3 = shade for pixel 0
@@ -830,9 +842,9 @@ BRAN @pixel1_done
 LOAD r6, r2
 SUBI r6, $CONE_TIP_Y      ; r6 = dy_from_tip = y - tip_y
 CMPI r6, #0
-BRAN|<< @pixel1_done      ; above tip → skip
+BRAN|<< @try_ground1      ; above tip → try ground
 CMPI r6, $CONE_HEIGHT
-BRAN|>> @pixel1_done      ; below base → skip
+BRAN|>> @try_ground1      ; below base → try ground
 ; r_sq = sq_table[dy>>1]; displacement = (dy>>1)*2
 LOAD r4, r6
 SHFT r4, LSR #1
@@ -851,7 +863,7 @@ SUBR r4, r5
 :abs_dxk1_ok
 SHFT r4, LSL #1           ; r4 = 2*abs_dx1_cone (= displacement for dx_sq lookup)
 CMPR r4, r6               ; flags: N/V set based on r4 - r6
-BRAN|>> @pixel1_done      ; signed GT: fires when r4 > r6 → outside cone
+BRAN|>> @try_ground1      ; signed GT: fires when r4 > r6 → outside cone
 ; n_k = r_sq - dx_sq
 LOAD r3, (r4, l)          ; r3 = dx_sq
 SUBR r7, r3               ; r7 = r_sq - dx_sq = n_k
@@ -959,6 +971,15 @@ BRAN @pixel1_done
 CMPI r3, #255
 BRAN|<= @pixel1_done
 LOAD r3, #255
+
+:try_ground1
+CMPI r2, $GROUND_Y
+BRAN|<< @pixel1_done      ; y < GROUND_Y → black
+LOAD r3, #90
+LOAD r4, r2
+SUBI r4, $GROUND_Y        ; r4 = y - GROUND_Y
+SHFT r4, LSL #1           ; r4 = 2*(y - GROUND_Y)
+SUBR r3, r4               ; r3 = 90 - 2*(y - GROUND_Y)
 
 :pixel1_done
 ; r3 = shade for pixel 1
