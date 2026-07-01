@@ -57,7 +57,13 @@ Only keep `BRAN|HI` in the isqrt loops where firing on "first < second" is corre
    - Real fix (owner says they'll do this in a separate session): assembler
      should pack `.DW`/`.DB` tightly instead of padding every data token to
      instruction width.
-2. **DMA instructions unimplemented**: `DMAT`, `DMAR`, `DMAW` are not
+2. **Bare `;` comments rejected by assembler**: a line containing only `;`
+   (nothing after the semicolon) causes a parse error. The comment parser uses
+   `is_not("\n\r")` which requires at least one character after `;`. The
+   assembler source at `toolchain/src/parsers/shared.rs:244` already has a
+   TODO noting this. Workaround: always write at least one character after
+   `;`, e.g. use `; ` (semicolon-space) as a blank separator line.
+3. **DMA instructions unimplemented**: `DMAT`, `DMAR`, `DMAW` are not
    implemented in the simulator. Do not use them in this example.
 3. **Don't run the `basic-video` example** (per owner instruction, unrelated
    to this work — just avoid it during testing/exploration).
