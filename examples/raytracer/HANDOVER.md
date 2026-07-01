@@ -11,16 +11,29 @@ bug or manual issue is found, stop and report it instead of patching it.
 ## Status
 
 Step 1 DONE — sphere + cylinder render correctly.
-Step 2 IN PROGRESS — adding cone.
+Step 2 DONE — cone renders correctly.
 Step 3 TODO — add ground plane.
 
 ## Important: use BRAN|>> (signed GreaterThan) for range checks, not BRAN|HI
 
-`BRAN|HI` (unsigned Higher) relies on the carry flag. When the absolute value
-of a register is computed via `SUBR r4, #0` (negation), this sets carry=1 due
-to borrow (0 - positive wraps). A subsequent `CMPI` may not reset carry,
-so `BRAN|HI` misfires. Use `BRAN|>>` (signed GreaterThan) instead — it uses
-only N/V flags and works correctly after `CMPI` on non-negative values.
+`BRAN|HI` (unsigned Higher) in SIRC fires when **carry IS SET and zero IS CLEAR**.
+SIRC uses the *borrow* convention: carry=1 means borrow (unsigned underflow, first
+operand < second operand). This is opposite to ARM's convention (carry=1 = no borrow).
+
+Consequences:
+- After `CMPI r4, #N` following a `SUBR r4, #0` negation: the negation sets
+  carry=1 (borrow from 0 - positive). A subsequent `CMPI` may not clear carry.
+  `BRAN|HI` uses carry directly and misfires. Fix: use `BRAN|>>` (GreaterThan,
+  uses only N/V flags).
+- After `CMPR r4, r6`: `BRAN|HI` fires when **r4 < r6** (carry=1), not r4 > r6.
+  For "skip if r4 > r6", use `BRAN|>>` (fires when Z=0 AND N==V, signed GT).
+
+The isqrt binary search `CMPR r3, r7 / BRAN|HI @iNh` is intentionally correct:
+it fires when n < sq[mid] (carry=1), setting hi=mid-1 to narrow the search.
+Do not change those BRAN|HI uses — they exploit the "fires when first < second" semantics.
+
+**Rule**: use `BRAN|>>` for all "skip if value exceeds threshold" range checks.
+Only keep `BRAN|HI` in the isqrt loops where firing on "first < second" is correct.
 
 ## Known toolchain caveats (not bugs to fix here)
 
@@ -48,11 +61,12 @@ only N/V flags and works correctly after `CMPI` on non-negative values.
    implemented in the simulator. Do not use them in this example.
 3. **Don't run the `basic-video` example** (per owner instruction, unrelated
    to this work — just avoid it during testing/exploration).
-4. **`.ORG` placement / code-size budget**: the render loop is ~273
-   instructions (2 words each), so code spans words 0x0200–0x0421. The
-   `sq_table` must live above that; it is placed at `.ORG 0x0600` and `l`
-   is initialised to `#0x0601` (base+1 for the +1 offset above). Do not
-   move `sq_table` below 0x0450 without re-checking the instruction count.
+4. **`.ORG` placement / code-size budget**: with sphere + cylinder + cone the
+   render loop is ~500 instructions (2 words each), so code spans words
+   0x0200–0x05F3 approximately. The `sq_table` must live above that; it is
+   placed at `.ORG 0x0800` and `l` is initialised to `#0x0801` (base+1 for
+   the +1 offset above). Do not move `sq_table` below 0x0650 without
+   re-checking the instruction count.
 
 ## Plan / progress
 
@@ -68,7 +82,12 @@ only N/V flags and works correctly after `CMPI` on non-negative values.
       moved `sq_table` to `.ORG 0x0600`
 - [x] Re-assembled/re-linked/re-ran; `render.pgm` shows correct sphere
       (smooth shading, circular boundary, black background)
-- [x] Committed and pushed final working version
+- [x] Committed and pushed final working version (sphere+cylinder)
+- [x] Step 2: added cone (CX3=104, tip y=28, height=48, slope 2:1)
+      Discovered BRAN|HI fires when carry=1 (first<second) — used BRAN|>> for
+      the cone boundary check (`CMPR r4, r6 / BRAN|>> @pixel_done`)
+      Moved sq_table from .ORG 0x0600 to .ORG 0x0800 to accommodate larger code
+- [x] Committed and pushed step 2 working version (sphere+cylinder+cone)
 
 ## How to build/run (for whoever picks this up)
 

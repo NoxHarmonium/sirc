@@ -9,8 +9,8 @@
 ;   l (lh:ll) = sq_table base pointer (word 0x0601 - one past :sq_table)
 ;   s (sh:sl) = stack (grows down from top of FRAMEBUF segment)
 ; sq_table indexing: each .DW entry is padded to a 2-word slot (toolchain
-; limitation). ll = sq_table_base+1; every lookup uses index*2 as the
-; displacement. See HANDOVER.md for details.
+; limitation). ll = sq_table_base+1 (0x0801); every lookup uses index*2 as
+; the displacement. See HANDOVER.md for details.
 ; SIRC carry/condition notes:
 ;   carry SET on borrow: CMPR a,b sets carry when a < b (unsigned).
 ;   HI fires when carry clear && zero clear (unsigned a > b).
@@ -34,6 +34,11 @@
 .EQU $CYL_R             #12
 .EQU $CYL_HALF_H        #28
 
+; Cone: tip at (CX3, CONE_TIP_Y), opening downward, 2:1 slope (radius r = dy>>1)
+.EQU $CX3               #104
+.EQU $CONE_TIP_Y        #28
+.EQU $CONE_HEIGHT       #48
+
 ; Exception vector
 .ORG 0x0000
 .DQ @main
@@ -45,7 +50,7 @@ LOAD al, #0x0000
 LOAD sh, $FRAMEBUF_SEGMENT
 LOAD sl, #0xFFFF
 LOAD lh, #0x0000
-LOAD ll, #0x0601           ; sq_table+1: skip entry-0 padding word
+LOAD ll, #0x0801           ; sq_table+1: skip entry-0 padding word
 
 ; --- Write PGM P5 header "P5\n128 96\n255\n" (14 bytes = 7 big-endian words) ---
 ; Word 0: 0x5035 'P','5'    Word 4: 0x360A '6','\n'
@@ -256,7 +261,7 @@ LOAD r4, #0
 SUBR r4, r6
 :abs_dyc0_ok
 CMPI r4, $CYL_HALF_H
-BRAN|>> @pixel0_done
+BRAN|>> @try_cone0
 
 ; abs_dx_c -> r4; check <= CYL_R
 LOAD r4, r5
@@ -266,7 +271,7 @@ LOAD r4, #0
 SUBR r4, r5
 :abs_dxc0_ok
 CMPI r4, $CYL_R
-BRAN|>> @pixel0_done
+BRAN|>> @try_cone0
 
 ; d_sq_c = sq_table[abs_dx_c] -> r7
 SHFT r4, LSL #1
@@ -376,6 +381,141 @@ BRAN|>= @c0_shade_hi
 LOAD r3, #0
 BRAN @pixel0_done
 :c0_shade_hi
+CMPI r3, #255
+BRAN|<= @pixel0_done
+LOAD r3, #255
+BRAN @pixel0_done
+
+; --- Cone test for pixel 0 ---
+:try_cone0
+LOAD r6, r2
+SUBI r6, $CONE_TIP_Y      ; r6 = dy_from_tip = y - tip_y
+CMPI r6, #0
+BRAN|<< @pixel0_done      ; above tip → skip
+CMPI r6, $CONE_HEIGHT
+BRAN|>> @pixel0_done      ; below base → skip
+; r_sq = sq_table[dy>>1]; displacement = (dy>>1)*2
+LOAD r4, r6
+SHFT r4, LSR #1
+SHFT r4, LSL #1
+LOAD r7, (r4, l)          ; r7 = r_sq
+; dx_cone = x - CX3 (signed)
+LOAD r5, r1
+SUBI r5, $CX3             ; r5 = dx_cone
+; abs_dx_cone -> r4
+LOAD r4, r5
+CMPI r4, #0
+BRAN|>= @abs_dxk0_ok
+LOAD r4, #0
+SUBR r4, r5
+:abs_dxk0_ok
+SHFT r4, LSL #1           ; r4 = 2*abs_dx_cone (= displacement for dx_sq lookup)
+CMPR r4, r6               ; flags: N/V set based on r4 - r6
+BRAN|>> @pixel0_done      ; signed GT: fires when r4 > r6 → outside cone
+; n_k = r_sq - dx_sq
+LOAD r3, (r4, l)          ; r3 = dx_sq
+SUBR r7, r3               ; r7 = r_sq - dx_sq = n_k
+LOAD r3, r7               ; r3 = n_k (isqrt input, readonly)
+STOR -(s), r5             ; save dx_cone
+LOAD r4, #0
+LOAD r6, #32
+; isqrt0_k: 6 iterations
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i1h
+LOAD r4, r5
+BRAN @k0_i2
+:k0_i1h
+SUBI r5, #1
+LOAD r6, r5
+:k0_i2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i2h
+LOAD r4, r5
+BRAN @k0_i3
+:k0_i2h
+SUBI r5, #1
+LOAD r6, r5
+:k0_i3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i3h
+LOAD r4, r5
+BRAN @k0_i4
+:k0_i3h
+SUBI r5, #1
+LOAD r6, r5
+:k0_i4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i4h
+LOAD r4, r5
+BRAN @k0_i5
+:k0_i4h
+SUBI r5, #1
+LOAD r6, r5
+:k0_i5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i5h
+LOAD r4, r5
+BRAN @k0_i6
+:k0_i5h
+SUBI r5, #1
+LOAD r6, r5
+:k0_i6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k0_i6h
+LOAD r4, r5
+BRAN @k0_done
+:k0_i6h
+SUBI r5, #1
+LOAD r6, r5
+:k0_done
+; r4 = z_hit_k
+LOAD r5, (s)+             ; restore dx_cone
+; shade_k = clamp(128 + 2*z_hit - dx_cone, 0, 255)
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+CMPI r3, #0
+BRAN|>= @k0_shade_hi
+LOAD r3, #0
+BRAN @pixel0_done
+:k0_shade_hi
 CMPI r3, #255
 BRAN|<= @pixel0_done
 LOAD r3, #255
@@ -560,7 +700,7 @@ LOAD r4, #0
 SUBR r4, r6
 :abs_dyc1_ok
 CMPI r4, $CYL_HALF_H
-BRAN|>> @pixel1_done
+BRAN|>> @try_cone1
 
 ; abs_dx1_c -> r4; check <= CYL_R
 LOAD r4, r5
@@ -570,7 +710,7 @@ LOAD r4, #0
 SUBR r4, r5
 :abs_dxc1_ok
 CMPI r4, $CYL_R
-BRAN|>> @pixel1_done
+BRAN|>> @try_cone1
 
 ; d_sq1_c = sq_table[abs_dx1_c] -> r7
 SHFT r4, LSL #1
@@ -683,6 +823,142 @@ BRAN @pixel1_done
 CMPI r3, #255
 BRAN|<= @pixel1_done
 LOAD r3, #255
+BRAN @pixel1_done
+
+; --- Cone test for pixel 1 ---
+:try_cone1
+LOAD r6, r2
+SUBI r6, $CONE_TIP_Y      ; r6 = dy_from_tip = y - tip_y
+CMPI r6, #0
+BRAN|<< @pixel1_done      ; above tip → skip
+CMPI r6, $CONE_HEIGHT
+BRAN|>> @pixel1_done      ; below base → skip
+; r_sq = sq_table[dy>>1]; displacement = (dy>>1)*2
+LOAD r4, r6
+SHFT r4, LSR #1
+SHFT r4, LSL #1
+LOAD r7, (r4, l)          ; r7 = r_sq
+; dx1_cone = (x+1) - CX3 (signed)
+LOAD r5, r1
+SUBI r5, $CX3
+ADDI r5, #1               ; r5 = dx1_cone
+; abs_dx1_cone -> r4
+LOAD r4, r5
+CMPI r4, #0
+BRAN|>= @abs_dxk1_ok
+LOAD r4, #0
+SUBR r4, r5
+:abs_dxk1_ok
+SHFT r4, LSL #1           ; r4 = 2*abs_dx1_cone (= displacement for dx_sq lookup)
+CMPR r4, r6               ; flags: N/V set based on r4 - r6
+BRAN|>> @pixel1_done      ; signed GT: fires when r4 > r6 → outside cone
+; n_k = r_sq - dx_sq
+LOAD r3, (r4, l)          ; r3 = dx_sq
+SUBR r7, r3               ; r7 = r_sq - dx_sq = n_k
+LOAD r3, r7               ; r3 = n_k (isqrt input, readonly)
+STOR -(s), r5             ; save dx1_cone
+LOAD r4, #0
+LOAD r6, #32
+; isqrt1_k: 6 iterations
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i1h
+LOAD r4, r5
+BRAN @k1_i2
+:k1_i1h
+SUBI r5, #1
+LOAD r6, r5
+:k1_i2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i2h
+LOAD r4, r5
+BRAN @k1_i3
+:k1_i2h
+SUBI r5, #1
+LOAD r6, r5
+:k1_i3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i3h
+LOAD r4, r5
+BRAN @k1_i4
+:k1_i3h
+SUBI r5, #1
+LOAD r6, r5
+:k1_i4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i4h
+LOAD r4, r5
+BRAN @k1_i5
+:k1_i4h
+SUBI r5, #1
+LOAD r6, r5
+:k1_i5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i5h
+LOAD r4, r5
+BRAN @k1_i6
+:k1_i5h
+SUBI r5, #1
+LOAD r6, r5
+:k1_i6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @k1_i6h
+LOAD r4, r5
+BRAN @k1_done
+:k1_i6h
+SUBI r5, #1
+LOAD r6, r5
+:k1_done
+; r4 = z_hit1_k
+LOAD r5, (s)+             ; restore dx1_cone
+; shade1_k = clamp(128 + 2*z_hit - dx1_cone, 0, 255)
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+CMPI r3, #0
+BRAN|>= @k1_shade_hi
+LOAD r3, #0
+BRAN @pixel1_done
+:k1_shade_hi
+CMPI r3, #255
+BRAN|<= @pixel1_done
+LOAD r3, #255
 
 :pixel1_done
 ; r3 = shade for pixel 1
@@ -707,10 +983,10 @@ COPI #0x14FF
 
 ; ============================================================
 ; sq_table[i] = i*i, for i = 0..64
-; At word offset 0x0600 in PROGRAM segment.
-; sq_table+1 = 0x0601 (ll init value).
+; At word offset 0x0800 in PROGRAM segment.
+; sq_table+1 = 0x0801 (ll init value).
 ; ============================================================
-.ORG 0x0600
+.ORG 0x0800
 :sq_table
 .DW #0
 .DW #1
