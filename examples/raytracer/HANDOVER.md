@@ -10,8 +10,17 @@ bug or manual issue is found, stop and report it instead of patching it.
 
 ## Status
 
-**DONE** — `raytracer.sasm` builds, runs, and produces a correct 128×96 sphere
-PGM image. Committed and pushed.
+Step 1 DONE — sphere + cylinder render correctly.
+Step 2 IN PROGRESS — adding cone.
+Step 3 TODO — add ground plane.
+
+## Important: use BRAN|>> (signed GreaterThan) for range checks, not BRAN|HI
+
+`BRAN|HI` (unsigned Higher) relies on the carry flag. When the absolute value
+of a register is computed via `SUBR r4, #0` (negation), this sets carry=1 due
+to borrow (0 - positive wraps). A subsequent `CMPI` may not reset carry,
+so `BRAN|HI` misfires. Use `BRAN|>>` (signed GreaterThan) instead — it uses
+only N/V flags and works correctly after `CMPI` on non-negative values.
 
 ## Known toolchain caveats (not bugs to fix here)
 

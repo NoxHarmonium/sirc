@@ -1,42 +1,45 @@
 ; raytracer.sasm - SIRC ray tracer
 ; Renders a 128x96 grayscale image in PGM P5 format via a file-mapped segment.
-; 
+; Scene: sphere (left), vertical cylinder (centre).
 ; Memory layout:
-;   Segment 0x0000 (PROGRAM):  code + sq_table (loaded via --program-file)
-;   Segment 0x0002 (FRAMEBUF): render.pgm      (loaded via --segment file:...)
-; 
+;   Segment 0x0000 (PROGRAM):  code + sq_table
+;   Segment 0x0002 (FRAMEBUF): render.pgm
 ; Address registers:
 ;   a (ah:al) = framebuffer write pointer
-;   l (lh:ll) = sq_table base pointer (word 0x0601 in PROGRAM segment -
-;               one past the :sq_table label; see indexing note below)
+;   l (lh:ll) = sq_table base pointer (word 0x0601 - one past :sq_table)
 ;   s (sh:sl) = stack (grows down from top of FRAMEBUF segment)
-; sq_table indexing: the assembler pads every .DW entry to a full
-; instruction-width (4 byte / 2 word) slot, so logical entry i actually
-; lives at word (sq_table + 1 + i*2), not (sq_table + i). l is set to
-; sq_table+1 so every lookup just needs index*2 as the displacement.
-; See HANDOVER.md for details (this is a known toolchain limitation,
-; not something to "fix" here).
+; sq_table indexing: each .DW entry is padded to a 2-word slot (toolchain
+; limitation). ll = sq_table_base+1; every lookup uses index*2 as the
+; displacement. See HANDOVER.md for details.
 ; SIRC carry/condition notes:
-;   carry is SET on borrow: CMPR a, b sets carry when a < b (unsigned).
-;   After CMPR r_n, r_sq: HI fires when n < sq_table[mid] (sq_table[mid] > n)
-;   -> hi = mid-1 is the correct response.
-;   Signed: << = LessThan (fires when CMPI result < 0).
+;   carry SET on borrow: CMPR a,b sets carry when a < b (unsigned).
+;   HI fires when carry clear && zero clear (unsigned a > b).
+;   Signed: << = LessThan, >= = GreaterOrEqual.
 
 .EQU $FRAMEBUF_SEGMENT  #0x0002
 .EQU $WIDTH             #128
 .EQU $HEIGHT            #96
 .EQU $HEADER_WORDS      #7
-.EQU $CX                #64
-.EQU $CY                #48
-.EQU $RADIUS_SQ         #1024
 
-; Exception vector: CPU reads word-pair at 0x0000 as the reset address
+; Sphere: centre (CX1, CY1), radius 16 (radius^2 = 256)
+.EQU $CX1               #24
+.EQU $CY1               #48
+.EQU $SPH_R_SQ          #256
+
+; Vertical cylinder: centre-x CX2, spans y [CY2-CYL_HALF_H .. CY2+CYL_HALF_H]
+; x-radius 12 (radius^2 = 144)
+.EQU $CX2               #62
+.EQU $CY2               #48
+.EQU $CYL_R_SQ          #144
+.EQU $CYL_R             #12
+.EQU $CYL_HALF_H        #28
+
+; Exception vector
 .ORG 0x0000
 .DQ @main
 
 .ORG 0x0200
 :main
-
 LOAD ah, $FRAMEBUF_SEGMENT
 LOAD al, #0x0000
 LOAD sh, $FRAMEBUF_SEGMENT
@@ -45,10 +48,10 @@ LOAD lh, #0x0000
 LOAD ll, #0x0601           ; sq_table+1: skip entry-0 padding word
 
 ; --- Write PGM P5 header "P5\n128 96\n255\n" (14 bytes = 7 big-endian words) ---
-; Word 0: 0x5035  'P','5'      Word 4: 0x360A  '6','\n'
-; Word 1: 0x0A31  '\n','1'     Word 5: 0x3235  '2','5'
-; Word 2: 0x3238  '2','8'      Word 6: 0x350A  '5','\n'
-; Word 3: 0x2039  ' ','9'
+; Word 0: 0x5035 'P','5'    Word 4: 0x360A '6','\n'
+; Word 1: 0x0A31 '\n','1'   Word 5: 0x3235 '2','5'
+; Word 2: 0x3238 '2','8'    Word 6: 0x350A '5','\n'
+; Word 3: 0x2039 ' ','9'
 LOAD r1, #0x5035
 STOR (#0, a), r1
 LOAD r1, #0x0A31
@@ -66,14 +69,11 @@ STOR (#6, a), r1
 ADDI al, $HEADER_WORDS
 
 ; ============================================================
-; RENDER LOOP (2 pixels written per word per iteration)
-; 
-; r1 = x-pair start (0,2,4,...,126)   r2 = y (0..95)
-; r3 = pixel0 / isqrt-input / scratch  r4 = lo / z_hit / dx1
-; r5 = dx (signed) / mid / abs_dx      r6 = dy (signed) / hi
-; r7 = d_sq / sq_table[mid] / pixel1
-; 
-; Stack depth: at most 3 words (pixel0 + dx + dy during isqrt1)
+; RENDER LOOP - 2 pixels per word
+; r1 = x (0,2,4,...,126)   r2 = y (0..95)
+; r3 = shade/scratch/isqrt-n   r4 = abs/lo/z_hit
+; r5 = dx-signed/mid          r6 = dy-signed/hi
+; r7 = sq_table[mid]/scratch
 ; ============================================================
 LOAD r2, #0
 
@@ -82,58 +82,61 @@ LOAD r1, #0
 
 :loop_x
 
-; === Pixel 0 at column r1 ===
+; ============================================================
+; PIXEL 0 at column r1
+; ============================================================
 
+; --- Sphere test ---
 LOAD r5, r1
-SUBI r5, $CX             ; r5 = dx0 = r1 - CX  (signed)
+SUBI r5, $CX1              ; r5 = dx_s = x - CX1 (signed)
 LOAD r6, r2
-SUBI r6, $CY             ; r6 = dy  = r2 - CY  (signed)
+SUBI r6, $CY1              ; r6 = dy_s = y - CY1 (signed)
 
-; abs_dx0 -> r3
+; abs_dx_s -> r3
 LOAD r3, r5
 CMPI r3, #0
-BRAN|>= @abs_dx0_ok
+BRAN|>= @abs_dxs0_ok
 LOAD r3, #0
 SUBR r3, r5
-:abs_dx0_ok
+:abs_dxs0_ok
 
-; abs_dy -> r4
+; abs_dy_s -> r4
 LOAD r4, r6
 CMPI r4, #0
-BRAN|>= @abs_dy0_ok
+BRAN|>= @abs_dys0_ok
 LOAD r4, #0
 SUBR r4, r6
-:abs_dy0_ok
+:abs_dys0_ok
 
 CMPI r3, #64
-BRAN|<= @dx0_clamped
+BRAN|<= @clamp_dxs0
 LOAD r3, #64
-:dx0_clamped
+:clamp_dxs0
 CMPI r4, #64
-BRAN|<= @dy0_clamped
+BRAN|<= @clamp_dys0
 LOAD r4, #64
-:dy0_clamped
+:clamp_dys0
 
-; d_sq0 = sq_table[abs_dx0] + sq_table[abs_dy]  -> r7
-SHFT r3, LSL #1           ; double index for .DW packing workaround
+; d_sq_s = sq_table[abs_dx_s] + sq_table[abs_dy_s] -> r7
+SHFT r3, LSL #1
 LOAD r7, (r3, l)
 SHFT r4, LSL #1
 LOAD r3, (r4, l)
 ADDR r7, r3
 
-CMPI r7, $RADIUS_SQ
+CMPI r7, $SPH_R_SQ
 BRAN|<< @sphere0
 LOAD r3, #0
-BRAN @pixel0_done
+BRAN @try_cyl0
 
 :sphere0
-STOR -(s), r5             ; save dx0
-STOR -(s), r6             ; save dy
-LOAD r3, $RADIUS_SQ
-SUBR r3, r7               ; r3 = n0 = RADIUS_SQ - d_sq0  (isqrt input)
-LOAD r4, #0               ; lo
-LOAD r6, #32              ; hi
-; --- isqrt0: 6 ceiling-div iterations; r3=n readonly; r4=lo; r5=mid; r6=hi; r7=sq[mid] ---
+STOR -(s), r5              ; save dx_s
+STOR -(s), r6              ; save dy_s
+LOAD r3, $SPH_R_SQ
+SUBR r3, r7                ; r3 = n = SPH_R_SQ - d_sq (isqrt input, readonly)
+LOAD r4, #0                ; lo
+LOAD r6, #32               ; hi
+; isqrt0_s: 6 iterations
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -141,13 +144,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_1h
+BRAN|HI @s0_i1h
 LOAD r4, r5
-BRAN @i0_2
-:i0_1h
+BRAN @s0_i2
+:s0_i1h
 SUBI r5, #1
 LOAD r6, r5
-:i0_2
+:s0_i2
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -155,13 +158,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_2h
+BRAN|HI @s0_i2h
 LOAD r4, r5
-BRAN @i0_3
-:i0_2h
+BRAN @s0_i3
+:s0_i2h
 SUBI r5, #1
 LOAD r6, r5
-:i0_3
+:s0_i3
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -169,13 +172,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_3h
+BRAN|HI @s0_i3h
 LOAD r4, r5
-BRAN @i0_4
-:i0_3h
+BRAN @s0_i4
+:s0_i3h
 SUBI r5, #1
 LOAD r6, r5
-:i0_4
+:s0_i4
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -183,13 +186,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_4h
+BRAN|HI @s0_i4h
 LOAD r4, r5
-BRAN @i0_5
-:i0_4h
+BRAN @s0_i5
+:s0_i4h
 SUBI r5, #1
 LOAD r6, r5
-:i0_5
+:s0_i5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -197,13 +200,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_5h
+BRAN|HI @s0_i5h
 LOAD r4, r5
-BRAN @i0_6
-:i0_5h
+BRAN @s0_i6
+:s0_i5h
 SUBI r5, #1
 LOAD r6, r5
-:i0_6
+:s0_i6
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -211,88 +214,232 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i0_6h
+BRAN|HI @s0_i6h
 LOAD r4, r5
-BRAN @isqrt0_done
-:i0_6h
+BRAN @s0_done
+:s0_i6h
 SUBI r5, #1
 LOAD r6, r5
-:isqrt0_done
-; r4 = z_hit0
-LOAD r6, (s)+             ; restore dy
-LOAD r5, (s)+             ; restore dx0
-
-; shade0 = clamp(128 + 2*z_hit0 - dx0 - dy, 0, 255) -> r3
+:s0_done
+; r4 = z_hit_s
+LOAD r6, (s)+              ; restore dy_s
+LOAD r5, (s)+              ; restore dx_s
+; shade_s = clamp(128 + 2*z_hit - dx_s - dy_s, 0, 255)
 LOAD r3, #128
 ADDR r3, r4
 ADDR r3, r4
 SUBR r3, r5
 SUBR r3, r6
 CMPI r3, #0
-BRAN|>= @p0_hi
+BRAN|>= @s0_shade_hi
 LOAD r3, #0
 BRAN @pixel0_done
-:p0_hi
+:s0_shade_hi
+CMPI r3, #255
+BRAN|<= @pixel0_done
+LOAD r3, #255
+BRAN @pixel0_done
+
+; --- Cylinder test for pixel 0 ---
+:try_cyl0
+; r3 = 0 (sphere missed), r1=x, r2=y
+LOAD r5, r1
+SUBI r5, $CX2              ; r5 = dx_c (signed)
+LOAD r6, r2
+SUBI r6, $CY2              ; r6 = dy_c (signed)
+
+; abs_dy_c -> r4; check <= CYL_HALF_H
+LOAD r4, r6
+CMPI r4, #0
+BRAN|>= @abs_dyc0_ok
+LOAD r4, #0
+SUBR r4, r6
+:abs_dyc0_ok
+CMPI r4, $CYL_HALF_H
+BRAN|>> @pixel0_done
+
+; abs_dx_c -> r4; check <= CYL_R
+LOAD r4, r5
+CMPI r4, #0
+BRAN|>= @abs_dxc0_ok
+LOAD r4, #0
+SUBR r4, r5
+:abs_dxc0_ok
+CMPI r4, $CYL_R
+BRAN|>> @pixel0_done
+
+; d_sq_c = sq_table[abs_dx_c] -> r7
+SHFT r4, LSL #1
+LOAD r7, (r4, l)
+
+; n_c = CYL_R_SQ - d_sq_c -> r3
+LOAD r3, $CYL_R_SQ
+SUBR r3, r7
+
+; isqrt0_c: 6 iterations (save dx_c=r5; hi=32 safe for R=12)
+STOR -(s), r5
+LOAD r4, #0
+LOAD r6, #32
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i1h
+LOAD r4, r5
+BRAN @c0_i2
+:c0_i1h
+SUBI r5, #1
+LOAD r6, r5
+:c0_i2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i2h
+LOAD r4, r5
+BRAN @c0_i3
+:c0_i2h
+SUBI r5, #1
+LOAD r6, r5
+:c0_i3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i3h
+LOAD r4, r5
+BRAN @c0_i4
+:c0_i3h
+SUBI r5, #1
+LOAD r6, r5
+:c0_i4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i4h
+LOAD r4, r5
+BRAN @c0_i5
+:c0_i4h
+SUBI r5, #1
+LOAD r6, r5
+:c0_i5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i5h
+LOAD r4, r5
+BRAN @c0_i6
+:c0_i5h
+SUBI r5, #1
+LOAD r6, r5
+:c0_i6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c0_i6h
+LOAD r4, r5
+BRAN @c0_done
+:c0_i6h
+SUBI r5, #1
+LOAD r6, r5
+:c0_done
+; r4 = z_hit_c
+LOAD r5, (s)+              ; restore dx_c
+; shade_c = clamp(128 + 2*z_hit - dx_c, 0, 255)
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+CMPI r3, #0
+BRAN|>= @c0_shade_hi
+LOAD r3, #0
+BRAN @pixel0_done
+:c0_shade_hi
 CMPI r3, #255
 BRAN|<= @pixel0_done
 LOAD r3, #255
 
 :pixel0_done
-; r3=pixel0  r5=dx0(signed)  r6=dy(signed)
+; r3 = shade for pixel 0
 
-; === Pixel 1 at column r1+1 ===
-STOR -(s), r3             ; save pixel0;  stack=[pixel0]
+; ============================================================
+; PIXEL 1 at column r1+1
+; ============================================================
+STOR -(s), r3              ; save shade0
 
-LOAD r4, r5
-ADDI r4, #1               ; r4 = dx1 = dx0+1  (signed)
+; --- Sphere test for pixel 1 ---
+LOAD r5, r1
+SUBI r5, $CX1
+ADDI r5, #1                ; r5 = dx1_s = (x+1) - CX1 (signed)
+LOAD r6, r2
+SUBI r6, $CY1              ; r6 = dy1_s = y - CY1 (signed, same row)
 
-; abs_dx1 -> r5  (r4=dx1 unchanged)
-LOAD r5, r4
-CMPI r5, #0
-BRAN|>= @abs_dx1_ok
-LOAD r5, #0
-SUBR r5, r4
-:abs_dx1_ok
+; abs_dx1_s -> r3
+LOAD r3, r5
+CMPI r3, #0
+BRAN|>= @abs_dxs1_ok
+LOAD r3, #0
+SUBR r3, r5
+:abs_dxs1_ok
 
-; abs_dy -> r7  (r6=dy unchanged)
-LOAD r7, r6
-CMPI r7, #0
-BRAN|>= @abs_dy1_ok
-LOAD r7, #0
-SUBR r7, r6
-:abs_dy1_ok
+; abs_dy1_s -> r4
+LOAD r4, r6
+CMPI r4, #0
+BRAN|>= @abs_dys1_ok
+LOAD r4, #0
+SUBR r4, r6
+:abs_dys1_ok
 
-CMPI r5, #64
-BRAN|<= @dx1_clamped
-LOAD r5, #64
-:dx1_clamped
-CMPI r7, #64
-BRAN|<= @dy1_clamped
-LOAD r7, #64
-:dy1_clamped
+CMPI r3, #64
+BRAN|<= @clamp_dxs1
+LOAD r3, #64
+:clamp_dxs1
+CMPI r4, #64
+BRAN|<= @clamp_dys1
+LOAD r4, #64
+:clamp_dys1
 
-; d_sq1 = sq_table[abs_dx1] + sq_table[abs_dy]  -> r3
-SHFT r5, LSL #1           ; double index for .DW packing workaround
-LOAD r3, (r5, l)
-SHFT r7, LSL #1
-LOAD r5, (r7, l)
-ADDR r3, r5               ; r3 = d_sq1
+; d_sq1_s = sq_table[abs_dx1_s] + sq_table[abs_dy1_s] -> r7
+SHFT r3, LSL #1
+LOAD r7, (r3, l)
+SHFT r4, LSL #1
+LOAD r3, (r4, l)
+ADDR r7, r3
 
-CMPI r3, $RADIUS_SQ
+CMPI r7, $SPH_R_SQ
 BRAN|<< @sphere1
-LOAD r3, (s)+             ; restore pixel0
-LOAD r7, #0
-BRAN @pack_pixels
+LOAD r3, #0
+BRAN @try_cyl1
 
 :sphere1
-LOAD r5, $RADIUS_SQ
-SUBR r5, r3
-LOAD r3, r5               ; r3 = n1  (isqrt input, read-only)
-STOR -(s), r4             ; save dx1;  stack=[pixel0, dx1]
-STOR -(s), r6             ; save dy;   stack=[pixel0, dx1, dy]
+STOR -(s), r5              ; save dx1_s (stack: [shade0, dx1_s])
+STOR -(s), r6              ; save dy1_s (stack: [shade0, dx1_s, dy1_s])
+LOAD r3, $SPH_R_SQ
+SUBR r3, r7
 LOAD r4, #0
 LOAD r6, #32
-; --- isqrt1: 6 ceiling-div iterations ---
+; isqrt1_s: 6 iterations
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -300,13 +447,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_1h
+BRAN|HI @s1_i1h
 LOAD r4, r5
-BRAN @i1_2
-:i1_1h
+BRAN @s1_i2
+:s1_i1h
 SUBI r5, #1
 LOAD r6, r5
-:i1_2
+:s1_i2
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -314,13 +461,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_2h
+BRAN|HI @s1_i2h
 LOAD r4, r5
-BRAN @i1_3
-:i1_2h
+BRAN @s1_i3
+:s1_i2h
 SUBI r5, #1
 LOAD r6, r5
-:i1_3
+:s1_i3
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -328,13 +475,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_3h
+BRAN|HI @s1_i3h
 LOAD r4, r5
-BRAN @i1_4
-:i1_3h
+BRAN @s1_i4
+:s1_i3h
 SUBI r5, #1
 LOAD r6, r5
-:i1_4
+:s1_i4
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -342,13 +489,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_4h
+BRAN|HI @s1_i4h
 LOAD r4, r5
-BRAN @i1_5
-:i1_4h
+BRAN @s1_i5
+:s1_i4h
 SUBI r5, #1
 LOAD r6, r5
-:i1_5
+:s1_i5
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -356,13 +503,13 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_5h
+BRAN|HI @s1_i5h
 LOAD r4, r5
-BRAN @i1_6
-:i1_5h
+BRAN @s1_i6
+:s1_i5h
 SUBI r5, #1
 LOAD r6, r5
-:i1_6
+:s1_i6
 ADDR r5, r4, r6
 ADDI r5, #1
 SHFT r5, LSR #1
@@ -370,35 +517,177 @@ SHFT r5, LSL #1
 LOAD r7, (r5, l)
 SHFT r5, LSR #1
 CMPR r3, r7
-BRAN|HI @i1_6h
+BRAN|HI @s1_i6h
 LOAD r4, r5
-BRAN @isqrt1_done
-:i1_6h
+BRAN @s1_done
+:s1_i6h
 SUBI r5, #1
 LOAD r6, r5
-:isqrt1_done
-; r4 = z_hit1
-LOAD r6, (s)+             ; restore dy
-LOAD r5, (s)+             ; restore dx1
-
-; shade1 = clamp(128 + 2*z_hit1 - dx1 - dy, 0, 255) -> r7
-LOAD r7, #128
-ADDR r7, r4
-ADDR r7, r4
-SUBR r7, r5
-SUBR r7, r6
-CMPI r7, #0
-BRAN|>= @p1_hi
-LOAD r7, #0
+:s1_done
+; r4 = z_hit1_s
+LOAD r6, (s)+              ; restore dy1_s
+LOAD r5, (s)+              ; restore dx1_s
+; shade1_s = clamp(128 + 2*z_hit - dx1_s - dy1_s, 0, 255)
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+SUBR r3, r6
+CMPI r3, #0
+BRAN|>= @s1_shade_hi
+LOAD r3, #0
 BRAN @pixel1_done
-:p1_hi
-CMPI r7, #255
+:s1_shade_hi
+CMPI r3, #255
 BRAN|<= @pixel1_done
-LOAD r7, #255
+LOAD r3, #255
+BRAN @pixel1_done
+
+; --- Cylinder test for pixel 1 ---
+:try_cyl1
+; r3 = 0 (sphere missed), r1=x, r2=y
+LOAD r5, r1
+SUBI r5, $CX2
+ADDI r5, #1                ; r5 = dx1_c = (x+1) - CX2 (signed)
+LOAD r6, r2
+SUBI r6, $CY2              ; r6 = dy1_c (signed)
+
+; abs_dy1_c -> r4; check <= CYL_HALF_H
+LOAD r4, r6
+CMPI r4, #0
+BRAN|>= @abs_dyc1_ok
+LOAD r4, #0
+SUBR r4, r6
+:abs_dyc1_ok
+CMPI r4, $CYL_HALF_H
+BRAN|>> @pixel1_done
+
+; abs_dx1_c -> r4; check <= CYL_R
+LOAD r4, r5
+CMPI r4, #0
+BRAN|>= @abs_dxc1_ok
+LOAD r4, #0
+SUBR r4, r5
+:abs_dxc1_ok
+CMPI r4, $CYL_R
+BRAN|>> @pixel1_done
+
+; d_sq1_c = sq_table[abs_dx1_c] -> r7
+SHFT r4, LSL #1
+LOAD r7, (r4, l)
+
+; n1_c = CYL_R_SQ - d_sq1_c -> r3
+LOAD r3, $CYL_R_SQ
+SUBR r3, r7
+
+; isqrt1_c: 6 iterations (save dx1_c=r5)
+STOR -(s), r5
+LOAD r4, #0
+LOAD r6, #32
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i1h
+LOAD r4, r5
+BRAN @c1_i2
+:c1_i1h
+SUBI r5, #1
+LOAD r6, r5
+:c1_i2
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i2h
+LOAD r4, r5
+BRAN @c1_i3
+:c1_i2h
+SUBI r5, #1
+LOAD r6, r5
+:c1_i3
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i3h
+LOAD r4, r5
+BRAN @c1_i4
+:c1_i3h
+SUBI r5, #1
+LOAD r6, r5
+:c1_i4
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i4h
+LOAD r4, r5
+BRAN @c1_i5
+:c1_i4h
+SUBI r5, #1
+LOAD r6, r5
+:c1_i5
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i5h
+LOAD r4, r5
+BRAN @c1_i6
+:c1_i5h
+SUBI r5, #1
+LOAD r6, r5
+:c1_i6
+ADDR r5, r4, r6
+ADDI r5, #1
+SHFT r5, LSR #1
+SHFT r5, LSL #1
+LOAD r7, (r5, l)
+SHFT r5, LSR #1
+CMPR r3, r7
+BRAN|HI @c1_i6h
+LOAD r4, r5
+BRAN @c1_done
+:c1_i6h
+SUBI r5, #1
+LOAD r6, r5
+:c1_done
+; r4 = z_hit1_c
+LOAD r5, (s)+              ; restore dx1_c
+; shade1_c = clamp(128 + 2*z_hit - dx1_c, 0, 255)
+LOAD r3, #128
+ADDR r3, r4
+ADDR r3, r4
+SUBR r3, r5
+CMPI r3, #0
+BRAN|>= @c1_shade_hi
+LOAD r3, #0
+BRAN @pixel1_done
+:c1_shade_hi
+CMPI r3, #255
+BRAN|<= @pixel1_done
+LOAD r3, #255
 
 :pixel1_done
-; r7=pixel1
-LOAD r3, (s)+             ; restore pixel0;  stack=[]
+; r3 = shade for pixel 1
+LOAD r7, r3                ; r7 = shade1
+LOAD r3, (s)+              ; r3 = shade0
 
 :pack_pixels
 SHFT r3, LSL #8
@@ -418,8 +707,8 @@ COPI #0x14FF
 
 ; ============================================================
 ; sq_table[i] = i*i, for i = 0..64
-; At word offset 0x0600 in PROGRAM segment (0x0400 was too close to
-; the end of the render loop; 0x0600 gives ~450 instruction slots of margin).
+; At word offset 0x0600 in PROGRAM segment.
+; sq_table+1 = 0x0601 (ll init value).
 ; ============================================================
 .ORG 0x0600
 :sq_table
