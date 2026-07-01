@@ -35,7 +35,7 @@
         },
         {
           "name": "constant.language.register.sirc",
-          "match": "\\b(r1|r2|r3|r4|r5|r6|r7|lh|ll|ah|al|ph|pl|sh|sl|sr|a|p|s)\\b"
+          "match": "\\b(r1|r2|r3|r4|r5|r6|r7|lh|ll|ah|al|ph|pl|sh|sl|sr|l|a|p|s)\\b"
         }
       ]
     },
@@ -50,7 +50,7 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LDEL|LJMP|LJSR|LOAD|STOR|SHFT|EXCP|RSET|ETFR|ETTR)(\\[([SANsan])\\])?(\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV))?(?!\\w)",
+          "match": "\\b(ADDI|ADCI|SUBI|SBCI|ANDI|ORRI|XORI|CMPI|TSAI|TSXI|COPI|ADDR|ADCR|SUBR|SBCR|ANDR|ORRR|XORR|CMPR|TSAR|TSXR|COPR|BRAN|BRSR|RETS|NOOP|WAIT|RETE|LDEA|LDEL|LJMP|LJSR|LOAD|STOR|SHFT|EXCP|RSET|ETFR|ETTR|DMAR|DMAW|DMAT|MULU|MULS|DIVU|DIVS)(\\[([SANsan])\\])?(\\|(AL|==|!=|CS|CC|NS|NC|OS|OC|HI|LO|>=|<<|>>|<=|NV))?(?!\\w)",
           "captures": {
             "1": { "name": "keyword.control.mnemonic.sirc" },
             "2": { "name": "keyword.control.status-override.sirc" },
