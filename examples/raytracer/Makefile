@@ -25,6 +25,9 @@ debug: raytracer.bin
 	truncate -s 131070 ./render.pgm
 	cargo run ${CARGO_ARGS} --no-default-features --bin sirc_vm -- ${RUN_ARGS} --debug
 
+doc-cover: run
+	python3 -c "from PIL import Image; Image.open('render.pgm').save('../../docs/reference/cover.png')"
+
 clean:
 	rm -f raytracer.bin raytracer.o render.pgm raytracer.bin.dbg
 
