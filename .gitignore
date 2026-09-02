@@ -25,3 +25,6 @@ mem.bin
 !.claude/agents/
 !.claude/skills/
 .codex
+
+# Period reference manuals used by /manual-edit; copyrighted, never commit
+docs/reference/review/corpus/

@@ -15,6 +15,12 @@ Read, in this order:
    `\imm`, `\statusbit`, addressing-mode macros, `instructionbox`) and the packages in use.
 2. `docs/reference/manual-handover.md`, especially every "Resolved:" line and the terminology
    notes in Workstream 1 and Workstream 13.
+2a. `docs/reference/review/period-style.md` if it exists: conventions observed in real
+   early-1990s CPU manuals, with page citations. Where the manual is inconsistent and the
+   period convention is one of the competing forms, prefer the period convention over the
+   majority form and say so in the rule. Where the manual is consistent but differs from the
+   period convention, do not change the rule; record it under decisions needing approval with
+   the citation, so the user can choose.
 3. `docs/reference/chapters/11-reading-instructions.tex` (the notation chapter).
 4. Then sample: grep across all chapters for competing forms before deciding each rule. Examples
    of things to grep for: `user mode` vs `protected mode`, `kernel` vs `supervisor`,
@@ -40,7 +46,7 @@ Write `docs/reference/STYLE.md` covering:
 - Decisions needing human approval: a short list of the rules where the manual was split close
   to evenly and you chose one. The user will review these before copy editing starts.
 
-Decide rules by majority use in the manual unless the handover document or the notation chapter
-already specifies a form, in which case that wins. Be prescriptive: "Use X. Do not use Y." Do not
+Decide rules by majority use in the manual unless the handover document, the notation chapter,
+or (for split cases) the period style notes already specify a form, in which case that wins. Be prescriptive: "Use X. Do not use Y." Do not
 write essays. Keep the file under about 2,500 words. Do not edit any chapter. Finish by listing
 the path you wrote and the decisions that need approval.

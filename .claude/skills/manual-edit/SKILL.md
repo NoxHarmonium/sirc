@@ -1,6 +1,6 @@
 ---
 name: manual-edit
-description: Run a publisher-style editorial pass over the SIRC-1 reference manual under docs/reference using a pipeline of specialised subagents (facts digest, style guide, fact-checkers, continuity checker, per-chapter copy editors, LaTeX QA, cold reader). Invoke with /manual-edit. Optional arguments: "phase N" to run a single phase, "chapters <glob>" to restrict scope.
+description: Run a publisher-style editorial pass over the SIRC-1 reference manual under docs/reference using a pipeline of specialised subagents (facts digest, period benchmark against real 1990s CPU manuals, style guide, fact-checkers, continuity checker, per-chapter copy editors, LaTeX QA, cold reader). Invoke with /manual-edit. Optional arguments: "phase N" to run a single phase, "chapters <glob>" to restrict scope.
 ---
 
 # Manual editing pass
@@ -46,16 +46,32 @@ Run `git status --porcelain docs/reference` and stop if there are uncommitted ch
 must commit or stash first so each phase's diff is clean. Check whether `pdflatex` or
 `latexmk` is on PATH and remember the answer for phase 5.
 
-## Phase 1: ground truth (two agents, parallel)
+## Phase 1: ground truth (three agents)
 
-Dispatch `manual-facts-digest` and `manual-style-editor` together. When both return, read
-`review/facts.md`'s `## Open questions` section and `STYLE.md`'s "Decisions needing human
-approval" section.
+Check `docs/reference/review/corpus/` for period reference-manual PDFs. If it is empty, tell
+the user which manuals to drop in (the Motorola M68000 Family Programmer's Reference Manual
+`M68000PRM.pdf` and MC68000 User's Manual `MC68000UM.pdf` at minimum; both are distributed
+free by NXP) and ask whether to proceed without the period benchmark. The directory is
+gitignored; never commit the PDFs.
 
-**Gate 1.** Present both lists to the user with `AskUserQuestion` (one question per style
-decision is too many; group them and ask for approval as a batch with the option to override
-individual items). Apply the user's overrides to `STYLE.md` yourself with `Edit`. Do not
-proceed until the style guide is approved; every later agent depends on it.
+Dispatch `manual-facts-digest` and `manual-period-benchmark` together. When both return,
+dispatch `manual-style-editor`; it reads `review/period-style.md` so it must run after the
+benchmark. Then read `review/facts.md`'s `## Open questions`, `STYLE.md`'s "Decisions needing
+human approval", and the ranked gap list at the end of `review/period-gaps.md`.
+
+**Gate 1.** Present three things to the user with `AskUserQuestion`:
+
+1. The style decisions, grouped, for batch approval with per-item override. Apply overrides to
+   `STYLE.md` yourself with `Edit`.
+2. The facts-digest open questions, for information; they become `unclear` findings later.
+3. The period coverage gaps. These are new content and out of scope for an editing pass. Ask
+   which to accept as backlog, and append the accepted ones to
+   `docs/reference/manual-handover.md` as a new `## Workstream 14: Period Coverage Gaps`
+   section, each with the corpus citation. Gaps of the kind "add a field to the instruction
+   template" are the one exception: if the user accepts one, it becomes a `major` finding
+   against every chapter with instruction entries and is applied in Phase 3.
+
+Do not proceed until the style guide is approved; every later agent depends on it.
 
 ## Phase 2: review (ten agents, batches of five)
 
