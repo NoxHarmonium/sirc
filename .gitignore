@@ -21,5 +21,7 @@ mem.bin
 *.stamp
 
 # AI
-.claude
+.claude/*
+!.claude/agents/
+!.claude/skills/
 .codex
