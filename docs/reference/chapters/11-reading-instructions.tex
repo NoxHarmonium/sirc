@@ -6,40 +6,73 @@ entry usable as an implementation contract, not only as programmer guidance.
 
 \section{Instruction Entry Fields}
 
+Each instruction entry begins with a title naming the mnemonic or mnemonic family, followed immediately by one
+applicability line: \texttt{SIRC-1, all revisions} for CPU instructions, or the coprocessor and revision required for
+coprocessor instructions, per the model and revision policy in Chapter~\ref{ch:coprocessor}. The fields below then
+follow, in this order, for every entry:
+
 \begin{description}
-	\item[Mnemonic] The assembly mnemonic or mnemonic family. Immediate and register variants are listed together when they
-	      perform the same operation.
-	\item[Opcodes] The 6-bit opcode values for each supported instruction format.
+	\item[Mnemonic] The assembly mnemonic or mnemonic family, given in the entry title. Immediate and register variants are
+	      listed together when they perform the same operation.
+	\item[Opcodes] The 6-bit opcode values for each supported instruction format. Meta-instructions that assemble to another
+	      instruction's encoding use \textbf{Assembles to} instead of \textbf{Opcodes}.
+	\item[Instruction Fields] One line per encoding field the instruction uses: register fields, the condition field, the status
+	      update source field and which of its encodings are legal for this instruction, shift type and count, and immediate
+	      width. Values come from Chapter~\ref{ch:instruction-formats} and the facts digest; an entry must not invent a value
+	      here.
 	\item[Syntax] The accepted assembler forms. Meta-instructions are called out separately from real CPU instruction encodings.
-	\item[Operands] The permitted operand kinds and addressing modes for the instruction.
+	\item[Operands] The permitted operand kinds and addressing modes for the instruction. Addressing-mode names come from the
+	      closed set in Table~\ref{tab:addr-modes} (Chapter~\ref{ch:addressing-modes}): Immediate, Register Direct, Address
+	      Register Direct, Indirect Immediate, Indirect Register, Post-Increment, and Pre-Decrement. An entry must not introduce
+	      a mode name outside that set; the 8-bit short-immediate encoding is a width variant of Immediate, not a mode.
 	\item[Operation] Pseudocode for the architectural effect of the instruction. Arithmetic is performed on 16-bit word values
 	      unless otherwise stated.
+	\item[Description] Prose description of the instruction's behavior, supplementing the Operation pseudocode.
+	\item[Flags] The effect on the condition flags in the status register.
 	\item[Write-back] Whether the computed result is written to a register, discarded, or used to update control state.
-	\item[Status Flags] The effect on the condition flags in the status register.
-	\item[Condition Codes] All normal instructions may be conditional. If the condition is false, the instruction has no
-	      architectural side effects unless a later instruction description explicitly states otherwise.
-	\item[Exceptions] Faults or traps that can be raised by the instruction. When an exception can occur, the entry should state
+	\item[Exceptions] Faults or traps that can be raised by the instruction. When an exception can occur, the entry must state
 	      whether partial side effects are possible.
+	\item[Condition field] The condition field values the instruction accepts for predicated execution. Every normal instruction
+	      may be conditional. If the condition is false, the instruction has no architectural side effects unless a later
+	      instruction description explicitly states otherwise.
 	\item[Timing] The base execution time and any circumstances that add wait states.
 	\item[Privilege] Whether the instruction is available in protected mode, supervisor mode, or both.
+	\item[Example / Examples] One or more worked examples of the instruction in use. Each example is numbered \texttt{Example
+		      N-M:}, where N is the chapter number (or appendix letter) and M counts from 1 within the chapter; multiple examples in
+	      one entry take consecutive numbers.
+	\item[Notes] Additional informative remarks. A Notes block is informative and must not introduce a requirement that is not
+	      already stated in a normative field.
 \end{description}
 
 \section{Notation}
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{ll}
+	\begin{tabular}{lp{10cm}}
 		\toprule
-		\textbf{Notation} & \textbf{Meaning}                                       \\
+		\textbf{Notation}          & \textbf{Meaning}                                                                         \\
 		\midrule
-		\texttt{rD}       & Destination general-purpose register                   \\
-		\texttt{rS}       & Source general-purpose register                        \\
-		\texttt{rS1}      & First source register, usually the left-hand operand   \\
-		\texttt{rS2}      & Second source register, usually the right-hand operand \\
-		\texttt{\#imm16}  & 16-bit immediate word encoded in immediate format      \\
-		\texttt{\#imm8}   & 8-bit immediate encoded in short immediate format      \\
-		\texttt{shift}    & Optional SIRCIS shift definition                       \\
-		\texttt{SR.X}     & Status register field \texttt{X}                       \\
+		\texttt{rD}                & Destination general-purpose register                                                     \\
+		\texttt{rS}                & Source general-purpose register                                                          \\
+		\texttt{rS1}               & First source register, usually the left-hand operand                                     \\
+		\texttt{rS2}               & Second source register, usually the right-hand operand                                   \\
+		\texttt{rO}                & Offset or index general-purpose register supplying a register displacement in a
+		memory or effective-address form                                                                                      \\
+		\texttt{\#imm16}           & 16-bit immediate word encoded in immediate format                                        \\
+		\texttt{\#imm8}            & 8-bit immediate encoded in short immediate format                                        \\
+		\texttt{shift}             & Optional shift definition. It applies to the register operand being shifted (the first
+		source register in register and short-immediate formats, or the offset register for register-displacement
+		\mnemonic{LOAD}/\mnemonic{STOR} forms); it never applies to an immediate value, a second source register, or
+		loaded data. See Chapter~\ref{ch:shift-operations} for the full encoding.                                             \\
+		\texttt{SR.X}              & Status register field \texttt{X}                                                         \\
+		\texttt{addr / src}        & Source address-register pair (\reg{l}, \reg{a}, \reg{s}, or \reg{p}) supplying the base
+		address for a memory-class or address-calculation instruction                                                         \\
+		\texttt{dest}              & Destination address-register pair for an address-calculation instruction, encoded in the
+		register field                                                                                                        \\
+		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                           \\
+		\texttt{@label}            & Symbol reference resolved by the linker; PC-relative for \mnemonic{BRAN} and
+		\mnemonic{BRSR}, an absolute low-word address otherwise                                                               \\
+		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                 \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Description Notation}
@@ -55,13 +88,14 @@ Flag tables use the following symbols:
 	\centering
 	\begin{tabular}{cp{9cm}}
 		\toprule
-		\textbf{Symbol} & \textbf{Meaning}                                          \\
+		\textbf{Symbol} & \textbf{Meaning}                                                                      \\
 		\midrule
-		\texttt{*}      & Updated from the instruction result                       \\
-		\texttt{0}      & Cleared to zero                                           \\
-		\texttt{1}      & Set to one                                                \\
-		\texttt{-}      & Preserved                                                 \\
-		\texttt{S}      & Updated from the shifter result when \texttt{[S]} is used \\
+		\texttt{*}      & Updated from the instruction result                                                   \\
+		\texttt{0}      & Cleared to zero                                                                       \\
+		\texttt{1}      & Set to one                                                                            \\
+		\texttt{-}      & Preserved                                                                             \\
+		\texttt{S}      & Updated from the shifter result when \texttt{[S]} is used                             \\
+		\texttt{U}      & Architecturally undefined; the implementation leaves the flag in an unspecified state \\
 		\bottomrule
 	\end{tabular}
 	\caption{Status Flag Effect Symbols}
@@ -94,5 +128,5 @@ ALU instructions can select the source of status flag updates with the status up
 	\label{tab:status-update-source-encoding}
 \end{table}
 
-When no override is written, ALU instructions use \texttt{[A]}. Instructions that do not support status updates must
-not use status update override syntax.
+When no override is written, ALU instructions use \texttt{[A]}. The one exception is \mnemonic{SHFT}, which defaults to
+\texttt{[S]}. Instructions that do not support status updates must not use status update override syntax.

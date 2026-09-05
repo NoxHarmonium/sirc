@@ -12,7 +12,7 @@ before being used in an ALU operation—all within a single instruction.
 Shift operations are only applied to source operands. A shift cannot be applied to the result of an operation before
 register writeback.
 
-\textbf{Note:} By default, when shifts are used with ALU instructions (apart from the SHFT meta instruction), the status register flags are updated based on the ALU operation result, not the shift. However, you can manually control this behavior using the status override syntax (see Section~\ref{sec:status-override}).
+\textbf{Note:} By default, when shifts are used with ALU instructions (apart from the \mnemonic{SHFT} meta-instruction), the status register flags are updated based on the ALU operation result, not the shift. This behavior can be overridden using the status override syntax (see Section~\ref{sec:status-override}).
 
 \section{Shift Types}
 
@@ -22,30 +22,39 @@ register writeback.
 	\centering
 	\begin{tabular}{clcp{7cm}}
 		\toprule
-		\textbf{Code} & \textbf{Mnemonic} & \textbf{Type}          & \textbf{Description}             \\
+		\textbf{Code} & \textbf{Mnemonic} & \textbf{Type}          & \textbf{Description}                               \\
 		\midrule
-		000           & NUL (or none)     & None                   & No shift performed               \\
-		001           & LSL               & Logical Shift Left     & Shift left, fill with zeros      \\
-		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros     \\
-		011           & ASL               & Arithmetic Shift Left  & Same as LSL (shifts in zeros)    \\
-		100           & ASR               & Arithmetic Shift Right & Shift right, preserving sign bit \\
-		101           & RTL               & Rotate Left            & Rotate left within the operand   \\
-		110           & RTR               & Rotate Right           & Rotate right within the operand  \\
-		111           & --                & Reserved               & Reserved for future use          \\
+		000           & NUL               & --                     & No shift performed                                 \\
+		001           & LSL               & Logical Shift Left     & Shift left, fill with zeros                        \\
+		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros                       \\
+		011           & ASL               & Arithmetic Shift Left  & Same data result as LSL; sets V on signed overflow \\
+		100           & ASR               & Arithmetic Shift Right & Shift right, preserving sign bit                   \\
+		101           & RTL               & Rotate Left            & Rotate left within the operand                     \\
+		110           & RTR               & Rotate Right           & Rotate right within the operand                    \\
+		111           & --                & Reserved               & Reserved for future use                            \\
 		\bottomrule
 	\end{tabular}
 	\caption{Shift Type Encoding}
 	\label{tab:shift-encoding}
 \end{table}
 
+\mnemonic{NUL} is the no-shift form: it leaves the operand unchanged but still routes it through the shifter, so \texttt{SHFT rD, NUL \#0} is a legal way to drive the status flags from the unshifted value of \texttt{rD}.
+
 \section{Shift Syntax}
 
-A shift postamble can come after any short immediate or register instruction. It is applied in the "Decode and Register
-Fetch" phase of instruction execution, before any ALU operations or memory address calculation occurs.
+A shift suffix may follow the ALU short-immediate and ALU register forms, the \mnemonic{SHFT} meta-instruction, and the
+register-displacement \mnemonic{LOAD}/\mnemonic{STOR} forms. It is rejected on \mnemonic{LOAD rD, rS}, on
+\mnemonic{LDEA}/\mnemonic{LDEL}, and on coprocessor instructions.
 
-It is applied to the first source operand of an instruction. If using the three operand form of instruction, it will be
-the second operand. If using the two operand form of instruction, the second operand is inferred to be the same as the
-destination.
+For ALU instructions, the shift is applied in the "Decode and Register Fetch" phase, before the ALU operation. In
+register-format instructions the shifted operand is R2 (first source); in short-immediate instructions it is the
+register named by the Reg field (first source, since the short-immediate format has no separate source register). In
+register-displacement \mnemonic{LOAD} forms the shift is applied to the offset register used to compute the effective
+address, never to the value loaded from memory; in register-displacement \mnemonic{STOR} forms it is applied to the
+source register before its value is written to memory.
+
+If using the three-operand form of an instruction, the shifted operand is the second operand. If using the two-operand
+form, the second operand is inferred to be the same as the destination.
 
 See this table for some examples of which operand is shifted:
 
@@ -82,18 +91,18 @@ See this table for some examples of which operand is shifted:
 \end{figure}
 
 \begin{itemize}
-	\item Bit 15 is shifted into the carry flag
+	\item The last bit shifted out of bit 15 (bit 16-n for a count of n) is placed in the carry flag
 	\item Bit 0 receives 0
 	\item Equivalent to multiplying by $2^n$ where $n$ is the shift count
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-1:}
 \begin{lstlisting}
 ; Multiply r1 by 4
 ADDI r1, #0, LSL #2  ; r1 = (r1 << 2) = r1 * 4
 
-; Set bit 10
-ORRI r3, #1, LSL #10     ; r3 |= (r3 << 10) with immediate 1 = 0x0400
+; Set bit 10 (16-bit immediate form)
+ORRI r3, #0x0400         ; r3 |= 0x0400
 \end{lstlisting}
 
 \subsection{Logical Shift Right (LSR)}
@@ -112,24 +121,24 @@ ORRI r3, #1, LSL #10     ; r3 |= (r3 << 10) with immediate 1 = 0x0400
 \end{figure}
 
 \begin{itemize}
-	\item Bit 0 is shifted into the carry flag
+	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
 	\item Bit 15 receives 0
 	\item Equivalent to unsigned division by $2^n$
 	\item Use for unsigned values only
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-2:}
 \begin{lstlisting}
 ; Divide unsigned value by 8
 ADDI r1, #0, LSR #3  ; r1 = (r1 >> 3) = r1 / 8 (unsigned)
 
-; Extract upper byte
+; Extract high byte
 ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 \end{lstlisting}
 
 \subsection{Arithmetic Shift Left (ASL)}
 
-\textbf{Operation:} Identical to LSL. Shift bits to the left, filling with zeros.
+\textbf{Operation:} Produces the same data result as LSL, but sets the overflow flag if the sign bit changes.
 
 \begin{itemize}
 	\item Equivalent to signed multiplication by $2^n$
@@ -137,7 +146,7 @@ ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 	\item Overflow flag is set if sign bit changes during shift
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-3:}
 \begin{lstlisting}
 ; Multiply signed value by 2
 ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
@@ -159,13 +168,13 @@ ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
 \end{figure}
 
 \begin{itemize}
-	\item Bit 0 is shifted into the carry flag
-	\item Bit 15 (sign bit) is copied into bit 15 and bit 14
+	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
+	\item Bit 15 (sign bit) is replicated into all bits vacated by the shift
 	\item Equivalent to signed division by $2^n$ (rounds toward negative infinity)
 	\item Use for signed values only
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-4:}
 \begin{lstlisting}
 ; Divide signed value by 4
 ADDI r1, #0, ASR #2  ; r1 = (r1 >> 2) = r1 / 4 (signed)
@@ -198,7 +207,7 @@ copied into the carry flag. The incoming carry flag is not used as an input.
 	\item Useful for bit manipulation, circular buffers, and cyclic bit patterns
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-5:}
 \begin{lstlisting}
 ; Rotate r1 left by 1
 SHFT r1, RTL #1
@@ -229,7 +238,7 @@ copied into the carry flag. The incoming carry flag is not used as an input.
 	\item No data is lost
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 9-6:}
 \begin{lstlisting}
 ; Rotate r1 right by 1
 SHFT r1, RTR #1
@@ -247,10 +256,10 @@ The Shift Operand (SO) bit determines what value is shifted:
 	\centering
 	\begin{tabular}{clp{8cm}}
 		\toprule
-		\textbf{SO Bit} & \textbf{Mode}           & \textbf{Description}                                     \\
+		\textbf{SO Bit} & \textbf{Mode}           & \textbf{Description}                                                                                                                       \\
 		\midrule
-		0               & Shift by Immediate      & R2 (first source operand) is shifted by a literal amount \\
-		1               & Shift Count in Register & R2 is shifted by the amount in the shift count register  \\
+		0               & Shift by Immediate      & The first source operand (Register format: R2; Short Immediate format: the Reg field) is shifted by a literal amount                       \\
+		1               & Shift Count in Register & The first source operand (Register format: R2; Short Immediate format: the Reg field) is shifted by the amount in the shift count register \\
 		\bottomrule
 	\end{tabular}
 	\caption{Shift Operand Modes}
@@ -262,9 +271,9 @@ The Shift Operand (SO) bit determines what value is shifted:
 The first source operand (R2) is shifted by a literal amount before the ALU operation.
 
 \begin{lstlisting}
-; Add (r1 * 4) + 1 to r1
-ADDI r1, #1, LSL #2  ; r1 = r1 + (r2 << 2) + 1
-                          ; SO=0: r2 is shifted by literal 2
+; Multiply r1 by 4 and add 1
+ADDI r1, #1, LSL #2  ; r1 = (r1 << 2) + 1
+                          ; SO=0: r1 is shifted by literal 2
 
 \end{lstlisting}
 
@@ -285,12 +294,23 @@ ADDR r4, r5, r6, ASR r7  ; r4 = (r5 >> r7) + r6 (arithmetic)
 
 \section{Shift Count}
 
-The shift count is a 4-bit field, allowing shifts of 0--15 positions.
+The shift count is 0--15 when specified as an immediate (SO = 0); the field is 4 bits wide, and both the assembler and
+the encoder enforce this range, so a count greater than 15 can never occur through the immediate path. When the shift
+count is taken from a register (SO = 1), the full 16-bit register value is available as a count, and a count greater
+than 15 is well defined:
 
 \begin{itemize}
 	\item Shift count of 0 means no shift is performed
-	\item Maximum shift count is 15
-	\item Shift counts $\geq$ 16 would be meaningless for 16-bit values
+	\item Maximum immediate shift count is 15
+	\item For \mnemonic{LSL}, \mnemonic{LSR}, and \mnemonic{ASL}, a register-supplied count of 16 or more produces the
+	      same result as a count of exactly 16: every original bit is shifted out, giving \texttt{0x0000}. The carry
+	      flag reflects the last bit shifted out at count 16, as for any other count.
+	\item For \mnemonic{ASR}, a register-supplied count of 16 or more sign-extends fully: \texttt{0xFFFF} if the
+	      original value was negative, \texttt{0x0000} if it was positive or zero. This is the same rule as any other
+	      count, just carried to its limit -- every vacated bit is the sign bit.
+	\item \mnemonic{RTL} and \mnemonic{RTR} have no vacated bits to define, since a rotate never discards data; a
+	      register-supplied count is used modulo 16, so a count of 16 behaves as a count of 0, a count of 17 behaves
+	      as a count of 1, and so on.
 \end{itemize}
 
 \section{Status Flag Effects}
@@ -311,7 +331,9 @@ For all shifts and rotates:
 \begin{itemize}
 	\item The last bit shifted out is placed in the carry flag
 	\item For shifts of more than 1 position, only the final bit shifted out matters
-	\item If shift count is 0, carry flag is not modified
+	\item A shift count of 0 leaves the operand unchanged and clears the carry flag. When the status register is updated from the
+	      shifter, all four condition flags are written, so no flag survives a shift-sourced update; to preserve flags across a
+	      shift, use the \texttt{[N]} status override
 \end{itemize}
 
 \subsection{Zero Flag}
@@ -333,6 +355,7 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 
 \subsection{Multiplication by Constants}
 
+\textbf{Example 9-7:}
 \begin{lstlisting}
 ; Multiply by 2
 ADDI r1, #0, LSL #1   ; r1 = (r1 << 1) = r1 * 2
@@ -346,6 +369,7 @@ ADDR r1, r2, r2, LSL #2   ; r1 = (r2 << 2) + r2 = r2 * 5
 
 \subsection{Division by Powers of 2}
 
+\textbf{Example 9-8:}
 \begin{lstlisting}
 ; Unsigned divide by 4
 LOAD r1, r2        ; r1 = r2
@@ -358,6 +382,7 @@ ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 
 \subsection{Bit Field Extraction}
 
+\textbf{Example 9-9:}
 \begin{lstlisting}
 ; Extract bits 8-11 from r1
 LOAD r2, r1        ; r2 = r1
@@ -372,6 +397,7 @@ ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
 
 \subsection{Bit Manipulation}
 
+\textbf{Example 9-10:}
 \begin{lstlisting}
 ; Set bit N (where N is in r2)
 LOAD r3, #1               ; r3 = 1
@@ -398,6 +424,7 @@ For operations on values larger than 16 bits, shifts and rotates can be combined
 
 \subsection{32-bit Left Shift}
 
+\textbf{Example 9-11:}
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 left by 1
 ; r1 = high word, r2 = low word
@@ -407,19 +434,21 @@ ADCI r1, #0, LSL #1   ; Shift high and add carry into bit 0
 
 \subsection{32-bit Right Shift (Unsigned)}
 
+\textbf{Example 9-12:}
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (unsigned)
 SHFT r1, LSR #1       ; Shift high, LSB -> carry
-SHFT[N] r2, LSR #1    ; Shift low while preserving carry from high word
+ORRI[N] r2, #0, LSR #1    ; Shift low while preserving carry from high word
 ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \end{lstlisting}
 
 \subsection{32-bit Right Shift (Signed)}
 
+\textbf{Example 9-13:}
 \begin{lstlisting}
 ; Shift 32-bit value in r1:r2 right by 1 (signed)
 SHFT r1, ASR #1       ; Arithmetic shift high, LSB -> carry
-SHFT[N] r2, LSR #1    ; Shift low while preserving carry from high word
+ORRI[N] r2, #0, LSR #1    ; Shift low while preserving carry from high word
 ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \end{lstlisting}
 
@@ -436,8 +465,9 @@ ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \section{Limitations}
 
 \begin{itemize}
-	\item Maximum shift count is 15 (4-bit field)
-	\item For shifts $>$ 15, multiple shift instructions must be used
+	\item The immediate shift count is limited to 0--15 (4-bit field)
+	\item A register-supplied shift count greater than 15 is architecturally undefined
+	\item For a shift greater than 15 positions, use multiple shift instructions with immediate counts
 	\item Rotates do not consume the carry flag; \mnemonic{RTL} and \mnemonic{RTR} rotate only within the 16-bit operand
 	\item The reserved shift type (111) has architecturally undefined behavior
 \end{itemize}
@@ -469,6 +499,7 @@ A status override modifier can be added immediately after an instruction mnemoni
 
 \subsection{Examples}
 
+\textbf{Example 9-14:}
 \textbf{Default Behavior (ALU flags):}
 \begin{lstlisting}
 ; Without override, flags reflect the ALU addition result
@@ -476,6 +507,7 @@ ADDI r2, #1, LSL #2           ; r2 = (r2 << 2) + 1
                               ; Flags: based on addition result
 \end{lstlisting}
 
+\textbf{Example 9-15:}
 \textbf{Shift Flag Override:}
 \begin{lstlisting}
 ; Update flags based on shift result instead of ALU
@@ -487,6 +519,7 @@ CMPI[S] r3, #0, LSR #4        ; Compare (r3 >> 4) with 0
                               ; Flags: based on shift, not comparison
 \end{lstlisting}
 
+\textbf{Example 9-16:}
 \textbf{No Flag Update:}
 \begin{lstlisting}
 ; Perform operation without affecting status flags
@@ -503,7 +536,7 @@ BRAN|== @equal_branch         ; Branch using flags from CMPR
 
 \subsubsection{Testing Shift Results}
 
-When you need to know properties of a shifted value without performing a subsequent comparison:
+To determine properties of a shifted value without performing a subsequent comparison:
 
 \begin{lstlisting}
 ; Check if r1 << 3 would be negative
@@ -521,7 +554,7 @@ CMPR r1, r2                   ; Compare r1 and r2
 
 ; Do some work without affecting flags
 ADDI[N] r3, #1                ; Increment counter (flags unchanged)
-LOAD[N] r4, (#0, a)+          ; Load next value (flags unchanged)
+LOAD r4, (#0, a)+             ; Load next value (LOAD never updates flags)
 
 ; Branch using original comparison flags
 BRAN|>= @r1_was_greater

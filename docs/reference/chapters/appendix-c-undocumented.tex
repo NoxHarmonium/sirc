@@ -3,10 +3,14 @@
 
 \section{Overview}
 
-The SIRCIS instruction set includes 14 undocumented instruction opcodes. These opcodes are valid encodings and will
-execute in hardware, but their architectural behaviour is undefined. Software must not depend on their results, side
-effects, timing, flag behaviour, or fault behaviour. Undocumented opcodes are reserved for future CPU revisions and may
-be repurposed without preserving their current simulator or hardware behaviour.
+The SIRCIS instruction set includes 14 undocumented instruction opcodes. Most of these opcodes are valid encodings with
+architecturally undefined behaviour: software must not depend on their results, side effects, timing, flag behaviour,
+or fault behaviour. Two of the fourteen, \opcode{27} and \opcode{2F}, are the exception -- each has fully defined,
+tested behaviour (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the
+coprocessor command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged)
+but no public assembly syntax, and they are listed here for that reason rather than because their behaviour is
+undefined. Undocumented opcodes are reserved for future CPU revisions and may be repurposed without preserving their
+current simulator or hardware behaviour.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -41,39 +45,40 @@ accidentally depend on undefined write-back ordering.
 	\centering
 	\begin{tabular}{clll}
 		\toprule
-		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}            \\
+		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern}        & \textbf{Notes}            \\
 		\midrule
-		0x08            & Immediate       & ADD-like + 0x8   & Test variant (no save)    \\
-		0x09            & Immediate       & ADC-like + 0x8   & Test variant (no save)    \\
-		0x0B            & Immediate       & SUB-like + 0x8   & Test variant (no save)    \\
-		0x0D            & Immediate       & SBC-like + 0x8   & Test variant (no save)    \\
-		0x27            & Short Imm       & LOAD-like        & No public assembly syntax \\
-		0x28            & Short Imm       & ADD-like + 0x8   & Test variant (no save)    \\
-		0x29            & Short Imm       & ADC-like + 0x8   & Test variant (no save)    \\
-		0x2B            & Short Imm       & SUB-like + 0x8   & Test variant (no save)    \\
-		0x2D            & Short Imm       & SBC-like + 0x8   & Test variant (no save)    \\
-		0x2F            & Short Imm       & COP-like         & No public assembly syntax \\
-		0x38            & Register        & ADD-like + 0x8   & Test variant (no save)    \\
-		0x39            & Register        & ADC-like + 0x8   & Test variant (no save)    \\
-		0x3B            & Register        & SUB-like + 0x8   & Test variant (no save)    \\
-		0x3D            & Register        & SBC-like + 0x8   & Test variant (no save)    \\
+		\opcode{08}     & Immediate       & ADD-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{09}     & Immediate       & ADC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{0B}     & Immediate       & SBC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{0D}     & Immediate       & OR-like + \texttt{0x8}  & Test variant (no save)    \\
+		\opcode{27}     & Short Imm       & LOAD-like               & No public assembly syntax \\
+		\opcode{28}     & Short Imm       & ADD-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{29}     & Short Imm       & ADC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{2B}     & Short Imm       & SBC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{2D}     & Short Imm       & OR-like + \texttt{0x8}  & Test variant (no save)    \\
+		\opcode{2F}     & Short Imm       & COP-like                & No public assembly syntax \\
+		\opcode{38}     & Register        & ADD-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{39}     & Register        & ADC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{3B}     & Register        & SBC-like + \texttt{0x8} & Test variant (no save)    \\
+		\opcode{3D}     & Register        & OR-like + \texttt{0x8}  & Test variant (no save)    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Undocumented Instruction Opcodes}
 \end{table}
 
-\section{Likely Behavior}
+\section{Observed Behavior}
 
-Based on the systematic opcode organization, the undocumented opcodes with bit 3 set in the ALU operation field likely
-behave as "test" variants of arithmetic instructions:
+The undocumented opcodes with bit 3 set in the ALU operation field compute \texttt{alu\_code \& 0x7} as the operation,
+discard the result, and update all four flags exactly as the corresponding documented operation does. This is the
+observed behavior of the current reference implementation; it is architecturally undefined, so software must not rely
+on it.
 
-\subsection{0x08, 0x28, 0x38 (ADD Test)}
+\subsection{\opcode{08}, \opcode{28}, \opcode{38} (ADD Test)}
 
-Probably performs addition but discards the result, only updating flags. Similar to \mnemonic{CMP} but using ADD
-semantics instead of SUB.
+Computes the sum of the two operands but discards the result, updating flags as an ADD would. This is comparable to
+\mnemonic{CMP}, but using ADD semantics instead of SUB.
 
 \begin{lstlisting}
-; Hypothetical behavior
 result = operand1 + operand2  ; Calculate
 ; result is discarded (not written to register)
 ; Flags updated based on result
@@ -81,12 +86,11 @@ result = operand1 + operand2  ; Calculate
 
 \textbf{Utility:} Limited. \mnemonic{CMP} already provides comparison functionality.
 
-\subsection{0x09, 0x29, 0x39 (ADC Test)}
+\subsection{\opcode{09}, \opcode{29}, \opcode{39} (ADC Test)}
 
-Probably performs add-with-carry but discards the result, updating flags.
+Computes the sum of the two operands plus the incoming carry, but discards the result, updating flags.
 
 \begin{lstlisting}
-; Hypothetical behavior
 result = operand1 + operand2 + C
 ; result is discarded
 ; Flags updated
@@ -94,35 +98,41 @@ result = operand1 + operand2 + C
 
 \textbf{Utility:} Possibly useful for testing carry propagation without modifying registers.
 
-\subsection{0x0B, 0x2B, 0x3B (SUB Test)}
+\subsection{\opcode{0B}, \opcode{2B}, \opcode{3B} (SBC Test)}
 
-Probably identical to \mnemonic{CMP} (which is already SUB without save).
-
-\textbf{Utility:} None. Use \mnemonic{CMP} instead.
-
-\subsection{0x0D, 0x2D, 0x3D (SBC Test)}
-
-Probably performs subtract-with-borrow but discards the result.
+Computes the difference of the two operands minus the incoming borrow, but discards the result, updating flags.
 
 \begin{lstlisting}
-; Hypothetical behavior
-result = operand1 - operand2 - (1 - C)
+result = operand1 - operand2 - C  ; C is the borrow input
 ; result is discarded
 ; Flags updated
 \end{lstlisting}
 
 \textbf{Utility:} Possibly useful for testing borrow propagation in multi-precision arithmetic.
 
+\subsection{\opcode{0D}, \opcode{2D}, \opcode{3D} (OR Test)}
+
+Computes the bitwise OR of the two operands but discards the result. N and Z are updated from the OR result; C and V
+are cleared.
+
+\begin{lstlisting}
+result = operand1 | operand2
+; result is discarded
+; N and Z updated from result; C and V cleared
+\end{lstlisting}
+
+\textbf{Utility:} Limited. \mnemonic{ORRI} already provides the same flag effects with a result write-back.
+
 \section{Implementation Notes}
 
 \subsection{Current Simulator}
 
-In the current SIRC-VM simulator (as of version 1.0):
+In the current SIRC-VM simulator:
 
 \begin{itemize}
 	\item Undocumented instructions are recognized and decoded
 	\item The undocumented ALU test-variant opcodes execute following the "test variant" pattern (no write-back)
-	\item Flag updates may or may not be implemented correctly
+	\item Flag updates match the corresponding documented operation exactly, as verified by the reference test suite
 	\item Behavior may change in future versions
 \end{itemize}
 
@@ -175,18 +185,18 @@ These instructions were left undocumented for several reasons:
 \subsection{For Hardware Implementers}
 
 \begin{itemize}
-	\item You may implement these opcodes following the logical pattern
+	\item These opcodes may be implemented following the logical pattern
 	\item Document any implementation-specific behavior
 	\item Consider reserving them for future standardization
 \end{itemize}
 
 \subsection{For Researchers/Hackers}
 
-If you must experiment with undocumented instructions:
+Experimenting with undocumented instructions requires the following precautions:
 
 \begin{itemize}
-	\item Test thoroughly on your specific hardware/simulator version
-	\item Document your findings
+	\item Test thoroughly on the specific hardware or simulator version in use
+	\item Document the findings
 	\item Isolate usage in test code, not production
 	\item Be prepared for behavior changes
 \end{itemize}
@@ -197,11 +207,13 @@ Some undocumented instructions may be formally specified in future SIRCIS revisi
 include:
 
 \begin{itemize}
-	\item \textbf{ADC Test (0x09/0x29/0x39)}: For carry flag testing in multi-precision
-	\item \textbf{SBC Test (0x0D/0x2D/0x3D)}: For borrow flag testing in multi-precision
+	\item \textbf{ADC Test (\opcode{09}/\opcode{29}/\opcode{39})}: For carry flag testing in multi-precision
+	      arithmetic
+	\item \textbf{SBC Test (\opcode{0B}/\opcode{2B}/\opcode{3B})}: For borrow flag testing in multi-precision
+	      arithmetic
 \end{itemize}
 
-Others (SUB Test, which duplicates CMP) will likely remain undocumented or be repurposed.
+Others (the ADD Test and OR Test variants) will likely remain undocumented or be repurposed.
 
 \section{Opcode Space for Expansion}
 
@@ -209,8 +221,8 @@ The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
 	\item 14 undocumented opcodes (could be formally specified)
-	\item Reserved shift type (0x111) could enable additional shift modes
-	\item Reserved address register encoding could enable more address modes
+	\item Reserved shift type (111) could enable additional shift modes
+	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source
 	\item Standard optional coprocessors and model-specific coprocessors can provide extended functionality through the
 	      documented coprocessor compatibility rules
 \end{itemize}

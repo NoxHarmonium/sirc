@@ -1,4 +1,4 @@
-; Reserved space for 128x32 bit exception vectors
+; Reserved space for 256x32 bit exception vectors
 
 ; First vector is the reset vector
 .ORG 0x0000

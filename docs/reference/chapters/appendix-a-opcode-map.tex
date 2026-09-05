@@ -8,111 +8,120 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 \begin{table}[H]
 	\centering
 	\footnotesize
-	\begin{tabular}{|c|l|l|l|}
-		\hline
+	\begin{tabular}{clll}
+		\toprule
 		\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description}                                     \\
-		\hline
-		\multicolumn{4}{|c|}{\textbf{ALU Immediate (0x00--0x0F)}}                                                     \\
-		\hline
-		00           & 000000          & ADDI              & Add Immediate                                            \\
-		01           & 000001          & ADCI              & Add with Carry Immediate                                 \\
-		02           & 000010          & SUBI              & Subtract Immediate                                       \\
-		03           & 000011          & SBCI              & Subtract with Carry Immediate                            \\
-		04           & 000100          & ANDI              & AND Immediate                                            \\
-		05           & 000101          & ORRI              & OR Immediate                                             \\
-		06           & 000110          & XORI              & XOR Immediate                                            \\
-		07           & 000111          & LOAD              & Load Immediate                                           \\
-		08           & 001000          & --                & Undocumented                                             \\
-		09           & 001001          & --                & Undocumented                                             \\
-		0A           & 001010          & CMPI              & Compare Immediate                                        \\
-		0B           & 001011          & --                & Undocumented                                             \\
-		0C           & 001100          & TSAI              & Test AND Immediate                                       \\
-		0D           & 001101          & --                & Undocumented                                             \\
-		0E           & 001110          & TSXI              & Test XOR Immediate                                       \\
-		0F           & 001111          & COPI              & Coprocessor Immediate                                    \\
-		\hline
-		\multicolumn{4}{|c|}{\textbf{Memory and Control (0x10--0x1F)}}                                                \\
-		\hline
-		10           & 010000          & STOR              & Store Indirect Immediate                                 \\
-		11           & 010001          & STOR              & Store Indirect Register                                  \\
-		12           & 010010          & STOR              & Store Pre-Decrement Immediate                            \\
-		13           & 010011          & STOR              & Store Pre-Decrement Register                             \\
-		14           & 010100          & LOAD              & Load Indirect Immediate                                  \\
-		15           & 010101          & LOAD              & Load Indirect Register                                   \\
-		16           & 010110          & LOAD              & Load Post-Increment Immediate                            \\
-		17           & 010111          & LOAD              & Load Post-Increment Register                             \\
-		18           & 011000          & LDEA              & Load Effective Address Immediate                         \\
-		19           & 011001          & LDEA              & Load Effective Address Register                          \\
-		1A           & 011010          & LDEA              & Load Effective Address Pre-Decrement Immediate           \\
-		1B           & 011011          & LDEA              & Load Effective Address Pre-Decrement Register            \\
-		1C           & 011100          & LDEL              & Load Effective Address and Link Immediate                \\
-		1D           & 011101          & LDEL              & Load Effective Address and Link Register                 \\
-		1E           & 011110          & LDEL              & Load Effective Address and Link Post-Increment Immediate \\
-		1F           & 011111          & LDEL              & Load Effective Address and Link Post-Increment Register  \\
-		\hline
-		\multicolumn{4}{|c|}{\textbf{ALU Short Immediate (0x20--0x2F)}}                                               \\
-		\hline
-		20           & 100000          & ADDI              & Add Short Immediate                                      \\
-		21           & 100001          & ADCI              & Add with Carry Short Immediate                           \\
-		22           & 100010          & SUBI              & Subtract Short Immediate                                 \\
-		23           & 100011          & SBCI              & Subtract with Carry Short Immediate                      \\
-		24           & 100100          & ANDI              & AND Short Immediate                                      \\
-		25           & 100101          & ORRI              & OR Short Immediate                                       \\
-		26           & 100110          & XORI              & XOR Short Immediate                                      \\
-		27           & 100111          & LOAD              & Undocumented                                             \\
-		28           & 101000          & --                & Undocumented                                             \\
-		29           & 101001          & --                & Undocumented                                             \\
-		2A           & 101010          & CMPI              & Compare Short Immediate                                  \\
-		2B           & 101011          & --                & Undocumented                                             \\
-		2C           & 101100          & TSAI              & Test AND Short Immediate                                 \\
-		2D           & 101101          & --                & Undocumented                                             \\
-		2E           & 101110          & TSXI              & Test XOR Short Immediate                                 \\
-		2F           & 101111          & COPI              & Undocumented                                             \\
-		\hline
-		\multicolumn{4}{|c|}{\textbf{ALU Register (0x30--0x3F)}}                                                      \\
-		\hline
-		30           & 110000          & ADDR              & Add Register                                             \\
-		31           & 110001          & ADCR              & Add with Carry Register                                  \\
-		32           & 110010          & SUBR              & Subtract Register                                        \\
-		33           & 110011          & SBCR              & Subtract with Carry Register                             \\
-		34           & 110100          & ANDR              & AND Register                                             \\
-		35           & 110101          & ORRR              & OR Register                                              \\
-		36           & 110110          & XORR              & XOR Register                                             \\
-		37           & 110111          & LOAD              & Load Register                                            \\
-		38           & 111000          & --                & Undocumented                                             \\
-		39           & 111001          & --                & Undocumented                                             \\
-		3A           & 111010          & CMPR              & Compare Register                                         \\
-		3B           & 111011          & --                & Undocumented                                             \\
-		3C           & 111100          & TSAR              & Test AND Register                                        \\
-		3D           & 111101          & --                & Undocumented                                             \\
-		3E           & 111110          & TSXR              & Test XOR Register                                        \\
-		3F           & 111111          & COPR              & Coprocessor Register                                     \\
-		\hline
+		\midrule
+		\multicolumn{4}{c}{\textbf{ALU Immediate (\opcode{00}--\opcode{0F})}}                                         \\
+		\midrule
+		\opcode{00}  & 000000          & ADDI              & Add Immediate                                            \\
+		\opcode{01}  & 000001          & ADCI              & Add with Carry Immediate                                 \\
+		\opcode{02}  & 000010          & SUBI              & Subtract Immediate                                       \\
+		\opcode{03}  & 000011          & SBCI              & Subtract with Carry Immediate                            \\
+		\opcode{04}  & 000100          & ANDI              & AND Immediate                                            \\
+		\opcode{05}  & 000101          & ORRI              & OR Immediate                                             \\
+		\opcode{06}  & 000110          & XORI              & XOR Immediate                                            \\
+		\opcode{07}  & 000111          & LOAD              & Load Immediate                                           \\
+		\opcode{08}  & 001000          & --                & Undocumented                                             \\
+		\opcode{09}  & 001001          & --                & Undocumented                                             \\
+		\opcode{0A}  & 001010          & CMPI              & Compare Immediate                                        \\
+		\opcode{0B}  & 001011          & --                & Undocumented                                             \\
+		\opcode{0C}  & 001100          & TSAI              & Test AND Immediate                                       \\
+		\opcode{0D}  & 001101          & --                & Undocumented                                             \\
+		\opcode{0E}  & 001110          & TSXI              & Test XOR Immediate                                       \\
+		\opcode{0F}  & 001111          & COPI              & Coprocessor Immediate                                    \\
+		\midrule
+		\multicolumn{4}{c}{\textbf{Memory and Control (\opcode{10}--\opcode{1F})}}                                    \\
+		\midrule
+		\opcode{10}  & 010000          & STOR              & Store Indirect Immediate                                 \\
+		\opcode{11}  & 010001          & STOR              & Store Indirect Register                                  \\
+		\opcode{12}  & 010010          & STOR              & Store Pre-Decrement Immediate                            \\
+		\opcode{13}  & 010011          & STOR              & Store Pre-Decrement Register                             \\
+		\opcode{14}  & 010100          & LOAD              & Load Indirect Immediate                                  \\
+		\opcode{15}  & 010101          & LOAD              & Load Indirect Register                                   \\
+		\opcode{16}  & 010110          & LOAD              & Load Post-Increment Immediate                            \\
+		\opcode{17}  & 010111          & LOAD              & Load Post-Increment Register                             \\
+		\opcode{18}  & 011000          & LDEA              & Load Effective Address Immediate                         \\
+		\opcode{19}  & 011001          & LDEA              & Load Effective Address Register                          \\
+		\opcode{1A}  & 011010          & LDEA              & Load Effective Address Pre-Decrement Immediate           \\
+		\opcode{1B}  & 011011          & LDEA              & Load Effective Address Pre-Decrement Register            \\
+		\opcode{1C}  & 011100          & LDEL              & Load Effective Address and Link Immediate                \\
+		\opcode{1D}  & 011101          & LDEL              & Load Effective Address and Link Register                 \\
+		\opcode{1E}  & 011110          & LDEL              & Load Effective Address and Link Post-Increment Immediate \\
+		\opcode{1F}  & 011111          & LDEL              & Load Effective Address and Link Post-Increment Register  \\
+		\midrule
+		\multicolumn{4}{c}{\textbf{ALU Short Immediate (\opcode{20}--\opcode{2F})}}                                   \\
+		\midrule
+		\opcode{20}  & 100000          & ADDI              & Add Short Immediate                                      \\
+		\opcode{21}  & 100001          & ADCI              & Add with Carry Short Immediate                           \\
+		\opcode{22}  & 100010          & SUBI              & Subtract Short Immediate                                 \\
+		\opcode{23}  & 100011          & SBCI              & Subtract with Carry Short Immediate                      \\
+		\opcode{24}  & 100100          & ANDI              & AND Short Immediate                                      \\
+		\opcode{25}  & 100101          & ORRI              & OR Short Immediate                                       \\
+		\opcode{26}  & 100110          & XORI              & XOR Short Immediate                                      \\
+		\opcode{27}  & 100111          & --                & Undocumented (LOAD-like)                                 \\
+		\opcode{28}  & 101000          & --                & Undocumented                                             \\
+		\opcode{29}  & 101001          & --                & Undocumented                                             \\
+		\opcode{2A}  & 101010          & CMPI              & Compare Short Immediate                                  \\
+		\opcode{2B}  & 101011          & --                & Undocumented                                             \\
+		\opcode{2C}  & 101100          & TSAI              & Test AND Short Immediate                                 \\
+		\opcode{2D}  & 101101          & --                & Undocumented                                             \\
+		\opcode{2E}  & 101110          & TSXI              & Test XOR Short Immediate                                 \\
+		\opcode{2F}  & 101111          & --                & Undocumented (COP-like)                                  \\
+		\midrule
+		\multicolumn{4}{c}{\textbf{ALU Register (\opcode{30}--\opcode{3F})}}                                          \\
+		\midrule
+		\opcode{30}  & 110000          & ADDR              & Add Register                                             \\
+		\opcode{31}  & 110001          & ADCR              & Add with Carry Register                                  \\
+		\opcode{32}  & 110010          & SUBR              & Subtract Register                                        \\
+		\opcode{33}  & 110011          & SBCR              & Subtract with Carry Register                             \\
+		\opcode{34}  & 110100          & ANDR              & AND Register                                             \\
+		\opcode{35}  & 110101          & ORRR              & OR Register                                              \\
+		\opcode{36}  & 110110          & XORR              & XOR Register                                             \\
+		\opcode{37}  & 110111          & LOAD              & Load Register                                            \\
+		\opcode{38}  & 111000          & --                & Undocumented                                             \\
+		\opcode{39}  & 111001          & --                & Undocumented                                             \\
+		\opcode{3A}  & 111010          & CMPR              & Compare Register                                         \\
+		\opcode{3B}  & 111011          & --                & Undocumented                                             \\
+		\opcode{3C}  & 111100          & TSAR              & Test AND Register                                        \\
+		\opcode{3D}  & 111101          & --                & Undocumented                                             \\
+		\opcode{3E}  & 111110          & TSXR              & Test XOR Register                                        \\
+		\opcode{3F}  & 111111          & COPR              & Coprocessor Register                                     \\
+		\bottomrule
 	\end{tabular}
 	\caption{Complete SIRCIS Opcode Map}
+	\label{tab:opcode-map}
 \end{table}
 
 \section{Opcode Patterns}
 
 \subsection{Format Identification}
 
+Bit numbers in this section refer to the 6-bit opcode value (instruction bits 31--26), not to the instruction word.
+
 \begin{itemize}
-	\item Bits 5--4 = 00: Immediate format (0x00--0x0F)
-	\item Bits 5--4 = 01: Memory/Control operations (0x10--0x1F)
-	\item Bits 5--4 = 10: Short Immediate with Shift (0x20--0x2F)
-	\item Bits 5--4 = 11: Register format (0x30--0x3F)
+	\item Opcode bits 5--4 = 00: Immediate format (\opcode{00}--\opcode{0F})
+	\item Opcode bits 5--4 = 01: Memory and control operations (\opcode{10}--\opcode{1F}). Format is selected by opcode bit 0:
+	      even opcodes use Immediate format, odd opcodes use Register format.
+	\item Opcode bits 5--4 = 10: Short Immediate with Shift (\opcode{20}--\opcode{2F})
+	\item Opcode bits 5--4 = 11: Register format (\opcode{30}--\opcode{3F})
 \end{itemize}
 
 \subsection{Save vs. Test}
 
 \begin{itemize}
-	\item Bit 3 = 0: Save result (0x00--0x07, 0x20--0x27, 0x30--0x37)
-	\item Bit 3 = 1: Test only, discard result (0x08--0x0F, 0x28--0x2F, 0x38--0x3F)
+	\item Bit 3 = 0 and low nibble \texttt{0}--\texttt{6}: save result (\opcode{00}--\opcode{06}, \opcode{20}--\opcode{26},
+	      \opcode{30}--\opcode{36})
+	\item Bit 3 = 1 and low nibble \texttt{8}--\texttt{E}: test only, discard result (\opcode{08}--\opcode{0E},
+	      \opcode{28}--\opcode{2E}, \opcode{38}--\opcode{3E})
+	\item Low nibble \texttt{F} is the coprocessor call (\opcode{0F}, \opcode{3F}), not a test form
+	\item Low nibble \texttt{7} is \mnemonic{LOAD} (\opcode{07}, \opcode{37})
+	\item \opcode{27} and \opcode{2F} are undocumented
 \end{itemize}
 
 \subsection{Memory Operations Decoding}
 
-For opcodes 0x10--0x1F, bits encode memory operation type:
+For opcodes \opcode{10}--\opcode{1F}, bits encode memory operation type:
 
 \begin{itemize}
 	\item Bit 4 = 1: Always set for memory/control section
@@ -123,7 +132,8 @@ For opcodes 0x10--0x1F, bits encode memory operation type:
 		      \item 10 = Load Effective Address
 		      \item 11 = Load EA with Link (jump to subroutine)
 	      \end{itemize}
-	\item Bit 1: Determines if both registers in address pair are updated
+	\item Bit 1: Auto-update of the source address register (0 = no update, 1 = pre-decrement for STOR/LDEA, post-increment for
+	      LOAD/LDEL). Only the low word of the pair is adjusted, and always by one word regardless of the displacement.
 	\item Bit 0: Immediate (0) or Register (1) offset
 \end{itemize}
 
@@ -132,13 +142,15 @@ For opcodes 0x10--0x1F, bits encode memory operation type:
 The following opcodes are undocumented and should not be used in production code:
 
 \begin{itemize}
-	\item 0x08, 0x09, 0x0B, 0x0D (Immediate format, test variants)
-	\item 0x28, 0x29, 0x2B, 0x2D (Short Immediate format, test variants)
-	\item 0x38, 0x39, 0x3B, 0x3D (Register format, test variants)
+	\item \opcode{08}, \opcode{09}, \opcode{0B}, \opcode{0D} (Immediate format, test variants)
+	\item \opcode{28}, \opcode{29}, \opcode{2B}, \opcode{2D} (Short Immediate format, test variants)
+	\item \opcode{38}, \opcode{39}, \opcode{3B}, \opcode{3D} (Register format, test variants)
+	\item \opcode{27}, \opcode{2F} (no public assembly syntax)
 \end{itemize}
 
-These opcodes may execute in hardware but their behavior is implementation-defined and may change between CPU
-revisions. See Appendix~\ref{appendix:undocumented} for details.
+The twelve test-variant opcodes above execute in hardware, but their behavior is architecturally undefined and may
+change between CPU revisions. See Appendix~\ref{appendix:undocumented} for details on all fourteen undocumented
+opcodes, including \opcode{27} and \opcode{2F}.
 
 \section{Quick Lookup Table}
 
@@ -147,23 +159,24 @@ revisions. See Appendix~\ref{appendix:undocumented} for details.
 	\small
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Operation} & \textbf{Immediate} & \textbf{Short+Shift}    & \textbf{Register} \\
+		\textbf{Operation} & \textbf{Immediate} & \textbf{Short+Shift}           & \textbf{Register} \\
 		\midrule
-		ADD                & 0x00               & 0x20                    & 0x30              \\
-		ADC                & 0x01               & 0x21                    & 0x31              \\
-		SUB                & 0x02               & 0x22                    & 0x32              \\
-		SBC                & 0x03               & 0x23                    & 0x33              \\
-		AND                & 0x04               & 0x24                    & 0x34              \\
-		OR                 & 0x05               & 0x25                    & 0x35              \\
-		XOR                & 0x06               & 0x26                    & 0x36              \\
-		LOAD               & 0x07               & 0x27\textsuperscript{*} & 0x37              \\
-		CMP                & 0x0A               & 0x2A                    & 0x3A              \\
-		TSA                & 0x0C               & 0x2C                    & 0x3C              \\
-		TSX                & 0x0E               & 0x2E                    & 0x3E              \\
-		COP                & 0x0F               & 0x2F\textsuperscript{*} & 0x3F              \\
+		ADD                & \opcode{00}        & \opcode{20}                    & \opcode{30}       \\
+		ADC                & \opcode{01}        & \opcode{21}                    & \opcode{31}       \\
+		SUB                & \opcode{02}        & \opcode{22}                    & \opcode{32}       \\
+		SBC                & \opcode{03}        & \opcode{23}                    & \opcode{33}       \\
+		AND                & \opcode{04}        & \opcode{24}                    & \opcode{34}       \\
+		ORR                & \opcode{05}        & \opcode{25}                    & \opcode{35}       \\
+		XOR                & \opcode{06}        & \opcode{26}                    & \opcode{36}       \\
+		LOAD               & \opcode{07}        & \opcode{27}\textsuperscript{*} & \opcode{37}       \\
+		CMP                & \opcode{0A}        & \opcode{2A}                    & \opcode{3A}       \\
+		TSA                & \opcode{0C}        & \opcode{2C}                    & \opcode{3C}       \\
+		TSX                & \opcode{0E}        & \opcode{2E}                    & \opcode{3E}       \\
+		COP                & \opcode{0F}        & \opcode{2F}\textsuperscript{*} & \opcode{3F}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Variant Quick Reference}
+	\label{tab:instruction-variant-quick-reference}
 \end{table}
 
 \textsuperscript{*} These opcodes have no public assembly syntax and are undocumented.

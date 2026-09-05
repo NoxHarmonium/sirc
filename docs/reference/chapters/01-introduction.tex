@@ -3,7 +3,7 @@
 
 \section{Overview}
 
-The SIRC-1 is a 16-bit RISC processor ideal for general purpose computing.
+The SIRC-1 is a 16-bit RISC processor ideal for general-purpose computing.
 
 \noindent It implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a powerful set of operations while still ensuring simplicity of CPU implementation.
 
@@ -33,8 +33,8 @@ The SIRC-1 was designed with several key goals in order of importance:
 	\item[Simplicity] The CPU should be simple enough to be implemented in hardware without requiring complex microcode engines
 	      or multi-level instruction decoders.
 
-	\item[Developer Ergonomics] It should have powerful instruction encodings that include conditional execution and bit shifting
-	      that can help reduce the number of instructions and branches to keep track of.
+	\item[Developer Ergonomics] Powerful instruction encodings, including conditional execution and bit shifting, should reduce
+	      the number of instructions and branches a program must track.
 
 	\item[Performance] While simple, the design should allow for reasonable performance through efficient instruction encoding
 	      and the potential for future enhancements like pipelining.
@@ -44,9 +44,9 @@ The SIRC-1 was designed with several key goals in order of importance:
 
 \subsection{Applications}
 
-The SIRC-1 is designed for ideal for general purpose computing, such as the core of a microcomputer.
+The SIRC-1 is designed for general-purpose computing, such as the core of a microcomputer.
 
-\noindent It should not be used in memory constrained environments, as the fixed length instructions and lack of byte addressing can potentially mean larger program sizes.
+\noindent It should not be used in memory-constrained environments, as fixed-length instructions and the lack of byte addressing can result in larger program sizes.
 
 \section{Key Features}
 
@@ -56,18 +56,18 @@ The SIRC-1 is designed for ideal for general purpose computing, such as the core
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Feature}            & \textbf{Specification} \\
+		\textbf{Feature}            & \textbf{Specification}             \\
 		\midrule
-		Data Width                  & 16-bit                 \\
-		Addressing                  & Word Addressing        \\
-		Address Bus                 & 24-bit word address    \\
-		Instruction Size            & 32-bit fixed           \\
-		General Purpose Registers   & 7 (r1--r7)             \\
-		Address Register Pairs      & 4 (l, a, s, p)         \\
-		Total Addressable Registers & 16                     \\
-		Instruction Formats         & 3                      \\
-		Addressing Modes            & 7                      \\
-		Condition Codes             & 16                     \\
+		Data Width                  & 16-bit                             \\
+		Addressing                  & Word Addressing                    \\
+		Address Bus                 & 24-bit word address                \\
+		Instruction Size            & 32-bit fixed                       \\
+		General-Purpose Registers   & 7 (r1--r7)                         \\
+		Address Register Pairs      & 4 (l, a, s, p -- link, address, stack pointer, program counter) \\
+		Total Addressable Registers & 16                                 \\
+		Instruction Formats         & 3                                  \\
+		Addressing Modes            & 7 (see Table~\ref{tab:addr-modes}) \\
+		Condition Codes             & 16                                 \\
 		\bottomrule
 	\end{tabular}
 	\caption{SIRC-1 CPU Specifications}
@@ -82,42 +82,43 @@ a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 This fixed six-stage model means that ordinary processing-unit instructions take 6 clock cycles to complete when bus
 operations do not require wait states, regardless of their complexity. DMA commands are the main exception because the
 DMA unit holds instruction fetch after dispatch until its transfer has completed. A bus device may hold the current
-phase by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6 cycle
-instruction execution model may seem wasteful for simple register operations that don't require memory access, it
+phase by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6-cycle
+instruction execution model may seem wasteful for simple register operations that do not require memory access, it
 dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or
 microcode.
 
 \subsection{Coprocessors}
 
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
-register file. Only one coprocessor can be active at one time and are usually activated using the \mnemonic{COPI} or
-\mnemonic{COPR} coprocessor-call instructions (except for the "exception unit" which can be activated when physical
-pins are asserted on the chip). All implementations of the SIRC-1 will have the "processing unit" as coprocessor 0x0,
-the "exception unit" as coprocessor 0x1, and the DMA unit as coprocessor 0x2. Other coprocessors are optional and will
-vary depending on which SIRC-1 model you have. The instruction set supports up to 16 coprocessors. The coprocessor IDs
-are stable between models, so that programs are cross compatible. For example, coprocessor 0x3 will always be the
-Integer Maths Unit. This means if the CPU model is missing an optional coprocessor, and a program requires it, the CPU
-will raise an invalid-opcode fault so that the behaviour can be emulated in software where practical.
+register file. Only one coprocessor can be active at a time. Coprocessors are usually activated using the
+\mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions (see Chapter~\ref{ch:coprocessor}), except for the "exception unit," which can also be
+activated when physical pins are asserted on the chip. All implementations of the SIRC-1 will have the "processing
+unit" as coprocessor \texttt{0x0}, the "exception unit" as coprocessor \texttt{0x1}, and the DMA unit as coprocessor
+\texttt{0x2}. Other coprocessors are optional and vary by SIRC-1 model. The instruction set supports up to 16
+coprocessors. The coprocessor IDs are stable between models, so that programs are cross-compatible. For example,
+coprocessor \texttt{0x3} will always be the Integer Maths Unit. This means that if a CPU model is missing an optional
+coprocessor and a program requires it, the CPU raises an invalid-opcode fault so that the behavior can be emulated in
+software where practical.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{ID} & \textbf{Name}      & \textbf{Optional} & \textbf{Purpose}                            \\
+		\textbf{ID}                & \textbf{Name}      & \textbf{Optional} & \textbf{Purpose}                            \\
 		\midrule
-		0x0         & Processing Unit    & No                & Executes instructions                       \\
-		0x1         & Exception Unit     & No                & Handles interrupts and exceptions           \\
-		0x2         & DMA Unit           & No                & Transfers blocks of data via the bus        \\
-		0x3         & Integer Maths Unit & Yes               & Multiplies and divides integer values       \\
-		0x4--0xF    & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
+		\texttt{0x0}               & Processing Unit    & No                & Executes instructions                       \\
+		\texttt{0x1}               & Exception Unit     & No                & Handles interrupts and exceptions           \\
+		\texttt{0x2}               & DMA Unit           & No                & Transfers blocks of data via the bus        \\
+		\texttt{0x3}               & Integer Maths Unit & Yes               & Multiplies and divides integer values       \\
+		\texttt{0x4}--\texttt{0xF} & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
 		\bottomrule
 	\end{tabular}
 	\caption{List of coprocessors}
 	\label{tab:coprocessor-list}
 \end{table}
 
-Each coprocessor can execute 16 opcodes, the first 8 (0x0-0x7) can be called in any mode. The last 8 (0x8-0xF) can only
-be called in supervisor mode.
+Each coprocessor can execute 16 opcodes: the first 8 (\texttt{0x0}--\texttt{0x7}) can be called in any mode, and the
+last 8 (\texttt{0x8}--\texttt{0xF}) can be called only in supervisor mode.
 
 \subsection{Privilege Levels}
 
@@ -132,22 +133,22 @@ The SIRC-1 supports two privilege levels:
 	      coprocessor instructions.
 \end{description}
 
-The privilege level is controlled by the Protected Mode bit in the status register.
+The privilege level is controlled by the protected mode bit in the status register.
 
 \section{Memory Organization}
 
 \subsection{Address Space}
 
 The SIRC-1 uses word addressing, where each address refers to a 16-bit word. With a 24-bit address space, this allows
-access to $2^24$ = 16,777,216 words, or 32 megabytes of external byte storage. Addresses are formed by combining the
+access to $2^{24}$ = 16,777,216 words, or 32 megabytes of external byte storage. Addresses are formed by combining the
 low 8 bits of the high address-register component with the full 16-bit low address-register component:
 
 \begin{equation}
 	\text{Address} = (\text{RegHigh}[7:0] \ll 16) \mid \text{RegLow}[15:0]
 \end{equation}
 
-Note that the upper 8 bits of the high register (bits 15--8) are not used for addressing but are available for storage,
-enabling techniques like tagged pointers.
+The high 8 bits of the high register (bits 15--8) are not used for addressing but are available for storage, enabling
+techniques such as tagged pointers.
 
 For normative byte order, multi-word storage, exception vector layout, immediate interpretation, and wraparound rules,
 see Chapter~\ref{ch:data-representation}.
@@ -162,12 +163,12 @@ two consecutive 16-bit words: the target address high word followed by the targe
 	\small
 	\begin{tabularx}{\textwidth}{lllX}
 		\toprule
-		\textbf{Region} & \textbf{Vector IDs}          & \textbf{Word addresses}          & \textbf{Purpose}                                \\
+		\textbf{Region} & \textbf{Vector IDs}                                                       & \textbf{Word addresses}          & \textbf{Purpose}                                \\
 		\midrule
-		Reset           & 0x00                         & \addr{0x000000}--\addr{0x000001} & Initial program counter after reset             \\
-		Faults          & 0x01--0x0F                   & \addr{0x000002}--\addr{0x00001F} & Fault and reserved privileged exception vectors \\
-		Hardware        & 0x10, 0x20, 0x30, 0x40, 0x50 & \addr{0x000020}--\addr{0x0000A1} & Hardware exception vectors, spaced by vector ID \\
-		User traps      & 0x60--0xFF                   & \addr{0x0000C0}--\addr{0x0001FF} & User software exception vectors                 \\
+		Reset           & \texttt{0x00}                                                             & \addr{0x000000}--\addr{0x000001} & Initial program counter after reset             \\
+		Faults          & \texttt{0x01}--\texttt{0x0F}                                              & \addr{0x000002}--\addr{0x00001F} & Fault and reserved privileged exception vectors \\
+		Hardware        & \texttt{0x10}, \texttt{0x20}, \texttt{0x30}, \texttt{0x40}, \texttt{0x50} & \addr{0x000020}--\addr{0x0000A1} & Hardware exception vectors, spaced by vector ID \\
+		User traps      & \texttt{0x60}--\texttt{0xFF}                                              & \addr{0x0000C0}--\addr{0x0001FF} & User software exception vectors                 \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Exception Vector Table Regions}
@@ -179,10 +180,10 @@ Beyond these reserved regions, the memory layout is flexible and can be defined 
 \subsection{Alignment}
 
 \begin{itemize}
-	\item All memory addresses refer to 16-bit words
-	\item There are no alignment restrictions for general memory I/O
-	\item All instructions span 2 words and must begin at an even word address
-	\item Unaligned instruction fetches (odd word address) trigger an alignment fault exception
+	\item All memory addresses refer to 16-bit words.
+	\item There are no alignment restrictions for general memory I/O.
+	\item All instructions span 2 words and must begin at an even word address.
+	\item Unaligned instruction fetches (odd word address) trigger an alignment fault.
 \end{itemize}
 
 \section{Document Organization}

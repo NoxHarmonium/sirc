@@ -1,4 +1,4 @@
-; Reserved space for 128x32 bit exception vectors
+; Reserved space for 256x32 bit exception vectors
 
 
 .EQU $FALSE                         #0x0
@@ -40,7 +40,7 @@
 .ORG 0x0200
 :start
 
-; Enable all hardware interrupts (set bits 9-13 of SR)
+; Enable all four maskable hardware interrupt lines (bits 9-12 of SR)
 ORRI sr, #0b0001_1110_0000_0000
 
 ; Setup routines

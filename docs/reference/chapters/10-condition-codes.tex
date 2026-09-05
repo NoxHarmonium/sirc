@@ -3,11 +3,12 @@
 
 \section{Overview}
 
-Most SIRCIS instructions can be executed conditionally based on the state of the condition flags in the status
+Every SIRC-1 instruction can be executed conditionally based on the state of the condition flags in the status
 register. This allows for efficient implementation of conditional logic without requiring explicit branch instructions.
 
-The 4-bit condition code field in each instruction specifies under what conditions the instruction should execute. If
-the condition is not met, the instruction behaves as a \mnemonic{NOOP} (no operation).
+The 4-bit condition code field in each instruction specifies the conditions under which the instruction executes. If
+the condition is not met, the instruction has no architectural effect: no register, flag, memory, address-register or
+coprocessor state changes, and no privilege check is performed.
 
 \section{Condition Code Encoding}
 
@@ -27,8 +28,8 @@ the condition is not met, the instruction behaves as a \mnemonic{NOOP} (no opera
 		0110          & NC                & Negative Clear (N = 0)                         \\
 		0111          & OS                & Overflow Set (V = 1)                           \\
 		1000          & OC                & Overflow Clear (V = 0)                         \\
-		1001          & HI                & Unsigned Higher (C = 1 AND Z = 0)              \\
-		1010          & LO                & Unsigned Lower or Same (C = 0 OR Z = 1)        \\
+		1001          & HI                & Unsigned Higher (C = 0 AND Z = 0)              \\
+		1010          & LO                & Unsigned Lower or Same (C = 1 OR Z = 1)        \\
 		1011          & >=                & Signed Greater or Equal (N = V)                \\
 		1100          & <<                & Signed Less Than (N $\neq$ V)                  \\
 		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)          \\
@@ -53,15 +54,20 @@ These conditions test a single status flag:
 
 	\item[!= (Not Equal)] Executes when Z = 0. Typical use: test inequality.
 
-	\item[CS (Carry Set)] Executes when C = 1. Can indicate unsigned overflow or borrow.
+	\item[CS (Carry Set)] Executes when C = 1. SIRC-1 sets Carry on a \emph{borrow}, not on
+	      unsigned overflow of an add; after a subtraction or \mnemonic{CMP}, C = 1 means the
+	      first operand was unsigned lower than the second. This is the opposite polarity from
+	      processors (for example ARM) whose Carry flag means \emph{no} borrow occurred.
 
-	\item[CC (Carry Clear)] Executes when C = 0. No unsigned overflow/borrow.
+	\item[CC (Carry Clear)] Executes when C = 0. After a subtraction or \mnemonic{CMP}, C = 0
+	      means no borrow occurred: the first operand was unsigned higher than or equal to the
+	      second.
 
 	\item[NS (Negative Set)] Executes when N = 1. Tests if result is negative (signed).
 
 	\item[NC (Negative Clear)] Executes when N = 0. Tests if result is positive or zero (signed).
 
-	\item[OS (Overflow Set)] Executes when V = 1. Signed overflow occurred.
+	\item[OS (Overflow Set)] Executes when V = 1. Indicates signed overflow.
 
 	\item[OC (Overflow Clear)] Executes when V = 0. No signed overflow.
 \end{description}
@@ -71,9 +77,9 @@ These conditions test a single status flag:
 These conditions are used after comparing unsigned integers:
 
 \begin{description}
-	\item[HI (Unsigned Higher)] Executes when C = 1 AND Z = 0. Tests if first operand $>$ second operand (unsigned).
+	\item[HI (Unsigned Higher)] Executes when C = 0 AND Z = 0. Tests if first operand $>$ second operand (unsigned).
 
-	\item[LO (Unsigned Lower or Same)] Executes when C = 0 OR Z = 1. Tests if first $\leq$ second (unsigned).
+	\item[LO (Unsigned Lower or Same)] Executes when C = 1 OR Z = 1. Tests if first $\leq$ second (unsigned).
 \end{description}
 
 \textbf{Note:} For unsigned comparisons:
@@ -81,8 +87,12 @@ These conditions are used after comparing unsigned integers:
 	\item Use \texttt{HI} and \texttt{LO} after \mnemonic{CMP}
 	\item \texttt{HI} tests if first $>$ second (unsigned)
 	\item \texttt{LO} tests if first $\leq$ second (unsigned)
-	\item \texttt{CS} is equivalent to unsigned $\geq$
-	\item \texttt{CC} is equivalent to unsigned $<$
+	\item \texttt{CS} is equivalent to unsigned $<$
+	\item \texttt{CC} is equivalent to unsigned $\geq$
+	\item Because Carry means borrow on SIRC-1, \texttt{CS}/\texttt{CC} are the opposite way
+	      round from processors whose Carry flag means no borrow (for example ARM); prefer
+	      \texttt{HI}/\texttt{LO} if that is easier to remember, since their names match their
+	      meaning directly.
 \end{itemize}
 
 \subsection{Signed Comparisons}
@@ -102,8 +112,8 @@ These conditions are used after comparing signed integers:
 \subsection{Special Conditions}
 
 \begin{description}
-	\item[Never (NV)] Never executes; equivalent to \mnemonic{NOOP}. Can be used for instruction padding or to temporarily
-	      disable instructions during debugging.
+	\item[Never (NV)] Never executes: no register, flag, memory, address-register or coprocessor state changes, and no privilege
+	      check is performed. Can be used for instruction padding or to temporarily disable instructions during debugging.
 \end{description}
 
 \section{Assembly Syntax}
@@ -130,7 +140,7 @@ STOR|NS (#0, s), r6
 
 The most common use of condition codes is with compare (\mnemonic{CMP}) instructions:
 
-\subsection{Unsigned Comparison}
+\subsection{Example 10-1: Unsigned Comparison}
 
 \begin{lstlisting}
 ; if (r1 > r2) { r3 = r4; } (unsigned)
@@ -142,7 +152,7 @@ CMPI r1, #100
 BRAN|LO @target
 \end{lstlisting}
 
-\subsection{Signed Comparison}
+\subsection{Example 10-2: Signed Comparison}
 
 \begin{lstlisting}
 ; if (r1 >= r2) { r3 = r4; } (signed)
@@ -154,7 +164,7 @@ CMPI r1, #-10
 BRAN|<< @negative_case
 \end{lstlisting}
 
-\subsection{Equality Testing}
+\subsection{Example 10-3: Equality Testing}
 
 \begin{lstlisting}
 ; if (r1 == r2) { branch }
@@ -174,17 +184,28 @@ BRAN|!= @non_zero_case
 	\centering
 	\begin{tabular}{cccccc}
 		\toprule
-		\textbf{Relationship}   & \textbf{Z} & \textbf{C} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
+		\textbf{Relationship}   & \textbf{Z}                         & \textbf{C} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
 		\midrule
-		rA = rB                 & 1          & *          & ==                 & 0001          & Equal            \\
-		rA $\neq$ rB            & 0          & *          & !=                 & 0010          & Not Equal        \\
-		rA $>$ rB (unsigned)    & 0          & 1          & HI                 & 1001          & Higher           \\
-		rA $<$ rB (unsigned)    & 0          & 0          & CC                 & 0100          & Lower            \\
-		rA $\geq$ rB (unsigned) & *          & 1          & CS                 & 0011          & Higher or Same   \\
-		rA $\leq$ rB (unsigned) & *          & *          & LO                 & 1010          & Lower or Same    \\
+		rA = rB                 & 1                                  & X          & ==                 & 0001          & Equal            \\
+		rA $\neq$ rB            & 0                                  & X          & !=                 & 0010          & Not Equal        \\
+		rA $>$ rB (unsigned)    & 0                                  & 0          & HI                 & 1001          & Higher           \\
+		rA $<$ rB (unsigned)    & X                                  & 1          & CS                 & 0011          & Lower            \\
+		rA $\geq$ rB (unsigned) & X                                  & 0          & CC                 & 0100          & Higher or Same   \\
+		rA $\leq$ rB (unsigned) & \multicolumn{2}{c}{C = 1 OR Z = 1$^{*}$} & LO   & 1010          & Lower or Same    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Unsigned Comparison Results}
+
+	\smallskip
+	\texttt{X} = the flag value does not affect this relationship.
+	\newline
+	$^{*}$Unlike every other row, LO is not a single-corner condition: it is the OR of two flag values, so it cannot
+	be expressed as one value per column with the other marked \texttt{X}. This is the only row in the table with
+	that shape.
+	\newline
+	\textbf{Note:} SIRC-1's Carry flag is set on a \emph{borrow}, so \texttt{CS} (C = 1) means unsigned lower and
+	\texttt{CC} (C = 0) means unsigned higher or same. This is the opposite pairing from processors whose Carry
+	flag means no borrow occurred; \texttt{HI} and \texttt{LO} are unaffected and mean exactly what their names say.
 \end{table}
 
 \subsection{Signed Comparison (CMPR rA, rB)}
@@ -195,25 +216,28 @@ BRAN|!= @non_zero_case
 		\toprule
 		\textbf{Relationship} & \textbf{Z} & \textbf{N} & \textbf{V} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
 		\midrule
-		rA = rB               & 1          & *          & *          & ==                 & 0001          & Equal            \\
-		rA $\neq$ rB          & 0          & *          & *          & !=                 & 0010          & Not Equal        \\
+		rA = rB               & 1          & X          & X          & ==                 & 0001          & Equal            \\
+		rA $\neq$ rB          & 0          & X          & X          & !=                 & 0010          & Not Equal        \\
 		rA $>$ rB (signed)    & 0          & 0          & 0          & >>                 & 1101          & Greater          \\
 		rA $>$ rB (signed)    & 0          & 1          & 1          & >>                 & 1101          & Greater          \\
-		rA $<$ rB (signed)    & *          & 0          & 1          & <<                 & 1100          & Less             \\
-		rA $<$ rB (signed)    & *          & 1          & 0          & <<                 & 1100          & Less             \\
-		rA $\geq$ rB (signed) & *          & 0          & 0          & >=                 & 1011          & Greater or Equal \\
-		rA $\geq$ rB (signed) & *          & 1          & 1          & >=                 & 1011          & Greater or Equal \\
-		rA $\leq$ rB (signed) & 1          & *          & *          & <=                 & 1110          & Less or Equal    \\
+		rA $<$ rB (signed)    & X          & 0          & 1          & <<                 & 1100          & Less             \\
+		rA $<$ rB (signed)    & X          & 1          & 0          & <<                 & 1100          & Less             \\
+		rA $\geq$ rB (signed) & X          & 0          & 0          & >=                 & 1011          & Greater or Equal \\
+		rA $\geq$ rB (signed) & X          & 1          & 1          & >=                 & 1011          & Greater or Equal \\
+		rA $\leq$ rB (signed) & 1          & X          & X          & <=                 & 1110          & Less or Equal    \\
 		rA $\leq$ rB (signed) & 0          & 0          & 1          & <=                 & 1110          & Less or Equal    \\
 		rA $\leq$ rB (signed) & 0          & 1          & 0          & <=                 & 1110          & Less or Equal    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Signed Comparison Results}
+
+	\smallskip
+	\texttt{X} = the flag value does not affect this relationship.
 \end{table}
 
 \section{Advanced Usage}
 
-\subsection{Conditional Assignment}
+\subsection{Example 10-4: Conditional Assignment}
 
 \begin{lstlisting}
 ; max = (a > b) ? a : b (unsigned)
@@ -222,7 +246,7 @@ LOAD|HI r3, r1           ; r3 = a if a > b
 LOAD|LO r3, r2           ; r3 = b if a <= b
 \end{lstlisting}
 
-\subsection{Conditional Increment}
+\subsection{Example 10-5: Conditional Increment}
 
 \begin{lstlisting}
 ; if (condition) count++
@@ -230,7 +254,7 @@ CMPI r1, #0
 ADDI|!= r2, #1           ; Increment r2 if r1 != 0
 \end{lstlisting}
 
-\subsection{Conditional Function Call}
+\subsection{Example 10-6: Conditional Function Call}
 
 \begin{lstlisting}
 ; if (r1 > 0) call_function()
@@ -238,11 +262,11 @@ CMPI r1, #0
 LJSR|>> a                ; Call function if r1 > 0 (signed)
 \end{lstlisting}
 
-\subsection{Loop Construction}
+\subsection{Example 10-7: Loop Construction}
 
 \begin{lstlisting}
 ; for (i = 10; i > 0; i--)
-ADDI r1, #0, #10         ; i = 10
+LOAD r1, #10             ; i = 10
 loop:
     ; ... loop body ...
     SUBI r1, #1          ; i--
@@ -256,22 +280,22 @@ loop:
 	\small
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Intent}          & \textbf{After CMP}   & \textbf{Condition Code} \\
+		\textbf{Intent}          & \textbf{After \mnemonic{CMP}} & \textbf{Condition Code} \\
 		\midrule
-		If equal                 & \texttt{CMPR a, b}   & \texttt{==}             \\
-		If not equal             & \texttt{CMPR a, b}   & \texttt{!=}             \\
-		If a $>$ b (unsigned)    & \texttt{CMPR a, b}   & \texttt{HI}             \\
-		If a $\geq$ b (unsigned) & \texttt{CMPR a, b}   & \texttt{CS}             \\
-		If a $<$ b (unsigned)    & \texttt{CMPR a, b}   & \texttt{CC}             \\
-		If a $\leq$ b (unsigned) & \texttt{CMPR a, b}   & \texttt{LO}             \\
-		If a $>$ b (signed)      & \texttt{CMPR a, b}   & \texttt{>>}             \\
-		If a $\geq$ b (signed)   & \texttt{CMPR a, b}   & \texttt{>=}             \\
-		If a $<$ b (signed)      & \texttt{CMPR a, b}   & \texttt{<<}             \\
-		If a $\leq$ b (signed)   & \texttt{CMPR a, b}   & \texttt{<=}             \\
-		If negative              & \texttt{CMPI a, \#0} & \texttt{NS}             \\
-		If positive or zero      & \texttt{CMPI a, \#0} & \texttt{NC}             \\
-		If overflow occurred     & After arithmetic     & \texttt{OS}             \\
-		If no overflow           & After arithmetic     & \texttt{OC}             \\
+		If equal                 & \texttt{CMPR a, b}            & \texttt{==}             \\
+		If not equal             & \texttt{CMPR a, b}            & \texttt{!=}             \\
+		If a $>$ b (unsigned)    & \texttt{CMPR a, b}            & \texttt{HI}             \\
+		If a $\geq$ b (unsigned) & \texttt{CMPR a, b}            & \texttt{CC}             \\
+		If a $<$ b (unsigned)    & \texttt{CMPR a, b}            & \texttt{CS}             \\
+		If a $\leq$ b (unsigned) & \texttt{CMPR a, b}            & \texttt{LO}             \\
+		If a $>$ b (signed)      & \texttt{CMPR a, b}            & \texttt{>>}             \\
+		If a $\geq$ b (signed)   & \texttt{CMPR a, b}            & \texttt{>=}             \\
+		If a $<$ b (signed)      & \texttt{CMPR a, b}            & \texttt{<<}             \\
+		If a $\leq$ b (signed)   & \texttt{CMPR a, b}            & \texttt{<=}             \\
+		If negative              & \texttt{CMPI a, \#0}          & \texttt{NS}             \\
+		If positive or zero      & \texttt{CMPI a, \#0}          & \texttt{NC}             \\
+		If overflow occurred     & After arithmetic              & \texttt{OS}             \\
+		If no overflow           & After arithmetic              & \texttt{OC}             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Condition Code Selection Guide}
@@ -281,16 +305,17 @@ loop:
 \section{Performance Considerations}
 
 \begin{itemize}
-	\item Conditional instructions do not branch, avoiding pipeline flushes
-	\item When a condition is false, the instruction still takes 6 cycles but performs no operation
-	\item For short conditional sequences, conditional execution can be faster than branching
-	\item For longer conditional blocks, explicit branches may be more efficient
+	\item A predicated instruction costs the same six cycles whether or not it executes; the saving over a branch is the branch
+	      instruction itself, not a pipeline penalty, since the SIRC-1 has no overlapped pipeline to flush.
+	\item When a condition is false, the instruction still takes 6 cycles but performs no operation.
+	\item For short conditional sequences, conditional execution can be faster than branching.
+	\item For longer conditional blocks, explicit branches may be more efficient.
 \end{itemize}
 
 \section{Common Pitfalls}
 
 \begin{itemize}
-	\item \textbf{Signed vs. Unsigned}: Using unsigned conditions (\texttt{HI}, \texttt{LO}) for signed values or vice versa produces incorrect results
+	\item \textbf{Signed vs. Unsigned}: Using unsigned conditions (\texttt{HI}, \texttt{LO}) for signed values or vice versa produces incorrect results.
 
 	\item \textbf{Flag Clobbering}: Flags are modified by most ALU instructions. Ensure the condition flags haven't been modified between the comparison and conditional instruction:
 
@@ -306,5 +331,5 @@ BRAN|HI @target
 ADDI r3, #100         ; After the branch
 \end{lstlisting}
 
-	\item \textbf{Inverted Logic}: Remember that \texttt{CMP A, B} computes A - B, so condition codes test A relative to B, not B relative to A
+	\item \textbf{Inverted Logic}: Remember that \texttt{CMP A, B} computes A - B, so condition codes test A relative to B, not B relative to A.
 \end{itemize}

@@ -10,102 +10,111 @@ Section~\ref{sec:qr-where-to-find} lists where to find additional reference tabl
 % ==========================================
 
 All instruction mnemonics in alphabetical order. \emph{Type}: ALU, Memory (Mem), Control-flow (CF), Coprocessor (COP),
-or Meta. \emph{Flags}: flags written by the instruction (\texttt{--} = none; \texttt{*} = determined by the
-coprocessor). Meta-instructions inherit the flag behaviour of the underlying CPU instruction. For full encoding
-details, see the chapter cited in the header of each group.
+or Meta. \emph{N}, \emph{Z}, \emph{C}, \emph{V}: uses the symbols defined in Table~\ref{tab:flag-effect-symbols}
+(Chapter~\ref{ch:reading-instructions}): \texttt{*} (updated), \texttt{0}, \texttt{1}, \texttt{-} (preserved), and
+\texttt{S} (from the shifter). Rows marked \textsuperscript{\dag} are preserved by the call instruction itself, but the
+selected coprocessor may define further effects once dispatched. Rows marked \textsuperscript{\ddag} are updated from a
+named source rather than from the instruction's own result. Meta-instructions inherit the flag behaviour of the
+underlying CPU instruction. For full encoding details, see the chapter cited in the header of each group.
 
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabular}{llllp{6.5cm}}
+	\begin{tabularx}{\textwidth}{ll>{\raggedright\arraybackslash}p{3.1cm}llllX}
 		\toprule
-		\textbf{Mnemonic} & \textbf{Type} & \textbf{Opcode(s)}   & \textbf{Flags} & \textbf{Description}                                    \\
+		\textbf{Mnemonic} & \textbf{Type} & \textbf{Opcode(s)}                               & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V}               & \textbf{Description}                                                                                          \\
 		\midrule
-		\multicolumn{5}{l}{\textit{A -- Ch.\ref{ch:alu-instructions}}}                                                                      \\
-		\mnemonic{ADCI}   & ALU           & 0x01/0x21/0x31       & NZCV           & Add with carry (immediate, short, or register)          \\
-		\mnemonic{ADDI}   & ALU           & 0x00/0x20            & NZCV           & Add immediate or short immediate                        \\
-		\mnemonic{ADDR}   & ALU           & 0x30                 & NZCV           & Add register                                            \\
-		\mnemonic{ANDI}   & ALU           & 0x04/0x24            & NZ             & Bitwise AND immediate or short immediate                \\
-		\mnemonic{ANDR}   & ALU           & 0x34                 & NZ             & Bitwise AND register                                    \\
+		\multicolumn{8}{l}{\textit{A -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
+		\mnemonic{ADCI}   & ALU           & \opcode{01}/\opcode{21}                          & *          & *          & *          & *                        & Add with carry, immediate or short immediate                                                                  \\
+		\mnemonic{ADCR}   & ALU           & \opcode{31}                                      & *          & *          & *          & *                        & Add with carry, register                                                                                      \\
+		\mnemonic{ADDI}   & ALU           & \opcode{00}/\opcode{20}                          & *          & *          & *          & *                        & Add immediate or short immediate                                                                              \\
+		\mnemonic{ADDR}   & ALU           & \opcode{30}                                      & *          & *          & *          & *                        & Add register                                                                                                  \\
+		\mnemonic{ANDI}   & ALU           & \opcode{04}/\opcode{24}                          & *          & *          & 0          & 0                        & Bitwise AND immediate or short immediate                                                                      \\
+		\mnemonic{ANDR}   & ALU           & \opcode{34}                                      & *          & *          & 0          & 0                        & Bitwise AND register                                                                                          \\
 		\midrule
-		\multicolumn{5}{l}{\textit{B -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                          \\
-		\mnemonic{BRAN}   & Meta          & LDEA p,\ldots        & --             & PC-relative conditional branch                          \\
-		\mnemonic{BRSR}   & Meta          & LDEL p,\ldots        & --             & PC-relative call (saves return address to l)            \\
+		\multicolumn{8}{l}{\textit{B -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                             \\
+		\mnemonic{BRAN}   & Meta          & LDEA p,\ldots                                    & -          & -          & -          & -                        & PC-relative conditional branch                                                                                \\
+		\mnemonic{BRSR}   & Meta          & LDEL p,\ldots                                    & -          & -          & -          & -                        & PC-relative call (saves return address to l)                                                                  \\
 		\midrule
-		\multicolumn{5}{l}{\textit{C -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:coprocessor}}}                                            \\
-		\mnemonic{CMPI}   & ALU           & 0x0A/0x2A            & NZCV           & Compare immediate or short immediate (no write-back)    \\
-		\mnemonic{CMPR}   & ALU           & 0x3A                 & NZCV           & Compare register (no write-back)                        \\
-		\mnemonic{COPI}   & COP           & 0x0F                 & *              & Coprocessor call immediate                              \\
-		\mnemonic{COPR}   & COP           & 0x3F                 & *              & Coprocessor call register                               \\
+		\multicolumn{8}{l}{\textit{C -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:coprocessor}}}                                                                                                                                                                               \\
+		\mnemonic{CMPI}   & ALU           & \opcode{0A}/\opcode{2A}                          & *          & *          & *          & *                        & Compare immediate or short immediate (no write-back)                                                          \\
+		\mnemonic{CMPR}   & ALU           & \opcode{3A}                                      & *          & *          & *          & *                        & Compare register (no write-back)                                                                              \\
+		\mnemonic{COPI}   & COP           & \opcode{0F}                                      & -          & -          & -          & -\textsuperscript{\dag}  & Coprocessor call immediate                                                                                    \\
+		\mnemonic{COPR}   & COP           & \opcode{3F}                                      & -          & -          & -          & -\textsuperscript{\dag}  & Coprocessor call register                                                                                     \\
 		\midrule
-		\multicolumn{5}{l}{\textit{D -- Ch.\ref{ch:meta-instructions}}}                                                                     \\
-		\mnemonic{DIVS}   & Meta          & COPI \#0x3300        & *              & Signed divide (Integer Maths Unit, coprocessor 0x3)     \\
-		\mnemonic{DIVU}   & Meta          & COPI \#0x3200        & *              & Unsigned divide (Integer Maths Unit, coprocessor 0x3)   \\
-		\mnemonic{DMAR}   & Meta          & COPI \#0x28xx        & --             & DMA read into registers (DMA unit, coprocessor 0x2)     \\
-		\mnemonic{DMAT}   & Meta          & COPI \#0x2Ann        & --             & DMA memory-to-memory transfer                           \\
-		\mnemonic{DMAW}   & Meta          & COPI \#0x29xx        & --             & DMA write from registers                                \\
+		\multicolumn{8}{l}{\textit{D -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
+		\mnemonic{DIVS}   & Meta          & COPI \#0x3300                                    & -          & -          & -          & -\textsuperscript{\dag}  & Signed divide (Integer Maths Unit, coprocessor 0x3)                                                           \\
+		\mnemonic{DIVU}   & Meta          & COPI \#0x3200                                    & -          & -          & -          & -\textsuperscript{\dag}  & Unsigned divide (Integer Maths Unit, coprocessor 0x3)                                                         \\
+		\mnemonic{DMAR}   & Meta          & COPI \#0x28xx                                    & -          & -          & -          & -                        & DMA read into registers (DMA unit, coprocessor 0x2)                                                           \\
+		\mnemonic{DMAT}   & Meta          & COPI \#0x2Ann                                    & -          & -          & -          & -                        & DMA memory-to-memory transfer                                                                                 \\
+		\mnemonic{DMAW}   & Meta          & COPI \#0x29xx                                    & -          & -          & -          & -                        & DMA write from registers                                                                                      \\
 		\midrule
-		\multicolumn{5}{l}{\textit{E -- Ch.\ref{ch:meta-instructions}}}                                                                     \\
-		\mnemonic{ETFR}   & Meta          & COPI \#0x1Cxy        & --             & Read exception-unit state                               \\
-		\mnemonic{ETTR}   & Meta          & COPI \#0x1Dxy        & --             & Write exception-unit state                              \\
-		\mnemonic{EXCP}   & Meta          & COPI \#0x11vv        & --             & Raise user exception (trap) with vector \texttt{vv}     \\
+		\multicolumn{8}{l}{\textit{E -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
+		\mnemonic{ETFR}   & Meta          & COPI \#0x1Cxy                                    & -          & -          & -          & -                        & Read exception-unit state                                                                                     \\
+		\mnemonic{ETTR}   & Meta          & COPI \#0x1Dxy                                    & -          & -          & -          & -                        & Write exception-unit state                                                                                    \\
+		\mnemonic{EXCP}   & Meta          & COPI \#0x11vv                                    & -          & -          & -          & -                        & Raise user exception (trap) with vector \texttt{vv}                                                           \\
 		\midrule
-		\multicolumn{5}{l}{\textit{L -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                          \\
-		\mnemonic{LDEA}   & CF            & 0x18--0x1B           & --             & Load effective address                                  \\
-		\mnemonic{LDEL}   & CF            & 0x1C--0x1F           & --             & Load effective address and link (saves PC to l)         \\
-		\mnemonic{LJMP}   & Meta          & LDEA p,\ldots        & --             & Long (absolute) jump                                    \\
-		\mnemonic{LJSR}   & Meta          & LDEL p,\ldots        & --             & Long (absolute) call                                    \\
-		\mnemonic{LOAD}   & Mem           & 0x07/0x14--0x17/0x37 & --             & Load from memory or register                            \\
+		\multicolumn{8}{l}{\textit{L -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                             \\
+		\mnemonic{LDEA}   & CF            & \opcode{18}--\opcode{1B}                         & -          & -          & -          & -                        & Load effective address                                                                                        \\
+		\mnemonic{LDEL}   & CF            & \opcode{1C}--\opcode{1F}                         & -          & -          & -          & -                        & Load effective address and link (saves PC to l)                                                               \\
+		\mnemonic{LJMP}   & Meta          & LDEA p,\ldots                                    & -          & -          & -          & -                        & Long (absolute) jump                                                                                          \\
+		\mnemonic{LJSR}   & Meta          & LDEL p,\ldots                                    & -          & -          & -          & -                        & Long (absolute) call                                                                                          \\
+		\mnemonic{LOAD}   & Mem/ALU       & \opcode{07}/\opcode{14}--\opcode{17}/\opcode{37} & -          & -          & -          & -                        & Load from memory (\opcode{14}--\opcode{17}) or move an immediate or register value (\opcode{07}, \opcode{37}) \\
 		\midrule
-		\multicolumn{5}{l}{\textit{M -- Ch.\ref{ch:meta-instructions}}}                                                                     \\
-		\mnemonic{MULS}   & Meta          & COPI \#0x3100        & *              & Signed multiply (Integer Maths Unit, coprocessor 0x3)   \\
-		\mnemonic{MULU}   & Meta          & COPI \#0x3000        & *              & Unsigned multiply (Integer Maths Unit, coprocessor 0x3) \\
+		\multicolumn{8}{l}{\textit{M -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
+		\mnemonic{MULS}   & Meta          & COPI \#0x3100                                    & -          & -          & -          & -\textsuperscript{\dag}  & Signed multiply (Integer Maths Unit, coprocessor 0x3)                                                         \\
+		\mnemonic{MULU}   & Meta          & COPI \#0x3000                                    & -          & -          & -          & -\textsuperscript{\dag}  & Unsigned multiply (Integer Maths Unit, coprocessor 0x3)                                                       \\
 		\midrule
-		\multicolumn{5}{l}{\textit{N -- Ch.\ref{ch:meta-instructions}}}                                                                     \\
-		\mnemonic{NOOP}   & Meta          & ADDI[N] r1,\#0       & --             & No operation                                            \\
+		\multicolumn{8}{l}{\textit{N -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
+		\mnemonic{NOOP}   & Meta          & ADDI[N] r1,\#0                                   & -          & -          & -          & -                        & No operation                                                                                                  \\
 		\midrule
-		\multicolumn{5}{l}{\textit{O -- Ch.\ref{ch:alu-instructions}}}                                                                      \\
-		\mnemonic{ORRI}   & ALU           & 0x05/0x25            & NZ             & Bitwise OR immediate or short immediate                 \\
-		\mnemonic{ORRR}   & ALU           & 0x35                 & NZ             & Bitwise OR register                                     \\
+		\multicolumn{8}{l}{\textit{O -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
+		\mnemonic{ORRI}   & ALU           & \opcode{05}/\opcode{25}                          & *          & *          & 0          & 0                        & Bitwise OR immediate or short immediate                                                                       \\
+		\mnemonic{ORRR}   & ALU           & \opcode{35}                                      & *          & *          & 0          & 0                        & Bitwise OR register                                                                                           \\
 		\midrule
-		\multicolumn{5}{l}{\textit{R -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                          \\
-		\mnemonic{RETE}   & Meta          & COPI \#0x1A00        & --             & Return from exception handler                           \\
-		\mnemonic{RETS}   & Meta          & LDEA p,(\#0,l)       & --             & Return from subroutine                                  \\
-		\mnemonic{RSET}   & Meta          & COPI \#0x1B00        & --             & System reset                                            \\
+		\multicolumn{8}{l}{\textit{R -- Ch.\ref{ch:control-flow} / Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                             \\
+		\mnemonic{RETE}   & Meta          & COPI \#0x1A00                                    & *          & *          & *          & *\textsuperscript{\ddag} & Return from exception handler (SR restored from the link register)                                            \\
+		\mnemonic{RETS}   & Meta          & LDEA p,(\#0,l)                                   & -          & -          & -          & -                        & Return from subroutine                                                                                        \\
+		\mnemonic{RSET}   & Meta          & COPI \#0x1B00                                    & *          & *          & *          & *\textsuperscript{\ddag} & System reset (SR cleared to 0)                                                                                \\
 		\midrule
-		\multicolumn{5}{l}{\textit{S -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:memory-instructions} / Ch.\ref{ch:meta-instructions}}}    \\
-		\mnemonic{SBCI}   & ALU           & 0x03/0x23            & NZCV           & Subtract with carry, immediate or short immediate       \\
-		\mnemonic{SBCR}   & ALU           & 0x33                 & NZCV           & Subtract with carry, register                           \\
-		\mnemonic{SHFT}   & Meta          & ORRI[S] rD,\#0       & *              & Shift with status-register update                       \\
-		\mnemonic{STOR}   & Mem           & 0x10--0x13           & --             & Store to memory                                         \\
-		\mnemonic{SUBI}   & ALU           & 0x02/0x22            & NZCV           & Subtract immediate or short immediate                   \\
-		\mnemonic{SUBR}   & ALU           & 0x32                 & NZCV           & Subtract register                                       \\
+		\multicolumn{8}{l}{\textit{S -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:memory-instructions} / Ch.\ref{ch:meta-instructions}}}                                                                                                                                       \\
+		\mnemonic{SBCI}   & ALU           & \opcode{03}/\opcode{23}                          & *          & *          & *          & *                        & Subtract with carry, immediate or short immediate                                                             \\
+		\mnemonic{SBCR}   & ALU           & \opcode{33}                                      & *          & *          & *          & *                        & Subtract with carry, register                                                                                 \\
+		\mnemonic{SHFT}   & Meta          & ORRI[S] rD,\#0                                   & S          & S          & S          & S                        & Shift with status-register update                                                                             \\
+		\mnemonic{STOR}   & Mem           & \opcode{10}--\opcode{13}                         & -          & -          & -          & -                        & Store to memory                                                                                               \\
+		\mnemonic{SUBI}   & ALU           & \opcode{02}/\opcode{22}                          & *          & *          & *          & *                        & Subtract immediate or short immediate                                                                         \\
+		\mnemonic{SUBR}   & ALU           & \opcode{32}                                      & *          & *          & *          & *                        & Subtract register                                                                                             \\
 		\midrule
-		\multicolumn{5}{l}{\textit{T -- Ch.\ref{ch:alu-instructions}}}                                                                      \\
-		\mnemonic{TSAI}   & ALU           & 0x0C/0x2C            & NZ             & Test AND immediate or short (no write-back)             \\
-		\mnemonic{TSAR}   & ALU           & 0x3C                 & NZ             & Test AND register (no write-back)                       \\
-		\mnemonic{TSXI}   & ALU           & 0x0E/0x2E            & NZ             & Test XOR immediate or short (no write-back)             \\
-		\mnemonic{TSXR}   & ALU           & 0x3E                 & NZ             & Test XOR register (no write-back)                       \\
+		\multicolumn{8}{l}{\textit{T -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
+		\mnemonic{TSAI}   & ALU           & \opcode{0C}/\opcode{2C}                          & *          & *          & 0          & 0                        & Test AND immediate or short (no write-back)                                                                   \\
+		\mnemonic{TSAR}   & ALU           & \opcode{3C}                                      & *          & *          & 0          & 0                        & Test AND register (no write-back)                                                                             \\
+		\mnemonic{TSXI}   & ALU           & \opcode{0E}/\opcode{2E}                          & *          & *          & 0          & 0                        & Test XOR immediate or short (no write-back)                                                                   \\
+		\mnemonic{TSXR}   & ALU           & \opcode{3E}                                      & *          & *          & 0          & 0                        & Test XOR register (no write-back)                                                                             \\
 		\midrule
-		\multicolumn{5}{l}{\textit{W -- Ch.\ref{ch:meta-instructions}}}                                                                     \\
-		\mnemonic{WAIT}   & Meta          & COPI \#0x1900        & --             & Halt until an interrupt fires                           \\
+		\multicolumn{8}{l}{\textit{W -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
+		\mnemonic{WAIT}   & Meta          & COPI \#0x1900                                    & -          & -          & -          & -                        & Idle until an enabled hardware interrupt or a reset occurs                                                    \\
 		\midrule
-		\multicolumn{5}{l}{\textit{X -- Ch.\ref{ch:alu-instructions}}}                                                                      \\
-		\mnemonic{XORI}   & ALU           & 0x06/0x26            & NZ             & Bitwise XOR immediate or short immediate                \\
-		\mnemonic{XORR}   & ALU           & 0x36                 & NZ             & Bitwise XOR register                                    \\
+		\multicolumn{8}{l}{\textit{X -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
+		\mnemonic{XORI}   & ALU           & \opcode{06}/\opcode{26}                          & *          & *          & 0          & 0                        & Bitwise XOR immediate or short immediate                                                                      \\
+		\mnemonic{XORR}   & ALU           & \opcode{36}                                      & *          & *          & 0          & 0                        & Bitwise XOR register                                                                                          \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Alphabetical Mnemonic Index}
 	\label{tab:mnemonic-index}
 \end{table}
+
+\textsuperscript{\dag} Preserved by the coprocessor-call instruction itself; the selected coprocessor may define
+further effects once the call is dispatched. \textsuperscript{\ddag} \mnemonic{RETE} restores all four flags from the
+link register; \mnemonic{RSET} clears all four flags to zero as part of clearing \reg{sr}.
 
 % ==========================================
 \section{Status Register Bit Reference}
 \label{sec:qr-sr-bits}
 % ==========================================
 
-The status register (\reg{sr}) is 16 bits wide. The upper byte (bits 15--8) is privileged: reads in protected mode
-return zero for those bits; direct writes in protected mode raise a privilege violation fault.
+The status register (\reg{sr}) is 16 bits wide. The high byte (bits 15--8) is privileged: reads in protected mode
+return zero for those bits. In protected mode any instruction that names \reg{sr} as its destination raises a privilege
+violation fault, regardless of which bits the write would change.
 
 \begin{table}[H]
 	\centering
@@ -123,7 +132,7 @@ return zero for those bits; direct writes in protected mode raise a privilege vi
 		9            & E1            & Privileged      & 0              & Enable hardware interrupt line 1 (level 1, lowest maskable)                       \\
 		8            & P             & Privileged      & 0              & Protected mode: 0 = supervisor, 1 = protected                                     \\
 		\midrule
-		7--4         & --            & Either          & 0              & Reserved; reads as 0                                                              \\
+		7--4         & --            & Either          & 0              & Reserved for future use; software must not rely on the value read                 \\
 		\midrule
 		3            & V             & Either          & 0              & Overflow: signed arithmetic overflow occurred                                     \\
 		2            & C             & Either          & 0              & Carry: unsigned carry out or borrow                                               \\
@@ -157,8 +166,8 @@ controllers, coprocessors) can inspect these pins to determine the nature of the
 		010               & 2              & Data Read                                   \\
 		011               & 3              & Data Write                                  \\
 		100               & 4              & Exception Vector Fetch                      \\
-		101               & 5              & DMA Co-processor Read Burst                 \\
-		110               & 6              & DMA Co-processor Write Burst                \\
+		101               & 5              & DMA Coprocessor Read Burst                  \\
+		110               & 6              & DMA Coprocessor Write Burst                 \\
 		111               & 7              & Reserved                                    \\
 		\bottomrule
 	\end{tabular}
@@ -166,7 +175,7 @@ controllers, coprocessors) can inspect these pins to determine the nature of the
 	\label{tab:bat-quick-ref}
 \end{table}
 
-See Chapter~\ref{ch:cpu-architecture} (section on External Bus Signals) for usage examples including the PROT pin
+See Chapter~\ref{ch:cpu-architecture}, Section "Pin Descriptions", for usage examples including the PROT pin
 interaction.
 
 % ==========================================
@@ -178,18 +187,18 @@ interaction.
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Table}                       & \textbf{Chapter / Appendix}           & \textbf{Label}                     \\
+		\textbf{Table}                       & \textbf{Chapter / Appendix}           & \textbf{Label}                             \\
 		\midrule
-		Complete opcode map (all 64 opcodes) & Appendix~\ref{appendix:opcode-map}    & ---                                \\
-		Register encoding (4-bit IDs)        & Chapter~\ref{ch:registers}            & \ref{tab:register-encoding}        \\
-		Condition code encoding              & Chapter~\ref{ch:instruction-formats}  & \ref{tab:condition-code-encoding}  \\
-		Shift type encoding                  & Chapter~\ref{ch:instruction-formats}  & \ref{tab:shift-types}              \\
-		Addressing mode summary              & Chapter~\ref{ch:addressing-modes}     & ---                                \\
-		Exception vector table               & Chapter~\ref{ch:exceptions}           & ---                                \\
-		Instruction timing (cycle counts)    & Appendix~\ref{appendix:timing}        & ---                                \\
-		Complete instruction list by opcode  & Chapter~\ref{ch:instruction-summary}  & \ref{tab:complete-instruction-set} \\
-		Meta-instructions cross-reference    & Chapter~\ref{ch:meta-instructions}    & ---                                \\
-		Flag effect symbols                  & Chapter~\ref{ch:reading-instructions} & \ref{tab:flag-effect-symbols}      \\
+		Complete opcode map (all 64 opcodes) & Appendix~\ref{appendix:opcode-map}    & \ref{tab:opcode-map}                       \\
+		Register encoding (4-bit IDs)        & Chapter~\ref{ch:registers}            & \ref{tab:register-encoding}                \\
+		Condition code encoding              & Chapter~\ref{ch:instruction-formats}  & \ref{tab:condition-code-encoding}          \\
+		Shift type encoding                  & Chapter~\ref{ch:instruction-formats}  & \ref{tab:shift-types}                      \\
+		Addressing mode summary              & Chapter~\ref{ch:addressing-modes}     & \ref{tab:addr-modes}                       \\
+		Exception vector table               & Chapter~\ref{ch:exceptions}           & ---                                        \\
+		Instruction timing (cycle counts)    & Appendix~\ref{appendix:timing}        & ---                                        \\
+		Complete instruction list by opcode  & Chapter~\ref{ch:instruction-summary}  & \ref{tab:complete-instruction-set}         \\
+		Meta-instructions cross-reference    & Chapter~\ref{ch:meta-instructions}    & \ref{tab:meta-instruction-cross-reference} \\
+		Flag effect symbols                  & Chapter~\ref{ch:reading-instructions} & \ref{tab:flag-effect-symbols}              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Reference Table Locations}

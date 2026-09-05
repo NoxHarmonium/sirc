@@ -1,49 +1,102 @@
 \chapter{Example Programs}
 \label{ch:example-programs}
 
-This appendix includes some sample programs to demonstrate how to use different features of the CPU.
+This appendix contains sample programs that demonstrate several features of the CPU.
 
 \section{Byte Sieve}
 
+This program computes primes below 1000 using the Sieve of Eratosthenes, storing one byte
+per candidate number in a memory-mapped array rather than in a register or the stack. It is
+a compact illustration of addressing-register setup (\reg{ah}/\reg{al} and \reg{sh}/\reg{sl})
+and of using \mnemonic{STOR} and \mnemonic{LOAD} with an indexed effective address to walk an
+array. The two nested loops starting at labels \texttt{:2} and \texttt{:3} (lines 35--50) are
+the core of the sieve: the outer loop advances the candidate, and the inner loop marks its
+multiples as composite.
+
 \lstinputlisting[
-	caption={Byte sieve example},
+	caption={Example D-1: Byte sieve},
 	label={lst:example-byte-sieve}
 ]{../../examples/byte-sieve/byte-sieve.sasm}
 
 \section{Faults}
 
+This pair of programs exercises every fault type the CPU can raise and the vector table that
+routes them to handlers. \texttt{faults.sasm} deliberately triggers, in sequence, a bus fault,
+an alignment fault, two segment-overflow faults (one from an effective-address calculation,
+one from program-counter overflow), an instruction-trace fault, a bus-protection fault, an
+invalid-opcode fault (which itself triggers a nested double fault), a privilege violation, and
+a level-five interrupt. Each handler, defined from line 144 onward, increments a distinct
+register so a reader can confirm which faults fired and in what order. The segment-overflow
+handler (lines 167--204) is worth particular attention: it reads exception metadata with
+\mnemonic{ETFR} to distinguish an instruction-fetch overflow from an effective-address
+overflow before deciding how to fix up the return address.
+
 \lstinputlisting[
-	caption={Fault handling example},
+	caption={Example D-2: Fault handling},
 	label={lst:example-faults}
 ]{../../examples/faults/faults.sasm}
 
+\texttt{faults-high.sasm} is a second, separately assembled segment that the program-counter
+overflow test in Example D-2 jumps into; it exists only to let that fault trigger without the
+CPU executing the vector table sitting at address 0x0000 in the main segment. It jumps back
+into \texttt{faults.sasm} through the trampoline at 0xFFF0.
+
 \lstinputlisting[
-	caption={High-address fault handling example},
+	caption={Example D-3: High-address fault handling},
 	label={lst:example-faults-high}
 ]{../../examples/faults/faults-high.sasm}
 
 \section{Hardware Exception}
 
+This example shows a device-driven interrupt handled through the serial device: the program
+prints a help message, waits on \mnemonic{WAIT} for a hardware exception, and exits once the
+handler reports that the expected character has arrived in \reg{r7}. The exception handler
+itself is installed at vector 0x0080 and defined from line 137 onward; it saves the link
+register, calls \texttt{read\_pending\_byte} and \texttt{write\_pending\_byte} in turn, and
+restores the link register before returning with \mnemonic{RETE}. Those two subroutines show
+the poll-and-acknowledge pattern used to drain and refill the serial device's receive and
+send buffers one byte at a time.
+
 \lstinputlisting[
-	caption={Hardware exception example},
+	caption={Example D-4: Hardware exception},
 	label={lst:example-hardware-exception}
 ]{../../examples/hardware-exception/hardware-exception.sasm}
 
+The data segment below supplies the two zero-terminated, word-per-character messages
+(\texttt{help\_message} and \texttt{exit\_message}) that Example D-4 prints at startup and on
+exit.
+
 \lstinputlisting[
-	caption={Hardware exception data},
+	caption={Example D-5: Hardware exception data},
 	label={lst:example-hardware-exception-data}
 ]{../../examples/hardware-exception/data.sasm}
 
 \section{Software Exception}
 
+This short program demonstrates a software-raised exception with \mnemonic{EXCP} and confirms
+that nesting is blocked while a handler is running. It sets \reg{r1} to 1, raises exception
+0x40, and expects \reg{r1} to hold 0xFF once the handler at line 26 has run. That handler
+itself raises a second exception, 0x41, from inside the handler; because the handler at vector
+0x0500 (line 37) sets \reg{r1} to 0xBB only if it runs, the final value of \reg{r1} shows
+whether the nested exception was correctly ignored.
+
 \lstinputlisting[
-	caption={Software exception example},
+	caption={Example D-6: Software exception},
 	label={lst:example-software-exception}
 ]{../../examples/software-exception/software-exception.sasm}
 
 \section{Store Load}
 
+This program is a self-checking test of indexed and immediate-offset memory access, followed
+by an exhaustive exercise of every \mnemonic{LJMP}/\mnemonic{LJSR} addressing form. The store
+and load block (lines 8--19) round-trips values through memory using an immediate offset and a
+register offset from an address-register pair. The remainder of the listing chains together
+register-offset, immediate-offset, and plain register forms of \mnemonic{LJMP} and
+\mnemonic{LJSR}; every path not on the intended route lands on an \texttt{LJMP s}/\texttt{LJSR
+s} instruction commented \texttt{FAIL!}, so a working implementation reaches the \texttt{:pass}
+label at the end while a faulty one jumps into the "forbidden zone" and fails at \texttt{:fail}.
+
 \lstinputlisting[
-	caption={Store/load example},
+	caption={Example D-7: Store/load},
 	label={lst:example-store-load}
 ]{../../examples/store-load/store-load.sasm}

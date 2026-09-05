@@ -535,7 +535,7 @@ Design decisions to carry forward:
   - `DMAR addr, #n` -> `COPI #0x2800 | operand`
   - `DMAW addr, #n` -> `COPI #0x2900 | operand`
   - `DMAT a, l, #n` -> `COPI #0x2A00 | n`
-  These operation nibbles are supervisor-only by the existing coprocessor privilege rule.
+    These operation nibbles are supervisor-only by the existing coprocessor privilege rule.
 - DMA register convention:
   - `a`, `l`, or `s` may be the memory pointer for `DMAR` and `DMAW`; `p` is not a public DMA register operand.
   - `a` is the source pointer for `DMAT`.
@@ -570,7 +570,7 @@ Design decisions to carry forward:
   - `MULS` -> `COPI #0x3100`
   - `DIVU` -> `COPI #0x3200`
   - `DIVS` -> `COPI #0x3300`
-  These operation nibbles are user-callable by the existing coprocessor privilege rule.
+    These operation nibbles are user-callable by the existing coprocessor privilege rule.
 - Maths status convention: `r3` is written as a status word. Bit 0 means any maths error, bit 1 means divide by zero,
   bit 2 means quotient overflow, and bits 3--15 are reserved/written as zero. On successful divide, `r1` receives the
   remainder, `r2` receives the quotient, and `r3` is zero. On divide-by-zero or quotient overflow, set the relevant
@@ -729,11 +729,23 @@ Tasks:
   - optionally render selected pages for visual inspection
 
 - Add visual PDF QA for known problem pages.
-  - Render and inspect the page containing Section 12.2, "Complete Instruction List".
-  - Render instruction reference pages containing tall boxes such as "XORI / XORR", "LOAD - Load/Move", and
-    "CMPI / CMPR".
+  - **Superseded (2026-09-06):** the tall-box problem (Section 12.2, "XORI / XORR", "LOAD - Load/Move",
+    "CMPI / CMPR") is resolved by the `breakable` fix in Workstream 13. The remaining known problem pages are
+    the four single-page tables tracked there (chapter 12's instruction list, chapter 16's common-semantics
+    table, and the Appendix A and Appendix E tables) -- render and inspect those once converted to
+    `longtable`.
   - Treat overfull tables, clipped boxes, and awkward bottom-of-page instructionbox placement as documentation build
     defects.
+
+- Verify two facts left unchecked by the 2026-09 editorial pass (`review/triaged.md`, findings F-arch-10 and
+  F-tim-13, both marked `defer` -- the author chose not to rule on either during that pass).
+  - Chapter 2 states a 24 MHz maximum clock rate and a 5 V +/- 5% supply with no stated basis. Confirm these
+    figures against the actual design target (or the reference implementation's timing model) and either cite
+    a source or mark them as illustrative/example values, not a specification.
+  - Appendix B's CPU-comparison table gives ARM6 and MIPS R2000 a CPI (cycles per instruction) of exactly 1.0.
+    This is arguably wrong for both: ARM6 loads take 3 cycles and taken branches 3 cycles, and the R2000's
+    loads/branches cost extra cycles on a cache or interlock stall, so neither part achieves a flat 1.0 CPI in
+    practice. Either correct the figures or give a range.
 
 - Generate tables from source where possible.
   - opcode map
@@ -768,12 +780,21 @@ navigable, and visually consistent throughout.
 Tasks:
 
 - Fix page-layout issues in the instruction reference chapters.
-  - Convert the "Complete Instruction List" table (Section 12.2) from a single-page table to a multi-page
-    `longtable` or `ltablex` so it flows across pages without clipping.
-  - Enable `breakable` on `tcolorbox` instruction boxes (or set a consistent `\needspace` / `\pagebreak`
-    policy) so boxes do not get stranded at the bottom of a page or silently clip content.
-  - Known problem boxes: "XORI / XORR", "LOAD - Load/Move", "CMPI / CMPR". Treat the fix as exhaustive rather
-    than enumerating every case.
+  - **Done (2026-09-06):** `instructionbox` is now `breakable` (`tcbuselibrary{breakable, skins}` plus
+    `breakable, enhanced jigsaw` in `preamble.tex`), so instruction boxes flow across a page break instead
+    of overflowing it. This resolved every known tall-box case, including "XORI / XORR", "LOAD - Load/Move",
+    and "CMPI / CMPR".
+  - **Still open:** four tables are still single-page `table[H]`s that overflow when their content doesn't
+    fit the remaining page space, and need converting to `longtable`/`ltablex`:
+    - Chapter 12, "Complete Instruction List" (`tab:complete-instruction-set`) -- 58pt overfull.
+    - Chapter 16, "Common Coprocessor Instruction Semantics" (`tab:coprocessor-common-semantics`) -- 75pt
+      overfull; genuinely tall content (9 rows of policy prose), not a width problem, so `tabularx` does not
+      help here.
+    - Appendix A, "Complete SIRCIS Opcode Map" -- 407pt overfull (nearly a full extra page).
+    - Appendix E, "Alphabetical Mnemonic Index" -- 663pt overfull, the worst in the manual.
+    - Found and measured by the `manual-latex-qa` agent on 2026-09-06 (`review/latex-qa.md`,
+      findings F-latexqa-1, F-latexqa-7, F-latexqa-8, F-latexqa-10); all four are confirmed still present as
+      of that build.
 
 - Coherent visual design pass.
   - Choose and apply a single professional serif font package (e.g. `libertinus`, `newpxtext`, or similar) in
@@ -805,6 +826,43 @@ Acceptance criteria:
 - All chapters use the same fonts, heading sizes, table style, box style, and code style with no exceptions.
 - Every term used in the manual is defined the first time it appears or is listed in the glossary.
 
+## Workstream 14: Period Coverage Gaps
+
+Identified by the period benchmark (`review/period-gaps.md`, 2026-09-05) against the
+M68000 Family Programmer's Reference Manual (1992, `M68000PRM`) and the MCS6500 Family
+Programming Manual (1976, `MCS6500`). Accepted as backlog; new content, not editing.
+
+1. **Instruction Format bit diagram in every entry.** A bit-numbered 16-bit word (both
+   words for immediate format) showing opcode, condition, register, AF, shift and immediate
+   fields. `M68000PRM:4-4`, `4-25`; `MCS6500:B-3`.
+2. **Legal forms table in each entry.** Accepted operand/addressing forms with encodings,
+   or a cross-reference line to the chapter "Legal Forms" table. `M68000PRM:4-5`, `4-108`.
+3. **Condition-code computation table.** Boolean formulas for V, C, Z per instruction
+   family in terms of Sm, Dm, Rm, plus condition-test formulas. `M68000PRM:3-18`, `3-19`.
+4. **Preface / About This Manual.** Audience, assumed knowledge, companion documents,
+   out-of-scope items, how to read entries, revision status. `MCS6500:p.1-2`;
+   `M68000PRM:1-1`.
+5. **Manual-wide notational conventions table.** Operators, register names, `#imm`,
+   indirection, `SR.X`, assignment, literal prefixes, flag-symbol legend, in one place near
+   the front; generalise Chapter 11's table. `M68000PRM:3-2`..`3-4`; `MCS6500:B-2`.
+6. **List of Examples in the front matter.** Follows from the Gate 1 decision to number
+   examples `N-M` within each chapter. `MCS6500` front matter.
+7. **Instruction format summary in opcode order.** Appendix listing every opcode
+   0x00--0x3F with its full 32-bit layout as a bit diagram. `M68000PRM:8-1`..`8-5`;
+   `MCS6500:D-1`.
+8. **Programming model figures.** One figure of user-visible registers with bit widths,
+   one for supervisor additions, and a table of privileged registers/bits.
+   `M68000PRM:1-2`, `1-9`, `1-11`.
+9. **Exception vector table as a table.** Columns: vector number, table address,
+   assignment, priority, retryable/post-instruction; one saved-state figure per exception
+   class. `M68000PRM:B-2`, `B-3`..`B-13`.
+10. **Per-mode encoding box in Chapter 8.** GENERATION (EA formula), ASSEMBLER SYNTAX,
+    field encoding and instruction word count for each addressing mode. `M68000PRM:2-6`,
+    `2-7`.
+11. **Alphabetical access and index.** Either alphabetical entries within Part III or a
+    true mnemonic-to-page index with every alias, plus a short subject index.
+    `M68000PRM:4-1`.
+
 ## Suggested Execution Order
 
 1. Finish the instruction-description template rollout and close remaining per-instruction legality/flag/exception gaps.
@@ -831,3 +889,5 @@ The manual is "up to scratch" when:
 - Quick-reference appendices cover the common lookup tasks.
 - The manual can be built and checked with a repeatable command.
 - The rendered PDF is visually consistent and professional throughout, with no clipped or stranded content.
+
+#### REMEMBER TO WORK OUT WHAT IS WRONG WITH THE DIAGRAM AND FIX IT. I SWEAR I LEFT A NOTE SOMEWHERE

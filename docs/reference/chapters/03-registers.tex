@@ -3,11 +3,10 @@
 
 \section{Overview}
 
-The SIRC-1 CPU provides sixteen 16-bit registers that serve various purposes. These registers can be classified into
-three categories:
+The SIRC-1 CPU provides sixteen 16-bit registers, classified into three categories:
 
 \begin{itemize}
-	\item General purpose registers (\reg{r1}--\reg{r7})
+	\item General-purpose registers (\reg{r1}--\reg{r7})
 	\item Address register pairs (\reg{l}, \reg{a}, \reg{s}, \reg{p})
 	\item Status register (\reg{sr})
 \end{itemize}
@@ -15,7 +14,10 @@ three categories:
 All programmer-visible registers are 16 bits wide. Address registers can be used in pairs to form 24-bit addresses for
 memory operations.
 
-\section{General Purpose Registers}
+Only \reg{sr} (cleared to zero) and the \reg{p} pair (loaded from the reset vector) have defined values after reset;
+all other registers are architecturally undefined. See Chapter~\ref{ch:exceptions}.
+
+\section{General-Purpose Registers}
 
 \subsection{Register Set}
 
@@ -26,30 +28,25 @@ The SIRC-1 provides seven general-purpose registers:
 		\toprule
 		\textbf{Register} & \textbf{Description}       \\
 		\midrule
-		\reg{r1}          & General purpose register 1 \\
-		\reg{r2}          & General purpose register 2 \\
-		\reg{r3}          & General purpose register 3 \\
-		\reg{r4}          & General purpose register 4 \\
-		\reg{r5}          & General purpose register 5 \\
-		\reg{r6}          & General purpose register 6 \\
-		\reg{r7}          & General purpose register 7 \\
+		\reg{r1}          & General-purpose register 1 \\
+		\reg{r2}          & General-purpose register 2 \\
+		\reg{r3}          & General-purpose register 3 \\
+		\reg{r4}          & General-purpose register 4 \\
+		\reg{r5}          & General-purpose register 5 \\
+		\reg{r6}          & General-purpose register 6 \\
+		\reg{r7}          & General-purpose register 7 \\
 		\bottomrule
 	\end{tabular}
 \end{center}
 
-These registers can be used freely for any purpose by the programmer. They hold 16-bit values and can be used as source
-or destination operands for all ALU instructions.
+The programmer may use these registers for any purpose. They hold 16-bit values and may be used as source or
+destination operands for all ALU instructions.
 
 \subsection{Usage Conventions}
 
-While there are no hardware-enforced conventions, typical usage patterns include:
-
-\begin{itemize}
-	\item \reg{r1}--\reg{r4}: Temporary values and expression evaluation
-	\item \reg{r5}--\reg{r7}: Preserved across function calls (by convention)
-\end{itemize}
-
-These are software conventions only and are not enforced by the CPU.
+The CPU does not enforce any register-usage convention among \reg{r1}--\reg{r7}; all seven registers are equally
+general purpose. Calling conventions and register-preservation rules are outside the scope of this document and are
+addressed in the SIRC-1 ABI and Toolchain documentation.
 
 \section{Address Register Pairs}
 
@@ -74,19 +71,18 @@ register.
 	\label{fig:addr-pair}
 \end{figure}
 
-The upper 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
+The high 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
 enabling techniques such as tagged pointers.
 
 The exact address composition and stored-address layout are specified in Chapter~\ref{ch:data-representation}.
 
-Although each address register pair has a specific name, and a suggested usage by convention, they are all treated the
-same by STOR/LOAD instructions and they can all be used for indirect addressing the same way.
+Although each address register pair has a specific name and a suggested usage by convention, \mnemonic{STOR} and
+\mnemonic{LOAD} instructions treat all four pairs identically, and any pair may be used for indirect addressing.
 
-In fact, you can perform a jump by simply loading a value in to the Program Counter registers.
+Loading a value directly into the \reg{p} pair performs a jump.
 
-However, it is worth noting that the Link Register pair will be updated automatically through link-writing instructions
-(\mnemonic{LDEL}, \mnemonic{LJSR}, and \mnemonic{BRSR}) and the Program Counter pair is incremented after every
-instruction.
+The link register pair updates automatically when \mnemonic{LDEL}, \mnemonic{LJSR}, or \mnemonic{BRSR} executes. The
+program counter pair increments after every instruction.
 
 \subsection{Link Register (l)}
 
@@ -123,7 +119,7 @@ The link register pair stores return addresses for subroutine calls. When a subr
 	\end{tabular}
 \end{center}
 
-A general-purpose address register pair used for pointer operations and memory access.
+This general-purpose address register pair is used for pointer operations and memory access.
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -168,9 +164,9 @@ modes are particularly useful with this register.
 	\end{tabular}
 \end{center}
 
-The program counter register pair points to the next instruction to be executed. It is automatically incremented by 1
-after each 16-bit word fetch. Since instructions are 32 bits (two words), the PC is incremented twice during a complete
-instruction fetch, advancing by 2 words total per instruction.
+The program counter register pair points to the instruction currently being fetched. It is not modified during either
+fetch phase; the low word \reg{pl} advances by 2 during the Decode and Register Fetch phase, and \reg{ph} is never
+incremented, so a wrap stays inside the segment.
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -185,12 +181,14 @@ The status register (\reg{sr}) is a special 16-bit register that contains CPU st
 divided into two bytes:
 
 \begin{itemize}
-	\item \textbf{Lower Byte (bits 7--0):} Condition flags, accessible in both supervisor and protected modes
-	\item \textbf{Upper Byte (bits 15--8):} Control and privileged state
+	\item \textbf{Low Byte (bits 7--0):} Condition flags, readable in both modes and updated as a side effect of ALU and
+	      shift instructions in both modes; direct writes to \reg{sr} are privileged
+	\item \textbf{High Byte (bits 15--8):} Control and privileged state
 \end{itemize}
 
-In protected mode, reads of \reg{sr} are redacted to the lower byte (upper byte reads as zero). Direct writes to
-\reg{sr} raise a privilege violation fault.
+In protected mode, reads of \reg{sr} are redacted to the low byte (high byte reads as zero), and direct writes to
+\reg{sr} raise a privilege violation fault. In supervisor mode, a direct write to \reg{sr} is permitted, except that it
+cannot change the Exception Active (EA) bit.
 
 The status register is discussed in detail in Chapter~\ref{ch:status-register}.
 
@@ -198,20 +196,20 @@ The status register is discussed in detail in Chapter~\ref{ch:status-register}.
 
 \subsection{High Address Register Restrictions}
 
-The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) is considered privileged:
+The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) is privileged:
 
 \begin{itemize}
-	\item In \textbf{supervisor mode}: Can be read from and written to freely
+	\item In \textbf{supervisor mode}: Reading and writing are both allowed.
 	\item In \textbf{protected mode}:
 	      \begin{itemize}
-		      \item Reading is allowed
-		      \item Direct writes trigger a privilege exception
+		      \item Reading is allowed.
+		      \item Direct writes trigger a privilege exception.
 		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a
-		            privilege exception
+		            privilege exception.
 	      \end{itemize}
 \end{itemize}
 
-This restriction provides a form of memory segmentation/protection. User programs running in protected mode cannot
+This restriction provides a form of memory segmentation and protection. User programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
 Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP},
 \mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If
@@ -221,8 +219,8 @@ The status register differs slightly from the high address registers:
 \begin{itemize}
 	\item High address registers (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph}) remain readable in protected mode, but direct writes
 	      trigger a privilege violation fault.
-	\item The status register's privileged byte is hidden on reads in protected mode, and cannot be modified directly from
-	      protected mode writes.
+	\item The status register's privileged byte is hidden on reads in protected mode, and direct writes in protected mode cannot
+	      modify it.
 \end{itemize}
 
 \section{Register Addressing}
@@ -233,34 +231,42 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 	\centering
 	\begin{tabular}{clc}
 		\toprule
-		\textbf{ID} & \textbf{Register} & \textbf{Privileged} \\
+		\textbf{ID}  & \textbf{Register} & \textbf{Privileged}                                 \\
 		\midrule
-		0x0         & \reg{sr}          & Upper byte only     \\
-		0x1         & \reg{r1}          & No                  \\
-		0x2         & \reg{r2}          & No                  \\
-		0x3         & \reg{r3}          & No                  \\
-		0x4         & \reg{r4}          & No                  \\
-		0x5         & \reg{r5}          & No                  \\
-		0x6         & \reg{r6}          & No                  \\
-		0x7         & \reg{r7}          & No                  \\
-		0x8         & \reg{lh}          & Yes                 \\
-		0x9         & \reg{ll}          & No                  \\
-		0xA         & \reg{ah}          & Yes                 \\
-		0xB         & \reg{al}          & No                  \\
-		0xC         & \reg{sh}          & Yes                 \\
-		0xD         & \reg{sl}          & No                  \\
-		0xE         & \reg{ph}          & Yes                 \\
-		0xF         & \reg{pl}          & No                  \\
+		\texttt{0x0} & \reg{r1}          & No                                                  \\
+		\texttt{0x1} & \reg{r2}          & No                                                  \\
+		\texttt{0x2} & \reg{r3}          & No                                                  \\
+		\texttt{0x3} & \reg{r4}          & No                                                  \\
+		\texttt{0x4} & \reg{r5}          & No                                                  \\
+		\texttt{0x5} & \reg{r6}          & No                                                  \\
+		\texttt{0x6} & \reg{r7}          & No                                                  \\
+		\texttt{0x7} & \reg{sr}          & Reads: high byte redacted. Writes: fully privileged \\
+		\texttt{0x8} & \reg{lh}          & Yes                                                 \\
+		\texttt{0x9} & \reg{ll}          & No                                                  \\
+		\texttt{0xA} & \reg{ah}          & Yes                                                 \\
+		\texttt{0xB} & \reg{al}          & No                                                  \\
+		\texttt{0xC} & \reg{sh}          & Yes                                                 \\
+		\texttt{0xD} & \reg{sl}          & No                                                  \\
+		\texttt{0xE} & \reg{ph}          & Yes                                                 \\
+		\texttt{0xF} & \reg{pl}          & No                                                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Register Encoding}
 	\label{tab:register-encoding}
 \end{table}
 
+Because writes to \reg{sr} are fully privileged, any instruction whose destination field encodes \texttt{0x7} is
+privileged in protected mode, even when the operation would only alter the unprivileged low byte of \reg{sr}. This
+register-index assignment is deliberate: \reg{sr} does not occupy field \texttt{0x0} (unlike an earlier revision of
+this encoding), so an all-zero instruction word decodes as \mnemonic{ADDI[N]} \reg{r1}, \texttt{\#0} -- a genuine,
+always-unprivileged no-op. This is what lets erased or uninitialized memory (which reads back as all-zero words) be
+executed safely instead of faulting; see the \mnemonic{NOOP} entry in Chapter~\ref{ch:meta-instructions}.
+
 \section{Usage Examples}
 
 \subsection{Basic Register Operations}
 
+\textbf{Example 3-1:}
 \begin{lstlisting}
 ; Load immediate value into r1
 LOAD r1, #100
@@ -275,6 +281,7 @@ ADDR r3, r1, r2
 
 \subsection{Address Register Usage}
 
+\textbf{Example 3-2:}
 \begin{lstlisting}
 ; Load value from memory at address in 'a' register pair
 LOAD r1, (a)
@@ -283,7 +290,7 @@ LOAD r1, (a)
 STOR (#8, a), r1
 
 ; Push r1 onto stack (pre-decrement)
-STOR -(#2, s), r1
+STOR -(s), r1
 
 ; Pop stack into r2 (post-increment)
 LOAD r2, (s)+
@@ -292,6 +299,7 @@ LOAD r2, (s)+
 
 \subsection{Subroutine Call}
 
+\textbf{Example 3-3:}
 \begin{lstlisting}
 ; Call subroutine at address in 'a' register
 ; Return address saved to 'l' register automatically

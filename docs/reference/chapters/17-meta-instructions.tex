@@ -10,27 +10,28 @@ operations easier to read and write; they do not introduce additional CPU opcode
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Primary Documentation}    & \textbf{Lowers To}          \\
+		\textbf{Meta-Instruction} & \textbf{Primary Documentation}     & \textbf{Lowers To}          \\
 		\midrule
-		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions} & \mnemonic{ORRI[S]}          \\
-		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}     & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}     & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}     & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}     & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}     & \mnemonic{LDEA p, (\#0, l)} \\
-		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI}             \\
-		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x1900}    \\
-		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x1A00}    \\
-		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x1B00}    \\
-		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x1Cxy}    \\
-		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x1Dxy}    \\
-		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x28xx}    \\
-		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x29xx}    \\
-		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x2Ann}    \\
-		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x3000}    \\
-		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x3100}    \\
-		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x3200}    \\
-		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}      & \mnemonic{COPI \#0x3300}    \\
+		\mnemonic{NOOP}           & Chapter~\ref{ch:meta-instructions} & \mnemonic{ADDI[N] r1, \#0}  \\
+		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions}  & \mnemonic{ORRI[S]}          \\
+		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
+		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
+		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
+		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
+		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, (\#0, l)} \\
+		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI}             \\
+		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1900}    \\
+		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1A00}    \\
+		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1B00}    \\
+		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Cxy}    \\
+		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Dxy}    \\
+		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x28xx}    \\
+		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x29xx}    \\
+		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x2Ann}    \\
+		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3000}    \\
+		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3100}    \\
+		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3200}    \\
+		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3300}    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instruction Cross-Reference}
@@ -39,36 +40,55 @@ operations easier to read and write; they do not introduce additional CPU opcode
 
 \section{NOOP -- No Operation}
 
-\textbf{Syntax:} \texttt{NOOP}
+\begin{instructionbox}{NOOP -- No Operation}
 
-\textbf{Assembles to:} \texttt{ADDI[N] r1, \#0}
+	\textbf{Applicability:} SIRC-1, all revisions
 
-\textbf{Operands:} None.
+	\textbf{Assembles to:} \texttt{ADDI[N] r1, \#0}
 
-\textbf{Operation:} Executes an add-immediate-zero instruction that writes the original value of \reg{r1} back to
-\reg{r1} and preserves status flags.
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} fixed at \texttt{0x0} (\reg{r1}).
+		\item \textbf{Immediate (bits 21--6):} fixed at \imm{0}.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{00} (status register not updated).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
-\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during
-development.
+	\textbf{Syntax:} \texttt{NOOP}
 
-\textbf{Write-back:} No architectural state changes.
+	\textbf{Operands:} None.
 
-\textbf{Flags:} Preserved.
+	\textbf{Operation:} Executes an add-immediate-zero instruction whose destination is \reg{r1}: \reg{r1} is rewritten
+	with its own value plus zero, so no architectural state changes occur. Because the status-register update source is
+	\texttt{None}, no condition flags are written. Register field \texttt{0x0} is deliberately assigned to \reg{r1}, an
+	ordinary unprivileged register (see Chapter~\ref{ch:registers}), so this instruction is unprivileged and an all-zero
+	instruction word (as read from erased or uninitialized memory) always executes safely as a no-op, in both protected
+	and supervisor mode.
 
-\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
-instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
-occur after it commits.
+	\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during
+	development.
 
-\textbf{Condition codes:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
-normally not useful.
+	\textbf{Write-back:} No architectural state changes.
 
-\textbf{Timing:} Same as \mnemonic{ADDI}: 6 cycles, plus instruction-fetch wait states.
+	\textbf{Flags:} Preserved.
 
-\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
+	instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
+	occur after it commits.
 
-\textbf{Example:}
-\begin{lstlisting}
+	\textbf{Condition field:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
+	normally not useful.
+
+	\textbf{Timing:} Same as \mnemonic{ADDI}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
+
+	\textbf{Example 17-1:}
+	\begin{lstlisting}
 NOOP                          ; Wait 6 cycles
 NOOP
 NOOP                          ; Total 18 cycles delay
 \end{lstlisting}
+
+\end{instructionbox}

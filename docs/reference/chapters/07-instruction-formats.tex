@@ -15,7 +15,7 @@ The SIRC-1 supports three distinct instruction formats:
 	\item Register
 \end{enumerate}
 
-Note: operandless assembler meta-instructions such as \mnemonic{NOOP} still assemble to one of these three CPU
+\textbf{Note:} Operandless assembler meta-instructions such as \mnemonic{NOOP} still assemble to one of these three CPU
 instruction formats.
 
 Each format is optimized for different types of operations and addressing modes.
@@ -45,10 +45,10 @@ All instruction formats share some common fields:
 \begin{description}
 	\item[Opcode (6 bits)] Identifies the operation to perform. With 6 bits, up to 64 distinct operations can be encoded.
 
-	\item[Condition Flags (4 bits)] Specifies under what conditions the instruction should execute. See
+	\item[Condition Flags (4 bits)] Specifies the conditions under which the instruction executes. See
 	      \textbf{Chapter~\ref{ch:condition-codes}} for details.
 
-	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (a, p, s, l) and in ALU
+	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (l, a, s, p) and in ALU
 	      operations to specify how the status register is updated.
 
 \end{description}
@@ -59,7 +59,7 @@ All instruction formats share some common fields:
 
 The immediate format encodes a full 16-bit immediate value within the instruction.
 
-Note: Due to the large 16-bit operand, shift is not supported in this format.
+\textbf{Note:} Due to the large 16-bit operand, shift is not supported in this format.
 
 \begin{figure}[H]
 	\centering
@@ -77,7 +77,10 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register identifier
+	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
+	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 = l, 01
+	      = a, 10 = s, 11 = p) naming the destination pair, using the same encoding as the AF field; bits 25--24 are unused for
+	      these opcodes.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
@@ -102,9 +105,10 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 
 \noindent\textbf{Notes:}
 \begin{itemize}
-	\item Condition code examples: 0x0 (0000) = Always, 0x1 (0001) = Equal (==), 0xB (1011) = Signed >=
+	\item Condition code examples: \texttt{0x0} (0000) = Always, \texttt{0x1} (0001) = Equal (==), \texttt{0xB} (1011) = Signed
+	      >=
 	\item AF field for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift
-	\item Negative immediates use two's complement (\#-2 = 0xFFFE)
+	\item Negative immediates use two's complement (\imm{-2} = \texttt{0xFFFE})
 \end{itemize}
 
 \section{Short Immediate Format (with Shift)}
@@ -114,7 +118,7 @@ Note: Due to the large 16-bit operand, shift is not supported in this format.
 The short immediate format sacrifices immediate value width to include shift information, allowing for more powerful
 single-instruction operations.
 
-Only supported for ALU instructions - cannot be used with any of the branching, or load/store instructions.
+This format is supported only for ALU instructions; it cannot be used with branching or load/store instructions.
 
 \begin{figure}[H]
 	\centering
@@ -136,7 +140,7 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier
-	\item[Immediate (bits 21--14)] 8-bit signed or unsigned immediate value
+	\item[Immediate (bits 21--14)] 8-bit unsigned immediate value, zero-extended to 16 bits before use
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
 	      \begin{itemize}
 		      \item 0 = Shift amount field contains the literal shift amount
@@ -163,8 +167,8 @@ Only supported for ALU instructions - cannot be used with any of the branching, 
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
 	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7)
-	\item Condition code examples: 0x0 = Always, 0x2 = Not Equal (!=), 0x5 = Negative (<0)
-	\item SHFT is a meta instruction using ORRI opcode (0x25) with AF=0b10
+	\item Condition code examples: \texttt{0x0} = Always, \texttt{0x2} = Not Equal (!=), \texttt{0x5} = Negative (<0)
+	\item SHFT is a meta-instruction using ORRI opcode \opcode{25} with AF=10
 \end{itemize}
 
 \section{Register Format}
@@ -193,7 +197,10 @@ The register format allows operations on up to three registers with optional shi
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register 1 (bits 25--22)] 4-bit destination register
+	\item[Register 1 (bits 25--22)] 4-bit destination register. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
+	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 = l, 01
+	      = a, 10 = s, 11 = p) naming the destination pair, using the same encoding as the AF field; bits 25--24 are unused for
+	      these opcodes.
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
@@ -217,7 +224,7 @@ The register format allows operations on up to three registers with optional shi
 		      \item 10 = Status register updated from shift operation
 		      \item 11 = Reserved for future use
 	      \end{itemize}
-	\item[Condition (bits 3--0)] Condition code
+	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
 
 \subsection{Register Operand Semantics}
@@ -229,12 +236,12 @@ For most three-operand instructions:
 	\item R3 = Second source operand (optional)
 \end{itemize}
 
-Note: If R3 is not specified, the assembler with use R1 as both destination and first source operand when encoding the
-instruction:
+\textbf{Note:} If only two register operands are given, the assembler will use R1 as both destination and
+first source operand when encoding the instruction:
 
 \begin{lstlisting}
 ADDR r1, r2, r3  ; r1 = r2 + r3
-ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
+ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 \end{lstlisting}
 
 \subsection{Encoding Examples}
@@ -243,13 +250,15 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 
 \noindent\textbf{Notes:}
 \begin{itemize}
-	\item When R3 is not specified in assembly, it defaults to R1 (e.g., \texttt{ADDR r4, r5} uses R1=0x4, R2=0x4, R3=0x5)
-	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 7 and 8)
+	\item When only two register operands are given, R2 is encoded as a copy of R1 and the second operand is encoded in R3, for
+	      example \texttt{ADDR r4, r5} uses R1=\texttt{0x4}, R2=\texttt{0x4}, R3=\texttt{0x5}
+	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see the \texttt{SUBR|>>} and
+	      \texttt{ANDR|CS} rows)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
-	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift (see
-	      SHFT row 9)
-	\item Condition code examples: 0x0 = Always, 0xD = Signed > (>>), 0x3 = Carry Set (CS)
-	\item SHFT is a meta instruction using ORRI opcode (0x25) with AF=0b10
+	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift (see the
+	      \texttt{SHFT} row)
+	\item Condition code examples: \texttt{0x0} = Always, \texttt{0xD} = Signed > (>>), \texttt{0x3} = Carry Set (CS)
+	\item SHFT is a meta-instruction using ORRI opcode \opcode{25} with AF=10
 \end{itemize}
 
 \section{Operand Encoding Details}
@@ -263,7 +272,7 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 		\toprule
 		\textbf{Code} & \textbf{Mnemonic} & \textbf{Condition}                         \\
 		\midrule
-		0000          & (none)            & Always (unconditional)                     \\
+		0000          & AL (or none)      & Always (unconditional)                     \\
 		0001          & ==                & Equal (Z = 1)                              \\
 		0010          & !=                & Not Equal (Z = 0)                          \\
 		0011          & CS                & Carry Set (C = 1)                          \\
@@ -272,12 +281,12 @@ ADDR r1, r2      ; r1 = r1 + r2 (R3 implicitly = R1)
 		0110          & NC                & Negative Clear (N = 0)                     \\
 		0111          & OS                & Overflow Set (V = 1)                       \\
 		1000          & OC                & Overflow Clear (V = 0)                     \\
-		1001          & HI                & Unsigned Higher (C = 1 AND Z = 0)          \\
-		1010          & LO                & Unsigned Lower or Same (C = 0 OR Z = 1)    \\
+		1001          & HI                & Unsigned Higher (C = 0 AND Z = 0)          \\
+		1010          & LO                & Unsigned Lower or Same (C = 1 OR Z = 1)    \\
 		1011          & >=                & Signed Greater or Equal (N = V)            \\
-		1100          & <                 & Signed Less Than (N $\neq$ V)              \\
+		1100          & <<                & Signed Less Than (N $\neq$ V)              \\
 		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)      \\
-		1110          & <<                & Signed Less or Equal (Z = 1 OR N $\neq$ V) \\
+		1110          & <=                & Signed Less or Equal (Z = 1 OR N $\neq$ V) \\
 		1111          & NV                & Never (never executes)                     \\
 		\bottomrule
 	\end{tabular}
@@ -295,7 +304,7 @@ For more details on condition codes see \textbf{Chapter~\ref{ch:condition-codes}
 		\toprule
 		\textbf{Code} & \textbf{Type}          & \textbf{Mnemonic} \\
 		\midrule
-		000           & None (no shift)        & --                \\
+		000           & None (no shift)        & NUL               \\
 		001           & Logical Shift Left     & LSL               \\
 		010           & Logical Shift Right    & LSR               \\
 		011           & Arithmetic Shift Left  & ASL               \\
@@ -315,31 +324,36 @@ For more details on shift operations see \textbf{Chapter~\ref{ch:shift-operation
 
 The SIRCIS instruction set uses systematic opcode patterns to simplify decoding:
 
-\subsection{ALU Instructions}
+\subsection{Opcode Groups}
 
 \begin{itemize}
-	\item \textbf{0x0\_}: Immediate operand
-	\item \textbf{0x1\_}: Memory operations
-	\item \textbf{0x2\_}: Short immediate with shift
-	\item \textbf{0x3\_}: Register operand
+	\item \textbf{\texttt{0x0\_}}: Immediate operand
+	\item \textbf{\texttt{0x1\_}}: Memory operations
+	\item \textbf{\texttt{0x2\_}}: Short immediate with shift
+	\item \textbf{\texttt{0x3\_}}: Register operand
 \end{itemize}
 
 \subsection{Test vs. Save}
 
-All ALU operations have both a "save result" and "test only" variant:
+This pattern applies to the ALU groups \texttt{0x0\_}, \texttt{0x2\_}, and \texttt{0x3\_} only. Each ALU operation has
+both a "save result" and a "test only" variant:
 
 \begin{itemize}
-	\item \textbf{0x\_0-0x\_7}: Save result to destination
-	\item \textbf{0x\_8-0x\_F}: Test only (update flags, don't save result)
+	\item \textbf{\texttt{0x\_0}--\texttt{0x\_6}}: Save result to destination
+	\item \textbf{\texttt{0x\_8}--\texttt{0x\_E}}: Test only (update flags, do not save the result)
+	\item \textbf{\texttt{0x\_F}}: Coprocessor call (\mnemonic{COPI}/\mnemonic{COPR}), not a test-only
+	      form
 \end{itemize}
 
-To turn a "save result" instruction to a "test only" instruction, you can simply add 0x8 to the opcode.
+Adding \texttt{0x8} to a "save result" opcode in the range \texttt{0x\_0}--\texttt{0x\_6} gives its "test only" form.
+Opcodes \texttt{0x27} and \texttt{0x2F} are exceptions to this pattern: they are undocumented opcodes (see
+Appendix~\ref{appendix:undocumented}), not a "save result" operation or a coprocessor call.
 
 For example:
 
 \begin{itemize}
 	\item \opcode{04}: \mnemonic{ANDI} -- AND immediate, save result
-	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (don't save result)
+	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (does not save the result)
 \end{itemize}
 
 \section{Instruction Fetch and Alignment}
@@ -349,11 +363,13 @@ For example:
 Since instructions are 32 bits and the data bus is 16 bits wide, each instruction requires two fetch cycles:
 
 \begin{enumerate}
-	\item Fetch high word (bits 31--16) from address in PC
-	\item Increment PC by 1
-	\item Fetch low word (bits 15--0) from address in PC
-	\item Increment PC by 1
+	\item Fetch the high word from the address in \reg{pl}.
+	\item Fetch the low word from \reg{pl} + 1.
+	\item After decode, \reg{pl} advances by 2.
 \end{enumerate}
+
+\reg{pl} still holds the address of the instruction being executed while it is decoded, because
+address calculations that select \reg{p} use that value.
 
 \subsection{Alignment Requirements}
 
