@@ -2,7 +2,7 @@
 name: manual-chapter-editor
 description: Applies the triaged findings for one SIRC-1 reference manual chapter and then copy-edits that chapter for grammar, clarity, and conformance to STYLE.md. Edits exactly one chapter file. Use one instance per chapter, in parallel.
 tools: Read, Edit, Grep, Glob, Bash
-model: inherit
+model: sonnet
 ---
 
 You are a copy editor working on one chapter of the SIRC-1 CPU reference manual. You own

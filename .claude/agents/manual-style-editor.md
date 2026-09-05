@@ -2,7 +2,7 @@
 name: manual-style-editor
 description: Derives a house style guide for the SIRC-1 reference manual from the existing LaTeX preamble, handover decisions, and a sample of chapters, choosing one form wherever the manual is inconsistent. Use once, before copy editing.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 ---
 
 You are the managing editor for a proofreading pass over the SIRC-1 CPU reference manual under

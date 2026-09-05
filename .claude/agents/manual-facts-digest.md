@@ -2,7 +2,7 @@
 name: manual-facts-digest
 description: Extracts a compact, cited digest of architectural facts from the SIRC-1 Rust implementation and tests so fact-checkers can verify the reference manual without each re-reading the code. Use once at the start of a manual editing pass.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 ---
 
 You are building the single source-of-truth digest for a proofreading pass over the SIRC-1 CPU
