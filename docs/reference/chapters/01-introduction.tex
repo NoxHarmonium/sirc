@@ -80,9 +80,12 @@ The SIRC-1 executes every instruction through six sequential execution phases (n
 a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 This fixed six-stage model means that ordinary processing-unit instructions take 6 clock cycles to complete when bus
-operations do not require wait states, regardless of their complexity. DMA commands are the main exception because the
-DMA unit holds instruction fetch after dispatch until its transfer has completed. A bus device may hold the current
-phase by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6-cycle
+operations do not require wait states, regardless of their complexity. Every coprocessor call (\mnemonic{COPI},
+\mnemonic{COPR}, and every meta-instruction that assembles to one) takes a second complete 6-cycle dispatch slot, for
+12 cycles in total, before the next instruction is fetched. DMA commands add further cycles on top of that: the DMA
+unit holds instruction fetch after dispatch until its transfer has completed, so their total cost scales with the
+transfer size. A bus device may hold the current phase by delaying bus acknowledgement, adding wait cycles without
+adding execution phases. While having a fixed 6-cycle
 instruction execution model may seem wasteful for simple register operations that do not require memory access, it
 dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or
 microcode.

@@ -128,5 +128,6 @@ ALU instructions can select the source of status flag updates with the status up
 	\label{tab:status-update-source-encoding}
 \end{table}
 
-When no override is written, ALU instructions use \texttt{[A]}. The one exception is \mnemonic{SHFT}, which defaults to
-\texttt{[S]}. Instructions that do not support status updates must not use status update override syntax.
+When no override is written, ALU instructions use \texttt{[A]}. \mnemonic{SHFT} defaults to \texttt{[S]} instead, and
+\mnemonic{LOAD} always encodes \texttt{[N]} and never updates the status flags, regardless of any override syntax.
+Instructions that do not support status updates must not use status update override syntax.

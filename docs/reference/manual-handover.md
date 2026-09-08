@@ -737,8 +737,8 @@ Tasks:
   - Treat overfull tables, clipped boxes, and awkward bottom-of-page instructionbox placement as documentation build
     defects.
 
-- Verify two facts left unchecked by the 2026-09 editorial pass (`review/triaged.md`, findings F-arch-10 and
-  F-tim-13, both marked `defer` -- the author chose not to rule on either during that pass).
+- Verify two facts left unchecked by the 2026-09 editorial pass (findings F-arch-10 and F-tim-13,
+  both marked `defer` -- the author chose not to rule on either during that pass).
   - Chapter 2 states a 24 MHz maximum clock rate and a 5 V +/- 5% supply with no stated basis. Confirm these
     figures against the actual design target (or the reference implementation's timing model) and either cite
     a source or mark them as illustrative/example values, not a specification.
@@ -746,6 +746,12 @@ Tasks:
     This is arguably wrong for both: ARM6 loads take 3 cycles and taken branches 3 cycles, and the R2000's
     loads/branches cost extra cycles on a cache or interlock stall, so neither part achieves a flat 1.0 CPI in
     practice. Either correct the figures or give a range.
+
+- Chapter 13's Legal Forms table only shows the shorthand+shift row (`ADDR rD, rS2[, shift]`,
+  omitting `rS1`) for `ADD`. The underlying encoding behavior is identical for every register-form
+  ALU instruction, so `ADC`, `SUB`, `SBC`, `AND`, `ORR`, `XOR`, `CMP`, `TSA`, and `TSX` are each
+  missing the equivalent row. Add them for completeness (minor, not a correctness issue -- the
+  shorthand already works for all of them, it just isn't shown in every entry's table).
 
 - Generate tables from source where possible.
   - opcode map
@@ -792,9 +798,8 @@ Tasks:
       help here.
     - Appendix A, "Complete SIRCIS Opcode Map" -- 407pt overfull (nearly a full extra page).
     - Appendix E, "Alphabetical Mnemonic Index" -- 663pt overfull, the worst in the manual.
-    - Found and measured by the `manual-latex-qa` agent on 2026-09-06 (`review/latex-qa.md`,
-      findings F-latexqa-1, F-latexqa-7, F-latexqa-8, F-latexqa-10); all four are confirmed still present as
-      of that build.
+    - Found and measured by the `manual-latex-qa` agent on 2026-09-06 (findings F-latexqa-1,
+      F-latexqa-7, F-latexqa-8, F-latexqa-10); all four are confirmed still present as of that build.
 
 - Coherent visual design pass.
   - Choose and apply a single professional serif font package (e.g. `libertinus`, `newpxtext`, or similar) in
@@ -828,9 +833,9 @@ Acceptance criteria:
 
 ## Workstream 14: Period Coverage Gaps
 
-Identified by the period benchmark (`review/period-gaps.md`, 2026-09-05) against the
-M68000 Family Programmer's Reference Manual (1992, `M68000PRM`) and the MCS6500 Family
-Programming Manual (1976, `MCS6500`). Accepted as backlog; new content, not editing.
+Identified by a period benchmark against the M68000 Family Programmer's Reference Manual (1992,
+`M68000PRM`) and the MCS6500 Family Programming Manual (1976, `MCS6500`), run 2026-09-05.
+Accepted as backlog; new content, not editing.
 
 1. **Instruction Format bit diagram in every entry.** A bit-numbered 16-bit word (both
    words for immediate format) showing opcode, condition, register, AF, shift and immediate

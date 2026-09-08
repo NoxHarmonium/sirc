@@ -2,11 +2,11 @@
 
 For copy editors working across the 22 chapters/appendices of the SIRC-1 CPU Reference
 Manual. Rules were set by majority usage found in the current chapters, except where the
-handover ("Resolved:" items), Chapter 11, or the period-style notes
-(`docs/reference/review/period-style.md`) already dictate a form. Apply these rules; do not
-introduce new house-style debates during copyediting. Items the editor must not silently
-"fix" are listed in **Decisions needing human approval** at the end — leave those chapters
-as-is until the user picks an option.
+handover ("Resolved:" items), Chapter 11, or a 2026-09-05 benchmark against period CPU
+manuals (M68000 and MCS6500 family reference manuals) already dictate a form. Apply these
+rules; do not introduce new house-style debates during copyediting. Every inconsistency found
+during the initial style derivation was ruled on by the author and is recorded in
+**Approved decisions** at the end.
 
 ## 1. Terminology
 

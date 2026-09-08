@@ -1,6 +1,6 @@
 # Implementation bugs and gaps found by the manual editorial pass
 
-Out of scope for the manual pass. Each item is a place where the author ruled that the manual is right and the Rust is wrong or incomplete. IDs refer to `review/triaged.md`.
+Out of scope for the manual pass. Each item is a place where the author ruled that the manual is right and the Rust is wrong or incomplete. Each entry is self-contained (claim, evidence with exact file/line citations, and fix); the finding IDs (e.g. `F-data-1`) are carried over from the 2026-09 editorial pass's triage for cross-referencing this document's revision history, not as pointers into a still-existing file.
 
 ## F-enc-18 (code-wrong, blocker) — REVISED 2026-09-08 with exact numeric proof and register-count-16 tie-in
 
