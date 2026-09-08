@@ -27,4 +27,5 @@ mem.bin
 .codex
 
 # Period reference manuals used by /manual-edit; copyrighted, never commit
-docs/reference/review/corpus/
+docs/reference/review/corpus/*
+!docs/reference/review/corpus/README.md
