@@ -126,9 +126,9 @@ When cleared to 0, interrupts on that line are disabled and are not serviced.
 
 \textbf{Important behavior:}
 \begin{itemize}
-	\item Disabled interrupts are not queued while the enable bit is 0. Hardware interrupt lines are level-sensitive: a line that
-	      is still asserted when its enable bit is set is latched at that point, and only assertions that end while the bit is 0
-	      are lost
+	\item Disabled interrupts are not queued while the enable bit is 0.
+	\item Hardware interrupt lines 1-4 are level-sensitive, not edge-triggered. If an interrupt pin
+	      remains asserted, it will be serviced again as soon as the current handler is finished.
 	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
 	      exception level
 	\item This prevents the same interrupt from re-triggering while its handler is executing
@@ -189,8 +189,8 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
 	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): \mnemonic{LOAD} never updates the condition
 	      flags -- the assembler always assembles it with status source \texttt{[N]}, giving the flag row
-	      \texttt{- - - -}. An explicit AF suffix written on \mnemonic{LOAD} leaves all four flags architecturally
-	      undefined (\texttt{U U U U}). \mnemonic{LDEA} never updates the condition flags
+	      \texttt{- - - -}. An explicit status update override written on \mnemonic{LOAD} leaves all four flags
+	      architecturally undefined (\texttt{U U U U}). \mnemonic{LDEA} never updates the condition flags
 	\item \textbf{Shift Operations}: Can optionally update flags based on the instruction's status register update source field
 \end{itemize}
 
