@@ -52,40 +52,41 @@ are not legal for this instruction family.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                 \\
+		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                      \\
 		\midrule
-		ADD                  & \texttt{ADDI rD, \#imm16}           & 0x00              & Writes result                  \\
-		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & 0x20              & Writes result                  \\
-		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & 0x30              & Writes result                  \\
-		ADC                  & \texttt{ADCI rD, \#imm16}           & 0x01              & Writes result                  \\
-		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & 0x21              & Writes result                  \\
-		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & 0x31              & Writes result                  \\
-		SUB                  & \texttt{SUBI rD, \#imm16}           & 0x02              & Writes result                  \\
-		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & 0x22              & Writes result                  \\
-		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & 0x32              & Writes result                  \\
-		SBC                  & \texttt{SBCI rD, \#imm16}           & 0x03              & Writes result                  \\
-		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & 0x23              & Writes result                  \\
-		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & 0x33              & Writes result                  \\
-		AND                  & \texttt{ANDI rD, \#imm16}           & 0x04              & Writes result                  \\
-		AND                  & \texttt{ANDI rD, \#imm8, shift}     & 0x24              & Writes result                  \\
-		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & 0x34              & Writes result                  \\
-		ORR                  & \texttt{ORRI rD, \#imm16}           & 0x05              & Writes result                  \\
-		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & 0x25              & Writes result                  \\
-		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & 0x35              & Writes result                  \\
-		XOR                  & \texttt{XORI rD, \#imm16}           & 0x06              & Writes result                  \\
-		XOR                  & \texttt{XORI rD, \#imm8, shift}     & 0x26              & Writes result                  \\
-		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & 0x36              & Writes result                  \\
-		LOAD                 & \texttt{LOAD rD, \#imm16}           & 0x07              & Writes result; preserves flags \\
-		LOAD                 & \texttt{LOAD rD, rS}                & 0x37              & Writes result; preserves flags \\
-		CMP                  & \texttt{CMPI rS, \#imm16}           & 0x0A              & Updates flags only             \\
-		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & 0x2A              & Updates flags only             \\
-		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & 0x3A              & Updates flags only             \\
-		TSA                  & \texttt{TSAI rS, \#imm16}           & 0x0C              & Updates flags only             \\
-		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & 0x2C              & Updates flags only             \\
-		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & 0x3C              & Updates flags only             \\
-		TSX                  & \texttt{TSXI rS, \#imm16}           & 0x0E              & Updates flags only             \\
-		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & 0x2E              & Updates flags only             \\
-		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & 0x3E              & Updates flags only             \\
+		ADD                  & \texttt{ADDI rD, \#imm16}           & \opcode{00}       & Writes result                       \\
+		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & \opcode{20}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & \opcode{30}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS2[, shift]}      & \opcode{30}       & Writes result (shorthand: rS1 = rD) \\
+		ADC                  & \texttt{ADCI rD, \#imm16}           & \opcode{01}       & Writes result                       \\
+		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & \opcode{21}       & Writes result                       \\
+		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & \opcode{31}       & Writes result                       \\
+		SUB                  & \texttt{SUBI rD, \#imm16}           & \opcode{02}       & Writes result                       \\
+		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & \opcode{22}       & Writes result                       \\
+		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & \opcode{32}       & Writes result                       \\
+		SBC                  & \texttt{SBCI rD, \#imm16}           & \opcode{03}       & Writes result                       \\
+		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & \opcode{23}       & Writes result                       \\
+		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & \opcode{33}       & Writes result                       \\
+		AND                  & \texttt{ANDI rD, \#imm16}           & \opcode{04}       & Writes result                       \\
+		AND                  & \texttt{ANDI rD, \#imm8, shift}     & \opcode{24}       & Writes result                       \\
+		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & \opcode{34}       & Writes result                       \\
+		ORR                  & \texttt{ORRI rD, \#imm16}           & \opcode{05}       & Writes result                       \\
+		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & \opcode{25}       & Writes result                       \\
+		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & \opcode{35}       & Writes result                       \\
+		XOR                  & \texttt{XORI rD, \#imm16}           & \opcode{06}       & Writes result                       \\
+		XOR                  & \texttt{XORI rD, \#imm8, shift}     & \opcode{26}       & Writes result                       \\
+		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & \opcode{36}       & Writes result                       \\
+		LOAD                 & \texttt{LOAD rD, \#imm16}           & \opcode{07}       & Writes result; preserves flags      \\
+		LOAD                 & \texttt{LOAD rD, rS}                & \opcode{37}       & Writes result; preserves flags      \\
+		CMP                  & \texttt{CMPI rS, \#imm16}           & \opcode{0A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & \opcode{2A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & \opcode{3A}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm16}           & \opcode{0C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & \opcode{2C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & \opcode{3C}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm16}           & \opcode{0E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & \opcode{2E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & \opcode{3E}       & Updates flags only                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}
@@ -94,7 +95,8 @@ are not legal for this instruction family.
 
 \noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
-\texttt{ADDR r1, r1, r2}.
+\texttt{ADDR r1, r1, r2}. A shift definition may be combined with the shorthand; because the shift always applies to
+the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}, not \texttt{r1 + (r2 << 2)}.
 
 \noindent\textbf{Short-immediate LOAD:} Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
 
@@ -104,16 +106,16 @@ are not legal for this instruction family.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                          \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                     \\
 		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                   \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate. \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                      \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.               \\
-		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                 \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                               \\
-		Exceptions             & ALU execution raises no instruction-specific faults; see the notes below.                                                    \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                           \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                              \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                            \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                                 \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                          \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                            \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                          \\
+		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction whose register field names a privileged register raises a privilege-violation fault at decode; see the notes below. \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
@@ -121,10 +123,12 @@ are not legal for this instruction family.
 \end{table}
 
 \noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
-bus-protection, data alignment, segment-overflow, privilege-violation, or invalid-opcode faults. Instruction fetch can
-still raise the normal fetch faults before an ALU instruction executes. If trace mode was enabled when the instruction
-began, an instruction-trace fault is raised after the instruction commits. Processing-unit encodings outside the
-documented ALU forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode fault.
+bus-protection, data alignment, segment-overflow, or invalid-opcode faults. In protected mode, an ALU instruction whose
+register field names \reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} raises a privilege-violation fault at decode
+and has no other effect. Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
+If trace mode was enabled when the instruction began, an instruction-trace fault is raised after the instruction
+commits. Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
+documented ALU forms execute with architecturally undefined results (see Appendix~\ref{appendix:undocumented}).
 
 \section{Status Flag Updates}
 
@@ -163,8 +167,11 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 instruction uses its default status update source. If \texttt{[N]} is encoded, all status flags are preserved. If
 \texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
 encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
-the shifter flag rules. Public \mnemonic{LOAD} forms do not support status update override syntax and always preserve
-the status flags.
+the shifter flag rules. The immediate format has no shift fields, so \texttt{[S]} on an immediate-format instruction
+writes a constant zero into the flag byte: N, Z, C, and V are all cleared. Use \texttt{[S]} only with short-immediate
+and register forms. Public \mnemonic{LOAD} forms do not support status update override syntax and always preserve the
+status flags; an encoding of the \mnemonic{LOAD} opcode with a non-\texttt{None} AF field, which is not reachable from
+public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
 
 \subsection{Manual Flag Update Control}
 
@@ -175,9 +182,10 @@ override syntax. See Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-
 	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
 	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
 	\item \texttt{INSTR[N]} -- Do not update status flags
+	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax; the status register is left unchanged.
 \end{itemize}
 
-\textbf{Example:}
+\textbf{Example 13-1:}
 \begin{lstlisting}
 ; Update flags from shift operation
 ADDI[S] r1, #0, LSL #3        ; Flags reflect (r1 << 3), not the ALU
@@ -189,7 +197,22 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \end{lstlisting}
 
 \begin{instructionbox}{SHFT -- Shift with Status Update Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} \texttt{rD}, the destination and shifted source register; any of the 16
+		      registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate (bits 21--14):} fixed at \texttt{0x00} by the meta-instruction.
+		\item \textbf{Shift type and count:} \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
+		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}, a register count above 15 is
+		      architecturally undefined.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{10} (Shift) by the meta-instruction.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -218,13 +241,14 @@ SR = flags_from_shift_result
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no shift result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no shift result is written and status flags are preserved.
 
 	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Examples:}
+	\textbf{Example 13-2:}
 	\begin{lstlisting}
 ; Shift r1 left by 3 and update flags
 SHFT r1, LSL #3               ; ORRI[S] r1, #0, LSL #3
@@ -236,9 +260,10 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item Because the lowering uses the short-immediate format, \mnemonic{SHFT} has the same shift field limits as other
-		      short-immediate ALU instructions.
-		\item All shift types are supported: LSL, LSR, ASL, ASR, RTL, and RTR.
+		\item Immediate shift counts are 0--15; the assembler rejects a larger literal. A register shift count above 15 is
+		      architecturally undefined.
+		\item All six shift types are supported, plus \mnemonic{NUL}: NUL, LSL, LSR, ASL, ASR, RTL, and RTR. \texttt{SHFT rD, NUL
+			      \#0} sets the flags from the unshifted value of \texttt{rD}.
 	\end{itemize}
 \end{instructionbox}
 
@@ -246,14 +271,31 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 \section{ADD -- Addition}
 
 \begin{instructionbox}{ADDI / ADDR -- Add Immediate / Add Register}
-	\textbf{Opcodes:} 0x00 (Imm), 0x20 (Short Imm), 0x30 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ADDI rD, #imm16                ; rD = rD + imm16
-ADDI rD, #imm8, shift          ; rD = (rD << shift) + imm8
+ADDI rD, #imm8, shift          ; rD = shift(rD) + imm8
 ADDR rD, rS1, rS2              ; rD = rS1 + rS2
-ADDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2
+ADDR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{rD} is the destination and first source in immediate forms. Register forms use \texttt{rS1}
@@ -283,13 +325,14 @@ SR.V = signed_overflow
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-3:}
 	\begin{lstlisting}
 ; Simple addition
 ADDI r1, #100              ; r1 = r1 + 100
@@ -316,14 +359,31 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 \section{ADC -- Add with Carry}
 
 \begin{instructionbox}{ADCI / ADCR -- Add with Carry}
-	\textbf{Opcodes:} 0x01 (Imm), 0x21 (Short Imm), 0x31 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ADCI rD, #imm16                ; rD = rD + imm16 + C
-ADCI rD, #imm8, shift          ; rD = (rD << shift) + imm8 + C
+ADCI rD, #imm8, shift          ; rD = shift(rD) + imm8 + C
 ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
-ADCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) + rS2 + C
+ADCR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2 + C
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
@@ -351,13 +411,14 @@ SR.V = signed_overflow
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-4:}
 	\begin{lstlisting}
 ; 32-bit addition (r1:r2 = r3:r4 + r5:r6)
 ; Low words
@@ -379,14 +440,31 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 \section{SUB -- Subtraction}
 
 \begin{instructionbox}{SUBI / SUBR -- Subtract Immediate / Subtract Register}
-	\textbf{Opcodes:} 0x02 (Imm), 0x22 (Short Imm), 0x32 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SUBI rD, #imm16                ; rD = rD - imm16
-SUBI rD, #imm8, shift          ; rD = (rD << shift) - imm8
+SUBI rD, #imm8, shift          ; rD = shift(rD) - imm8
 SUBR rD, rS1, rS2              ; rD = rS1 - rS2
-SUBR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2
+SUBR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
@@ -413,13 +491,14 @@ SR.V = signed_overflow
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-5:}
 	\begin{lstlisting}
 ; Decrement by 1
 SUBI r1, #1                ; r1 = r1 - 1
@@ -444,14 +523,31 @@ BRAN|!= @loop              ; Branch if not zero
 \section{SBC -- Subtract with Carry (Borrow)}
 
 \begin{instructionbox}{SBCI / SBCR -- Subtract with Carry}
-	\textbf{Opcodes:} 0x03 (Imm), 0x23 (Short Imm), 0x33 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SBCI rD, #imm16                ; rD = rD - imm16 - C
-SBCI rD, #imm8, shift          ; rD = (rD << shift) - imm8 - C
+SBCI rD, #imm8, shift          ; rD = shift(rD) - imm8 - C
 SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
-SBCR rD, rS1, rS2, shift       ; rD = (rS1 << shift) - rS2 - C
+SBCR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2 - C
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
@@ -478,13 +574,14 @@ SR.V = signed_overflow
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-6:}
 	\begin{lstlisting}
 ; 32-bit subtraction (r1:r2 = r3:r4 - r5:r6)
 ; Low words
@@ -505,14 +602,31 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 \section{AND -- Bitwise AND}
 
 \begin{instructionbox}{ANDI / ANDR -- AND Immediate / AND Register}
-	\textbf{Opcodes:} 0x04 (Imm), 0x24 (Short Imm), 0x34 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ANDI rD, #imm16                ; rD = rD & imm16
-ANDI rD, #imm8, shift          ; rD = (rD << shift) & imm8
+ANDI rD, #imm8, shift          ; rD = shift(rD) & imm8
 ANDR rD, rS1, rS2              ; rD = rS1 & rS2
-ANDR rD, rS1, rS2, shift       ; rD = (rS1 << shift) & rS2
+ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
@@ -540,19 +654,20 @@ SR.V = 0
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-7:}
 	\begin{lstlisting}
 ; Mask lower byte
 ANDI r1, #0x00FF           ; r1 = r1 & 0xFF
 
 ; Clear bit 5
-ANDI r2, #~(1<<5)          ; r2 = r2 & 0xFFDF
+ANDI r2, #0xFFDF           ; r2 = r2 & 0xFFDF (clear bit 5)
 
 ; Check if two registers share any set bits
 ANDR r3, r1, r2            ; r3 = r1 & r2
@@ -572,14 +687,31 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 \section{ORR -- Bitwise OR}
 
 \begin{instructionbox}{ORRI / ORRR -- OR Immediate / OR Register}
-	\textbf{Opcodes:} 0x05 (Imm), 0x25 (Short Imm), 0x35 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ORRI rD, #imm16                ; rD = rD | imm16
-ORRI rD, #imm8, shift          ; rD = (rD << shift) | imm8
+ORRI rD, #imm8, shift          ; rD = shift(rD) | imm8
 ORRR rD, rS1, rS2              ; rD = rS1 | rS2
-ORRR rD, rS1, rS2, shift       ; rD = (rS1 << shift) | rS2
+ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
@@ -607,25 +739,26 @@ SR.V = 0
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-8:}
 	\begin{lstlisting}
 ; Set bit 7
 ORRI r1, #0x0080           ; r1 = r1 | 0x80
 
 ; Set multiple bits
-ORRI r2, #0xF000           ; Set upper nibble
+ORRI r2, #0xF000           ; Set high nibble
 
 ; Combine two registers
 ORRR r3, r1, r2            ; r3 = r1 | r2
 
 ; Set bit N (variable)
-ADDI r4, #1
+LOAD r4, #1                ; r4 = 1
 SHFT r4, LSL r5            ; r4 = 1 << r5
 ORRR r1, r4                ; r1 |= (1 << r5)
 \end{lstlisting}
@@ -642,14 +775,31 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 \section{XOR -- Bitwise Exclusive OR}
 
 \begin{instructionbox}{XORI / XORR -- XOR Immediate / XOR Register}
-	\textbf{Opcodes:} 0x06 (Imm), 0x26 (Short Imm), 0x36 (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
+		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 XORI rD, #imm16                ; rD = rD ^ imm16
-XORI rD, #imm8, shift          ; rD = (rD << shift) ^ imm8
+XORI rD, #imm8, shift          ; rD = shift(rD) ^ imm8
 XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
-XORR rD, rS1, rS2, shift       ; rD = (rS1 << shift) ^ rS2
+XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
@@ -677,13 +827,14 @@ SR.V = 0
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-9:}
 	\begin{lstlisting}
 ; Toggle bit 3
 XORI r1, #0x0008           ; r1 = r1 ^ 0x08
@@ -714,29 +865,44 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 \section{LOAD -- Load Immediate / Move Register}
 
 \begin{instructionbox}{LOAD -- Load/Move}
-	\textbf{Opcodes:} 0x07 (Imm), 0x37 (Reg). Opcode 0x27 is undocumented.
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented.
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} destination \texttt{rD} (immediate form) or \texttt{rD, rS} (register form); any of the
+		      16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6). The register form has no immediate field.
+		\item \textbf{AF (bits 5--4):} the public assembly syntax always encodes \texttt{00} (None), which preserves the
+		      status flags. An encoding of this opcode with a different AF value, not reachable from assembly syntax,
+		      leaves all four status flags architecturally undefined (\texttt{U U U U}).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LOAD rD, #imm16                ; rD = imm16 (via add)
-LOAD rD, rS                    ; rD = rS (via add)
+LOAD rD, #imm16                ; rD = imm16
+LOAD rD, rS                    ; rD = rS
 \end{lstlisting}
 
 	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
-	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax.
+	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax; the register-to-register form
+	does not accept a shift definition (use \mnemonic{SHFT}). The indirect memory forms of \mnemonic{LOAD} are
+	documented in Chapter~\ref{ch:memory-instructions}.
 
 	\textbf{Operation:}
 	\begin{verbatim}
-; Implemented as: rD = 0 + operand
 destination = operand
 ; Flags NOT updated
 \end{verbatim}
 
 	\textbf{Description:}
 
-	Loads an immediate value into a register or copies a register value. This is actually implemented as an ADD with an
-	implicit zero operand, but flags are not updated. This is the primary way to load constants or move data between
-	registers. Opcode \texttt{0x27} has no public assembly syntax and is undocumented.
+	The ALU passes the second operand straight through to the destination; the first operand is ignored. This is the
+	primary way to load constants or move data between registers. Opcode \texttt{0x27} has no public assembly syntax and is
+	undocumented.
 
 	\textbf{Flags:} Preserved.
 
@@ -744,13 +910,14 @@ destination = operand
 
 	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no result is written and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\textbf{Example:}
+	\textbf{Example 13-10:}
 	\begin{lstlisting}
 ; Load constant
 LOAD r1, #1234             ; r1 = 1234
@@ -785,14 +952,31 @@ ORRI r5, #0x34             ; r5 = 0x1234
 \section{CMP -- Compare}
 
 \begin{instructionbox}{CMPI / CMPR -- Compare Immediate / Compare Register}
-	\textbf{Opcodes:} 0x0A (Imm), 0x2A (Short Imm), 0x3A (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
+		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 CMPI rS, #imm16                ; Compare rS with imm16
-CMPI rS, #imm8, shift          ; Compare (rS << shift) with imm8
+CMPI rS, #imm8, shift          ; Compare shift(rS) with imm8
 CMPR rS1, rS2                  ; Compare rS1 with rS2
-CMPR rS1, rS2, shift           ; Compare (rS1 << shift) with rS2
+CMPR rS1, rS2, shift           ; Compare shift(rS1) with rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
@@ -821,13 +1005,16 @@ SR.V = signed_overflow
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
+	privilege check is made on the register field even though this instruction writes no register, so
+	\texttt{CMPI sr, \#0} in protected mode raises a privilege-violation fault.
 
-	\textbf{Example:}
+	\textbf{Example 13-11:}
 	\begin{lstlisting}
 ; Test if r1 is zero
 CMPI r1, #0
@@ -854,8 +1041,8 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		\item Does not modify any register, only flags
 		\item Use with conditional instructions or branches
 		\item Remember: \texttt{CMP A, B} computes A - B
-		\item For signed comparisons, use \texttt{>=}, \texttt{<}, \texttt{>>}, \texttt{<<}
-		\item For unsigned comparisons, use \texttt{>}, \texttt{CS}, \texttt{CC}, \texttt{<=}
+		\item For signed comparisons, use \texttt{>=}, \texttt{<<}, \texttt{>>}, \texttt{<=}
+		\item For unsigned comparisons, use \texttt{HI}, \texttt{LO}, \texttt{CS}, \texttt{CC}
 	\end{itemize}
 \end{instructionbox}
 
@@ -863,14 +1050,31 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 \section{TSA -- Test AND}
 
 \begin{instructionbox}{TSAI / TSAR -- Test AND Immediate / Test AND Register}
-	\textbf{Opcodes:} 0x0C (Imm), 0x2C (Short Imm), 0x3C (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
+		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 TSAI rS, #imm16                ; Test rS & imm16
-TSAI rS, #imm8, shift          ; Test (rS << shift) & imm8
+TSAI rS, #imm8, shift          ; Test shift(rS) & imm8
 TSAR rS1, rS2                  ; Test rS1 & rS2
-TSAR rS1, rS2, shift           ; Test (rS1 << shift) & rS2
+TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
@@ -898,19 +1102,22 @@ SR.V = 0
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
+	privilege check is made on the register field even though this instruction writes no register, so
+	\texttt{TSAI sr, \#0} in protected mode raises a privilege-violation fault.
 
-	\textbf{Example:}
+	\textbf{Example 13-12:}
 	\begin{lstlisting}
 ; Test if bit 5 is set
 TSAI r1, #0x0020           ; Test r1 & 0x20
 BRAN|!= @bit5_set          ; Branch if bit 5 was set
 
-; Test if any upper byte bits are set
+; Test if any high byte bits are set
 TSAI r2, #0xFF00
 BRAN|!= @has_upper_bits
 
@@ -919,7 +1126,7 @@ TSAR r1, r2
 BRAN|== @no_common_bits    ; Branch if no bits in common
 
 ; Test multiple bits
-TSAI r3, #0xF000           ; Test upper nibble
+TSAI r3, #0xF000           ; Test high nibble
 BRAN|== @upper_clear       ; Branch if all tested bits clear
 \end{lstlisting}
 
@@ -937,14 +1144,31 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 \section{TSX -- Test XOR}
 
 \begin{instructionbox}{TSXI / TSXR -- Test XOR Immediate / Test XOR Register}
-	\textbf{Opcodes:} 0x0E (Imm), 0x2E (Short Imm), 0x3E (Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
+		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
+		      (short-immediate form, bits 21--14).
+		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved (status register unchanged).
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 TSXI rS, #imm16                ; Test rS ^ imm16
-TSXI rS, #imm8, shift          ; Test (rS << shift) ^ imm8
+TSXI rS, #imm8, shift          ; Test shift(rS) ^ imm8
 TSXR rS1, rS2                  ; Test rS1 ^ rS2
-TSXR rS1, rS2, shift           ; Test (rS1 << shift) ^ rS2
+TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
 \end{lstlisting}
 
 	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
@@ -972,13 +1196,16 @@ SR.V = 0
 
 	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
 
-	\textbf{Condition codes:} If the condition is false, no status flags are updated.
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
+	privilege check is made on the register field even though this instruction writes no register, so
+	\texttt{TSXI sr, \#0} in protected mode raises a privilege-violation fault.
 
-	\textbf{Example:}
+	\textbf{Example 13-13:}
 	\begin{lstlisting}
 ; Test if r1 equals specific value
 TSXI r1, #0x1234           ; Test r1 ^ 0x1234
@@ -989,8 +1216,8 @@ TSXR r1, r2                ; Test r1 ^ r2
 BRAN|== @registers_equal   ; Branch if r1 == r2
 
 ; Test if bit pattern matches
-TSAI r3, #0xFF             ; Mask to lower byte
-TSXI r3, #0xAA             ; Test if lower byte == 0xAA
+ANDI r3, #0x00FF           ; Mask to low byte
+TSXI r3, #0x00AA           ; Test if low byte == 0xAA
 BRAN|== @pattern_match
 \end{lstlisting}
 
@@ -1011,6 +1238,6 @@ The ALU instructions form the computational core of the SIRCIS instruction set. 
 	\item All ALU operations work only on registers (load/store architecture)
 	\item Three format variants provide flexibility (immediate, short+shift, register)
 	\item Test variants (CMP, TSA, TSX) allow non-destructive testing
-	\item Shift operations can be combined with ALU ops for powerful single-cycle operations
+	\item Shift operations can be combined with ALU ops for powerful single-instruction operations
 	\item Consistent flag behavior makes conditional execution predictable
 \end{itemize}

@@ -21,5 +21,11 @@ mem.bin
 *.stamp
 
 # AI
-.claude
+.claude/*
+!.claude/agents/
+!.claude/skills/
 .codex
+
+# Period reference manuals used by /manual-edit; copyrighted, never commit
+docs/reference/review/corpus/*
+!docs/reference/review/corpus/README.md

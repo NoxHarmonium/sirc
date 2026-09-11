@@ -11,12 +11,12 @@
 .EQU $DEBUG_DEVICE_BUS_PROTECTION_ERROR #0x0006
 
 
-;; Cpu Phases
-.EQU $CPU_PHASE_INSTRUCTION_FETCH  #0x0000
-.EQU $CPU_PHASE_EFFECTIVE_ADDRESS  #0x0003
+;; Bus access types (fault metadata register, bits 0-2)
+.EQU $BAT_NONE                      #0x0000
+.EQU $BAT_DATA_WRITE                #0x0003
 
 
-; Reserved space for 128x32 bit exception vectors
+; Reserved space for 256x32 bit exception vectors
 .ORG 0x0000
 .DQ @init
 .ORG 0x0002
@@ -165,19 +165,20 @@ ETTR #6, a
 RETE
 
 :segment_overflow_fault_handler
-; Check the phase
+; Check which kind of address computation caused the overflow, using the
+; bus access type captured in the fault metadata register
 
-; Transfer exception metadata to r7
+; Transfer fault metadata to r7
 ETFR    r7, #7
-; Mask off the phase section of the status register
+; Mask off the bus access type (bits 0-2) from the fault metadata register
 ANDI    r7, #0x7
 
-CMPI    r7, $CPU_PHASE_INSTRUCTION_FETCH
+CMPI    r7, $BAT_NONE
 BRAN|== @segment_overflow_fault_handler_pc
-; Mask off the phase section of the status register
+; Mask off the bus access type (bits 0-2) from the fault metadata register
 ANDI    r7, #0x7
 
-CMPI    r7, $CPU_PHASE_EFFECTIVE_ADDRESS
+CMPI    r7, $BAT_DATA_WRITE
 BRAN|== @segment_overflow_fault_handler_address
 
 BRAN @segment_overflow_fault_handler_end

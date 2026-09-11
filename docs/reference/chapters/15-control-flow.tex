@@ -28,29 +28,29 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}  & \textbf{Notes}                                 \\
+		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}  & \textbf{Notes}                                                              \\
 		\midrule
-		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18               & Immediate-offset effective address             \\
-		LDEA                 & \texttt{LDEA dest, (rS, src)}        & 0x19               & Register-offset effective address              \\
-		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A               & Pre-decrement source, immediate offset         \\
-		LDEA                 & \texttt{LDEA dest, -(rS, src)}       & 0x1B               & Pre-decrement source, register offset          \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C               & Immediate-offset effective address and link    \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)}        & 0x1D               & Register-offset effective address and link     \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E               & Post-increment source, immediate offset        \\
-		LDEL                 & \texttt{LDEL dest, (rS, src)+}       & 0x1F               & Post-increment source, register offset         \\
-		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}      \\
-		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement       \\
-		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}      \\
-		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} meta & PC-relative linker-computed call               \\
-		RETS                 & \texttt{RETS}                        & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, l)}         \\
-		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}       \\
-		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)}  \\
-		LJMP                 & \texttt{LJMP src, rS}                & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rS, src)}        \\
-		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#0, src)}       \\
-		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)}  \\
-		LJSR                 & \texttt{LJSR src, rS}                & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rS, src)}        \\
-		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)+} \\
-		LJSR                 & \texttt{LJSR (rS, src)+}             & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rS, src)+}       \\
+		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18               & Immediate-offset effective address                                          \\
+		LDEA                 & \texttt{LDEA dest, (rO, src)}        & 0x19               & Register-offset effective address                                           \\
+		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A               & Pre-decrement source, immediate offset                                      \\
+		LDEA                 & \texttt{LDEA dest, -(rO, src)}       & 0x1B               & Pre-decrement source, register offset                                       \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C               & Immediate-offset effective address and link; \texttt{dest} excludes \reg{l} \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)}        & 0x1D               & Register-offset effective address and link; \texttt{dest} excludes \reg{l}  \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E               & Post-increment source, immediate offset; \texttt{dest} excludes \reg{l}     \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)+}       & 0x1F               & Post-increment source, register offset; \texttt{dest} excludes \reg{l}      \\
+		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}                                   \\
+		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement                                    \\
+		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}                                   \\
+		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} meta & PC-relative linker-computed call                                            \\
+		RETS                 & \texttt{RETS}                        & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, l)}                                      \\
+		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}                                    \\
+		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)}                               \\
+		LJMP                 & \texttt{LJMP src, rO}                & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rO, src)}                                     \\
+		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#0, src)}                                    \\
+		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)}                               \\
+		LJSR                 & \texttt{LJSR src, rO}                & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)}                                     \\
+		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)+}                              \\
+		LJSR                 & \texttt{LJSR (rO, src)+}             & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)+}                                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Control-Flow and Effective-Address Forms}
@@ -59,7 +59,8 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 
 \noindent\textbf{Address registers:} \texttt{src} and \texttt{dest} are address-register pairs: \reg{l}, \reg{a},
 \reg{s}, or \reg{p}. The branch meta-instructions always use \reg{p} as both the source and destination address-register
-pair.
+pair. \reg{l} is never a legal \mnemonic{LDEL} destination, because \mnemonic{LDEL} always writes the return address to
+\reg{l}; the destination and the link write would alias. \mnemonic{LDEL} destinations are \reg{a}, \reg{s}, or \reg{p}.
 
 \noindent\textbf{Zero displacement:} Immediate-displacement forms may omit \texttt{\#0}. Thus
 \texttt{LDEA dest, (src)}, \texttt{LDEA dest, -(src)}, \texttt{LDEL dest, (src)}, and
@@ -69,8 +70,11 @@ not public syntax. The post-increment call shorthand \texttt{LJSR (src)+} is leg
 \texttt{LDEL p, (\#0, src)+}.
 
 \noindent\textbf{Aliased register writes:} Instructions that write the same address-register pair through more than one
-write-back path have architecturally undefined behavior. Avoid forms such as \texttt{LDEA a, -(\#0, a)} and
-\texttt{LDEL l, (\#0, l)+}. The assembler rejects known hazardous aliased forms.
+write-back path have architecturally undefined behavior. The assembler rejects exactly these forms: \mnemonic{LDEA}
+pre-decrement with destination equal to source; \mnemonic{LDEL} with destination \reg{l} (any form); \mnemonic{LDEL}
+post-increment with source \reg{l} or with destination equal to source; \mnemonic{LJSR} post-increment from \reg{l} or
+\reg{p}; \mnemonic{LOAD} post-increment whose destination is a half of the auto-updated pair; and \mnemonic{STOR}
+pre-decrement whose source is a half of the auto-updated pair.
 
 \noindent\textbf{Shift suffixes:} Control-flow and effective-address displacements are not shifted. Register-offset
 forms do not accept shift suffixes in the assembler.
@@ -132,7 +136,19 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 \section{Branch Meta-Instructions}
 
 \begin{instructionbox}{BRAN -- Branch Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x3} (\reg{p}) by the meta-instruction.
+		\item \textbf{Immediate (bits 21--6):} signed 16-bit displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -141,8 +157,10 @@ BRAN @label                   ; p = p + label offset
 BRAN|cond #disp               ; Conditional PC-relative branch
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{\#disp} is a 16-bit PC-relative word displacement. \texttt{@label} is resolved by the
-	linker to a PC-relative displacement from the next instruction address.
+	\textbf{Operands:} \texttt{\#disp} is a signed 16-bit word displacement (\texttt{-32768} to \texttt{+32767}) added to
+	the low word of \reg{p} modulo $2^{16}$; a branch cannot change the program segment, so the displacement wraps within
+	the current 64K segment. \texttt{@label} is resolved by the linker to a word displacement from the address of the
+	branch instruction itself.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -154,7 +172,9 @@ if condition:
 	\textbf{Description:}
 
 	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler meta-instruction, not a distinct CPU
-	opcode. Use \mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p, (rS, src)} for non-PC-relative computed jumps.
+	opcode. The displacement base is the branching instruction's own address, so \texttt{BRAN \#0} branches to itself and
+	\texttt{BRAN \#2} falls through to the next instruction. Use \mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p,
+		(rO, src)} for non-PC-relative computed jumps.
 
 	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
 
@@ -162,13 +182,13 @@ if condition:
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise segment-overflow or protected-mode privilege faults.
 
-	\textbf{Condition codes:} If the condition is false, no branch occurs and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no branch occurs and status flags are preserved.
 
 	\textbf{Timing:} Same as \mnemonic{LDEA}: 6 cycles, plus instruction-fetch wait states.
 
 	\textbf{Privilege:} Same as \mnemonic{LDEA}. Protected-mode branches must preserve the high word of \reg{p}.
 
-	\textbf{Examples:}
+	\textbf{Example 15-1:}
 	\begin{lstlisting}
 ; Unconditional branch forward
 BRAN #20                      ; Jump ahead 20 words
@@ -182,7 +202,19 @@ loop:
 \end{instructionbox}
 
 \begin{instructionbox}{BRSR -- Branch to Subroutine Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x3} (\reg{p}) by the meta-instruction.
+		\item \textbf{Immediate (bits 21--6):} signed 16-bit displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -191,8 +223,10 @@ BRSR @label                   ; l = next PC; p = p + label offset
 BRSR|cond #disp               ; Conditional PC-relative call
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{\#disp} is a 16-bit PC-relative word displacement. \texttt{@label} is resolved by the
-	linker to a PC-relative displacement from the next instruction address.
+	\textbf{Operands:} \texttt{\#disp} is a signed 16-bit word displacement (\texttt{-32768} to \texttt{+32767}) added to
+	the low word of \reg{p} modulo $2^{16}$; a call cannot change the program segment, so the displacement wraps within
+	the current 64K segment. \texttt{@label} is resolved by the linker to a word displacement from the address of the
+	call instruction itself.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -204,8 +238,9 @@ if condition:
 
 	\textbf{Description:}
 
-	Calls a PC-relative subroutine by saving the return address in \reg{l} and branching to the computed target. Return
-	with \mnemonic{RETS}, which assembles to \texttt{LDEA p, (\#0, l)}.
+	Calls a PC-relative subroutine by saving the return address in \reg{l} and branching to the computed target. The
+	displacement base is the branching instruction's own address, so the \mnemonic{BRSR} link value is that address plus 2
+	(the address of the next instruction). Return with \mnemonic{RETS}, which assembles to \texttt{LDEA p, (\#0, l)}.
 
 	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l} and \reg{p}.
 
@@ -213,7 +248,7 @@ if condition:
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEL}; may raise segment-overflow or protected-mode privilege faults.
 
-	\textbf{Condition codes:} If the condition is false, no call occurs, \reg{l} is not written, and status flags are
+	\textbf{Condition field:} If the condition is false, no call occurs, \reg{l} is not written, and status flags are
 	preserved.
 
 	\textbf{Timing:} Same as \mnemonic{LDEL}: 6 cycles, plus instruction-fetch wait states.
@@ -221,7 +256,7 @@ if condition:
 	\textbf{Privilege:} Same as \mnemonic{LDEL}. Protected-mode calls must preserve the high words written to \reg{l} and
 	\reg{p}.
 
-	\textbf{Examples:}
+	\textbf{Example 15-2:}
 	\begin{lstlisting}
 ; PC-relative call
 BRSR @function
@@ -235,7 +270,19 @@ RETS
 \section{Return Meta-Instruction}
 
 \begin{instructionbox}{RETS -- Return from Subroutine Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x0} (\reg{l}) by the meta-instruction.
+		\item \textbf{Immediate (bits 21--6):} fixed at \texttt{0x0000} by the meta-instruction.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -264,14 +311,14 @@ if condition:
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise protected-mode privilege faults if the return would change
 	\reg{p}'s high word.
 
-	\textbf{Condition codes:} If the condition is false, no return occurs and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no return occurs and status flags are preserved.
 
 	\textbf{Timing:} Same as \mnemonic{LDEA}: 6 cycles, plus instruction-fetch wait states.
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Examples:}
+	\textbf{Example 15-3:}
 	\begin{lstlisting}
 my_function:
     ; ... function body ...
@@ -283,21 +330,36 @@ my_function:
 \section{Load Effective Address}
 
 \begin{instructionbox}{LDEA -- Load Effective Address}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} destination address-register pair \texttt{dest};
+		      \texttt{0x0} = \reg{l}, \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		\item \textbf{Immediate (bits 21--6, immediate forms only):} 16-bit signed displacement.
+		\item \textbf{R3 (bits 17--14, register forms only):} \texttt{rO}, a general-purpose register supplying the
+		      displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LDEA dest, (#offset, src)     ; dest = src + offset
 LDEA dest, (src)              ; equivalent to LDEA dest, (#0, src)
-LDEA dest, (rS, src)          ; dest = src + rS
+LDEA dest, (rO, src)          ; dest = src + rO
 LDEA dest, -(#offset, src)    ; src -= 1; dest = src + offset
 LDEA dest, -(src)             ; equivalent to LDEA dest, -(#0, src)
-LDEA dest, -(rS, src)         ; src -= 1; dest = src + rS
+LDEA dest, -(rO, src)         ; src -= 1; dest = src + rO
 LDEA|cond dest, (#offset, src)
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{dest} and \texttt{src} are address-register pairs. Immediate forms use a 16-bit
-	displacement. Register forms use \texttt{rS} as a displacement. Pre-decrement forms also update \texttt{src}.
+	displacement. Register forms use \texttt{rO} as a displacement. Pre-decrement forms also update \texttt{src}.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -322,7 +384,7 @@ if condition:
 	\textbf{Exceptions:} May raise a segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
 	In protected mode, raises a privilege-violation fault if write-back would change a written address-register high word.
 
-	\textbf{Condition codes:} If the condition is false, no destination or source address register is written and status
+	\textbf{Condition field:} If the condition is false, no destination or source address register is written and status
 	flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states. No data-memory bus access is performed.
@@ -330,7 +392,7 @@ if condition:
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Examples:}
+	\textbf{Example 15-4:}
 	\begin{lstlisting}
 ; Pointer arithmetic
 LDEA a, (#16, a)              ; a = a + 16
@@ -345,21 +407,37 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 \end{instructionbox}
 
 \begin{instructionbox}{LDEL -- Load Effective Address and Link}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} destination address-register pair \texttt{dest};
+		      \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} (\texttt{0x0} = \reg{l} is not a legal
+		      \mnemonic{LDEL} destination).
+		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		\item \textbf{Immediate (bits 21--6, immediate forms only):} 16-bit signed displacement.
+		\item \textbf{R3 (bits 17--14, register forms only):} \texttt{rO}, a general-purpose register supplying the
+		      displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LDEL dest, (#offset, src)     ; l = next PC; dest = src + offset
 LDEL dest, (src)              ; equivalent to LDEL dest, (#0, src)
-LDEL dest, (rS, src)          ; l = next PC; dest = src + rS
+LDEL dest, (rO, src)          ; l = next PC; dest = src + rO
 LDEL dest, (#offset, src)+    ; l = next PC; dest = src + offset; src += 1
 LDEL dest, (src)+             ; equivalent to LDEL dest, (#0, src)+
-LDEL dest, (rS, src)+         ; l = next PC; dest = src + rS; src += 1
+LDEL dest, (rO, src)+         ; l = next PC; dest = src + rO; src += 1
 LDEL|cond dest, (#offset, src)
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{dest} and \texttt{src} are address-register pairs. Immediate forms use a 16-bit
-	displacement. Register forms use \texttt{rS} as a displacement. Post-increment forms also update \texttt{src}.
+	displacement. Register forms use \texttt{rO} as a displacement. Post-increment forms also update \texttt{src}.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -384,7 +462,7 @@ if condition:
 	\textbf{Exceptions:} May raise a segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
 	In protected mode, raises a privilege-violation fault if write-back would change a written address-register high word.
 
-	\textbf{Condition codes:} If the condition is false, no destination, link, or source address register is written and
+	\textbf{Condition field:} If the condition is false, no destination, link, or source address register is written and
 	status flags are preserved.
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states. No data-memory bus access is performed.
@@ -392,7 +470,7 @@ if condition:
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Examples:}
+	\textbf{Example 15-5:}
 	\begin{lstlisting}
 ; Absolute call through a
 LDEL p, (#0, a)               ; l = next PC; p = a
@@ -409,17 +487,33 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 \section{Long Jump Meta-Instructions}
 
 \begin{instructionbox}{LJMP -- Long Jump Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction.
+		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		\item \textbf{Immediate (bits 21--6, \texttt{\#offset} form only):} 16-bit signed displacement; fixed at
+		      \texttt{0x0000} for plain \texttt{LJMP src}.
+		\item \textbf{R3 (bits 17--14, \texttt{rO} form only):} \texttt{rO}, a general-purpose register supplying the
+		      displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LJMP src                      ; p = src
 LJMP src, #offset             ; p = src + offset
-LJMP src, rS                  ; p = src + rS
+LJMP src, rO                  ; p = src + rO
 LJMP|cond src                 ; Conditional long jump
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rS} operands select
+	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rO} operands select
 	immediate or register displacement forms.
 
 	\textbf{Operation:}
@@ -440,29 +534,60 @@ if condition:
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise segment-overflow or protected-mode privilege faults.
 
-	\textbf{Condition codes:} If the condition is false, no jump occurs and status flags are preserved.
+	\textbf{Condition field:} If the condition is false, no jump occurs and status flags are preserved.
 
 	\textbf{Timing:} Same as \mnemonic{LDEA}: 6 cycles, plus instruction-fetch wait states.
 
 	\textbf{Privilege:} Same as \mnemonic{LDEA}. Protected-mode jumps must preserve the high word of \reg{p}.
 
+	\textbf{Example 15-6:}
+	\begin{lstlisting}
+; Jump to address in a
+LJMP a                         ; p = a
+
+; Jump with offset
+LJMP a, #16                    ; p = a + 16
+
+; Jump with register displacement
+LOAD r1, #4
+LJMP a, r1                     ; p = a + r1
+\end{lstlisting}
+
 \end{instructionbox}
 
 \begin{instructionbox}{LJSR -- Long Jump to Subroutine Meta-Instruction}
+	\textbf{Applicability:} SIRC-1, all revisions
+
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction.
+		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} for non-post-increment forms. Post-increment forms
+		      accept only \texttt{0x1} = \reg{a} or \texttt{0x2} = \reg{s}; \reg{l} and \reg{p} are aliased
+		      address-register writes with architecturally undefined behavior and are rejected by the assembler.
+		\item \textbf{Immediate (bits 21--6, \texttt{\#offset} forms only):} 16-bit signed displacement; fixed at
+		      \texttt{0x0000} for plain \texttt{LJSR src}.
+		\item \textbf{R3 (bits 17--14, \texttt{rO} forms only):} \texttt{rO}, a general-purpose register supplying the
+		      displacement.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LJSR src                      ; l = next PC; p = src
 LJSR src, #offset             ; l = next PC; p = src + offset
-LJSR src, rS                  ; l = next PC; p = src + rS
+LJSR src, rO                  ; l = next PC; p = src + rO
 LJSR (#offset, src)+          ; l = next PC; p = src + offset; src += 1
 LJSR (src)+                   ; equivalent to LJSR (#0, src)+
-LJSR (rS, src)+               ; l = next PC; p = src + rS; src += 1
+LJSR (rO, src)+               ; l = next PC; p = src + rO; src += 1
 LJSR|cond src                 ; Conditional long call
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rS} operands select
+	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rO} operands select
 	immediate or register displacement forms. Post-increment forms also update \texttt{src}.
 
 	\textbf{Operation:}
@@ -479,7 +604,9 @@ if condition:
 
 	Calls a subroutine through an address register. The return address is saved in \reg{l}; return with \mnemonic{RETS}.
 	Post-increment forms advance \texttt{src} after computing the target. Because \mnemonic{LJSR} implicitly writes \reg{l}
-	and \reg{p}, post-increment source registers cannot be \reg{l} or \reg{p}.
+	and \reg{p}, post-increment source registers must not be \reg{l} or \reg{p}; such forms are aliased address-register
+	writes with architecturally undefined behavior and are rejected by the assembler (see
+	Appendix~\ref{appendix:undocumented}).
 
 	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l}, \reg{p}, and any post-increment source register.
 
@@ -487,7 +614,7 @@ if condition:
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEL}; may raise segment-overflow or protected-mode privilege faults.
 
-	\textbf{Condition codes:} If the condition is false, no call occurs, \reg{l} is not written, any post-increment source
+	\textbf{Condition field:} If the condition is false, no call occurs, \reg{l} is not written, any post-increment source
 	register is preserved, and status flags are preserved.
 
 	\textbf{Timing:} Same as \mnemonic{LDEL}: 6 cycles, plus instruction-fetch wait states.
@@ -495,15 +622,16 @@ if condition:
 	\textbf{Privilege:} Same as \mnemonic{LDEL}. Protected-mode calls must preserve the high words written to \reg{l} and
 	\reg{p}.
 
-	\textbf{Examples:}
+	\textbf{Example 15-7:}
 	\begin{lstlisting}
 ; Call function at address in a
+; supervisor mode only -- writing ah is privileged
 LOAD ah, #0x0040
 LOAD al, #0x0000              ; a = 0x00400000
 LJSR a                        ; Call 0x00400000
 
 ; Call with offset
-LJSR a, #function_offset      ; p = a + function_offset
+LJSR a, @function_offset      ; p = a + function_offset
 
 ; Call with register displacement
 LOAD r1, #8
@@ -548,12 +676,13 @@ while_end:
 \begin{lstlisting}
 ; Switch on r1 (0-3)
 LOAD r2, r1                   ; r2 = r1
-ADDI r2, #0, LSL #1           ; r2 = (r2 << 1) = r2 * 2 (word size)
-LDEA p, (r2, p)               ; Jump via table
+; Scale the index to a 2-word BRAN entry and skip over this LDEA
+ADDI r2, #2, LSL #1           ; r2 = (r2 << 1) + 2
+LDEA p, (r2, p)               ; Jump into the branch table below
 
 jump_table:
-    DW case0 - jump_table
-    DW case1 - jump_table
-    DW case2 - jump_table
-    DW case3 - jump_table
+    BRAN @case0
+    BRAN @case1
+    BRAN @case2
+    BRAN @case3
 \end{lstlisting}

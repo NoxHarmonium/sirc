@@ -52,9 +52,9 @@ storage unless an instruction explicitly writes the high register.
 		\toprule
 		\textbf{Pair value} & \textbf{High register} & \textbf{Low register} & \textbf{Address bus value} \\
 		\midrule
-		\reg{ah:al}         & \texttt{0x0012}        & \texttt{0x3456}       & \texttt{0x123456}          \\
-		\reg{ah:al}         & \texttt{0xAB12}        & \texttt{0x3456}       & \texttt{0x123456}          \\
-		\reg{ph:pl}         & \texttt{0x0000}        & \texttt{0x0100}       & \texttt{0x000100}          \\
+		\reg{ah:al}         & \texttt{0x0012}        & \texttt{0x3456}       & \addr{0x123456}            \\
+		\reg{ah:al}         & \texttt{0xAB12}        & \texttt{0x3456}       & \addr{0x123456}            \\
+		\reg{ph:pl}         & \texttt{0x0000}        & \texttt{0x0100}       & \addr{0x000100}            \\
 		\bottomrule
 	\end{tabular}
 	\caption{Address Register Pair Interpretation}
@@ -70,8 +70,8 @@ Only bits 7--0 of the high word are significant when the value is loaded as an a
 		\toprule
 		\textbf{Stored address} & \textbf{Word at address N} & \textbf{Word at address N+1} \\
 		\midrule
-		\texttt{0x123456}       & \texttt{0x0012}            & \texttt{0x3456}              \\
-		\texttt{0xFECAFE}       & \texttt{0x00FE}            & \texttt{0xCAFE}              \\
+		\addr{0x123456}         & \texttt{0x0012}            & \texttt{0x3456}              \\
+		\addr{0xFECAFE}         & \texttt{0x00FE}            & \texttt{0xCAFE}              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Stored 24-bit Address Format}
@@ -87,23 +87,25 @@ Every instruction is 32 bits, stored as two consecutive 16-bit words:
 	\item Word at \reg{p}+1: instruction bits 15--0
 \end{itemize}
 
-Instruction fetch reads the high word first, increments \reg{p} by one word, reads the low word, then increments
-\reg{p} by one word again. Instruction addresses must be even word addresses. Fetching from an odd word address raises
-an alignment fault.
+Instruction fetch reads the high word from the address in \reg{p} and the low word from that address plus one. \reg{p}
+itself is not modified during the fetch; it advances by two words during instruction decode, so an instruction that
+reads or uses \reg{p} as an address register sees the address of the instruction itself. Instruction addresses must be
+even word addresses. Fetching from an odd word address raises an alignment fault.
 
 \section{Exception Vector Storage}
 \label{sec:exception-vector-storage}
 
 Each exception vector table entry is a stored 24-bit address in the format shown in
-Table~\ref{tab:stored-address-format}. Vector entry \texttt{V} starts at word address \texttt{V * 2}:
+Table~\ref{tab:stored-address-format}. The vector table begins at word address \addr{0x000000}, so vector entry
+\texttt{V} starts at word address \texttt{V * 2}:
 
 \begin{itemize}
 	\item Word at \texttt{V * 2}: target address high word
 	\item Word at \texttt{V * 2 + 1}: target address low word
 \end{itemize}
 
-For example, vector \texttt{0x06} occupies word addresses \texttt{0x00000C} and \texttt{0x00000D}. If it should jump to
-\texttt{0x123456}, those two words contain \texttt{0x0012} and \texttt{0x3456}.
+For example, vector \texttt{0x06} occupies word addresses \addr{0x00000C} and \addr{0x00000D}. To jump to
+\addr{0x123456}, those two words contain \texttt{0x0012} and \texttt{0x3456}.
 
 \section{Immediate Values}
 
@@ -114,13 +116,13 @@ is interpreted as signed, unsigned, or bitwise data.
 	\centering
 	\begin{tabularx}{\textwidth}{llX}
 		\toprule
-		\textbf{Use}                   & \textbf{Width} & \textbf{Interpretation}                                              \\
+		\textbf{Use}                   & \textbf{Width} & \textbf{Interpretation}                                                                                                                    \\
 		\midrule
-		ALU arithmetic immediate       & 16 bits        & Two's-complement operand; result is truncated to 16 bits             \\
-		ALU arithmetic short immediate & 8 bits         & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF}      \\
-		ALU logical immediates         & 16 or 8 bits   & Bit mask; no sign interpretation is applied by the logical operation \\
-		Memory displacements           & 16 bits        & Two's-complement offset added to the low address word                \\
-		Coprocessor operands           & 16 bits        & Coprocessor-defined command or parameter bits                        \\
+		ALU arithmetic immediate       & 16 bits        & Two's-complement operand; result is truncated to 16 bits                                                                                   \\
+		ALU arithmetic short immediate & 8 bits         & Zero-extended operand in the range \texttt{0x00}--\texttt{0xFF}                                                                            \\
+		ALU logical immediates         & 16 or 8 bits   & Bit mask; no sign interpretation is applied by the logical operation                                                                       \\
+		Memory displacements           & 16 bits        & Two's-complement displacement added to the low address word; see Section~\ref{sec:arithmetic-and-address-wraparound} for the overflow trap \\
+		Coprocessor operands           & 16 bits        & Coprocessor-defined command or parameter bits                                                                                              \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Immediate Field Interpretation}
@@ -128,9 +130,9 @@ is interpreted as signed, unsigned, or bitwise data.
 \end{table}
 
 Short immediates occupy an 8-bit field and are zero-extended before use by ALU arithmetic. They are therefore suitable
-for compact non-negative constants and bit masks, not for encoding negative arithmetic operands. Assemblers must reject
-values that cannot be represented in the selected immediate field width unless they deliberately offer a documented
-truncation mode.
+for compact non-negative constants and bit masks, not for encoding negative arithmetic operands. A value that cannot be
+represented in the selected immediate field width is truncated to that width; the reference assembler does not diagnose
+this truncation except for the short-immediate-with-shift form, which is range-checked.
 
 Short immediates are not used for memory, effective-address, branch, jump, or subroutine-call displacements. Those
 forms use 16-bit immediate displacements, register displacements, or assembler-resolved full-width branch offsets.
@@ -146,19 +148,24 @@ Software standards may build on the architectural high-word-first rule for wider
 those conventions are non-normative unless a separate ABI or toolchain document says otherwise.
 
 \section{Arithmetic and Address Wraparound}
+\label{sec:arithmetic-and-address-wraparound}
 
 General-purpose register arithmetic is performed modulo $2^{16}$. Arithmetic condition flags describe the truncated
 16-bit result: C records unsigned carry or borrow, and V records signed overflow.
 
-Address calculation for memory, effective-address, branch, jump, and auto-update operations adds offsets to the low
-word of the selected address register pair. The high address-register word is not changed by ordinary displacement,
+Address calculation for memory, effective-address, branch, jump, and auto-update operations adds displacements to the
+low word of the selected address register pair. The high address-register word is not changed by ordinary displacement,
 pre-decrement, or post-increment calculation. If the low word overflows or underflows and \texttt{SR.A} (Trap on
-Address Overflow) is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps
-modulo $2^{16}$.
+Address Overflow)\footnote{\texttt{SR.\textit{X}} denotes bit or field \textit{X} of the status register; see
+Chapter~\ref{ch:status-register} for the bit layout and Chapter~\ref{ch:reading-instructions} for the full notation
+convention.} is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps
+modulo $2^{16}$. Displacements are signed two's-complement, and the trap fires only when the low-word calculation
+wraps, whether the displacement is positive or negative.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
-alignment fault.
+alignment fault. If the program counter wraps the low word while \texttt{SR.A} is set, a segment-overflow fault is
+raised at the next instruction fetch, not on the instruction that caused the wrap.
 
 \section{Memory Ordering}
 

@@ -7,8 +7,8 @@ The Status Register (\reg{sr}) is a 16-bit special-purpose register that contain
 the CPU. It is divided into two bytes with different privilege levels:
 
 \begin{itemize}
-	\item \textbf{Lower Byte (bits 7--0):} Condition flags -- readable and writable in both supervisor and protected modes
-	\item \textbf{Upper Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode
+	\item \textbf{Low Byte (bits 7--0):} Condition flags -- readable in both modes, and updated as a side effect of ALU and shift instructions in both modes; a direct write to \reg{sr} is privileged and raises a privilege violation fault in protected mode
+	\item \textbf{High Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode
 \end{itemize}
 
 \section{Status Register Layout}
@@ -42,8 +42,9 @@ the CPU. It is divided into two bytes with different privilege levels:
 
 \section{Condition Flags (Non-Privileged)}
 
-These flags reflect the results of ALU operations and comparisons. They can be read and written by code running in any
-privilege level.
+These flags reflect the results of ALU operations and comparisons. They can be read at any privilege level and are
+updated by ordinary instruction execution at any privilege level, but a direct write to \reg{sr} is a privileged
+operation (see Section~\ref{sec:sr-manual-updates}).
 
 \subsection{Zero Flag (Z) -- Bit 0}
 
@@ -83,7 +84,9 @@ privilege level.
 
 \subsection{Reserved Flags -- Bits 4--7}
 
-Bits 4 through 7 of the lower byte are reserved for future use. They should not be relied upon by software.
+Bits 4 through 7 of the lower byte are reserved for future use; software must not rely on them. These bits can be
+written by a supervisor-mode direct write to \reg{sr}, but any subsequent ALU or shift flag update clears them to zero.
+They read as zero after any flag-updating instruction.
 
 \section{Control Flags (Privileged)}
 
@@ -97,11 +100,11 @@ protected mode raise a privilege violation fault.
 	\item[When Set (1):] CPU operates in protected mode with restricted access to:
 	      \begin{itemize}
 		      \item High address-register components (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph})
-		      \item Upper byte of status register
-		      \item Privileged coprocessor operations (opcodes > 0x07xx)
+		      \item High byte of status register
+		      \item Privileged coprocessor operations (command-word operation nibble \texttt{0x8}--\texttt{0xF}, bits 11--8)
 	      \end{itemize}
 	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. Performing a
-	      restricted operation will cause a "privilege violation" fault.
+	      restricted operation raises a privilege violation fault.
 \end{description}
 
 \subsection{Hardware Interrupt Enable Bits (E1-E4) -- Bits 9--12}
@@ -119,11 +122,13 @@ These four bits individually control whether each of the four maskable hardware 
 be disabled via the status register.
 
 When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
-When cleared to 0, interrupts on that line are disabled and will not be serviced.
+When cleared to 0, interrupts on that line are disabled and are not serviced.
 
 \textbf{Important behavior:}
 \begin{itemize}
-	\item Disabled interrupts are not queued -- they are completely ignored while the enable bit is 0
+	\item Disabled interrupts are not queued while the enable bit is 0.
+	\item Hardware interrupt lines 1-4 are level-sensitive, not edge-triggered. If an interrupt pin
+	      remains asserted, it will be serviced again as soon as the current handler is finished.
 	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
 	      exception level
 	\item This prevents the same interrupt from re-triggering while its handler is executing
@@ -143,9 +148,9 @@ Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
 	\item[When Clear (0):] The CPU is executing normal code (\texttt{current\_exception\_level == 0})
 	\item[Automatically Set:] When any exception is entered (software, hardware, or fault)
 	\item[Automatically Cleared:] When returning to exception level 0 via \mnemonic{RETE}
-	\item[Purpose:] Allows software to detect whether it's running within an exception handler context
-	\item[Typical Use:] OS code can check this bit to determine appropriate behavior (e.g., avoid re-enabling interrupts during
-	      nested exception handling)
+	\item[Purpose:] Allows software to detect whether it is running within an exception handler context
+	\item[Typical Use:] OS code can check this bit to determine appropriate behavior, for example avoiding re-enabling interrupts
+	      during nested exception handling
 \end{description}
 
 \textbf{Note:} This bit reflects the internal \texttt{current\_exception\_level} state. Programs can read this bit but
@@ -154,7 +159,9 @@ cannot directly modify it -- it is managed automatically by the exception handli
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
 \begin{description}
-	\item[When Set (1):] Memory address calculations that overflow or underflow will trigger an address overflow exception
+	\item[When Set (1):] An effective-address calculation or a program-counter advance that wraps the low word raises a segment
+	      overflow fault (vector \texttt{0x03}). For a program-counter wrap the fault is raised at the following instruction
+	      fetch
 	\item[When Clear (0):] Address overflows wrap around without any side effects
 	\item[Purpose:] Helps detect pointer errors during development
 	\item[Typical Use:] Enabled during debugging, disabled in production for performance
@@ -180,11 +187,15 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z and N flags; C and V flags are cleared
 	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Same as Arithmetic Instructions but does not update destination
 	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
-	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Does not update condition flags
+	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): \mnemonic{LOAD} never updates the condition
+	      flags -- the assembler always assembles it with status source \texttt{[N]}, giving the flag row
+	      \texttt{- - - -}. An explicit status update override written on \mnemonic{LOAD} leaves all four flags
+	      architecturally undefined (\texttt{U U U U}). \mnemonic{LDEA} never updates the condition flags
 	\item \textbf{Shift Operations}: Can optionally update flags based on the instruction's status register update source field
 \end{itemize}
 
 \subsection{Manual Updates}
+\label{sec:sr-manual-updates}
 
 In supervisor mode, the status register can be directly manipulated like any other register:
 
@@ -204,6 +215,13 @@ LOAD sr, (s)+
 
 \end{lstlisting}
 
+An ALU instruction that targets \reg{sr} writes its result to \reg{sr} and then overwrites bits 7--0 with the flags
+produced by that same instruction, so only bits 15--8 can be set this way. To write the low byte, suppress the flag
+update with the \texttt{[N]} status source (for example \mnemonic{ORRI[N]} \reg{sr}, \imm{0x0003}) or use
+\mnemonic{LOAD} \reg{sr}, \texttt{rN}. A direct write to \reg{sr} also preserves the current value of bit 13
+(\texttt{EA}); only \mnemonic{RETE} restores it, so the \mnemonic{LOAD} \reg{sr}, (s)+ restore above does not reproduce
+the exception-active state saved at the time of the original write.
+
 \textbf{Important:} When running in protected mode, any direct write to the status register raises a privilege violation
 fault. Protected-mode programs can still affect condition flags through ordinary ALU and shift instruction execution;
 they cannot directly load or store \reg{sr}.
@@ -217,8 +235,8 @@ lower byte in bits 7--0, with bits 15--8 masked to zero (for security).
 ; In supervisor mode - gets full 16 bits
 LOAD r1, sr  ; r1 = 0xXXXX (all bits)
 
-; In protected mode - upper byte masked
-LOAD r1, sr  ; r1 = 0x00XX (upper byte forced to 0)
+; In protected mode - high byte masked
+LOAD r1, sr  ; r1 = 0x00XX (high byte forced to 0)
 \end{lstlisting}
 
 \section{Exception Handling Effects}
@@ -229,14 +247,15 @@ When an exception occurs:
 	\item The current status register is saved
 	\item Protected mode bit (P) is cleared (entering supervisor mode)
 	\item Trace mode bit (T) is cleared (disabling single-stepping in exception handler)
-	\item Interrupts may be masked depending on exception type
+	\item The hardware interrupt enable bits are not changed. A pending interrupt is serviced during a handler only if its
+	      priority level is higher than the current exception level
 \end{enumerate}
 
 When returning from an exception with \mnemonic{RETE}, the saved status register is restored.
 
 \section{Usage Examples}
 
-\subsection{Conditional Execution}
+\subsection{Example 5-1: Conditional Execution}
 
 \begin{lstlisting}
 ; Compare r1 with r2
@@ -252,7 +271,7 @@ BRAN|HI @label_greater
 ADDI|>= r1, #0x16
 \end{lstlisting}
 
-\subsection{Manual Status Flag Control}
+\subsection{Example 5-2: Manual Status Flag Control}
 
 The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
 particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
@@ -268,7 +287,7 @@ ADDI[N] r3, #1                ; Increment without changing flags
 BRAN|== @still_uses_cmpr_flags ; Branch uses CMPR flags
 \end{lstlisting}
 
-\subsection{Testing Bits}
+\subsection{Example 5-3: Testing Bits}
 
 \begin{lstlisting}
 ; Test if bit 5 is set in r1
@@ -278,7 +297,7 @@ TSAI r1, #0x0020  ; AND with 0x0020, update flags only
 BRAN|!= @bit_was_set
 \end{lstlisting}
 
-\subsection{Enabling Protected Mode}
+\subsection{Example 5-4: Enabling Protected Mode}
 
 \begin{lstlisting}
 ; Entering protected mode (from supervisor mode)
@@ -289,16 +308,20 @@ ORRI sr, #0x0100  ; Set protected mode bit
 ; ADDI ah, #0x05  ; This would cause exception!
 \end{lstlisting}
 
-\subsection{Saving and Restoring Status}
+\subsection{Example 5-5: Saving and Restoring Status}
 
 \begin{lstlisting}
 ; Save status register
 LOAD r7, sr
 
 ; Do some operations that change flags
-ADDI r1, r2, r3
+ADDR r1, r2, r3
 CMPI r1, #100
 
 ; Restore original status
 LOAD sr, r7
 \end{lstlisting}
+
+The restore above does not reproduce bit 13 (\texttt{EA}) as it stood at the time of the save: a direct write to
+\reg{sr} always preserves the register's current \texttt{EA} value rather than adopting the written one, so only
+\mnemonic{RETE} can restore \texttt{EA}.

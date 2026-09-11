@@ -5,10 +5,9 @@
 
 Most SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
-adding execution phases. DMA meta-instructions are the main exception: after the normal coprocessor dispatch they hold
-instruction fetch until the DMA unit has completed its bus transfers. This fixed execution sequence greatly simplifies
-software development and hardware design. See Chapter~\ref{ch:cpu-architecture} for the bus signal timing, wait-state,
-and response-priority rules.
+adding execution phases. Coprocessor calls are the exception: the dispatched coprocessor occupies at least one further
+slot after the six-phase call. This fixed execution sequence greatly simplifies software development and hardware
+design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -27,21 +26,25 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lc}
+	\begin{tabular}{p{6.5cm}p{6.5cm}}
 		\toprule
-		\textbf{Instruction Type}  & \textbf{Cycles}    \\
+		\textbf{Instruction Type}                                                                             & \textbf{Cycles}                                           \\
 		\midrule
-		ALU (Register)             & 6                  \\
-		ALU (Immediate)            & 6                  \\
-		Load from Memory           & 6                  \\
-		Store to Memory            & 6                  \\
-		Branch (taken)             & 6                  \\
-		Branch (not taken)         & 6                  \\
-		Conditional (executed)     & 6                  \\
-		Conditional (not executed) & 6                  \\
-		NOOP                       & 6                  \\
-		DMAR/DMAW                  & $6 + \max(|n|, 1)$ \\
-		DMAT                       & $6 + \max(2n, 1)$  \\
+		ALU (Register)                                                                                        & 6                                                         \\
+		ALU (Immediate)                                                                                       & 6                                                         \\
+		Load from Memory                                                                                      & 6                                                         \\
+		Store to Memory                                                                                       & 6                                                         \\
+		Branch (taken)                                                                                        & 6                                                         \\
+		Branch (not taken)                                                                                    & 6                                                         \\
+		Conditional (executed)                                                                                & 6                                                         \\
+		Conditional (not executed)                                                                            & 6                                                         \\
+		\mnemonic{NOOP}                                                                                       & 6                                                         \\
+		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $12 + \max(|n| - 1, 0)$                                   \\
+		\mnemonic{DMAT}                                                                                       & $12 + \max(2n - 1, 0)$                                    \\
+		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch)                           \\
+		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch)                                       \\
+		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch) \\
+		\mnemonic{WAIT}                                                                                       & 12 + idle until an enabled interrupt or reset             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Timing}
@@ -53,13 +56,29 @@ The cycle counts in this appendix assume that every bus operation is acknowledge
 DMA bus access. A conditional DMA meta-instruction whose condition is false does not dispatch to the DMA unit and takes
 only 6 cycles.
 
+\subsection{Exception and Fault Timing}
+
+A hardware-exception or fault dispatch occupies one 6-cycle slot: the vector's high word is fetched at phase 0, the low
+word at phase 1, and entry to the handler is committed at phase 3. A latched interrupt is dispatched at the next phase
+0, so the worst-case latency from assertion to the handler's first instruction fetch is 6 cycles to finish the current
+instruction plus 6 cycles to dispatch. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector fetch.
+
+A fault aborts the six-phase sequence of the faulting instruction at the phase that detects it; the remaining phases of
+that instruction do not run. Alignment is detected before phase 0; Privilege Violation is detected at phase 2; Segment
+Overflow is detected at phase 2 or phase 3; Bus and Bus Protection faults are detected at the phase that acknowledges
+the failing bus access. In every case the exception-unit dispatch slot begins in the cycle immediately following
+detection. Alignment, Bus, Bus Protection, Privilege Violation, and PC-wrap Segment Overflow save the address of the faulting
+instruction and are retryable; only Invalid Opcode and non-PC-wrap Segment Overflow save the address of the next
+instruction and are not restartable.
+
 \section{Conditional Execution}
 
 When a conditional instruction's condition is not met:
 \begin{itemize}
-	\item The instruction still takes 6 cycles to complete when no bus wait states are required
-	\item All execution phases run normally
-	\item The write-back stage is disabled (no register or memory modification)
+	\item All six phases still occur and consume one cycle each
+	\item The execute, memory-access, and write-back phases perform no operation: no effective address is computed, no
+	      \texttt{SR.A} overflow check is made, and no data bus cycle is driven
+	\item No register, memory, or address-register update occurs
 	\item Status flags are not updated
 \end{itemize}
 
@@ -71,11 +90,11 @@ execution time.
 \subsection{Simple Loop}
 \begin{lstlisting}
 ; Process 10 elements (assuming no bus wait states)
-ADDI r7, #0, #10              ; 6 cycles
-loop:
+LOAD r7, #10                  ; 6 cycles
+:loop
     LOAD r1, (#0, a)+         ; 6 cycles
     ADDI r1, #1               ; 6 cycles
-    STOR (#-2, a), r1         ; 6 cycles
+    STOR (#-1, a), r1         ; 6 cycles
     SUBI r7, #1               ; 6 cycles
     BRAN|!= @loop             ; 6 cycles
 ; Total per iteration: 30 cycles
@@ -124,6 +143,10 @@ simultaneously. Instead:
 	\item If BACK is not asserted and neither BERR nor BPER aborts the request, the CPU holds that phase until the bus operation
 	      is acknowledged.
 	\item Each wait state adds one clock cycle to the instruction
+	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception or
+	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own. A
+	      system that inserts $w$ wait states per access therefore adds $2w$ cycles to an ALU instruction and $3w$ cycles to a
+	      load or store.
 \end{itemize}
 
 \subsection{Optimization Guidelines}
@@ -133,9 +156,9 @@ simultaneously. Instead:
 	      \begin{lstlisting}
 ; Instead of:
 CMPR r1, r2
-BRAN|<= @skip
+BRAN|LO @skip
 ADDI r3, #1
-skip:
+:skip
 
 ; Use:
 CMPR r1, r2
@@ -145,8 +168,8 @@ ADDI|HI r3, #1             ; Saves branch overhead
 	\item \textbf{Combine operations with shifts}
 	      \begin{lstlisting}
 ; Instead of:
-ADDR r1, r2, r2
-ADDI r1, #0, LSL #1
+ADDR r1, r2, r2            ; r1 = 2 * r2
+ADDR r1, r1, r2            ; r1 = 3 * r2
 
 ; Use:
 ADDR r1, r2, r2, LSL #1    ; Multiply by 3 in one instruction
@@ -156,7 +179,7 @@ ADDR r1, r2, r2, LSL #1    ; Multiply by 3 in one instruction
 	      \begin{lstlisting}
 ; Instead of:
 LOAD r1, (#0, a)
-ADDI a, #2
+ADDI al, #1
 
 ; Use:
 LOAD r1, (#0, a)+          ; Same result, fewer cycles
@@ -166,7 +189,7 @@ LOAD r1, (#0, a)+          ; Same result, fewer cycles
 	      \begin{lstlisting}
 ; Instead of processing one item per iteration,
 ; process multiple items to reduce branch overhead
-loop:
+:loop
     LOAD r1, (#0, a)+
     LOAD r2, (#0, a)+
     LOAD r3, (#0, a)+
@@ -184,7 +207,7 @@ At a given clock frequency:
 \begin{itemize}
 	\item \textbf{Instructions per second:} $f_{clock} / 6$
 	\item \textbf{At 10 MHz:} $\approx$ 1.67 million instructions/second
-	\item \textbf{At 25 MHz:} $\approx$ 4.17 million instructions/second
+	\item \textbf{At 24 MHz (maximum rated clock):} $\approx$ 4.0 million instructions/second
 \end{itemize}
 
 These are theoretical maximums assuming perfect code with no inefficiencies.
@@ -199,8 +222,8 @@ These are theoretical maximums assuming perfect code with no inefficiencies.
 		\textbf{CPU}   & \textbf{Avg CPI} & \textbf{Notes}                                            \\
 		\midrule
 		SIRC-1         & 6.0              & Fixed for ordinary instructions; DMA adds transfer cycles \\
-		MOS 6502       & 2-7              & Variable by instruction                                   \\
-		Motorola 68000 & 4-158            & Highly variable                                           \\
+		MOS 6502       & 2--7             & Variable by instruction                                   \\
+		Motorola 68000 & 4--158           & Highly variable                                           \\
 		ARM6           & 1.0              & Single-cycle with pipeline                                \\
 		MIPS R2000     & 1.0              & Single-cycle with pipeline                                \\
 		\bottomrule
@@ -208,5 +231,5 @@ These are theoretical maximums assuming perfect code with no inefficiencies.
 	\caption{Cycles Per Instruction Comparison}
 \end{table}
 
-The SIRC-1's fixed 6-cycle execution makes it slower than pipelined RISC CPUs but more predictable. It's comparable to
+The SIRC-1's fixed 6-cycle execution makes it slower than pipelined RISC CPUs but more predictable. It is comparable to
 early microprocessors while being simpler to implement in hardware.

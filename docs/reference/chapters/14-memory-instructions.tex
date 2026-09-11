@@ -12,16 +12,19 @@ The SIRC-1 provides two primary memory operations:
 	\item \mnemonic{STOR} -- Write from a register to memory
 \end{itemize}
 
-Both instructions support four memory addressing forms:
+\mnemonic{LOAD} and \mnemonic{STOR} each support four memory addressing forms. Both support indirect addressing with
+an immediate offset and indirect addressing with a register offset; \mnemonic{LOAD} additionally supports
+post-increment and \mnemonic{STOR} additionally supports pre-decrement:
 \begin{itemize}
 	\item Indirect with immediate offset: \texttt{(\#offset, addr)}
-	\item Indirect with register offset: \texttt{(reg, addr)}
-	\item Post-increment load: \texttt{(\#offset, addr)+} or \texttt{(reg, addr)+}
-	\item Pre-decrement store: \texttt{-(\#offset, addr)} or \texttt{-(reg, addr)}
+	\item Indirect with register offset: \texttt{(rO, addr)}
+	\item Post-increment (\mnemonic{LOAD} only): \texttt{(\#offset, addr)+} or \texttt{(rO, addr)+}
+	\item Pre-decrement (\mnemonic{STOR} only): \texttt{-(\#offset, addr)} or \texttt{-(rO, addr)}
 \end{itemize}
 
-\textbf{Important:} Register-offset memory forms support optional shift operations on the data being loaded or stored.
-Immediate-offset memory forms do not encode a shift field. See Section~\ref{sec:memory-shifts} for details. Shifts are
+\textbf{Important:} \mnemonic{STOR}'s register-offset forms support an optional shift suffix, applied to the source
+register value before it is written to memory. \mnemonic{LOAD} does not support a shift suffix on any form: the
+offset register \texttt{rO} is always used unshifted. See Section~\ref{sec:memory-shifts} for details. Shifts are
 also \textbf{not} supported when loading immediate values or copying register values directly.
 
 \section{Effective Address Calculation}
@@ -29,36 +32,38 @@ also \textbf{not} supported when loading immediate values or copying register va
 For all memory operations, the effective address (EA) is calculated as:
 
 \begin{equation}
-	\text{EA} = \text{AddressRegister} + \text{Offset}
+	\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{Displacement})
 \end{equation}
 
 Where:
 \begin{itemize}
 	\item Address Register is one of: \reg{l}, \reg{a}, \reg{s}, or \reg{p}
-	\item Offset is either an immediate value or register contents
+	\item Displacement is either a 16-bit signed immediate value or the unshifted contents of the offset register
+	      \texttt{rO}
 \end{itemize}
 
-The resulting 24-bit address is used to access memory.
+The high word supplies the segment and is not changed by the displacement; only the low word participates in the
+addition, modulo $2^{16}$.
 
 \section{Legal Forms}
 
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabular}{llll}
+	\begin{tabularx}{\textwidth}{lll>{\raggedright\arraybackslash}X}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                        & \textbf{Encoding} & \textbf{Notes}                                  \\
+		\textbf{Instruction} & \textbf{Syntax}                        & \textbf{Encoding} & \textbf{Notes}                                                  \\
 		\midrule
-		LOAD                 & \texttt{LOAD rD, (\#offset, addr)}     & 0x14              & Immediate offset                                \\
-		LOAD                 & \texttt{LOAD rD, (rO, addr)[, shift]}  & 0x15              & Register offset; optional load-result shift     \\
-		LOAD                 & \texttt{LOAD rD, (\#offset, addr)+}    & 0x16              & Immediate offset; post-increment                \\
-		LOAD                 & \texttt{LOAD rD, (rO, addr)+[, shift]} & 0x17              & Register offset; optional shift; post-increment \\
-		STOR                 & \texttt{STOR (\#offset, addr), rS}     & 0x10              & Immediate offset                                \\
-		STOR                 & \texttt{STOR (rO, addr), rS[, shift]}  & 0x11              & Register offset; optional source shift          \\
-		STOR                 & \texttt{STOR -(\#offset, addr), rS}    & 0x12              & Immediate offset; pre-decrement                 \\
-		STOR                 & \texttt{STOR -(rO, addr), rS[, shift]} & 0x13              & Register offset; optional shift; pre-decrement  \\
+		LOAD                 & \texttt{LOAD rD, (\#offset, addr)}     & \opcode{14}       & Immediate offset                                                \\
+		LOAD                 & \texttt{LOAD rD, (rO, addr)}           & \opcode{15}       & Register offset; no shift suffix                                \\
+		LOAD                 & \texttt{LOAD rD, (\#offset, addr)+}    & \opcode{16}       & Immediate offset; post-increment                                \\
+		LOAD                 & \texttt{LOAD rD, (rO, addr)+}          & \opcode{17}       & Register offset; no shift suffix; post-increment                \\
+		STOR                 & \texttt{STOR (\#offset, addr), rS}     & \opcode{10}       & Immediate offset                                                \\
+		STOR                 & \texttt{STOR (rO, addr), rS[, shift]}  & \opcode{11}       & Register offset; optional source shift                          \\
+		STOR                 & \texttt{STOR -(\#offset, addr), rS}    & \opcode{12}       & Immediate offset; pre-decrement                                 \\
+		STOR                 & \texttt{STOR -(rO, addr), rS[, shift]} & \opcode{13}       & Register offset; optional shift; pre-decrement                  \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Legal Memory Instruction Forms}
 	\label{tab:memory-legal-forms}
 \end{table}
@@ -68,50 +73,64 @@ The resulting 24-bit address is used to access memory.
 as the matching \texttt{\#0} forms. This shorthand does not add new addressing modes: \mnemonic{LOAD} has no
 pre-decrement form and \mnemonic{STOR} has no post-increment form.
 
+\noindent\textbf{Aliased register writes:} In post-increment \mnemonic{LOAD} forms the destination register must not
+be either half of the auto-updated address-register pair; in pre-decrement \mnemonic{STOR} forms the source register
+must not be either half of the auto-updated pair. The result of such an encoding is architecturally undefined and the
+assembler rejects it.
+
 \section{Common Memory Semantics}
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                            \\
+		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                                                                      \\
 		\midrule
-		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved.                                                                                                                      \\
-		Address calculation & Immediate-offset forms add the 16-bit encoded offset to the selected address register low word. Register-offset forms add \texttt{rO} to the selected address register low word. The selected address register high word supplies the segment. \\
-		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                     \\
-		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access.                                       \\
-		Status flags        & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register.                                                                                                                           \\
-		Timing              & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase.                                                                                              \\
-		Exceptions          & Memory instructions can raise data bus, data bus-protection, and segment-overflow faults; see the notes below.                                                                                                                                 \\
-		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase. If a fault aborts execution before write-back, those write-back effects do not occur.                                         \\
+		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved.                                                                                                                                                                                                                                                                                                                                \\
+		Address calculation & Immediate-offset forms add the 16-bit signed displacement to the selected address register low word. Register-offset forms add the unshifted \texttt{rO} to the selected address register low word; \texttt{rO} is never shifted, even on \mnemonic{STOR}'s register-offset forms, which shift the value being stored instead. The selected address register high word supplies the segment and is unchanged.                                                                                                                                                            \\
+		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                                               \\
+		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                 \\
+		Status flags        & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register.                                                                                                                                                                                                                                                                                                                                     \\
+		Timing              & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase.                                                                                                                                                                                                                                                                                                        \\
+		Exceptions          & Memory instructions can raise data bus, data bus-protection, segment-overflow, and privilege-violation faults; see the notes below.                                                                                                                                                                                                                                                                                                                      \\
+		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase, so a fault that aborts execution before write-back leaves them undone. Data bus, data bus-protection, and privilege-violation faults are retryable: the saved return address is the address of the faulting instruction, so returning from the fault handler with \mnemonic{RETE} retries the same memory access. Segment-overflow is the exception: it is retryable only when raised by program-counter wraparound, which cannot happen during a memory instruction's effective-address calculation, so a segment-overflow fault raised here is never retryable and resumes after the faulting access (see Chapter~\ref{ch:exceptions}). \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Memory Instruction Semantics}
 	\label{tab:memory-common-semantics}
 \end{table}
 
-\noindent Memory instructions can raise data bus and data bus-protection faults during the memory-access phase.
-Effective-address calculation can raise a segment-overflow fault when \texttt{SR.A} (Trap on Address Overflow) is set
-and the 16-bit low-word address calculation wraps. Documented memory forms do not raise privilege-violation or invalid-opcode faults. Instruction
-fetch can still raise the normal fetch faults before a memory instruction executes. If trace mode was enabled when the
-instruction began, an instruction-trace fault is raised after the instruction commits. Processing-unit encodings outside
-the documented memory forms are reserved or architecturally undefined; they are not required to raise an invalid-opcode
-fault.
+\noindent Memory instructions can raise data bus and data bus-protection faults during the memory-access phase. The
+16-bit displacement is signed two's-complement; effective-address calculation can raise a segment-overflow fault when
+\texttt{SR.A} (Trap on Address Overflow) is set and the low-word address calculation wraps. This segment-overflow
+fault is not raised by program-counter wraparound, so it is not retryable: the saved return address is the address of
+the next instruction (see Chapter~\ref{ch:exceptions}). A memory instruction raises a privilege-violation fault in
+protected mode when its register field names a privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or
+\reg{sh}); this applies to the \mnemonic{LOAD} destination register and to the \mnemonic{STOR} source register, even
+though \mnemonic{STOR} only reads it. Post-increment and pre-decrement address-register auto-update writes only the
+low word of the pair, so it never changes the high word and never raises a privilege-violation fault. Documented
+memory forms do not raise invalid-opcode faults. Instruction fetch can still raise the normal fetch faults before a
+memory instruction executes. If trace mode was enabled when the instruction began, an instruction-trace fault is
+raised after the instruction commits. Processing-unit encodings outside the documented memory forms are reserved or
+architecturally undefined; they are not required to raise an invalid-opcode fault.
 
 \section{Status Flag Effects}
 
 Memory instructions do not update status flags. All four condition flags are preserved regardless of addressing form,
-shift result, or auto-update side effect. Memory instructions do not support status update override syntax; the status
-override field is ignored.
+shift result, or auto-update side effect. This applies only to the memory-access \mnemonic{LOAD} forms
+(\opcode{14}--\opcode{17}) and \mnemonic{STOR} (\opcode{10}--\opcode{13}); see Chapter~\ref{ch:alu-instructions} for
+the flag behavior of the LOAD-immediate (\opcode{07}) and LOAD-register (\opcode{37}) forms. The AF field (bits 5--4)
+is not a status-update source for these opcodes; it selects the address-register pair used to form the effective
+address.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lllllp{5.5cm}}
 		\toprule
-		\textbf{Instruction} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Meaning}     \\
+		\textbf{Instruction}            & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Meaning}     \\
 		\midrule
-		LOAD                 & -          & -          & -          & -          & Flags are preserved. \\
-		STOR                 & -          & -          & -          & -          & Flags are preserved. \\
+		LOAD (\opcode{14}--\opcode{17}) & -          & -          & -          & -          & Flags are preserved. \\
+		STOR (\opcode{10}--\opcode{13}) & -          & -          & -          & -          & Flags are preserved. \\
 		\bottomrule
 	\end{tabular}
 	\caption{Memory Instruction Status Flag Effects}
@@ -123,37 +142,53 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 \section{LOAD Instructions}
 
 \begin{instructionbox}{LOAD -- Load from Memory}
-	\textbf{Opcodes:} 0x14 (Indirect Imm), 0x15 (Indirect Reg), 0x16 (Post-Inc Imm), 0x17 (Post-Inc Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{14} (Indirect Imm), \opcode{15} (Indirect Reg), \opcode{16} (Post-Inc Imm), \opcode{17} (Post-Inc Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22, Immediate format, \opcode{14}/\opcode{16}):} Destination register
+		      \texttt{rD}.
+		\item \textbf{R1 (bits 25--22, Register format, \opcode{15}/\opcode{17}):} Destination register \texttt{rD}.
+		\item \textbf{R2 (bits 21--18, Register format, \opcode{15}/\opcode{17}):} Unused, fixed at \texttt{0}. The
+		      assembler does not accept a shift suffix on any \mnemonic{LOAD} form: \mnemonic{LOAD} has no field that
+		      shifts the offset register or the loaded value. Use \mnemonic{SHFT} on \texttt{rO} before the
+		      \mnemonic{LOAD} if a scaled offset is needed.
+		\item \textbf{R3 (bits 17--14, Register format, \opcode{15}/\opcode{17}):} Offset register \texttt{rO}, used
+		      unshifted.
+		\item \textbf{Immediate (bits 21--6, Immediate format, \opcode{14}/\opcode{16}):} 16-bit signed displacement.
+		\item \textbf{AF (bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
+		      \texttt{10} = \reg{s}, \texttt{11} = \reg{p}. Not a status-update source for these opcodes.
+		\item \textbf{Condition field (bits 3--0):} All 16 condition-field encodings are legal; see \textbf{Condition
+			      field} below.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
 LOAD rD, (addr)               ; equivalent to LOAD rD, (#0, addr)
-LOAD rD, (rS, addr)           ; rD = memory[addr + rS]
+LOAD rD, (rO, addr)           ; rD = memory[addr + rO]
 LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
 LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
-LOAD rD, (rS, addr)+          ; rD = memory[addr + rS]; addr += 1
-
-; With optional shift (register-offset memory forms only)
-LOAD rD, (rS, addr), shift           ; Load and shift
-LOAD rD, (rS, addr)+, shift          ; Load, shift, then increment
+LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{rD} is the destination general-purpose register. \texttt{addr} is the address-register
-	pair that supplies the segment and base low word. Immediate-offset forms use a 16-bit displacement. Register-offset
-	forms use \texttt{rS} as the displacement register and may apply a shift to the loaded memory value before write-back.
+	\textbf{Operands:} \texttt{rD} is the destination general-purpose register; a privileged register (\reg{sr},
+	\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. \texttt{addr} is
+	the address-register pair that supplies the segment and base low word. Immediate-offset forms use a 16-bit signed
+	displacement. Register-offset forms use \texttt{rO} as the displacement register, always unshifted; \mnemonic{LOAD}
+	does not accept a shift suffix.
 
 	\textbf{Operation:}
 	\begin{verbatim}
 if post_increment then
     effective_address = addr + offset
-    loaded_value = memory[effective_address]
-    destination = shift_if_encoded(loaded_value)
+    destination = memory[effective_address]
     addr.low = addr.low + 1
 else
     effective_address = addr + offset
-    loaded_value = memory[effective_address]
-    destination = shift_if_encoded(loaded_value)
+    destination = memory[effective_address]
 endif
 ; Flags are preserved
 \end{verbatim}
@@ -163,24 +198,27 @@ endif
 	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
 	the load, useful for array traversal.
 
+	\textbf{Flags:} Preserved.
+
 	\textbf{Write-back:} If the condition is true, writes the loaded value to \texttt{rD}. Post-increment forms also write
 	the incremented address-register low word.
 
-	\textbf{Flags:} Preserved.
-
 	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory read. May raise a
-	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
+	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set; this fault is not
+	retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
+	\texttt{rD} names a privileged register.
+
+	\textbf{Condition field:} If the condition is false, no memory read occurs, no destination register is written, no
+	address register is incremented, and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles when the memory read is acknowledged without wait states; wait states extend the memory-access
 	phase.
 
-	\textbf{Condition codes:} If the condition is false, no memory read occurs, no destination register is written, no
-	address register is incremented, and status flags are preserved.
-
 	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection.
+	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rD} names a privileged register
+	(\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}).
 
-	\textbf{Examples:}
+	\textbf{Example 14-1:}
 	\begin{lstlisting}
 ; Load from fixed offset
 LOAD r1, (#4, a)              ; r1 = memory[a + 4]
@@ -194,9 +232,9 @@ LOAD r4, (#0, a)+             ; r4 = *a; a += 1
 ; Stack pop
 LOAD r5, (#0, s)+             ; r5 = *s; s += 1
 
-; Load and shift (for bit manipulation)
-LOAD r3, (r2, a), LSL #2      ; r3 = memory[a + r2] << 2
-LOAD r6, (r2, a), ASR #2      ; r6 = memory[a + r2] >> 2 (signed)
+; LOAD has no shift suffix: scale the offset register first with SHFT
+SHFT r2, LSL #2               ; r2 = r2 << 2
+LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 \end{lstlisting}
 
 \end{instructionbox}
@@ -204,25 +242,48 @@ LOAD r6, (r2, a), ASR #2      ; r6 = memory[a + r2] >> 2 (signed)
 \section{STOR Instructions}
 
 \begin{instructionbox}{STOR -- Store to Memory}
-	\textbf{Opcodes:} 0x10 (Indirect Imm), 0x11 (Indirect Reg), 0x12 (Pre-Dec Imm), 0x13 (Pre-Dec Reg)
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{10} (Indirect Imm), \opcode{11} (Indirect Reg), \opcode{12} (Pre-Dec Imm), \opcode{13} (Pre-Dec Reg)
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22, Immediate format, \opcode{10}/\opcode{12}):} Source register \texttt{rS}.
+		\item \textbf{R1 (bits 25--22, Register format, \opcode{11}/\opcode{13}):} Unused, encoded as 0.
+		\item \textbf{R2 (bits 21--18, Register format, \opcode{11}/\opcode{13}):} Source register \texttt{rS}.
+		\item \textbf{R3 (bits 17--14, Register format, \opcode{11}/\opcode{13}):} Offset register \texttt{rO}.
+		\item \textbf{Immediate (bits 21--6, Immediate format, \opcode{10}/\opcode{12}):} 16-bit signed displacement.
+		\item \textbf{Shift Type (bits 12--10, Register format, \opcode{11}/\opcode{13}):} \texttt{000} none,
+		      \texttt{001} LSL, \texttt{010} LSR, \texttt{011} ASL, \texttt{100} ASR, \texttt{101} RTL, \texttt{110}
+		      RTR, \texttt{111} reserved. Applies to \texttt{rS} before the value is written to memory.
+		\item \textbf{Shift Amount (bits 9--6, Register format, \opcode{11}/\opcode{13}):} Immediate count 0--15, or
+		      (Shift Operand bit set) a register holding the count; a register count above 15 is architecturally
+		      undefined.
+		\item \textbf{AF (bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
+		      \texttt{10} = \reg{s}, \texttt{11} = \reg{p}. Not a status-update source for these opcodes.
+		\item \textbf{Condition field (bits 3--0):} All 16 condition-field encodings are legal; see \textbf{Condition
+			      field} below.
+	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
 STOR (#offset, addr), rS      ; memory[addr + offset] = rS
 STOR (addr), rS               ; equivalent to STOR (#0, addr), rS
-STOR (rD, addr), rS           ; memory[addr + rD] = rS
+STOR (rO, addr), rS           ; memory[addr + rO] = rS
 STOR -(#offset, addr), rS     ; addr -= 1; memory[addr + offset] = rS
 STOR -(addr), rS              ; equivalent to STOR -(#0, addr), rS
-STOR -(rD, addr), rS          ; addr -= 1; memory[addr + rD] = rS
+STOR -(rO, addr), rS          ; addr -= 1; memory[addr + rO] = rS
 
-; With optional shift (register-offset memory forms only)
-STOR (rD, addr), rS, shift           ; Shift and store
-STOR -(rD, addr), rS, shift          ; Decrement, shift, and store
+; With optional shift on the source value (register-offset memory forms only)
+STOR (rO, addr), rS, shift           ; Shift rS, then store
+STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{rS} is the source general-purpose register. \texttt{addr} is the address-register pair that
-	supplies the segment and base low word. Immediate-offset forms use a 16-bit displacement. Register-offset forms use
-	\texttt{rD} as the displacement register and may apply a shift to the source value before storing it.
+	\textbf{Operands:} \texttt{rS} is the source general-purpose register; a privileged register (\reg{sr}, \reg{ah},
+	\reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode, even though \mnemonic{STOR}
+	only reads it. \texttt{addr} is the address-register pair that supplies the segment and base low word.
+	Immediate-offset forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
+	register and may apply a shift to the source value before storing it.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -243,24 +304,27 @@ endif
 	Stores a 16-bit value from a register into memory. Pre-decrement forms use the decremented address for the store and
 	write the decremented address register value back after the memory access, useful for stack push operations.
 
+	\textbf{Flags:} Preserved.
+
 	\textbf{Write-back:} If the condition is true, writes the source value to memory. Pre-decrement forms also write the
 	decremented address-register low word.
 
-	\textbf{Flags:} Preserved.
-
 	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory write. May raise a
-	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
+	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set; this fault is not
+	retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
+	\texttt{rS} names a privileged register.
+
+	\textbf{Condition field:} If the condition is false, no memory write occurs, no address register is decremented, and
+	status flags are preserved.
 
 	\textbf{Timing:} 6 cycles when the memory write is acknowledged without wait states; wait states extend the memory-access
 	phase.
 
-	\textbf{Condition codes:} If the condition is false, no memory write occurs, no address register is decremented, and
-	status flags are preserved.
-
 	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection.
+	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rS} names a privileged register
+	(\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}), even though \mnemonic{STOR} only reads it.
 
-	\textbf{Examples:}
+	\textbf{Example 14-2:}
 	\begin{lstlisting}
 ; Store to fixed offset
 STOR (#8, a), r1              ; memory[a + 8] = r1
@@ -293,7 +357,7 @@ LOAD r3, (#2, a)              ; r3 = point.z
 \begin{lstlisting}
 ; Process array of 16-bit values
 ; 'a' = array base, r7 = count
-loop:
+:loop
     LOAD r1, (#0, a)+         ; Load element, advance
     ; ... process r1 ...
     SUBI r7, #1
@@ -316,20 +380,11 @@ LOAD r1, (#0, s)+
 \section{Shift Operations with Memory Instructions}
 \label{sec:memory-shifts}
 
-Register-offset memory forms of \mnemonic{LOAD} and \mnemonic{STOR} support optional shift operations. This feature
-allows data to be shifted during the load or store operation, which is particularly useful for bit manipulation and
-working with the CPU's word-addressed memory architecture.
-
-\subsection{LOAD with Shift}
-
-When loading from memory, the data read from memory is shifted \textbf{after} being loaded but \textbf{before} being
-written to the destination register:
-
-\begin{lstlisting}
-LOAD r3, (r2, a), LSL #2      ; r3 = (memory[a + r2]) << 2
-LOAD r5, (r2, a), ASL #3      ; r5 = (memory[a + r2]) << 3
-LOAD r6, (r4, a), ASR #2      ; r6 = (memory[a + r4]) >> 2 (sign-extend)
-\end{lstlisting}
+Only \mnemonic{STOR}'s register-offset forms support an optional shift suffix, applied to the source register value
+before it is written to memory. \mnemonic{LOAD} does not support a shift suffix on any form -- the offset register
+\texttt{rO} is always used unshifted, and there is no field that shifts the loaded value. This asymmetry is
+architectural, not an oversight: use \mnemonic{SHFT} on the offset register before a \mnemonic{LOAD} if a scaled
+index is needed.
 
 \subsection{STOR with Shift}
 
@@ -348,7 +403,7 @@ All standard shift types are supported:
 \begin{itemize}
 	\item \textbf{LSL} -- Logical Shift Left (fill with zeros)
 	\item \textbf{LSR} -- Logical Shift Right (fill with zeros)
-	\item \textbf{ASL} -- Arithmetic Shift Left (same as LSL)
+	\item \textbf{ASL} -- Arithmetic Shift Left (same data result as LSL; sets V on signed overflow)
 	\item \textbf{ASR} -- Arithmetic Shift Right (sign-extend)
 	\item \textbf{RTL} -- Rotate Left within the operand
 	\item \textbf{RTR} -- Rotate Right within the operand
@@ -356,52 +411,53 @@ All standard shift types are supported:
 
 \subsection{Shift Limitations}
 
-\textbf{Important:} Shift operations are \textbf{only} supported when using register-offset memory forms. The following modes do \textbf{not} support shifts:
+\textbf{Important:} The shift suffix is \textbf{only} supported on \mnemonic{STOR}'s register-offset forms. The
+following do \textbf{not} support a shift suffix:
 \begin{itemize}
+	\item Any \mnemonic{LOAD} form, register-offset included -- \texttt{LOAD r1, (r2, a)} -- No shift suffix exists
 	\item Loading immediate values: \texttt{LOAD r1, \#0x1234} -- No shift allowed
 	\item Copying registers: \texttt{LOAD r1, r2} -- No shift allowed
 	\item Immediate-offset memory load: \texttt{LOAD r1, (\#0, a)} -- No shift allowed
 	\item Immediate-offset memory store: \texttt{STOR (\#0, a), r1} -- No shift allowed
 \end{itemize}
 
-For unsupported shift forms, load or store the unshifted value and use an ALU instruction or \mnemonic{SHFT} for the
-shift operation.
+For any of these, load or store the unshifted value and use an ALU instruction or \mnemonic{SHFT} for the shift
+operation.
 
 \subsection{Use Cases}
 
-\subsubsection{Packed Data}
+\subsubsection{Scaled Indexing}
 
-Shifting during load/store can save cycles when extracting or placing fields in packed words:
+\mnemonic{LOAD} has no shift suffix, so scaling an index for array access takes a separate \mnemonic{SHFT} before the
+\mnemonic{LOAD}:
 
 \begin{lstlisting}
-; Load a packed word and move the high byte into the low byte position
-LOAD r3, (r2, a), LSR #8
+; r2 holds an element index; each element occupies 4 words
+SHFT r2, LSL #2                ; r2 = r2 << 2
+LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 \end{lstlisting}
 
 \subsubsection{Bit Manipulation}
 
-Shifting during memory access enables efficient bit manipulation:
+Shifting the source register before a \mnemonic{STOR} is useful for packing a scaled or shifted value into memory
+without a separate ALU instruction:
 
 \begin{lstlisting}
-; Extract upper byte from memory
-LOAD r1, (r3, a), LSR #8      ; r1 = (memory[a + r3] >> 8) & 0xFF
-
-; Store scaled value
+; Store a scaled value
 STOR (r3, a), r2, LSL #2      ; memory[a + r3] = r2 * 4
 \end{lstlisting}
 
 \subsubsection{Combined with Auto-Increment/Decrement}
 
-Shifts work seamlessly with post-increment and pre-decrement modes:
+\mnemonic{STOR}'s shift suffix works seamlessly with pre-decrement mode:
 
 \begin{lstlisting}
-; Load, shift, and advance pointer
-LOAD r3, (r2, a)+, LSL #1     ; r3 = (memory[a + r2]) << 1; a += 1
-
-; Decrement, shift, and store
+; Decrement, shift the source value, and store
 STOR -(r2, a), r1, LSR #2     ; a -= 1; memory[a + r2] = r1 >> 2
 \end{lstlisting}
 
 \subsection{Status Flags}
 
-\textbf{Note:} Unlike shifts in ALU instructions, shifts performed during \mnemonic{LOAD} and \mnemonic{STOR} operations can \textbf{not} update the status register flags. If you need flag updates based on a shift result, use an ALU instruction or the \mnemonic{SHFT} meta-instruction (see Chapter~\ref{ch:meta-instructions}).
+\textbf{Note:} Unlike shifts in ALU instructions, a shift performed during a \mnemonic{STOR} cannot update the status
+register flags. For flag updates based on a shift result, use an ALU instruction or the \mnemonic{SHFT}
+meta-instruction (see Chapter~\ref{ch:alu-instructions}).

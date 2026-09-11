@@ -2,7 +2,7 @@
 
 .EQU $MAX_PRIME #1000
 
-; Reserved space for 128x32 bit exception vectors
+; Reserved space for 256x32 bit exception vectors
 .ORG 0x0000
 .DQ @main
 
@@ -16,7 +16,7 @@ LOAD    al, #0x0000
 
 ; Stack segment (other end of mapped file)
 LOAD    sh, #0x00F0
-; Array Start = 0x00F0_0000
+; Stack top = 0x00F0_FFFF
 LOAD    sl, #0xFFFF
 
 LOAD    r7, #2
