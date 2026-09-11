@@ -381,14 +381,16 @@ See Chapter~\ref{ch:exceptions} for more details.
 	\item \textbf{Signal Type:} Active Low
 \end{itemize}
 
-When asserted, the CPU samples the Level 5 hardware exception line.
+When asserted, the CPU samples the Level 5 hardware exception line. Unlike \texttt{IRQ1}--\texttt{IRQ4}, which are
+level-sensitive, NMI is edge-triggered: it fires once on assertion regardless of how long the pin is held, and the pin
+must be released and reasserted to fire again.
 
 This interrupt cannot be masked, and if this pin is asserted while another level 5 exception is being handled, a "level
 five hardware exception conflict" fault is raised.
 
-If NMI remains asserted after its handler returns, it may be sampled again through the normal Level 5 interrupt rules.
-Therefore, it is important that the level 5 exception handlers are executed quickly and that NMI is only asserted for
-important non-interruptible events.
+Because NMI is edge-triggered, holding the pin asserted after its handler returns does not by itself cause it to fire
+again -- a fresh falling-then-rising transition is required. Therefore, it is important that the level 5 exception
+handlers are executed quickly and that NMI is only asserted for important non-interruptible events.
 
 \subsubsection{Reset Input (RSTI)}
 
@@ -726,7 +728,8 @@ after an instruction boundary, it is not sampled until the next boundary.
 		\textbf{Input}   & \textbf{Sampling rule}                                                                                                                                                                               \\
 		\midrule
 		BACK, BERR, BPER & Sampled while BAS is asserted. They complete or abort the active bus request.                                                                                                                        \\
-		IRQ1--IRQ4, NMI  & Level-sensitive. A line asserted while enabled is latched at that moment, even if released before the next instruction boundary; the exception unit dispatches the latched request at that boundary. \\
+		IRQ1--IRQ4       & Level-sensitive. A line asserted while enabled is latched at that moment, even if released before the next instruction boundary; the exception unit dispatches the latched request at that boundary. \\
+		NMI              & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                             \\
 		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.                                                                         \\
 		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                                                                             \\
 		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                       \\

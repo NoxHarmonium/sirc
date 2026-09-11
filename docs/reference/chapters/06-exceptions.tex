@@ -94,6 +94,10 @@ categories:
 	      \textit{faulting} instruction, so a handler implementing virtual memory can map in the missing page and return with
 	      \mnemonic{RETE} to retry the same instruction.
 
+	      Because ALU results and status-register updates are only committed during the write-back phase
+	      (Chapter~\ref{ch:cpu-architecture}), which always runs after the memory-access phase where a bus fault is
+	      detected, a bus fault can never leave a partial status-register or register update behind.
+
 	\item \textbf{Bus Protection Fault} \textit{(Retryable)} — Raised when an external device asserts the bus
 	      protection error CPU pin.
 
@@ -126,8 +130,9 @@ categories:
 	      will trap on older hardware, and the handler can emulate the operation in software before returning to the instruction
 	      following the trapped call.
 
-	      Normal processing-unit encodings outside the documented instruction set are reserved or architecturally undefined. They
-	      are not required to raise an invalid-opcode fault.
+	      Note that this fault is specific to coprocessor instructions. Other instruction encodings outside the documented
+	      instruction set -- i.e. normal processing-unit encodings -- are reserved or architecturally undefined; they are not
+	      required to raise an invalid-opcode fault.
 
 	\item \textbf{Privilege Violation Fault} \textit{(Retryable)} — Raised when a privileged operation is attempted
 	      while not in supervisor mode:
@@ -159,9 +164,9 @@ categories:
 	\item \textbf{Level Five Hardware Exception Conflict} \textit{(Exception dispatch)} — Raised when a level five
 	      hardware exception arrives while one is already being serviced.
 
-	      The windowed link register scheme has no spare register above level 6, so a second L5 cannot be handled normally.
-	      Rather than silently dropping it (which could mask a hardware misconfiguration), the CPU raises this fault. Level 5
-	      interrupts should be treated as NMIs.
+	      The exception unit has no spare link register above level 6, so a second L5 cannot be handled normally. Rather than
+	      silently dropping it (which could mask a hardware misconfiguration), the CPU raises this fault. Level 5 interrupts
+	      should be treated as NMIs.
 
 	\item \textbf{Double Fault} \textit{(Exception dispatch)} — Raised when a fault occurs while another fault is
 	      already being handled.
@@ -173,8 +178,10 @@ categories:
 
 	      The CPU jumps to vector \texttt{0x08}. This is typically a last-chance handler that dumps registers and resets. If
 	      another fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector \texttt{0x08} again.
-	      If the double-fault vector fetch itself fails, the CPU requests reset. If two fault conditions are detected within the
-	      same instruction before either has been dispatched, the resulting behavior is architecturally undefined.
+	      There is no limit to the number of times vector \texttt{0x08} is dispatched. A double fault handler that causes a
+	      fault may cause an infinite loop without special handling from the programmer. If the double-fault vector fetch
+	      itself fails, the CPU will reset. If two fault conditions are detected within the same instruction before either has
+	      been dispatched, the resulting behavior is architecturally undefined.
 
 \end{itemize}
 
@@ -185,12 +192,19 @@ A hardware exception occurs when interrupt pins are signalled by external hardwa
 different vectors based on the interrupt "priority". The vectors for hardware exceptions are in the
 \texttt{0x10}--\texttt{0x50} range.
 
+The return address stored in the exception link register is the address of the instruction that would have executed
+next, not the interrupted one -- so once the handler returns via \mnemonic{RETE}, the interrupted program resumes
+normally as if nothing happened.
+
 \subsection{User Exceptions (Traps)}
 
 A user exception occurs when the program executes an \mnemonic{EXCP} instruction that signals the exception coprocessor
 that it should trigger an exception. They are usually used by programs running in protected mode to switch to
 supervisor mode in a controlled way. They are also referred to as "traps". The vectors for user exceptions are in the
 \texttt{0x60}--\texttt{0xFF} range.
+
+As with hardware exceptions, the return address stored in the link register is the instruction following the
+\mnemonic{EXCP} call, so \mnemonic{RETE} resumes the calling program immediately after the trap.
 
 Software exceptions are only accepted from normal execution. If an \mnemonic{EXCP} instruction is executed while any
 exception or fault handler is already active, the software exception is ignored, is not queued, and does not fetch its
@@ -216,7 +230,10 @@ link registers in total, indexed 0--7:
 Each link register stores three pieces of information:
 
 \begin{itemize}
-	\item \textbf{Return Address:} The 24-bit return address, held in a 32-bit field whose top 8 bits are always zero
+	\item \textbf{Return Address:} The 24-bit return address, held in a 32-bit field whose top 8 bits are always zero.
+	      This is enforced by the same address masking applied whenever a full address is derived from an address register
+	      pair (Figure~\ref{fig:addr-pair}), so even if the source address register's high word carries data in its own top
+	      8 bits, that data is discarded before the address ever reaches the link register.
 	\item \textbf{Return Status Register:} The 16-bit status register value at the time of the exception
 	\item \textbf{Saved Exception Level:} The exception level that was active when the exception was taken;
 	      \mnemonic{RETE} restores it into \texttt{current\_exception\_level}
@@ -389,7 +406,12 @@ priority of exceptions is determined by examining the first nibble of the vector
 the first nibble (for example, \texttt{0x00} is priority 7, \texttt{0x40} is priority 3, and \texttt{0x60} and above
 are all priority 1).
 
+A cause value of \texttt{0x0000} -- the value left in place at reset and whenever no exception is pending -- selects
+coprocessor ID \texttt{0x0}, the processing unit, so the CPU simply continues executing the program normally in the
+absence of any exception activity.
+
 \subsection{Hardware Interrupt Enable Bits}
+\label{sec:hardware-interrupt-enable-bits}
 
 The status register contains 4 individual enable bits (bits 9--12 in the privileged byte) that control whether each
 maskable hardware interrupt line can trigger an exception:
@@ -411,13 +433,14 @@ exception level.
 
 \subsection{Pending Hardware Interrupts}
 
-Hardware interrupt pins are level-sensitive inputs. When an enabled interrupt line is observed, the corresponding bit
-is set in the pending hardware-exceptions register. Disabled maskable interrupt lines are ignored at this sampling
-point and are not latched for later service.
+Hardware interrupt lines 1--4 are level-sensitive inputs; Level 5 is edge-triggered and is described separately under
+"Level 5 NMI-like Behavior" below. When an enabled level-sensitive interrupt line is observed asserted, the
+corresponding bit is set in the pending hardware-exceptions register. Disabled maskable interrupt lines are ignored at
+this sampling point and are not latched for later service.
 
-The pending register stores one bit per hardware interrupt line, so repeated assertions of the same line coalesce into
-a single pending interrupt. If the external pin remains asserted after the interrupt is serviced, it may be sampled
-again and become pending again.
+For the level-sensitive lines, the pending register stores one bit per hardware interrupt line, so repeated assertions
+of the same line coalesce into a single pending interrupt. If the external pin remains asserted after the interrupt is
+serviced, it may be sampled again and become pending again.
 
 At an instruction boundary, the exception unit selects the highest-priority pending hardware interrupt whose priority
 is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Pending
@@ -446,7 +469,10 @@ interrupt.
 
 \textbf{Level 5 NMI-like Behavior:}
 
-Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). They cannot be disabled via the
+Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). Unlike interrupt levels 1--4, which are
+level-sensitive (sampled for as long as the pin is asserted), Level 5 is edge-triggered: it fires once on assertion
+regardless of how long the pin is held, and must be released and reasserted to fire again. This avoids spurious Level
+Five Hardware Exception Conflict faults from a line that simply stays asserted. Level 5 cannot be disabled via the
 interrupt enable bits in the status register, and will preempt any lower-priority exception handler. However, Level 5
 is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), a L5 interrupt
 that arrives while a fault is being handled is \textit{queued} in the pending hardware exceptions register rather than
@@ -466,7 +492,7 @@ interrupt is pending. Table~\ref{tab:l5-fault-timeline} walks through the sequen
 
 \begin{table}[H]
 	\centering
-	\begin{tabularx}{\textwidth}{cl>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}X}
+	\begin{tabularx}{\textwidth}{c>{\raggedright\arraybackslash}p{4cm}>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}X}
 		\toprule
 		\textbf{Step} & \textbf{Event}                                                                    & \textbf{Exception Level} & \textbf{Link Register Used}                                                        \\
 		\midrule
@@ -570,22 +596,10 @@ described above.
 If a bus or protection fault occurs during an exception-vector fetch before entry commits, the original exception does
 not enter. The CPU raises the corresponding fault with \texttt{BAT0}--\texttt{BAT2} set to
 \texttt{ExceptionVectorFetch}. If a fault-vector fetch itself fails, the CPU escalates to double fault. If the
-double-fault vector fetch fails, the CPU requests reset.
+double-fault vector fetch fails, the CPU will reset.
 
-\textbf{Returning from Exceptions:}
-
-The \mnemonic{RETE} (Return from Exception) instruction restores the saved state from the link register:
-
-\begin{enumerate}
-	\item The return address is loaded from the link register into the program counter
-	\item The saved status register value is restored (including interrupt enable bits)
-	\item The saved exception level is restored to \texttt{current\_exception\_level}
-	\item If the restored exception level is 0, \texttt{SR.EA} is cleared; otherwise the restored value of \texttt{SR.EA} stands
-	\item Execution resumes at the return address
-\end{enumerate}
-
-After RETE, any pending interrupts that are now eligible to run (higher priority than the restored exception level and
-enabled) will be serviced before the next instruction executes.
+\textbf{Returning from Exceptions:} see Section~\ref{sec:return-from-exception} for how \mnemonic{RETE} restores this
+state.
 
 \subsection{Vector Table}
 
@@ -683,9 +697,18 @@ counter.
 	\label{tab:reset-state}
 \end{table}
 
-\subsection{Reset Output Hold}
+Because the status register is cleared to \texttt{0x0000} as part of the reset sequence, hardware interrupt lines 1--4
+are masked immediately after reset -- their enable bits, \texttt{SR.E1}--\texttt{SR.E4}
+(Section~\ref{sec:hardware-interrupt-enable-bits}), are all cleared to 0. The Level 5 (NMI) line is architecturally
+non-maskable and remains enabled regardless of \reg{sr}'s contents. Note also that the status register is not cleared
+the instant reset is requested: it is cleared during the reset-vector fetch sequence (Section~\ref{sec:reset-vector-fetch}),
+once that sequence reaches its execute phase.
 
-While reset is active, the CPU asserts \texttt{RSTO} and performs no bus cycles.
+\subsection{Reset Output Hold}
+\label{sec:reset-output-hold}
+
+While reset is active, the CPU asserts \texttt{RSTO} and performs no bus cycles. This gives external devices sharing
+the reset line time to complete their own reset sequence before the CPU resumes.
 
 For hardware reset, asserting \texttt{RSTI} immediately aborts any current instruction, exception handler, exception
 dispatch, or pending bus wait, then asserts \texttt{RSTO}. If \texttt{RSTI} remains asserted, \texttt{RSTO} remains
@@ -698,6 +721,7 @@ commits the reset command, the CPU requests reset and \texttt{RSTO} is asserted 
 fetch begins.
 
 \subsection{Reset Vector Fetch}
+\label{sec:reset-vector-fetch}
 
 The reset vector is vector \texttt{0x00} in the exception vector table. After the reset-output hold, the exception unit
 performs an exception-vector fetch with bus access type \texttt{ExceptionVectorFetch}:
@@ -709,18 +733,38 @@ performs an exception-vector fetch with bus access type \texttt{ExceptionVectorF
 	\item Load the fetched target address into \reg{p}.
 \end{enumerate}
 
+These four steps are not one clock cycle each. Steps 1 and 2 each occupy their own fetch cycle, an instruction-decode
+cycle follows between step 2 and step 3 (not itemized above), and steps 3 and 4 then happen together in a single
+execute cycle. The reset-vector fetch therefore takes four clock cycles in total, separate from and following the
+reset-output hold described in Section~\ref{sec:reset-output-hold}.
+
+Step 3's status-register clear is listed here, rather than only in the Reset State table
+(Table~\ref{tab:reset-state}), because it marks the specific point in the pipeline where the clear actually happens --
+useful for anyone modeling cycle-accurate timing. Table~\ref{tab:reset-state} instead documents the eventual, settled
+reset state; no other register is touched during the reset-vector fetch itself, so it is the only state change
+covered both here and there.
+
 If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded. The CPU raises the
 corresponding fault with \texttt{BAT0}--\texttt{BAT2} set to \texttt{ExceptionVectorFetch}. From that point the normal
 exception-vector fetch fault rules apply: a fault-vector fetch failure escalates to double fault, and a double-fault
-vector fetch failure requests reset.
+vector fetch failure will reset the CPU.
 
 \section{Return from Exception}
+\label{sec:return-from-exception}
 
-To return from an exception handler, the \mnemonic{RETE} (Return from Exception) instruction is used. It restores the
-saved state from the current link register using the same steps described under "Returning from Exceptions" in
-Section~\ref{sec:exception-entry-side-effects}: it loads the return address into the program counter, restores the
-saved status register (including the interrupt enable bits and, conditionally, \texttt{SR.EA}), restores the saved
-exception level into \texttt{current\_exception\_level}, and resumes execution at the return address.
+To return from an exception handler, the \mnemonic{RETE} (Return from Exception) instruction restores the saved state
+from the current link register:
+
+\begin{enumerate}
+	\item The return address is loaded from the link register into the program counter
+	\item The saved status register value is restored (including interrupt enable bits)
+	\item The saved exception level is restored to \texttt{current\_exception\_level}
+	\item If the restored exception level is 0, \texttt{SR.EA} is cleared; otherwise the restored value of \texttt{SR.EA} stands
+	\item Execution resumes at the return address
+\end{enumerate}
+
+After RETE, any pending interrupts that are now eligible to run (higher priority than the restored exception level and
+enabled) will be serviced before the next instruction executes.
 
 Executing \mnemonic{RETE} while the current exception level is 0 is architecturally undefined.
 

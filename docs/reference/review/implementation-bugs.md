@@ -781,3 +781,48 @@ column renders as `01`, `10`, `11`.
   and any test helper that constructs a `CpuPeripheral` to match the new signature.
 - confidence: high
 - status: not started; author's call on timing, not required for manual accuracy.
+
+## Make Level 5 (NMI) hardware exception edge-triggered in the simulator (code-wrong, major) — NEW 2026-09-12
+
+- category: fact
+- claim: chapter 6 Section 6.3.4 ("Level 5 NMI-like Behavior") and Appendix F ("Non-Maskable
+  Interrupt Inputs (NMI)" and the external input sampling rules table) now document Level 5 as
+  edge-triggered, unlike interrupt levels 1-4, which are level-sensitive. This was the original
+  design intent (author-confirmed 2026-09-12): edge-triggering avoids spurious Level Five Hardware
+  Exception Conflict faults from a line that simply stays asserted, matching the period convention
+  of level-sensitive maskable IRQs alongside an edge-triggered NMI.
+- evidence: `peripheral-cpu/src/lib.rs:499-518` (`raise_hardware_interrupt()`) ORs the asserted
+  interrupt bits, including Level 5's, into `eu_registers.pending_hardware_exceptions` on every
+  poll cycle the pin is high — pure level sampling, with no rising/falling-edge detection anywhere
+  in the codebase. The NMI-like re-entry special case in `get_cause_register_value()` /
+  `handle_exception()` (`exception_unit/execution.rs:176-184, 242-249`) only governs what happens
+  while the CPU is *already at* exception level 6 (raising a Level Five Hardware Exception Conflict
+  fault instead of coalescing); it does not implement edge-triggering, and a Level 5 pin held high
+  while the CPU is below level 6 is still just OR-latched exactly like levels 1-4.
+- resolution: code-wrong (manual now documents the intended design; simulator has not implemented
+  it).
+- fix: add real rising-edge detection for the Level 5 / NMI line specifically — latch a pending
+  Level 5 exception only on a 0→1 transition of the pin, and require the pin to be released and
+  reasserted before it can latch again — separate from the OR-latch level-sampling logic used for
+  interrupt levels 1-4.
+- confidence: high
+- status: not started; author's call for a future simulator branch. Manual updated to the target
+  (edge-triggered) design in this pass.
+
+## Invalid Opcode Fault doc comment incorrectly implies it's retryable (cleanup, minor) — NEW 2026-09-12
+
+- category: cleanup
+- claim: none — this is a stale code comment, not a manual/code mismatch. Surfaced while verifying
+  the Aborted/non-retryable fault categories in chapter 6 Section 6.2.1 against the implementation.
+- evidence: `peripheral-cpu/src/coprocessors/exception_unit/definitions.rs:121-131`'s design comment
+  lists Invalid Opcode Fault among the "Abort Exceptions" whose link register stores "the address of
+  the faulting instruction so it can be retried." Per the already-ruled `F-exc-3` entry above (Gate 2
+  A revised), Invalid Opcode Fault is deliberately kept non-retryable, and its actual code path
+  (`lib.rs:375-391`) stores the address of the *next* instruction, matching that ruling — not the
+  comment's claim.
+- resolution: n/a (doc-comment accuracy only, no behavior change).
+- fix: update the `definitions.rs:121-131` comment to carve Invalid Opcode Fault out of the
+  "can be retried" framing, e.g. noting it is a deliberate exception to the general Abort-Exception
+  retry pattern (see `F-exc-3`).
+- confidence: high
+- status: not started; no manual impact either way.
