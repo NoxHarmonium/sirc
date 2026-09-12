@@ -135,7 +135,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 
 \section{Branch Meta-Instructions}
 
-\begin{instructionbox}{BRAN -- Branch Meta-Instruction}
+\begin{instructionbox}{BRAN}{Branch Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination
@@ -201,7 +201,7 @@ loop:
 
 \end{instructionbox}
 
-\begin{instructionbox}{BRSR -- Branch to Subroutine Meta-Instruction}
+\begin{instructionbox}{BRSR}{Branch to Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination
@@ -267,9 +267,7 @@ RETS
 
 \end{instructionbox}
 
-\section{Return Meta-Instruction}
-
-\begin{instructionbox}{RETS -- Return from Subroutine Meta-Instruction}
+\begin{instructionbox}{RETS}{Return from Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
@@ -329,7 +327,7 @@ my_function:
 
 \section{Load Effective Address}
 
-\begin{instructionbox}{LDEA -- Load Effective Address}
+\begin{instructionbox}{LDEA}{Load Effective Address}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register)
@@ -406,7 +404,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 
 \end{instructionbox}
 
-\begin{instructionbox}{LDEL -- Load Effective Address and Link}
+\begin{instructionbox}{LDEL}{Load Effective Address and Link}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register)
@@ -486,7 +484,7 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 
 \section{Long Jump Meta-Instructions}
 
-\begin{instructionbox}{LJMP -- Long Jump Meta-Instruction}
+\begin{instructionbox}{LJMP}{Long Jump Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination
@@ -555,7 +553,7 @@ LJMP a, r1                     ; p = a + r1
 
 \end{instructionbox}
 
-\begin{instructionbox}{LJSR -- Long Jump to Subroutine Meta-Instruction}
+\begin{instructionbox}{LJSR}{Long Jump to Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination

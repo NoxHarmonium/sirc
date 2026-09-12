@@ -5,15 +5,30 @@
 
 This appendix provides a complete map of all 64 possible opcodes in the SIRCIS instruction set.
 
-\begin{table}[H]
-	\centering
-	\footnotesize
-	\begin{tabular}{clll}
-		\toprule
-		\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description}                                     \\
-		\midrule
-		\multicolumn{4}{c}{\textbf{ALU Immediate (\opcode{00}--\opcode{0F})}}                                         \\
-		\midrule
+\footnotesize
+\begin{longtable}{clll}
+	\caption{Complete SIRCIS Opcode Map}
+	\label{tab:opcode-map} \\
+	\toprule
+	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description} \\
+	\midrule
+	\endfirsthead
+
+	\multicolumn{4}{l}{\small\textit{Table~\ref{tab:opcode-map} (continued)}} \\
+	\toprule
+	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description} \\
+	\midrule
+	\endhead
+
+	\midrule
+	\multicolumn{4}{r}{\small\textit{continued on next page}} \\
+	\endfoot
+
+	\bottomrule
+	\endlastfoot
+
+	\multicolumn{4}{c}{\textbf{ALU Immediate (\opcode{00}--\opcode{0F})}}                                         \\
+	\midrule
 		\opcode{00}  & 000000          & ADDI              & Add Immediate                                            \\
 		\opcode{01}  & 000001          & ADCI              & Add with Carry Immediate                                 \\
 		\opcode{02}  & 000010          & SUBI              & Subtract Immediate                                       \\
@@ -87,11 +102,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 		\opcode{3D}  & 111101          & --                & Undocumented                                             \\
 		\opcode{3E}  & 111110          & TSXR              & Test XOR Register                                        \\
 		\opcode{3F}  & 111111          & COPR              & Coprocessor Register                                     \\
-		\bottomrule
-	\end{tabular}
-	\caption{Complete SIRCIS Opcode Map}
-	\label{tab:opcode-map}
-\end{table}
+\end{longtable}
 
 \section{Opcode Patterns}
 
