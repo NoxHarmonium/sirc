@@ -314,10 +314,8 @@ executed safely instead of faulting; see the \mnemonic{NOOP} entry in Chapter~\r
 
 \section{Usage Examples}
 
-\subsection{Basic Register Operations}
-
-\textbf{Example 3-1:}
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Load immediate value into r1
 LOAD r1, #100
 
@@ -327,12 +325,12 @@ ADDI r2, #2
 
 ; Add r1 and r2, store in r3
 ADDR r3, r1, r2
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Basic Register Operations}
+\end{example}
 
-\subsection{Address Register Usage}
-
-\textbf{Example 3-2:}
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Load value from memory at address in 'a' register pair
 LOAD r1, (a)
 
@@ -345,12 +343,12 @@ STOR -(s), r1
 ; Pop stack into r2 (post-increment)
 LOAD r2, (s)+
 
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Address Register Usage}
+\end{example}
 
-\subsection{Subroutine Call}
-
-\textbf{Example 3-3:}
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Call subroutine at address in 'a' register
 ; Return address saved to 'l' register automatically
 LJSR a
@@ -360,4 +358,6 @@ LJSR a
 ; Return from subroutine
 ; Copies 'l' register to 'p' register
 RETS
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Subroutine Call}
+\end{example}

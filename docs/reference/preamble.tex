@@ -48,6 +48,16 @@
 \usepackage{enumitem}
 \usepackage{float}
 
+% A captioned, non-floating environment for worked assembly examples, so
+% they get a real "List of Examples" (like the existing List of
+% Figures/Tables) instead of a hand-maintained one. Numbered N-M (chapter
+% number, then sequential within that chapter/appendix) to match the
+% manual's existing "Example 13-1" convention; [H] means it never actually
+% floats away from where the author placed it.
+\newfloat{example}{H}{loe}[chapter]
+\floatname{example}{Example}
+\renewcommand{\theexample}{\thechapter-\arabic{example}}
+
 \usepackage{tabularx}
 \usepackage{booktabs}
 \usepackage{multirow}

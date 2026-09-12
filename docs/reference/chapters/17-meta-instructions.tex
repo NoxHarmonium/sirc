@@ -82,11 +82,13 @@ operations easier to read and write; they do not introduce additional CPU opcode
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
-	\textbf{Example 17-1:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 NOOP                          ; Wait 6 cycles
 NOOP
 NOOP                          ; Total 18 cycles delay
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Timing Delay with NOOP}
+	\end{example}
 
 \end{instructionbox}

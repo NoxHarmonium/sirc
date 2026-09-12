@@ -140,9 +140,8 @@ STOR|NS (#0, s), r6
 
 The most common use of condition codes is with compare (\mnemonic{CMP}) instructions:
 
-\subsection{Example 10-1: Unsigned Comparison}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; if (r1 > r2) { r3 = r4; } (unsigned)
 CMPR r1, r2          ; Compare r1 and r2
 LOAD|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
@@ -150,11 +149,12 @@ LOAD|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
 ; if (r1 <= 100) { branch } (unsigned)
 CMPI r1, #100
 BRAN|LO @target
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Unsigned Comparison}
+\end{example}
 
-\subsection{Example 10-2: Signed Comparison}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; if (r1 >= r2) { r3 = r4; } (signed)
 CMPR r1, r2          ; Compare r1 and r2
 LOAD|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
@@ -162,11 +162,12 @@ LOAD|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
 ; if (r1 < -10) { branch } (signed)
 CMPI r1, #-10
 BRAN|<< @negative_case
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Signed Comparison}
+\end{example}
 
-\subsection{Example 10-3: Equality Testing}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; if (r1 == r2) { branch }
 CMPR r1, r2
 BRAN|== @equal_case
@@ -174,7 +175,9 @@ BRAN|== @equal_case
 ; if (r1 != 0) { branch }
 CMPI r1, #0
 BRAN|!= @non_zero_case
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Equality Testing}
+\end{example}
 
 \section{Condition Code Truth Tables}
 
@@ -237,41 +240,45 @@ BRAN|!= @non_zero_case
 
 \section{Advanced Usage}
 
-\subsection{Example 10-4: Conditional Assignment}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; max = (a > b) ? a : b (unsigned)
 CMPR r1, r2              ; Compare a and b
 LOAD|HI r3, r1           ; r3 = a if a > b
 LOAD|LO r3, r2           ; r3 = b if a <= b
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Conditional Assignment}
+\end{example}
 
-\subsection{Example 10-5: Conditional Increment}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; if (condition) count++
 CMPI r1, #0
 ADDI|!= r2, #1           ; Increment r2 if r1 != 0
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Conditional Increment}
+\end{example}
 
-\subsection{Example 10-6: Conditional Function Call}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; if (r1 > 0) call_function()
 CMPI r1, #0
 LJSR|>> a                ; Call function if r1 > 0 (signed)
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Conditional Function Call}
+\end{example}
 
-\subsection{Example 10-7: Loop Construction}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; for (i = 10; i > 0; i--)
 LOAD r1, #10             ; i = 10
 loop:
     ; ... loop body ...
     SUBI r1, #1          ; i--
     BRAN|HI @loop        ; Continue if i > 0 (unsigned)
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Loop Construction}
+\end{example}
 
 \section{Condition Code Selection Guide}
 

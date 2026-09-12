@@ -188,8 +188,8 @@ if condition:
 
 	\textbf{Privilege:} Same as \mnemonic{LDEA}. Protected-mode branches must preserve the high word of \reg{p}.
 
-	\textbf{Example 15-1:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Unconditional branch forward
 BRAN #20                      ; Jump ahead 20 words
 
@@ -197,7 +197,9 @@ BRAN #20                      ; Jump ahead 20 words
 loop:
     ; ... loop body ...
     BRAN|!= @loop             ; Jump back if not zero
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Unconditional and Conditional Branching}
+	\end{example}
 
 \end{instructionbox}
 
@@ -256,14 +258,16 @@ if condition:
 	\textbf{Privilege:} Same as \mnemonic{LDEL}. Protected-mode calls must preserve the high words written to \reg{l} and
 	\reg{p}.
 
-	\textbf{Example 15-2:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; PC-relative call
 BRSR @function
 
 ; Return from the subroutine
 RETS
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Calling and Returning with BRSR/RETS}
+	\end{example}
 
 \end{instructionbox}
 
@@ -316,12 +320,14 @@ if condition:
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Example 15-3:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 my_function:
     ; ... function body ...
     RETS                      ; Return to caller
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Returning from a Subroutine}
+	\end{example}
 
 \end{instructionbox}
 
@@ -390,8 +396,8 @@ if condition:
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Example 15-4:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Pointer arithmetic
 LDEA a, (#16, a)              ; a = a + 16
 
@@ -400,7 +406,9 @@ LDEA p, (r1, a)               ; p = a + r1
 
 ; Pre-decrement source pointer and copy nearby address
 LDEA a, -(#0, s)              ; s -= 1; a = s
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Pointer Arithmetic and Computed Jumps with LDEA}
+	\end{example}
 
 \end{instructionbox}
 
@@ -468,8 +476,8 @@ if condition:
 	\textbf{Privilege:} Available in protected mode and supervisor mode, subject to protected-mode address-register
 	write-back restrictions.
 
-	\textbf{Example 15-5:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Absolute call through a
 LDEL p, (#0, a)               ; l = next PC; p = a
 
@@ -478,7 +486,9 @@ LDEL a, (r1, s)               ; l = next PC; a = s + r1
 
 ; Post-increment source pointer after call target calculation
 LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Calling Through a Register with LDEL}
+	\end{example}
 
 \end{instructionbox}
 
@@ -538,8 +548,8 @@ if condition:
 
 	\textbf{Privilege:} Same as \mnemonic{LDEA}. Protected-mode jumps must preserve the high word of \reg{p}.
 
-	\textbf{Example 15-6:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Jump to address in a
 LJMP a                         ; p = a
 
@@ -549,7 +559,9 @@ LJMP a, #16                    ; p = a + 16
 ; Jump with register displacement
 LOAD r1, #4
 LJMP a, r1                     ; p = a + r1
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Jumping Through a Register with LJMP}
+	\end{example}
 
 \end{instructionbox}
 
@@ -620,8 +632,8 @@ if condition:
 	\textbf{Privilege:} Same as \mnemonic{LDEL}. Protected-mode calls must preserve the high words written to \reg{l} and
 	\reg{p}.
 
-	\textbf{Example 15-7:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Call function at address in a
 ; supervisor mode only -- writing ah is privileged
 LOAD ah, #0x0040
@@ -638,7 +650,9 @@ LJSR a, r1                    ; p = a + r1
 ; Call through a table entry and advance to the next entry
 LJSR (#0, a)+                 ; p = old a; a += 1
 LJSR (r1, a)+                 ; p = a + r1; a += 1
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Calling Through a Register with LJSR}
+	\end{example}
 
 \end{instructionbox}
 

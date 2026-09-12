@@ -361,9 +361,8 @@ Many addressing modes require specifying which address register pair to use. The
 
 \section{Addressing Mode Examples}
 
-\subsection{Example 8-1: Structure Access}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Assume 'a' points to a struct:
 ; struct Point {
 ;   word 0: int16_t x
@@ -372,11 +371,12 @@ Many addressing modes require specifying which address register pair to use. The
 
 LOAD r1, (#0, a)      ; r1 = point.x
 LOAD r2, (#1, a)      ; r2 = point.y
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Structure Access}
+\end{example}
 
-\subsection{Example 8-2: Array Iteration}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Iterate array of 16-bit values
 ; Assume 'a' points to array start
 ; r7 = counter
@@ -385,11 +385,12 @@ LOAD r2, (#1, a)      ; r2 = point.y
   ; ... process r1 ...
   SUBI r7, #1
   BRAN|!= @loop
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Array Iteration}
+\end{example}
 
-\subsection{Example 8-3: Stack Frame}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 :begin_subroutine
 
 ; Function prologue - save registers
@@ -406,7 +407,9 @@ LOAD r3, (#0, s)+
 LOAD r2, (#0, s)+
 LOAD r1, (#0, s)+
 RETS
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Stack Frame}
+\end{example}
 
 \section{Addressing Mode Restrictions}
 

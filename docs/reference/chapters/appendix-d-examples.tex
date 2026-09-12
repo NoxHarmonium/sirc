@@ -13,10 +13,14 @@ array. The two nested loops starting at labels \texttt{:2} and \texttt{:3} (line
 the core of the sieve: the outer loop advances the candidate, and the inner loop marks its
 multiples as composite.
 
-\lstinputlisting[
-	caption={Example D-1: Byte sieve},
-	label={lst:example-byte-sieve}
-]{../../examples/byte-sieve/byte-sieve.sasm}
+% These example programs are too long to fit a non-breaking [H] float, so they use
+% \lstinputlisting's own (page-breaking) caption directly rather than the "example" float
+% used elsewhere in the manual, while still stepping the shared example counter and adding a
+% matching "List of Examples" entry so they appear there too, consistently numbered.
+\refstepcounter{example}
+\label{ex:byte-sieve}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Byte sieve}
+\lstinputlisting[caption={Example~\theexample: Byte sieve}]{../../examples/byte-sieve/byte-sieve.sasm}
 
 \section{Faults}
 
@@ -31,20 +35,20 @@ handler (lines 167--204) is worth particular attention: it reads exception metad
 \mnemonic{ETFR} to distinguish an instruction-fetch overflow from an effective-address
 overflow before deciding how to fix up the return address.
 
-\lstinputlisting[
-	caption={Example D-2: Fault handling},
-	label={lst:example-faults}
-]{../../examples/faults/faults.sasm}
+\refstepcounter{example}
+\label{ex:faults}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Fault handling}
+\lstinputlisting[caption={Example~\theexample: Fault handling}]{../../examples/faults/faults.sasm}
 
 \texttt{faults-high.sasm} is a second, separately assembled segment that the program-counter
-overflow test in Example D-2 jumps into; it exists only to let that fault trigger without the
-CPU executing the vector table sitting at address 0x0000 in the main segment. It jumps back
-into \texttt{faults.sasm} through the trampoline at 0xFFF0.
+overflow test in Example~\ref{ex:faults} jumps into; it exists only to let that fault trigger
+without the CPU executing the vector table sitting at address 0x0000 in the main segment. It
+jumps back into \texttt{faults.sasm} through the trampoline at 0xFFF0.
 
-\lstinputlisting[
-	caption={Example D-3: High-address fault handling},
-	label={lst:example-faults-high}
-]{../../examples/faults/faults-high.sasm}
+\refstepcounter{example}
+\label{ex:faults-high}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}High-address fault handling}
+\lstinputlisting[caption={Example~\theexample: High-address fault handling}]{../../examples/faults/faults-high.sasm}
 
 \section{Hardware Exception}
 
@@ -57,19 +61,19 @@ restores the link register before returning with \mnemonic{RETE}. Those two subr
 the poll-and-acknowledge pattern used to drain and refill the serial device's receive and
 send buffers one byte at a time.
 
-\lstinputlisting[
-	caption={Example D-4: Hardware exception},
-	label={lst:example-hardware-exception}
-]{../../examples/hardware-exception/hardware-exception.sasm}
+\refstepcounter{example}
+\label{ex:hardware-exception}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Hardware exception}
+\lstinputlisting[caption={Example~\theexample: Hardware exception}]{../../examples/hardware-exception/hardware-exception.sasm}
 
 The data segment below supplies the two zero-terminated, word-per-character messages
-(\texttt{help\_message} and \texttt{exit\_message}) that Example D-4 prints at startup and on
-exit.
+(\texttt{help\_message} and \texttt{exit\_message}) that Example~\ref{ex:hardware-exception}
+prints at startup and on exit.
 
-\lstinputlisting[
-	caption={Example D-5: Hardware exception data},
-	label={lst:example-hardware-exception-data}
-]{../../examples/hardware-exception/data.sasm}
+\refstepcounter{example}
+\label{ex:hardware-exception-data}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Hardware exception data}
+\lstinputlisting[caption={Example~\theexample: Hardware exception data}]{../../examples/hardware-exception/data.sasm}
 
 \section{Software Exception}
 
@@ -80,10 +84,10 @@ itself raises a second exception, 0x41, from inside the handler; because the han
 0x0500 (line 37) sets \reg{r1} to 0xBB only if it runs, the final value of \reg{r1} shows
 whether the nested exception was correctly ignored.
 
-\lstinputlisting[
-	caption={Example D-6: Software exception},
-	label={lst:example-software-exception}
-]{../../examples/software-exception/software-exception.sasm}
+\refstepcounter{example}
+\label{ex:software-exception}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Software exception}
+\lstinputlisting[caption={Example~\theexample: Software exception}]{../../examples/software-exception/software-exception.sasm}
 
 \section{Store Load}
 
@@ -96,7 +100,7 @@ register-offset, immediate-offset, and plain register forms of \mnemonic{LJMP} a
 s} instruction commented \texttt{FAIL!}, so a working implementation reaches the \texttt{:pass}
 label at the end while a faulty one jumps into the "forbidden zone" and fails at \texttt{:fail}.
 
-\lstinputlisting[
-	caption={Example D-7: Store/load},
-	label={lst:example-store-load}
-]{../../examples/store-load/store-load.sasm}
+\refstepcounter{example}
+\label{ex:store-load}
+\addcontentsline{loe}{example}{\protect\numberline{\theexample}Store/load}
+\lstinputlisting[caption={Example~\theexample: Store/load}]{../../examples/store-load/store-load.sasm}

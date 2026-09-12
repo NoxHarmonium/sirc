@@ -95,12 +95,22 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
 3. **Condition-code computation table.** `M68000PRM:3-18`, `3-19`. **Done (2026-09-12):** added a "Flag
    Computation Formulas" subsection to Chapter 13's "Status Flag Updates" section with Boolean C/V formulas per
    family in terms of `Dm`/`Sm`/`Rm`, verified by hand-tracing signed overflow and borrow cases.
-6. **List of Examples in the front matter.** Follows from the Gate 1 decision to number examples `N-M` within each
-   chapter. `MCS6500` front matter. Scoping decision (2026-09-12, author's call): retrofit examples into a proper
-   captioned float environment (like the existing List of Figures/Tables) rather than hand-maintaining the list, so
-   it can't drift out of sync. This is the bigger of the two remaining undertakings -- it touches every example
-   (30+, across 5+ chapters), all currently just bold inline text ("Example 13-3:") in front of an `lstlisting`,
-   not a captioned float. Not started.
+6. **List of Examples in the front matter.** `MCS6500` front matter. **Done (2026-09-12):** retrofitted all 75
+   examples across the manual (68 short inline examples in Chapters 3, 5, 8, 9, 10, 13-17, plus 7 full-program
+   listings in Appendix D) into a real numbered/captioned/listed mechanism, matching the existing List of
+   Figures/Tables. Two mechanisms were needed:
+   - A new `example` float (`\newfloat` in `preamble.tex`, numbered `N-M` like the existing convention, `[H]`
+     placement so it never actually floats away) for the ~68 short examples, each given a real caption (mostly
+     derived from a pre-existing subsection title or the leading code comment where neither existed yet).
+   - Appendix D's 7 example programs are full multi-hundred-line `.sasm` listings (up to 268 lines) that cannot
+     fit a non-breaking `[H]` float without massive overflow, so they keep `lstinputlisting`'s own page-breaking
+     caption, but now also manually step the shared `example` counter and inject a matching "List of Examples"
+     entry via `\addcontentsline{loe}{...}`, so they appear seamlessly alongside the float-based ones in one
+     unified list.
+   - This incidentally fixed a real numbering bug: Chapter 16's examples were hand-numbered out of file order
+     (16-4 appeared before 16-3 in the source); auto-numbering now reflects true document order.
+   - Also fixed two stale "this fault is not retryable" references in Chapter 14 (`LOAD`/`STOR` segment-overflow
+     exceptions) left over from before the fault-category unification earlier in this session.
 8. **Programming model figures.** `M68000PRM:1-2`, `1-9`, `1-11`. **Done (2026-09-12):** added a "Programming
    Model" section to Chapter 3 with a "User Programming Model" figure (`r1`-`r7`, the low word of each address
    register pair, `sr`'s unprivileged low byte) and a "Supervisor Programming Model Supplement" figure (the high

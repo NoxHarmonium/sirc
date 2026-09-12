@@ -133,8 +133,8 @@ endif
 	decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a
 	given \mnemonic{COPR} instruction faults depends on register contents.
 
-	\textbf{Example 16-1:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Wait for interrupt (Exception Unit)
 COPI #0x1900                  ; Coprocessor 1, operation 0x9
 ; Prefer the WAIT meta-instruction for normal assembly code.
@@ -146,7 +146,9 @@ COPI #0x1A00                  ; Coprocessor 1, operation 0xA
 ; User exception (system call)
 COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
 ; Prefer EXCP #0x80 for normal assembly code.
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Direct Coprocessor Calls}
+	\end{example}
 
 \end{instructionbox}
 
@@ -288,11 +290,13 @@ endif
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
-	\textbf{Example 16-2:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD r1, #'A'                 ; Character to print
 EXCP #0x80                    ; Trap to OS print routine
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Triggering a Software Exception}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{WAIT}{Wait for Interrupt Meta-Instruction}
@@ -345,12 +349,14 @@ endif
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-4:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 idle_loop:
     WAIT                       ; Halt until an interrupt or reset occurs
     BRAN @idle_loop            ; Resume waiting if woken spuriously
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Idling Until an Interrupt}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{RETE}{Return from Exception Meta-Instruction}
@@ -404,12 +410,14 @@ endif
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-5:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 timer_handler:
     ; ... service the timer interrupt ...
     RETE                       ; Return to the interrupted program
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Returning from an Interrupt Handler}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{RSET}{System Reset Meta-Instruction}
@@ -463,11 +471,13 @@ endif
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-6:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 ; Request a full processor reset from supervisor code
 RSET                           ; Reboots through the reset vector
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Requesting a Software Reset}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{ETFR/ETTR}{Exception Link Transfer Meta-Instructions}
@@ -536,14 +546,16 @@ endif
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-3:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 alignment_fault_handler:
     ETFR a, #6                ; Get faulting return address
     LOAD al, #0x0100          ; Correct the address
     ETTR #6, a                ; Write corrected address back
     RETE
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Correcting a Faulting Return Address}
+	\end{example}
 \end{instructionbox}
 
 See Chapter~\ref{ch:exceptions} for detailed documentation of exception handling and all exception coprocessor
@@ -671,12 +683,14 @@ if n > 0:
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-7:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD ah, #0x0040
 LOAD al, #0x0000              ; a = 0x00400000, start of source block
 DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]; a += 3
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Reading a Memory Block into Registers}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{DMAW}{DMA Write From Registers Meta-Instruction}
@@ -744,12 +758,14 @@ if n > 0:
 
 	\textbf{Privilege:} Supervisor mode only.
 
-	\textbf{Example 16-8:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD ah, #0x0040
 LOAD al, #0x0000              ; a = 0x00400000, start of destination block
 DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3; a += 3
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Writing Registers to a Memory Block}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{DMAT}{DMA Memory Transfer Meta-Instruction}
@@ -814,14 +830,16 @@ while remaining > 0:
 	\textbf{Overlap:} Overlapping source and destination ranges are architecturally undefined unless the source and
 	destination addresses are identical.
 
-	\textbf{Example 16-9:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD ah, #0x0040
 LOAD al, #0x0000              ; a = 0x00400000, source block
 LOAD lh, #0x0050
 LOAD ll, #0x0000              ; l = 0x00500000, destination block
 DMAT a, l, #16                ; Copy 16 words from memory[a] to memory[l]
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Copying a Memory Block with DMAT}
+	\end{example}
 \end{instructionbox}
 
 \section{Integer Maths Unit (Coprocessor 3)}
@@ -933,12 +951,14 @@ MULS:
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
-	\textbf{Example 16-10:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD r1, #1000                ; Multiplicand
 LOAD r2, #2000                ; Multiplier
 MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Unsigned 16x16 Multiply}
+	\end{example}
 \end{instructionbox}
 
 \begin{instructionbox}{DIVU/DIVS}{Integer Divide Meta-Instructions}
@@ -1003,11 +1023,13 @@ else:
 	\reg{r3} as a 16-bit two's-complement divisor. The quotient is truncated toward zero and the remainder has the sign
 	of the dividend. The case \texttt{-2147483648 / -1} is quotient overflow.
 
-	\textbf{Example 16-11:}
-	\begin{lstlisting}
+	\begin{example}
+		\begin{lstlisting}
 LOAD r1, #0                   ; High word of dividend
 LOAD r2, #100                 ; Low word of dividend
 LOAD r3, #7                   ; Divisor
 DIVU                          ; r1 = remainder, r2 = quotient, r3 = 0 on success
-\end{lstlisting}
+		\end{lstlisting}
+		\caption{Unsigned Divide}
+	\end{example}
 \end{instructionbox}

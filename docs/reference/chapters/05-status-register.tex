@@ -255,9 +255,8 @@ When returning from an exception with \mnemonic{RETE}, the saved status register
 
 \section{Usage Examples}
 
-\subsection{Example 5-1: Conditional Execution}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Compare r1 with r2
 CMPR r1, r2
 
@@ -269,15 +268,16 @@ BRAN|HI @label_greater
 
 ; Add 0x16 to r1 if r1 >= r2 (signed)
 ADDI|>= r1, #0x16
-\end{lstlisting}
-
-\subsection{Example 5-2: Manual Status Flag Control}
+	\end{lstlisting}
+	\caption{Conditional Execution}
+\end{example}
 
 The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
 particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
 Chapter~\ref{ch:shift-operations} for complete details.
 
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Update flags from shift instead of ALU
 ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
 
@@ -285,32 +285,35 @@ ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
 CMPR r1, r2                   ; Set comparison flags
 ADDI[N] r3, #1                ; Increment without changing flags
 BRAN|== @still_uses_cmpr_flags ; Branch uses CMPR flags
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Manual Status Flag Control}
+\end{example}
 
-\subsection{Example 5-3: Testing Bits}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Test if bit 5 is set in r1
 TSAI r1, #0x0020  ; AND with 0x0020, update flags only
 
 ; Branch if bit was set (result non-zero)
 BRAN|!= @bit_was_set
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Testing Bits}
+\end{example}
 
-\subsection{Example 5-4: Enabling Protected Mode}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Entering protected mode (from supervisor mode)
 ORRI sr, #0x0100  ; Set protected mode bit
 ; Now running in protected mode
 
 ; Attempting to write privileged register will fault
 ; ADDI ah, #0x05  ; This would cause exception!
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Enabling Protected Mode}
+\end{example}
 
-\subsection{Example 5-5: Saving and Restoring Status}
-
-\begin{lstlisting}
+\begin{example}
+	\begin{lstlisting}
 ; Save status register
 LOAD r7, sr
 
@@ -320,7 +323,9 @@ CMPI r1, #100
 
 ; Restore original status
 LOAD sr, r7
-\end{lstlisting}
+	\end{lstlisting}
+	\caption{Saving and Restoring Status}
+\end{example}
 
 The restore above does not reproduce bit 13 (\texttt{EA}) as it stood at the time of the save: a direct write to
 \reg{sr} always preserves the register's current \texttt{EA} value rather than adopting the written one, so only
