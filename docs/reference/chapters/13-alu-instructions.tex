@@ -179,6 +179,35 @@ and register forms. Public \mnemonic{LOAD} forms do not support status update ov
 status flags; an encoding of the \mnemonic{LOAD} opcode with a non-\texttt{None} AF field, which is not reachable from
 public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
 
+\subsection{Flag Computation Formulas}
+
+Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how,
+as a Boolean formula in terms of the sign bit (bit 15) of the destination operand (\texttt{Dm}), the source
+operand (\texttt{Sm}), and the result (\texttt{Rm}). $\cdot$ is Boolean AND, $+$ is Boolean OR, and $\overline{X}$
+is the complement of $X$.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{4.2cm}p{4.2cm}}
+		\toprule
+		\textbf{Family}        & \textbf{C}                                                                 & \textbf{V}                                                                 \\
+		\midrule
+		ADD, ADC               & Carry out of bit 15 of the full addition                                  & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
+		SUB, SBC, CMP          & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$            & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
+		AND, ORR, XOR, TSA, TSX & $0$ (always cleared)                                                      & $0$ (always cleared)                                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Carry and Overflow Flag Formulas}
+	\label{tab:alu-flag-formulas}
+\end{table}
+
+$N$ and $Z$ are the same for every family: $N = Rm$ (the result's own sign bit), and $Z$ is set when the full
+16-bit result is zero. \mnemonic{ADC} and \mnemonic{SBC} use the same formulas as \mnemonic{ADD} and
+\mnemonic{SUB} respectively -- the incoming carry/borrow is folded into the addition or subtraction before
+\texttt{Rm} (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
+\mnemonic{CMP}/\mnemonic{TSA}/\mnemonic{TSX} compute the same flags as the corresponding
+\mnemonic{SUB}/\mnemonic{AND}/\mnemonic{XOR} family and simply discard the result.
+
 \subsection{Manual Flag Update Control}
 
 ALU instructions except \mnemonic{LOAD} support manual control over how status flags are updated using the status

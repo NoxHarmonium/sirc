@@ -92,9 +92,9 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
 2. **Legal forms table in each entry.** Scoping decision (2026-09-12, author's call): a one-line cross-reference to
    the existing chapter-level Legal Forms table, not a duplicated per-entry table. `M68000PRM:4-5`, `4-108`. Not
    started.
-3. **Condition-code computation table.** Boolean formulas for V, C, Z per instruction family in terms of Sm, Dm,
-   Rm, plus condition-test formulas. `M68000PRM:3-18`, `3-19`. Belongs in Chapter 13's "Status Flag Updates"
-   section. Not started.
+3. **Condition-code computation table.** `M68000PRM:3-18`, `3-19`. **Done (2026-09-12):** added a "Flag
+   Computation Formulas" subsection to Chapter 13's "Status Flag Updates" section with Boolean C/V formulas per
+   family in terms of `Dm`/`Sm`/`Rm`, verified by hand-tracing signed overflow and borrow cases.
 6. **List of Examples in the front matter.** Follows from the Gate 1 decision to number examples `N-M` within each
    chapter. `MCS6500` front matter. Scoping decision (2026-09-12, author's call): retrofit examples into a proper
    captioned float environment (like the existing List of Figures/Tables) rather than hand-maintaining the list, so
