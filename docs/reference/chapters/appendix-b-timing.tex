@@ -67,9 +67,8 @@ A fault aborts the six-phase sequence of the faulting instruction at the phase t
 that instruction do not run. Alignment is detected before phase 0; Privilege Violation is detected at phase 2; Segment
 Overflow is detected at phase 2 or phase 3; Bus and Bus Protection faults are detected at the phase that acknowledges
 the failing bus access. In every case the exception-unit dispatch slot begins in the cycle immediately following
-detection. Alignment, Bus, Bus Protection, Privilege Violation, and PC-wrap Segment Overflow save the address of the faulting
-instruction and are retryable; only Invalid Opcode and non-PC-wrap Segment Overflow save the address of the next
-instruction and are not restartable.
+detection. Alignment, Bus, Bus Protection, Invalid Opcode, Privilege Violation, and Segment Overflow all save the
+address of the faulting instruction and are retryable.
 
 \section{Conditional Execution}
 

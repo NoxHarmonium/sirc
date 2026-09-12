@@ -484,6 +484,13 @@ BAT0--BAT2 unless BAS is asserted.
 	\label{tab:bus-response-timing-rules}
 \end{table}
 
+A bus transaction terminated by Bus Error or Bus Protection Error is architecturally unsuccessful. An external device
+must not commit any externally visible effect from a transaction for which it asserts the corresponding error signal:
+for a write, the device must not act on the data it was driven; for a read, any side effect the access would otherwise
+have (for example, a status register that clears on read) must not occur either. This is what makes Bus Fault and Bus
+Protection Fault safe to retry (Chapter~\ref{ch:exceptions}) -- the CPU can assume that a transaction it aborted with
+one of these signals never happened.
+
 BACK, BERR and BPER are logically mutually exclusive. If more than one is asserted for the same request, BERR has
 priority, then BPER, then BACK.
 
