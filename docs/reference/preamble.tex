@@ -177,20 +177,37 @@
 
 
 % ------------------------------------------------------------
-% Instruction boxes
+% Instruction reference pages
 % ------------------------------------------------------------
 
-% Square corners look considerably more period-correct.
-\newtcolorbox{instructionbox}[1]{
-    colback=sirclightgray,
-    colframe=sircred,
-    coltitle=black,
-    fonttitle=\bfseries\large,
-    title=#1,
-    arc=0mm,
-    boxrule=0.8pt,
-    breakable,
-    enhanced jigsaw,
+% Modelled on the instruction-description pages of period CPU manuals (e.g.
+% the M68000 Family Programmer's Reference Manual): each instruction gets a
+% dedicated page (or run of pages) with the mnemonic set prominently at the
+% top for flip-through lookup, rather than a boxed callout sitting in the
+% middle of running text. \clearpage at the start of every entry guarantees
+% two entries never share a page -- if one entry runs long, the next simply
+% starts on the page after it ends. The chapter running header (already set
+% by fancyhdr) carries the instruction category, matching how the M68000
+% manual shows its category ("Integer Instructions", etc.) in the header of
+% every instruction page.
+%
+% Every entry also gets its own table-of-contents/PDF-bookmark line, keyed
+% off its own mnemonic and name, regardless of whether it sits directly
+% under a \section of its own or is one of several instructions grouped
+% under a shared \section (e.g. the Exception Unit meta-instructions in
+% Chapter 16) -- so every instruction is individually findable via the ToC
+% or bookmarks either way, matching the "flip through to find it" goal.
+\newenvironment{instructionbox}[2]{%
+    \clearpage
+    \phantomsection
+    \addcontentsline{toc}{section}{#1 -- #2}
+    \noindent{\Huge\bfseries\color{sircred}#1}\par
+    \vspace{3pt}
+    \noindent{\Large\bfseries #2}\par
+    \vspace{6pt}
+    \titlerule
+    \vspace{10pt}
+}{%
 }
 
 

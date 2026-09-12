@@ -70,7 +70,7 @@ operation nibbles are rejected before the command is dispatched. Missing coproce
 operations are detected after the command has been latched for dispatch and raise invalid-opcode faults through the
 exception unit.
 
-\begin{instructionbox}{COPI/COPR -- Coprocessor Call}
+\begin{instructionbox}{COPI/COPR}{Coprocessor Call}
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is Undocumented.
@@ -232,7 +232,7 @@ is architecturally undefined.
 
 \section{Exception Unit Meta-Instructions}
 
-\begin{instructionbox}{EXCP -- User Exception Meta-Instruction}
+\begin{instructionbox}{EXCP}{User Exception Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -295,7 +295,7 @@ EXCP #0x80                    ; Trap to OS print routine
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{WAIT -- Wait for Interrupt Meta-Instruction}
+\begin{instructionbox}{WAIT}{Wait for Interrupt Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -353,7 +353,7 @@ idle_loop:
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{RETE -- Return from Exception Meta-Instruction}
+\begin{instructionbox}{RETE}{Return from Exception Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -412,7 +412,7 @@ timer_handler:
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{RSET -- System Reset Meta-Instruction}
+\begin{instructionbox}{RSET}{System Reset Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -470,7 +470,7 @@ RSET                           ; Reboots through the reset vector
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{ETFR/ETTR -- Exception Link Transfer Meta-Instructions}
+\begin{instructionbox}{ETFR/ETTR}{Exception Link Transfer Meta-Instructions}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -608,7 +608,7 @@ segment-overflow fault; otherwise the low word wraps modulo $2^{16}$. Partial si
 occurs mid-transfer, and software must not assume that re-executing the same DMA instruction restarts the original
 operation.
 
-\begin{instructionbox}{DMAR -- DMA Read To Registers Meta-Instruction}
+\begin{instructionbox}{DMAR}{DMA Read To Registers Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
 	in all SIRC-1 models.
 
@@ -679,7 +679,7 @@ DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{DMAW -- DMA Write From Registers Meta-Instruction}
+\begin{instructionbox}{DMAW}{DMA Write From Registers Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
 	in all SIRC-1 models.
 
@@ -752,7 +752,7 @@ DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{DMAT -- DMA Memory Transfer Meta-Instruction}
+\begin{instructionbox}{DMAT}{DMA Memory Transfer Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
 	in all SIRC-1 models.
 
@@ -874,7 +874,7 @@ raise invalid-opcode faults. Divide by zero and quotient overflow are reported i
 exceptions. If the condition is false, no maths command is dispatched, no coprocessor opcode check is performed, and
 registers and status flags are preserved.
 
-\begin{instructionbox}{MULU/MULS -- Integer Multiply Meta-Instructions}
+\begin{instructionbox}{MULU/MULS}{Integer Multiply Meta-Instructions}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 3 (Integer Maths Unit), an optional
 	coprocessor absent on models that do not implement it.
 
@@ -941,7 +941,7 @@ MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 \end{lstlisting}
 \end{instructionbox}
 
-\begin{instructionbox}{DIVU/DIVS -- Integer Divide Meta-Instructions}
+\begin{instructionbox}{DIVU/DIVS}{Integer Divide Meta-Instructions}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 3 (Integer Maths Unit), an optional
 	coprocessor absent on models that do not implement it.
 
