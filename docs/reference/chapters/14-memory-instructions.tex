@@ -144,6 +144,55 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 
 	\textbf{Opcodes:} \opcode{14} (Indirect Imm), \opcode{15} (Indirect Reg), \opcode{16} (Post-Inc Imm), \opcode{17} (Post-Inc Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
 
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{14}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{15}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{16}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{17}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
 	\textbf{Instruction Fields:}
 	\begin{itemize}
 		\item \textbf{Register (bits 25--22, Immediate format, \opcode{14}/\opcode{16}):} Destination register
@@ -243,6 +292,55 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} \opcode{10} (Indirect Imm), \opcode{11} (Indirect Reg), \opcode{12} (Pre-Dec Imm), \opcode{13} (Pre-Dec Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{10}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{11}} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rS} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{12}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{13}} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rS} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{AF} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}

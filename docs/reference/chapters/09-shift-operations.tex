@@ -144,6 +144,17 @@ ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 
 \textbf{Operation:} Produces the same data result as LSL, but sets the overflow flag if the sign bit changes.
 
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.2em]{17}
+		\bitheader{0-15} \\
+		\bitbox{1}{$\leftarrow$}
+		\bitbox{15}{\small Shift Left}
+		\bitbox{1}{0}
+	\end{bytefield}
+	\caption{Arithmetic Shift Left}
+\end{figure}
+
 \begin{itemize}
 	\item Equivalent to signed multiplication by $2^n$
 	\item Can cause signed overflow if sign bit changes

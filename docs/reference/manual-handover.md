@@ -84,11 +84,30 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
 
 1. **Instruction Format bit diagram in every entry.** A bit-numbered 16-bit word (both words for immediate format)
    showing opcode, condition, register, AF, shift and immediate fields. `M68000PRM:4-4`, `4-25`; `MCS6500:B-3`.
-   Scoping decision (2026-09-12, author's call): one diagram per encoding form an entry documents, not one per
-   entry overall -- so an entry like `ADDI`/`ADDR` (Immediate, Short-Immediate, and Register forms) gets three
-   diagrams. This is roughly 70-90 diagrams total across all 33 instruction entries; most will look near-identical
-   within a format family, with only the opcode value differing, but that repetition matches the M68000 PRM's own
-   practice and the manual's "flip through and find it" design goal. Not started.
+   **Done (2026-09-12):** added one 32-bit bytefield diagram per encoding form to all 33 instruction entries across
+   Chapters 13-17 (81 diagrams total), per the one-diagram-per-form scoping decision. Deliberately plain, uncaptioned
+   `bytefield` blocks rather than a captioned `figure`/`example` float, so they don't bloat the List of Figures or
+   List of Examples. Two mechanics were needed:
+   - Ordinary instructions (`ADDI`/`ADDR`, `LOAD`, `STOR`, `LDEA`, `LDEL`, `COPI`/`COPR`, etc.) get one diagram per
+     opcode/format pair, with generic field labels matching Chapter 7's canonical field names (`Reg`, `R1`-`R3`,
+     `Imm`, `AF`, `Cond`, etc.), and the entry's real opcode filled into the Opcode/Op field. `LDEA`/`LDEL` use their
+     own operand names (`dest`, `src`, `rO`) instead of generic `Reg`/`R1`-`R3`, matching their prose.
+   - Meta-instructions (`SHFT`, `BRAN`, `BRSR`, `RETS`, `LJMP`, `LJSR`, `EXCP`, `WAIT`, `RETE`, `RSET`, `ETFR`/`ETTR`,
+     `DMAR`, `DMAW`, `DMAT`, `MULU`/`MULS`, `DIVU`/`DIVS`, `NOOP`) don't have their own opcode, so their diagram
+     instead shows the real instruction they assemble to, with the fields the meta-instruction fixes shown as
+     literal values (e.g. `NOOP`'s diagram shows `ADDI` opcode `0x00` with `Reg` fixed to `0x0`, `Immediate Value`
+     fixed to `0x0000`, and `AF` fixed to `00`) rather than generic field names.
+   - A macro-based approach (three reusable `\newcommand`s wrapping the `bytefield` environment, taking the opcode
+     and field labels as arguments) was tried first but abandoned: the `bytefield` package's `\bitbox`/`&` machinery
+     does not work when its row content is supplied through macro parameter substitution -- confirmed with a minimal
+     reproduction outside the manual (`Extra alignment tab has been changed to \cr`, "more \span or & marks than
+     were in the preamble"). All 81 diagrams are written out literally instead, matching the pattern Chapter 7's own
+     three format diagrams already used.
+   - While working through these, also resolved the standing "REMEMBER TO WORK OUT WHAT IS WRONG WITH THE DIAGRAM"
+     note at the bottom of this file: Chapter 9's Arithmetic Shift Left (ASL) subsection was the only one of the six
+     shift types (LSL, LSR, ASL, ASR, RTL, RTR) missing its bit-movement figure -- LSL, LSR, ASR, RTL, and RTR each
+     had one, ASL didn't. Added the missing figure, identical in shape to LSL's (same data movement; ASL only
+     differs from LSL in overflow-flag semantics, which the directional figure doesn't depict anyway).
 2. **Legal forms table in each entry.** `M68000PRM:4-5`, `4-108`. **Done (2026-09-12):** added a one-line
    cross-reference to the relevant chapter-level Legal Forms table to all 33 instruction entries (appended to each
    entry's `Opcodes:`/`Assembles to:` line), per the scoping decision to reference rather than duplicate.
@@ -126,6 +145,10 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
    words per mode). All existing prose content (formulas, syntax examples, usage bullets) was preserved, just
    reorganized.
 
+All Workstream 13 and 14 backlog items above are now done. What remains open is Workstream 12 (documentation QA and
+build hygiene) and the two smaller, not-currently-a-known-problem Workstream 13 items noted above (`lstlisting`
+restyle, chapter/part opening-page review) -- neither was part of the agreed backlog for this pass.
+
 ## Definition of Done
 
 The manual is "up to scratch" when, in addition to everything already met by the completed workstreams:
@@ -133,5 +156,3 @@ The manual is "up to scratch" when, in addition to everything already met by the
 - There's a single repeatable command that builds the PDF, verifies generated examples, and checks
   references/terminology (Workstream 12).
 - Every term used in the manual is defined the first time it appears or is listed in a glossary (Workstream 13).
-
-#### REMEMBER TO WORK OUT WHAT IS WRONG WITH THE DIAGRAM AND FIX IT. I SWEAR I LEFT A NOTE SOMEWHERE

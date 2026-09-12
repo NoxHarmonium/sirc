@@ -139,6 +139,16 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{18}} &
+			\bitbox{4}{p} &
+			\bitbox{16}{disp} &
+			\bitbox{2}{p} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -207,6 +217,16 @@ loop:
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1C}} &
+			\bitbox{4}{p} &
+			\bitbox{16}{disp} &
+			\bitbox{2}{p} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -275,6 +295,16 @@ RETS
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{18}} &
+			\bitbox{4}{p} &
+			\bitbox{16}{0x0000} &
+			\bitbox{2}{0x0} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -337,6 +367,54 @@ my_function:
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{18}} &
+			\bitbox{4}{dest} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{19}} &
+			\bitbox{4}{dest} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1A}} &
+			\bitbox{4}{dest} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1B}} &
+			\bitbox{4}{dest} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -416,6 +494,54 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1C}} &
+			\bitbox{4}{dest} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1D}} &
+			\bitbox{4}{dest} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1E}} &
+			\bitbox{4}{dest} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1F}} &
+			\bitbox{4}{dest} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -498,6 +624,30 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{18}} &
+			\bitbox{4}{p} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{19}} &
+			\bitbox{4}{p} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -569,6 +719,30 @@ LJMP a, r1                     ; p = a + r1
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1C}} &
+			\bitbox{4}{p} &
+			\bitbox{16}{Offset} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{1D}} &
+			\bitbox{4}{p} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rO} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{src} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}

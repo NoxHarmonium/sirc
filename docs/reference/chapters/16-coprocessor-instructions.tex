@@ -74,6 +74,30 @@ exception unit.
 	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Opcodes:} 0x0F (Immediate), 0x3F (Register). Opcode 0x2F is Undocumented. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{Command} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rS} &
+			\bitbox{1}{0} &
+			\bitbox{3}{000} &
+			\bitbox{4}{0x0} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -239,6 +263,16 @@ is architecturally undefined.
 	present in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1100 | \#vector} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -304,6 +338,16 @@ EXCP #0x80                    ; Trap to OS print routine
 	present in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x1900}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1900} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -364,6 +408,16 @@ idle_loop:
 	present in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x1A00}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1A00} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -425,6 +479,16 @@ timer_handler:
 	present in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x1B00}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1B00} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -485,6 +549,26 @@ RSET                           ; Reboots through the reset vector
 	present in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} or \texttt{COPI \#0x1Dxy}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1Cxy} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x1Dxy} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -625,6 +709,16 @@ operation.
 	in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2800 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2800 | operand} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -698,6 +792,16 @@ DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]
 	in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2900 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2900 | operand} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -773,6 +877,16 @@ DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3
 	in all SIRC-1 models.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2A00 | \#n} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -897,6 +1011,26 @@ registers and status flags are preserved.
 	coprocessor absent on models that do not implement it.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x3000} or \texttt{COPI \#0x3100}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x3000} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x3100} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -966,6 +1100,26 @@ MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 	coprocessor absent on models that do not implement it.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x3200} or \texttt{COPI \#0x3300}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x3200} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x3300} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}

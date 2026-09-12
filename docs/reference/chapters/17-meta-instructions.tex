@@ -44,6 +44,17 @@ operations easier to read and write; they do not introduce additional CPU opcode
 
 	\textbf{Assembles to:} \texttt{ADDI[N] r1, \#0}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{00}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x0000} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
 	\textbf{Instruction Fields:}
 	\begin{itemize}
 		\item \textbf{Register (bits 25--22):} fixed at \texttt{0x0} (\reg{r1}).
