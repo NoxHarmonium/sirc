@@ -101,9 +101,11 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
    it can't drift out of sync. This is the bigger of the two remaining undertakings -- it touches every example
    (30+, across 5+ chapters), all currently just bold inline text ("Example 13-3:") in front of an `lstlisting`,
    not a captioned float. Not started.
-8. **Programming model figures.** One figure of user-visible registers with bit widths, one for supervisor
-   additions, and a table of privileged registers/bits. `M68000PRM:1-2`, `1-9`, `1-11`. Belongs in Chapter 3
-   (Register Model), alongside the existing address-pair figure. Not started.
+8. **Programming model figures.** `M68000PRM:1-2`, `1-9`, `1-11`. **Done (2026-09-12):** added a "Programming
+   Model" section to Chapter 3 with a "User Programming Model" figure (`r1`-`r7`, the low word of each address
+   register pair, `sr`'s unprivileged low byte) and a "Supervisor Programming Model Supplement" figure (the high
+   word of each address register pair, `sr`'s privileged high byte). The privileged-registers table this item also
+   asked for was already covered by the existing Register Encoding table (Table 3.1).
 9. **Per-mode encoding box in Chapter 8.** GENERATION (EA formula), ASSEMBLER SYNTAX, field encoding and
    instruction word count for each addressing mode. `M68000PRM:2-6`, `2-7`. Scoping note (2026-09-12): restructure
    using the same boxed-reference pattern as the redesigned instruction pages (Workstream 13), applied per
