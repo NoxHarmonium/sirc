@@ -211,24 +211,6 @@ At a given clock frequency:
 
 These are theoretical maximums assuming perfect code with no inefficiencies.
 
-\section{Comparison to Other CPUs}
-
-\begin{table}[H]
-	\centering
-	\small
-	\begin{tabular}{lcp{6cm}}
-		\toprule
-		\textbf{CPU}   & \textbf{Avg CPI} & \textbf{Notes}                                            \\
-		\midrule
-		SIRC-1         & 6.0              & Fixed for ordinary instructions; DMA adds transfer cycles \\
-		MOS 6502       & 2--7             & Variable by instruction                                   \\
-		Motorola 68000 & 4--158           & Highly variable                                           \\
-		ARM6           & 1.0              & Single-cycle with pipeline                                \\
-		MIPS R2000     & 1.0              & Single-cycle with pipeline                                \\
-		\bottomrule
-	\end{tabular}
-	\caption{Cycles Per Instruction Comparison}
-\end{table}
-
-The SIRC-1's fixed 6-cycle execution makes it slower than pipelined RISC CPUs but more predictable. It is comparable to
-early microprocessors while being simpler to implement in hardware.
+The SIRC-1's fixed 6-cycle execution trades peak throughput for predictability: every ordinary instruction takes the
+same number of cycles regardless of the operation or operands, which is simpler to implement in hardware and easier to
+reason about than a variable-cycle-count design.
