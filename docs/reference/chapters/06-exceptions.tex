@@ -47,28 +47,25 @@ was set before the exception, tracing resumes after RETE returns.
 
 \subsubsection{Fault Categories}
 
-Not all faults behave the same way with respect to the faulting instruction and the RETE return address. There are four
+Not all faults behave the same way with respect to the faulting instruction and the RETE return address. There are three
 categories:
 
 \begin{description}
-	\item[Retryable faults] The instruction that triggered the fault is cancelled before it takes effect. The link register
-	      stores the address of the faulting instruction. RETE returns to that instruction so it can be retried, typically after
+	\item[Retryable faults] The operation that triggered the fault does not take effect. For most faults this means the
+	      instruction is cancelled before it commits; Alignment Fault is the exception, since the fetch itself is what fails,
+	      so there is no decoded instruction to cancel in the first place -- but the effect is the same either way. The link
+	      register stores the address of the faulting instruction. RETE returns to that instruction so it can be retried, typically after
 	      the fault handler has corrected the condition that caused the fault: remapping or paging in a device for a bus fault,
-	      adjusting a permission for a bus protection fault, or bringing an out-of-range address back into range for a segment
-	      overflow. This is also why Privilege Violation is retryable: the CPU guarantees that the instruction that triggered it
-	      never took effect, so a supervisor-mode handler can safely inspect it, emulate the privileged effect if appropriate, and
-	      either retry it or advance past it under its own control.
+	      adjusting a permission for a bus protection fault, bringing an out-of-range address back into range for a segment
+	      overflow, or emulating the missing operation for an invalid opcode fault. This is also why Privilege Violation is
+	      retryable: the CPU guarantees that the instruction that triggered it never took effect, so a supervisor-mode handler
+	      can safely inspect it, emulate the privileged effect if appropriate, and either retry it or advance past it under its
+	      own control. Every fault in this category follows the same pattern: a handler is always free to advance past the
+	      faulting instruction with \mnemonic{ETFR}/\mnemonic{ETTR} instead of retrying it. For Invalid Opcode Fault this is
+	      usually the right choice -- simply retrying an unemulated invalid opcode will raise the same fault again.
 
-	      \textit{Alignment Fault; Bus Fault; Bus Protection Fault; Privilege Violation Fault; Segment Overflow Fault when raised
-		      by program-counter wraparound.}
-
-	\item[Aborted, non-retryable faults] The instruction that triggered the fault does not complete, but the link register stores
-	      the address of the \textit{next} instruction, not the faulting one. RETE does not return to the faulting instruction,
-	      so the aborted operation is not retried automatically; a handler that needs to resume it must locate and re-issue it
-	      itself.
-
-	      \textit{Invalid Opcode Fault; Segment Overflow Fault when raised by any address computation other than
-		      program-counter wraparound.}
+	      \textit{Alignment Fault; Bus Fault; Bus Protection Fault; Invalid Opcode Fault; Privilege Violation Fault; Segment
+		      Overflow Fault.}
 
 	\item[Post-instruction faults] The instruction completes normally and its effects are committed before the fault fires. The
 	      link register stores the address of the \textit{next} instruction. RETE advances to that instruction; the traced
@@ -114,21 +111,23 @@ categories:
 	      correct \reg{p} (for example, by clearing bit 0) before returning with \mnemonic{RETE}, or the CPU raises the same
 	      fault again immediately.
 
-	\item \textbf{Segment Overflow Fault} \textit{(Conditionally retryable)} — Raised when a computed address would fall
-	      outside the current segment.
+	\item \textbf{Segment Overflow Fault} \textit{(Retryable)} — Raised when a computed address would fall outside the
+	      current segment.
 
 	      Only raised if \texttt{SR.A} (Trap on Address Overflow) is set, since some programs intentionally rely on address
 	      wrap-around. Also raised if the program counter overflows; the captured bus address and bus access type in the fault
-	      metadata register help identify where the overflow occurred. When the program counter itself wraps, the link register
-	      stores the address of the faulting instruction and the fault is retryable. For any other computed-address overflow, the
-	      link register stores the address of the next instruction and the fault is not retryable.
+	      metadata register help identify where the overflow occurred. The link register stores the address of the faulting
+	      instruction, whether the overflow occurred in the program counter or in any other address computation, so a handler
+	      can bring the address back into range and retry with \mnemonic{RETE}.
 
-	\item \textbf{Invalid Opcode Fault} \textit{(Aborted, non-retryable)} — Raised when a coprocessor call targets a
+	\item \textbf{Invalid Opcode Fault} \textit{(Retryable)} — Raised when a coprocessor call targets a
 	      non-existent coprocessor or requests an operation that the selected coprocessor does not implement.
 
 	      Can be used for forward compatibility: programs written for a future coprocessor (for example, a floating-point unit)
-	      will trap on older hardware, and the handler can emulate the operation in software before returning to the instruction
-	      following the trapped call.
+	      will trap on older hardware, and the handler can emulate the operation in software. Because this fault is retryable,
+	      the link register stores the address of the faulting instruction; a handler that has emulated the operation must use
+	      \mnemonic{ETFR}/\mnemonic{ETTR} to redirect the return address to the instruction following the trapped call before
+	      returning with \mnemonic{RETE} -- retrying the instruction unmodified will simply raise the same fault again.
 
 	      Note that this fault is specific to coprocessor instructions. Other instruction encodings outside the documented
 	      instruction set -- i.e. normal processing-unit encodings -- are reserved or architecturally undefined; they are not
@@ -255,10 +254,12 @@ the Return Address and the Return Status Register between a link register and \r
 level is not accessible to software through these instructions.
 
 When an exception occurs, the appropriate link register (determined by the exception priority level) is populated with
-the current program counter and status register values. For faults in the retryable category (Alignment Fault, and
-Segment Overflow Fault raised by program-counter wraparound), the return address is the address of the faulting
-instruction, so it can be retried. For all other faults and for regular exceptions (hardware and software exceptions),
-the return address is the address after the current instruction.
+the current program counter and status register values. For faults in the retryable category (Alignment Fault, Bus
+Fault, Bus Protection Fault, Invalid Opcode Fault, Privilege Violation Fault, and Segment Overflow Fault), the return
+address is the address of the faulting instruction, so it can be retried. For regular exceptions (hardware and software
+exceptions) and Instruction Trace Fault, the return address is the address after the current instruction; see the
+"Fault Categories" section above for the exception-dispatch faults (Level Five Hardware Exception Conflict, Double
+Fault), which instead store the program counter at the point the fault was detected.
 
 \begin{table}[H]
 	\centering
@@ -286,48 +287,25 @@ the return address is the address after the current instruction.
 In this case, the fault link register (register 6) and the fault metadata register (register 7) are overwritten.
 This means the original return address is lost.
 
-A valid way of handling this is to declare the CPU state invalid, perform some last-chance error handling (for example,
-dumping the registers), and reset.
+There is no way to fully recover from a double fault: the valid response is to declare the CPU state invalid, perform
+some last-chance error handling (for example, dumping the registers), and reset the CPU.
 
-For robust fault handling that can recover from double faults, fault handlers should save the link register contents
-early in the handler:
+A fault handler that wants a better chance of capturing useful diagnostics before that reset should still save the
+link register contents early -- before doing anything else that might fault again -- using the \mnemonic{ETFR}
+instruction, so the original fault's return address and status register can be included in whatever gets dumped.
 
-\begin{lstlisting}
-:fault_handler
-    ; Immediately save link register to memory before doing anything
-    ; that might trigger another fault
-    ETFR #6                   ; Save fault link register (register 6) to a and r7
-    STOR -(#0, s), r7
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
-    ETFR #7                   ; Save fault metadata register (register 7) to a and r7
-    STOR -(#0, s), r7
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
+\mnemonic{ETFR} only transfers the return address and status register of link registers 6 and 7; the saved exception
+level is not accessible to software through it, nor can \mnemonic{ETTR} write it back. This is not just a missing
+diagnostic field: \mnemonic{RETE} always restores \texttt{current\_exception\_level} directly from whatever value is
+currently latched in the link register, and after a double fault that value is the fault level (7), not the level that
+was active before the original fault. Even a handler that perfectly restores the return address and status register
+and attempts \mnemonic{RETE} anyway would leave the CPU stuck at exception level 7 -- unable to service any hardware
+interrupt or software exception, including Level 5, since nothing outranks the highest priority level. New faults
+still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU would keep
+running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the program's
+life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault.
 
-    ; Now safe to perform operations that might fault
-    ; ...
-
-    ; Restore and return
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD r7, (#0, s)+
-    ETTR #7                  ; Restore fault metadata register (register 7) from a and r7
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD r7, (#0, s)+
-    ETTR #6                  ; Restore fault link register (register 6) from a and r7
-
-	; Now safe to use RETE
-	RETE
-
-\end{lstlisting}
-
-This sequence restores the return address and status register of link registers 6 and 7 but not their saved exception
-level, which software cannot access. A handler that has taken a double fault therefore cannot fully reconstruct the
-pre-fault exception level; treat the CPU state as unrecoverable and reset.
-
-However, if the stack pointer is invalid in this case, the double fault still corrupts the CPU state. A more robust
+The values can be stored on the stack but since the stack pointer may be corrupted, a more robust
 implementation stores and loads from hardcoded memory addresses that are known to always be valid, instead of relying
 on the stack pointer.
 
@@ -642,8 +620,8 @@ entries. Vectors \texttt{0x00}--\texttt{0x5F} (96 entries) are reserved for the 
 		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                                       & None              & Yes             \\
 		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Next instruction                          & Fault metadata    & Yes             \\
 		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction                      & Fault metadata    & Yes             \\
-		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instr. (PC wrap only), else next & Fault metadata    & Yes             \\
-		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Next instruction                          & Fault metadata    & Yes             \\
+		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction                      & Fault metadata    & Yes             \\
+		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction                      & Fault metadata    & Yes             \\
 		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Next instruction                          & Fault metadata    & Yes             \\
 		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction                          & Fault metadata    & Yes             \\
 		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point                            & Fault metadata    & Yes             \\
@@ -768,10 +746,10 @@ enabled) will be serviced before the next instruction executes.
 
 Executing \mnemonic{RETE} while the current exception level is 0 is architecturally undefined.
 
-For faults in the retryable category (Alignment Fault, and Segment Overflow Fault raised by program-counter
-wraparound), \mnemonic{RETE} returns to the faulting instruction, allowing it to be retried. For all other faults and
-for regular exceptions, \mnemonic{RETE} returns to the instruction following the one that was executing when the
-exception occurred.
+For faults in the retryable category (Alignment Fault, Bus Fault, Bus Protection Fault, Invalid Opcode Fault, Privilege
+Violation Fault, and Segment Overflow Fault), \mnemonic{RETE} returns to the faulting instruction, allowing it to be
+retried. For all other faults and for regular exceptions, \mnemonic{RETE} returns to the instruction following the one
+that was executing when the exception occurred.
 
 \subsection{Accessing Link Registers}
 

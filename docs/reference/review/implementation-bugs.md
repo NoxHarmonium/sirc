@@ -716,17 +716,23 @@ column renders as `01`, `10`, `11`.
 - status: manual updated to the target (post-renumbering) state; the Rust enum reorder, the one
   string table, and reassembly of existing binaries are left for the author.
 
-## F-exc-3 (code-wrong, blocker) — REVISED 2026-09-08, retryable set expanded, root cause identified
+## F-exc-3 (code-wrong, blocker) — REVISED 2026-09-12, retryable set now unified, supersedes the 2026-09-08 revision
 
 - category: fact
 - claim: chapter 6 previously said (per the superseded Gate 2 A ruling) that only Alignment and
-  PC-wrap Segment Overflow are retryable.
+  PC-wrap Segment Overflow are retryable. The 2026-09-08 revision below expanded that to Alignment,
+  Bus, Bus Protection, Privilege Violation, and PC-wrap Segment Overflow, while keeping Invalid
+  Opcode Fault and non-PC-wrap Segment Overflow non-retryable. The author has now (2026-09-12)
+  simplified the design further: every fault in this category is retryable, with no exceptions.
+  The "Aborted, non-retryable faults" category has been removed from chapter 6 entirely and its two
+  members folded into "Retryable faults."
 - evidence: `exception_unit/definitions.rs:121-131`, the CPU's own design comment: "Abort Exception
   means that the instruction does not have any effect... The program address stored in the link
   register is the address of the faulting instruction so it can be retried... This is important
   for things like privilege violation because you don't want the illegal instruction to do
   anything," explicitly listing Bus Fault, Alignment Fault, Privilege Violation, and Invalid
-  Opcode Fault (plus Reset) in the intended abort/retryable set.
+  Opcode Fault (plus Reset) in the intended abort/retryable set -- this comment was accurate all
+  along for Invalid Opcode Fault; only the code hadn't caught up to it.
 - root cause, traced 2026-09-08: `processing_unit/execution.rs:140-151`. The privilege check runs
   and calls `raise_fault` (marking a fault pending), but the very next line,
   `registers.pl = self.decoded_instruction.npc_l_;`, runs unconditionally in the same step,
@@ -737,21 +743,33 @@ column renders as `01`, `10`, `11`.
   faulting one. Bus and Bus Protection faults are detected even later (at the bus-response stage,
   after decode has already run), so they inherit the same problem. Only Alignment (detected before
   decode, at fetch) and PC-wrap Segment Overflow avoid it, which is why those two were the only
-  ones observed to work correctly.
+  ones observed to work correctly. Invalid Opcode Fault has a different root cause: it is raised a
+  full poll cycle after the invalid `pending_coprocessor_command` was written (`lib.rs:375-391`),
+  by which point `pl` has already advanced past that instruction during its own decode step, so the
+  fix here needs its own capture point rather than reusing the decode-time-fault fix below. The
+  non-PC-wrap Segment Overflow case (`execution_effective_address.rs`) is detected in the same
+  effective-address stage as the decode-time faults and can likely reuse that fix.
 - resolution: code-wrong.
 - fix: when a decode-time fault (Privilege Violation) is raised, do not advance `registers.pl` to
   `npc_l_` in that same step -- leave it at the faulting instruction's address so the later
   fault-dispatch stage captures the correct return address. The same principle applies to Bus
-  Fault and Bus Protection Fault at whichever stage they are detected: capture `pl` as it stood
-  before the faulting instruction, not after. Invalid Opcode Fault is unaffected by this fix and
-  should keep its current next-address behavior, per the author's explicit choice to keep it
-  non-retryable (matching the manual's existing "emulate, then resume after the trap" example
-  rather than the design comment's original intent for that one case).
+  Fault, Bus Protection Fault, and non-PC-wrap Segment Overflow at whichever stage each is
+  detected: capture `pl` as it stood before the faulting instruction, not after. Invalid Opcode
+  Fault needs a separate fix, since its fault is raised on the poll cycle *after* the triggering
+  instruction already completed its own decode step and advanced `pl`: capture and carry forward
+  the faulting instruction's address (e.g. from `pending_coprocessor_command`'s originating
+  instruction) rather than reading `pl` fresh at dispatch time.
 - confidence: high
 - status: manual updated (`chapters/06-exceptions.tex`, `chapters/14-memory-instructions.tex`,
-  `chapters/appendix-b-timing.tex`) to the author's final retryable set: Alignment, Bus, Bus
-  Protection, Privilege Violation, and PC-wrap Segment Overflow are retryable; Invalid Opcode Fault
-  and non-PC-wrap Segment Overflow are not. Code fix (above) left for the author.
+  `chapters/appendix-b-timing.tex`) to the author's final, unified retryable set: Alignment, Bus,
+  Bus Protection, Invalid Opcode Fault, Privilege Violation, and Segment Overflow (both the
+  program-counter-wraparound and address-computation cases) are all retryable; no fault in this
+  chapter is documented as non-retryable any more. Code fix (above) left for the author. Once it
+  lands, `examples/faults/faults.sasm`'s `segment_overflow_fault_handler` and
+  `invalid_opcode_fault_handler` will need an explicit `ETFR`/`ETTR` return-address redirect in the
+  branches that currently rely on the old non-retryable auto-advance (today they either do nothing
+  after the fault, or only redirect in the PC-wrap branch) -- without that redirect they will
+  re-fault on the same instruction indefinitely once retry becomes the default everywhere.
 
 ## Remove `system_ram_offset` (cleanup, minor) — NEW 2026-09-09
 
@@ -809,20 +827,7 @@ column renders as `01`, `10`, `11`.
 - status: not started; author's call for a future simulator branch. Manual updated to the target
   (edge-triggered) design in this pass.
 
-## Invalid Opcode Fault doc comment incorrectly implies it's retryable (cleanup, minor) — NEW 2026-09-12
-
-- category: cleanup
-- claim: none — this is a stale code comment, not a manual/code mismatch. Surfaced while verifying
-  the Aborted/non-retryable fault categories in chapter 6 Section 6.2.1 against the implementation.
-- evidence: `peripheral-cpu/src/coprocessors/exception_unit/definitions.rs:121-131`'s design comment
-  lists Invalid Opcode Fault among the "Abort Exceptions" whose link register stores "the address of
-  the faulting instruction so it can be retried." Per the already-ruled `F-exc-3` entry above (Gate 2
-  A revised), Invalid Opcode Fault is deliberately kept non-retryable, and its actual code path
-  (`lib.rs:375-391`) stores the address of the *next* instruction, matching that ruling — not the
-  comment's claim.
-- resolution: n/a (doc-comment accuracy only, no behavior change).
-- fix: update the `definitions.rs:121-131` comment to carve Invalid Opcode Fault out of the
-  "can be retried" framing, e.g. noting it is a deliberate exception to the general Abort-Exception
-  retry pattern (see `F-exc-3`).
-- confidence: high
-- status: not started; no manual impact either way.
+Note: an earlier version of this file (2026-09-12) logged a separate entry claiming
+`definitions.rs:121-131`'s comment was wrong to list Invalid Opcode Fault as retryable. The author
+has since ruled the opposite way (see the revised `F-exc-3` above): Invalid Opcode Fault *is*
+retryable, so that comment was correct all along and the entry has been removed as moot.

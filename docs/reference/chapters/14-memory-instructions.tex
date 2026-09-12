@@ -93,7 +93,7 @@ assembler rejects it.
 		Status flags        & Memory instructions preserve all status flags. Shifts used by memory instructions cannot update the status register.                                                                                                                                                                                                                                                                                                                                     \\
 		Timing              & Memory instructions complete in 6 cycles when the bus access is acknowledged without wait states. Bus wait states extend the memory-access phase.                                                                                                                                                                                                                                                                                                        \\
 		Exceptions          & Memory instructions can raise data bus, data bus-protection, segment-overflow, and privilege-violation faults; see the notes below.                                                                                                                                                                                                                                                                                                                      \\
-		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase, so a fault that aborts execution before write-back leaves them undone. Data bus, data bus-protection, and privilege-violation faults are retryable: the saved return address is the address of the faulting instruction, so returning from the fault handler with \mnemonic{RETE} retries the same memory access. Segment-overflow is the exception: it is retryable only when raised by program-counter wraparound, which cannot happen during a memory instruction's effective-address calculation, so a segment-overflow fault raised here is never retryable and resumes after the faulting access (see Chapter~\ref{ch:exceptions}). \\
+		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase, so a fault that aborts execution before write-back leaves them undone. Data bus, data bus-protection, segment-overflow, and privilege-violation faults are all retryable: the saved return address is the address of the faulting instruction, so returning from the fault handler with \mnemonic{RETE} retries the same memory access (see Chapter~\ref{ch:exceptions}). \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Memory Instruction Semantics}
@@ -103,8 +103,8 @@ assembler rejects it.
 \noindent Memory instructions can raise data bus and data bus-protection faults during the memory-access phase. The
 16-bit displacement is signed two's-complement; effective-address calculation can raise a segment-overflow fault when
 \texttt{SR.A} (Trap on Address Overflow) is set and the low-word address calculation wraps. This segment-overflow
-fault is not raised by program-counter wraparound, so it is not retryable: the saved return address is the address of
-the next instruction (see Chapter~\ref{ch:exceptions}). A memory instruction raises a privilege-violation fault in
+fault is retryable: the saved return address is the address of the faulting instruction (see
+Chapter~\ref{ch:exceptions}). A memory instruction raises a privilege-violation fault in
 protected mode when its register field names a privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or
 \reg{sh}); this applies to the \mnemonic{LOAD} destination register and to the \mnemonic{STOR} source register, even
 though \mnemonic{STOR} only reads it. Post-increment and pre-decrement address-register auto-update writes only the
