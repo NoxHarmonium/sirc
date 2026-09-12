@@ -44,58 +44,70 @@ Acceptance criteria:
 Goal: make the rendered PDF look like a professional CPU reference manual rather than a research paper — readable,
 navigable, and visually consistent throughout.
 
+**Done (2026-09-12):** notation and glossary section. Added `chapters/preface.tex` (unnumbered front-matter chapter:
+About This Manual, Assumed Knowledge, How to Read This Manual, Scope, Revision Status) and
+`chapters/notation-and-glossary.tex` (unnumbered front-matter chapter: manual-wide typographic conventions,
+normative vocabulary -- must/may/should/reserved/architecturally undefined/implementation-defined -- register name
+conventions, and a glossary of architectural terms). This merges what was originally two separate asks (this
+workstream's glossary task, and Workstream 14 item 5's notational-conventions table below) into one deliverable, and
+absorbed/expanded the old thin "About This Manual"/"Document Conventions" sections that were previously stuck at the
+end of `chapters/title.tex`. Placed in `\frontmatter`, after the title page and before the table of contents.
+
 Open task:
 
-- Add a notation and glossary section. Chapter 11 already defines instruction-notation symbols; expand this into
-  a short standalone glossary appendix (or a "Notation and Conventions" section in the front matter) covering:
-  - architectural terms (supervisor mode, protected mode, fault, exception, meta-instruction, word address)
-  - register name conventions (rN, l/a/s/p, sr, lh/ll, etc.)
-  - typographic conventions used in the manual (mnemonic style, register style, opcode style, pseudocode style,
-    reserved/undefined vocabulary)
-    This prevents readers having to hunt through chapters to understand notation.
-- Add a front cover with some graphic with abstact shapes and a back cover with a blurb and fake publishing info.
+- Add a front cover with an abstract-shapes graphic, and a back cover with a blurb and fake publishing info. Note
+  for whoever picks this up: `chapters/title.tex` already has a fictional publishing identity established (Silicon
+  Integrated Research Corporation, copyright 1989, Version 1.0) -- reuse it rather than inventing a competing one.
 
 Smaller, not-currently-a-known-problem items, not explicitly revisited during the 2026-09-12 visual-design pass:
 a dedicated `lstlisting` restyle, and a review of chapter/part opening pages specifically for visual consistency.
 
 Acceptance criteria:
 
-- Every term used in the manual is defined the first time it appears or is listed in the glossary. Not yet met.
+- Every term used in the manual is defined the first time it appears or is listed in the glossary. Met (2026-09-12).
 - (Page-overflow, box-styling, font, and color-palette criteria for this workstream are met as of 2026-09-12.)
 
 ## Workstream 14: Period Coverage Gaps
 
 Identified by a period benchmark against the M68000 Family Programmer's Reference Manual (1992, `M68000PRM`) and
 the MCS6500 Family Programming Manual (1976, `MCS6500`), run 2026-09-05. Accepted as backlog; new content, not
-editing. (Two items from the original 11-item list are already substantially satisfied by later work and have
-been dropped from this list: the exception vector table now has a full quick-reference table in Chapter 6, and
-Appendix E's alphabetical mnemonic index already provides mnemonic-to-page access.)
+editing. Three items from the original 11-item list have been dropped since they're already substantially covered:
+the exception vector table now has a full quick-reference table in Chapter 6; Appendix E's alphabetical mnemonic
+index already provides mnemonic-to-page access; and the opcode-order bit-diagram appendix (item 7, below) was
+judged (2026-09-12, author's call) to duplicate Chapter 7's per-format diagrams and Appendix A's opcode table
+closely enough not to be worth building separately.
 
-1. **Instruction Format bit diagram in every entry.** A bit-numbered 16-bit word (both
-   words for immediate format) showing opcode, condition, register, AF, shift and immediate
-   fields. `M68000PRM:4-4`, `4-25`; `MCS6500:B-3`.
-2. **Legal forms table in each entry.** Accepted operand/addressing forms with encodings,
-   or a cross-reference line to the chapter "Legal Forms" table. `M68000PRM:4-5`, `4-108`.
-3. **Condition-code computation table.** Boolean formulas for V, C, Z per instruction
-   family in terms of Sm, Dm, Rm, plus condition-test formulas. `M68000PRM:3-18`, `3-19`.
-4. **Preface / About This Manual.** Audience, assumed knowledge, companion documents,
-   out-of-scope items, how to read entries, revision status. `MCS6500:p.1-2`;
-   `M68000PRM:1-1`.
-5. **Manual-wide notational conventions table.** Operators, register names, `#imm`,
-   indirection, `SR.X`, assignment, literal prefixes, flag-symbol legend, in one place near
-   the front; generalise Chapter 11's table. `M68000PRM:3-2`..`3-4`; `MCS6500:B-2`. (Overlaps
-   with Workstream 13's glossary task above — probably worth doing together.)
-6. **List of Examples in the front matter.** Follows from the Gate 1 decision to number
-   examples `N-M` within each chapter. `MCS6500` front matter.
-7. **Instruction format summary in opcode order.** Appendix listing every opcode
-   0x00--0x3F with its full 32-bit layout as a bit diagram. `M68000PRM:8-1`..`8-5`;
-   `MCS6500:D-1`.
-8. **Programming model figures.** One figure of user-visible registers with bit widths,
-   one for supervisor additions, and a table of privileged registers/bits.
-   `M68000PRM:1-2`, `1-9`, `1-11`.
-9. **Per-mode encoding box in Chapter 8.** GENERATION (EA formula), ASSEMBLER SYNTAX,
-   field encoding and instruction word count for each addressing mode. `M68000PRM:2-6`,
-   `2-7`.
+**Done (2026-09-12):** items 4 (Preface) and 5 (manual-wide notational conventions table) -- see Workstream 13
+above; both were folded into the new `chapters/preface.tex` and `chapters/notation-and-glossary.tex`.
+
+Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scoped -- see below):
+
+1. **Instruction Format bit diagram in every entry.** A bit-numbered 16-bit word (both words for immediate format)
+   showing opcode, condition, register, AF, shift and immediate fields. `M68000PRM:4-4`, `4-25`; `MCS6500:B-3`.
+   Scoping decision (2026-09-12, author's call): one diagram per encoding form an entry documents, not one per
+   entry overall -- so an entry like `ADDI`/`ADDR` (Immediate, Short-Immediate, and Register forms) gets three
+   diagrams. This is roughly 70-90 diagrams total across all 33 instruction entries; most will look near-identical
+   within a format family, with only the opcode value differing, but that repetition matches the M68000 PRM's own
+   practice and the manual's "flip through and find it" design goal. Not started.
+2. **Legal forms table in each entry.** Scoping decision (2026-09-12, author's call): a one-line cross-reference to
+   the existing chapter-level Legal Forms table, not a duplicated per-entry table. `M68000PRM:4-5`, `4-108`. Not
+   started.
+3. **Condition-code computation table.** Boolean formulas for V, C, Z per instruction family in terms of Sm, Dm,
+   Rm, plus condition-test formulas. `M68000PRM:3-18`, `3-19`. Belongs in Chapter 13's "Status Flag Updates"
+   section. Not started.
+6. **List of Examples in the front matter.** Follows from the Gate 1 decision to number examples `N-M` within each
+   chapter. `MCS6500` front matter. Scoping decision (2026-09-12, author's call): retrofit examples into a proper
+   captioned float environment (like the existing List of Figures/Tables) rather than hand-maintaining the list, so
+   it can't drift out of sync. This is the bigger of the two remaining undertakings -- it touches every example
+   (30+, across 5+ chapters), all currently just bold inline text ("Example 13-3:") in front of an `lstlisting`,
+   not a captioned float. Not started.
+8. **Programming model figures.** One figure of user-visible registers with bit widths, one for supervisor
+   additions, and a table of privileged registers/bits. `M68000PRM:1-2`, `1-9`, `1-11`. Belongs in Chapter 3
+   (Register Model), alongside the existing address-pair figure. Not started.
+9. **Per-mode encoding box in Chapter 8.** GENERATION (EA formula), ASSEMBLER SYNTAX, field encoding and
+   instruction word count for each addressing mode. `M68000PRM:2-6`, `2-7`. Scoping note (2026-09-12): restructure
+   using the same boxed-reference pattern as the redesigned instruction pages (Workstream 13), applied per
+   addressing mode; replaces the current per-mode prose subsections in Chapter 8. Not started.
 
 ## Definition of Done
 

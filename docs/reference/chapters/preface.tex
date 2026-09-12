@@ -1,0 +1,50 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\label{ch:preface}
+
+\section*{About This Manual}
+
+This reference manual documents the SIRC-1 CPU architecture and the SIRCIS (SIRC Instruction Set) instruction set
+completely enough that an assembler, compiler backend, emulator, or hardware implementation can be built from the
+manual alone, without consulting any other source.
+
+It is written for:
+
+\begin{itemize}
+	\item Assembly language programmers
+	\item Compiler and toolchain developers
+	\item Hardware designers and implementers
+	\item Emulator and simulator authors
+	\item System software developers
+\end{itemize}
+
+\section*{Assumed Knowledge}
+
+This manual assumes the reader is already familiar with general computer architecture concepts: registers, memory
+addressing, binary and hexadecimal number representation, and assembly-language programming in general. It teaches
+the SIRC-1 architecture specifically; it does not teach these prerequisites from first principles.
+
+\section*{How to Read This Manual}
+
+Part I introduces the architecture as a whole: registers, data representation, the status register, and exception
+handling. Part II covers the instruction encoding formats, addressing modes, shift operations, and condition codes
+that every instruction is built from. Part III is the instruction reference itself, one dedicated entry per
+instruction; Chapter~\ref{ch:reading-instructions} explains the fields every entry uses (Opcodes, Syntax, Operands,
+Operation, Flags, Exceptions, Timing, Privilege, and so on) before the entries begin, and is worth reading first even
+for a reader who intends to use the rest of the manual only as a lookup reference. The appendices collect quick
+lookups (the complete opcode map, timing figures, undocumented-opcode notes, worked examples, and an alphabetical
+mnemonic index) that restate information from the main chapters in a faster-to-scan form; they never introduce a new
+architectural fact that isn't already established in Parts I--III.
+
+\section*{Scope}
+
+This manual covers the SIRC-1 hardware itself: the instruction set architecture, register model, bus interface,
+exception handling, and coprocessor interface. It does not cover software conventions built on top of that
+hardware --- register usage conventions, calling conventions, stack frame layout, or object/binary file format ---
+which are the concern of the (forthcoming) SIRC-1 ABI and Toolchain documentation, not the hardware architecture.
+See Chapter~\ref{ch:introduction}'s Scope section for the full statement.
+
+\section*{Revision Status}
+
+This is Version 1.0 of the SIRC-1 CPU Reference Manual. Except where an entry explicitly notes otherwise, every
+instruction, register, and behavior described here applies to \textit{SIRC-1, all revisions}.

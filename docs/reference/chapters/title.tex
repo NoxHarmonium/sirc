@@ -46,33 +46,3 @@
 	{\large\today}
 
 \end{titlepage}
-
-\clearpage
-\thispagestyle{empty}
-\vspace*{5cm}
-
-\section*{About This Manual}
-
-This reference manual provides comprehensive documentation for the SIRC-1 CPU architecture and the SIRCIS (SIRC
-Instruction Set) instruction set. It is intended for:
-
-\begin{itemize}
-	\item Assembly language programmers
-	\item Compiler and toolchain developers
-	\item Hardware designers and implementers
-	\item System software developers
-\end{itemize}
-
-\section*{Document Conventions}
-
-Throughout this manual, the following conventions are used:
-
-\begin{itemize}
-	\item Register names appear in typewriter font: \reg{r1}, \reg{ph}, \reg{sr}
-	\item Hexadecimal values are prefixed with \texttt{0x}: \opcode{1A}
-	\item Immediate values are prefixed with \texttt{\#}: \imm{123}
-	\item Instruction mnemonics appear in bold typewriter font: \mnemonic{ADDI}
-	\item Addressing modes use parentheses for indirection: \indirectimm{4}{a}
-\end{itemize}
-
-\clearpage

@@ -1,0 +1,122 @@
+\chapter*{Notation and Glossary}
+\addcontentsline{toc}{chapter}{Notation and Glossary}
+\label{ch:notation-glossary}
+
+This section collects the typographic conventions, normative vocabulary, and architectural terminology used
+throughout the manual, in one place, so a reader does not have to hunt through individual chapters to look one up.
+Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar placeholder names used
+only inside instruction descriptions) is defined separately in Chapter~\ref{ch:reading-instructions}, Table
+\ref{tab:instruction-description-notation}, alongside the status-flag-effect symbols
+(Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the conventions that apply manual-wide.
+
+\section*{Typographic Conventions}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Convention}         & \textbf{Meaning}                                                                          \\
+		\midrule
+		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font via \texttt{\textbackslash reg\{\}}, whether
+		general-purpose, address-pair, or status.                                                                              \\
+		\opcode{1A}                 & A literal instruction-opcode byte value, via \texttt{\textbackslash opcode\{\}}. Renders
+		as \texttt{0x1A}; the macro takes just the two hex digits.                                                             \\
+		\imm{123}                   & A concrete immediate value written as an operand, via \texttt{\textbackslash imm\{\}}.
+		Renders as \texttt{\#123}.                                                                                             \\
+		\addr{0x0002}               & A concrete memory address or vector target, via \texttt{\textbackslash addr\{\}}.        \\
+		\mnemonic{ADDI}             & An instruction mnemonic, always bold typewriter and always uppercase, via
+		\texttt{\textbackslash mnemonic\{\}}.                                                                                  \\
+		\texttt{SR.X}               & A field or bit of the status register, named by its bit label (for example
+		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                          \\
+		\indirectimm{4}{a}          & Parentheses denote indirection through an address-register pair; a leading
+		\texttt{-} denotes pre-decrement and a trailing \texttt{+} denotes post-increment, for example
+		\predec{0}{a} and \postinc{0}{a}.                                                                                      \\
+		\bottomrule
+	\end{tabular}
+	\caption{Manual-Wide Typographic Conventions}
+	\label{tab:manual-wide-notation}
+\end{table}
+
+Other conventions that do not have a dedicated macro:
+
+\begin{itemize}
+	\item \textbf{Hex literals} that aren't a register, opcode, immediate, or address value in one of the forms above
+	      (status-word values, encoded field values, bit patterns, coprocessor command words) are written
+	      \texttt{0x} followed by uppercase hex digits, for example \texttt{0x1A} rather than \texttt{0x1a}.
+	\item \textbf{Binary literals} in tables are written as a bare digit group with no prefix, for example
+	      \texttt{00}, \texttt{10}, \texttt{111} rather than \texttt{0b10}.
+	\item \textbf{Bit numbers} are written as plain text: "bit 15", "bits 4--7". Bit 15, or the
+	      highest-numbered bit of whatever field is under discussion, is always the most significant bit, and is
+	      always drawn on the left in every bit-field diagram.
+	\item \textbf{Numeric ranges} use an en dash, for example \texttt{0x00--0x0F} or "bits 5--4", both in
+	      prose and in tables.
+	\item \textbf{Word size}: "16-bit word" is stated once per chapter or major section on first use, then
+	      shortened to plain "word" for the rest of that section.
+\end{itemize}
+
+\section*{Normative Vocabulary}
+
+The following words carry a specific technical meaning whenever they appear in this manual, distinct from their
+everyday English sense:
+
+\begin{description}
+	\item[must / must not] A mandatory architectural requirement. Hardware or software that does not comply is not a
+	      conformant SIRC-1 implementation.
+	\item[may] A permitted option. The CPU, the assembler, or the programmer is free to choose either way.
+	\item[should / should not] A recommendation, not a conformance requirement.
+	\item[reserved] A field, opcode, or coprocessor ID that is not currently assigned a meaning. Software must not
+	      assume any particular value when reading a reserved field, and must write zero unless a chapter states an
+	      explicit encoding. A future CPU revision may assign a reserved field a meaning.
+	\item[architecturally undefined] The architecture does not specify the result. It may vary by CPU implementation,
+	      by revision, or even between two executions of the identical instruction on the identical CPU; software
+	      must never depend on any particular outcome.
+	\item[implementation-defined] Behavior that is fixed and consistent within one particular CPU implementation or
+	      model, but that may differ between models -- for example, the extra cycles an optional maths coprocessor
+	      takes to complete a multiply. This is a stronger guarantee than \textit{architecturally undefined}: a given
+	      implementation's behavior is at least self-consistent, even though the manual does not pin down what that
+	      behavior is.
+\end{description}
+
+\section*{Register Name Conventions}
+
+SIRC-1 has sixteen 16-bit registers: seven general-purpose registers \reg{r1}--\reg{r7}, four address register pairs
+(\reg{l}, \reg{a}, \reg{s}, \reg{p}), and the status register \reg{sr}. Each address register pair splits into a high
+and low half, named by appending \texttt{h}/\texttt{l} to the pair name -- \reg{lh}/\reg{ll}, \reg{ah}/\reg{al},
+\reg{sh}/\reg{sl}, \reg{ph}/\reg{pl} -- so that either half can be addressed as an ordinary 16-bit register on its
+own, or the pair addressed together as a 24-bit address. See Chapter~\ref{ch:registers} for the full register model,
+encoding, and privilege rules.
+
+\section*{Glossary of Architectural Terms}
+
+\begin{description}
+	\item[Coprocessor] One of the specialized execution units a \mnemonic{COPI}/\mnemonic{COPR} call can dispatch to
+	      -- the processing unit itself (coprocessor \texttt{0x0}), the exception unit (\texttt{0x1}), the DMA unit
+	      (\texttt{0x2}), and the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
+	\item[Displacement] A signed value added to an address register's low word to compute an effective address, as
+	      used by memory and effective-address instructions. Distinct from \textit{offset}, which this manual
+	      reserves for memory/structure offsets and the \texttt{system\_ram\_offset} register.
+	\item[Exception] The general term for any event that diverts program flow to a vector: a \textit{fault}, a
+	      \textit{hardware exception}, or a \textit{software exception}. See Chapter~\ref{ch:exceptions}.
+	\item[Exception level] The priority level of the exception currently being serviced (0 when not handling any
+	      exception). A new exception can only preempt the current one if its priority is strictly higher.
+	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a
+	      bus error or a privilege violation) or a debug event (instruction trace). Faults cannot be masked or
+	      deferred.
+	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
+	\item[Hardware exception] An exception signaled by an external interrupt pin. Also informally called an
+	      \textit{interrupt} at the pin level (interrupt pins, interrupt priority, interrupt enable) -- the two terms
+	      are synonyms at different registers of formality, not competing definitions.
+	\item[Meta-instruction] An assembler-level mnemonic (for example \mnemonic{BRAN}, \mnemonic{NOOP},
+	      \mnemonic{LJSR}) that assembles to a real CPU instruction's encoding rather than having an opcode of its
+	      own. See the relevant instruction-family chapter for each meta-instruction's lowering.
+	\item[Protected mode] The non-privileged CPU mode (\texttt{SR.P} set). Most privileged operations fault if
+	      attempted in protected mode; see Chapter~\ref{ch:status-register}.
+	\item[Retryable fault] A fault whose triggering operation does not take effect, so that returning with
+	      \mnemonic{RETE} safely retries it. See Chapter~\ref{ch:exceptions} for the full retryable set.
+	\item[Software exception] An exception raised deliberately by executing \mnemonic{EXCP}. Also called a
+	      \textit{trap}.
+	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available.
+	\item[Word address] SIRC-1 addresses memory in units of 16-bit words, not 8-bit bytes; incrementing an address
+	      register by one advances by one word. See Chapter~\ref{ch:data-representation} for the boundary between
+	      this architectural word addressing and any external byte-level representation.
+\end{description}
