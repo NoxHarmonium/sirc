@@ -89,9 +89,9 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
    diagrams. This is roughly 70-90 diagrams total across all 33 instruction entries; most will look near-identical
    within a format family, with only the opcode value differing, but that repetition matches the M68000 PRM's own
    practice and the manual's "flip through and find it" design goal. Not started.
-2. **Legal forms table in each entry.** Scoping decision (2026-09-12, author's call): a one-line cross-reference to
-   the existing chapter-level Legal Forms table, not a duplicated per-entry table. `M68000PRM:4-5`, `4-108`. Not
-   started.
+2. **Legal forms table in each entry.** `M68000PRM:4-5`, `4-108`. **Done (2026-09-12):** added a one-line
+   cross-reference to the relevant chapter-level Legal Forms table to all 33 instruction entries (appended to each
+   entry's `Opcodes:`/`Assembles to:` line), per the scoping decision to reference rather than duplicate.
 3. **Condition-code computation table.** `M68000PRM:3-18`, `3-19`. **Done (2026-09-12):** added a "Flag
    Computation Formulas" subsection to Chapter 13's "Status Flag Updates" section with Boolean C/V formulas per
    family in terms of `Dm`/`Sm`/`Rm`, verified by hand-tracing signed overflow and borrow cases.

@@ -138,7 +138,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 \begin{instructionbox}{BRAN}{Branch Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination
+	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the source and destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -204,7 +204,7 @@ loop:
 \begin{instructionbox}{BRSR}{Branch to Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination
+	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the source and destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -270,7 +270,7 @@ RETS
 \begin{instructionbox}{RETS}{Return from Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}
+	\textbf{Assembles to:} \texttt{LDEA p, (\#0, l)}. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -330,7 +330,7 @@ my_function:
 \begin{instructionbox}{LDEA}{Load Effective Address}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register)
+	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -407,7 +407,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 \begin{instructionbox}{LDEL}{Load Effective Address and Link}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register)
+	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -487,7 +487,7 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 \begin{instructionbox}{LJMP}{Long Jump Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination
+	\textbf{Assembles to:} \mnemonic{LDEA} with \reg{p} as the destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -556,7 +556,7 @@ LJMP a, r1                     ; p = a + r1
 \begin{instructionbox}{LJSR}{Long Jump to Subroutine Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination
+	\textbf{Assembles to:} \mnemonic{LDEL} with \reg{p} as the destination. See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}

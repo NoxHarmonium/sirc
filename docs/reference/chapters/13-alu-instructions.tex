@@ -234,7 +234,7 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \begin{instructionbox}{SHFT}{Shift with Status Update Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}
+	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -306,7 +306,7 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 \begin{instructionbox}{ADDI / ADDR}{Add Immediate / Add Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg)
+	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -392,7 +392,7 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 \begin{instructionbox}{ADCI / ADCR}{Add with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg)
+	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -471,7 +471,7 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 \begin{instructionbox}{SUBI / SUBR}{Subtract Immediate / Subtract Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg)
+	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -552,7 +552,7 @@ BRAN|!= @loop              ; Branch if not zero
 \begin{instructionbox}{SBCI / SBCR}{Subtract with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg)
+	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -629,7 +629,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 \begin{instructionbox}{ANDI / ANDR}{AND Immediate / AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg)
+	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -712,7 +712,7 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 \begin{instructionbox}{ORRI / ORRR}{OR Immediate / OR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg)
+	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -798,7 +798,7 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 \begin{instructionbox}{XORI / XORR}{XOR Immediate / XOR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg)
+	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -886,7 +886,7 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 \begin{instructionbox}{LOAD}{Load/Move}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented.
+	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -971,7 +971,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 \begin{instructionbox}{CMPI / CMPR}{Compare Immediate / Compare Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg)
+	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -1067,7 +1067,7 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 \begin{instructionbox}{TSAI / TSAR}{Test AND Immediate / Test AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg)
+	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -1159,7 +1159,7 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 \begin{instructionbox}{TSXI / TSXR}{Test XOR Immediate / Test XOR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg)
+	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}

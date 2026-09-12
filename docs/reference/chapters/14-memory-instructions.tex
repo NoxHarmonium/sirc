@@ -142,7 +142,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 \begin{instructionbox}{LOAD}{Load from Memory}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{14} (Indirect Imm), \opcode{15} (Indirect Reg), \opcode{16} (Post-Inc Imm), \opcode{17} (Post-Inc Reg)
+	\textbf{Opcodes:} \opcode{14} (Indirect Imm), \opcode{15} (Indirect Reg), \opcode{16} (Post-Inc Imm), \opcode{17} (Post-Inc Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
@@ -240,7 +240,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 \begin{instructionbox}{STOR}{Store to Memory}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{10} (Indirect Imm), \opcode{11} (Indirect Reg), \opcode{12} (Pre-Dec Imm), \opcode{13} (Pre-Dec Reg)
+	\textbf{Opcodes:} \opcode{10} (Indirect Imm), \opcode{11} (Indirect Reg), \opcode{12} (Pre-Dec Imm), \opcode{13} (Pre-Dec Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
