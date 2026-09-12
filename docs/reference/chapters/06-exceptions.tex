@@ -287,48 +287,25 @@ Fault), which instead store the program counter at the point the fault was detec
 In this case, the fault link register (register 6) and the fault metadata register (register 7) are overwritten.
 This means the original return address is lost.
 
-A valid way of handling this is to declare the CPU state invalid, perform some last-chance error handling (for example,
-dumping the registers), and reset.
+There is no way to fully recover from a double fault: the valid response is to declare the CPU state invalid, perform
+some last-chance error handling (for example, dumping the registers), and reset the CPU.
 
-For robust fault handling that can recover from double faults, fault handlers should save the link register contents
-early in the handler:
+A fault handler that wants a better chance of capturing useful diagnostics before that reset should still save the
+link register contents early -- before doing anything else that might fault again -- using the \mnemonic{ETFR}
+instruction, so the original fault's return address and status register can be included in whatever gets dumped.
 
-\begin{lstlisting}
-:fault_handler
-    ; Immediately save link register to memory before doing anything
-    ; that might trigger another fault
-    ETFR #6                   ; Save fault link register (register 6) to a and r7
-    STOR -(#0, s), r7
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
-    ETFR #7                   ; Save fault metadata register (register 7) to a and r7
-    STOR -(#0, s), r7
-    STOR -(#0, s), ah
-    STOR -(#0, s), al
+\mnemonic{ETFR} only transfers the return address and status register of link registers 6 and 7; the saved exception
+level is not accessible to software through it, nor can \mnemonic{ETTR} write it back. This is not just a missing
+diagnostic field: \mnemonic{RETE} always restores \texttt{current\_exception\_level} directly from whatever value is
+currently latched in the link register, and after a double fault that value is the fault level (7), not the level that
+was active before the original fault. Even a handler that perfectly restores the return address and status register
+and attempts \mnemonic{RETE} anyway would leave the CPU stuck at exception level 7 -- unable to service any hardware
+interrupt or software exception, including Level 5, since nothing outranks the highest priority level. New faults
+still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU would keep
+running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the program's
+life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault.
 
-    ; Now safe to perform operations that might fault
-    ; ...
-
-    ; Restore and return
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD r7, (#0, s)+
-    ETTR #7                  ; Restore fault metadata register (register 7) from a and r7
-    LOAD al, (#0, s)+
-    LOAD ah, (#0, s)+
-    LOAD r7, (#0, s)+
-    ETTR #6                  ; Restore fault link register (register 6) from a and r7
-
-	; Now safe to use RETE
-	RETE
-
-\end{lstlisting}
-
-This sequence restores the return address and status register of link registers 6 and 7 but not their saved exception
-level, which software cannot access. A handler that has taken a double fault therefore cannot fully reconstruct the
-pre-fault exception level; treat the CPU state as unrecoverable and reset.
-
-However, if the stack pointer is invalid in this case, the double fault still corrupts the CPU state. A more robust
+The values can be stored on the stack but since the stack pointer may be corrupted, a more robust
 implementation stores and loads from hardcoded memory addresses that are known to always be valid, instead of relying
 on the stack pointer.
 
