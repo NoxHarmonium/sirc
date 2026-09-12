@@ -1,0 +1,55 @@
+\clearpage
+\thispagestyle{empty}
+\begin{center}
+
+	\vspace*{1.5cm}
+
+	{\Large\bfseries SIRC-1 CPU Reference Manual}
+
+	\vspace{1cm}
+
+	\begin{minipage}{0.8\textwidth}
+		The SIRC-1 brings together a clean 16-bit load/store architecture, a fully specified six-stage execution
+		model, and an extensible coprocessor interface, without sacrificing the predictability system programmers
+		and hardware designers depend on. This manual documents every instruction, register, exception, and bus
+		signal to an implementation-ready level of detail, so that assemblers, compilers, operating systems, and
+		hardware implementations can all be built directly from its pages, without consulting any other source.
+
+		\vspace{0.6cm}
+
+		\textbf{Inside you will find:}
+		\begin{itemize}
+			\item The complete SIRCIS instruction set reference, arranged for quick lookup by mnemonic
+			\item Full exception, interrupt, and reset specifications
+			\item Bus timing diagrams for hardware and peripheral designers
+			\item Coprocessor and future-model compatibility guidelines
+		\end{itemize}
+	\end{minipage}
+
+	\vfill
+
+	% Stylized barcode -- decorative, not a real scannable symbol.
+	\begin{tikzpicture}[x=0.6mm, y=1mm]
+		\foreach \x/\w in {0/1,2/2,5/1,7/1,9/3,13/1,15/2,18/1,20/1,22/2,25/1,27/3,31/1,33/1,35/2,38/1,40/1,42/3,
+				46/1,48/2,51/1,53/1,55/3,59/1,61/1,63/2,66/1,68/3,72/1,74/1,76/2,79/1,81/1,83/3,87/1,89/2} {
+				\fill[black] (\x,0) rectangle ++(\w,10);
+			}
+	\end{tikzpicture}
+
+	\vspace{0.2cm}
+
+	{\small ISBN 0-000000-00-0}
+
+	\vspace{1cm}
+
+	{\small SILICON INTEGRATED RESEARCH CORPORATION}
+
+	{\small 1400 Fabrication Way, Milpitas Flat, CA}
+
+	{\small Printed in the United States of America}
+
+	\vspace{0.4cm}
+
+	{\small First Printing, 1989 \quad\textbullet\quad Version 1.0 \quad\textbullet\quad \$49.95}
+
+\end{center}

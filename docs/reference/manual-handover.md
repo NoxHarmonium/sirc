@@ -53,11 +53,11 @@ workstream's glossary task, and Workstream 14 item 5's notational-conventions ta
 absorbed/expanded the old thin "About This Manual"/"Document Conventions" sections that were previously stuck at the
 end of `chapters/title.tex`. Placed in `\frontmatter`, after the title page and before the table of contents.
 
-Open task:
-
-- Add a front cover with an abstract-shapes graphic, and a back cover with a blurb and fake publishing info. Note
-  for whoever picks this up: `chapters/title.tex` already has a fictional publishing identity established (Silicon
-  Integrated Research Corporation, copyright 1989, Version 1.0) -- reuse it rather than inventing a competing one.
+**Done (2026-09-12):** front and back cover. Added `chapters/front-cover.tex` (a TikZ abstract circuit/die-motif
+graphic in the manual's red/gray/black palette, plus title text) and `chapters/back-cover.tex` (a marketing-style
+blurb, a decorative barcode graphic, and a fake publishing block), wired into `main.tex` as the very first and very
+last pages of the document. Reused the existing fictional publishing identity from `chapters/title.tex` (Silicon
+Integrated Research Corporation, copyright 1989, Version 1.0) rather than inventing a competing one.
 
 Smaller, not-currently-a-known-problem items, not explicitly revisited during the 2026-09-12 visual-design pass:
 a dedicated `lstlisting` restyle, and a review of chapter/part opening pages specifically for visual consistency.

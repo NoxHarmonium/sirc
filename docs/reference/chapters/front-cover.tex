@@ -1,0 +1,56 @@
+\begin{titlepage}
+	\thispagestyle{empty}
+	\centering
+
+	\vspace*{1.5cm}
+
+	% Abstract geometric artwork -- a stylized circuit/die motif in the
+	% manual's restrained red/gray/black palette, evoking an early-1990s
+	% chip-vendor manual cover rather than a literal circuit diagram.
+	\begin{tikzpicture}[x=0.72cm, y=0.72cm]
+		\draw[black, thick] (0,0) rectangle (14,18);
+
+		% Trace grid
+		\foreach \x in {2,4,6,8,10,12} {
+				\draw[sircgray, thin] (\x,0.4) -- (\x,17.6);
+			}
+		\foreach \y in {2,4,6,8,10,12,14,16} {
+				\draw[sircgray, thin] (0.4,\y) -- (13.6,\y);
+			}
+
+		% Abstract blocks
+		\fill[sircred] (2,12) rectangle (5.5,15);
+		\draw[black, thick] (7.5,13) rectangle (12,16.5);
+		\fill[sirclightgray, draw=black, thick] (1,2) rectangle (4.5,5);
+		\draw[sircred, thick] (6,5) rectangle (10,9);
+		\fill[black] (10.5,3) rectangle (12.5,7);
+
+		% Connector traces linking the blocks
+		\draw[black, thick] (5.5,13.5) -- (7.5,14.5);
+		\draw[sircred, thick] (4.5,3.5) -- (6,7);
+		\draw[black, thick] (10,7) -- (10.5,5);
+		\draw[sircgray, thick] (8,9) -- (8,13);
+
+		% Via points
+		\foreach \p in {(4.5,3.5),(6,7),(10,7),(10.5,5),(8,9),(8,13),(5.5,13.5),(7.5,14.5)} {
+				\fill[black] \p circle (0.09);
+			}
+	\end{tikzpicture}
+
+	\vspace{1.3cm}
+
+	{\Huge\bfseries\color{sircred} SIRC-1}
+
+	\vspace{0.3cm}
+
+	{\LARGE\bfseries CPU Reference Manual}
+
+	\vspace{0.4cm}
+
+	{\large\itshape Featuring the SIRCIS Instruction Set}
+
+	\vfill
+
+	{\small SILICON INTEGRATED RESEARCH CORPORATION}
+
+\end{titlepage}
