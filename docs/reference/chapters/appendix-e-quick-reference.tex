@@ -17,14 +17,29 @@ selected coprocessor may define further effects once dispatched. Rows marked \te
 named source rather than from the instruction's own result. Meta-instructions inherit the flag behaviour of the
 underlying CPU instruction. For full encoding details, see the chapter cited in the header of each group.
 
-\begin{table}[H]
-	\centering
-	\small
-	\begin{tabularx}{\textwidth}{ll>{\raggedright\arraybackslash}p{3.1cm}llllX}
-		\toprule
-		\textbf{Mnemonic} & \textbf{Type} & \textbf{Opcode(s)}                               & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V}               & \textbf{Description}                                                                                          \\
-		\midrule
-		\multicolumn{8}{l}{\textit{A -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
+\small
+\begin{xltabular}{\textwidth}{ll>{\raggedright\arraybackslash}p{3.1cm}llllX}
+	\caption{Alphabetical Mnemonic Index}
+	\label{tab:mnemonic-index} \\
+	\toprule
+	\textbf{Mnemonic} & \textbf{Type} & \textbf{Opcode(s)} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Description} \\
+	\midrule
+	\endfirsthead
+
+	\multicolumn{8}{l}{\small\textit{Table~\ref{tab:mnemonic-index} (continued)}} \\
+	\toprule
+	\textbf{Mnemonic} & \textbf{Type} & \textbf{Opcode(s)} & \textbf{N} & \textbf{Z} & \textbf{C} & \textbf{V} & \textbf{Description} \\
+	\midrule
+	\endhead
+
+	\midrule
+	\multicolumn{8}{r}{\small\textit{continued on next page}} \\
+	\endfoot
+
+	\bottomrule
+	\endlastfoot
+
+	\multicolumn{8}{l}{\textit{A -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
 		\mnemonic{ADCI}   & ALU           & \opcode{01}/\opcode{21}                          & *          & *          & *          & *                        & Add with carry, immediate or short immediate                                                                  \\
 		\mnemonic{ADCR}   & ALU           & \opcode{31}                                      & *          & *          & *          & *                        & Add with carry, register                                                                                      \\
 		\mnemonic{ADDI}   & ALU           & \opcode{00}/\opcode{20}                          & *          & *          & *          & *                        & Add immediate or short immediate                                                                              \\
@@ -97,11 +112,7 @@ underlying CPU instruction. For full encoding details, see the chapter cited in 
 		\multicolumn{8}{l}{\textit{X -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
 		\mnemonic{XORI}   & ALU           & \opcode{06}/\opcode{26}                          & *          & *          & 0          & 0                        & Bitwise XOR immediate or short immediate                                                                      \\
 		\mnemonic{XORR}   & ALU           & \opcode{36}                                      & *          & *          & 0          & 0                        & Bitwise XOR register                                                                                          \\
-		\bottomrule
-	\end{tabularx}
-	\caption{Alphabetical Mnemonic Index}
-	\label{tab:mnemonic-index}
-\end{table}
+\end{xltabular}
 
 \textsuperscript{\dag} Preserved by the coprocessor-call instruction itself; the selected coprocessor may define
 further effects once the call is dispatched. \textsuperscript{\ddag} \mnemonic{RETE} restores all four flags from the
