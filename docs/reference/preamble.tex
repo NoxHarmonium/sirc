@@ -210,6 +210,23 @@
 }{%
 }
 
+% A compact boxed reference for one addressing mode: GENERATION, ASSEMBLER
+% SYNTAX, FIELD ENCODING, and INSTRUCTION WORD COUNT, matching the M68000
+% PRM's per-mode encoding box. Unlike instructionbox, this does not force a
+% page break -- there are only seven addressing modes and each is short
+% enough that several fit per page.
+\newtcolorbox{addrmodebox}[1]{
+    colback=sirclightgray,
+    colframe=sircred,
+    coltitle=black,
+    fonttitle=\bfseries\large,
+    title=#1,
+    arc=0mm,
+    boxrule=0.8pt,
+    breakable,
+    enhanced jigsaw,
+}
+
 
 % ------------------------------------------------------------
 % Architectural notation

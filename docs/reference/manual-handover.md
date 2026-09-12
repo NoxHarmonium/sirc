@@ -106,10 +106,15 @@ Open, in original numbering (2, 3, 6, 8, 9 remain; 1 stays open but is now scope
    register pair, `sr`'s unprivileged low byte) and a "Supervisor Programming Model Supplement" figure (the high
    word of each address register pair, `sr`'s privileged high byte). The privileged-registers table this item also
    asked for was already covered by the existing Register Encoding table (Table 3.1).
-9. **Per-mode encoding box in Chapter 8.** GENERATION (EA formula), ASSEMBLER SYNTAX, field encoding and
-   instruction word count for each addressing mode. `M68000PRM:2-6`, `2-7`. Scoping note (2026-09-12): restructure
-   using the same boxed-reference pattern as the redesigned instruction pages (Workstream 13), applied per
-   addressing mode; replaces the current per-mode prose subsections in Chapter 8. Not started.
+9. **Per-mode encoding box in Chapter 8.** `M68000PRM:2-6`, `2-7`. **Done (2026-09-12):** replaced the eight
+   per-mode prose subsections (Description/Syntax/Effective Value/Usage) with a new `addrmodebox` environment --
+   a compact, non-page-forcing bordered box (deliberately *not* the page-per-entry `instructionbox` pattern, since
+   there are only 7 addressing modes and several fit per page) stating GENERATION, ASSEMBLER SYNTAX, FIELD
+   ENCODING (with exact bit positions, e.g. Register format's R1/R2/R3 fields, the memory-format address-register
+   and offset fields, or which opcode bit selects auto-update), and INSTRUCTION WORD COUNT (always 2, fixed --
+   explicitly called out since that's what makes SIRC-1 different from architectures with variable extension
+   words per mode). All existing prose content (formulas, syntax examples, usage bullets) was preserved, just
+   reorganized.
 
 ## Definition of Done
 
