@@ -79,8 +79,17 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 // This is the original address with the pre/post increment/decrement applied (no offset)
                 // we need this value to write back to the source address register to do the inc/dec
                 let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
+                // Pre-decrement's borrow must be computed with a real subtraction: adding the
+                // two's-complement bit pattern of -1 (0xFFFF) via `overflowing_add` reports a
+                // carry for every nonzero `displaced` and no carry only when `displaced == 0`,
+                // which is exactly backwards from the genuine underflow of a -1 decrement (which
+                // only occurs when `displaced == 0` wraps to `0xFFFF`).
                 let (incremented_displacement, displacement_overflowed_after_inc) =
-                    displaced.overflowing_add(decoded.addr_inc as u16);
+                    if decoded.addr_inc == -1 {
+                        displaced.overflowing_sub(1)
+                    } else {
+                        displaced.overflowing_add(decoded.addr_inc as u16)
+                    };
 
                 trace!("Calculate offset: ad_l_ 0x{:X} sr_b_: 0x{:X} displaced: 0x{displaced:X} displacement_overflowed: {displacement_overflowed}", decoded.ad_l_ , decoded.sr_b_);
 

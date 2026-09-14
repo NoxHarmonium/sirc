@@ -13,36 +13,6 @@ Superseded.
 
 ## Open — needs a Rust (or generator) fix
 
-### F-mem-5 / F-data-10 (code-wrong, blocker) — pre-decrement effective-address overflow check is inverted
-
-- category: contradiction
-- claim: two manual locations state the same rule -- a segment-overflow fault is raised when
-  `SR.A` is set and the low-word address calculation overflows or underflows:
-  `chapters/14-memory-instructions.tex:94-95` ("Effective-address calculation can raise a
-  segment-overflow fault when \texttt{SR.A}... is set and the 16-bit low-word address calculation
-  wraps.") and `chapters/04-data-representation.tex:154-157` ("If the low word overflows or
-  underflows and \texttt{SR.A}... is set, the instruction raises a segment-overflow fault.").
-- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/execution_effective_address.rs:76-115`.
-  For pre-decrement forms, `addr_inc` is `-1`, added as `0xFFFF`: `displaced.overflowing_add(0xFFFF)`
-  reports overflow for every `displaced != 0` and *no* overflow for `displaced == 0`. With `SR.A`
-  set, this means (a) a pre-decrement whose displaced address is nonzero always faults, even though
-  no underflow actually occurred, and (b) a genuine underflow (displaced address 0, decrementing to
-  `0xFFFF`) produces no carry and does not fault -- the check is inverted. No test covers a
-  pre-decrement or underflow with `SR.A` set (`sirc-vm/peripheral-cpu/tests/exceptions/faults.rs:640-693`
-  only covers a positive-displacement LOAD).
-- resolution: code-wrong
-- fix: the manual's stated rule (raise only on a genuine wrap) is the sane architectural rule. The
-  borrow out of the `-1` decrement is being fed into the same overflow term as the carry out of the
-  displacement add, inverting the test for every pre-decrement form. `execution_effective_address.rs`
-  needs to compute the decrement's borrow separately from the displacement's carry. The same
-  sentence also appears at `chapters/15-control-flow.tex:103-105` (covering `LDEA` pre-decrement,
-  opcodes 0x1A/0x1B, which shares this code path).
-- confidence: medium
-- status: code-wrong
-- ruling: Gate 2 D: the address-overflow trap must detect signed wrap of the low word, not unsigned
-  carry. Manual rule stands (all three locations). Originally filed as two separate findings,
-  `F-mem-5` and `F-data-10`; merged here since they're the same code bug.
-
 ### F-enc-18 (code-wrong, blocker) — ASR does not sign-fill for shift counts above 1
 
 - category: fact
@@ -410,6 +380,42 @@ Superseded.
 - status: not started; author's call on timing, not required for manual accuracy.
 
 ## Already fixed (kept for the record)
+
+### F-mem-5 / F-data-10 (code-wrong, blocker) — FIXED 2026-09-14 — pre-decrement effective-address overflow check was inverted
+
+- category: contradiction
+- claim: two manual locations state the same rule -- a segment-overflow fault is raised when
+  `SR.A` is set and the low-word address calculation overflows or underflows:
+  `chapters/14-memory-instructions.tex:94-95` ("Effective-address calculation can raise a
+  segment-overflow fault when \texttt{SR.A}... is set and the 16-bit low-word address calculation
+  wraps.") and `chapters/04-data-representation.tex:154-157` ("If the low word overflows or
+  underflows and \texttt{SR.A}... is set, the instruction raises a segment-overflow fault.").
+- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/execution_effective_address.rs:76-115`.
+  For pre-decrement forms, `addr_inc` is `-1`, added as `0xFFFF`: `displaced.overflowing_add(0xFFFF)`
+  reported overflow for every `displaced != 0` and *no* overflow for `displaced == 0`. With `SR.A`
+  set, this meant (a) a pre-decrement whose displaced address is nonzero always faulted, even though
+  no underflow actually occurred, and (b) a genuine underflow (displaced address 0, decrementing to
+  `0xFFFF`) produced no carry and did not fault -- the check was inverted. No test covered a
+  pre-decrement or underflow with `SR.A` set prior to this fix.
+- resolution: code-wrong (fixed)
+- fix (applied): the borrow out of the `-1` decrement was being fed into the same overflow term as
+  the carry out of the displacement add, inverting the test for every pre-decrement form.
+  `execution_effective_address.rs` now computes the pre-decrement's borrow separately, via
+  `displaced.overflowing_sub(1)`, instead of routing `-1` through `overflowing_add(0xFFFF)`; the `0`
+  and `+1` (regular/post-increment) branches are unchanged, since `overflowing_add` was already
+  correct for those. The same sentence also appears at `chapters/15-control-flow.tex:103-105`
+  (covering `LDEA` pre-decrement, opcodes 0x1A/0x1B, which shares this code path) and needed no
+  further change.
+- test coverage added: `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs` gained
+  `test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault` and
+  `test_segment_overflow_fault_with_predecrement_underflow_faults`, both using `LDEA`
+  pre-decrement (opcode `0x1A`), covering exactly the two previously-untested cases (a nonzero
+  pre-decrement, which must not fault, and a genuine `0x0000 -> 0xFFFF` underflow, which must).
+- confidence: high
+- status: fixed
+- ruling: Gate 2 D: the address-overflow trap must detect signed wrap of the low word, not unsigned
+  carry. Manual rule stands (all three locations); the code now matches it. Originally filed as two
+  separate findings, `F-mem-5` and `F-data-10`; merged here since they're the same code bug.
 
 ### F-sum-30 (minor) — FIXED 2026-09-09 — vector count comment in every example source
 
