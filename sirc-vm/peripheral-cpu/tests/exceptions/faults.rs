@@ -49,6 +49,16 @@ pub fn build_load_instruction() -> InstructionData {
     })
 }
 
+pub fn build_ldea_predecrement_instruction(value: u16) -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
+        register: 0x1, // target (r1)
+        value,         // displacement added to al/ah before the decrement
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x1, // source (a)
+    })
+}
+
 pub fn build_invalid_opcode_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::CoprocessorCallImmediate,
@@ -108,6 +118,25 @@ pub fn expect_load_instruction() -> Vec<Option<Expectation>> {
             None,
             None,
         )),
+        None,
+        None,
+        None,
+    ]
+}
+
+pub fn expect_ldea_predecrement_instruction(value: u16) -> Vec<Option<Expectation>> {
+    let instruction_bytes: [u8; 4] =
+        encode_instruction(&build_ldea_predecrement_instruction(value));
+    let instruction_words = bytes_to_words(&instruction_bytes);
+    vec![
+        Some(expectation(None, None, Some(0x0000_0000), None)),
+        Some(expectation(
+            Some(instruction_words[0]),
+            None,
+            Some(0x0000_0001),
+            None,
+        )),
+        Some(expectation(Some(instruction_words[1]), None, None, None)),
         None,
         None,
         None,
@@ -757,6 +786,102 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
             .pending_fault
             .is_some_and(|fault| fault == Faults::SegmentOverflow),
         "A fault should be raised because TrapOnAddressOverflow is set"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(SEGMENT_OVERFLOW_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+}
+
+#[test]
+fn test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Set protected mode to test if the fault flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    // displaced = al + 0x0000 = 0x0005; decrementing to 0x0004 is not a real underflow.
+    cpu_peripheral.registers.al = 0x0005;
+
+    // Enable segment overflow up front: a nonzero pre-decrement must never fault.
+    set_sr_bit(
+        StatusRegisterFields::TrapOnAddressOverflow,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_ldea_predecrement_instruction(0x0000),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "No fault should be raised: displaced address 0x0005 does not underflow when decremented"
+    );
+}
+
+#[test]
+fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    // Set protected mode to test if the fault flips into privileged mode.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    // displaced = al + 0x0000 = 0x0000; decrementing wraps to 0xFFFF, a genuine underflow.
+    cpu_peripheral.registers.al = 0x0000;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_ldea_predecrement_instruction(0x0000),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "No fault should be raised unless TrapOnAddressOverflow is set"
+    );
+
+    // Enable segment overflow
+    set_sr_bit(
+        StatusRegisterFields::TrapOnAddressOverflow,
+        &mut cpu_peripheral.registers,
+    );
+
+    // Reset PL and al (the previous instruction did not commit its decrement, since the
+    // instruction only ran through the effective-address stage before we inspected the fault)
+    cpu_peripheral.registers.pl = 0x0;
+    cpu_peripheral.registers.al = 0x0000;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_ldea_predecrement_instruction(0x0000),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|fault| fault == Faults::SegmentOverflow),
+        "A fault should be raised: displaced address 0x0000 underflows to 0xFFFF when decremented"
     );
 
     run_expectations(
