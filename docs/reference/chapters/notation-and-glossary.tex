@@ -17,15 +17,13 @@ only inside instruction descriptions) is defined separately in Chapter~\ref{ch:r
 		\toprule
 		\textbf{Convention}         & \textbf{Meaning}                                                                          \\
 		\midrule
-		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font via \texttt{\textbackslash reg\{\}}, whether
-		general-purpose, address-pair, or status.                                                                              \\
-		\opcode{1A}                 & A literal instruction-opcode byte value, via \texttt{\textbackslash opcode\{\}}. Renders
-		as \texttt{0x1A}; the macro takes just the two hex digits.                                                             \\
-		\imm{123}                   & A concrete immediate value written as an operand, via \texttt{\textbackslash imm\{\}}.
-		Renders as \texttt{\#123}.                                                                                             \\
-		\addr{0x0002}               & A concrete memory address or vector target, via \texttt{\textbackslash addr\{\}}.        \\
-		\mnemonic{ADDI}             & An instruction mnemonic, always bold typewriter and always uppercase, via
-		\texttt{\textbackslash mnemonic\{\}}.                                                                                  \\
+		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font, whether general-purpose, address-pair,
+		or status.                                                                                                             \\
+		\opcode{1A}                 & A literal instruction-opcode byte value, written \texttt{0x} followed by two
+		uppercase hex digits.                                                                                                  \\
+		\imm{123}                   & A concrete immediate value written as an operand, prefixed with \texttt{\#}.      \\
+		\addr{0x0002}               & A concrete memory address or vector target.                                       \\
+		\mnemonic{ADDI}             & An instruction mnemonic, always bold typewriter and always uppercase.            \\
 		\texttt{SR.X}               & A field or bit of the status register, named by its bit label (for example
 		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                          \\
 		\indirectimm{4}{a}          & Parentheses denote indirection through an address-register pair; a leading

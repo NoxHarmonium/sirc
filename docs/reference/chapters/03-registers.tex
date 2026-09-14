@@ -19,10 +19,13 @@ all other registers are architecturally undefined. See Chapter~\ref{ch:exception
 
 \section{Programming Model}
 
-Figure~\ref{fig:user-programming-model} shows every register a protected-mode program can access directly: the seven
-general-purpose registers, the low (unprivileged) word of each of the four address register pairs, and the
-unprivileged low byte of \reg{sr}. \reg{sr}'s high byte is shown shaded because it reads as zero and cannot be
-written directly in protected mode; see Section~\ref{sec:privilege-restrictions} below.
+Figure~\ref{fig:register-programming-model} shows the complete sixteen-register programming model: the seven
+general-purpose registers, both words of each of the four address register pairs, and \reg{sr}. The high word of
+each address register pair, marked \textsuperscript{*}, is read-only in protected mode: a protected-mode program can
+read its real value but a direct write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter
+still: in protected mode it is hidden even from reads, which are redacted to zero, on top of being unwritable. Its
+low byte, shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully accessible in both
+modes. See Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
 
 \begin{figure}[H]
 	\centering
@@ -36,31 +39,25 @@ written directly in protected mode; see Section~\ref{sec:privilege-restrictions}
 		\bitbox{16}{\reg{r6}} \\
 		\bitbox{16}{\reg{r7}} \\
 		\bitbox{16}{\reg{ll} (link, low word)} \\
+		\bitbox{16}{\reg{lh} (link, high word)\textsuperscript{*}} \\
 		\bitbox{16}{\reg{al} (address, low word)} \\
+		\bitbox{16}{\reg{ah} (address, high word)\textsuperscript{*}} \\
 		\bitbox{16}{\reg{sl} (stack, low word)} \\
+		\bitbox{16}{\reg{sh} (stack, high word)\textsuperscript{*}} \\
 		\bitbox{16}{\reg{pl} (program counter, low word)} \\
-		\bitbox{8}{\color{sircgray}\reg{sr} high byte (hidden)} & \bitbox{8}{\reg{sr} low byte}
+		\bitbox{16}{\reg{ph} (program counter, high word)\textsuperscript{*}} \\
+		\bitbox{8}{\reg{sr} high byte\textsuperscript{\dag}} & \bitbox{8}{\textit{\reg{sr} low byte}}
 	\end{bytefield}
-	\caption{User Programming Model}
-	\label{fig:user-programming-model}
-\end{figure}
+	\caption{Register Programming Model}
+	\label{fig:register-programming-model}
 
-Figure~\ref{fig:supervisor-programming-model} shows what supervisor mode adds on top of the user programming model:
-the high (privileged) word of each address register pair, and \reg{sr}'s high byte, both hidden from a protected-mode
-program.
-
-\begin{figure}[H]
-	\centering
-	\begin{bytefield}[bitwidth=1.1em]{16}
-		\bitheader{0,15} \\
-		\bitbox{16}{\reg{lh} (link, high word)} \\
-		\bitbox{16}{\reg{ah} (address, high word)} \\
-		\bitbox{16}{\reg{sh} (stack, high word)} \\
-		\bitbox{16}{\reg{ph} (program counter, high word)} \\
-		\bitbox{8}{\reg{sr} high byte} & \bitbox{8}{\color{sircgray}\reg{sr} low byte (same as user model)}
-	\end{bytefield}
-	\caption{Supervisor Programming Model Supplement}
-	\label{fig:supervisor-programming-model}
+	\vspace{0.2cm}
+	\footnotesize
+	\textsuperscript{*}Read-only in protected mode: reads return the real value, but direct writes trigger a
+	privilege violation fault (address-register-pair write-back is still allowed, provided it would leave this word
+	unchanged). \quad \textsuperscript{\dag}Hidden in protected mode: reads are redacted to zero rather than the real
+	value, and direct writes cannot modify it either. The \textit{italicized} \reg{sr} low byte is the odd one out
+	among these: despite sharing a row with a hidden half, it is unprivileged and fully accessible in both modes.
 \end{figure}
 
 Table~\ref{tab:register-encoding} below lists every register's encoding and states exactly which ones are
