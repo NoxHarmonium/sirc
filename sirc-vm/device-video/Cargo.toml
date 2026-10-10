@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 peripheral_bus = { path = "../peripheral-bus" }
 log = "0.4.21"
-minifb = "0.28"
+minifb = "0.29"
 modular-bitfield = "0.13.0"
 
 [dev-dependencies]
