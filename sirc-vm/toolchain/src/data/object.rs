@@ -23,30 +23,30 @@ fn resolve_placeholder(
         .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
     match instruction_data {
         InstructionData::Immediate(immediate_instruction) => {
-            if resolved_value > &0xFFFF {
-                panic!("Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)");
-            } else {
-                InstructionData::Immediate(ImmediateInstructionData {
-                    value: resolved_value
-                        .to_owned()
-                        .try_into()
-                        .expect("Value should fit into a u8 as it is checked above"),
-                    ..immediate_instruction.clone()
-                })
-            }
+            assert!(
+                *resolved_value <= 0xFFFF,
+                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)"
+            );
+            InstructionData::Immediate(ImmediateInstructionData {
+                value: resolved_value
+                    .to_owned()
+                    .try_into()
+                    .expect("Value should fit into a u8 as it is checked above"),
+                ..immediate_instruction.clone()
+            })
         }
         InstructionData::ShortImmediate(short_immediate_instruction) => {
-            if resolved_value > &0xFF {
-                panic!("Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)");
-            } else {
-                InstructionData::ShortImmediate(ShortImmediateInstructionData {
-                    value: resolved_value
-                        .to_owned()
-                        .try_into()
-                        .expect("Value should fit into a u8 as it is checked above"),
-                    ..short_immediate_instruction.clone()
-                })
-            }
+            assert!(
+                *resolved_value <= 0xFF,
+                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)"
+            );
+            InstructionData::ShortImmediate(ShortImmediateInstructionData {
+                value: resolved_value
+                    .to_owned()
+                    .try_into()
+                    .expect("Value should fit into a u8 as it is checked above"),
+                ..short_immediate_instruction.clone()
+            })
         }
         InstructionData::Register(_) => instruction_data.clone(),
     }
