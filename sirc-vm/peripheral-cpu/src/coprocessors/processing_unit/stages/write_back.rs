@@ -60,12 +60,12 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
         let exception_active_mask = StatusRegisterFields::ExceptionActive as u16;
         let exception_active_preserved = registers[index] & exception_active_mask;
 
-        if should_redact_sr {
-            panic!("Protected-mode direct SR write reached write-back; privilege check should have raised a fault before write-back");
-        } else {
-            // In supervisor mode: allow new value everywhere except ExceptionActive bit
-            registers[index] = (value & !exception_active_mask) | exception_active_preserved;
-        }
+        assert!(
+            !should_redact_sr,
+            "Protected-mode direct SR write reached write-back; privilege check should have raised a fault before write-back"
+        );
+        // In supervisor mode: allow new value everywhere except ExceptionActive bit
+        registers[index] = (value & !exception_active_mask) | exception_active_preserved;
     } else {
         registers[index] = value;
     }
