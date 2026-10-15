@@ -6,34 +6,63 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-### IB-6: Zero-operand meta-instructions don't accept a trailing same-line comment
-
-- **Where:** `sirc-vm/toolchain/src/parsers/opcodes/meta.rs:50-59`, the `meta` parser (covers
-  `RETS`/`NOOP`; `RETE`/`WAIT` share the same shape via their own near-identical parsers).
-- **What:** after the instruction tag and condition flag, the parser requires the very next
-  character to be a line ending: `one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i_after_instruction)`.
-  It doesn't skip whitespace or hand off to the top-level comment tokenizer first, so anything
-  between the tag and the newline -- including a trailing `; comment` -- fails to parse. Every
-  operand-bearing instruction is unaffected: its own operand parser consumes up to the operand's
-  end and then the top-level `parse_tokens` tokenizer (`shared.rs:257-269`) separately matches the
-  trailing whitespace and `; comment` as their own tokens via `collect_separated_terminated`.
-- **Confirmed still present** (2026-09-17): `NOOP ; hello` fails to parse; bare `NOOP` and any
-  operand-bearing instruction with an identical trailing comment both parse fine.
-- **How it surfaced:** found by `make qa`'s extracted-listing check during the 2026-09-16 editorial
-  pass, in two manual Usage Examples (`15-control-flow.tex`'s `RETS` example,
-  `17-meta-instructions.tex`'s `NOOP` timing-delay example). Worked around in the manual by moving
-  the comment to its own line in both places -- the manual now matches what the assembler actually
-  accepts -- but the parser gap itself was never logged (`implementation-bugs.md` didn't exist yet
-  at the time; recreated later that same pass).
-- **Manual side:** no change needed beyond the workaround already applied.
-- **Suggested fix:** replace the hard `one_of("\r\n")` check with something that tolerates
-  trailing whitespace and an optional comment before the line ending -- e.g. peek for
-  whitespace/`;`/EOF instead of demanding a line-ending character directly, and let the top-level
-  tokenizer's own comment handling take it from there, matching how every operand-bearing
-  instruction already behaves.
-- **Status:** logged only, not fixed.
+None currently — all findings from the 2026-09-16 editorial pass, plus two more reported directly
+by the author on 2026-09-17, have been fixed.
 
 ## Fixed this pass
+
+### IB-7: A bare `;` with nothing after it fails to parse
+
+- **Where:** `sirc-vm/toolchain/src/parsers/shared.rs`, `parse_comment_`.
+- **What:** `map(pair(char(';'), cut(is_not("\n\r"))), ...)` -- `is_not("\n\r")` requires *one or
+  more* non-newline characters, so it can't match an empty comment body. `;` immediately followed
+  by a line ending, or by EOF with no trailing newline at all, both failed to parse. The function's
+  own TODO comment already flagged this exact gap ("Comments with nothing after the semicolon
+  currently fail").
+- **Reported directly by the author** (2026-09-17), alongside IB-6 below, not found by the prior
+  editorial pass.
+- **Checked an adjacent TODO in the same function** ("Comments with a semi-colon in the body ...
+  seem to fail") and it does not reproduce -- `; foo; bar` already assembles fine, since
+  `is_not("\n\r")`'s character set never excluded `;`. Removed that stale TODO along with the one
+  this fix addresses; left the third, still-open "more flexible eol parser" TODO alone.
+- **Fix:** swapped `is_not("\n\r")` (can't match empty) for `take_till(|c| c == '\n' || c == '\r')`
+  (can), and dropped the now-inert `cut(...)` wrapper -- `take_till` can't itself fail, so there
+  was nothing left to cut.
+- **Test coverage added:** `toolchain/tests/assembler/comment_test.rs` (new file) covers a bare `;`
+  both mid-file and as the literal last two bytes of a file with no trailing newline.
+- **Manual side:** no change needed -- this was never a documented restriction.
+
+### IB-6: Zero-operand meta-instructions don't accept a trailing same-line comment
+
+- **Where:** `sirc-vm/toolchain/src/parsers/opcodes/meta.rs`, the `meta` parser (covers
+  `RETS`/`NOOP` only).
+- **What:** after the instruction tag and condition flag, the parser required the very next
+  character to be a line ending: `one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i_after_instruction)`.
+  It didn't skip whitespace or hand off to the top-level comment tokenizer first, so anything
+  between the tag and the newline -- including a trailing `; comment` -- failed to parse. Every
+  operand-bearing instruction was unaffected: its own operand parser consumes up to the operand's
+  end and then the top-level `parse_tokens` tokenizer (`shared.rs`) separately matches the trailing
+  whitespace and `; comment` as their own tokens via `collect_separated_terminated`.
+- **This entry's own claim that `RETE`/`WAIT` "share the same shape via their own near-identical
+  parsers" was wrong** -- confirmed by direct testing, not just reading, during this pass: `RETE ;
+  a comment` and `WAIT ; a comment` both already parsed successfully before this fix. `RETE`/`WAIT`
+  (and `RSET`/`EXCP`/`ETFR`/`ETTR`) are parsed by a genuinely different function,
+  `toolchain/src/parsers/opcodes/exception.rs`'s `exception`, which already calls
+  `parse_instruction_operands0` even for its zero-operand cases and lets the top-level tokenizer
+  handle whatever comes after -- `meta.rs`'s own error string just happens to *mention* "RETE" as
+  prose, which is presumably what led to the original mix-up.
+- **Reported directly by the author** (2026-09-17), confirmed still present, and re-scoped to just
+  `NOOP`/`RETS` during this pass.
+- **Fix:** replaced the `one_of("\r\n")` check with `parse_instruction_operands0`, restructuring
+  the tag dispatch to match on `(tag, operands)` exactly like `exception.rs` already does --
+  reusing a proven, already-live pattern rather than inventing new parsing logic. Confirmed this
+  doesn't weaken error checking: genuine garbage after `NOOP`/`RETS` (e.g. `NOOP GARBAGE`, `NOOP
+  r1`) still correctly fails to parse, same as it already does for `WAIT GARBAGE`/`WAIT r1` today.
+- **Test coverage added:** `toolchain/tests/assembler/comment_test.rs` covers `NOOP`/`RETS` with a
+  trailing comment (the exact case reported), a regression guard proving `WAIT`/`RETE` were never
+  actually affected, and that genuine garbage input is still rejected.
+- **Manual side:** no change needed beyond the workaround already applied during the prior
+  editorial pass (moving the two affected manual examples' comments to their own line).
 
 ### IB-5: Linker only supports `FullAddress` label references on data directives, so explicit `.r`/`.l`/`.u` suffixes panic there
 
