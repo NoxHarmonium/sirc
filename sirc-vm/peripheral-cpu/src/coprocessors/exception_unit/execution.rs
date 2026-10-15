@@ -66,15 +66,13 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 
 
 pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCodes, u8, u8) {
     let instruction = decode_exception_unit_instruction(cause_register_value);
-    // TODO: Define what happens when exception CoP gets an unimplemented opcode
-    // category=Hardware
-    // Real CPU can't panic. Work out what should actually happen here (probably nothing)
-    let op_code = num::FromPrimitive::from_u8(instruction.op_code).unwrap_or_else(|| {
-        panic!(
-            "Unimplemented op code [{:X}] for exception co-processor",
-            instruction.op_code
-        )
-    });
+    // Reserved operation nibbles (0x2-0x8) are architecturally undefined, per the manual
+    // (chapters/06-exceptions.tex:816, chapters/16-coprocessor-instructions.tex Sec 16.2) -- not
+    // a fault, and certainly not a crash. A program can reach this via COPI/COPR targeting the
+    // exception unit's coprocessor ID with a reserved op nibble. Treat it as a harmless no-op,
+    // the same behavior `None` already gets.
+    let op_code =
+        num::FromPrimitive::from_u8(instruction.op_code).unwrap_or(ExceptionUnitOpCodes::None);
     let vector = instruction.value;
     let level = if op_code == ExceptionUnitOpCodes::SoftwareException {
         1
@@ -539,5 +537,26 @@ mod tests {
             eu_registers.pending_hardware_exceptions, LINE_1_AND_LINE_4_PENDING,
             "both lines stay latched, since neither is enabled"
         );
+    }
+
+    #[test]
+    fn reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking() {
+        // IB-2 (docs/reference/review/implementation-bugs.md): opcodes 0x2-0x8 are reserved --
+        // architecturally undefined, not a crash. Construct the raw cause value directly since
+        // `construct_cause_value` only accepts real `ExceptionUnitOpCodes` variants.
+        for reserved_op_code in 0x2u8..=0x8 {
+            let cause_value = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
+                << COPROCESSOR_ID_LENGTH)
+                & COPROCESSOR_ID_MASK
+                | (u16::from(reserved_op_code) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK;
+
+            let (op_code, _vector, _level) = deconstruct_cause_value(cause_value);
+
+            assert_eq!(
+                op_code,
+                ExceptionUnitOpCodes::None,
+                "reserved op code 0x{reserved_op_code:X} should decode as a harmless no-op, not panic"
+            );
+        }
     }
 }

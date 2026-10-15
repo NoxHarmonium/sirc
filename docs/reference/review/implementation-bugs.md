@@ -6,31 +6,6 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-### IB-2: Exception-unit reserved opcodes panic instead of behaving as undefined
-
-- **Where:** `sirc-vm/peripheral-cpu/src/coprocessors/exception_unit/execution.rs:69-77`,
-  `deconstruct_cause_value`
-- **What:** an unimplemented (reserved, `0x2`-`0x8`) exception-unit opcode currently panics:
-  ```rust
-  // TODO: Define what happens when exception CoP gets an unimplemented opcode
-  // category=Hardware
-  // Real CPU can't panic. Work out what should actually happen here (probably nothing)
-  let op_code = num::FromPrimitive::from_u8(instruction.op_code).unwrap_or_else(|| {
-      panic!("Unimplemented op code [{:X}] for exception co-processor", instruction.op_code)
-  });
-  ```
-  The comment already acknowledges this is wrong.
-- **Manual side:** per Chapter 16's "Model and Revision Policy" (§16.2): reserved operation codes
-  within an *implemented* coprocessor are architecturally undefined, not a fault and certainly not
-  a crash. `chapters/06-exceptions.tex:139-140` and `chapters/16-coprocessor-instructions.tex:
-  702-703` are being corrected this pass to stop implying these should fault (see the manual diff
-  this same commit).
-- **Suggested fix:** replace the panic with genuinely undefined-but-non-crashing behavior —
-  e.g. treat the reserved opcode as a no-op, or fall through with an arbitrary but harmless
-  default, matching how the processing unit's own undocumented ALU opcodes are decoded and
-  executed rather than rejected.
-- **Status:** logged only, not fixed this pass.
-
 ### IB-4: `.EQU` constants can't be used as a data directive's value, despite the manual's claim
 
 - **Where:** `sirc-vm/toolchain/src/parsers/data.rs:36-47`, `parse_data_type`;
@@ -61,6 +36,39 @@ while fact-checking the manual against the implementation.
 - **Status:** logged only, not fixed this pass.
 
 ## Fixed this pass
+
+### IB-2: Exception-unit reserved opcodes panic instead of behaving as undefined
+
+- **Where:** `sirc-vm/peripheral-cpu/src/coprocessors/exception_unit/execution.rs`,
+  `deconstruct_cause_value`
+- **What:** an unimplemented (reserved, `0x2`-`0x8`) exception-unit opcode panicked:
+  ```rust
+  let op_code = num::FromPrimitive::from_u8(instruction.op_code).unwrap_or_else(|| {
+      panic!("Unimplemented op code [{:X}] for exception co-processor", instruction.op_code)
+  });
+  ```
+  Reachable from software: a program can issue `COPI`/`COPR` targeting coprocessor 1 (the
+  exception unit) with any op nibble, including one of the 7 reserved values.
+- **Confirmed this pass**: the doc's own citations (`06-exceptions.tex:139-140`,
+  `16-coprocessor-instructions.tex:702-703`) point at unrelated content (Invalid Opcode Fault, DMA
+  faults respectively) and were wrong even before this pass — the manual did **not** need
+  correcting. The actually-correct wording already existed, unchanged, in two other places:
+  `chapters/06-exceptions.tex:816` ("opcodes 0x2–0x8 are reserved; issuing one is architecturally
+  undefined") and `chapters/16-coprocessor-instructions.tex:203-204` plus §16.2 "Model and
+  Revision Policy" (reserved operation nibbles within an implemented coprocessor are
+  architecturally undefined, not a fault). This was a Rust-only bug.
+- **Fix:** replaced the panic with a fallback to `ExceptionUnitOpCodes::None`, the existing
+  no-op variant — simpler than mirroring the processing unit's raw-bit-derived ALU behavior, since
+  reserved exception-unit nibbles have no comparable sub-structure to preserve. `step`'s
+  `ExecutionEffectiveAddressExecutor` phase already does nothing for `None`, and `level` (computed
+  alongside `op_code`) is never read on that path, so no other call site needed changes.
+- **Test coverage added:** a new unit test,
+  `reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking`, in the existing
+  `#[cfg(test)] mod tests` block in the same file — constructs a raw cause value for each of the 7
+  reserved nibbles (`0x2`-`0x8`) directly (bypassing `construct_cause_value`, which only accepts
+  real `ExceptionUnitOpCodes` variants by design) and asserts `deconstruct_cause_value` resolves
+  each to `None` instead of panicking.
+- **Manual side:** no change needed (see above) — the manual was already correct.
 
 ### IB-3: Interrupt dispatch gives up on the whole cycle if the single highest-priority pending line was disabled after being latched
 
