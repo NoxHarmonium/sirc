@@ -11,6 +11,26 @@ appendices) have been trimmed out of this file entirely to keep it focused — s
 Two workstreams (ABI/calling-convention docs and a binary/object-format appendix) were deliberately ruled out of
 scope for this manual and are also omitted here.
 
+## Source of Truth
+
+Decided 2026-09-16, since this had been resolved case-by-case up to this point without ever being written down: the
+manual is canonical. When the manual and the `sirc-vm` Rust implementation disagree, the default assumption is that
+the implementation has a bug, not that the manual is wrong -- fix the code to match the manual, and log the
+implementation gap (see `examples/*/NOTES.md` and past `implementation-bugs.md` entries for the established format)
+rather than editing the manual to match what the code currently does. This already matches how every such conflict
+in this project's history has actually been resolved: `SHFR` was rejected as infeasible because the manual's
+original design intentionally has no zero register (Ch. 3), the DMA coprocessor was made optional because the
+manual's own optional-coprocessor model called for it, several commits are literally titled "fix: match fault
+behaviour with the spec in the manual," and the `crc-report` reset-vector bug was fixed in the example program, not
+the manual, because the manual's Ch. 1/Ch. 6 prose was already correct.
+
+The manual is only wrong when a normative claim is traced back to source (the Rust implementation, its tests, or
+first-principles architectural reasoning) and found to not hold up architecturally -- not merely because the
+implementation currently does something else. That's a genuine manual bug, fixed like any other, with the reasoning
+recorded in the commit. There is no separate machine-readable spec, and none is planned; if one is ever introduced,
+this section should be revisited, since it would become the more natural canonical source over free-form LaTeX
+prose.
+
 ## Workstream 12: Documentation QA and Build Hygiene
 
 Goal: prevent the manual from drifting away from the implementation.
@@ -82,10 +102,18 @@ Open tasks:
   unresolved for now (author's call, 2026-09-12) rather than fixed as part of this pass.
 - Generate more tables from source where possible: opcode map, register map, condition codes, instruction
   encodings, coprocessor IDs.
-- Add a "manual source of truth" note: decide whether implementation code, LaTeX tables, or a shared
-  machine-readable spec is canonical.
-- Add TODO tracking: `TODO(manual)` comments in LaTeX, or track via issues instead. Avoid prose TODOs in the
-  rendered manual unless intentionally visible.
+- **Done (2026-09-16):** added a "manual source of truth" note -- see the new "Source of Truth" section near the
+  top of this file. The manual is canonical.
+- **Done (2026-09-16):** decided on TODO tracking -- `% TODO: <description>` followed by `% category=Manual` on
+  the next line, reusing the exact convention already used across the Rust codebase (`// TODO: ...` /
+  `// category=<Category>`, e.g. `Toolchain`/`Refactoring`/`Bugs`) rather than inventing a new one. LaTeX `%`
+  comments are invisible in the rendered PDF, satisfying "avoid prose TODOs in the rendered manual," and
+  `.github/workflows/todo.yml` (`ribtoks/tdg-github-action`) already scans the whole repository -- `.tex` files
+  aren't excluded -- and files a GitHub issue per TODO on every push to `main`, so this gets issue tracking for
+  free with no new tooling. Documented in `docs/reference/README.md`'s new "Tracking Open Questions" section.
+  Retrofitted the two pre-existing bare `% TODO:` comments (`02-cpu-architecture.tex`, one about the block diagram;
+  `appendix-f-external-interface.tex`, one about decoupling-capacitor guidance) with the missing
+  `% category=Manual` line so they match going forward.
 - Audit assembly examples by chapter: architecture/reset/bus/exception/memory-model chapters should generally
   prefer pseudocode, diagrams, timing tables, and state-transition descriptions over raw assembly; assembly
   listings should live mainly in the instruction-reference chapters, assembler-facing sections, and the examples

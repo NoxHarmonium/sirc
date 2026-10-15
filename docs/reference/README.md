@@ -91,3 +91,21 @@ The short Usage Examples scattered through the instruction chapters aren't real 
 
 Deliberately out of scope for now: deep prose/terminology review (definition-before-use, confusing passages) is a
 job for the `manual-cold-reader` agent pass, not something a Makefile can meaningfully approximate.
+
+## Tracking Open Questions
+
+Don't leave a TODO as rendered prose in the manual unless it's meant to be visible to readers (e.g. a genuinely
+provisional figure, called out as such). For anything else -- a gap noticed while editing, a decision deferred, a
+diagram that needs rework -- use the same comment convention already used across the Rust codebase, just with `%`
+instead of `//`:
+
+```latex
+% TODO: Update the diagram so the memory component is visually separate from the other components on the die
+% category=Manual
+```
+
+The `% TODO:`/`% category=` pair is invisible in the rendered PDF (LaTeX comments never render), and
+`.github/workflows/todo.yml` already scans the whole repository on every push to `main` and files a GitHub issue per
+TODO comment it finds -- `.tex` files aren't excluded, so this gets issue tracking for free without any new tooling.
+Use `category=Manual` to distinguish these from the Rust codebase's existing categories (`Toolchain`, `Refactoring`,
+`Bugs`, etc.).
