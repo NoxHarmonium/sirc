@@ -442,8 +442,8 @@
 ; TEST 24: Arithmetic Shift Right Multiple Bits
     BRSR @reset_test
     LOAD r3, #0xF000
-    ADDI r3, #0, ASR #4 ; r3 should be 0x8F00 (sign extended)
-    CMPI r3, #0x8F00
+    ADDI r3, #0, ASR #4 ; r3 should be 0xFF00 (sign extended)
+    CMPI r3, #0xFF00
     LOAD|== r7, #1
     BRSR @store_test_result
 
@@ -735,8 +735,8 @@
     LOAD r1, #0x8000        ; Value to store: 0x8000 (negative)
     STOR (a), r1
     LOAD r2, #0x0000        ; Offset register
-    LOAD r6, (r2, a), ASR #2  ; Load 0x8000 and shift right by 2: 0xA000 (sign extended)
-    CMPI r6, #0xA000
+    LOAD r6, (r2, a), ASR #2  ; Load 0x8000 and shift right by 2: 0xE000 (sign extended)
+    CMPI r6, #0xE000
     LOAD|== r7, #1
     BRSR @store_test_result
 
@@ -782,9 +782,9 @@
     LOAD al, #0x0470
     LOAD r1, #0xF000        ; Value in register: 0xF000 (negative)
     LOAD r2, #0x0000        ; Offset register
-    STOR (r2, a), r1, ASR #4  ; Shift r1 right by 4 and store: 0x8F00 (sign extended)
+    STOR (r2, a), r1, ASR #4  ; Shift r1 right by 4 and store: 0xFF00 (sign extended)
     LOAD r6, (a)        ; Read back the value
-    CMPI r6, #0x8F00
+    CMPI r6, #0xFF00
     LOAD|== r7, #1
     BRSR @store_test_result
 

@@ -13,37 +13,6 @@ Superseded.
 
 ## Open — needs a Rust (or generator) fix
 
-### F-enc-18 (code-wrong, blocker) — ASR does not sign-fill for shift counts above 1
-
-- category: fact
-- claim: manual states (correctly, and unchanged by this pass) "Bit 15 (sign bit) is replicated
-  into all bits vacated by the shift" and gives worked examples of `ASR #2`, `ASR #3`, `ASR #8` as
-  signed division.
-- evidence, verified 2026-09-08 by running the actual code (`perform_arithmetic_right_shift`,
-  `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/alu.rs:446-476`) with a standalone
-  reproduction: `wide_result = extended_a.rotate_right(clamped_b) | sign_bit`. For a shift count `n`
-  in `1..=16`, this is exactly a plain zero-filled logical right shift with bit 15 alone forced to
-  the *original* sign -- bits 14 down to `16-n` are **zero**, not sign-extended, for any `n > 1`. At
-  `n = 1` there is only one vacated bit (bit 15), so the result happens to be correct -- this is why
-  a single-bit `ASR #1` (the only form used in the chapter 9 and appendix D examples) looks right on
-  inspection. Confirmed against the existing (passing) test
-  `arithmetic_register_test.rs::test_arithmetic_shift_right_register`, which asserts the buggy value
-  as expected output: input `0xCCCD` (signed -13107), `ASR #6` gives `0x8333`. A true arithmetic
-  right shift (signed divide by 64, rounding toward negative infinity: `floor(-13107/64) = -205`) is
-  `0xFF33`. The test locks in the bug rather than catching it.
-- resolution: code-wrong.
-- fix: rewrite `perform_arithmetic_right_shift` to compute a genuine arithmetic shift, for example
-  by sign-extending to a signed 32-bit value before shifting: `((i32::from(a as i16)) >>
-  clamped_b.min(16)) as u16` (using Rust's native arithmetic right shift on a signed type, which
-  correctly saturates to all-1s or all-0s once the shift reaches the value's width). This also fixes
-  the register-count-\ge{}16 case (see `F-alu-8`/`F-enc-21` below) for free: shifting a
-  sign-extended value by 16 or more naturally gives `0xFFFF` (negative) or `0x0000` (positive),
-  matching true arithmetic-shift semantics, without needing a separate special case.
-- confidence: high
-- status: code-wrong
-- ruling: Gate 2 F, unchanged: ASR must sign-fill every vacated bit. Manual text already states this
-  correctly and needs no further change (its worked examples were already right).
-
 ### F-exc-7 / F-sum-7 / F-cop-9 (code-wrong, major) — EXCP below vector 0x60 panics instead of raising a fault
 
 - category: contradiction
@@ -147,29 +116,6 @@ Superseded.
   note.
 - confidence: high
 - status: not started
-
-### F-alu-8 / F-enc-21 (minor) — REVISED 2026-09-08, register shift counts above 15
-
-- category: fact
-- claim: `chapters/09-shift-operations.tex` and every Instruction Fields list in chapter 13
-  previously said "a register-supplied shift count greater than 15 is architecturally undefined."
-- evidence, verified 2026-09-08 directly against `perform_logical_left_shift`,
-  `perform_logical_right_shift`, `perform_arithmetic_left_shift`, `perform_arithmetic_right_shift`
-  (`clamped_b = b.clamp(0, u16::BITS as u16)`, i.e. clamp to 16) and `perform_rotate_left`/
-  `perform_rotate_right` (Rust's native `rotate_left`/`rotate_right`, which reduce the count modulo
-  the type's bit width). This is real, deterministic, well-defined behavior, not undefined -- it was
-  only untested (no existing test exercises a register-sourced count above 15; the tests with counts
-  of 16/255 in `arithmetic_register_test.rs` use `ShiftOperand::Immediate`, whose 4-bit encoding
-  truncates the count to 0-15 before it ever reaches this code, so they do not exercise this path at
-  all).
-- resolution: **the manual is now correct as documented** (updated 2026-09-08 to state the real
-  clamp/modulo behavior instead of "undefined"), contingent on the `F-enc-18` fix above landing
-  first -- until then, `ASR` with a register count of 16 or more gives the same wrong value as any
-  other `ASR` count above 1 (`0x8000` or `0x0000` rather than `0xFFFF`/`0x0000`), which the
-  `F-enc-18` fix corrects as a side effect.
-- confidence: high
-- status: manual updated; the `ASR` half depends on `F-enc-18`'s code fix landing; `LSL`/`LSR`/`ASL`/`RTL`/`RTR`
-  need no code change, only the documentation fix already applied.
 
 ### Register renumbering (code-wrong, minor) — NEW 2026-09-08, resolves NOOP (`F-cop-3`) cleanly
 
@@ -372,6 +318,61 @@ Superseded.
 - status: fixed
 - ruling: Gate 2 B stands: the manual's ARM-style `HI`/`LO` glosses are unchanged; `CS`/`CC`
   glosses state their real (non-ARM) meaning; the code now matches both.
+
+### F-enc-18 (code-wrong, blocker) — FIXED 2026-09-15 — ASR did not sign-fill for shift counts above 1
+
+- category: fact
+- claim: manual states "Bit 15 (sign bit) is replicated into all bits vacated by the shift" and
+  gives worked examples of `ASR #2`, `ASR #3`, `ASR #8` as signed division.
+- evidence: `perform_arithmetic_right_shift` (`sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/alu.rs`)
+  computed `extended_a.rotate_right(clamped_b) | sign_bit` -- this only forced bit 15 to the
+  original sign; for shift count `n > 1`, bits 14 down to `16-n` stayed zero instead of
+  sign-extended. At `n = 1` there's only one vacated bit, so the result happened to look correct,
+  which is why this went unnoticed -- the manual's own worked examples and the appendix D listings
+  only ever use `ASR #1`.
+- resolution: code-wrong (fixed)
+- fix (applied): rewrote `perform_arithmetic_right_shift` to sign-extend to `i32` before shifting
+  (`(i32::from(a as i16) >> clamped_b) as u16`), using Rust's native arithmetic right shift on a
+  signed type, which correctly saturates to all-1s/all-0s once the shift count reaches 16
+  (`clamped_b` is already bounded to `0..=16` by the existing clamp, nowhere near `i32`'s actual
+  32-bit shift-panic threshold). The carry computation (a rotate-into-bit-31 trick, independent of
+  the sign-fill bug) was kept unchanged; only the now-unnecessary `sign_bit` variable and its OR
+  were removed. No other shift function needed changes.
+- test coverage: the doc's own evidence section cited one buggy assertion, but two independent
+  research passes found **four** across two files, all corrected: `arithmetic_register_test.rs::test_arithmetic_shift_right_register`
+  (shift counts 6, 15, and `u8::MAX`-truncated-to-15, all with input `0xCCCD`) and
+  `arithmetic_short_immediate_test.rs::test_arithmetic_shift_right_immediate` (shift count 15,
+  input `0x80CD` -- this one was already flagged suspect with a `// Failing` comment, now removed).
+  Also added `test_arithmetic_shift_right_register_operand_count_above_15`, since no test anywhere
+  in the workspace previously exercised `ShiftOperand::Register` at all -- it proves the
+  `F-alu-8`/`F-enc-21` register-count-\ge{}16 case is genuinely fixed as a side effect, not just
+  claimed to be.
+- example fix: `examples/comprehensive-test/comprehensive-test.sasm` TESTs 24, 53, and 57 (not
+  mentioned in the doc) asserted the buggy value (`0x8F00`/`0xA000`/`0x8F00`); corrected to the
+  true arithmetic-shift results (`0xFF00`/`0xE000`/`0xFF00`). The golden register-dump fixture was
+  regenerated (`r6` changes from `0x8f00` to `0xff00`; the pass count stayed at 72/`0x48` and the
+  success marker stayed `0x0fab`, confirming the fix didn't just trade one failure for another).
+- confidence: high
+- status: fixed
+- ruling: Gate 2 F stands: ASR must sign-fill every vacated bit. Manual text needed no change (its
+  worked examples were already right).
+
+### F-alu-8 / F-enc-21 (minor) — FIXED 2026-09-15 — register shift counts above 15
+
+- category: fact
+- claim: `chapters/09-shift-operations.tex` and every Instruction Fields list in chapter 13
+  previously said "a register-supplied shift count greater than 15 is architecturally undefined."
+- evidence: verified directly against `perform_logical_left_shift`, `perform_logical_right_shift`,
+  `perform_arithmetic_left_shift`, `perform_arithmetic_right_shift` (`clamped_b = b.clamp(0,
+  u16::BITS as u16)`, i.e. clamp to 16) and `perform_rotate_left`/`perform_rotate_right` (Rust's
+  native `rotate_left`/`rotate_right`, which reduce the count modulo the type's bit width). This is
+  real, deterministic, well-defined behavior, not undefined -- it was only untested.
+- resolution: manual is correct as documented (clamp/modulo behavior, not "undefined"); the `ASR`
+  half was contingent on `F-enc-18`'s code fix, which has now landed (see above) -- confirmed by
+  the new `test_arithmetic_shift_right_register_operand_count_above_15` test.
+- confidence: high
+- status: fixed; `LSL`/`LSR`/`ASL`/`RTL`/`RTR` never needed a code change (only the documentation
+  fix, already applied); `ASR` is now fixed too.
 
 ### F-sum-30 (minor) — FIXED 2026-09-09 — vector count comment in every example source
 

@@ -890,7 +890,7 @@ fn test_arithmetic_shift_right_register() {
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             6,
-            0b1000_0011_0011_0011,
+            0b1111_1111_0011_0011,
             &vec![],
             &vec![StatusRegisterFields::Negative],
             StatusRegisterUpdateSource::Shift,
@@ -903,7 +903,7 @@ fn test_arithmetic_shift_right_register() {
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             15,
-            0b1000_0000_0000_0001,
+            0b1111_1111_1111_1111,
             &vec![],
             &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
             StatusRegisterUpdateSource::Shift,
@@ -942,12 +942,56 @@ fn test_arithmetic_shift_right_register() {
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             u8::MAX,
-            0b1000_0000_0000_0001,
+            0b1111_1111_1111_1111,
             &vec![],
             &vec![StatusRegisterFields::Negative, StatusRegisterFields::Carry],
             StatusRegisterUpdateSource::Shift,
         );
     }
+}
+
+/// A register-supplied shift count is not clamped by a 4-bit instruction field like the
+/// immediate form is -- it's a full register value, so it can be well above 15. `ASR` with such
+/// a count must saturate to all sign bits (0xFFFF for a negative operand), the same target
+/// `F-enc-18`'s fix produces for any count >= 16 via its `clamped_b` bound. This is the
+/// `F-alu-8`/`F-enc-21` case, previously untested (`ShiftOperand::Register` was never actually
+/// exercised by any test in the workspace).
+#[test]
+fn test_arithmetic_shift_right_register_operand_count_above_15() {
+    let target_register = 1;
+    let shift_count_register = 2;
+    let addend_register = 3;
+
+    let instruction_data = InstructionData::Register(RegisterInstructionData {
+        op_code: Instruction::AddRegister,
+        r1: target_register,
+        r2: target_register,
+        r3: addend_register,
+        shift_operand: ShiftOperand::Register,
+        shift_type: ShiftType::ArithmeticRightShift,
+        // Not the shift amount itself -- the index of the register holding it.
+        shift_count: shift_count_register,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: StatusRegisterUpdateSource::Shift as u8,
+    });
+    let (_, current) = common::run_instruction(
+        &instruction_data,
+        |registers: &mut Registers, _: &mut BusPeripheral| {
+            registers.set_at_index(target_register, 0b1100_1100_1100_1101);
+            registers.set_at_index(shift_count_register, 20);
+            registers.set_at_index(addend_register, 0);
+        },
+        0xFACE_0000,
+    );
+
+    assert_eq!(
+        0b1111_1111_1111_1111,
+        current.registers.get_at_index(target_register)
+    );
+    assert!(sr_bit_is_set(
+        StatusRegisterFields::Negative,
+        &current.registers
+    ));
 }
 
 // TODO: Improve unit test coverage for arithmetic register instructions
