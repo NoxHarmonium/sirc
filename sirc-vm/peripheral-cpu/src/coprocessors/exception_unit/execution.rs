@@ -27,8 +27,8 @@ use crate::{
         shared::ExecutionPhase,
     },
     registers::{
-        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, ExceptionLinkRegister,
-        ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
+        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set,
+        ExceptionLinkRegister, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
@@ -335,14 +335,8 @@ impl Executor for ExceptionUnitExecutor {
             }
             ExecutionPhase::InstructionDecode => {
                 self.vector_value |= bus_assertions.data as u32;
-                let vector_address_high = self.vector_address as u8;
 
                 debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
-
-                assert!(
-                    op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_high >= USER_EXCEPTION_VECTOR_START,
-                    "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_high:X}",
-                );
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
                 // TODO: Some of these may have to be spread into the other execution phases depending on things like memory access (e.g. to make it like the CPU - one op per phase)
@@ -424,6 +418,26 @@ impl Executor for ExceptionUnitExecutor {
                         }
 
                         trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
+                    }
+                    // The first section of the exception vector address space is reserved for
+                    // hardware exceptions/faults -- in protected mode, a software exception
+                    // targeting it is a privilege violation, not a valid dispatch (supervisor
+                    // code is unrestricted, matching `check_privilege`'s general convention
+                    // elsewhere). Raising the fault here (rather than jumping to the vector this
+                    // cycle) is sufficient to suppress dispatch: `Fault` can only ever be this
+                    // op-code when `pending_fault` was already `Some` going in
+                    // (`get_cause_register_value` checks it first), so this guard can never
+                    // accidentally intercept a genuine fault dispatch.
+                    ExceptionUnitOpCodes::SoftwareException
+                        if vector < USER_EXCEPTION_VECTOR_START
+                            && sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) =>
+                    {
+                        raise_fault(
+                            eu_registers,
+                            Faults::PrivilegeViolation,
+                            &bus_assertions,
+                            registers.get_full_pc_address(),
+                        );
                     }
                     ExceptionUnitOpCodes::Fault
                     | ExceptionUnitOpCodes::HardwareException

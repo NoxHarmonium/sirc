@@ -13,41 +13,6 @@ Superseded.
 
 ## Open — needs a Rust (or generator) fix
 
-### F-exc-7 / F-sum-7 / F-cop-9 (code-wrong, major) — EXCP below vector 0x60 panics instead of raising a fault
-
-- category: contradiction
-- claim: three manual locations describe EXCP with a reserved vector (below 0x60) as a controlled
-  fault condition:
-  - `chapters/06-exceptions.tex:93-99`, item 5, lists "Triggering a software exception with a vector
-    below 0x60" as a Privilege Violation Fault cause.
-  - `chapters/16-coprocessor-instructions.tex:201-202` hedges: "Triggers a software exception at the
-    specified user vector, normally 0x60--0xFF."
-  - `chapters/appendix-d-examples.tex:39-42`'s included listing
-    (`examples/software-exception/software-exception.sasm:18`) itself executes `EXCP #0x40`, a
-    reserved vector.
-- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/exception_unit/execution.rs:330-333` `assert!`s
-  (panics) when a SoftwareException opcode carries a vector below `USER_EXCEPTION_VECTOR_START`
-  (0x60) -- it does not raise a fault at all. `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/execution.rs:46-48`
-  decides privilege purely from the COP opcode nibble, so `EXCP` (opcode 0x1) can never be treated
-  as privileged. `sirc-vm/toolchain/src/parsers/opcodes/exception.rs:73` masks the vector to 8 bits
-  with no range check, so the assembler happily emits `EXCP #0x40` (as the appendix D example does).
-  Against all of this, `exception_unit/definitions.rs:51-55` documents it as a privilege violation.
-  No test covers any of this. facts.md Open question 4.
-- resolution: code-wrong
-- fix: add a real range check in the exception unit -- comparing the vector *number*, not the
-  doubled vector *address* -- that raises Privilege Violation Fault (matching the `definitions.rs`
-  doc comment) instead of panicking when a software exception's vector is below 0x60. Once that
-  check exists, move `appendix-d-examples.tex`'s example off vector 0x40 to vector 0x60 (and its
-  vector-table `.ORG` from 0x0080 to 0x00C0), and replace chapter 16's hedged "normally 0x60--0xFF"
-  with an unhedged statement of the ruled behavior.
-- confidence: high
-- status: code-wrong
-- ruling: Gate 2 J: EXCP with a vector below 0x60 must raise a fault (privilege violation), not
-  panic; the guard must compare vector numbers, not doubled addresses. The appendix D example must
-  move to vector 0x60 when the check lands. Manual stands (all three locations). Originally filed as
-  three separate findings, `F-exc-7`, `F-sum-7`, and `F-cop-9`; merged here since they share one
-  root cause and one ruling.
-
 ### F-con2-20 (code-wrong, major) — stray `SHFT` row in the register-format generator output
 
 - category: contradiction
@@ -322,6 +287,70 @@ Superseded.
 - confidence: high
 - status: fixed
 - ruling: manual stands; the simulator now matches the documented edge-triggered design.
+
+### F-exc-7 / F-sum-7 / F-cop-9 (code-wrong, major) — FIXED 2026-09-15 — EXCP below vector 0x60 panicked instead of raising a fault
+
+- category: contradiction
+- claim: three manual locations describe `EXCP` with a reserved vector (below `0x60`) as a
+  controlled fault condition: `chapters/06-exceptions.tex`'s Privilege Violation Fault cause list,
+  `chapters/16-coprocessor-instructions.tex`'s `EXCP` entry (hedged: "normally 0x60--0xFF"), and
+  `chapters/appendix-d-examples.tex`'s included listing
+  (`examples/software-exception/software-exception.sasm`) itself executed `EXCP #0x40`, a reserved
+  vector.
+- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/exception_unit/execution.rs`'s
+  `ExceptionUnitExecutor::step` `assert!`ed (panicked) when a `SoftwareException` opcode carried a
+  vector below `USER_EXCEPTION_VECTOR_START` (0x60) instead of raising a fault.
+  `processing_unit/execution.rs`'s `check_privilege` decides privilege purely from the static COP
+  sub-opcode nibble, so it structurally cannot see `EXCP`'s runtime vector value -- the fix had to
+  live in the exception unit itself.
+- **found during implementation, beyond the original write-up**: the assert wasn't just wrong to
+  panic, it compared the wrong representation and was silently broken even as a panic. It compared
+  `self.vector_address as u8` (a *doubled, offset-OR'd byte address*) against
+  `USER_EXCEPTION_VECTOR_START` (a raw *vector number*). Vectors `0x30`-`0x5F` double to
+  `0x60`-`0xBE`, passing the `>= 0x60` check -- so the assert never actually fired for the example
+  that supposedly demonstrated the bug (`0x40 * 2 = 0x80 >= 0x60`), which is why that example passed
+  CI despite using a reserved vector. Only vectors below `0x30` would have panicked. The fix compares
+  the raw pre-doubling `vector` value instead.
+- **also found during implementation**: the manual's own pseudocode for `EXCP`
+  (`16-coprocessor-instructions.tex`) gates the fault on protected mode -- `if protected_mode and
+  vector < 0x60 then raise privilege_violation_fault` -- which the original finding's fix
+  description didn't call out. Supervisor-mode code triggering a low-vector software exception must
+  still dispatch normally (matching `check_privilege`'s general "no restrictions outside protected
+  mode" convention elsewhere in the codebase); an early draft of the fix missed this and would have
+  faulted unconditionally.
+- resolution: code-wrong (fixed)
+- fix (applied): removed the assert. In `ExceptionUnitExecutor::step`'s `ExecutionEffectiveAddressExecutor`
+  phase, split the `SoftwareException` case out of the shared `Fault | HardwareException |
+  SoftwareException => handle_exception(...)` dispatch arm with a match guard --
+  `SoftwareException if vector < USER_EXCEPTION_VECTOR_START && sr_bit_is_set(ProtectedMode,
+  registers)` -- that calls `raise_fault(eu_registers, Faults::PrivilegeViolation, ...)` instead of
+  dispatching. `raise_fault` only sets `pending_fault`; the actual jump happens the *next* poll
+  cycle when `get_cause_register_value` sees it and re-enters with a `Fault` op-code, which is why
+  `Fault` can never be misrouted by this guard -- it's only ever the op-code when `pending_fault` was
+  already `Some` going in. `registers.get_full_pc_address()` is used as the fault's return address,
+  matching this same function's existing `LevelFiveInterruptConflict` precedent: the exception unit's
+  own multi-cycle dispatch has no pre-PC-advance snapshot threaded into it (unlike the main
+  pipeline's write-back stage), so this fault resumes at the instruction after `EXCP`, not `EXCP`
+  itself -- a pre-existing structural limit of this dispatch path, not something this fix changes.
+- test coverage added: `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs` gained
+  `test_privilege_violation_fault_on_reserved_software_exception_vector` (proves the fault, not a
+  panic) and `test_reserved_software_exception_vector_allowed_in_supervisor_mode` (regression-proves
+  the protected-mode gate found during implementation). No existing test needed correcting --
+  nothing previously exercised this path (`grep -rn "should_panic"` across the crate: zero matches).
+- consequence: `examples/software-exception/software-exception.sasm` moved off the reserved vectors
+  `0x40`/`0x41` to `0x60`/`0x61` (vector table `.ORG 0x0080` -> `0x00C0`); its
+  `.register-dump-expected` is unaffected, since its addresses are all in the unmoved `:start`/handler
+  code region. `examples/math-coprocessor-emulation/math-coprocessor-emulation.sasm`'s `EXCP #0x70`
+  was already valid and unaffected; no other example used a reserved `EXCP` vector. Manual:
+  `chapters/16-coprocessor-instructions.tex`'s hedged "normally 0x60--0xFF" tightened to state the
+  fault condition directly; `chapters/appendix-d-examples.tex`'s prose vector numbers updated to
+  match the moved example; `chapters/06-exceptions.tex` was already correct and needed no change.
+- confidence: high
+- status: fixed
+- ruling: Gate 2 J: EXCP with a vector below 0x60 must raise a fault (privilege violation) in
+  protected mode, not panic; satisfied. Manual stands (all three locations). Originally filed as
+  three separate findings, `F-exc-7`, `F-sum-7`, and `F-cop-9`; merged here since they share one
+  root cause and one ruling.
 
 ### Register renumbering (code-wrong, minor) — FIXED 2026-09-15 — resolves NOOP (`F-cop-3`) cleanly
 

@@ -304,8 +304,9 @@ if condition_true then
 endif
 \end{lstlisting}
 
-	\textbf{Description:} Triggers a software exception at the specified user vector, normally 0x60--0xFF. Used by
-	programs running in protected mode to invoke system calls or request supervisor-mode services.
+	\textbf{Description:} Triggers a software exception at the specified user vector, 0x60--0xFF; a vector below 0x60
+	raises a privilege-violation fault in protected mode. Used by programs running in protected mode to invoke system
+	calls or request supervisor-mode services.
 
 	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
 

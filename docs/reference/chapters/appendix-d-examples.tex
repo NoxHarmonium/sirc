@@ -71,8 +71,8 @@ The data segment below supplies the two zero-terminated, word-per-character mess
 \section{Software Exception}
 
 This short program demonstrates a software-raised exception with \mnemonic{EXCP} and confirms that nesting is blocked
-while a handler is running. It sets \reg{r1} to 1, raises exception 0x40, and expects \reg{r1} to hold 0xFF once the
-handler at line 26 has run. That handler itself raises a second exception, 0x41, from inside the handler; because the
+while a handler is running. It sets \reg{r1} to 1, raises exception 0x60, and expects \reg{r1} to hold 0xFF once the
+handler at line 26 has run. That handler itself raises a second exception, 0x61, from inside the handler; because the
 handler at vector 0x0500 (line 37) sets \reg{r1} to 0xBB only if it runs, the final value of \reg{r1} shows whether the
 nested exception was correctly ignored.
 

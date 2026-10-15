@@ -34,7 +34,8 @@ use peripheral_cpu::{
 // category=Testing
 
 use crate::exceptions::common::{
-    build_rete_instruction, build_test_instruction, expectation, run_expectations,
+    build_rete_instruction, build_test_instruction, expect_exception_handler,
+    expect_main_program_cycle_with_instruction, expectation, run_expectations,
 };
 
 use super::common::Expectation;
@@ -1528,6 +1529,110 @@ fn test_privilege_violation_fault_on_address_register_high_word_write() {
         0x0000_0000,
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
+}
+
+/// Models the exception unit's own cycle when it fetches a reserved software-exception vector:
+/// the (irrelevant) vector-table contents are still fetched exactly as for a valid vector, but no
+/// dispatch/jump happens this cycle -- `Faults::PrivilegeViolation` is raised instead, to be
+/// dispatched on the *next* cycle via `expect_fault`.
+pub fn expect_software_exception_vector_fetch_without_dispatch(
+    vector: u8,
+) -> Vec<Option<Expectation>> {
+    vec![
+        Some(expectation(None, None, Some(u32::from(vector) * 2), None)),
+        Some(expectation(
+            Some(0x0),
+            None,
+            Some((u32::from(vector) * 2) + 1),
+            None,
+        )),
+        Some(expectation(Some(0x0), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+    ]
+}
+
+pub fn build_software_exception_below_reserved_vector_instruction() -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0x0,
+        value: 0x1140, // EXCP #0x40 -- reserved (below USER_EXCEPTION_VECTOR_START, 0x60)
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    })
+}
+
+#[test]
+fn test_privilege_violation_fault_on_reserved_software_exception_vector() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    let software_exception = build_software_exception_below_reserved_vector_instruction();
+
+    // Protected mode must be active for this check to fire -- see the paired
+    // `test_reserved_software_exception_vector_allowed_in_supervisor_mode` below.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0, &software_exception),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_software_exception_vector_fetch_without_dispatch(0x40),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::PrivilegeViolation),
+        "A fault should be raised because vector 0x40 is below the reserved threshold (0x60)"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(PRIVILEGE_VIOLATION_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+}
+
+#[test]
+fn test_reserved_software_exception_vector_allowed_in_supervisor_mode() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut clocks = 0;
+
+    let software_exception = build_software_exception_below_reserved_vector_instruction();
+
+    // Protected mode is NOT set here -- supervisor code is unrestricted (manual: "if
+    // protected_mode and vector < 0x60 then raise privilege_violation_fault"), so this must
+    // dispatch normally, not fault.
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0, &software_exception),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_exception_handler(0x0, 0x40, (0xABCD, 0xAB00)),
+        &mut clocks,
+    );
+
+    assert_eq!(None, cpu_peripheral.eu_registers.pending_fault);
+    assert_eq_hex!(0x00CD_AB02, cpu_peripheral.registers.get_full_pc_address());
 }
 
 #[test]
