@@ -49,7 +49,7 @@ make sense, not as findings about the manual.
 
 ## Simulator behavior findings
 
-### Leading NOOP requirement (unexplained -- flagged, not resolved)
+### Leading NOOP requirement (resolved -- not a simulator bug, missing reset vector)
 
 **What I expected:** Per Chapter 2 ("Six-Stage Execution Phases") and
 Chapter 10 ("SIRC-1 has no overlapped pipeline to flush"), execution is a
@@ -63,29 +63,30 @@ is anything other than `NOOP` (all-zero encoding), the very first run
 reliably raises a cascading fault storm -- a Bus Fault (`No device was
 mapped for address [...]` at a garbage segment like `0x800000` or
 `0xC00030`) immediately followed by a Double Fault, which then loops
-forever (matching the manual's own statement that double-fault dispatch has
-"no limit" -- Chapter 6). This reproduced with several different genuinely
-unprivileged first instructions (`LOAD al, #0x0020`; `LOAD ah, #0x0000`),
-ruling out a privilege-violation explanation. Prefixing the exact same
-program with one extra leading `NOOP` before the real first instruction
-made the fault disappear every time I tried it (confirmed independently on
-two different minimal test programs). This looks like some kind of
-off-by-one in how the very first fetch/decode cycle after a fresh
-`--program-file` load is handled, but I could not pin down the mechanism
-from black-box testing alone, and the manual gives no reason to expect a
-program's first instruction to be treated specially.
+forever.
 
-**Where I looked:** Chapter 2 (six-phase execution model), Chapter 4
-("Memory Ordering" -- explicitly rules out speculative access), Chapter 6
-(reset and exception dispatch), Chapter 10 ("no overlapped pipeline").
-None of these predict or explain the behavior.
+**Root cause (found once source was consulted, after this exercise's
+black-box phase ended):** address `0x0000` is the *reset vector slot*, not
+the entry point. Chapter 6 ("Reset and Startup") states plainly: "Program
+counter: Loaded from reset vector `0x00`", and the vector table lists
+`0x00` at `Addr 0x0000`-`0x0001` -- a 2-word *stored pointer*, exactly like
+every other vector table entry, not "execution starts here." This program
+put real code (`NOOP` / `BRAN @main`) directly at `0x0000` instead of a
+stored pointer, same mistake the black-box exercise's PLAN.md made in
+assuming `--program-file` "simply starts execution at word address
+`0x000000`" with no indirection. Every sibling example (`faults.sasm`,
+`software-exception.sasm`, etc.) opens with `.ORG 0x0000` / `.DQ
+@init_or_start` for exactly this reason. Reset reads whatever raw bits
+occupy `0x0000`-`0x0001` as a stored jump target: a leading `NOOP`'s
+all-zero encoding happens to read back as address `0x000000` -- i.e. itself
+-- so the "jump" is a no-op and execution falls through normally; any other
+first instruction's non-zero encoding reads back as a garbage address,
+producing exactly the observed Bus Fault into unmapped memory.
 
-**What I did about it:** Every program in this example now starts with an
-unconditional `NOOP` as its literal first instruction, as a workaround.
-This is flagged here rather than silently worked around because it's
-exactly the kind of manual/simulator mismatch this exercise exists to
-surface -- I do not know whether this is a simulator bug or an
-undocumented architectural requirement.
+**What I did about it:** Replaced the leading `NOOP` workaround with a
+proper `.ORG 0x0000` / `.DQ @main` reset vector, matching every sibling
+example. No simulator change needed -- the reset behavior matches Chapter 6
+exactly once the program supplies the vector it documents.
 
 ### Segment 0 is only backed by the loaded program's own length
 

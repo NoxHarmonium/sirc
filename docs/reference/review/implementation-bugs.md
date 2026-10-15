@@ -13,37 +13,6 @@ Superseded.
 
 ## Open — needs a Rust (or generator) fix
 
-### Fault storm unless a program's first instruction is NOOP — NEW 2026-09-16, root cause not yet found
-
-- category: fact (simulator behavior contradicts the manual's own execution model, cause unknown)
-- claim: none in the manual asserts a program's first instruction is special-cased -- Chapter 2 (six-stage
-  execution phases), Chapter 6 (reset and exception dispatch), and Chapter 10 ("no overlapped pipeline to
-  flush") all describe execution as a strict, non-overlapped sequence of whole instructions with no
-  first-instruction exception. Loading a program via `--program-file` is documented (by every example in
-  `examples/`) as simply starting execution at word address `0x000000`.
-- evidence: discovered 2026-09-16 while writing `examples/crc-report` strictly from the manual (see that
-  directory's `NOTES.md`, "Leading NOOP requirement"). If the *first* instruction in the loaded image is
-  anything other than `NOOP` (the all-zero encoding), the very first run reliably raises a Bus Fault
-  ("No device was mapped for address [...]" at a garbage segment such as `0x800000` or `0xC00030`)
-  immediately followed by a Double Fault, which then loops forever (consistent with the manual's own statement
-  that double-fault dispatch has no retry limit -- Chapter 6). Reproduced with several different, genuinely
-  unprivileged first instructions (`LOAD al, #0x0020`; `LOAD ah, #0x0000`), ruling out a privilege-violation
-  explanation. Prefixing the exact same program with one extra leading `NOOP` made the fault disappear every
-  time, confirmed independently on multiple minimal test programs and again in the much larger final
-  `crc-report` program (large forward jumps, dynamic `EXCP`/`RETE` dispatch, mode switches) with no
-  recurrence once the leading `NOOP` was present.
-- resolution: unknown -- this was found via black-box testing only (per that exercise's own rule against
-  reading `sirc-vm/` source), so the mechanism hasn't been diagnosed. Plausible candidates, unconfirmed:
-  something in `PROGRAM_SEGMENT` initialization or the very first fetch/decode cycle after a fresh
-  `--program-file` load reads from an uninitialized or wrong address before the "real" first instruction is
-  reached; or the loader's handling of address `0x000000` specifically has an off-by-one that only a NOOP's
-  all-zero encoding happens to survive harmlessly.
-- fix: needs investigation starting from `sirc-vm/peripheral-cpu`'s program load path and the first few CPU
-  cycles after reset/load -- trace what address is actually fetched first and compare against what
-  `--program-file`'s loader claims to have mapped.
-- confidence: high that the symptom is real and reproducible; none yet on the root cause.
-- status: not started.
-
 ### Segment 0 only backed by the loaded program's own length — NEW 2026-09-16
 
 - category: fact (undocumented VM-loader behavior, not a manual contradiction)
@@ -668,6 +637,44 @@ top = 0x00F0_FFFF".
   own header comment exactly.
 - confidence: high
 - status: fixed
+
+### `examples/crc-report` "fault storm" — FIXED 2026-09-16 — missing reset vector, not a simulator bug
+
+- category: fact (not a manual/code mismatch -- an example program that never stored a reset vector at
+  all, discovered during a black-box conformance exercise)
+- claim: none from the manual pass -- filed as "Fault storm unless a program's first instruction is
+  NOOP", suspecting a simulator bug in the very first fetch/decode cycle after a `--program-file` load.
+- evidence: `ExceptionUnitOpCodes::Reset` (`exception_unit/execution.rs`) does
+  `registers.set_full_pc_address(self.vector_value)`, where `self.vector_value` is fetched from the
+  vector table -- the exact same mechanism used for every other exception/fault vector, reading a
+  stored 32-bit pointer from word address `vector * INSTRUCTION_SIZE_WORDS` (`0x0000`-`0x0001` for the
+  reset vector, `0x00`). This is directly documented in the manual, in three separate places:
+  `chapters/01-introduction.tex` ("The CPU expects the exception vector table to begin at word address
+  0x000000"), `chapters/04-data-representation.tex` (same), and `chapters/06-exceptions.tex`'s "Reset
+  and Startup" section ("Program counter: Loaded from reset vector 0x00"; "the exception unit fetches
+  vector 0x00 and loads the fetched target address into the program counter"). Every sibling example
+  (`faults.sasm`, `software-exception.sasm`, `protected-mode-writeback.sasm`, etc.) correctly opens with
+  `.ORG 0x0000` / `.DQ @init_or_start` -- a *stored pointer*, confirmed directly in `faults.sasm`.
+  `crc-report.sasm` instead put real, directly-executable code (`NOOP` / `BRAN @main`) at address
+  `0x0000`, never storing a vector there. Reset read whatever raw bits occupied `0x0000`-`0x0001` as if
+  they were a stored jump target: a leading `NOOP`'s all-zero encoding happened to read back as address
+  `0x000000` -- itself -- so the "jump" was a no-op and execution fell through normally (the actual
+  reason the workaround "worked", not any real NOOP handling); any other first instruction's non-zero
+  encoding read back as a garbage address (`0x800000`, `0xC00030`, etc.), producing exactly the observed
+  Bus Fault into unmapped memory, cascading into a double fault with no vector table installed yet to
+  catch it.
+- resolution: not a simulator bug -- `examples/crc-report/PLAN.md` incorrectly assumed
+  `--program-file` "simply start[s] execution at word address 0x000000" with no indirection; the
+  manual states the opposite in three chapters, just without a worked code example showing the
+  assembler syntax for it (`.ORG`/`.DQ` aren't documented in `docs/reference/` at all -- a possible,
+  separate documentation gap, not acted on here).
+- fix (applied): `crc-report.sasm`'s `:start` / `NOOP` / `BRAN @main` block replaced with `.ORG 0x0000`
+  / `.DQ @main`, matching every sibling example's convention; the leading-`NOOP` workaround and its
+  header-comment note removed as no longer needed. `NOTES.md`'s "Leading NOOP requirement" entry
+  corrected to record the true root cause rather than left as an open mystery. No Rust changes.
+- confidence: high
+- status: fixed
+- ruling: n/a (example bug, not a manual/code contradiction).
 
 ## Superseded / no longer applicable
 

@@ -17,14 +17,12 @@
 ; before protected mode is entered (for the CRC/itoa scratch buffers, which
 ; live in this program's own segment 0); every later address-register
 ; adjustment uses only `al` (unprivileged) or goes through the monitor trap.
-; -
-; NOTE: the leading NOOP below is a required workaround for an empirically
-; observed simulator quirk -- see NOTES.md ("leading NOOP requirement").
 ; ============================================================================
 
-:start
-    NOOP
-    BRAN @main                    ; skip over the exception vector table region
+.ORG 0x0000
+.DQ @main                          ; reset vector -- Chapter 6 "Reset and Startup": the PC is
+                                    ; loaded from the stored pointer at 0x0000-0x0001, not from
+                                    ; code placed there directly (see NOTES.md).
 
     ; User exception vector table entries. Vector table entries live at
     ; fixed word addresses vector*2 (high word) / vector*2+1 (low word), per
