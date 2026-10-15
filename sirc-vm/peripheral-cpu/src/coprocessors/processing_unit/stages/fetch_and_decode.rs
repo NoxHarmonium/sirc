@@ -204,6 +204,12 @@ pub fn decode_and_register_fetch(
 
     let npc_h_ = registers.ph;
 
+    // Captured before the caller advances `registers.pl` to `npc_l_`, so later pipeline stages
+    // (and, for an invalid coprocessor call, even the following poll cycle) can still recover
+    // this instruction's own address if it turns out to be the one that faults.
+    let pc_l_ = registers.pl;
+    let pc_h_ = registers.ph;
+
     (
         DecodedInstruction {
             ins: op_code,
@@ -228,6 +234,8 @@ pub fn decode_and_register_fetch(
             con_: condition_flag.should_execute(registers),
             npc_l_,
             npc_h_,
+            pc_l_,
+            pc_h_,
         },
         npc_overflowed,
     )

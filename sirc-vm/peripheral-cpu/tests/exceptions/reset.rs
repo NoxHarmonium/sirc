@@ -3,7 +3,7 @@ use peripheral_bus::{
     device::BusAssertions, memory_mapped_device::new_stub_memory_mapped_device, new_bus_peripheral,
 };
 use peripheral_cpu::{
-    coprocessors::exception_unit::definitions::Faults,
+    coprocessors::exception_unit::definitions::{Faults, PendingFault},
     coprocessors::processing_unit::{
         definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
         encoding::encode_instruction,
@@ -255,7 +255,10 @@ fn test_reset_clears_pending_exception_state() {
 
     {
         let cpu = get_cpu(&mut bus);
-        cpu.eu_registers.pending_fault = Some(Faults::BusProtection);
+        cpu.eu_registers.pending_fault = Some(PendingFault {
+            fault: Faults::BusProtection,
+            pc: 0x0,
+        });
         cpu.eu_registers.pending_hardware_exceptions = 0x1F;
         cpu.eu_registers.current_exception_level = 7;
         cpu.eu_registers.waiting_for_exception = true;

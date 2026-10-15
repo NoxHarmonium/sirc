@@ -171,6 +171,10 @@ COPI #0x14FF
 
 ; Transfer exception level 6 (fault) return registers to a/r7
 ETFR #6
+; Invalid Opcode Fault is retryable: the link register holds the trapping MULU's own
+; address, not the address after it. Skip past it (2 words) before saving, so returning
+; through the emulation-return-gate below resumes after MULU as before.
+ADDI al, #2
 ; Save the original fault return registers so we can return manually after the emulation code is done
 STOR ($FRAME_RETURN_HIGH, s), ah
 STOR ($FRAME_RETURN_LOW, s), al

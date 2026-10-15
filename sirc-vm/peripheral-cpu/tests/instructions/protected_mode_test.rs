@@ -38,7 +38,10 @@ where
 
     ProtectedModeResult {
         registers: cpu.registers,
-        pending_fault: cpu.eu_registers.pending_fault,
+        pending_fault: cpu
+            .eu_registers
+            .pending_fault
+            .map(|pending_fault| pending_fault.fault),
         pending_coprocessor_command: cpu.registers.pending_coprocessor_command,
     }
 }

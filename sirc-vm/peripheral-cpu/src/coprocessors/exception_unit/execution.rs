@@ -20,7 +20,7 @@ use crate::{
                 DOUBLE_FAULT_VECTOR, LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
                 USER_EXCEPTION_VECTOR_START,
             },
-            ExceptionPriorities, Faults, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
+            ExceptionPriorities, Faults, PendingFault, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
             EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK, EXCEPTION_UNIT_TRANSFER_REGISTER_SELECT_MASK,
         },
         processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
@@ -143,8 +143,8 @@ pub fn get_cause_register_value(
     registers: &Registers,
     eu_registers: &mut ExceptionUnitRegisters,
 ) -> u16 {
-    if let Some(pending_fault) = eu_registers.pending_fault {
-        let vector = match pending_fault {
+    if let Some(PendingFault { fault, .. }) = eu_registers.pending_fault {
+        let vector = match fault {
             Faults::Bus => BUS_FAULT,
             Faults::Alignment => ALIGNMENT_FAULT,
             Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
@@ -240,10 +240,12 @@ fn handle_exception(
 
     // TODO: Magic numbers
     if current_exception_level == 6 && exception_level == 6 {
-        eu_registers.pending_fault = raise_fault(
+        // Not retryable -- resume after whatever was executing when the conflicting L5 arrived.
+        raise_fault(
             eu_registers,
             Faults::LevelFiveInterruptConflict,
             bus_assertions,
+            registers.get_full_pc_address(),
         );
         return;
     }
@@ -255,8 +257,18 @@ fn handle_exception(
         return;
     }
 
+    // For a Fault dispatch, `pending_fault` was set by `raise_fault` with the correct return
+    // address for that specific fault (the faulting instruction's own address if retryable, the
+    // following instruction's otherwise) and hasn't been cleared yet -- it's cleared later, in
+    // `WriteBackExecutor`, once this dispatch has committed. For a HardwareException or
+    // SoftwareException dispatch, no fault is pending, so fall back to the current PC as before.
+    let return_address = eu_registers.pending_fault.map_or_else(
+        || registers.get_full_pc_address(),
+        |pending_fault| pending_fault.pc,
+    );
+
     eu_registers.link_registers[(exception_level - 1) as usize] = ExceptionLinkRegister {
-        return_address: registers.get_full_pc_address(),
+        return_address,
         return_status_register: registers.sr,
         saved_exception_level: current_exception_level,
     };

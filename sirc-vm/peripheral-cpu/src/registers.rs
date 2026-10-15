@@ -1,7 +1,7 @@
 use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 
-use crate::coprocessors::exception_unit::definitions::Faults;
+use crate::coprocessors::exception_unit::definitions::PendingFault;
 
 /// The bits of an address register pair that actually gets mapped to physical pins
 /// (Only 24 bit addressing)
@@ -592,7 +592,7 @@ pub struct ExceptionUnitRegisters {
     // TODO: Consider capturing bus information when exception occurs
     // category=Hardware
     pub pending_hardware_exceptions: u8,
-    pub pending_fault: Option<Faults>,
+    pub pending_fault: Option<PendingFault>,
     // 8 registers for 7 exception levels + 1 metadata register that stores metadata about faults (at index 0xF)
     pub link_registers: [ExceptionLinkRegister; 8],
     pub waiting_for_exception: bool,

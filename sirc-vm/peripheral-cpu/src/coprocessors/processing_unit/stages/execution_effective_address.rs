@@ -6,7 +6,9 @@ use crate::{
         exception_unit::definitions::Faults, processing_unit::definitions::Instruction,
     },
     raise_fault,
-    registers::{sr_bit_is_set, ExceptionUnitRegisters, Registers, StatusRegisterFields},
+    registers::{
+        sr_bit_is_set, ExceptionUnitRegisters, Registers, SegmentedAddress, StatusRegisterFields,
+    },
 };
 
 use super::{
@@ -119,8 +121,16 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
                     && (displacement_overflowed || displacement_overflowed_after_inc)
                 {
-                    eu_registers.pending_fault =
-                        raise_fault(eu_registers, Faults::SegmentOverflow, &bus_assertions);
+                    // By this phase `registers.pl` has already advanced past this instruction
+                    // (it happened back at decode); recover this instruction's own fetch address
+                    // from `decoded` instead so the fault is genuinely retryable.
+                    let fault_pc = (decoded.pc_h_, decoded.pc_l_).to_full_address();
+                    raise_fault(
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        &bus_assertions,
+                        fault_pc,
+                    );
                 }
             }
 

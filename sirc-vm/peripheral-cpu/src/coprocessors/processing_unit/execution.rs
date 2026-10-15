@@ -81,8 +81,12 @@ impl Executor for ProcessingUnitExecutor {
         );
 
         if registers.pl.is_odd() {
-            eu_registers.pending_fault =
-                raise_fault(eu_registers, Faults::Alignment, &bus_assertions);
+            raise_fault(
+                eu_registers,
+                Faults::Alignment,
+                &bus_assertions,
+                registers.get_full_pc_address(),
+            );
         }
 
         let result = match phase {
@@ -91,8 +95,12 @@ impl Executor for ProcessingUnitExecutor {
 
                 // PC Overflow check
                 if self.next_instruction_fetch_is_overflow {
-                    eu_registers.pending_fault =
-                        raise_fault(eu_registers, Faults::SegmentOverflow, &bus_assertions);
+                    raise_fault(
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        &bus_assertions,
+                        registers.get_full_pc_address(),
+                    );
                 }
                 self.next_instruction_fetch_is_overflow = false;
 
@@ -140,8 +148,14 @@ impl Executor for ProcessingUnitExecutor {
 
                 let privilege_violation = check_privilege(&self.decoded_instruction, registers);
                 if privilege_violation {
-                    eu_registers.pending_fault =
-                        raise_fault(eu_registers, Faults::PrivilegeViolation, &bus_assertions);
+                    // Captured before the `registers.pl = npc_l_` advance below, so the fault's
+                    // return address is this instruction's own, not the next one's.
+                    raise_fault(
+                        eu_registers,
+                        Faults::PrivilegeViolation,
+                        &bus_assertions,
+                        registers.get_full_pc_address(),
+                    );
                 }
 
                 // TODO: Define how PC will be incremented in hardware
