@@ -1,7 +1,7 @@
 # SIRC-1 Reference Manual Handover
 
 Date: 2026-06-20
-Last updated: 2026-09-12
+Last updated: 2026-09-16
 
 This handover tracks what's left to bring the SIRC-1 CPU Reference Manual up to the standard of a production CPU
 programmer's reference manual, using the Motorola M68000 Family Programmer's Reference Manual as the comparison
@@ -57,6 +57,16 @@ Open tasks:
   (the manual's own scope statement in the preface excludes assembler/toolchain conventions), but if so that
   should be stated explicitly rather than left as a silent gap, since instruction-reference examples throughout
   the manual assume the reader already knows this syntax.
+- Add a worked assembly example showing how to set up the exception vector table and an entry-point label.
+  Chapters 1, 4, and 6 all state in prose that the CPU loads the program counter from a stored pointer at word
+  address `0x000000` (the reset vector), not that execution simply begins there -- but nothing in the manual
+  shows the actual syntax (`.ORG 0x0000` / `.DQ @main`, matching every `examples/*.sasm` file) for satisfying
+  this. Confirmed 2026-09-16: a program written strictly from the manual's prose, with no such example to check
+  against, placed real code directly at `0x000000` instead of a stored pointer, which the simulator (correctly,
+  per the documented reset behavior) misread as a jump target, causing a fault-storm crash on every run until
+  the missing indirection was diagnosed against source. See `examples/crc-report/NOTES.md` ("Leading NOOP
+  requirement (resolved...)") for the full incident. This is the same class of gap as the
+  `.ORG`/`.DW`/`.DB`/`.DQ` item above and could reasonably be fixed together.
 
 Acceptance criteria:
 
