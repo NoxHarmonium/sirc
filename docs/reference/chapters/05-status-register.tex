@@ -7,8 +7,8 @@ The Status Register (\reg{sr}) is a 16-bit special-purpose register that contain
 the CPU. It is divided into two bytes with different privilege levels:
 
 \begin{itemize}
-	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4) -- readable in both modes, and updated as a side effect of ALU and shift instructions in both modes; any instruction that names \reg{sr} as its destination operand is privileged and raises a privilege violation fault in protected mode, including the flag-only comparison and test instructions (\mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}), which fault even though they do not write their destination
-	\item \textbf{High Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode
+	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4) -- readable and directly writable in both modes, and updated as a side effect of ALU and shift instructions in both modes
+	\item \textbf{High Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode; in protected mode it reads as zero and direct writes to it are silently ignored, with no fault
 \end{itemize}
 
 \section{Status Register Layout}
@@ -43,8 +43,8 @@ the CPU. It is divided into two bytes with different privilege levels:
 \section{Condition Flags (Non-Privileged)}
 
 These flags reflect the results of ALU operations and comparisons. They can be read at any privilege level and are
-updated by ordinary instruction execution at any privilege level, but a direct write to \reg{sr} is a privileged
-operation (see Section~\ref{sec:sr-manual-updates}).
+updated by ordinary instruction execution at any privilege level. A direct write to \reg{sr} can also set them at any
+privilege level (see Section~\ref{sec:sr-manual-updates}).
 
 \subsection{Zero Flag (Z) -- Bit 0}
 
@@ -90,8 +90,8 @@ They read as zero after any flag-updating instruction.
 
 \section{Control Flags (Privileged)}
 
-These flags control CPU behavior and can only be modified directly in supervisor mode. Attempts to write \reg{sr} in
-protected mode raise a privilege violation fault.
+These flags control CPU behavior and can only be modified directly in supervisor mode. In protected mode, a direct
+write to \reg{sr} leaves these bits unchanged: the write is silently ignored for bits 15--8 and does not raise a fault.
 
 \subsection{Protected Mode (P) -- Bit 8}
 
@@ -100,12 +100,13 @@ protected mode raise a privilege violation fault.
 	\item[When Set (1):] CPU operates in protected mode with restricted access to:
 	      \begin{itemize}
 		      \item High address-register components (\reg{lh}, \reg{ah}, \reg{sh}, \reg{ph})
-		      \item High byte of status register
+		      \item High byte of status register (reads as zero; writes are silently ignored)
 		      \item Privileged coprocessor operations (command-word operation nibble \texttt{0x8}--\texttt{0xF}, bits 11--8)
 		      \item Software exceptions targeting a vector below \texttt{0x60} (see Chapter~\ref{ch:exceptions})
 	      \end{itemize}
 	\item[Note:] This bit provides basic memory protection by preventing user code from changing memory segments. Performing a
-	      restricted operation raises a privilege violation fault.
+	      restricted operation raises a privilege violation fault, with the exception of writes to the high byte of the status
+	      register, which are silently ignored.
 \end{description}
 
 \subsection{Hardware Interrupt Enable Bits (E1-E4) -- Bits 9--12}
@@ -225,11 +226,13 @@ update with the \texttt{[N]} status source (for example \mnemonic{ORRI[N]} \reg{
 (\texttt{EA}); only \mnemonic{RETE} restores it, so the \mnemonic{LOAD} \reg{sr}, (s)+ restore above does not reproduce
 the exception-active state saved at the time of the original write.
 
-\textbf{Important:} When running in protected mode, any instruction that names \reg{sr} as its destination operand
-raises a privilege violation fault -- including the flag-only comparison and test instructions (\mnemonic{CMPI},
-\mnemonic{CMPR}, \mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}), which fault even though they do
-not write their destination. Protected-mode programs can still affect condition flags through ordinary ALU and shift
-instruction execution; they cannot name \reg{sr} as a destination operand at all.
+\textbf{Important:} When running in protected mode, a direct write to \reg{sr} updates only the low byte (bits 7--0).
+Bits 15--8 -- including the Protected Mode bit itself -- are left unchanged, silently and without a fault, so a
+protected-mode program cannot leave protected mode or alter the interrupt-enable, trace, or address-overflow bits this
+way. Because bits 15--8 read as zero in protected mode, a read-modify-write of \reg{sr} behaves consistently: the high
+byte is never disturbed. This applies to every instruction that names \reg{sr} as its destination, including the
+flag-only comparison and test instructions (\mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{TSAI}, \mnemonic{TSAR},
+\mnemonic{TSXI}, \mnemonic{TSXR}), which do not write their destination and are therefore unaffected.
 
 \section{Reading the Status Register}
 

@@ -104,9 +104,10 @@ assembler rejects it.
 \texttt{SR.A} (Trap on Address Overflow) is set and the low-word address calculation wraps. This segment-overflow
 fault is retryable: the saved return address is the address of the faulting instruction (see
 Chapter~\ref{ch:exceptions}). A memory instruction raises a privilege-violation fault in
-protected mode when its register field names a privileged register (\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or
+protected mode when its register field names a privileged high address register (\reg{ah}, \reg{lh}, \reg{ph}, or
 \reg{sh}); this applies to the \mnemonic{LOAD} destination register and to the \mnemonic{STOR} source register, even
-though \mnemonic{STOR} only reads it. Post-increment and pre-decrement address-register auto-update writes only the
+though \mnemonic{STOR} only reads it. Naming \reg{sr} is permitted in protected mode: \mnemonic{LOAD} into \reg{sr}
+updates only bits 7--0, and \mnemonic{STOR} of \reg{sr} stores the redacted value (bits 15--8 read as zero). Post-increment and pre-decrement address-register auto-update writes only the
 low word of the pair, so it never changes the high word and never raises a privilege-violation fault. Documented
 memory forms do not raise invalid-opcode faults. Instruction fetch can still raise the normal fetch faults before a
 memory instruction executes. If trace mode was enabled when the instruction began, an instruction-trace fault is
@@ -220,8 +221,8 @@ LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
 LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{rD} is the destination general-purpose register; a privileged register (\reg{sr},
-	\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. \texttt{addr} is
+	\textbf{Operands:} \texttt{rD} is the destination general-purpose register; a privileged high address register
+	(\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. \texttt{addr} is
 	the address-register pair that supplies the segment and base low word. Immediate-offset forms use a 16-bit signed
 	displacement. Register-offset forms use \texttt{rO} as the displacement register, always unshifted; \mnemonic{LOAD}
 	does not accept a shift suffix.
@@ -375,7 +376,7 @@ STOR (rO, addr), rS, shift           ; Shift rS, then store
 STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{rS} is the source general-purpose register; a privileged register (\reg{sr}, \reg{ah},
+	\textbf{Operands:} \texttt{rS} is the source general-purpose register; a privileged high address register (\reg{ah},
 	\reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode, even though \mnemonic{STOR}
 	only reads it. \texttt{addr} is the address-register pair that supplies the segment and base low word.
 	Immediate-offset forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
