@@ -735,8 +735,11 @@ performs an exception-vector fetch with bus access type \texttt{ExceptionVectorF
 
 These four steps are not one clock cycle each. Steps 1 and 2 each occupy their own fetch cycle, an instruction-decode
 cycle follows between step 2 and step 3 (not itemized above), and steps 3 and 4 then happen together in a single
-execute cycle. The reset-vector fetch therefore takes four clock cycles in total, separate from and following the
-reset-output hold described in Section~\ref{sec:reset-output-hold}.
+execute cycle -- four clock cycles of substantive work. Like every other exception-unit dispatch, though, the
+reset-vector fetch runs through the same fixed six-phase instruction pipeline described in
+Chapter~\ref{ch:cpu-architecture}, so it still occupies two further cycles -- a memory-access phase and a write-back
+phase -- in which reset has nothing left to do. The reset-vector fetch therefore takes six clock cycles in total, not
+four, separate from and following the reset-output hold described in Section~\ref{sec:reset-output-hold}.
 
 Step 3's status-register clear is listed here, rather than only in the Reset State table (Table~\ref{tab:reset-state}),
 because it marks the specific point in the pipeline where the clear actually happens -- useful for anyone modeling

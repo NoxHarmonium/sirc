@@ -865,30 +865,34 @@ Legend: **status: accepted** = will be applied by a chapter editor without furth
 
 ---
 
-## Still open — author wants to investigate further before deciding
-
-### F-exc-2 vs. F-cons-3 (disputed)
+## Resolved after Phase 3 (2026-09-16, author's own investigation)
 
 ### F-exc-2 vs. F-cons-3
 - file: chapters/06-exceptions.tex (729-732) vs. chapters/appendix-b-timing.tex (47),
   chapters/16-coprocessor-instructions.tex (534-535)
-- claim: Chapter 6 says the reset-vector fetch takes 4 clock cycles total; Appendix B and Chapter
+- claim: Chapter 6 said the reset-vector fetch takes 4 clock cycles total; Appendix B and Chapter
   16 both say 6 (giving an 18-cycle RSET total: 6 call + 6 RSTO hold + 6 fetch).
 - F-exc-2's take (resolution: manual-wrong, confidence: high): the implementation hard-codes 6
   cycles per exception-unit slot (`lib.rs:71`, `CYCLES_PER_INSTRUCTION = 6`; phase-advance is mod
-  6) and a reset test polls exactly that many cycles, so Chapter 6's "4 cycles" is the outlier --
-  fix Chapter 6 to describe one full 6-cycle slot (SR clear and PC load both committing on the
-  4th cycle, two more cycles completing the slot), keeping the 18-cycle RSET total everywhere.
+  6) and a reset test polls exactly that many cycles, so Chapter 6's "4 cycles" is the outlier.
 - F-cons-3's take (resolution: unclear, confidence: high): flagged the same three-way number
   mismatch without picking a side, since it only compares manual passages against each other and
   doesn't independently trace the Rust source.
-- why flagged instead of auto-resolved: F-exc-2's resolution rests on real, specific Rust evidence
-  (a named constant and a test's poll count) that F-cons-3 didn't have -- I lean toward accepting
-  F-exc-2's fix (edit Chapter 6, not Appendix B/16) precisely because it's the only one of the two
-  reports that actually checked the implementation rather than just comparing manual passages. But
-  since one report calls this "unclear" and the other "high confidence," it's surfaced here rather
-  than silently accepted.
-- author's response (2026-09-16): "probably 6 cycles but I'll need to dig into this one a bit
-  more" -- not resolved yet. **Excluded from Phase 3**: neither `06-exceptions.tex:729-732` nor
-  the two Appendix B/Chapter 16 passages that cite the 18-cycle `RSET` total should be touched
-  until the author confirms which side is right.
+- resolution (author-verified 2026-09-16): the author asked whether any existing test traces the
+  reset-vector-fetch cycle count directly. It does --
+  `peripheral-cpu/tests/exceptions/reset.rs::test_hardware_rsti_reset` polls through the 6-cycle
+  RSTO hold, then the vector fetch itself, ending with
+  `poll_n_feedback(&mut bus, ACK, CYCLES_PER_INSTRUCTION - 1)` (5 more cycles after the first) --
+  6 total -- before asserting the PC landed correctly. Tracing
+  `exception_unit/execution.rs`'s `Reset` op-code arm against the six `ExecutionPhase` variants
+  confirms why: `InstructionFetchLow`/`InstructionFetchHigh`/`InstructionDecode` fetch and latch
+  the two vector words, `ExecutionEffectiveAddressExecutor` commits `sr = 0x0` and the new `p`
+  together (matching Chapter 6's "steps 3 and 4 happen together"), but `MemoryAccessExecutor` and
+  `WriteBackExecutor` still consume a cycle each even though Reset has no work to do there -- the
+  same fixed six-phase pipeline every instruction and coprocessor dispatch runs through
+  (Chapter~2). F-exc-2's reading was correct: 6 cycles, not 4.
+- fix applied: `06-exceptions.tex` (Reset Vector Fetch) reworded to state the four listed steps
+  are "four clock cycles of substantive work" but the dispatch still occupies two further
+  pipeline cycles (memory-access, write-back) doing nothing, for six clock cycles total -- not
+  four. Appendix B and Chapter 16 needed no change; their 6-cycle / 18-cycle-total figures were
+  already correct.

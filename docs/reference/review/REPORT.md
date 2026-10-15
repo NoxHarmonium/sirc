@@ -74,11 +74,12 @@ Nine deferred findings plus one disputed pair were resolved in conversation with
 - Appendix F interrupt latching: resolved on period-appropriate grounds (real level-sensitive IRQ
   lines on simple 1980s CPUs put the burden of holding the line on the requesting device, not on
   the CPU to remember a sub-instruction pulse) — matches Chapters 5 and 6, both already correct.
-- **Still open**: the reset-vector-fetch cycle count (Chapter 6 says 4 cycles; Appendix B and
-  Chapter 16 both say 6, an 18-cycle `RSET` total). Two reviewers disagreed — one traced it to a
-  hard-coded `CYCLES_PER_INSTRUCTION = 6` constant and a matching test and recommended fixing
-  Chapter 6; the other flagged the mismatch without checking the code. Author's lean is "probably
-  6" but wants to dig in further before committing. **Not touched this pass.**
+- Reset-vector-fetch cycle count (Chapter 6 said 4 cycles; Appendix B and Chapter 16 both said 6,
+  an 18-cycle `RSET` total): resolved separately after Phase 3, once the author checked
+  `reset.rs::test_hardware_rsti_reset` and traced the `Reset` op-code arm against the six
+  `ExecutionPhase` variants. 6 is correct — the dispatch still burns a memory-access and a
+  write-back cycle with nothing to do, same as every other instruction. Chapter 6 fixed to match;
+  Appendix B and Chapter 16 needed no change. See `triaged.md`'s "Resolved after Phase 3" section.
 
 ## Implementation bugs (`implementation-bugs.md`)
 
