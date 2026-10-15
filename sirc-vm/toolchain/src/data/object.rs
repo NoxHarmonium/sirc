@@ -92,7 +92,19 @@ fn inject_data_value(
         DataType::PlaceHolder(placeholder_name) => {
             let resolved_value = placeholders.get(&placeholder_name)
                 .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
-            program[program_offset] = u32::to_be_bytes(resolved_value.to_owned());
+            // Truncate per data.size_bytes, same as the DataType::Value arm above -- the
+            // placeholder's resolved value is an arbitrary u32 regardless of which directive
+            // size uses it, so DB/DW must mask down rather than writing the full 4 bytes.
+            let bytes: [u8; 4] = match data.size_bytes {
+                DB_VALUE => [0x0, 0x0, 0x0, *resolved_value as u8],
+                DW_VALUE => {
+                    let word_bytes = u16::to_be_bytes(*resolved_value as u16);
+                    [0x0, 0x0, word_bytes[0], word_bytes[1]]
+                }
+                DQ_VALUE => u32::to_be_bytes(*resolved_value),
+                _ => panic!("Unsupported data size bytes {}", data.size_bytes),
+            };
+            program[program_offset] = bytes;
         }
     }
 }

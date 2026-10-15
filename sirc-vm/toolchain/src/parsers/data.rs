@@ -43,6 +43,7 @@ fn parse_data_type(i: &str) -> AsmResult<DataType> {
             DataType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
+        map(parse_placeholder, DataType::PlaceHolder).context("placeholder"),
     ))(i)
 }
 

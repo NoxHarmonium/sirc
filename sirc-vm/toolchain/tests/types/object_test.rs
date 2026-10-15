@@ -154,3 +154,38 @@ fn test_build_object_does_not_pad_a_trailing_word_for_odd_instruction_counts() {
         "3 instructions * 4 bytes each, no trailing pad word"
     );
 }
+
+#[test]
+fn test_build_object_resolves_equ_placeholders_on_data_directives_truncated_per_size() {
+    // IB-4 (docs/reference/review/implementation-bugs.md): .EQU constants ($NAME) previously
+    // couldn't be used as a data directive's value at all -- parse_data_type had no placeholder
+    // branch. Each constant here deliberately exceeds its directive's width (except the .DQ one,
+    // already the max width) so this also proves the resolved value is truncated per
+    // data.size_bytes rather than the full 32-bit value being written regardless of directive
+    // size (a second bug found in the previously-dead resolution code during implementation).
+    let input = "\
+.EQU $BYTE_VAL #0x1FF
+.EQU $WORD_VAL #0x1CAFE
+.EQU $QUAD_VAL #0x12345678
+.DB $BYTE_VAL
+.DW $WORD_VAL
+.DQ $QUAD_VAL
+";
+    let tokens = match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(
+        parse_tokens,
+    )(input)
+    {
+        Ok(tokens) => tokens,
+        Err(error) => panic!("Error parsing file:\n{error}"),
+    };
+    let object = build_object(tokens, "UNIT_TEST".to_string(), input.to_string());
+
+    assert_eq!(
+        object.program,
+        vec![
+            0x00, 0x00, 0x00, 0xFF, // .DB $BYTE_VAL: 0x1FF truncated to its low byte
+            0x00, 0x00, 0xCA, 0xFE, // .DW $WORD_VAL: 0x1CAFE truncated to its low word
+            0x12, 0x34, 0x56, 0x78, // .DQ $QUAD_VAL: full 32 bits preserved
+        ]
+    );
+}

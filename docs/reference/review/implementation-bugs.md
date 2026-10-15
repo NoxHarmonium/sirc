@@ -6,23 +6,6 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-### IB-4: `.EQU` constants can't be used as a data directive's value, despite the manual's claim
-
-- **Where:** `sirc-vm/toolchain/src/parsers/data.rs:36-47`, `parse_data_type`;
-  `sirc-vm/toolchain/src/data/object.rs:92-96`
-- **What:** `parse_data_type` is `alt((parse_number, parse_symbol_reference))`, with no branch for
-  a `$NAME` placeholder, so `.DW $ANSWER` fails to assemble (`expected '#' ... or expected '@'`).
-  `object.rs` already has a `DataType::PlaceHolder` match arm that this parser can never produce --
-  it looks like a feature that was half-built and never finished, not a deliberate restriction.
-- **Manual side:** no change. Author's call (2026-09-16): keep the manual's existing claim that
-  `.EQU` constants are usable "anywhere a `#immediate` operand is accepted," including data
-  directives, and treat this as the toolchain owing the manual a feature rather than the manual
-  overclaiming.
-- **Suggested fix:** add a `parse_placeholder` branch to `parse_data_type` so `.DB`/`.DW`/`.DQ` can
-  take a `$NAME` operand, reaching the `DataType::PlaceHolder` handling that already exists in
-  `object.rs`.
-- **Status:** logged only, not fixed this pass.
-
 ### IB-5: Linker only supports `FullAddress` label references on data directives, so explicit `.r`/`.l`/`.u` suffixes panic there
 
 - **Where:** `sirc-vm/toolchain/src/bin/linker.rs:125-134`
@@ -36,6 +19,40 @@ while fact-checking the manual against the implementation.
 - **Status:** logged only, not fixed this pass.
 
 ## Fixed this pass
+
+### IB-4: `.EQU` constants can't be used as a data directive's value, despite the manual's claim
+
+- **Where:** `sirc-vm/toolchain/src/parsers/data.rs`, `parse_data_type`;
+  `sirc-vm/toolchain/src/data/object.rs`, `inject_data_value`.
+- **What:** `parse_data_type` was `alt((parse_number, parse_symbol_reference))`, with no branch for
+  a `$NAME` placeholder, so `.DW $ANSWER` failed to assemble (`expected '#' ... or expected '@'`).
+  `object.rs` already had a `DataType::PlaceHolder` match arm that the parser could never produce
+  -- confirmed a half-built, never-finished feature, not a deliberate restriction. The doc's own
+  citations for both files were accurate (unlike IB-1/IB-2's, which were stale).
+- **Confirmed wider than the original report**: the dead `DataType::PlaceHolder` resolution arm in
+  `inject_data_value` also ignored `data.size_bytes` entirely, always writing the full 4-byte
+  representation of the resolved `u32` regardless of whether the directive was `.DB`/`.DW`/`.DQ` --
+  unlike the sibling `DataType::Value` arm right above it, which truncates per size. This would
+  have produced silently wrong bytes for `.DB $NAME`/`.DW $NAME` the moment the parser fix made
+  this code path reachable (e.g. `.DB $NAME` with a placeholder value above `0xFF` would write
+  garbage into what should be the zero-padded high bytes of that program slot), so it had to be
+  fixed alongside the parser gap rather than left for later.
+- **Fix:** added a `parse_placeholder` branch to `parse_data_type`, mirroring the existing
+  three-branch shape `parse_value` already uses for instruction immediates
+  (`sirc-vm/toolchain/src/parsers/instruction.rs`). Made `inject_data_value`'s
+  `DataType::PlaceHolder` arm truncate per `data.size_bytes` (`DB_VALUE`/`DW_VALUE`/`DQ_VALUE`),
+  matching the `DataType::Value` arm's existing truncation logic exactly. No other call site needed
+  changes -- the printer's `DataType::PlaceHolder` arm already round-trips correctly and was
+  simply unreachable dead code until now.
+- **Test coverage added:** a new `test_build_object_resolves_equ_placeholders_on_data_directives_truncated_per_size`
+  in `sirc-vm/toolchain/tests/types/object_test.rs` -- defines three `.EQU` constants whose values
+  deliberately exceed their directive's width (except `.DQ`, already the max width) and asserts the
+  assembled bytes are correctly truncated per directive, not just passed through. This is also the
+  first test coverage in the suite for `$NAME` placeholder resolution at all (none existed for
+  instruction operands either).
+- **Manual side:** no change needed -- `chapters/appendix-d-examples.tex` already states `.EQU`
+  constants are usable "anywhere a `#immediate` operand is accepted," a general claim that already
+  covers data directives; confirmed independently, not just trusted from the doc's own note.
 
 ### IB-2: Exception-unit reserved opcodes panic instead of behaving as undefined
 
