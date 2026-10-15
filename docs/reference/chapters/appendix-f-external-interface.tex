@@ -116,30 +116,30 @@ The SIRC CPU is most commonly provided as a DIP-64 package.
 	\centering
 	\begin{tabular}{rll}
 		\toprule
-		\textbf{Pin} & \textbf{Name} & \textbf{Description}          \\
+		\textbf{Pin} & \textbf{Name} & \textbf{Description}           \\
 		\midrule
-		1-8          & A0-A7         & Address bus bits 0-7          \\
-		9            & VCC1          & Power supply                  \\
-		10-25        & A8-A23        & Address bus bits 8-23         \\
-		26           & GND1          & Ground                        \\
-		27-42        & D0-D15        & Data bus bit 0-15             \\
-		43           & VCC2          & Power supply                  \\
-		44           & GND2          & Ground                        \\
-		45           & CLKI          & Clock input                   \\
-		46           & SYNC          & Instruction-sync output       \\
-		47           & BAS           & Bus access strobe output      \\
-		48           & BRW           & Bus read/write output         \\
-		49           & BACK          & Bus acknowledge input         \\
-		50           & BERR          & Bus error input               \\
-		51           & BPER          & Bus protection error          \\
-		52-54        & BAT0-BAT2     & Bus access type bits 0-2      \\
-		55           & PROT          & Protected-mode output         \\
-		56           & HALT          & External CPU halt input       \\
-		57           & TRCE          & Force trace mode input        \\
-		58-61        & IRQ1-IRQ4     & Maskable interrupt inputs 1-4 \\
-		62           & NMI           & Non-maskable interrupt input  \\
-		63           & RSTI          & Reset input                   \\
-		64           & RSTO          & Reset output                  \\
+		1--8         & A0--A7        & Address bus bits 0--7          \\
+		9            & VCC1          & Power supply                   \\
+		10--25       & A8--A23       & Address bus bits 8--23         \\
+		26           & GND1          & Ground                         \\
+		27--42       & D0--D15       & Data bus bits 0--15            \\
+		43           & VCC2          & Power supply                   \\
+		44           & GND2          & Ground                         \\
+		45           & CLKI          & Clock input                    \\
+		46           & SYNC          & Instruction-sync output        \\
+		47           & BAS           & Bus access strobe output       \\
+		48           & BRW           & Bus read/write output          \\
+		49           & BACK          & Bus acknowledge input          \\
+		50           & BERR          & Bus error input                \\
+		51           & BPER          & Bus protection error           \\
+		52--54       & BAT0--BAT2    & Bus access type bits 0--2      \\
+		55           & PROT          & Protected-mode output          \\
+		56           & HALT          & External CPU halt input        \\
+		57           & TRCE          & Force trace mode input         \\
+		58--61       & IRQ1--IRQ4    & Maskable interrupt inputs 1--4 \\
+		62           & NMI           & Non-maskable interrupt input   \\
+		63           & RSTI          & Reset input                    \\
+		64           & RSTO          & Reset output                   \\
 		\bottomrule
 	\end{tabular}
 	\caption{SIRC CPU 64-pin DIP pinout}
@@ -151,7 +151,7 @@ use "asserted" and "deasserted" to refer to the logical state of a signal accord
 
 \subsection{Pin Descriptions}
 
-\subsubsection{Address Bus Bits (A0-23)}
+\subsubsection{Address Bus Bits (A0--A23)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
@@ -163,7 +163,7 @@ Connected to the address bus.
 These 24 pins declare the address on the bus that the CPU reads from or writes to when BAS (bus access strobe) is
 asserted.
 
-\subsubsection{Power Pins (VCC1-2, GND1-2)}
+\subsubsection{Power Pins (VCC1--2, GND1--2)}
 
 These pins provide the 5V power that the CPU requires to function.
 
@@ -172,7 +172,7 @@ The VCC pins must be connected to 5V +/- 5\% and GND pins must be connected to a
 % TODO: Should I recommend some capacitors etc. to be put on the rail or something like that? Maybe should see what other CPU data sheets say
 % category=Manual
 
-\subsubsection{Data Bus Bits (D0-D15)}
+\subsubsection{Data Bus Bits (D0--D15)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Bi-directional
@@ -207,7 +207,7 @@ transitions complete one full instruction execution when no bus wait states occu
 Asserted while the CPU is in the first execution phase of an instruction or exception-unit dispatch. It remains
 asserted if a wait state holds that phase, and is deasserted during every other phase.
 
-It can be useful for debugging purposes.
+This pin is useful for debugging purposes.
 
 \subsubsection{Bus Access Strobe Output (BAS)}
 
@@ -241,7 +241,7 @@ When high, the CPU is requesting a read from the bus. When low, the CPU is reque
 \end{itemize}
 
 When asserted, the bus is reporting that the requested read/write completed successfully. On reads, the CPU samples
-D0-D15 on the clock edge that accepts BACK.
+D0--D15 on the clock edge that accepts BACK.
 
 If all bus devices are fast and can complete reads/writes in a single cycle, this pin can be permanently held asserted.
 
@@ -276,7 +276,7 @@ It behaves much like the BERR pin but raises a different fault so that programs 
 An example of a situation where a bus protection error might be raised would be a write to ROM, or a write to a
 privileged section of memory when the CPU is not in supervisor mode.
 
-\subsubsection{Bus Access Type Bits (BAT0-BAT2)}
+\subsubsection{Bus Access Type Bits (BAT0--BAT2)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Output
@@ -356,7 +356,7 @@ cleared the Trace Mode (T) flag in the status register.
 
 When in trace mode, the CPU raises an exception on every instruction to allow software debugging.
 
-\subsubsection{Maskable Interrupt Inputs (IRQ1-IRQ4)}
+\subsubsection{Maskable Interrupt Inputs (IRQ1--IRQ4)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Input
@@ -365,13 +365,13 @@ When in trace mode, the CPU raises an exception on every instruction to allow so
 
 When asserted, the corresponding hardware interrupt line is sampled by the CPU.
 
-They can be "masked" by the Hardware Interrupt Enable Bits (E1-E4) of the status register, which disables them.
+They can be masked by the Hardware Interrupt Enable Bits (E1--E4) of the status register.
 
 Interrupt inputs are level-sensitive and are sampled at instruction boundaries. Enabled interrupt lines are latched in
-the pending hardware-exceptions register; disabled maskable lines are ignored and not queued. A line that is asserted
-while its enable bit is set is latched at the moment of assertion, even if it is released before the next instruction
-boundary; only an assertion that begins and ends while the enable bit is 0 is lost. If an interrupt pin remains
-asserted after its handler returns, it may be sampled again through the normal interrupt rules.
+the pending hardware-exceptions register; disabled maskable lines are ignored and not queued. The requesting device
+must hold the line asserted until it is sampled and serviced; an assertion that begins and ends between instruction
+boundaries, before the CPU samples it, is not recognized. If an interrupt pin remains asserted after its handler
+returns, it may be sampled again through the normal interrupt rules.
 
 See Chapter~\ref{ch:exceptions} for more details.
 
@@ -386,12 +386,12 @@ When asserted, the CPU samples the Level 5 hardware exception line. Unlike \text
 level-sensitive, NMI is edge-triggered: it fires once on assertion regardless of how long the pin is held, and the pin
 must be released and reasserted to fire again.
 
-This interrupt cannot be masked, and if this pin is asserted while another level 5 exception is being handled, a "level
-five hardware exception conflict" fault is raised.
+This interrupt cannot be masked. If this pin is asserted while another Level 5 exception is being handled, the CPU
+raises a Level Five Hardware Exception Conflict fault.
 
 Because NMI is edge-triggered, holding the pin asserted after its handler returns does not by itself cause it to fire
-again -- a fresh falling-then-rising transition is required. Therefore, it is important that the level 5 exception
-handlers are executed quickly and that NMI is only asserted for important non-interruptible events.
+again -- a fresh falling-then-rising transition is required. Level 5 exception handlers must therefore execute quickly,
+and NMI should be asserted only for important, non-interruptible events.
 
 \subsubsection{Reset Input (RSTI)}
 
@@ -487,12 +487,12 @@ BAT0--BAT2 unless BAS is asserted.
 
 A bus transaction terminated by Bus Error or Bus Protection Error is architecturally unsuccessful. An external device
 must not commit any externally visible effect from a transaction for which it asserts the corresponding error signal:
-for a write, the device must not act on the data it was driven; for a read, any side effect the access would otherwise
+for a write, the device must not act on the data driven to it; for a read, any side effect the access would otherwise
 have (for example, a status register that clears on read) must not occur either. This is what makes Bus Fault and Bus
 Protection Fault safe to retry (Chapter~\ref{ch:exceptions}) -- the CPU can assume that a transaction it aborted with
 one of these signals never happened.
 
-BACK, BERR and BPER are logically mutually exclusive. If more than one is asserted for the same request, BERR has
+BACK, BERR, and BPER are logically mutually exclusive. If more than one is asserted for the same request, BERR has
 priority, then BPER, then BACK.
 
 \subsubsection{Bus Cycle Types}
@@ -733,14 +733,14 @@ after an instruction boundary, it is not sampled until the next boundary.
 	\small
 	\begin{tabularx}{\textwidth}{lX}
 		\toprule
-		\textbf{Input}   & \textbf{Sampling rule}                                                                                                                                                                               \\
+		\textbf{Input}   & \textbf{Sampling rule}                                                                                                                                                                                   \\
 		\midrule
-		BACK, BERR, BPER & Sampled while BAS is asserted. They complete or abort the active bus request.                                                                                                                        \\
-		IRQ1--IRQ4       & Level-sensitive. A line asserted while enabled is latched at that moment, even if released before the next instruction boundary; the exception unit dispatches the latched request at that boundary. \\
-		NMI              & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                               \\
-		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.                                                                         \\
-		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                                                                             \\
-		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                       \\
+		BACK, BERR, BPER & Sampled while BAS is asserted. They complete or abort the active bus request.                                                                                                                            \\
+		IRQ1--IRQ4       & Level-sensitive. The requesting device must hold the line asserted until it is sampled and serviced; an assertion that begins and ends between boundaries, before the CPU samples it, is not recognized. \\
+		NMI              & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                                   \\
+		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.                                                                             \\
+		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                                                                                 \\
+		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                           \\
 		\bottomrule
 	\end{tabularx}
 	\caption{External input sampling rules}

@@ -489,8 +489,7 @@ ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 
 \begin{itemize}
 	\item The immediate shift count is limited to 0--15 (4-bit field)
-	\item A register-supplied shift count greater than 15 is architecturally undefined
-	\item For a shift greater than 15 positions, use multiple shift instructions with immediate counts
+	\item For an immediate shift greater than 15 positions, use multiple shift instructions with immediate counts
 	\item Rotates do not consume the carry flag; \mnemonic{RTL} and \mnemonic{RTR} rotate only within the 16-bit operand
 	\item The reserved shift type (111) has architecturally undefined behavior
 \end{itemize}

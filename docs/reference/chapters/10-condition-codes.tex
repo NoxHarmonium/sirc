@@ -7,8 +7,9 @@ Every SIRC-1 instruction can be executed conditionally based on the state of the
 register. This allows for efficient implementation of conditional logic without requiring explicit branch instructions.
 
 The 4-bit condition code field in each instruction specifies the conditions under which the instruction executes. If
-the condition is not met, the instruction has no architectural effect: no register, flag, memory, address-register or
-coprocessor state changes, and no privilege check is performed.
+the condition is not met, the instruction has no architectural effect beyond the normal two-word advance of \reg{p}: no
+general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
+performed.
 
 \section{Condition Code Encoding}
 
@@ -82,11 +83,11 @@ These conditions are used after comparing unsigned integers:
 
 \textbf{Note:} For unsigned comparisons:
 \begin{itemize}
-	\item Use \texttt{HI} and \texttt{LO} after \mnemonic{CMP}
-	\item \texttt{HI} tests if first $>$ second (unsigned)
-	\item \texttt{LO} tests if first $\leq$ second (unsigned)
-	\item \texttt{CS} is equivalent to unsigned $<$
-	\item \texttt{CC} is equivalent to unsigned $\geq$
+	\item Use \texttt{HI} and \texttt{LO} after \mnemonic{CMP}.
+	\item \texttt{HI} tests if first $>$ second (unsigned).
+	\item \texttt{LO} tests if first $\leq$ second (unsigned).
+	\item \texttt{CS} is equivalent to unsigned $<$.
+	\item \texttt{CC} is equivalent to unsigned $\geq$.
 	\item Prefer \texttt{HI}/\texttt{LO} over \texttt{CS}/\texttt{CC} for unsigned comparisons if that is easier to remember,
 	      since their names match their meaning directly.
 \end{itemize}
@@ -108,8 +109,9 @@ These conditions are used after comparing signed integers:
 \subsection{Special Conditions}
 
 \begin{description}
-	\item[Never (NV)] Never executes: no register, flag, memory, address-register or coprocessor state changes, and no privilege
-	      check is performed. Can be used for instruction padding or to temporarily disable instructions during debugging.
+	\item[Never (NV)] Never executes: the instruction has no architectural effect beyond the normal two-word advance of \reg{p},
+	      no general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
+	      performed. Can be used for instruction padding or to temporarily disable instructions during debugging.
 \end{description}
 
 \section{Assembly Syntax}

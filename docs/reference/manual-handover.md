@@ -198,6 +198,23 @@ Open tasks:
   `examples/crc-report/NOTES.md`, "Leading NOOP requirement (resolved...)", for the incident that motivated this).
   Cross-referenced from Chapter 11's notation table, which had a simplified, now-linked version of the same
   `@label` entry.
+- **Done (2026-09-16):** ran a scoped `/manual-edit` pass to fact-check and consistency-check everything changed
+  this session, since none of it had been through the systematic pipeline before. Full detail in
+  `docs/reference/review/REPORT.md` and `docs/reference/review/triaged.md`; summary: 65 raw findings from 4
+  targeted fact-checkers (data/status/condition, exceptions/undocumented, coprocessor/meta, summaries/appendices)
+  plus a full-manual consistency check, deduplicated to 56, all resolved with the author at Gate 2 and applied
+  across 16 chapter files. Three standouts: Chapter 6's exception quick-reference table had the wrong return
+  address for three of six retryable faults; Chapter 7's worked register-encoding example was off by one on every
+  field; and this session's own new "Retry-Safe DMA Copy Routine" example (Chapter 16) had a real logic bug --
+  `l` was doing double duty as both the DMA destination register and the subroutine link register, so `RETS`
+  would jump into copied data instead of returning -- rewritten with a new calling convention and verified against
+  the real assembler, hand-traced for stack-arithmetic correctness, and (after the rewrite overflowed its
+  non-breaking float) split into two parts to fix a genuine page-layout break. Also found and fixed two real Rust
+  bugs unrelated to any manual error (see `implementation-bugs.md`: `IB-3`, interrupt dispatch blocking on a
+  masked pending line, fixed this pass with two new unit tests; `IB-1`, a still-incomplete segment-overflow
+  displacement fix, logged only) plus three more logged-only implementation gaps (`IB-2`, `IB-4`, `IB-5`). One
+  item is still open: the reset-vector-fetch cycle count (Chapter 6 says 4, Appendix B/Chapter 16 say 6) has two
+  reviewers disagreeing and the author wants to dig in further before deciding -- not touched this pass.
 
 Acceptance criteria:
 

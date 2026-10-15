@@ -46,10 +46,10 @@ All instruction formats share some common fields:
 	\item[Opcode (6 bits)] Identifies the operation to perform. With 6 bits, up to 64 distinct operations can be encoded.
 
 	\item[Condition Flags (4 bits)] Specifies the conditions under which the instruction executes. See
-	      \textbf{Chapter~\ref{ch:condition-codes}} for details.
+	      Chapter~\ref{ch:condition-codes} for details.
 
-	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (l, a, s, p) and in ALU
-	      operations to specify how the status register is updated.
+	\item[Additional Flags (2 bits)] Used in memory operations to specify address register pairs (\reg{l}, \reg{a}, \reg{s},
+	      \reg{p}) and in ALU operations to specify how the status register is updated.
 
 \end{description}
 
@@ -78,16 +78,16 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
-	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 = l, 01
-	      = a, 10 = s, 11 = p) naming the destination pair, using the same encoding as the AF field; bits 25--24 are unused for
-	      these opcodes.
+	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
+	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
+	      field; bits 25--24 are unused for these opcodes.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
-		      \item 00 = l (link register)
-		      \item 01 = a (address register)
-		      \item 10 = s (stack pointer)
-		      \item 11 = p (program counter)
+		      \item 00 = \reg{l} (link register)
+		      \item 01 = \reg{a} (address register)
+		      \item 10 = \reg{s} (stack pointer)
+		      \item 11 = \reg{p} (program counter)
 	      \end{itemize}
 	      or 2-bit status register update source selector (for ALU operations)
 	      \begin{itemize}
@@ -107,7 +107,8 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 \begin{itemize}
 	\item Condition code examples: \texttt{0x0} (0000) = Always, \texttt{0x1} (0001) = Equal (==), \texttt{0xB} (1011) = Signed
 	      >=
-	\item AF field for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift
+	\item AF field for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
+	      10=update from shift
 	\item Negative immediates use two's complement (\imm{-2} = \texttt{0xFFFE})
 \end{itemize}
 
@@ -198,9 +199,9 @@ The register format allows operations on up to three registers with optional shi
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
 	\item[Register 1 (bits 25--22)] 4-bit destination register. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
-	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 = l, 01
-	      = a, 10 = s, 11 = p) naming the destination pair, using the same encoding as the AF field; bits 25--24 are unused for
-	      these opcodes.
+	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
+	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
+	      field; bits 25--24 are unused for these opcodes.
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
@@ -212,10 +213,10 @@ The register format allows operations on up to three registers with optional shi
 	\item[Shift Amount (bits 9--6)] Shift amount (or register containing shift amount)
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
-		      \item 00 = l (link register)
-		      \item 01 = a (address register)
-		      \item 10 = s (stack pointer)
-		      \item 11 = p (program counter)
+		      \item 00 = \reg{l} (link register)
+		      \item 01 = \reg{a} (address register)
+		      \item 10 = \reg{s} (stack pointer)
+		      \item 11 = \reg{p} (program counter)
 	      \end{itemize}
 	      or 2-bit status register update source selector (for ALU operations)
 	      \begin{itemize}
@@ -236,7 +237,7 @@ For most three-operand instructions:
 	\item R3 = Second source operand (optional)
 \end{itemize}
 
-\textbf{Note:} If only two register operands are given, the assembler will use R1 as both destination and
+\textbf{Note:} If only two register operands are given, the assembler uses R1 as both destination and
 first source operand when encoding the instruction:
 
 \begin{lstlisting}
@@ -251,11 +252,12 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item When only two register operands are given, R2 is encoded as a copy of R1 and the second operand is encoded in R3, for
-	      example \texttt{ADDR r4, r5} uses R1=\texttt{0x4}, R2=\texttt{0x4}, R3=\texttt{0x5}
+	      example \texttt{ADDR r4, r5} uses R1=\texttt{0x3}, R2=\texttt{0x3}, R3=\texttt{0x4}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see the \texttt{SUBR|>>} and
 	      \texttt{ANDR|CS} rows)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
-	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift
+	\item AF for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
+	      10=update from shift
 	\item Condition code examples: \texttt{0x0} = Always, \texttt{0xD} = Signed > (>>), \texttt{0x3} = Carry Set (CS)
 \end{itemize}
 
@@ -292,7 +294,7 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 	\label{tab:condition-code-encoding}
 \end{table}
 
-For more details on condition codes see \textbf{Chapter~\ref{ch:condition-codes}}
+For more details on condition codes see Chapter~\ref{ch:condition-codes}.
 
 \subsection{Shift Types}
 
@@ -316,7 +318,7 @@ For more details on condition codes see \textbf{Chapter~\ref{ch:condition-codes}
 	\label{tab:shift-types}
 \end{table}
 
-For more details on shift operations see \textbf{Chapter~\ref{ch:shift-operations}}
+For more details on shift operations see Chapter~\ref{ch:shift-operations}.
 
 \section{Opcode Encoding Patterns}
 
@@ -374,7 +376,7 @@ address calculations that select \reg{p} use that value.
 Instructions span two consecutive words and must begin at an even word address. The program counter (\reg{pl}) must
 always be even.
 
-Attempting to fetch an instruction from an odd word address will trigger an alignment fault exception.
+Fetching an instruction from an odd word address raises an alignment fault.
 
 \section{Format Selection Guidelines}
 

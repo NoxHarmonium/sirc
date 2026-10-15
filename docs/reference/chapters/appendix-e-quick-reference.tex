@@ -1,5 +1,5 @@
 \chapter{Quick Reference}
-\label{ch:quick-reference}
+\label{appendix:quick-reference}
 
 This appendix collects the most frequently consulted tables in a single location for use during development.
 Section~\ref{sec:qr-where-to-find} lists where to find additional reference tables defined in the main chapters.
@@ -10,11 +10,11 @@ Section~\ref{sec:qr-where-to-find} lists where to find additional reference tabl
 % ==========================================
 
 All instruction mnemonics in alphabetical order. \emph{Type}: ALU, Memory (Mem), Control-flow (CF), Coprocessor (COP),
-or Meta. \emph{N}, \emph{Z}, \emph{C}, \emph{V}: uses the symbols defined in Table~\ref{tab:flag-effect-symbols}
+or Meta. \emph{N}, \emph{Z}, \emph{C}, \emph{V}: use the symbols defined in Table~\ref{tab:flag-effect-symbols}
 (Chapter~\ref{ch:reading-instructions}): \texttt{*} (updated), \texttt{0}, \texttt{1}, \texttt{-} (preserved), and
 \texttt{S} (from the shifter). Rows marked \textsuperscript{\dag} are preserved by the call instruction itself, but the
 selected coprocessor may define further effects once dispatched. Rows marked \textsuperscript{\ddag} are updated from a
-named source rather than from the instruction's own result. Meta-instructions inherit the flag behaviour of the
+named source rather than from the instruction's own result. Meta-instructions inherit the flag behavior of the
 underlying CPU instruction. For full encoding details, see the chapter cited in the header of each group.
 
 \small
@@ -186,7 +186,7 @@ controllers, coprocessors) can inspect these pins to determine the nature of the
 	\label{tab:bat-quick-ref}
 \end{table}
 
-See Chapter~\ref{ch:cpu-architecture}, Section "Pin Descriptions", for usage examples including the PROT pin
+See Appendix~\ref{appendix:external-interface}, Section "Pin Descriptions", for usage examples including the PROT pin
 interaction.
 
 % ==========================================

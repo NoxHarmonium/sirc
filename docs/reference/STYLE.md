@@ -33,7 +33,7 @@ during the initial style derivation was ruled on by the author and is recorded i
 - **may** — a permitted option; the CPU, the assembler, or the programmer is free to choose.
 - **should / should not** — a recommendation. Not required for conformance. Do not use for anything that is actually mandatory.
 - **shall** — do not use. The manual currently has zero instances; keep it that way and use "must" instead.
-- **reserved** — a field, opcode, or coprocessor ID not currently assigned. Software must not assume a read value and must write zero unless a chapter states an explicit encoding. (See Decisions needing approval — current wording is softer than this in places.)
+- **reserved** — a field, opcode, or coprocessor ID not currently assigned. Software must not assume any particular read value and must not rely on any behavior it may have. Do *not* require writing zero (see "Reserved fields stay advisory" below).
 - **undefined / architecturally undefined** — the architecture does not specify the result. It may vary by implementation, by revision, or between executions; software must not depend on any particular outcome, and doing so is not a portability guarantee. Prefer "architecturally undefined" in instruction-reference prose; bare "undefined" is acceptable in flag tables and informal descriptions.
 - **implementation-defined** — behavior that is fixed and consistent within one CPU implementation/model but may differ between models (e.g., extra maths-coprocessor cycles). Not a synonym for "architecturally undefined."
 - **unpredictable** — not used in this manual. Do not introduce it as a synonym for "undefined"; the manual already distinguishes "architecturally undefined" from "implementation-defined" and a third term would blur that line.

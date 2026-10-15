@@ -63,8 +63,8 @@ everyday English sense:
 	\item[may] A permitted option. The CPU, the assembler, or the programmer is free to choose either way.
 	\item[should / should not] A recommendation, not a conformance requirement.
 	\item[reserved] A field, opcode, or coprocessor ID that is not currently assigned a meaning. Software must not assume any
-	      particular value when reading a reserved field, and must write zero unless a chapter states an explicit encoding. A
-	      future CPU revision may assign a reserved field a meaning.
+	      particular value when reading a reserved field, and must not rely on any behaviour it may have. A future CPU revision
+	      may assign a reserved field a meaning.
 	\item[architecturally undefined] The architecture does not specify the result. It may vary by CPU implementation, by
 	      revision, or even between two executions of the identical instruction on the identical CPU; software must never depend
 	      on any particular outcome.
@@ -87,8 +87,8 @@ encoding, and privilege rules.
 
 \begin{description}
 	\item[Coprocessor] One of the specialized execution units a \mnemonic{COPI}/\mnemonic{COPR} call can dispatch to -- the
-	      processing unit itself (coprocessor \texttt{0x0}), the exception unit (\texttt{0x1}), the DMA unit (\texttt{0x2}), and
-	      the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
+	      processing unit itself (coprocessor \texttt{0x0}), the exception unit (\texttt{0x1}), the optional DMA unit
+	      (\texttt{0x2}), and the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
 	\item[Displacement] A signed value added to an address register's low word to compute an effective address, as used by memory
 	      and effective-address instructions. Distinct from \textit{offset}, which this manual reserves for memory/structure
 	      offsets and the \texttt{system\_ram\_offset} register.
@@ -97,7 +97,9 @@ encoding, and privilege rules.
 	\item[Exception level] The priority level of the exception currently being serviced (0 when not handling any exception). A
 	      new exception can only preempt the current one if its priority is strictly higher.
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
-	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred.
+	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred, though two of them are
+	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
+	      \texttt{SR.T} or the \texttt{TRCE} input.
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
 	\item[Hardware exception] An exception signaled by an external interrupt pin. Also informally called an \textit{interrupt} at
 	      the pin level (interrupt pins, interrupt priority, interrupt enable) -- the two terms are synonyms at different

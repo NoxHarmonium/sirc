@@ -4,13 +4,13 @@
 \section{Overview}
 
 The SIRCIS instruction set includes 14 undocumented instruction opcodes. Most of these opcodes are valid encodings with
-architecturally undefined behaviour: software must not depend on their results, side effects, timing, flag behaviour,
-or fault behaviour. Two of the fourteen, \opcode{27} and \opcode{2F}, are the exception -- each has fully defined,
-tested behaviour (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the
-coprocessor command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged)
-but no public assembly syntax, and they are listed here for that reason rather than because their behaviour is
-undefined. Undocumented opcodes are reserved for future CPU revisions and may be repurposed without preserving their
-current behaviour.
+architecturally undefined behavior: software must not depend on their results, side effects, timing, flag behavior, or
+fault behavior. Two of the fourteen, \opcode{27} and \opcode{2F}, are the exception -- each has fully defined, tested
+behavior (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the coprocessor
+command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged) but no
+public assembly syntax, and they are listed here for that reason rather than because their behavior is undefined.
+Undocumented opcodes are reserved for future CPU revisions and may be repurposed without preserving their current
+behavior.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -68,9 +68,10 @@ accidentally depend on undefined write-back ordering.
 
 \section{Observed Behavior}
 
-The undocumented opcodes with bit 3 set in the ALU operation field compute \texttt{alu\_code \& 0x7} as the operation,
-discard the result, and update all four flags exactly as the corresponding documented operation does. This is the
-observed behavior of current implementations; it is architecturally undefined, so software must not rely on it.
+The undocumented opcodes whose ALU operation field is \texttt{0x8}--\texttt{0xE} compute \texttt{alu\_code \& 0x7} as
+the operation, discard the result, and update all four flags exactly as the corresponding documented operation does.
+This is the observed behavior of current implementations; it is architecturally undefined, so software must not rely on
+it.
 
 \subsection{\opcode{08}, \opcode{28}, \opcode{38} (ADD Test)}
 
@@ -128,9 +129,10 @@ result = operand1 | operand2
 
 An implementation -- whether an emulator or a hardware implementation -- decodes undocumented instructions normally
 rather than rejecting them, and, for the undocumented ALU test-variant opcodes, executes the operation and updates
-flags exactly as the corresponding documented operation would. Only the write-back stage differs: the decoder treats
-bit 3 of the operation field as a "don't write back" bit, so the computed result is discarded rather than committed to
-a register.
+flags exactly as the corresponding documented operation would. Only the write-back stage differs: for operation field
+values \texttt{0x8}--\texttt{0xE}, the decoder treats bit 3 of the operation field as a "don't write back" bit, so the
+computed result is discarded rather than committed to a register. Operation field value \texttt{0xF} is the coprocessor
+call (\opcode{2F}) and is not affected.
 
 This means undocumented encodings may execute, but their exact behavior depends on implementation details and is not
 part of the architectural contract. It is not required to be preserved in future CPU revisions.
@@ -140,10 +142,10 @@ part of the architectural contract. It is not required to be preserved in future
 These instructions were left undocumented for several reasons:
 
 \begin{enumerate}
-	\item \textbf{Limited utility}: Most have no practical use beyond documented instructions
-	\item \textbf{Incomplete semantics}: The designer hasn't fully defined their behavior
-	\item \textbf{Opcode space reservation}: May be used for future features
-	\item \textbf{Implementation flexibility}: Allows hardware optimizations
+	\item \textbf{Limited utility}: Most have no practical use beyond documented instructions.
+	\item \textbf{Incomplete semantics}: The designer has not fully defined their behavior.
+	\item \textbf{Opcode space reservation}: May be used for future features.
+	\item \textbf{Implementation flexibility}: Allows hardware optimizations.
 \end{enumerate}
 
 \section{Recommendations}
@@ -153,26 +155,26 @@ These instructions were left undocumented for several reasons:
 \textbf{Do not use undocumented instructions in production code.}
 
 \begin{itemize}
-	\item Behavior may change between CPU revisions
-	\item Assemblers may reject them or emit warnings
-	\item Code may not be portable
-	\item Debugging tools may not recognize them
+	\item Behavior may change between CPU revisions.
+	\item Assemblers may reject them or emit warnings.
+	\item Code may not be portable.
+	\item Debugging tools may not recognize them.
 \end{itemize}
 
 \subsection{For Compiler Writers}
 
 \begin{itemize}
-	\item Do not generate undocumented instructions
-	\item Use only documented instructions for all operations
-	\item If optimization requires new operations, request formal documentation
+	\item Do not generate undocumented instructions.
+	\item Use only documented instructions for all operations.
+	\item If optimization requires new operations, request formal documentation.
 \end{itemize}
 
 \subsection{For Hardware Implementers}
 
 \begin{itemize}
-	\item These opcodes may be implemented following the logical pattern
-	\item Document any implementation-specific behavior
-	\item Consider reserving them for future standardization
+	\item These opcodes may be implemented following the logical pattern.
+	\item Document any implementation-specific behavior.
+	\item Consider reserving them for future standardization.
 \end{itemize}
 
 \section{Future Standardization}
@@ -195,10 +197,10 @@ The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
 	\item 14 undocumented opcodes (could be formally specified)
-	\item Reserved shift type (111) could enable additional shift modes
-	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source
+	\item Reserved shift type (111) could enable additional shift modes.
+	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source.
 	\item Standard optional coprocessors and model-specific coprocessors can provide extended functionality through the
-	      documented coprocessor compatibility rules
+	      documented coprocessor compatibility rules.
 \end{itemize}
 
 Any future expansion must maintain backward compatibility with existing code.

@@ -242,7 +242,7 @@ endif
 	\textbf{Description:}
 
 	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
-	the load, useful for array traversal.
+	the load, which is useful for array traversal.
 
 	\textbf{Flags:} Preserved.
 
@@ -352,8 +352,9 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 		      \texttt{001} LSL, \texttt{010} LSR, \texttt{011} ASL, \texttt{100} ASR, \texttt{101} RTL, \texttt{110}
 		      RTR, \texttt{111} reserved. Applies to \texttt{rS} before the value is written to memory.
 		\item \textbf{Shift Amount (bits 9--6, Register format, \opcode{11}/\opcode{13}):} Immediate count 0--15, or
-		      (Shift Operand bit set) a register holding the count; a register count above 15 is architecturally
-		      undefined.
+		      (Shift Operand bit set) a register holding the count; a register count is used in full (16 or more
+		      clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16
+		      for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{AF (bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
 		      \texttt{10} = \reg{s}, \texttt{11} = \reg{p}. Not a status-update source for these opcodes.
 		\item \textbf{Condition field (bits 3--0):} All 16 condition-field encodings are legal; see \textbf{Condition

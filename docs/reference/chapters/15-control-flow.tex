@@ -30,14 +30,14 @@ no side effects, as described in Chapter~\ref{ch:reading-instructions}.
 		\toprule
 		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}  & \textbf{Notes}                                                              \\
 		\midrule
-		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & 0x18               & Immediate-offset effective address                                          \\
-		LDEA                 & \texttt{LDEA dest, (rO, src)}        & 0x19               & Register-offset effective address                                           \\
-		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & 0x1A               & Pre-decrement source, immediate offset                                      \\
-		LDEA                 & \texttt{LDEA dest, -(rO, src)}       & 0x1B               & Pre-decrement source, register offset                                       \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & 0x1C               & Immediate-offset effective address and link; \texttt{dest} excludes \reg{l} \\
-		LDEL                 & \texttt{LDEL dest, (rO, src)}        & 0x1D               & Register-offset effective address and link; \texttt{dest} excludes \reg{l}  \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & 0x1E               & Post-increment source, immediate offset; \texttt{dest} excludes \reg{l}     \\
-		LDEL                 & \texttt{LDEL dest, (rO, src)+}       & 0x1F               & Post-increment source, register offset; \texttt{dest} excludes \reg{l}      \\
+		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & \opcode{18}        & Immediate-offset effective address                                          \\
+		LDEA                 & \texttt{LDEA dest, (rO, src)}        & \opcode{19}        & Register-offset effective address                                           \\
+		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & \opcode{1A}        & Pre-decrement source, immediate offset                                      \\
+		LDEA                 & \texttt{LDEA dest, -(rO, src)}       & \opcode{1B}        & Pre-decrement source, register offset                                       \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & \opcode{1C}        & Immediate-offset effective address and link; \texttt{dest} excludes \reg{l} \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)}        & \opcode{1D}        & Register-offset effective address and link; \texttt{dest} excludes \reg{l}  \\
+		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & \opcode{1E}        & Post-increment source, immediate offset; \texttt{dest} excludes \reg{l}     \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)+}       & \opcode{1F}        & Post-increment source, register offset; \texttt{dest} excludes \reg{l}      \\
 		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}                                   \\
 		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement                                    \\
 		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}                                   \\
@@ -186,9 +186,9 @@ if condition:
 	\texttt{BRAN \#2} falls through to the next instruction. Use \mnemonic{LDEA p, (\#offset, src)} or \mnemonic{LDEA p,
 		(rO, src)} for non-PC-relative computed jumps.
 
-	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
-
 	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise segment-overflow or protected-mode privilege faults.
 
@@ -264,9 +264,9 @@ if condition:
 	displacement base is the branching instruction's own address, so the \mnemonic{BRSR} link value is that address plus 2
 	(the address of the next instruction). Return with \mnemonic{RETS}, which assembles to \texttt{LDEA p, (\#0, l)}.
 
-	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l} and \reg{p}.
-
 	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l} and \reg{p}.
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEL}; may raise segment-overflow or protected-mode privilege faults.
 
@@ -336,9 +336,9 @@ if condition:
 	Returns from a subroutine by copying the link register to the program counter. Used after \mnemonic{LJSR} or
 	\mnemonic{BRSR}.
 
-	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
-
 	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise protected-mode privilege faults if the return would change
 	\reg{p}'s high word.
@@ -367,7 +367,7 @@ if condition:
 \begin{instructionbox}{LDEA}{Load Effective Address}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} 0x18 (Immediate), 0x19 (Register), 0x1A (Pre-Dec Immediate), 0x1B (Pre-Dec Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\textbf{Opcodes:} \opcode{18} (Immediate), \opcode{19} (Register), \opcode{1A} (Pre-Dec Immediate), \opcode{1B} (Pre-Dec Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -459,10 +459,10 @@ if condition:
 	arithmetic and for control flow when the destination is \reg{p}. Pre-decrement forms also update the source address
 	register pair.
 
+	\textbf{Flags:} Preserved.
+
 	\textbf{Write-back:} If the condition is true, writes the computed address to \texttt{dest}. Pre-decrement forms also
 	write the decremented source address back to \texttt{src}.
-
-	\textbf{Flags:} Preserved.
 
 	\textbf{Exceptions:} May raise a segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
 	In protected mode, raises a privilege-violation fault if write-back would change a written address-register high word.
@@ -494,7 +494,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 \begin{instructionbox}{LDEL}{Load Effective Address and Link}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} 0x1C (Immediate), 0x1D (Register), 0x1E (Post-Inc Immediate), 0x1F (Post-Inc Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
+	\textbf{Opcodes:} \opcode{1C} (Immediate), \opcode{1D} (Register), \opcode{1E} (Post-Inc Immediate), \opcode{1F} (Post-Inc Register). See Table~\ref{tab:control-flow-legal-forms} for the full family of legal forms.
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -587,10 +587,10 @@ if condition:
 	Computes an effective address, saves the return address to \reg{l}, and writes the computed address to the destination
 	address-register pair. It is the real link-writing primitive behind \mnemonic{BRSR} and \mnemonic{LJSR}.
 
+	\textbf{Flags:} Preserved.
+
 	\textbf{Write-back:} If the condition is true, writes the return address to \reg{l} and the computed address to
 	\texttt{dest}. Post-increment forms also write the incremented source address back to \texttt{src}.
-
-	\textbf{Flags:} Preserved.
 
 	\textbf{Exceptions:} May raise a segment-overflow fault during effective-address calculation when \texttt{SR.A} is set.
 	In protected mode, raises a privilege-violation fault if write-back would change a written address-register high word.
@@ -687,9 +687,9 @@ if condition:
 	Performs an absolute jump through an address register. \mnemonic{LJMP} is an assembler meta-instruction, not a separate
 	CPU opcode.
 
-	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
-
 	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEA} write-back to \reg{p}.
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEA}; may raise segment-overflow or protected-mode privilege faults.
 
@@ -793,9 +793,9 @@ if condition:
 	writes with architecturally undefined behavior and are rejected by the assembler (see
 	Appendix~\ref{appendix:undocumented}).
 
-	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l}, \reg{p}, and any post-increment source register.
-
 	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} Inherits \mnemonic{LDEL} write-back to \reg{l}, \reg{p}, and any post-increment source register.
 
 	\textbf{Exceptions:} Same as \mnemonic{LDEL}; may raise segment-overflow or protected-mode privilege faults.
 
