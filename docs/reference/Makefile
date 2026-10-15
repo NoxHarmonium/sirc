@@ -14,7 +14,7 @@ EXAMPLE_ASM := $(filter-out ../../examples/reference-encodings/%.sasm ../../exam
 DOT := $(wildcard diagrams/*.dot)
 DIAGRAM_PDF := $(DOT:.dot=.pdf)
 
-.PHONY: all clean cleanall quick graphviz view format format-check qa
+.PHONY: all clean cleanall quick graphviz view format format-check check-refs qa
 
 # Default target - build the PDF
 all: $(OUTPUT).pdf
@@ -29,6 +29,7 @@ $(OUTPUT).pdf: graphviz $(TEX) $(EXAMPLE_ASM)
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex > /dev/null || (cat $(MAIN).log && exit 1)
 	@mv $(MAIN).pdf $(OUTPUT).pdf
 	@echo "✓ PDF generated: $(OUTPUT).pdf"
+	@$(MAKE) --no-print-directory check-refs
 
 # Quick build (single pass, for drafts)
 quick: graphviz $(TEX) $(EXAMPLE_ASM)
@@ -73,9 +74,27 @@ format-check: .format-check.stamp
 .format-check.stamp: $(MAIN).tex preamble.tex chapters/*.tex
 	latexindent -m -l --cruft=.cruft/ --silent --check $? || (cat .cruft/indent.log && exit 1)
 
-# QA: build the PDF, verify every worked-example listing against the real
-# assembler/linker, and check for undefined cross-references. See qa.py for
-# what "verified" means and how to opt an inline listing in with a
-# "% qa:assemble" comment.
+# Fails if the build log has any reference/citation LaTeX couldn't resolve.
+# Run automatically as the last step of `all` (a single `quick` pass always
+# reports its own forward references as undefined, so this isn't wired into
+# `quick`). Doesn't depend on $(OUTPUT).pdf itself -- graphviz above is
+# .PHONY, which would make anything depending on the PDF rebuild it every
+# time, defeating the point of checking a build that was just done. Run
+# `make all` first if main.log doesn't exist yet.
+check-refs:
+	@test -f $(MAIN).log || (echo "✗ No $(MAIN).log -- run 'make all' first" && exit 1)
+	@if grep -q "LaTeX Warning: There were undefined references." $(MAIN).log; then \
+		grep -A1 "LaTeX Warning: Reference \`\|LaTeX Warning: Citation \`" $(MAIN).log; \
+		echo "✗ Undefined references/citations found"; \
+		exit 1; \
+	fi
+	@echo "✓ No undefined references or citations"
+
+# Runs every manual QA check in one command -- format-check, a full build
+# (which checks references itself), the listings extracted from the manual,
+# and every Appendix D worked-example program. Just a runner: qa.sh does
+# nothing that isn't a plain `make` target in this Makefile or one of the
+# examples/*/Makefiles, so a CI pipeline can call those targets directly
+# instead of going through the script.
 qa:
-	python3 qa.py
+	./qa.sh

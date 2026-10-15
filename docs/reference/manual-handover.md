@@ -17,17 +17,20 @@ Goal: prevent the manual from drifting away from the implementation.
 
 Open tasks:
 
-- **Done (2026-09-16):** added a reference-manual QA target (`make qa`, or `python3 qa.py` directly -- see
-  `docs/reference/README.md`'s "QA" section for full detail). One command runs `make format-check`, a full `make
-  all` build, then verifies content against the real `sirc-vm` toolchain rather than just checking it typesets:
-  every Appendix D worked-example program is checked via its own `examples/<name>/Makefile`'s existing `check`
-  target (assemble, link, run under the VM, diff against a checked-in expected fixture -- this also handles
-  multi-file programs like `hardware-exception.sasm`+`data.sasm` for free, since it just runs the real recipe
-  instead of reimplementing it), every inline Usage Example listing is fed to the real assembler, and the build log
-  is checked for unresolved references/citations. `--render N,N` optionally rasterizes given pages to PNG for a
-  visual spot-check. Deliberately scoped: bare `Syntax:`/`Operation:` pseudocode blocks (placeholder operands like
-  `#opcode`, not real code) are skipped by default rather than reported as failures, with an opt-in
-  `% qa:assemble` comment marker for the few bare blocks that are real code; deep prose/terminology review is left
+- **Done (2026-09-16):** added a reference-manual QA target -- `make qa` / `./qa.sh` in `docs/reference/`, see the
+  README's "QA" section for full detail. Deliberately built as plain `make` targets plus a thin bash runner, not a
+  wrapper script with its own logic, so a CI pipeline can call the same `make` targets directly: `make format-check`,
+  a full `make all` build (which now also runs the new `check-refs` target as its last step, failing if `main.log`
+  has any unresolved reference or citation), `make -C ../../examples/manual-examples objects` (assembles every
+  Usage Example listing pulled out of the manual chapters -- see `examples/manual-examples/`, new this pass: an
+  `extract-listings.awk` script plus a `Makefile` using an ordinary pattern rule, so re-running only reassembles
+  listings that actually changed, the same as any C-like build), and `make -C <dir> clean check` for every
+  `examples/<name>/` directory an Appendix D listing points at (discovered from the manual source, not hardcoded).
+  Bare `Syntax:`/`Operation:` pseudocode blocks (placeholder operands like `#opcode`, not real code) are skipped by
+  default rather than reported as failures, with an opt-in `% qa:assemble` comment marker for the few bare blocks
+  that are real code. An earlier version of this pass built the same checks as a Python script; reworked into pure
+  make + bash on request, to get make's native incremental-rebuild behavior for free and keep every check callable
+  directly from CI without a language runtime beyond what's already required. Deep prose/terminology review is left
   to the `manual-cold-reader` agent rather than approximated with regexes.
 
   First run found 3 real problems (all now fixed), which is a reasonable signal the check is pulling its weight
