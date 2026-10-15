@@ -6,33 +6,6 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-### IB-1: Segment-overflow trap uses unsigned add for the general displacement, still wrong for negative displacements
-
-- **Where:** `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/execution_effective_address.rs:79`
-- **What:** `let (displaced, displacement_overflowed) = decoded.ad_l_.overflowing_add(decoded.sr_b_);`
-  computes the base-address-plus-displacement using an *unsigned* `u16::overflowing_add`. For a
-  negative displacement (e.g. `#-4`, stored as `0xFFFC`), the carry-out this produces is the
-  opposite of a genuine signed wrap.
-- **Effect:** `STOR (#-4, s), r2` with `al = 0x1000` spuriously raises `SegmentOverflow` when
-  `SR.A` is set, even though `0x1000 - 4` does not wrap the low word. Conversely `al = 0x0000`
-  with `#-1` — a genuine underflow — does not trap at all.
-- **Why it's still open:** commit `d6b8eb4` ("fix: pre-decrement addressing not faulting on
-  underflow", 2026-09-14) fixed exactly this bug class, but only for the *auto-decrement* step
-  used by pre-decrement addressing (the `decoded.addr_inc == -1` special case, a few lines below
-  this one). The general immediate/register displacement calculation at line 79 was never
-  converted to the same signed-wrap logic.
-- **Manual side:** no change needed. `chapters/04-data-representation.tex:162-163`,
-  `chapters/08-addressing-modes.tex:236-238`, and `chapters/14-memory-instructions.tex:104` all
-  state the same (correct) rule consistently: the trap should fire only on a genuine signed wrap,
-  regardless of the displacement's sign.
-- **Suggested fix:** apply the same `overflowing_sub` treatment used for the pre-decrement case to
-  the general displacement add — e.g. sign-extend `sr_b_` and compute a signed wrap check, or
-  branch on `sr_b_`'s sign and use `overflowing_sub` for negative displacements. Add a regression
-  test for a negative displacement with `SR.A` set, alongside the existing
-  `test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault`-style tests in
-  `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs`.
-- **Status:** logged only, not fixed this pass.
-
 ### IB-2: Exception-unit reserved opcodes panic instead of behaving as undefined
 
 - **Where:** `sirc-vm/peripheral-cpu/src/coprocessors/exception_unit/execution.rs:69-77`,
@@ -109,3 +82,40 @@ while fact-checking the manual against the implementation.
 - **Manual side:** added one clarifying sentence to
   `chapters/06-exceptions.tex` making explicit that a masked pending interrupt does not block
   lower-priority ones (this was always the intended reading, now also true in the implementation).
+
+### IB-1: Segment-overflow trap uses unsigned add for the general displacement, still wrong for negative displacements
+
+- **Where:** `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/execution_effective_address.rs`,
+  the `MemoryRefDisplacement` arm.
+- **What:** `let (displaced, displacement_overflowed) = decoded.ad_l_.overflowing_add(decoded.sr_b_);`
+  computed the base-address-plus-displacement using an *unsigned* `u16::overflowing_add`. For a
+  negative displacement (e.g. `#-4`, stored as `0xFFFC`), the carry-out this produces is the
+  opposite of a genuine signed wrap.
+- **Effect:** `STOR (#-4, s), r2` with `al = 0x1000` spuriously raised `SegmentOverflow` when
+  `SR.A` was set, even though `0x1000 - 4` does not wrap the low word. Conversely `al = 0x0000`
+  with `#-1` — a genuine underflow — did not trap at all.
+- **Confirmed wider than the original report**: this shared `displaced`/`displacement_overflowed`
+  pair feeds *every* `addr_inc` branch (regular, pre-decrement, post-increment) and every opcode
+  in the `0x10..=0x1F` range (`LOAD`, `STOR`, `LDEA`, `LDEL`, immediate- and register-displacement
+  forms alike) — not just the general/regular case the original report's example cited. The prior
+  fix (`d6b8eb4`, "fix: pre-decrement addressing not faulting on underflow", 2026-09-14) only
+  converted the pre-decrement special case's own extra `-1` step to signed-aware logic; the shared
+  base+displacement step every branch starts from was untouched, so pre-decrement was only ever
+  half-fixed.
+- **Fix:** branch on `sr_b_`'s sign (via `cast_signed()`) and use `overflowing_sub` with the
+  magnitude (`sr_b_.wrapping_neg()`) for negative displacements instead of routing the raw
+  two's-complement bits through `overflowing_add`, mirroring the exact idiom the pre-decrement fix
+  already established. Since every `addr_inc` branch starts from this same value, fixing it here
+  fixes all three uniformly.
+- **Test coverage added:** a new `test_segment_overflow_fault_with_negative_displacement_does_not_fault`
+  (general/regular path, `al=0x1000`, displacement `#-4` — must not fault, the exact reported false
+  positive) in `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs`. Also found during
+  implementation: the existing `test_segment_overflow_fault_with_load` was unknowingly asserting
+  the *buggy* behavior — its displacement (`0xCAFE`) is itself negative as a signed value
+  (`-13570`), and its old `al=0xFFFE` produces `0xFFFE + (-13570) = 0xCAFC`, which does not
+  genuinely wrap. Fixed by changing that test's `al` to `0x0`, a genuine underflow under the
+  corrected signed-wrap rule, preserving the test's original intent ("a real wrap faults") rather
+  than flipping its assertion.
+- **Manual side:** no change needed — `chapters/04-data-representation.tex:162-163`,
+  `chapters/08-addressing-modes.tex:236-238`, and `chapters/14-memory-instructions.tex:103-104` all
+  already state the correct rule consistently and were left as-is.

@@ -76,8 +76,18 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             ExecutionStepInstructionType::NoOp => {}
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
-                let (displaced, displacement_overflowed) =
-                    decoded.ad_l_.overflowing_add(decoded.sr_b_);
+                // sr_b_ is a signed two's-complement displacement (manual: "trap fires only when
+                // the low-word calculation wraps, whether the displacement is positive or
+                // negative"). A plain unsigned overflowing_add reports a spurious carry for a
+                // negative displacement that doesn't actually underflow, and misses a genuine
+                // underflow the unsigned view can't see as a carry. Detect the sign and use a
+                // real subtraction for negative displacements, same idiom as the pre-decrement
+                // step below.
+                let (displaced, displacement_overflowed) = if decoded.sr_b_.cast_signed() < 0 {
+                    decoded.ad_l_.overflowing_sub(decoded.sr_b_.wrapping_neg())
+                } else {
+                    decoded.ad_l_.overflowing_add(decoded.sr_b_)
+                };
                 // This is the original address with the pre/post increment/decrement applied (no offset)
                 // we need this value to write back to the source address register to do the inc/dec
                 let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);

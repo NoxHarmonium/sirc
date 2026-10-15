@@ -60,6 +60,16 @@ pub fn build_ldea_predecrement_instruction(value: u16) -> InstructionData {
     })
 }
 
+pub fn build_ldea_instruction(value: u16) -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value, // displacement added to al/ah -- no pre/post increment
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x1, // source (a)
+    })
+}
+
 pub fn build_invalid_opcode_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::CoprocessorCallImmediate,
@@ -758,8 +768,11 @@ fn test_segment_overflow_fault_with_load() {
         &mut cpu_peripheral.registers,
     );
 
-    // The test LOAD instruction calculates al + imm so high values like this should force a segment overflow
-    cpu_peripheral.registers.al = 0xFFFE;
+    // The test LOAD instruction's displacement is 0xCAFE, which as a signed two's-complement
+    // 16-bit value is -13570. al=0x0 makes this a genuine underflow (0x0 - 13570 wraps below
+    // zero) under the correct signed-wrap rule -- unlike the old al=0xFFFE, which computed
+    // 0xFFFE + (-13570) = 0xCAFC, well within range and not a real wrap at all.
+    cpu_peripheral.registers.al = 0x0;
 
     // Run load instruction
     run_expectations(&mut cpu_peripheral, &expect_load_instruction(), &mut clocks);
@@ -806,6 +819,35 @@ fn test_segment_overflow_fault_with_load() {
         // faulting LOAD's own address, not the address after it.
         0x0000_0000,
         cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+}
+
+#[test]
+fn test_segment_overflow_fault_with_negative_displacement_does_not_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+
+    set_sr_bit(
+        StatusRegisterFields::TrapOnAddressOverflow,
+        &mut cpu_peripheral.registers,
+    );
+
+    // 0xFFFC as a signed two's-complement displacement is -4. al=0x1000 + (-4) = 0x0FFC, well
+    // within range -- a genuine non-wrapping negative displacement, matching the manual's rule
+    // that the trap fires only on a real low-word wrap regardless of the displacement's sign.
+    // A plain unsigned add would spuriously see this as a carry (0x1000 + 0xFFFC overflows 16
+    // bits), which was exactly this bug's false positive.
+    cpu_peripheral.registers.al = 0x1000;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_instruction(&build_ldea_instruction(0xFFFC), 0x0000_0000, false),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "A negative displacement that does not genuinely wrap the low word must not fault"
     );
 }
 
