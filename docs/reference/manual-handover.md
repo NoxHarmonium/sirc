@@ -48,6 +48,21 @@ Open tasks:
     the assembler actually accepts today; the underlying parser gap is not fixed and has no tracking file to live
     in right now (`implementation-bugs.md` was retired earlier this pass since nothing was open -- worth deciding
     whether to recreate it or track findings like this one somewhere else next time one turns up).
+- **Done (2026-09-16):** wired the QA target into CI (`.github/workflows/manual.yml`, new). Runs on push/PR to
+  `main`, path-filtered to `docs/reference/**` and `examples/manual-examples/**` so it doesn't fire on unrelated
+  Rust-only changes: installs TeX Live + Graphviz via apt, then runs `make format-check`, `make all` (build +
+  `check-refs`), and `make -C examples/manual-examples objects` as separate steps, uploading the built PDF as a
+  build artifact. Deliberately does *not* re-run `make check` for the Appendix D example programs
+  (byte-sieve/faults/hardware-exception/software-exception/store-load) -- `sirc-vm.yml`'s existing `examples` matrix
+  job already does that on every push via the `coverage.yml` chain, so repeating it here would just double CI time
+  for the same signal. Not yet verified against a real GitHub Actions run (built and tested the underlying `make`
+  targets locally, but authoring session had no way to trigger CI itself) -- watch the first run on this branch for
+  a missing apt package (the LaTeX package list is a best-effort guess at what covers `tcolorbox`/`bytefield`/
+  `tikz-timing`/etc., not a verified-in-CI list).
+- **Idea, not started:** publish the built PDF to GitHub Releases automatically on a version bump, using something
+  like `release-please` to manage the versioning/changelog and a follow-up job to attach
+  `docs/reference/SIRC-1-reference-manual.pdf` from `manual.yml`'s build artifact to the created release. Long-term
+  goal per the author (2026-09-16); explicitly not part of this pass.
 - Chapter 2's 24 MHz maximum clock rate and 5 V +/- 5% supply figures have no stated basis. Deliberately left
   unresolved for now (author's call, 2026-09-12) rather than fixed as part of this pass.
 - Generate more tables from source where possible: opcode map, register map, condition codes, instruction
