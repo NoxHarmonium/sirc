@@ -115,6 +115,14 @@ matching the unanimous form already in Chapters 13–17. Do not use "Status Flag
 - Architecture/reset/bus/exception/memory-model chapters should prefer pseudocode,
   diagrams, and tables over assembly listings (per handover Workstream 12); confine
   assembly listings mainly to the instruction-reference chapters and the examples appendix.
+- Label declarations use a **leading** colon (`:loop`), never a trailing one (`loop:`) — the
+  assembler only accepts the leading form, confirmed 2026-09-16 (`examples/crc-report`) after
+  several existing manual listings turned out to use the trailing form and fail to assemble.
+  Label *references* (branch/call targets, and any operand naming a symbol's address) use
+  `@label`, with no `#` prefix even where the operand position is otherwise an immediate value
+  (`BRAN|cond @loop`, `LOAD al, @buffer` — not `LOAD al, #buffer`). When adding or editing a
+  listing that uses labels, prefer actually assembling it (`cargo run --bin assembler`, from
+  `docs/reference/` add `../../sirc-vm` to the path) over eyeballing the syntax.
 
 ## Approved decisions (Gate 1, 2026-09-05)
 

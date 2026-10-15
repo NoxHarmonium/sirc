@@ -204,7 +204,7 @@ if condition:
 BRAN #20                      ; Jump ahead 20 words
 
 ; Backward branch (loop)
-loop:
+:loop
     ; ... loop body ...
     BRAN|!= @loop             ; Jump back if not zero
 		\end{lstlisting}
@@ -352,7 +352,7 @@ if condition:
 
 	\begin{example}
 		\begin{lstlisting}
-my_function:
+:my_function
     ; ... function body ...
     RETS                      ; Return to caller
 		\end{lstlisting}
@@ -840,22 +840,22 @@ BRAN|<= @else_part
 ; Then part
 ; ...
 BRAN @end
-else_part:
+:else_part
 ; Else part
 ; ...
-end:
+:end
 \end{lstlisting}
 
 \subsection{While Loop}
 \begin{lstlisting}
 ; while (r1 > 0) { ... }
-while_start:
+:while_start
     CMPI r1, #0
     BRAN|<= @while_end
     ; Loop body
     ; ...
     BRAN @while_start
-while_end:
+:while_end
 \end{lstlisting}
 
 \subsection{Switch/Jump Table}
@@ -866,7 +866,7 @@ LOAD r2, r1                   ; r2 = r1
 ADDI r2, #2, LSL #1           ; r2 = (r2 << 1) + 2
 LDEA p, (r2, p)               ; Jump into the branch table below
 
-jump_table:
+:jump_table
     BRAN @case0
     BRAN @case1
     BRAN @case2

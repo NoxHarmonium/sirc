@@ -396,7 +396,7 @@ endif
 
 	\begin{example}
 		\begin{lstlisting}
-idle_loop:
+:idle_loop
     WAIT                       ; Halt until an interrupt or reset occurs
     BRAN @idle_loop            ; Resume waiting if woken spuriously
 		\end{lstlisting}
@@ -467,7 +467,7 @@ endif
 
 	\begin{example}
 		\begin{lstlisting}
-timer_handler:
+:timer_handler
     ; ... service the timer interrupt ...
     RETE                       ; Return to the interrupted program
 		\end{lstlisting}
@@ -633,7 +633,7 @@ endif
 
 	\begin{example}
 		\begin{lstlisting}
-alignment_fault_handler:
+:alignment_fault_handler
     ETFR a, #6                ; Get faulting return address
     LOAD al, #0x0100          ; Correct the address
     ETTR #6, a                ; Write corrected address back
@@ -777,7 +777,7 @@ up to a fixed retry budget, before giving up.
 ; kept in a register -- are saved on the stack instead, and restored
 ; before every retry attempt.
 
-dma_copy_safe:
+:dma_copy_safe
     STOR -(#0, s), ah          ; save the original source/dest addresses
     STOR -(#0, s), al          ; and the retry budget where DMAT can't
     STOR -(#0, s), lh          ; touch them
@@ -785,7 +785,7 @@ dma_copy_safe:
     LOAD r1, #3                ; retry budget
     STOR -(#0, s), r1
 
-dma_copy_attempt:
+:dma_copy_attempt
     DMAT a, l, #7              ; may fault partway through
     ADDI sl, #5                ; success: discard the saved state
     RETS
@@ -793,20 +793,20 @@ dma_copy_attempt:
 ; Install at the Bus Fault, Bus Protection Fault, and Segment Overflow
 ; Fault vectors (Chapter 6). Falls through to whatever other handling
 ; those vectors need for faults unrelated to this transfer.
-dma_fault_handler:
+:dma_fault_handler
     ETFR r7, #7                ; r7 = fault metadata
     LOAD r6, r7                ; copy it -- ANDI below would destroy r7
     ANDI r6, #0x0007           ; isolate the bus-access-type field
     CMPI r6, #0x0005           ; BAT = 0x5 (DMA read burst)?
-    BRAN|== dma_fault_is_dma
+    BRAN|== @dma_fault_is_dma
     CMPI r6, #0x0006           ; BAT = 0x6 (DMA write burst)?
-    BRAN|!= dma_fault_not_dma  ; neither -- not this handler's fault
+    BRAN|!= @dma_fault_not_dma ; neither -- not this handler's fault
 
-dma_fault_is_dma:
+:dma_fault_is_dma
     LOAD r1, (#0, s)           ; retry budget
     SUBI r1, #1
     STOR (#0, s), r1
-    BRAN|== dma_copy_give_up   ; out of retries
+    BRAN|== @dma_copy_give_up  ; out of retries
 
     LOAD ll, (#1, s)           ; restore the original addresses -- a/l
     LOAD lh, (#2, s)           ; may already be wrong, e.g. double-
@@ -814,17 +814,17 @@ dma_fault_is_dma:
     LOAD ah, (#4, s)
     RETE                       ; retry dma_copy_attempt from a clean state
 
-dma_copy_give_up:
+:dma_copy_give_up
     ADDI sl, #5                ; discard the saved state
     ETFR a, #6                 ; get the faulting return address
-    LOAD al, #dma_copy_failed  ; redirect past the retry loop
+    LOAD al, @dma_copy_failed  ; redirect past the retry loop
     ETTR #6, a
     RETE
 
-dma_fault_not_dma:
+:dma_fault_not_dma
     ; ... handling for faults unrelated to this transfer ...
 
-dma_copy_failed:
+:dma_copy_failed
     ; ... signal failure to the caller; left to the calling convention
     ; in use ...
     RETS

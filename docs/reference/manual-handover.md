@@ -44,12 +44,16 @@ Open tasks:
   which names the real "SIRC-VM" simulator directly, has a subsection literally titled "Current Simulator," and a
   "For Researchers/Hackers" section that reads like modern engineering documentation rather than a period manual
   (not yet fixed -- flagged for a future pass, since it's a larger rewrite than a single sentence).
-- Fix label syntax in the manual's own worked examples: several existing code samples across `chapters/*.tex` use
-  a trailing-colon label (`while_start:`), but the assembler only accepts a leading colon (`:while_start`) --
-  confirmed 2026-09-16 while writing `examples/crc-report` strictly from the manual, where the trailing-colon form
-  (copied from one of these examples) failed to assemble. Needs an audit of every labeled code sample in the
-  manual and a fix to whichever form is wrong; worth cross-checking against `STYLE.md` for which form (if either)
-  is the intended house style before mass-editing.
+- **Done (2026-09-16):** label syntax in the manual's worked examples. Audited every labeled code sample across
+  `chapters/*.tex` (18 labels in `10-condition-codes.tex`, `15-control-flow.tex`, and
+  `16-coprocessor-instructions.tex`) and converted every trailing-colon label (`while_start:`) to the leading-colon
+  form (`:while_start`) the assembler actually accepts. The same pass over `16-coprocessor-instructions.tex`'s
+  "Retry-Safe DMA Copy Routine" example (added earlier this pass) also turned up three branch targets missing
+  their `@` prefix (`BRAN|== dma_fault_is_dma` instead of `BRAN|== @dma_fault_is_dma`) and one address load using
+  `#label` instead of `@label` (`LOAD al, #dma_copy_failed`) -- fixed alongside the label syntax. Every fixed
+  listing was re-verified by actually assembling it (`cargo run --bin assembler`), not just read for correct
+  syntax. Added a rule to `STYLE.md` §7 (Code listings) documenting both conventions (leading-colon declarations,
+  `@label` references with no `#`) so this doesn't reappear.
 - Document the assembler's data directives (`.DW`, `.DB`, `.DQ`) and `.ORG` somewhere in the manual -- they appear
   in exactly zero worked examples or reference chapters today (confirmed 2026-09-16, same exercise as above), so
   a reader has no manual-sourced way to learn how to lay out static data or place code at a specific address.

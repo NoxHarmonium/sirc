@@ -268,7 +268,7 @@ LJSR|>> a                ; Call function if r1 > 0 (signed)
 	\begin{lstlisting}
 ; for (i = 10; i > 0; i--)
 LOAD r1, #10             ; i = 10
-loop:
+:loop
     ; ... loop body ...
     SUBI r1, #1          ; i--
     BRAN|HI @loop        ; Continue if i > 0 (unsigned)
