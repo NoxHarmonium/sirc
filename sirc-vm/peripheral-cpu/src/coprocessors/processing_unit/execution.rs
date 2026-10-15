@@ -19,7 +19,6 @@ use crate::registers::{
 };
 
 const PRIVILEGED_REGISTERS: &[u8] = &[
-    RegisterName::Sr as u8,
     RegisterName::Ah as u8,
     RegisterName::Lh as u8,
     RegisterName::Ph as u8,

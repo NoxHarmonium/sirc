@@ -94,23 +94,45 @@ fn direct_high_address_register_writes_fault_in_protected_mode() {
     assert_eq!(0x00CC, result.registers.ph);
 }
 
+const PROTECTED_WITH_E1: u16 = StatusRegisterFields::ProtectedMode as u16
+    | StatusRegisterFields::HardwareInterruptEnable1 as u16;
+
+fn assert_privileged_byte_untouched(result: &ProtectedModeResult) {
+    assert_eq!(PROTECTED_WITH_E1, result.registers.sr & 0xFF00);
+}
+
 #[test]
-fn direct_status_register_writes_fault_in_protected_mode() {
+fn direct_status_register_writes_ignore_privileged_byte_in_protected_mode() {
     let load_sr = InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadRegisterFromImmediate,
         register: RegisterName::Sr.to_register_index(),
-        value: 0x0000,
+        value: 0x000A,
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x0,
     });
     let result = run_instruction(&load_sr, |registers, _| {
         enable_protected_mode(registers);
+        set_sr_bit(StatusRegisterFields::HardwareInterruptEnable1, registers);
     });
-    assert_privilege_fault(&result);
-    assert_eq!(
-        StatusRegisterFields::ProtectedMode as u16,
-        result.registers.sr
-    );
+    assert_no_fault(&result);
+    assert_privileged_byte_untouched(&result);
+    assert_eq!(0x000A, result.registers.sr & 0x00FF);
+
+    // Attempting to clear the privileged byte (including P itself) is silently ignored
+    let load_sr_clearing_privileged = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadRegisterFromImmediate,
+        register: RegisterName::Sr.to_register_index(),
+        value: 0xFF05,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    });
+    let result = run_instruction(&load_sr_clearing_privileged, |registers, _| {
+        enable_protected_mode(registers);
+        set_sr_bit(StatusRegisterFields::HardwareInterruptEnable1, registers);
+    });
+    assert_no_fault(&result);
+    assert_privileged_byte_untouched(&result);
+    assert_eq!(0x0005, result.registers.sr & 0x00FF);
 
     let register_load_sr = InstructionData::Register(RegisterInstructionData {
         op_code: Instruction::LoadRegisterFromRegister,
@@ -125,13 +147,49 @@ fn direct_status_register_writes_fault_in_protected_mode() {
     });
     let result = run_instruction(&register_load_sr, |registers, _| {
         enable_protected_mode(registers);
+        set_sr_bit(StatusRegisterFields::HardwareInterruptEnable1, registers);
         registers.r1 = 0x0000;
     });
-    assert_privilege_fault(&result);
-    assert_eq!(
-        StatusRegisterFields::ProtectedMode as u16,
-        result.registers.sr
-    );
+    assert_no_fault(&result);
+    assert_privileged_byte_untouched(&result);
+    assert_eq!(0x0000, result.registers.sr & 0x00FF);
+}
+
+#[test]
+fn status_register_read_modify_write_round_trips_in_protected_mode() {
+    // The privileged byte reads as zero in protected mode, so a read-modify-write of sr must
+    // not fault and must leave the real privileged byte alone.
+    let orri_sr = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::OrImmediate,
+        register: RegisterName::Sr.to_register_index(),
+        value: 0x0003,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    });
+    let result = run_instruction(&orri_sr, |registers, _| {
+        enable_protected_mode(registers);
+        set_sr_bit(StatusRegisterFields::HardwareInterruptEnable1, registers);
+    });
+    assert_no_fault(&result);
+    assert_privileged_byte_untouched(&result);
+    assert_eq!(0x0003, result.registers.sr & 0x00FF);
+}
+
+#[test]
+fn compare_instructions_naming_sr_do_not_fault_in_protected_mode() {
+    let cmpi_sr = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CompareImmediate,
+        register: RegisterName::Sr.to_register_index(),
+        value: 0x0000,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x1,
+    });
+    let result = run_instruction(&cmpi_sr, |registers, _| {
+        enable_protected_mode(registers);
+        set_sr_bit(StatusRegisterFields::HardwareInterruptEnable1, registers);
+    });
+    assert_no_fault(&result);
+    assert_privileged_byte_untouched(&result);
 }
 
 #[test]

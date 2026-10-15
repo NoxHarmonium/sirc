@@ -53,19 +53,20 @@ fn get_register_value(registers: &Registers, index: u8) -> u16 {
 }
 
 fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
-    let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
     let sr_register_index = RegisterName::Sr as u8;
     if index == sr_register_index {
-        // Always preserve the ExceptionActive bit (bit 13) - only the EU can modify it
-        let exception_active_mask = StatusRegisterFields::ExceptionActive as u16;
-        let exception_active_preserved = registers[index] & exception_active_mask;
-
-        assert!(
-            !should_redact_sr,
-            "Protected-mode direct SR write reached write-back; privilege check should have raised a fault before write-back"
-        );
-        // In supervisor mode: allow new value everywhere except ExceptionActive bit
-        registers[index] = (value & !exception_active_mask) | exception_active_preserved;
+        if sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) {
+            // In protected mode only the low byte is writable; writes to the privileged byte
+            // (including the ExceptionActive bit) are silently ignored.
+            registers[index] =
+                (registers[index] & SR_PRIVILEGED_MASK) | (value & SR_REDACTION_MASK);
+        } else {
+            // In supervisor mode: allow new value everywhere except ExceptionActive bit (bit 13),
+            // which only the EU can modify
+            let exception_active_mask = StatusRegisterFields::ExceptionActive as u16;
+            let exception_active_preserved = registers[index] & exception_active_mask;
+            registers[index] = (value & !exception_active_mask) | exception_active_preserved;
+        }
     } else {
         registers[index] = value;
     }
