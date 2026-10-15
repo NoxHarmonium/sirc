@@ -54,8 +54,8 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
 \mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, the DMA unit gets at least one post-dispatch cycle after the
 6-cycle \mnemonic{COPI} dispatch. For non-zero transfers, that first post-dispatch cycle may also be the first no-wait
-DMA bus access. A conditional DMA meta-instruction whose condition is false does not dispatch to the DMA unit and takes
-only 6 cycles.
+DMA bus access. A conditional \mnemonic{DMAR}/\mnemonic{DMAW}/\mnemonic{DMAT} whose condition is false does not
+dispatch to the DMA unit and takes only 6 cycles.
 
 \subsection{Exception and Fault Timing}
 

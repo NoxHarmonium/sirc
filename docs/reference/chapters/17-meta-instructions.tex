@@ -4,7 +4,12 @@
 \section{Overview}
 
 Meta-instructions are assembly mnemonics that lower to ordinary SIRCIS instruction encodings. They exist to make common
-operations easier to read and write; they do not introduce additional CPU opcodes.
+operations easier to read and write; they do not introduce additional CPU opcodes. Every meta-instruction is an alias
+for exactly one real instruction encoding, never a sequence of several: this keeps a program's instruction count, and
+therefore its timing, predictable directly from its source, without needing to know which mnemonics are "real" and
+which secretly expand to more than one. An operation that cannot be expressed as a single instruction (for example, a
+runtime-variable operand where the underlying encoding only has room for a compile-time immediate) is documented as an
+explicit multi-instruction technique where it comes up, not given its own meta-instruction mnemonic.
 
 \begin{table}[H]
 	\centering

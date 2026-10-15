@@ -1097,6 +1097,27 @@ while remaining > 0:
 	\textbf{Overlap:} Overlapping source and destination ranges are architecturally undefined unless the source and
 	destination addresses are identical.
 
+	\textbf{Notes:}
+	\begin{itemize}
+		\item \mnemonic{DMAT}'s \texttt{\#n} is fixed at assembly time; it has no register-operand form. SIRC-1
+		      meta-instructions are always aliases for exactly one real instruction, so a runtime-variable count
+		      cannot be a \mnemonic{DMAT} form without turning it into a multi-instruction expansion, which would
+		      make its instruction count unpredictable like every other meta-instruction's is not.
+		\item A transfer whose length is only known at runtime is still possible, just not as a single mnemonic: build the command
+		      word in a register and dispatch it directly with the general \mnemonic{COPR} instruction instead of \mnemonic{DMAT},
+		      for example:
+		      \begin{lstlisting}
+ANDI[N] rS, #0x00FF           ; keep only the low byte (the count)
+ORRI[N] rS, #0x2A00           ; combine with DMAT's own fixed header
+COPR rS                       ; dispatch -- identical to DMAT from here
+		      \end{lstlisting}
+		      The \texttt{[N]} suffix keeps these two setup steps from disturbing the status flags, matching \mnemonic{DMAT}'s own
+		      "Flags: Preserved" above. This is ordinary use of the already-documented \mnemonic{COPR} instruction (see the
+		      \mnemonic{COPI}/\mnemonic{COPR} entry above), not a distinct form of \mnemonic{DMAT}. Once dispatched, it behaves
+		      exactly like \mnemonic{DMAT} -- including this entry's Fault side effects above -- since the DMA unit cannot tell
+		      whether a command arrived via \mnemonic{COPI} or \mnemonic{COPR}.
+	\end{itemize}
+
 	\begin{example}
 		\begin{lstlisting}
 LOAD ah, #0x0040

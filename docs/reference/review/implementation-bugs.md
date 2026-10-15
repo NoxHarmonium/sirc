@@ -48,34 +48,6 @@ Superseded.
   three separate findings, `F-exc-7`, `F-sum-7`, and `F-cop-9`; merged here since they share one
   root cause and one ruling.
 
-### F-arch-6 / F-cop-14 (not-implemented, major) — DMA unit documented "Required" but not implemented
-
-- category: contradiction
-- claim: two manual locations both mark the DMA unit (coprocessor `0x2`) "Required":
-  - `chapters/01-introduction.tex:95-100, 110`: "All implementations of the SIRC-1 will have the
-    \"processing unit\" as coprocessor 0x0, the \"exception unit\" as coprocessor 0x1, and the DMA
-    unit as coprocessor 0x2." / the coprocessor table's DMA row is marked required (not optional).
-  - `chapters/16-coprocessor-instructions.tex:141`: "0x2 & DMA Unit & Yes & 0x8--0xA & Required
-    standard DMA transfer unit".
-- evidence: `sirc-vm/peripheral-cpu/src/lib.rs:375-394` dispatches only coprocessor IDs 0 and 1 and
-  raises `Faults::InvalidOpCode` for every other ID, including `0x2` -- so the reference
-  implementation is a conforming SIRC-1 (per the manual's own definition) that nonetheless omits a
-  coprocessor the manual calls required. The facts digest's "Coprocessors" table records DMA as
-  "not implemented in peripheral-cpu."
-- resolution: code-wrong
-- fix: settle whether the reference implementation is a deliberately incomplete model (say so once,
-  e.g. "the reference simulator omits the DMA unit and raises an invalid-opcode fault for
-  coprocessor 0x2") or whether DMA should be optional like the math unit. As written, an emulator
-  author can't tell from the manual whether omitting coprocessor 0x2 is conformant, and the
-  probe-by-invalid-opcode-fault advice in Chapter 16 is meaningless for a "required" coprocessor
-  that the reference CPU faults on. The DMA timing figures in Chapter 16 depend on the same
-  decision.
-- confidence: medium
-- status: not-implemented
-- ruling: Gate 2 M: the DMA unit is Required and planned; the reference emulator has not implemented
-  it yet. Manual stands (both locations). Originally filed as two separate findings, `F-arch-6` and
-  `F-cop-14`; merged here since they're the same gap.
-
 ### F-con2-20 (code-wrong, major) — stray `SHFT` row in the register-format generator output
 
 - category: contradiction
@@ -455,6 +427,32 @@ top = 0x00F0_FFFF".
 - status: manual updated (done); the optional assembler-side rejection above is not required for
   correctness, since the encoding was already inert.
 
+### F-arch-6 / F-cop-14 (contradiction) — REVISED 2026-09-15, supersedes the Gate 2 M ruling — DMA unit is now Optional
+
+- category: contradiction
+- original claim (2026-09-05): two manual locations both marked the DMA unit (coprocessor `0x2`)
+  "Required" (`chapters/01-introduction.tex`'s coprocessor table and prose; the "Required" column
+  of `chapters/16-coprocessor-instructions.tex`'s Standard Coprocessor IDs table), while
+  `sirc-vm/peripheral-cpu/src/lib.rs:375-394` dispatches only coprocessor IDs 0 and 1 and raises
+  `Faults::InvalidOpCode` for every other ID, including `0x2` -- so the reference implementation
+  omitted a coprocessor the manual called required, with no stated basis for that requirement.
+- original ruling (Gate 2 M, 2026-09-05): the DMA unit is Required and planned; the reference
+  emulator just hadn't implemented it yet. Manual stood as written.
+- revised ruling (2026-09-15, author's call): reconsidered and reversed. There was no architectural
+  reason DMA needed to be required -- unlike the processing unit and exception unit, it doesn't
+  participate in reset or exception handling, and software without it can always fall back to
+  ordinary `LOAD`/`STOR` loops, the same story as the already-optional Integer Maths Unit. The DMA
+  section's own hedge ("software must not assume Coprocessor 2 is present") was already in tension
+  with calling it required. The manual now marks DMA optional in both locations (matching the Maths
+  Unit's "No" / "Optional" table entries and phrasing), and every `DMAR`/`DMAW`/`DMAT`
+  `Applicability` line and `Exceptions` field was updated to match ("an optional coprocessor absent
+  on models that do not implement it" / "Missing DMA hardware ... raise invalid-opcode faults").
+- resolution: **author chose to fix this in the manual, not the code** -- the reference
+  implementation's current non-support for coprocessor `0x2` is now fully conformant, since an
+  optional coprocessor is allowed to be absent. No Rust change is required by this finding.
+- confidence: high
+- status: manual updated (done); no code fix needed or expected.
+
 ## Superseded / no longer applicable
 
 ### F-tim-1 — superseded by `F-data-1`
@@ -481,3 +479,26 @@ An earlier version of this file briefly logged a finding claiming
 retryable. The author has since ruled the opposite way (see `F-exc-3`, now fixed, above under
 "Already fixed"): Invalid Opcode Fault *is* retryable, so that comment was correct all along, and
 the finding was removed as moot.
+
+### `DMAT` register-count form / `DMATR` mnemonic — reverted 2026-09-15, same day it was proposed
+
+Briefly added and then reverted within the same session. The idea: a register-operand form of
+`DMAT` (first drafted as a separate four-letter-breaking mnemonic `DMATR`, then folded into `DMAT`
+as a second syntax form) so a transfer's word count could be supplied at runtime instead of a fixed
+assembly-time immediate. This entry's earlier revision had an "Add assembler support" finding open
+against it. The author then pointed out a project-wide rule this violated that hadn't been written
+down yet: SIRC-1 meta-instructions are always aliases for exactly one real instruction, so that a
+program's instruction count (and therefore its timing) is always predictable from its source
+without needing to track which mnemonics secretly expand to more than one. The register-count form
+assembles to three instructions (`ANDI[N]`, `ORRI[N]`, `COPR`), which breaks that rule -- there was
+no way to make it a single instruction, since `COPR` relays a register's full 16-bit value as the
+command verbatim, with no field-extraction mechanism to combine a fixed header with a runtime count
+in one instruction.
+- resolution: reverted. `chapters/16-coprocessor-instructions.tex`'s `DMAT` entry is back to its
+  single, immediate-only form. A "Notes" item on that entry now documents the `ANDI[N]`/`ORRI[N]`/`COPR`
+  sequence as an explicit technique a programmer can use directly (ordinary use of the
+  already-documented `COPR` instruction), not as a `DMAT` form or a new mnemonic. The general rule
+  itself is now stated explicitly in `chapters/17-meta-instructions.tex`'s overview, so this doesn't
+  need to be rediscovered per-instruction again.
+- no assembler work needed: nothing to implement, since the feature was withdrawn before being
+  built.
