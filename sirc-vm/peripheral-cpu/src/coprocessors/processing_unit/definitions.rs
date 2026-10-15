@@ -111,7 +111,10 @@ impl StatusRegisterUpdateSource {
 // TODO: Find a better place for `ConditionFlags` implementation
 // category=Refactoring
 // Define trait and move somewhere else?
-// Note: copied from ARM - https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/condition-codes-1-condition-flags-and-codes
+// Note: most of these predicates are copied from ARM - https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/condition-codes-1-condition-flags-and-codes
+// `UnsignedHigher`/`UnsignedLowerOrSame` are not exactly the same as ARM however,
+// because SIRC sets SR.C to 1 on a borrow where as ARM clears the flag.
+// So for SIRC, the HI/LO have the C bit flipped from ARM
 impl ConditionFlags {
     #[must_use]
     pub fn should_execute(&self, registers: &Registers) -> bool {
@@ -126,11 +129,11 @@ impl ConditionFlags {
             Self::OverflowSet => sr_bit_is_set(StatusRegisterFields::Overflow, registers),
             Self::OverflowClear => !sr_bit_is_set(StatusRegisterFields::Overflow, registers),
             Self::UnsignedHigher => {
-                sr_bit_is_set(StatusRegisterFields::Carry, registers)
+                !sr_bit_is_set(StatusRegisterFields::Carry, registers)
                     && !sr_bit_is_set(StatusRegisterFields::Zero, registers)
             }
             Self::UnsignedLowerOrSame => {
-                !sr_bit_is_set(StatusRegisterFields::Carry, registers)
+                sr_bit_is_set(StatusRegisterFields::Carry, registers)
                     || sr_bit_is_set(StatusRegisterFields::Zero, registers)
             }
             Self::GreaterOrEqual => {

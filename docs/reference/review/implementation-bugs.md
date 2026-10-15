@@ -44,136 +44,6 @@ Superseded.
 - ruling: Gate 2 F, unchanged: ASR must sign-fill every vacated bit. Manual text already states this
   correctly and needs no further change (its worked examples were already right).
 
-### F-data-1 (code-wrong, blocker) — HI/LO condition predicates use the wrong carry polarity
-
-- category: fact
-- claim (as originally documented): "HI (Unsigned Higher) Executes when C = 1 AND Z = 0. Tests if
-  first operand $>$ second operand (unsigned)."
-- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/alu.rs:195-206`
-  (`perform_subtract` sets C from `a.overflowing_sub(b)`, i.e. C = borrow = `a < b` unsigned,
-  confirmed by `tests/instructions/arithmetic_immediate_test.rs:260-272`);
-  `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/definitions.rs:128-136`
-  (`UnsignedHigher = Carry AND NOT Zero`, `UnsignedLowerOrSame = NOT Carry OR Zero` -- the file
-  comment at line 114 says this predicate set "copied from ARM," which defines C after subtraction
-  as *no borrow*, the opposite polarity).
-- resolution: **code-wrong** -- the manual's original ARM-style glosses for `HI`/`LO`/`CS`/`CC` were
-  correct in *intent*; only two lines of `definitions.rs` need to change to make the hardware
-  actually deliver that intent, given this CPU's real (and correct, and intentional) borrow-on-subtract
-  convention.
-- fix (author-confirmed, 2026-09-08): change only the `Carry` term in the two compound predicates;
-  leave `Zero`, and leave `CarrySet`/`CarryClear`, untouched:
-
-  ```rust
-  // definitions.rs, ConditionFlags::should_execute
-  Self::UnsignedHigher => {
-      !sr_bit_is_set(StatusRegisterFields::Carry, registers)   // was: sr_bit_is_set(...)
-          && !sr_bit_is_set(StatusRegisterFields::Zero, registers)
-  }
-  Self::UnsignedLowerOrSame => {
-      sr_bit_is_set(StatusRegisterFields::Carry, registers)     // was: !sr_bit_is_set(...)
-          || sr_bit_is_set(StatusRegisterFields::Zero, registers)
-  }
-  ```
-
-  Do **not** touch `CarrySet`/`CarryClear` (lines 122-123) or the signed predicates
-  `GreaterOrEqual`/`LessThan`/`GreaterThan`/`LessThanOrEqual` (they key off Negative/Overflow only,
-  never Carry, and are unaffected by this bug).
-
-  Resulting truth table, all four relations now distinct:
-
-  | Mnemonic | Test | Meaning |
-  |---|---|---|
-  | `CS` | C=1 | unsigned lower (`a < b`) -- matches x86's borrow-flag convention, not ARM's |
-  | `CC` | C=0 | unsigned higher or same (`a >= b`) |
-  | `HI` | C=0 AND Z=0 | unsigned higher, strict (`a > b`) |
-  | `LO` | C=1 OR Z=1 | unsigned lower or same (`a <= b`) |
-
-  This restores `HI` and `LO` to meaning exactly what their names say (matching the manual's
-  original glosses without changing manual wording for those two). `CS` and `CC` keep their
-  existing single-flag test unchanged, but their *English gloss* is the opposite of ARM's `CS`/`CC`
-  (ARM: `CS` = higher-or-same; here: `CS` = lower) -- the manual has been corrected to state this
-  chip-specific meaning (see `chapters/10-condition-codes.tex`, `13-alu-instructions.tex`,
-  `appendix-b-timing.tex`, and `05-status-register.tex`).
-
-  After the code change, find and update every Rust test that currently asserts the old `HI`/`LO`
-  truth values (search the test suite for `UnsignedHigher`, `UnsignedLowerOrSame`, and any
-  `should_execute`/condition-flag test using `HI`/`LO` in its name or assembly fixture), and
-  re-check any example program using `BRAN|HI`, `BRAN|LO`, or an `|HI`/`|LO` conditional suffix
-  against the corrected behavior.
-- confidence: high
-- status: code-wrong
-- ruling: Gate 2 B, revised 2026-09-08 by the author: the manual's ARM-style `HI`/`LO` glosses stand
-  unchanged; `CS`/`CC` glosses are corrected to their real (non-ARM) meaning;
-  `definitions.rs`'s `UnsignedHigher`/`UnsignedLowerOrSame` predicates are to be fixed as shown
-  above. The author will apply the code and test changes separately; this pass updated only the
-  manual.
-- affected manual locations, corrected 2026-09-08: `chapters/10-condition-codes.tex` (main encoding
-  table, CS/CC/HI/LO glosses, the CS/CC-equivalence note, the unsigned truth table, and the
-  selection guide -- the CS and CC rows swap which relationship they describe; HI and LO keep their
-  English meaning and only their flag-value column changes) and `chapters/07-instruction-formats.tex`
-  (a duplicate copy of the same encoding table, same fix). Checked and found already correct as
-  written, no change needed: `chapters/13-alu-instructions.tex` (its one worked example already uses
-  `HI` with the correct "greater than" meaning), `chapters/05-status-register.tex` (its Carry-flag
-  description never commits to a direction), `chapters/09-shift-operations.tex` (its `CS` usage
-  tests a shift-result carry, not a subtraction borrow, so the polarity question does not apply),
-  and `chapters/appendix-b-timing.tex` (see `F-tim-1`, superseded below -- both its `HI`/`LO` timing
-  example and its `BRAN|HI` loop are correct once the code fix lands).
-
-### F-exc-3 (code-wrong, blocker) — REVISED 2026-09-12, retryable fault set now unified
-
-- category: fact
-- claim: chapter 6 previously said (per the superseded Gate 2 A ruling) that only Alignment and
-  PC-wrap Segment Overflow are retryable. A 2026-09-08 revision expanded that to Alignment, Bus, Bus
-  Protection, Privilege Violation, and PC-wrap Segment Overflow, while keeping Invalid Opcode Fault
-  and non-PC-wrap Segment Overflow non-retryable. The author has now (2026-09-12) simplified the
-  design further: every fault in this category is retryable, with no exceptions. The "Aborted,
-  non-retryable faults" category has been removed from chapter 6 entirely and its two members folded
-  into "Retryable faults."
-- evidence: `exception_unit/definitions.rs:121-131`, the CPU's own design comment: "Abort Exception
-  means that the instruction does not have any effect... The program address stored in the link
-  register is the address of the faulting instruction so it can be retried... This is important for
-  things like privilege violation because you don't want the illegal instruction to do anything,"
-  explicitly listing Bus Fault, Alignment Fault, Privilege Violation, and Invalid Opcode Fault (plus
-  Reset) in the intended abort/retryable set -- this comment was accurate all along for Invalid
-  Opcode Fault; only the code hadn't caught up to it.
-- root cause, traced 2026-09-08: `processing_unit/execution.rs:140-151`. The privilege check runs
-  and calls `raise_fault` (marking a fault pending), but the very next line,
-  `registers.pl = self.decoded_instruction.npc_l_;`, runs unconditionally in the same step,
-  advancing the program counter past the faulting instruction regardless of whether a fault was just
-  raised. `raise_fault` itself only marks the fault pending; it does not capture a return address. By
-  the time a later pipeline stage reads `registers.pl` to populate the fault link register, `pl` has
-  already moved on, so the saved address is the *next* instruction's, not the faulting one. Bus and
-  Bus Protection faults are detected even later (at the bus-response stage, after decode has already
-  run), so they inherit the same problem. Only Alignment (detected before decode, at fetch) and
-  PC-wrap Segment Overflow avoid it, which is why those two were the only ones observed to work
-  correctly. Invalid Opcode Fault has a different root cause: it is raised a full poll cycle after
-  the invalid `pending_coprocessor_command` was written (`lib.rs:375-391`), by which point `pl` has
-  already advanced past that instruction during its own decode step, so the fix here needs its own
-  capture point rather than reusing the decode-time-fault fix below. The non-PC-wrap Segment Overflow
-  case (`execution_effective_address.rs`) is detected in the same effective-address stage as the
-  decode-time faults and can likely reuse that fix.
-- resolution: code-wrong.
-- fix: when a decode-time fault (Privilege Violation) is raised, do not advance `registers.pl` to
-  `npc_l_` in that same step -- leave it at the faulting instruction's address so the later
-  fault-dispatch stage captures the correct return address. The same principle applies to Bus Fault,
-  Bus Protection Fault, and non-PC-wrap Segment Overflow at whichever stage each is detected: capture
-  `pl` as it stood before the faulting instruction, not after. Invalid Opcode Fault needs a separate
-  fix, since its fault is raised on the poll cycle *after* the triggering instruction already
-  completed its own decode step and advanced `pl`: capture and carry forward the faulting
-  instruction's address (e.g. from `pending_coprocessor_command`'s originating instruction) rather
-  than reading `pl` fresh at dispatch time.
-- confidence: high
-- status: manual updated (`chapters/06-exceptions.tex`, `chapters/14-memory-instructions.tex`,
-  `chapters/appendix-b-timing.tex`) to the author's final, unified retryable set: Alignment, Bus, Bus
-  Protection, Invalid Opcode Fault, Privilege Violation, and Segment Overflow (both the
-  program-counter-wraparound and address-computation cases) are all retryable; no fault in this
-  chapter is documented as non-retryable any more. Code fix (above) left for the author. Once it
-  lands, `examples/faults/faults.sasm`'s `segment_overflow_fault_handler` and
-  `invalid_opcode_fault_handler` will need an explicit `ETFR`/`ETTR` return-address redirect in the
-  branches that currently rely on the old non-retryable auto-advance (today they either do nothing
-  after the fault, or only redirect in the PC-wrap branch) -- without that redirect they will
-  re-fault on the same instruction indefinitely once retry becomes the default everywhere.
-
 ### F-exc-7 / F-sum-7 / F-cop-9 (code-wrong, major) — EXCP below vector 0x60 panics instead of raising a fault
 
 - category: contradiction
@@ -417,6 +287,92 @@ Superseded.
   carry. Manual rule stands (all three locations); the code now matches it. Originally filed as two
   separate findings, `F-mem-5` and `F-data-10`; merged here since they're the same code bug.
 
+### F-exc-3 (code-wrong, blocker) — FIXED 2026-09-14 — retryable faults captured the wrong return address
+
+- category: fact
+- claim: chapter 6 documents a unified retryable fault set with no exceptions: Alignment, Bus, Bus
+  Protection, Invalid Opcode Fault, Privilege Violation, and Segment Overflow (both the
+  program-counter-wraparound and address-computation cases) all retry the faulting instruction
+  itself, not the one after it.
+- root cause: `raise_fault` (`lib.rs`) only marked a fault pending and wrote bus-fault *metadata*; it
+  never captured a return address. The actual retry address was read later, fresh, in
+  `handle_exception` (`exception_unit/execution.rs`), from whatever `registers.pl` happened to be at
+  dispatch time -- and by then `pl` had already been advanced past the faulting instruction for every
+  fault type except Alignment and PC-wrap Segment Overflow (which are detected before decode runs).
+  A second, undocumented instance of the same bug was found during implementation:
+  `write_back.rs`'s `set_address_register_values` (Privilege Violation on an illegal address-register
+  high-word write) has the identical problem, several pipeline phases later than the decode-time
+  check this finding originally cited.
+- resolution: code-wrong (fixed)
+- fix (applied): `ExceptionUnitRegisters.pending_fault` changed from `Option<Faults>` to
+  `Option<PendingFault>`, a new struct bundling the fault with the address it should return to.
+  `raise_fault` gained a `fault_pc: u32` parameter and became the sole writer of `pending_fault`
+  (no call site can raise a fault without stating its retry address). `DecodedInstruction` gained
+  `pc_l_`/`pc_h_` (the instruction's own fetch address, captured before decode advances `pl`), letting
+  later-phase and later-cycle call sites (non-PC-wrap Segment Overflow, both Privilege Violation
+  sites, Bus/Bus Protection, Invalid Opcode) recover the correct address. `handle_exception` now
+  reads the address off `pending_fault` instead of `registers.get_full_pc_address()`. The one
+  deliberate exception: `handle_vector_fetch_bus_fault`'s double-fault-during-vector-fetch escalation
+  explicitly carries the *original* fault's address forward rather than computing a new one.
+- test coverage added: corrected two `sirc-vm/peripheral-cpu/tests/exceptions/faults.rs` assertions
+  that were pinning the old bug (`test_double_fault`), added a return-address assertion to every
+  existing fault test that lacked one, and added `test_privilege_violation_fault_on_address_register_high_word_write`
+  and `test_bus_fault_during_instruction_fetch` for the two previously-uncovered call sites.
+- example fixes: `examples/faults/faults.sasm`'s fault handlers (`bus_fault_handler`,
+  `bus_protection_fault_handler`, `invalid_opcode_fault_handler`, `double_fault_handler`,
+  `privilege_violation_fault_handler`) gained the `ETFR`/`ETTR` return-address redirects this finding
+  predicted would be needed once retry became universal; the deliberate nested-double-fault test was
+  also moved to run last, since it leaves `current_exception_level` unable to fully unwind (a
+  separate, pre-existing limitation -- see follow-up below) and would otherwise corrupt the tests
+  after it. `examples/math-coprocessor-emulation/math-coprocessor-emulation.sasm` needed one line
+  (`ADDI al, #2`) to skip past the trapped `MULU` before saving its return-state snapshot. Both
+  examples' golden register-dump fixtures were regenerated.
+- follow-up filed separately (not part of this fix): making faults genuinely retryable exposed that
+  `ExceptionLinkRegister.saved_exception_level` has no way to survive a second fault reusing the same
+  link-register slot, so `current_exception_level` gets stuck at the fault level after any nested
+  fault instead of unwinding back to 0. This was pre-existing and previously masked by the very bug
+  fixed here.
+- confidence: high
+- status: fixed
+- ruling: Gate 2 unchanged -- the unified retryable set stands; the simulator now matches it.
+
+### F-data-1 (code-wrong, blocker) — FIXED 2026-09-14 — HI/LO condition predicates used the wrong carry polarity
+
+- category: fact
+- claim (as originally documented): "HI (Unsigned Higher) Executes when C = 1 AND Z = 0. Tests if
+  first operand $>$ second operand (unsigned)."
+- evidence: `sirc-vm/peripheral-cpu/src/coprocessors/processing_unit/stages/alu.rs:195-206`
+  (`perform_subtract` sets C from `a.overflowing_sub(b)`, i.e. C = borrow = `a < b` unsigned);
+  `definitions.rs`'s `UnsignedHigher`/`UnsignedLowerOrSame` arms were written assuming ARM's
+  *no-borrow* Carry convention (per the file's own "copied from ARM" comment) -- the opposite
+  polarity from what this CPU's subtraction actually produces.
+- resolution: code-wrong (fixed) -- the manual's original ARM-style glosses for `HI`/`LO`/`CS`/`CC`
+  were correct in *intent*; only the `Carry` term in two compound predicates needed to change.
+- fix (applied): `definitions.rs`, `ConditionFlags::should_execute` --
+  `UnsignedHigher = !Carry && !Zero` (was `Carry && !Zero`), `UnsignedLowerOrSame = Carry || Zero`
+  (was `!Carry || Zero`). `CarrySet`/`CarryClear` and the signed predicates
+  (`GreaterOrEqual`/`LessThan`/`GreaterThan`/`LessThanOrEqual`) were left untouched, as they don't
+  depend on this polarity. The stale "copied from ARM" comment at line 114 was also updated to
+  note `HI`/`LO`/`CS`/`CC` are the one exception, matching the ARM-divergence note already in
+  `chapters/10-condition-codes.tex`.
+- test coverage added: zero existing tests exercised `HI`/`LO` at all prior to this fix -- a real
+  coverage gap, which is presumably why the bug shipped unnoticed. New file
+  `sirc-vm/peripheral-cpu/tests/instructions/condition_flags_test.rs` adds an exhaustive
+  `should_execute` truth-table test across all four `(Carry, Zero)` combinations, plus six
+  end-to-end integration tests (`CMPR`-equivalent flag setup followed by a conditional `ADDI`)
+  proving `HI`/`LO` gate correctly through the real assemble/decode/execute path.
+- example fix: `examples/comprehensive-test/comprehensive-test.sasm`'s TEST 35/36 were found to
+  currently "pass" only by accident -- their `CMPR` operand order was backwards relative to their
+  own stated intent (`CMPR r2, r1` when comparing "is r1 > r2"), which happened to cancel out
+  against the polarity bug. Fixed the operand order to `CMPR r1, r2` in both, matching the
+  manual's established convention; both tests now pass correctly rather than accidentally, and
+  the example's golden register-dump fixture needed no changes (verified via `make check`). No
+  other `.sasm` file uses `|HI`/`|LO`/`|CS`/`|CC` in a way that executes.
+- confidence: high
+- status: fixed
+- ruling: Gate 2 B stands: the manual's ARM-style `HI`/`LO` glosses are unchanged; `CS`/`CC`
+  glosses state their real (non-ARM) meaning; the code now matches both.
+
 ### F-sum-30 (minor) — FIXED 2026-09-09 — vector count comment in every example source
 
 Six `examples/*/*.sasm` headers (`boring`, `byte-sieve`, `faults`, `hardware-exception`,
@@ -494,8 +450,8 @@ top = 0x00F0_FFFF".
 
 `appendix-b-timing.tex`'s `ADDR|HI`/`ADDR|LO` timing comments and its `SUBI`/`BRAN|HI` unrolled-loop
 example (line 199) were checked against the corrected `HI`/`LO` predicates from `F-data-1`
-(`!Carry && !Zero` / `Carry || Zero`) and found already correct as written -- no manual change
-needed once `F-data-1`'s code fix lands. No separate fix required.
+(`!Carry && !Zero` / `Carry || Zero`, now fixed in code too -- see "Already fixed" above) and found
+already correct as written. No separate fix required.
 
 ### F-cop-3 — superseded by "Register renumbering" above
 
@@ -511,5 +467,6 @@ renumbering rather than a NOOP-specific exemption.
 
 An earlier version of this file briefly logged a finding claiming
 `exception_unit/definitions.rs:121-131`'s comment was wrong to list Invalid Opcode Fault as
-retryable. The author has since ruled the opposite way (see `F-exc-3` above): Invalid Opcode Fault
-*is* retryable, so that comment was correct all along, and the finding was removed as moot.
+retryable. The author has since ruled the opposite way (see `F-exc-3`, now fixed, above under
+"Already fixed"): Invalid Opcode Fault *is* retryable, so that comment was correct all along, and
+the finding was removed as moot.

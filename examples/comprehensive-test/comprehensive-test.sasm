@@ -553,7 +553,7 @@
     LOAD r1, #0xFFFF        ; 65535
     LOAD r2, #0x0001        ; 1
     LOAD r3, #0x0000
-    CMPR r2, r1             ; 65535 > 1 (unsigned)
+    CMPR r1, r2             ; 65535 > 1 (unsigned)
     ADDI|HI r3, #0x1111     ; Should execute
     CMPI r3, #0x1111
     LOAD|== r7, #1
@@ -564,7 +564,7 @@
     LOAD r1, #0x0001
     LOAD r2, #0xFFFF
     LOAD r4, #0x0000
-    CMPR r2, r1             ; 1 <= 65535 (unsigned)
+    CMPR r1, r2             ; 1 <= 65535 (unsigned)
     ADDI|LO r4, #0x2222     ; Should execute
     CMPI r4, #0x2222
     LOAD|== r7, #1
