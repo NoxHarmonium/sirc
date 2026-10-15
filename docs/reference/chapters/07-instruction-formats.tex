@@ -255,10 +255,8 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see the \texttt{SUBR|>>} and
 	      \texttt{ANDR|CS} rows)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
-	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift (see the
-	      \texttt{SHFT} row)
+	\item AF for memory ops: 00=l, 01=a, 10=s, 11=p; for ALU ops: 00=no update, 01=update from ALU, 10=update from shift
 	\item Condition code examples: \texttt{0x0} = Always, \texttt{0xD} = Signed > (>>), \texttt{0x3} = Carry Set (CS)
-	\item SHFT is a meta-instruction using ORRI opcode \opcode{25} with AF=10
 \end{itemize}
 
 \section{Operand Encoding Details}

@@ -162,8 +162,6 @@ pub struct Registers {
     // CPU Internal Registers (not directly accessible to programs)
     // No need to segment these registers into 16 bit registers because instructions don't address them
 
-    // System RAM access is offset from here (e.g. interrupt vectors)
-    pub system_ram_offset: u32,
     // Used to delegate to coprocessors
     // If first nibble is 0x0, will just invoke CPU as normal
     pub pending_coprocessor_command: u16,

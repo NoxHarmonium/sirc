@@ -1,9 +1,16 @@
 use std::collections::BTreeMap;
 
+use nom_supreme::{
+    error::ErrorTree,
+    final_parser::{final_parser, Location},
+};
 use sirc_vm::debug_adapter::types::ObjectDebugInfo;
+use toolchain::data::object::build_object;
+use toolchain::parsers::shared::parse_tokens;
 use toolchain::types::object::{
     merge_object_definitions, ObjectDefinition, RefType, SymbolDefinition, SymbolRef,
 };
+use toolchain::types::shared::Token;
 
 #[test]
 fn test_merge_object_definition_single_definition_untouched() {
@@ -122,4 +129,28 @@ fn test_merge_object_definitions_counts() {
     assert_eq!(4, merged.symbol_refs.len());
     assert_eq!(32, merged.program.len());
     assert_eq!(2, merged_debug_info.debug_info_map.keys().len());
+}
+
+#[test]
+fn test_build_object_does_not_pad_a_trailing_word_for_odd_instruction_counts() {
+    // Regression test for an `ensure_program_size` off-by-one: it used to `resize(min_size + 1,
+    // ...)` instead of `resize(min_size, ...)`, which left one extra, always-unfilled zero word
+    // appended to the assembled program whenever the token count's parity meant nothing else
+    // wrote over that pre-allocated slot. Invisible for most programs (nothing executes past a
+    // halt), but corrupts anything that inspects the assembled bytes directly.
+    let input = "ADDI r1, #0\nADDI r2, #0\nADDI r3, #0\n";
+    let tokens = match final_parser::<&str, Vec<Token>, ErrorTree<&str>, ErrorTree<Location>>(
+        parse_tokens,
+    )(input)
+    {
+        Ok(tokens) => tokens,
+        Err(error) => panic!("Error parsing file:\n{error}"),
+    };
+    let object = build_object(tokens, "UNIT_TEST".to_string(), input.to_string());
+
+    assert_eq!(
+        12,
+        object.program.len(),
+        "3 instructions * 4 bytes each, no trailing pad word"
+    );
 }

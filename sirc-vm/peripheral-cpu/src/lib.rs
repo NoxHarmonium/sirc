@@ -216,12 +216,9 @@ pub fn raise_fault(
 /// Will panic if the specified `program_segment_label` is not a segment defined in the provided `memory_peripheral`
 ///
 #[must_use]
-pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
+pub fn new_cpu_peripheral() -> CpuPeripheral {
     CpuPeripheral {
-        registers: Registers {
-            system_ram_offset,
-            ..Registers::default()
-        },
+        registers: Registers::default(),
         eu_registers: ExceptionUnitRegisters::default(),
         phase: 0,
         processing_unit_executor: ProcessingUnitExecutor::default(),

@@ -273,7 +273,7 @@ fn bus_protection_error_for_request(request: BusAssertions) -> BusAssertions {
 
 #[test]
 fn test_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -308,7 +308,7 @@ fn test_bus_fault_during_instruction_fetch() {
     // `decoded_instruction.pc_l_/pc_h_` -- at this phase that field still holds the *previous*
     // instruction's address (or the CPU's freshly-constructed default, 0x0), since this
     // instruction was never decoded.
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     cpu_peripheral.registers.pl = 0x0010;
 
@@ -428,7 +428,7 @@ pub fn expect_bus_protection_fault(vector_value: (u16, u16)) -> Vec<Option<Expec
 
 #[test]
 fn test_bus_protection_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -459,7 +459,7 @@ fn test_bus_protection_fault() {
 
 #[test]
 fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     cpu_peripheral.registers.pending_coprocessor_command =
@@ -520,7 +520,7 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
 
 #[test]
 fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     cpu_peripheral.reset();
 
@@ -566,7 +566,7 @@ fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
 
 #[test]
 fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     // The `pc` value here isn't checked by this test; only the escalation to DoubleFault is.
     cpu_peripheral.eu_registers.pending_fault = Some(PendingFault {
@@ -620,7 +620,7 @@ fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
 
 #[test]
 fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     cpu_peripheral.eu_registers.pending_fault = Some(PendingFault {
         fault: Faults::DoubleFault,
         pc: 0x0,
@@ -654,7 +654,7 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
 // reset" guard that suppresses fault dispatch until reset() is called).
 #[test]
 fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     // Simulate already being inside a fault handler so that a spurious raise_fault call
     // after triple-fault would produce DoubleFault rather than a plain Bus fault.
     cpu_peripheral.eu_registers.current_exception_level = 7;
@@ -710,7 +710,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
 
 #[test]
 fn test_alignment_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -749,7 +749,7 @@ fn test_alignment_fault() {
 
 #[test]
 fn test_segment_overflow_fault_with_load() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -811,7 +811,7 @@ fn test_segment_overflow_fault_with_load() {
 
 #[test]
 fn test_segment_overflow_fault_with_instruction_fetch() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -898,7 +898,7 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
 
 #[test]
 fn test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -930,7 +930,7 @@ fn test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault() {
 
 #[test]
 fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -994,7 +994,7 @@ fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
 
 #[test]
 fn test_invalid_opcode_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     run_expectations(
@@ -1049,7 +1049,7 @@ fn test_invalid_opcode_fault() {
 
 #[test]
 fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     let handler_address = 0x00AB_CDE0;
 
@@ -1121,7 +1121,7 @@ fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
 
 #[test]
 fn test_double_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     run_expectations(
@@ -1419,7 +1419,7 @@ pub fn build_privilege_violation_instruction() -> InstructionData {
 
 #[test]
 fn test_privilege_violation_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Protected mode must be active for the privilege check to fire
@@ -1478,7 +1478,7 @@ pub fn build_privilege_violation_address_write_instruction() -> InstructionData 
 
 #[test]
 fn test_privilege_violation_fault_on_address_register_high_word_write() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Protected mode must be active for the write-back privilege check to fire.
@@ -1565,7 +1565,7 @@ pub fn build_software_exception_below_reserved_vector_instruction() -> Instructi
 
 #[test]
 fn test_privilege_violation_fault_on_reserved_software_exception_vector() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     let software_exception = build_software_exception_below_reserved_vector_instruction();
@@ -1611,7 +1611,7 @@ fn test_privilege_violation_fault_on_reserved_software_exception_vector() {
 
 #[test]
 fn test_reserved_software_exception_vector_allowed_in_supervisor_mode() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     let software_exception = build_software_exception_below_reserved_vector_instruction();
@@ -1637,7 +1637,7 @@ fn test_reserved_software_exception_vector_allowed_in_supervisor_mode() {
 
 #[test]
 fn test_level_five_interrupt_conflict_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Simulate being inside a level-5 handler
@@ -1684,7 +1684,7 @@ fn test_level_five_interrupt_conflict_fault() {
 
 #[test]
 fn test_instruction_trace_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     set_sr_bit(

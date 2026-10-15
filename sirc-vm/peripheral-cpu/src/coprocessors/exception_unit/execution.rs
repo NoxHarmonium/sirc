@@ -313,8 +313,7 @@ impl Executor for ExceptionUnitExecutor {
 
         match phase {
             ExecutionPhase::InstructionFetchLow => {
-                let vector_address_offset = vector as u32 * INSTRUCTION_SIZE_WORDS;
-                self.vector_address = registers.system_ram_offset | vector_address_offset;
+                self.vector_address = vector as u32 * INSTRUCTION_SIZE_WORDS;
                 return BusAssertions {
                     address: self.vector_address,
                     op: BusOperation::Read,

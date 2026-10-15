@@ -183,7 +183,7 @@ fn main() {
 fn setup_vm(args: &Args) -> Vm {
     let master_clock_freq = 21_477_272;
 
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     // Jump to reset vector
     cpu_peripheral.reset();
 

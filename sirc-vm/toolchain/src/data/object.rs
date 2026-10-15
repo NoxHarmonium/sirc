@@ -99,7 +99,7 @@ fn inject_data_value(
 
 fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
     if min_size > program.len() {
-        program.resize(min_size + 1, [0x0, 0x0, 0x0, 0x0]);
+        program.resize(min_size, [0x0, 0x0, 0x0, 0x0]);
     }
 }
 

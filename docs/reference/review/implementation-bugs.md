@@ -13,64 +13,35 @@ Superseded.
 
 ## Open — needs a Rust (or generator) fix
 
-### F-con2-20 (code-wrong, major) — stray `SHFT` row in the register-format generator output
+### SHFR (register-count shift) — undocumented, unimplemented feature gap — NEW 2026-09-15
 
-- category: contradiction
-- claim: `generated/register-format-encodings.tex:44-45` lists `SHFT` as a register-format encoding
-  with a note that it is "a meta-instruction using ORRI opcode 0x25 with AF=10".
-- evidence: `SHFT` lowers to the short-immediate format, not the register format, so it does not
-  belong in this table.
-- resolution: code-wrong (generator bug -- the chapters only include this file's generated output,
-  so the fix must go in the generator itself)
-- fix: remove the `SHFT` row from the register-format-encodings generator and delete the orphaned
-  note.
-- confidence: high
-- status: not started
-
-### F-con-66 / F-con2-30 (minor) — `0b` prefix in the generated encoding tables
-
-- category: cosmetic
-- claim: `generated/immediate-format-encodings.tex`, `generated/short-immediate-format-encodings.tex`,
-  and `generated/register-format-encodings.tex` print two-bit fields with a `0b` prefix inside table
-  cells where the column header already says the base -- 22 occurrences across the three files.
-- evidence: these files are machine output, so the fix belongs in the generator, not the `.tex`. The
-  same literals in `chapters/07-instruction-formats.tex` were already corrected by the chapter
-  editor (that one file is hand-maintained, not generated).
-- resolution: cosmetic, generator bug
-- fix: drop the `0b` prefix in the generator so the AF column renders as `01`, `10`, `11` instead of
-  `0b01`, `0b10`, `0b11`.
-- confidence: high
-- status: not started. Originally filed as two findings, `F-con-66` and `F-con2-30` (the second
-  re-confirmed the first with an exact occurrence count); merged here.
-
-### Remove `system_ram_offset` (cleanup, minor) — NEW 2026-09-09
-
-- category: dead code
-- claim: none -- this is not a manual/code mismatch, just cleanup surfaced while confirming chapter
-  4's exception-vector addressing.
-- evidence: `peripheral-cpu/src/registers.rs:166` (`pub system_ram_offset: u32` on `Registers`),
-  `peripheral-cpu/src/lib.rs:197-200` (`new_cpu_peripheral(system_ram_offset: u32)` stores it
-  verbatim), and `peripheral-cpu/src/coprocessors/exception_unit/execution.rs:304-305`
-  (`vector_address = registers.system_ram_offset | (vector * INSTRUCTION_SIZE_WORDS)`). Every call
-  site in the codebase passes `0x0` (`sirc-vm/src/main.rs:186`; no test overrides it), so the field
-  has no observable effect anywhere it is actually used.
-- author's context (2026-09-09): added very early in development to represent a fixed,
-  manufacturing-time base-address register (not something the chip user could configure), then never
-  actually used. The author is leaning toward removing it.
-- resolution: n/a (cleanup, not a bug). The manual does not need to change either way: chapter 4
-  already documents a hardwired `0x000000` vector-table base with no offset register, which is what
-  the code does in every real configuration today, and which the author confirmed (2026-09-09) is
-  period-plausible -- the base 68000 (pre-68010) has no Vector Base Register at all and is
-  permanently fixed at address 0 in hardware, and the 6502's vectors are fixed at the top of the
-  address space on every variant. If `system_ram_offset` is removed, chapter 4's wording needs no
-  update; if it is instead wired up to a genuine fixed-at-manufacture value (i.e. still not
-  runtime-configurable), chapter 4's wording also needs no update, since it already describes the
-  address as fixed rather than describing *why* it is fixed.
-- fix: remove the `system_ram_offset` field from `Registers`, the `new_cpu_peripheral` parameter,
-  and its use in `exception_unit/execution.rs`; update the one call site in `sirc-vm/src/main.rs`
-  and any test helper that constructs a `CpuPeripheral` to match the new signature.
-- confidence: high
-- status: not started; author's call on timing, not required for manual accuracy.
+- category: enhancement
+- claim: none -- not a manual/code mismatch (the manual documents no `SHFR` or register-count-shift
+  meta-instruction anywhere); noticed while investigating a misplaced `SHFT` example row in the
+  generated register-format-encodings table (see "SHFT generator row..." under Already fixed).
+- evidence: `StatusRegisterUpdateSource::Shift` (`peripheral-cpu/src/coprocessors/processing_unit/definitions.rs`)
+  is a fully decoder-supported value with an explicit comment: "At the moment hardcoded to Alu for
+  all ALU instructions except for SHFI/SHFR ... It is supported by the decode[r], I just need to
+  work out a syntax for the assembler." A test-file comment
+  (`peripheral-cpu/tests/instructions/arithmetic_register_test.rs`) independently names the same
+  planned feature: "These tests would be the equivalent of the SHFR meta instruction -- reuses the
+  same opcode as ADDR but the StatusRegisterUpdateSource is Shift." Register-format ALU instructions
+  already support `ShiftOperand::Register` (a register-supplied shift count, e.g. `SUBR|>> r1, r2,
+  r3, ASR r4`), so the hardware primitive SHFR would need already exists, and is exercised by
+  existing tests under a raw `Instruction::AddRegister` encoding, not through an assembler mnemonic.
+  `SHFR`/`SHFI` appear nowhere in the manual, any `.sasm` example, or the toolchain parser (`grep`
+  across all three: zero matches) -- there is currently no way to write this in assembly.
+- resolution: n/a (feature gap, not a bug -- nothing documents SHFR as existing today, so there is no
+  contradiction to resolve)
+- fix (if implemented): add assembler syntax for a register-count shift meta-instruction (working
+  name `SHFR`, matching the existing `SHFT`/short-immediate naming and the code comments), lowering
+  to the ALU opcode already used by the corresponding register-format instruction (e.g. `ADDR`) with
+  `StatusRegisterUpdateSource::Shift` set and a redundant zero-valued operand, mirroring how `SHFT`
+  lowers to `OrShortImmediate` with `AF=10` today. Would need manual coverage (a new entry in the
+  meta-instructions or ALU-instructions chapter) and a `reference-encodings.sasm` example once
+  implemented.
+- confidence: high (the decoder-side support and the two independent code comments are unambiguous)
+- status: not started; author's call on timing and whether this is wanted at all.
 
 ## Already fixed (kept for the record)
 
@@ -351,6 +322,130 @@ Superseded.
   protected mode, not panic; satisfied. Manual stands (all three locations). Originally filed as
   three separate findings, `F-exc-7`, `F-sum-7`, and `F-cop-9`; merged here since they share one
   root cause and one ruling.
+
+### F-con2-20 (code-wrong, major) — FIXED 2026-09-15 — stray `SHFT` row in the register-format generator output
+
+- category: contradiction
+- claim: `generated/register-format-encodings.tex` listed `SHFT` as a register-format encoding.
+- evidence: `SHFT` always lowers to the short-immediate instruction format -- confirmed
+  independently against `toolchain/src/parsers/opcodes/arithmetic_immediate.rs`: its only accepted
+  operand shape constructs `InstructionData::ShortImmediate`, never `Register`. It does not belong
+  in the register-format table.
+- **found during implementation, correcting the original claim**: the generated `.tex` file itself
+  carried no explanatory note (the "meta-instruction using ORRI opcode 0x25 with AF=10" text the
+  original finding quoted lives in the hand-maintained `chapters/07-instruction-formats.tex`'s
+  Notes list, which `\input`s the generated table -- conflated by the original write-up).
+- **user pushback, investigated rather than dismissed**: could the misplaced line be a stub for a
+  genuine "SHFT has a register-count form" design, not a mistake? Verified it wasn't a working
+  stub -- the line read `SHFT r1, ASL #3`, an *immediate* count, byte-for-byte identical to the
+  correctly-placed short-immediate example; a register-count form would need syntax like `SHFR r1,
+  ASL r2`, which appears nowhere. The question did surface a real, separate finding: see "SHFR
+  (register-count shift)" under Open.
+- resolution: code-wrong (fixed)
+- fix (applied): removed the stray `@manual-example SHFT r1, ASL #3` annotation and instruction from
+  `examples/reference-encodings/reference-encodings.sasm` (its correctly-placed short-immediate
+  `SHFT r3, RTR #5` example was untouched); dropped the now-orphaned "(see the SHFT row)"
+  cross-reference and standalone SHFT note from `chapters/07-instruction-formats.tex`'s
+  register-format Notes list (the short-immediate section's identical note, where SHFT genuinely
+  belongs, was left alone). Regenerated `generated/register-format-encodings.tex` via `make
+  manual-tex`.
+- **unplanned bug found during regeneration**: removing the line dropped the fixture's total
+  instruction count to 33 (odd), which exposed a latent off-by-one in the assembler's
+  `ensure_program_size` (`toolchain/src/data/object.rs`) -- it called `resize(min_size + 1, ...)`
+  instead of `resize(min_size, ...)`, silently appending one trailing zero-padding instruction word
+  to any assembled program whose token count left that pre-allocated slot unfilled. Invisible for
+  ordinary programs (nothing executes past a halt), but corrupted this fixture's own word-for-word
+  count check, and shifted addresses inside two other examples that happened to trip the same
+  parity (see "off-by-one in `ensure_program_size`" below). Fixed alongside this finding at the
+  user's direction.
+- confidence: high
+- status: fixed
+
+### Off-by-one in `ensure_program_size` silently padded assembled programs — FIXED 2026-09-15
+
+- category: fact (found during implementation of F-con2-20, not part of the original review)
+- claim: none from the manual pass -- discovered while regenerating `reference-encodings` after
+  removing the stray `SHFT` row above.
+- evidence: `toolchain/src/data/object.rs`'s `ensure_program_size(program, min_size)` called
+  `program.resize(min_size + 1, [0x0, 0x0, 0x0, 0x0])` instead of `resize(min_size, ...)`. Every
+  token write goes through exactly one `[u8; 4]` slot (`inject_data_value` confirmed to write a
+  single slot even for `DQ_VALUE`, a 32-bit value), so the `+1` had no legitimate purpose -- it just
+  over-allocated one extra word ahead of where the token stream had actually reached. That extra
+  slot is silently overwritten by the *next* token's own write in the common case, so the bug was
+  invisible for any program that ends in an unreachable halt/loop; it only leaves a lasting trailing
+  (or, across an `.ORG` jump, mid-file) zero-padding word when the token-count parity leaves nothing
+  to overwrite it. `reference-encodings`'s own word-for-word count check
+  (`examples == words`) caught it directly; `comprehensive-test`'s and
+  `protected-mode-writeback`'s `.register-dump-expected` link-register addresses (baked-in
+  downstream of the stray padding) were shifted by it too.
+- resolution: code-wrong (fixed)
+- fix (applied): `program.resize(min_size, [0x0, 0x0, 0x0, 0x0])`.
+- test coverage added: `toolchain/tests/types/object_test.rs` gained
+  `test_build_object_does_not_pad_a_trailing_word_for_odd_instruction_counts`, asserting a
+  3-instruction program assembles to exactly 12 bytes. No existing test needed correcting for
+  behavior -- the two toolchain assembler snapshot tests (`arithmetic_immediate_test`,
+  `arithmetic_register_test`) both happen to assemble to even instruction counts (36 and 26 words)
+  and were confirmed byte-for-byte unaffected. `comprehensive-test.register-dump-expected` was
+  regenerated (one link-register return address shifted by exactly one instruction, `0x7ca` ->
+  `0x7c8`); verified against a pre-session commit (`f39aa96`, before any of this session's work)
+  that `protected-mode-writeback`'s own separate, pre-existing double-fault crash (unrelated to this
+  fix) predates this and every other change made this session -- flagged separately, not fixed here
+  since it's out of scope and not part of the CI example matrix.
+- confidence: high
+- status: fixed
+
+### F-con-66 / F-con2-30 (minor) — FIXED 2026-09-15 — `0b` prefix in the generated encoding tables
+
+- category: cosmetic
+- claim: `generated/immediate-format-encodings.tex`, `generated/short-immediate-format-encodings.tex`,
+  and `generated/register-format-encodings.tex` printed two-bit fields with a `0b` prefix inside
+  table cells where the column header already states the base.
+- **correction to the original claim**: cited as "22 occurrences" -- actually 34 at the time of
+  this fix (15 register, 12 immediate, 7 short-immediate), dropping to 33 once the SHFT row (above)
+  was removed.
+- evidence: these are machine-generated files, so the fix belonged in the generator
+  (`examples/reference-encodings/manual-tex.awk`), not the `.tex`.
+  `chapters/07-instruction-formats.tex` (hand-maintained) was confirmed already clean (`grep -n
+  "0b"`: zero matches).
+- resolution: cosmetic, generator bug (fixed)
+- fix (applied): dropped the literal `"0b"` immediately before `bin_plain(af, 2)` in all three
+  row-emitting functions (`emit_immediate_row`, `emit_short_immediate_row`, `emit_register_row`) in
+  `manual-tex.awk`. Regenerated all three `generated/*.tex` files via `make manual-tex`; diff
+  confirmed to change only the 33 `0b`-prefixed cells, nothing else.
+- confidence: high
+- status: fixed. Originally filed as two findings, `F-con-66` and `F-con2-30`; merged here.
+
+### Remove `system_ram_offset` (cleanup, minor) — FIXED 2026-09-15
+
+- category: dead code
+- claim: none -- not a manual/code mismatch, cleanup surfaced while confirming chapter 4's
+  exception-vector addressing.
+- evidence: `pub system_ram_offset: u32` on `Registers`, threaded through
+  `new_cpu_peripheral(system_ram_offset: u32)`, OR'd into the exception unit's vector-address
+  calculation. Exhaustively verified every one of the 33 call sites across the workspace (2
+  production: `sirc-vm/src/main.rs`, `sirc-vm/benches/byte_sieve.rs`; 31 test call sites) passes
+  exactly `0x0` -- no exceptions -- confirming the field has zero observable effect anywhere.
+- author's context (2026-09-09): added very early in development to represent a fixed,
+  manufacturing-time base-address register, then never actually used.
+- resolution: n/a (cleanup, not a bug). Manual needed no change either way, as originally assessed --
+  chapter 4 already documents a hardwired `0x000000` vector-table base with no offset register.
+- fix (applied): removed the field from `Registers`, `new_cpu_peripheral`'s (now zero-argument)
+  signature, and its use in `exception_unit/execution.rs` (simplified to `vector as u32 *
+  INSTRUCTION_SIZE_WORDS` directly, no more OR). Updated all 33 call sites from
+  `new_cpu_peripheral(0x0)` to `new_cpu_peripheral()`.
+- **found during implementation, beyond the original scope**: three more stale references the
+  original finding didn't mention, all updated: a comment in
+  `peripheral-cpu/tests/exceptions/reset.rs` ("the reset vector table lives at
+  `system_ram_offset|0 = 0`"), a not-yet-exposed-registers TODO entry in
+  `sirc-vm/sirc-vm/src/debug_adapter/server.rs`, and a naming-convention example in
+  `docs/reference/STYLE.md`'s displacement-vs-offset row (replaced with `program_offset`, a
+  still-existing identifier). Also required regenerating the field's line out of 9 examples'
+  `.register-dump-expected` files (the `{:#?}`-formatted register dump): `boring`, `faults`,
+  `hardware-exception`, `software-exception`, `store-load`, `comprehensive-test`,
+  `math-coprocessor-emulation`, `protected-mode-writeback`, `basic-video` (`byte-sieve` has no
+  register-dump file, so it was unaffected).
+- confidence: high
+- status: fixed
 
 ### Register renumbering (code-wrong, minor) — FIXED 2026-09-15 — resolves NOOP (`F-cop-3`) cleanly
 

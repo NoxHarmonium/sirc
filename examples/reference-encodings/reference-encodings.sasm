@@ -103,6 +103,3 @@ SUBR|>> r1, r2, r3, ASR r4
 
 ; @manual-example ANDR|CS r5, r6, r7, LSL r1
 ANDR|CS r5, r6, r7, LSL r1
-
-; @manual-example SHFT r1, ASL #3
-SHFT r1, ASL #3

@@ -11,7 +11,7 @@ use crate::exceptions::common::{
 
 #[test]
 fn test_hardware_exception_clears_protected_mode() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Enable all hardware interrupts
@@ -48,7 +48,7 @@ fn test_hardware_exception_clears_protected_mode() {
 
 #[test]
 fn test_hardware_exception_triggers_in_order() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Enable all hardware interrupts
@@ -106,7 +106,7 @@ fn test_hardware_exception_triggers_in_order() {
 
 #[test]
 fn test_hardware_exception_trigger_repeats() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Enable all hardware interrupts
@@ -153,7 +153,7 @@ fn test_hardware_exception_trigger_repeats() {
 
 #[test]
 fn test_hardware_exception_higher_priority_interrupts_handler() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Enable all hardware interrupts
@@ -215,7 +215,7 @@ const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
 
 #[test]
 fn test_level_five_interrupt_is_edge_triggered() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
 
     // First assertion from a released pin: should latch.
     cpu_peripheral.raise_hardware_interrupt(LEVEL_FIVE_INTERRUPT_PIN_BIT);
@@ -243,7 +243,7 @@ fn test_level_five_interrupt_is_edge_triggered() {
 
 #[test]
 fn test_level_one_to_four_interrupts_remain_level_sensitive() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0xF);
 
     cpu_peripheral.raise_hardware_interrupt(0xF);
