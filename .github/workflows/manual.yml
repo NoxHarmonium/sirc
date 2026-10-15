@@ -45,22 +45,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # texlive-extra-utils provides latexindent; the rest cover the
-      # packages the manual actually uses (tcolorbox, bytefield, float,
-      # eso-pic, fancyhdr, tikz-timing). If a build fails here on a missing
-      # .sty, that's the first place to look.
-      - name: Install LaTeX toolchain and Graphviz
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            graphviz \
-            texlive-latex-base \
-            texlive-latex-recommended \
-            texlive-latex-extra \
-            texlive-fonts-recommended \
-            texlive-pictures \
-            texlive-plain-generic \
-            texlive-extra-utils
+      # Graphviz isn't part of TeX Live -- it's a separate system tool the
+      # Makefile shells out to for the block diagrams.
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+
+      # scheme-full, not a hand-picked package list or apt's texlive-*
+      # metapackages: the manual uses a handful of less-common packages
+      # (tcolorbox, bytefield, eso-pic, tikz-timing), and hand-picking
+      # individual TeX Live package names risks silently missing one of
+      # their transitive dependencies -- exactly the kind of gap that's easy
+      # to miss locally (a real TeX Live/MacTeX install already has
+      # everything) and only shows up as a CI-only failure. Costs a slower
+      # first install, but zauguin/install-texlive caches ~/texlive, so that
+      # cost is paid once, not on every run. (zauguin/install-texlive is the
+      # actively maintained successor once TeX-Live/setup-texlive-action
+      # deprecated itself in favour of it; the search for this ended up
+      # going through two other actions first, see the commit that added
+      # this workflow step for the trail.)
+      - uses: zauguin/install-texlive@v4
+        with:
+          packages: scheme-full
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.9.2

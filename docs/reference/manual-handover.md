@@ -49,16 +49,31 @@ Open tasks:
     in right now (`implementation-bugs.md` was retired earlier this pass since nothing was open -- worth deciding
     whether to recreate it or track findings like this one somewhere else next time one turns up).
 - **Done (2026-09-16):** wired the QA target into CI (`.github/workflows/manual.yml`, new). Runs on push/PR to
-  `main`, path-filtered to `docs/reference/**` and `examples/manual-examples/**` so it doesn't fire on unrelated
-  Rust-only changes: installs TeX Live + Graphviz via apt, then runs `make format-check`, `make all` (build +
+  `main`, path-filtered to `docs/reference/**`, `examples/manual-examples/**`, and `examples/**/*.sasm` (Appendix D
+  pulls several of those in via `\lstinputlisting`) so it doesn't fire on unrelated Rust-only changes: installs
+  Graphviz via apt and TeX Live via `zauguin/install-texlive` (`packages: scheme-full` -- deliberately the full
+  scheme rather than a hand-picked list or apt's texlive-* metapackages, since the manual uses several less-common
+  packages -- tcolorbox, bytefield, eso-pic, tikz-timing -- and hand-picking risks silently missing a transitive
+  dependency that a real local TeX Live/MacTeX install would never surface; the action caches `~/texlive`, so
+  scheme-full's slower install is paid once, not every run), then runs `make format-check`, `make all` (build +
   `check-refs`), and `make -C examples/manual-examples objects` as separate steps, uploading the built PDF as a
   build artifact. Deliberately does *not* re-run `make check` for the Appendix D example programs
   (byte-sieve/faults/hardware-exception/software-exception/store-load) -- `sirc-vm.yml`'s existing `examples` matrix
   job already does that on every push via the `coverage.yml` chain, so repeating it here would just double CI time
-  for the same signal. Not yet verified against a real GitHub Actions run (built and tested the underlying `make`
-  targets locally, but authoring session had no way to trigger CI itself) -- watch the first run on this branch for
-  a missing apt package (the LaTeX package list is a best-effort guess at what covers `tcolorbox`/`bytefield`/
-  `tikz-timing`/etc., not a verified-in-CI list).
+  for the same signal. Not yet verified against a real GitHub Actions run (built and tested every underlying `make`
+  target locally, but the authoring session had no way to trigger CI itself) -- watch the first run on this branch.
+  (Picking the TeX Live action took two wrong turns worth knowing about: `paolobrasolin/setup-texlive-action` looked
+  right first but hasn't been touched since 2021, and `TeX-Live/setup-texlive-action` -- despite the org name --
+  deprecated itself in favour of `zauguin/install-texlive`, the one actually used here.)
+- **Done (2026-09-16):** gave `examples/manual-examples/Makefile` a `check` target (an alias for `objects`) after
+  noticing it would otherwise break `examples/check-all.sh`, a local dev script (not used by any CI workflow) that
+  discovers every `examples/*/Makefile` and runs `make clean check` in each -- it would have hit "no rule to make
+  target 'check'" the first time someone ran it after this pass. Confirmed `check-all.sh`'s `find` picks up
+  `manual-examples/` and that `make -C examples/manual-examples clean check` now succeeds. Also confirmed this
+  target needs no TeX Live at all -- it only reads the manual chapters as plain text via `awk` (any POSIX awk;
+  tested against BSD awk and gawk, reasoned but not tested against Ubuntu's default `mawk` since installing it
+  locally hit an unrelated Homebrew permissions issue) plus a Rust toolchain for the assembler, both already
+  present wherever `sirc-vm.yml`'s existing `examples` job runs.
 - **Idea, not started:** publish the built PDF to GitHub Releases automatically on a version bump, using something
   like `release-please` to manage the versioning/changelog and a follow-up job to attach
   `docs/reference/SIRC-1-reference-manual.pdf` from `manual.yml`'s build artifact to the created release. Long-term

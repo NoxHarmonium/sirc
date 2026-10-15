@@ -12,6 +12,19 @@
 #   2. `objects`  -- an ordinary pattern rule assembles each extracted/*.sasm
 #      to extracted/*.o, so `make` only re-assembles listings that actually
 #      changed since the last run.
+#
+# `check` is an alias for `objects`, not a separate run-and-diff step like
+# every other examples/*/Makefile has: these are fragments pulled out of
+# prose, not standalone programs with an expected-output fixture to run
+# against, so "did every one assemble" is the whole check. It exists so
+# examples/check-all.sh -- which discovers every examples/*/Makefile and
+# runs `make clean check` in each -- doesn't fail here with "no rule to make
+# target 'check'".
+#
+# Needs only `awk` (any POSIX awk -- tested against BSD awk and gawk; no
+# gawk-only extensions used) and a Rust toolchain for `cargo run --bin
+# assembler`. No LaTeX/TeX Live involved: the manual chapters are only ever
+# read as plain text here, never compiled.
 
 CARGO_ARGS := --manifest-path=../../sirc-vm/Cargo.toml
 ASSEMBLE := cargo run $(CARGO_ARGS) --no-default-features --bin assembler --quiet --
@@ -20,9 +33,11 @@ CHAPTERS_DIR := ../../docs/reference/chapters
 CHAPTER_TEX := $(wildcard $(CHAPTERS_DIR)/*.tex)
 OUTDIR := extracted
 
-.PHONY: all extract objects _objects clean
+.PHONY: all extract objects _objects check clean
 
 all: objects
+
+check: objects
 
 extract: .extracted.stamp
 
