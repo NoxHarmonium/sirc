@@ -1,5 +1,14 @@
 # SIRC-1 CPU Reference Manual
 
+## Source of Truth
+
+The manual is canonical. When the manual and the `sirc-vm` Rust implementation disagree, default to fixing the
+implementation, not the manual -- log the gap (see `examples/*/NOTES.md` for the established format) and treat it as
+an implementation bug. The manual is only wrong when a normative claim is traced back to source (the implementation,
+its tests, or first-principles architectural reasoning) and doesn't hold up architecturally, not merely because the
+implementation currently does something else. See `manual-handover.md`'s "Source of Truth" section for the full
+reasoning and the project history this decision is based on.
+
 ## Diagram Tooling
 
 The CPU block diagram is sourced from Graphviz and committed as a rendered PDF under `diagrams/`.
