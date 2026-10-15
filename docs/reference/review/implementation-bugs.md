@@ -6,7 +6,32 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-None currently — all findings from the 2026-09-16 editorial pass have been fixed.
+### IB-6: Zero-operand meta-instructions don't accept a trailing same-line comment
+
+- **Where:** `sirc-vm/toolchain/src/parsers/opcodes/meta.rs:50-59`, the `meta` parser (covers
+  `RETS`/`NOOP`; `RETE`/`WAIT` share the same shape via their own near-identical parsers).
+- **What:** after the instruction tag and condition flag, the parser requires the very next
+  character to be a line ending: `one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i_after_instruction)`.
+  It doesn't skip whitespace or hand off to the top-level comment tokenizer first, so anything
+  between the tag and the newline -- including a trailing `; comment` -- fails to parse. Every
+  operand-bearing instruction is unaffected: its own operand parser consumes up to the operand's
+  end and then the top-level `parse_tokens` tokenizer (`shared.rs:257-269`) separately matches the
+  trailing whitespace and `; comment` as their own tokens via `collect_separated_terminated`.
+- **Confirmed still present** (2026-09-17): `NOOP ; hello` fails to parse; bare `NOOP` and any
+  operand-bearing instruction with an identical trailing comment both parse fine.
+- **How it surfaced:** found by `make qa`'s extracted-listing check during the 2026-09-16 editorial
+  pass, in two manual Usage Examples (`15-control-flow.tex`'s `RETS` example,
+  `17-meta-instructions.tex`'s `NOOP` timing-delay example). Worked around in the manual by moving
+  the comment to its own line in both places -- the manual now matches what the assembler actually
+  accepts -- but the parser gap itself was never logged (`implementation-bugs.md` didn't exist yet
+  at the time; recreated later that same pass).
+- **Manual side:** no change needed beyond the workaround already applied.
+- **Suggested fix:** replace the hard `one_of("\r\n")` check with something that tolerates
+  trailing whitespace and an optional comment before the line ending -- e.g. peek for
+  whitespace/`;`/EOF instead of demanding a line-ending character directly, and let the top-level
+  tokenizer's own comment handling take it from there, matching how every operand-bearing
+  instruction already behaves.
+- **Status:** logged only, not fixed.
 
 ## Fixed this pass
 

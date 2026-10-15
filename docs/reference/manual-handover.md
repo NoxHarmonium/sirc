@@ -65,9 +65,9 @@ Open tasks:
     `NOOP` or an operand-bearing instruction with the identical trailing comment both parse fine) that zero-operand
     instructions' grammar doesn't consume a trailing same-line comment the way every other instruction's grammar
     does. Worked around in both examples by moving the comment to its own line so the manual's examples match what
-    the assembler actually accepts today; the underlying parser gap is not fixed and has no tracking file to live
-    in right now (`implementation-bugs.md` was retired earlier this pass since nothing was open -- worth deciding
-    whether to recreate it or track findings like this one somewhere else next time one turns up).
+    the assembler actually accepts today. **Logged (2026-09-17)** as `IB-6` in
+    `docs/reference/review/implementation-bugs.md` (recreated as the standing home for findings like
+    this one) once that file existed again; not fixed.
 - **Done (2026-09-16):** wired the QA target into CI (`.github/workflows/manual.yml`, new). Runs on push/PR to
   `main`, path-filtered to `docs/reference/**`, `examples/manual-examples/**`, and `examples/**/*.sasm` (Appendix D
   pulls several of those in via `\lstinputlisting`) so it doesn't fire on unrelated Rust-only changes: installs
