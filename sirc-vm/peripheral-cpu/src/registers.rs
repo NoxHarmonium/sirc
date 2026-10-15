@@ -45,14 +45,14 @@ pub enum StatusRegisterFields {
 // category=Refactoring
 #[derive(FromPrimitive, ToPrimitive, Debug, PartialEq, Eq)]
 pub enum RegisterName {
-    Sr = 0,
-    R1,
+    R1 = 0,
     R2,
     R3,
     R4,
     R5,
     R6,
     R7,
+    Sr,
     Lh,
     Ll,
     Ah,
@@ -174,14 +174,14 @@ impl Index<u8> for Registers {
 
     fn index(&self, index: u8) -> &Self::Output {
         match index {
-            0 => &self.sr,
-            1 => &self.r1,
-            2 => &self.r2,
-            3 => &self.r3,
-            4 => &self.r4,
-            5 => &self.r5,
-            6 => &self.r6,
-            7 => &self.r7,
+            0 => &self.r1,
+            1 => &self.r2,
+            2 => &self.r3,
+            3 => &self.r4,
+            4 => &self.r5,
+            5 => &self.r6,
+            6 => &self.r7,
+            7 => &self.sr,
             8 => &self.lh,
             9 => &self.ll,
             10 => &self.ah,
@@ -198,14 +198,14 @@ impl Index<u8> for Registers {
 impl IndexMut<u8> for Registers {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
-            0 => &mut self.sr,
-            1 => &mut self.r1,
-            2 => &mut self.r2,
-            3 => &mut self.r3,
-            4 => &mut self.r4,
-            5 => &mut self.r5,
-            6 => &mut self.r6,
-            7 => &mut self.r7,
+            0 => &mut self.r1,
+            1 => &mut self.r2,
+            2 => &mut self.r3,
+            3 => &mut self.r4,
+            4 => &mut self.r5,
+            5 => &mut self.r6,
+            6 => &mut self.r7,
+            7 => &mut self.sr,
             8 => &mut self.lh,
             9 => &mut self.ll,
             10 => &mut self.ah,
@@ -528,14 +528,14 @@ pub fn set_hardware_interrupt_enable(registers: &mut Registers, enable_mask: u8)
 #[must_use]
 pub fn register_name_to_index(name: &str) -> u8 {
     match name {
-        "sr" => 0,
-        "r1" => 1,
-        "r2" => 2,
-        "r3" => 3,
-        "r4" => 4,
-        "r5" => 5,
-        "r6" => 6,
-        "r7" => 7,
+        "r1" => 0,
+        "r2" => 1,
+        "r3" => 2,
+        "r4" => 3,
+        "r5" => 4,
+        "r6" => 5,
+        "r7" => 6,
+        "sr" => 7,
         // [ah, al]
         "lh" => 8, // Link high
         "ll" => 9, // Link low

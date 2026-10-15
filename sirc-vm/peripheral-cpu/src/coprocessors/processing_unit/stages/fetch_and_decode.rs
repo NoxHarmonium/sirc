@@ -82,7 +82,8 @@ fn do_shift(
 /// use peripheral_cpu::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
 ///
 /// let mut registers = Registers::default();
-/// registers.r4 = 0xCE;
+/// // Raw register field 0x4 now names r5 (r1..r7 occupy 0x0..0x6, sr moved to 0x7).
+/// registers.r5 = 0xCE;
 /// registers.sl = 0xFA;
 /// registers.al = 0xCE;
 /// registers.ah = 0xBB;

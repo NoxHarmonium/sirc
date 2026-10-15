@@ -64,7 +64,7 @@ use super::super::shared::AsmResult;
 /// };
 ///
 /// assert_eq!(op_code, Instruction::AddShortImmediate);
-/// assert_eq!(register, 2);
+/// assert_eq!(register, 1); // r2
 /// assert_eq!(value, 123);
 /// assert_eq!(shift_type, ShiftType::LogicalLeftShift);
 /// assert_eq!(shift_count, 0x2);

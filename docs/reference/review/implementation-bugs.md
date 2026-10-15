@@ -62,39 +62,6 @@ Superseded.
 - confidence: high
 - status: not started
 
-### Register renumbering (code-wrong, minor) — NEW 2026-09-08, resolves NOOP (`F-cop-3`) cleanly
-
-- category: fact
-- claim: the manual previously said `NOOP` assembles to `ADDI[N] sr, #0` and is unprivileged; the
-  code faulted on it in protected mode because register field `0x0` names `sr`, a privileged
-  register, and the general privilege check (`PRIVILEGED_REGISTERS.contains(&instruction.des)`,
-  `execution.rs:21-43`) has no reason to exempt this one specific all-zero encoding.
-- resolution (author decision, 2026-09-08, superseding the earlier "exempt this encoding" framing):
-  renumber the `RegisterName` enum in `peripheral-cpu/src/registers.rs:46-62` so `r1` occupies index
-  `0x0` and `sr` moves to `0x7`, with `r2`..`r7` shifting down to fill `0x1`..`0x6`. Verified
-  2026-09-08 that nothing else depends on the old numeric order: every reference to `sr`'s index
-  goes through the `RegisterName::Sr` enum symbol (`execution.rs:22`, `fetch_and_decode.rs:42`,
-  `write_back.rs:47,57`, `protected_mode_test.rs:98,114`), not a hardcoded literal, so it follows the
-  reordering automatically. The address-register-pair mechanism (`l`/`a`/`s`/`p`, indices
-  `0x8`-`0xF`) is a separate 2-bit field and is unaffected. The toolchain's mnemonic-to-index table
-  (`toolchain/src/parsers/instruction.rs:482-497`) maps by name, not position, so register *names*
-  (`r1`-`r7`, `sr`) do not change, only their numeric encoding. One string-keyed lookup at
-  `peripheral-cpu/src/registers.rs:538` (`"r7" => 7`) also needs updating to match.
-- fix: reorder the enum, update the one hardcoded string-index table noted above, and reassemble
-  every existing `.sasm`/binary that encodes a register field directly (assembly source using
-  register *names* is unaffected and does not need editing, only reassembling).
-- consequence: `NOOP` now assembles to `ADDI[N] r1, #0` (still the all-zero word `0x00000000`, since
-  `r1` is now index `0x0`), and it is genuinely unprivileged, since `r1` is an ordinary
-  general-purpose register -- no privilege-check special case is needed. This also means erased or
-  uninitialized memory (which reads back as all-zero words) continues to execute safely as a no-op,
-  which the earlier "just pick a non-zero-encoding register" option would have lost. Manual updated:
-  `chapters/03-registers.tex` (Register Encoding table and its explanation),
-  `chapters/17-meta-instructions.tex` (NOOP entry and cross-reference table),
-  `chapters/12-instruction-summary.tex`, `chapters/appendix-e-quick-reference.tex`.
-- confidence: high
-- status: manual updated to the target (post-renumbering) state; the Rust enum reorder, the one
-  string table, and reassembly of existing binaries are left for the author.
-
 ### F-con-66 / F-con2-30 (minor) — `0b` prefix in the generated encoding tables
 
 - category: cosmetic
@@ -355,6 +322,60 @@ Superseded.
 - confidence: high
 - status: fixed
 - ruling: manual stands; the simulator now matches the documented edge-triggered design.
+
+### Register renumbering (code-wrong, minor) — FIXED 2026-09-15 — resolves NOOP (`F-cop-3`) cleanly
+
+- category: fact
+- claim: the manual previously said `NOOP` assembles to `ADDI[N] sr, #0` and is unprivileged; the
+  code faulted on it in protected mode because register field `0x0` named `sr`, a privileged
+  register, and the general privilege check (`PRIVILEGED_REGISTERS.contains(&instruction.des)`,
+  `execution.rs:21-43`) had no reason to exempt this one specific all-zero encoding.
+- resolution (author decision, 2026-09-08): renumber the `RegisterName` enum in
+  `peripheral-cpu/src/registers.rs` so `r1` occupies index `0x0` and `sr` moves to `0x7`, with
+  `r2`..`r7` shifting down to fill `0x1`..`0x6`.
+- fix (applied): reordered `RegisterName` to `R1, R2, ..., R7, Sr, Lh, ...` (implicit discriminants,
+  so `R1=0 .. R7=6, Sr=7`), which every symbolic reference (`RegisterName::Sr as u8` in
+  `execution.rs`, `fetch_and_decode.rs`, `write_back.rs`; `RegisterName::Sr.to_register_index()` in
+  `protected_mode_test.rs`) followed automatically. Two things the original write-up missed and
+  this fix also had to update: `Registers`' `Index<u8>`/`IndexMut<u8>` impls
+  (`peripheral-cpu/src/registers.rs`) are a second, hand-written `match` on raw index -> field, not
+  derived from the enum, and needed the same reorder; and the string-keyed
+  `register_name_to_index()` table (confirmed to have zero callers today, but kept in sync to avoid
+  a landmine). The toolchain's mnemonic parser (`toolchain/src/parsers/instruction.rs`) maps names
+  straight to `RegisterName` variants and needed no change.
+- undocumented test-breakage found during implementation: `peripheral-cpu/tests/instructions/common.rs`'s
+  `get_register_index_range()`/`get_non_address_register_index_range()` hardcoded the old layout
+  (excluding `sr`=0, `ph`/`pl`=14/15) and are consumed by ~80+ call sites as a generic writable ALU
+  register via `.set_at_index()`; left alone they would have silently dropped `r1` from coverage and
+  started writing arbitrary ALU results into `sr` (now inside the old bound). Fixed by deriving both
+  ranges from `RegisterName` symbols instead of literals. Three more independent hardcoded-`0x1`
+  literals meant as "r1" (`peripheral-cpu/tests/exceptions/common.rs`, `faults.rs` x2), a
+  `load_test.rs`/`store_test.rs` quickcheck `Arbitrary` impl duplicating the same hardcoded-range
+  bug with an additional off-by-one `+ 1`, one hardcoded assertion in
+  `toolchain/tests/assembler/coprocessor_test.rs` (`COPR r4` parses to raw index `4`), a
+  `fetch_and_decode.rs` doctest that set `registers.r4` to exercise raw field `0x4`, and three
+  toolchain parser doctests (`arithmetic_immediate.rs`, `arithmetic_register.rs`, `ljmp.rs`)
+  asserting raw parsed register indices — all silently wrong post-renumbering, all found only by
+  running the full test suite and root-causing each failure, not by static review.
+- test coverage added: `all_zero_instruction_word_does_not_fault_in_protected_mode` in
+  `peripheral-cpu/tests/instructions/protected_mode_test.rs`, proving the actual fix end-to-end
+  (nothing previously did -- `test_empty_memory_is_noop` only tested the decoder in isolation, and
+  `direct_status_register_writes_fault_in_protected_mode` tests a different, symbolically-addressed
+  instruction that correctly keeps faulting).
+- consequence: `NOOP` now assembles to `ADDI[N] r1, #0` (still the all-zero word `0x00000000`, since
+  `r1` is now index `0x0`), and it is genuinely unprivileged, since `r1` is an ordinary
+  general-purpose register -- no privilege-check special case is needed. This also means erased or
+  uninitialized memory (which reads back as all-zero words) continues to execute safely as a no-op.
+  Manual chapters (`03-registers.tex`, `17-meta-instructions.tex`, `12-instruction-summary.tex`,
+  `appendix-e-quick-reference.tex`) were already at the target (post-renumbering) state and needed
+  no changes; the machine-generated `docs/reference/generated/*-format-encodings.tex` fragments were
+  regenerated via `examples/reference-encodings`' `make manual-tex` to reflect the new raw hex, and
+  `toolchain/tests/assembler/snapshots/*arithmetic_immediate*`/`*arithmetic_register*` insta
+  snapshots were re-recorded for the same reason. No example `.bin` needed reassembling -- none are
+  committed (all gitignored, rebuilt fresh by `make check`).
+- confidence: high
+- status: fixed
+- ruling: manual stands; `NOOP` no longer faults in protected mode, satisfying Gate 2 I.
 
 ### F-sum-30 (minor) — FIXED 2026-09-09 — vector count comment in every example source
 

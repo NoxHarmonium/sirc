@@ -6,13 +6,13 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_cpu::registers::SegmentedAddress;
+use peripheral_cpu::registers::{RegisterName, SegmentedAddress};
 use peripheral_cpu::CpuPeripheral;
 
 pub fn build_test_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::AddImmediate,
-        register: 0x1,
+        register: RegisterName::R1.to_register_index(),
         value: 0xFA,
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x0,

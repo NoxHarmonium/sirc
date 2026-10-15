@@ -6,7 +6,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     InstructionData, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_cpu::registers::FullAddress;
+use peripheral_cpu::registers::{FullAddress, RegisterName};
 use peripheral_cpu::CYCLES_PER_INSTRUCTION;
 use peripheral_cpu::{new_cpu_peripheral, registers::Registers, CpuPeripheral};
 
@@ -138,12 +138,17 @@ where
     initial
 }
 
-pub fn get_register_index_range() -> Range<u8> {
-    1..14
+/// All general-purpose and address-sub-register (lh/ll/ah/al/sh/sl) indices, excluding `sr`
+/// (privileged, unsuitable as a generic ALU destination in these tests) and `ph`/`pl` (the
+/// program counter, unsuitable as a generic destination since writing it changes control flow).
+pub fn get_register_index_range() -> impl Iterator<Item = u8> {
+    let sr_index = RegisterName::Sr.to_register_index();
+    (RegisterName::R1.to_register_index()..=RegisterName::Sl.to_register_index())
+        .filter(move |&index| index != sr_index)
 }
 
 pub fn get_non_address_register_index_range() -> Range<u8> {
-    1..8
+    RegisterName::R1.to_register_index()..RegisterName::R7.to_register_index() + 1
 }
 
 pub fn get_address_register_index_range() -> Range<u8> {

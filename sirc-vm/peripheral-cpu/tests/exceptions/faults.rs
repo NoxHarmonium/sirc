@@ -25,7 +25,7 @@ use peripheral_cpu::{
     decode_fault_metadata_register, encode_fault_metadata_register, new_cpu_peripheral,
     registers::{
         set_sr_bit, sr_bit_is_set, sr_bit_is_set_value, AddressRegisterName,
-        FullAddressRegisterAccess, SegmentedAddress, StatusRegisterFields,
+        FullAddressRegisterAccess, RegisterName, SegmentedAddress, StatusRegisterFields,
     },
     FaultMetadataRegister,
 };
@@ -42,8 +42,8 @@ use super::common::Expectation;
 pub fn build_load_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadRegisterFromIndirectImmediate,
-        register: 0x1, // target (r1)
-        value: 0xCAFE, // source 2
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value: 0xCAFE,                                  // source 2
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x1, // source 1 (a)
     })
@@ -52,8 +52,8 @@ pub fn build_load_instruction() -> InstructionData {
 pub fn build_ldea_predecrement_instruction(value: u16) -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
-        register: 0x1, // target (r1)
-        value,         // displacement added to al/ah before the decrement
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value, // displacement added to al/ah before the decrement
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x1, // source (a)
     })

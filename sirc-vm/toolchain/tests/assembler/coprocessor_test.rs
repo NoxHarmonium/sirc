@@ -83,7 +83,7 @@ fn copr_accepts_source_only_register_form() {
     assert_eq!(inner.op_code, Instruction::CoprocessorCallRegister);
     assert_eq!(inner.r1, 0x0);
     assert_eq!(inner.r2, 0x0);
-    assert_eq!(inner.r3, 0x4);
+    assert_eq!(inner.r3, 0x3); // r4
     assert_eq!(inner.shift_operand, ShiftOperand::Immediate);
     assert_eq!(inner.shift_type, ShiftType::None);
     assert_eq!(inner.shift_count, 0x0);
