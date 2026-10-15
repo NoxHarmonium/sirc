@@ -10,8 +10,8 @@ use crate::{
     },
     raise_fault,
     registers::{
-        sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, StatusRegisterFields,
-        SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
+        sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, SegmentedAddress,
+        StatusRegisterFields, SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
     },
 };
 
@@ -72,6 +72,7 @@ fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
 }
 
 fn set_address_register_values(
+    decoded: &DecodedInstruction,
     registers: &mut Registers,
     eu_registers: &mut ExceptionUnitRegisters,
     bus_assertions: &BusAssertions,
@@ -84,8 +85,16 @@ fn set_address_register_values(
             .any(|write| registers[write.high_index] != write.high_value);
 
     if changes_protected_high_word {
-        eu_registers.pending_fault =
-            raise_fault(eu_registers, Faults::PrivilegeViolation, bus_assertions);
+        // By this point `registers.pl` has already been advanced past this instruction (it
+        // happened back at decode); recover this instruction's own fetch address from `decoded`
+        // instead so the fault is genuinely retryable.
+        let fault_pc = (decoded.pc_h_, decoded.pc_l_).to_full_address();
+        raise_fault(
+            eu_registers,
+            Faults::PrivilegeViolation,
+            bus_assertions,
+            fault_pc,
+        );
         return;
     }
 
@@ -202,6 +211,7 @@ impl StageExecutor for WriteBackExecutor {
             }
             WriteBackInstructionType::AddressWrite => {
                 set_address_register_values(
+                    decoded,
                     registers,
                     eu_registers,
                     &bus_assertions,
@@ -215,6 +225,7 @@ impl StageExecutor for WriteBackExecutor {
             }
             WriteBackInstructionType::AddressWriteWithSourceUpdate => {
                 set_address_register_values(
+                    decoded,
                     registers,
                     eu_registers,
                     &bus_assertions,
@@ -236,6 +247,7 @@ impl StageExecutor for WriteBackExecutor {
             }
             WriteBackInstructionType::AddressWriteSubroutine => {
                 set_address_register_values(
+                    decoded,
                     registers,
                     eu_registers,
                     &bus_assertions,
@@ -257,6 +269,7 @@ impl StageExecutor for WriteBackExecutor {
             }
             WriteBackInstructionType::AddressWriteSubroutineWithSourceUpdate => {
                 set_address_register_values(
+                    decoded,
                     registers,
                     eu_registers,
                     &bus_assertions,
@@ -285,6 +298,7 @@ impl StageExecutor for WriteBackExecutor {
             WriteBackInstructionType::AddressWriteLoadPostIncrement
             | WriteBackInstructionType::AddressWriteStorePreDecrement => {
                 set_address_register_values(
+                    decoded,
                     registers,
                     eu_registers,
                     &bus_assertions,

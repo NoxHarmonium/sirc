@@ -13,7 +13,7 @@ use peripheral_cpu::{
                     LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
                     SEGMENT_OVERFLOW_FAULT,
                 },
-                ExceptionUnitOpCodes, Faults,
+                ExceptionUnitOpCodes, Faults, PendingFault,
             },
             execution::construct_cause_value,
         },
@@ -24,8 +24,8 @@ use peripheral_cpu::{
     },
     decode_fault_metadata_register, encode_fault_metadata_register, new_cpu_peripheral,
     registers::{
-        set_sr_bit, sr_bit_is_set, sr_bit_is_set_value, FullAddressRegisterAccess,
-        SegmentedAddress, StatusRegisterFields,
+        set_sr_bit, sr_bit_is_set, sr_bit_is_set_value, AddressRegisterName,
+        FullAddressRegisterAccess, RegisterName, SegmentedAddress, StatusRegisterFields,
     },
     FaultMetadataRegister,
 };
@@ -34,7 +34,8 @@ use peripheral_cpu::{
 // category=Testing
 
 use crate::exceptions::common::{
-    build_rete_instruction, build_test_instruction, expectation, run_expectations,
+    build_rete_instruction, build_test_instruction, expect_exception_handler,
+    expect_main_program_cycle_with_instruction, expectation, run_expectations,
 };
 
 use super::common::Expectation;
@@ -42,8 +43,8 @@ use super::common::Expectation;
 pub fn build_load_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadRegisterFromIndirectImmediate,
-        register: 0x1, // target (r1)
-        value: 0xCAFE, // source 2
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value: 0xCAFE,                                  // source 2
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x1, // source 1 (a)
     })
@@ -52,8 +53,18 @@ pub fn build_load_instruction() -> InstructionData {
 pub fn build_ldea_predecrement_instruction(value: u16) -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement,
-        register: 0x1, // target (r1)
-        value,         // displacement added to al/ah before the decrement
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value, // displacement added to al/ah before the decrement
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x1, // source (a)
+    })
+}
+
+pub fn build_ldea_instruction(value: u16) -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: RegisterName::R1.to_register_index(), // target (r1)
+        value, // displacement added to al/ah -- no pre/post increment
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x1, // source (a)
     })
@@ -272,7 +283,7 @@ fn bus_protection_error_for_request(request: BusAssertions) -> BusAssertions {
 
 #[test]
 fn test_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -293,6 +304,66 @@ fn test_bus_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Bus Fault is retryable: the link register holds the faulting LOAD's own address.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+}
+
+#[test]
+fn test_bus_fault_during_instruction_fetch() {
+    // A bus error on the instruction fetch itself (as opposed to a data access during
+    // MemoryAccessExecutor, covered by `test_bus_fault` above) must use the *current* PC, not
+    // `decoded_instruction.pc_l_/pc_h_` -- at this phase that field still holds the *previous*
+    // instruction's address (or the CPU's freshly-constructed default, 0x0), since this
+    // instruction was never decoded.
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+    cpu_peripheral.registers.pl = 0x0010;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &vec![
+            // Phase 0 (InstructionFetchLow): CPU issues the fetch request for 0x10.
+            Some(expectation(None, None, Some(0x0000_0010), None)),
+            // Phase 1 (InstructionFetchHigh): the fetch request completes with a bus error.
+            Some(expectation(
+                Some(0x0),
+                Some(BusAssertions {
+                    bus_error: true,
+                    ..BusAssertions::default()
+                }),
+                None,
+                None,
+            )),
+            // Phases 2-5: pending_fault is set, so these are no-ops until phase wraps to 0.
+            None,
+            None,
+            None,
+            None,
+        ],
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::Bus),
+        "A fault should be raised because the instruction fetch got a bus error"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert_eq_hex!(
+        0x0000_0010,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
 }
 
 pub fn expect_bus_protection_fault(vector_value: (u16, u16)) -> Vec<Option<Expectation>> {
@@ -367,7 +438,7 @@ pub fn expect_bus_protection_fault(vector_value: (u16, u16)) -> Vec<Option<Expec
 
 #[test]
 fn test_bus_protection_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -388,11 +459,17 @@ fn test_bus_protection_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Bus Protection Fault is retryable: the link register holds the faulting LOAD's own
+        // address.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
 }
 
 #[test]
 fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     cpu_peripheral.registers.pending_coprocessor_command =
@@ -414,7 +491,7 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::Bus),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::Bus),
         "vector-fetch bus error should raise a bus fault"
     );
     assert_eq!(
@@ -453,7 +530,7 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
 
 #[test]
 fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     cpu_peripheral.reset();
 
@@ -473,7 +550,7 @@ fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::Bus),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::Bus),
         "reset-vector fetch bus error should raise a bus fault"
     );
     assert_eq!(
@@ -499,9 +576,13 @@ fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
 
 #[test]
 fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
-    cpu_peripheral.eu_registers.pending_fault = Some(Faults::InvalidOpCode);
+    // The `pc` value here isn't checked by this test; only the escalation to DoubleFault is.
+    cpu_peripheral.eu_registers.pending_fault = Some(PendingFault {
+        fault: Faults::InvalidOpCode,
+        pc: 0x0,
+    });
 
     let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
     assert_eq_hex!(u32::from(INVALID_OPCODE_FAULT) * 2, vector_request.address);
@@ -519,7 +600,7 @@ fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::DoubleFault),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::DoubleFault),
         "fault-vector fetch bus error should escalate to double fault"
     );
     assert_eq!(
@@ -549,8 +630,11 @@ fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
 
 #[test]
 fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
-    cpu_peripheral.eu_registers.pending_fault = Some(Faults::DoubleFault);
+    let mut cpu_peripheral = new_cpu_peripheral();
+    cpu_peripheral.eu_registers.pending_fault = Some(PendingFault {
+        fault: Faults::DoubleFault,
+        pc: 0x0,
+    });
 
     let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
     assert_eq_hex!(u32::from(DOUBLE_FAULT_VECTOR) * 2, vector_request.address);
@@ -580,11 +664,14 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
 // reset" guard that suppresses fault dispatch until reset() is called).
 #[test]
 fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     // Simulate already being inside a fault handler so that a spurious raise_fault call
     // after triple-fault would produce DoubleFault rather than a plain Bus fault.
     cpu_peripheral.eu_registers.current_exception_level = 7;
-    cpu_peripheral.eu_registers.pending_fault = Some(Faults::DoubleFault);
+    cpu_peripheral.eu_registers.pending_fault = Some(PendingFault {
+        fault: Faults::DoubleFault,
+        pc: 0x0,
+    });
 
     let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
     assert_eq_hex!(u32::from(DOUBLE_FAULT_VECTOR) * 2, vector_request.address);
@@ -633,7 +720,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
 
 #[test]
 fn test_alignment_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -663,11 +750,16 @@ fn test_alignment_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Alignment Fault is retryable: the link register holds the misaligned faulting address.
+        0x0000_0001,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
 }
 
 #[test]
 fn test_segment_overflow_fault_with_load() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -676,8 +768,11 @@ fn test_segment_overflow_fault_with_load() {
         &mut cpu_peripheral.registers,
     );
 
-    // The test LOAD instruction calculates al + imm so high values like this should force a segment overflow
-    cpu_peripheral.registers.al = 0xFFFE;
+    // The test LOAD instruction's displacement is 0xCAFE, which as a signed two's-complement
+    // 16-bit value is -13570. al=0x0 makes this a genuine underflow (0x0 - 13570 wraps below
+    // zero) under the correct signed-wrap rule -- unlike the old al=0xFFFE, which computed
+    // 0xFFFE + (-13570) = 0xCAFC, well within range and not a real wrap at all.
+    cpu_peripheral.registers.al = 0x0;
 
     // Run load instruction
     run_expectations(&mut cpu_peripheral, &expect_load_instruction(), &mut clocks);
@@ -703,7 +798,7 @@ fn test_segment_overflow_fault_with_load() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::SegmentOverflow),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::SegmentOverflow),
         "A fault should be raised because TrapOnAddressOverflow is set"
     );
 
@@ -719,11 +814,46 @@ fn test_segment_overflow_fault_with_load() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Segment Overflow (address computation) is retryable: the link register holds the
+        // faulting LOAD's own address, not the address after it.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+}
+
+#[test]
+fn test_segment_overflow_fault_with_negative_displacement_does_not_fault() {
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+
+    set_sr_bit(
+        StatusRegisterFields::TrapOnAddressOverflow,
+        &mut cpu_peripheral.registers,
+    );
+
+    // 0xFFFC as a signed two's-complement displacement is -4. al=0x1000 + (-4) = 0x0FFC, well
+    // within range -- a genuine non-wrapping negative displacement, matching the manual's rule
+    // that the trap fires only on a real low-word wrap regardless of the displacement's sign.
+    // A plain unsigned add would spuriously see this as a carry (0x1000 + 0xFFFC overflows 16
+    // bits), which was exactly this bug's false positive.
+    cpu_peripheral.registers.al = 0x1000;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_instruction(&build_ldea_instruction(0xFFFC), 0x0000_0000, false),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral.eu_registers.pending_fault.is_none(),
+        "A negative displacement that does not genuinely wrap the low word must not fault"
+    );
 }
 
 #[test]
 fn test_segment_overflow_fault_with_instruction_fetch() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -784,7 +914,7 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::SegmentOverflow),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::SegmentOverflow),
         "A fault should be raised because TrapOnAddressOverflow is set"
     );
 
@@ -800,11 +930,17 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Segment Overflow (PC-wrap) is retryable: the link register holds the wrapped fetch
+        // address itself.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
 }
 
 #[test]
 fn test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -836,7 +972,7 @@ fn test_segment_overflow_fault_with_predecrement_nonzero_does_not_fault() {
 
 #[test]
 fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Set protected mode to test if the fault flips into privileged mode.
@@ -880,7 +1016,7 @@ fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::SegmentOverflow),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::SegmentOverflow),
         "A fault should be raised: displaced address 0x0000 underflows to 0xFFFF when decremented"
     );
 
@@ -900,7 +1036,7 @@ fn test_segment_overflow_fault_with_predecrement_underflow_faults() {
 
 #[test]
 fn test_invalid_opcode_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     run_expectations(
@@ -919,7 +1055,7 @@ fn test_invalid_opcode_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::InvalidOpCode),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::InvalidOpCode),
         "A fault should be raised because F is an invalid coprocessor ID for this CPU model"
     );
 
@@ -945,11 +1081,17 @@ fn test_invalid_opcode_fault() {
         0x0000_FFFF,
         cpu_peripheral.eu_registers.link_registers[7].return_address
     );
+    assert_eq_hex!(
+        // Invalid Opcode Fault is retryable: the link register holds the faulting COPI's own
+        // address, not the address after it.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
 }
 
 #[test]
 fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
     let handler_address = 0x00AB_CDE0;
 
@@ -973,6 +1115,19 @@ fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
     assert_eq_hex!(0x00FA, cpu_peripheral.registers.r1);
+    assert_eq_hex!(
+        // Invalid Opcode Fault is retryable: the link register holds the faulting COPI's own
+        // address (0x0), not the address after it. Simply returning here (as this test's RETE
+        // is about to do without first redirecting the link register) would re-fault forever in
+        // a real handler -- see the manual poke below, which stands in for the ETFR/ETTR skip a
+        // real handler performs (as in examples/faults/faults.sasm's invalid_opcode_fault_handler).
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+
+    // Stand in for a real handler's `ETFR a, #6` / adjust / `ETTR #6, a` sequence, which would
+    // redirect the return address to skip past the trapped (2-word) COPI before returning.
+    cpu_peripheral.eu_registers.link_registers[6].return_address = 0x0000_0002;
 
     run_expectations(
         &mut cpu_peripheral,
@@ -1008,7 +1163,7 @@ fn test_invalid_opcode_handler_can_return_after_absent_coprocessor() {
 
 #[test]
 fn test_double_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     run_expectations(
@@ -1027,7 +1182,7 @@ fn test_double_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::InvalidOpCode),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::InvalidOpCode),
         "A fault should be raised because F is an invalid coprocessor ID for this CPU model"
     );
 
@@ -1062,7 +1217,9 @@ fn test_double_fault() {
         ),
     );
     assert_eq_hex!(
-        0x0000_0002,
+        // Invalid Opcode Fault is retryable: the link register holds the faulting instruction's
+        // own address (0x0), not the address after it.
+        0x0000_0000,
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
     assert_eq_hex!(
@@ -1087,7 +1244,7 @@ fn test_double_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::DoubleFault),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::DoubleFault),
         "A double fault should be raised because one is already being handled"
     );
 
@@ -1112,7 +1269,9 @@ fn test_double_fault() {
         ),
     );
     assert_eq_hex!(
-        0x00AB_CDE4,
+        // Retryable: holds the nested faulting instruction's own address (fetched at
+        // 0x00AB_CDE2 above), not the address after it.
+        0x00AB_CDE2,
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
     assert_eq_hex!(
@@ -1302,7 +1461,7 @@ pub fn build_privilege_violation_instruction() -> InstructionData {
 
 #[test]
 fn test_privilege_violation_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Protected mode must be active for the privilege check to fire
@@ -1321,7 +1480,7 @@ fn test_privilege_violation_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::PrivilegeViolation),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::PrivilegeViolation),
         "A fault should be raised because Ph is a privileged register"
     );
 
@@ -1337,11 +1496,190 @@ fn test_privilege_violation_fault() {
     ));
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(
+        // Privilege Violation is retryable: the link register holds the faulting instruction's
+        // own address, not the address after it.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+}
+
+pub fn build_privilege_violation_address_write_instruction() -> InstructionData {
+    // LDEA a, (s, #4): computes s + 4 and writes it to `a`. With `a`'s current high word
+    // different from the computed one and protected mode active, this is a write-back-time
+    // Privilege Violation (`write_back.rs`'s `set_address_register_values`), a different call
+    // site to `build_privilege_violation_instruction`'s decode-time check above.
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::LoadEffectiveAddressFromIndirectImmediate,
+        register: AddressRegisterName::Address.to_register_index(),
+        value: 0x0004,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::StackPointer.to_register_index(),
+    })
+}
+
+#[test]
+fn test_privilege_violation_fault_on_address_register_high_word_write() {
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+
+    // Protected mode must be active for the write-back privilege check to fire.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+    // Source base for the LDEA -- computed address is 0x1111_2226.
+    cpu_peripheral.registers.sh = 0x1111;
+    cpu_peripheral.registers.sl = 0x2222;
+    // Destination's current high word (0xAAAA) differs from the computed one (0x1111).
+    cpu_peripheral.registers.ah = 0xAAAA;
+    cpu_peripheral.registers.al = 0x1000;
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_instruction(
+            &build_privilege_violation_address_write_instruction(),
+            0x0,
+            false,
+        ),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::PrivilegeViolation),
+        "A fault should be raised because the LDEA would change a's high word in protected mode"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(PRIVILEGE_VIOLATION_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+
+    assert_eq_hex!(
+        // Retryable, and detected at a different pipeline stage (write-back) to the decode-time
+        // check above -- the link register must still hold the faulting instruction's own
+        // address, not the address after it.
+        0x0000_0000,
+        cpu_peripheral.eu_registers.link_registers[6].return_address
+    );
+}
+
+/// Models the exception unit's own cycle when it fetches a reserved software-exception vector:
+/// the (irrelevant) vector-table contents are still fetched exactly as for a valid vector, but no
+/// dispatch/jump happens this cycle -- `Faults::PrivilegeViolation` is raised instead, to be
+/// dispatched on the *next* cycle via `expect_fault`.
+pub fn expect_software_exception_vector_fetch_without_dispatch(
+    vector: u8,
+) -> Vec<Option<Expectation>> {
+    vec![
+        Some(expectation(None, None, Some(u32::from(vector) * 2), None)),
+        Some(expectation(
+            Some(0x0),
+            None,
+            Some((u32::from(vector) * 2) + 1),
+            None,
+        )),
+        Some(expectation(Some(0x0), None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+        Some(expectation(None, None, None, None)),
+    ]
+}
+
+pub fn build_software_exception_below_reserved_vector_instruction() -> InstructionData {
+    InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0x0,
+        value: 0x1140, // EXCP #0x40 -- reserved (below USER_EXCEPTION_VECTOR_START, 0x60)
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    })
+}
+
+#[test]
+fn test_privilege_violation_fault_on_reserved_software_exception_vector() {
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+
+    let software_exception = build_software_exception_below_reserved_vector_instruction();
+
+    // Protected mode must be active for this check to fire -- see the paired
+    // `test_reserved_software_exception_vector_allowed_in_supervisor_mode` below.
+    set_sr_bit(
+        StatusRegisterFields::ProtectedMode,
+        &mut cpu_peripheral.registers,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0, &software_exception),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_software_exception_vector_fetch_without_dispatch(0x40),
+        &mut clocks,
+    );
+
+    assert!(
+        cpu_peripheral
+            .eu_registers
+            .pending_fault
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::PrivilegeViolation),
+        "A fault should be raised because vector 0x40 is below the reserved threshold (0x60)"
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_fault(PRIVILEGE_VIOLATION_FAULT, (0x00AB, 0xCDE0)),
+        &mut clocks,
+    );
+
+    assert!(!sr_bit_is_set(
+        StatusRegisterFields::ProtectedMode,
+        &cpu_peripheral.registers
+    ));
+}
+
+#[test]
+fn test_reserved_software_exception_vector_allowed_in_supervisor_mode() {
+    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut clocks = 0;
+
+    let software_exception = build_software_exception_below_reserved_vector_instruction();
+
+    // Protected mode is NOT set here -- supervisor code is unrestricted (manual: "if
+    // protected_mode and vector < 0x60 then raise privilege_violation_fault"), so this must
+    // dispatch normally, not fault.
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_main_program_cycle_with_instruction(0x0, &software_exception),
+        &mut clocks,
+    );
+
+    run_expectations(
+        &mut cpu_peripheral,
+        &expect_exception_handler(0x0, 0x40, (0xABCD, 0xAB00)),
+        &mut clocks,
+    );
+
+    assert_eq!(None, cpu_peripheral.eu_registers.pending_fault);
+    assert_eq_hex!(0x00CD_AB02, cpu_peripheral.registers.get_full_pc_address());
 }
 
 #[test]
 fn test_level_five_interrupt_conflict_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     // Simulate being inside a level-5 handler
@@ -1373,7 +1711,7 @@ fn test_level_five_interrupt_conflict_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::LevelFiveInterruptConflict),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::LevelFiveInterruptConflict),
         "LevelFiveInterruptConflict should be raised when L5 fires while already at exception level 6"
     );
 
@@ -1388,7 +1726,7 @@ fn test_level_five_interrupt_conflict_fault() {
 
 #[test]
 fn test_instruction_trace_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     set_sr_bit(
@@ -1410,7 +1748,7 @@ fn test_instruction_trace_fault() {
         cpu_peripheral
             .eu_registers
             .pending_fault
-            .is_some_and(|fault| fault == Faults::InstructionTrace),
+            .is_some_and(|pending_fault| pending_fault.fault == Faults::InstructionTrace),
         "InstructionTrace fault should be pending after an instruction with T bit set"
     );
 

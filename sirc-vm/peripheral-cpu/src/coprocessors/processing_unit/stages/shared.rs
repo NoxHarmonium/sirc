@@ -56,6 +56,11 @@ pub struct DecodedInstruction {
     pub con_: bool,
     pub npc_l_: u16,
     pub npc_h_: u16,
+    /// The address this instruction was itself fetched from (as opposed to `npc_l_`/`npc_h_`,
+    /// the address of the *next* instruction). Used to recover the faulting instruction's own
+    /// address for faults detected after `registers.pl` has already been advanced.
+    pub pc_l_: u16,
+    pub pc_h_: u16,
 }
 
 #[derive(Debug, Default)]

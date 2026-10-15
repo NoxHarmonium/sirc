@@ -442,7 +442,11 @@ fn perform_arithmetic_left_shift(
     intermediate_registers.alu_output = result;
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
 fn perform_arithmetic_right_shift(
     a: u16,
     b: u16,
@@ -451,8 +455,6 @@ fn perform_arithmetic_right_shift(
     // Same as LSR but preserves the sign bit
     // TODO: Boolean `short_immediate` argument in ALU shift code is code smell
     // category=Refactoring
-    let sign_bit = u32::from(a) & 0x8000;
-
     let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
 
@@ -461,9 +463,14 @@ fn perform_arithmetic_right_shift(
     // Therefore, we can shift a 32 bit value temporarily and check manually if a bit
     // rotates into the first position on the left side.
     // The hardware implementation will look different to this
-    let wide_result = extended_a.rotate_right(u32::from(clamped_b)) | sign_bit;
-    let result = wide_result as u16;
-    let carry = (wide_result & MSB_MASK) == MSB_MASK;
+    let carry = (extended_a.rotate_right(u32::from(clamped_b)) & MSB_MASK) == MSB_MASK;
+
+    // Sign-extend to i32 *before* shifting, so every vacated bit becomes the original sign,
+    // not just bit 15. Rust's native arithmetic right shift on a signed type does this
+    // correctly, including saturating to all-1s/all-0s once the shift count reaches 16
+    // (clamped_b is already bounded to 0..=16 above, nowhere near i32's 32-bit shift-panic
+    // threshold).
+    let result = (i32::from(a as i16) >> clamped_b) as u16;
 
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,

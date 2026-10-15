@@ -122,7 +122,7 @@ function emit_immediate_row(instruction, word, encoded,    op, reg, imm, af, con
 	af = bits(encoded, 4, 2)
 	cond = bits(encoded, 0, 4)
 
-	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(reg, 1) " & " hex_field(imm, 4) " & 0b" bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
+	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(reg, 1) " & " hex_field(imm, 4) " & " bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
 	emit("& " bin_field(op, 6, 0) " & " bin_field(reg, 4, 0) " & " bin_field(imm, 16, 4) " & " bin_field(af, 2, 0) " & " bin_field(cond, 4, 0) " & \\\\")
 }
 
@@ -136,7 +136,7 @@ function emit_short_immediate_row(instruction, word, encoded,    op, reg, imm, s
 	af = bits(encoded, 4, 2)
 	cond = bits(encoded, 0, 4)
 
-	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(reg, 1) " & " hex_field(imm, 2) " & " so " & " bin_plain(st, 3) " & " hex_field(sa, 1) " & 0b" bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
+	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(reg, 1) " & " hex_field(imm, 2) " & " so " & " bin_plain(st, 3) " & " hex_field(sa, 1) " & " bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
 	emit("& " bin_field(op, 6, 0) " & " bin_field(reg, 4, 0) " & " bin_field(imm, 8, 0) " & " bin_field(so, 1, 0) " & " bin_field(st, 3, 0) " & " bin_field(sa, 4, 0) " & " bin_field(af, 2, 0) " & " bin_field(cond, 4, 0) " & \\\\")
 }
 
@@ -151,7 +151,7 @@ function emit_register_row(instruction, word, encoded,    op, r1, r2, r3, so, st
 	af = bits(encoded, 4, 2)
 	cond = bits(encoded, 0, 4)
 
-	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(r1, 1) " & " hex_field(r2, 1) " & " hex_field(r3, 1) " & " so " & " bin_plain(st, 3) " & " hex_field(sa, 1) " & 0b" bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
+	emit("\\texttt{" tex_escape(instruction) "} & " hex_field(op, 2) " & " hex_field(r1, 1) " & " hex_field(r2, 1) " & " hex_field(r3, 1) " & " so " & " bin_plain(st, 3) " & " hex_field(sa, 1) " & " bin_plain(af, 2) " & " hex_field(cond, 1) " & \\texttt{" word "} \\\\")
 	emit("& " bin_field(op, 6, 0) " & " bin_field(r1, 4, 0) " & " bin_field(r2, 4, 0) " & " bin_field(r3, 4, 0) " & " bin_field(so, 1, 0) " & " bin_field(st, 3, 0) " & " bin_field(sa, 4, 0) " & " bin_field(af, 2, 0) " & " bin_field(cond, 4, 0) " & \\\\")
 }
 

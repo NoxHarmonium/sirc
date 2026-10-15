@@ -175,3 +175,18 @@ pub enum Faults {
     DoubleFault = 0x8,
     BusProtection = 0x9,
 }
+
+/// A fault awaiting dispatch by the exception unit, bundled with the address it should be
+/// retried from (for retryable faults) or resumed after (for non-retryable ones).
+///
+/// Bundling these together (rather than tracking the fault and its address as two independent
+/// `Option`s) makes it impossible to raise a fault without also stating what address it should
+/// return to.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PendingFault {
+    pub fault: Faults,
+    /// The address `handle_exception` should store in the fault link register: the faulting
+    /// instruction's own address for retryable faults, or the following instruction's address
+    /// otherwise.
+    pub pc: u32,
+}

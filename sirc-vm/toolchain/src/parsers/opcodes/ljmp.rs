@@ -37,7 +37,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// assert_eq!(op_code, Instruction::LoadEffectiveAddressFromIndirectRegister);
 /// assert_eq!(r1, 0x03);
 /// assert_eq!(r2, 0x00);
-/// assert_eq!(r3, 0x02);
+/// assert_eq!(r3, 0x01); // r2
 /// assert_eq!(condition_flag, ConditionFlags::NotEqual);
 /// assert_eq!(shift_type, ShiftType::None);
 /// assert_eq!(shift_count, 0);

@@ -4,8 +4,8 @@
 .ORG 0x0000
 .DQ @start
 
-; 64th vector (*2 words per vector)
-.ORG 0x0080
+; 96th vector (*2 words per vector)
+.ORG 0x00C0
 .DQ @exception_handler
 .DQ @exception_handler_that_should_be_ignored
 
@@ -15,7 +15,7 @@
 ; Reset register
 LOAD    r1, #1
 ; Trigger Software Exception
-EXCP    #0x40
+EXCP    #0x60
 
 ; r1 should be 0x0FF here after exception handler runs
 
@@ -29,7 +29,7 @@ COPI    #0x14FF
 ; Final value of r1 should be this value
 LOAD    r1, #0xFF
 ; Try and trigger nested software exception (should be ignored)
-EXCP    #0x41
+EXCP    #0x61
 ; Return from exception
 RETE
 

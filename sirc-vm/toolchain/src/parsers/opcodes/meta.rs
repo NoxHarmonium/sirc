@@ -1,8 +1,7 @@
 use super::super::shared::AsmResult;
-use crate::parsers::instruction::parse_instruction_tag;
+use crate::parsers::instruction::{parse_instruction_operands0, parse_instruction_tag};
 use crate::types::instruction::InstructionToken;
 use nom::branch::alt;
-use nom::character::complete::one_of;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
@@ -20,7 +19,7 @@ use peripheral_cpu::registers::AddressRegisterName;
 /// use nom_supreme::error::ErrorTree;
 /// use nom_supreme::final_parser::{final_parser, Location};
 ///
-/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(meta)("RETS|==\n") {
+/// let parsed_instruction = match final_parser::<&str, InstructionToken, ErrorTree<&str>, ErrorTree<Location>>(meta)("RETS|==") {
 ///   Ok(tokens) => tokens,
 ///   Err(error) => panic!("Error parsing instruction:\n{}", error),
 /// };
@@ -47,23 +46,14 @@ pub fn meta(i: &str) -> AsmResult<InstructionToken> {
             error_string.as_str(),
         )));
     }
-    let (i, _) =
-        one_of::<&str, &str, ErrorTree<&str>>("\r\n")(i_after_instruction).map_err(|_| {
-            let error_string =
-                format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
-            nom::Err::Failure(ErrorTree::from_external_error(
-                i_after_instruction,
-                ErrorKind::Fail,
-                error_string.as_str(),
-            ))
-        })?;
+    let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
-    match tag.as_str() {
+    match (tag.as_str(), operands.as_slice()) {
         // Returning from a subroutine is just loading the link register into the PC again
         // TODO: Double check that RETS instruction doesn't have security flaw
         // category=Hardware
         // Double check this doesn't provide a way for code running in non system mode to change the program segment (ph)
-        "RETS" => Ok((
+        ("RETS", []) => Ok((
             i,
             InstructionToken {
                 input_length,
@@ -79,7 +69,7 @@ pub fn meta(i: &str) -> AsmResult<InstructionToken> {
         )),
         // Pseudo instruction - add zero to register 1 which does nothing
         // I guess any instruction with condition flag set to "NEVER" would also work
-        "NOOP" => Ok((
+        ("NOOP", []) => Ok((
             i,
             InstructionToken {
                 input_length,
@@ -94,10 +84,11 @@ pub fn meta(i: &str) -> AsmResult<InstructionToken> {
             },
         )),
 
-        _ => {
-            let error_string = format!("Mismatch between parser and handler for tag [{tag}] ");
+        (tag, _modes) => {
+            let error_string =
+                format!("The [{tag}] does not support any addressing modes (e.g. NOOP or RETE)");
             Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i,
+                i_after_instruction,
                 ErrorKind::Fail,
                 error_string.as_str(),
             )))

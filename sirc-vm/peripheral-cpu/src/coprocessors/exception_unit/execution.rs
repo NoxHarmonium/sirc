@@ -20,15 +20,15 @@ use crate::{
                 DOUBLE_FAULT_VECTOR, LEVEL_FIVE_HARDWARE_EXCEPTION, LEVEL_ONE_HARDWARE_EXCEPTION,
                 USER_EXCEPTION_VECTOR_START,
             },
-            ExceptionPriorities, Faults, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
+            ExceptionPriorities, Faults, PendingFault, EXCEPTION_UNIT_TRANSFER_EU_REGISTER_LENGTH,
             EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK, EXCEPTION_UNIT_TRANSFER_REGISTER_SELECT_MASK,
         },
         processing_unit::definitions::INSTRUCTION_SIZE_WORDS,
         shared::ExecutionPhase,
     },
     registers::{
-        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, ExceptionLinkRegister,
-        ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
+        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set,
+        ExceptionLinkRegister, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
     CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
@@ -66,15 +66,13 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 
 
 pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCodes, u8, u8) {
     let instruction = decode_exception_unit_instruction(cause_register_value);
-    // TODO: Define what happens when exception CoP gets an unimplemented opcode
-    // category=Hardware
-    // Real CPU can't panic. Work out what should actually happen here (probably nothing)
-    let op_code = num::FromPrimitive::from_u8(instruction.op_code).unwrap_or_else(|| {
-        panic!(
-            "Unimplemented op code [{:X}] for exception co-processor",
-            instruction.op_code
-        )
-    });
+    // Reserved operation nibbles (0x2-0x8) are architecturally undefined, per the manual
+    // (chapters/06-exceptions.tex:816, chapters/16-coprocessor-instructions.tex Sec 16.2) -- not
+    // a fault, and certainly not a crash. A program can reach this via COPI/COPR targeting the
+    // exception unit's coprocessor ID with a reserved op nibble. Treat it as a harmless no-op,
+    // the same behavior `None` already gets.
+    let op_code =
+        num::FromPrimitive::from_u8(instruction.op_code).unwrap_or(ExceptionUnitOpCodes::None);
     let vector = instruction.value;
     let level = if op_code == ExceptionUnitOpCodes::SoftwareException {
         1
@@ -143,8 +141,8 @@ pub fn get_cause_register_value(
     registers: &Registers,
     eu_registers: &mut ExceptionUnitRegisters,
 ) -> u16 {
-    if let Some(pending_fault) = eu_registers.pending_fault {
-        let vector = match pending_fault {
+    if let Some(PendingFault { fault, .. }) = eu_registers.pending_fault {
+        let vector = match fault {
             Faults::Bus => BUS_FAULT,
             Faults::Alignment => ALIGNMENT_FAULT,
             Faults::SegmentOverflow => SEGMENT_OVERFLOW_FAULT,
@@ -158,49 +156,59 @@ pub fn get_cause_register_value(
 
         return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
     }
-    let exception_level =
-        interrupt_flags_to_exception_level(eu_registers.pending_hardware_exceptions);
-
     trace!(
-        "eu_registers.pending_hardware_exceptions: 0x[{:X}] interrupt exception level: 0x[{exception_level:X}] hw_interrupt_enable: 0x[{:X}] current_exception_level: 0x[{:X}]",
+        "eu_registers.pending_hardware_exceptions: 0x[{:X}] hw_interrupt_enable: 0x[{:X}] current_exception_level: 0x[{:X}]",
         eu_registers.pending_hardware_exceptions,
         get_hardware_interrupt_enable(registers),
         eu_registers.current_exception_level
     );
 
-    // Check if this specific hardware interrupt line is enabled
-    // exception_level 2-6 maps to interrupt lines 1-5
-    // So we check bit (exception_level - 2) of the enable mask
-    // Also check that this exception is higher priority than the current level
-    // (higher priority = higher exception level number).
-    // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
-    // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
-    // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
-    // by handle_exception's priority filter, which silently ignores lower-priority exceptions.
-    let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
-        && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
-    if (2..=6).contains(&exception_level)
-        && (exception_level > eu_registers.current_exception_level || is_nmi_reentry)
-    {
+    // Walk every pending line from highest to lowest priority (exception_level 6 down to 2,
+    // mapping to interrupt lines 5 down to 1) and dispatch the first one that is both pending
+    // and still enabled. This used to only ever look at the single highest *pending* line
+    // (via interrupt_flags_to_exception_level/find_highest_active_interrupt): if that one line's
+    // enable bit had been cleared since it was latched, the function gave up for the whole
+    // cycle and never considered any other pending line, even a lower-priority one that was
+    // still enabled -- see docs/reference/review/implementation-bugs.md, IB-3.
+    let hw_interrupt_enable = get_hardware_interrupt_enable(registers);
+    for exception_level in (2..=6).rev() {
         let interrupt_line = exception_level - 2;
-        let hw_interrupt_enable = get_hardware_interrupt_enable(registers);
-        let is_enabled = (hw_interrupt_enable & (1 << interrupt_line)) != 0;
-
-        if is_enabled {
-            trace!(
-                "servicing interrupt by injecting cause value. exception_level {exception_level}"
-            );
-            let vector = hardware_exception_level_to_vector(exception_level - 1);
-            // Clear highest interrupt because we will now service it
-            eu_registers.pending_hardware_exceptions &=
-                !find_highest_active_interrupt(eu_registers.pending_hardware_exceptions);
-
-            debug!(
-                "eu_registers.pending_hardware_exceptions: {}",
-                eu_registers.pending_hardware_exceptions
-            );
-            return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
+        let is_pending = (eu_registers.pending_hardware_exceptions & (1 << interrupt_line)) != 0;
+        if !is_pending {
+            continue;
         }
+
+        // Also check that this exception is higher priority than the current level
+        // (higher priority = higher exception level number).
+        // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
+        // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
+        // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
+        // by handle_exception's priority filter, which silently ignores lower-priority
+        // exceptions.
+        let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
+            && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
+        if !(exception_level > eu_registers.current_exception_level || is_nmi_reentry) {
+            continue;
+        }
+
+        // Check if this specific hardware interrupt line is still enabled -- it may have been
+        // latched while enabled and then masked before its turn to dispatch.
+        let is_enabled = (hw_interrupt_enable & (1 << interrupt_line)) != 0;
+        if !is_enabled {
+            continue;
+        }
+
+        trace!("servicing interrupt by injecting cause value. exception_level {exception_level}");
+        let vector = hardware_exception_level_to_vector(exception_level - 1);
+        // Clear this interrupt specifically (not necessarily the highest pending bit) because
+        // we are now servicing it.
+        eu_registers.pending_hardware_exceptions &= !(1 << interrupt_line);
+
+        debug!(
+            "eu_registers.pending_hardware_exceptions: {}",
+            eu_registers.pending_hardware_exceptions
+        );
+        return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
     }
     trace!(
         "returning registers.pending_coprocessor_command 0x[{:X}]",
@@ -240,10 +248,12 @@ fn handle_exception(
 
     // TODO: Magic numbers
     if current_exception_level == 6 && exception_level == 6 {
-        eu_registers.pending_fault = raise_fault(
+        // Not retryable -- resume after whatever was executing when the conflicting L5 arrived.
+        raise_fault(
             eu_registers,
             Faults::LevelFiveInterruptConflict,
             bus_assertions,
+            registers.get_full_pc_address(),
         );
         return;
     }
@@ -255,8 +265,18 @@ fn handle_exception(
         return;
     }
 
+    // For a Fault dispatch, `pending_fault` was set by `raise_fault` with the correct return
+    // address for that specific fault (the faulting instruction's own address if retryable, the
+    // following instruction's otherwise) and hasn't been cleared yet -- it's cleared later, in
+    // `WriteBackExecutor`, once this dispatch has committed. For a HardwareException or
+    // SoftwareException dispatch, no fault is pending, so fall back to the current PC as before.
+    let return_address = eu_registers.pending_fault.map_or_else(
+        || registers.get_full_pc_address(),
+        |pending_fault| pending_fault.pc,
+    );
+
     eu_registers.link_registers[(exception_level - 1) as usize] = ExceptionLinkRegister {
-        return_address: registers.get_full_pc_address(),
+        return_address,
         return_status_register: registers.sr,
         saved_exception_level: current_exception_level,
     };
@@ -301,8 +321,7 @@ impl Executor for ExceptionUnitExecutor {
 
         match phase {
             ExecutionPhase::InstructionFetchLow => {
-                let vector_address_offset = vector as u32 * INSTRUCTION_SIZE_WORDS;
-                self.vector_address = registers.system_ram_offset | vector_address_offset;
+                self.vector_address = vector as u32 * INSTRUCTION_SIZE_WORDS;
                 return BusAssertions {
                     address: self.vector_address,
                     op: BusOperation::Read,
@@ -323,14 +342,8 @@ impl Executor for ExceptionUnitExecutor {
             }
             ExecutionPhase::InstructionDecode => {
                 self.vector_value |= bus_assertions.data as u32;
-                let vector_address_high = self.vector_address as u8;
 
                 debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
-
-                assert!(
-                    op_code != ExceptionUnitOpCodes::SoftwareException || vector_address_high >= USER_EXCEPTION_VECTOR_START,
-                    "The first section of the exception vector address space is reserved for hardware exceptions. Expected >= 0x{USER_EXCEPTION_VECTOR_START:X} got 0x{vector_address_high:X}",
-                );
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
                 // TODO: Some of these may have to be spread into the other execution phases depending on things like memory access (e.g. to make it like the CPU - one op per phase)
@@ -413,6 +426,26 @@ impl Executor for ExceptionUnitExecutor {
 
                         trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
                     }
+                    // The first section of the exception vector address space is reserved for
+                    // hardware exceptions/faults -- in protected mode, a software exception
+                    // targeting it is a privilege violation, not a valid dispatch (supervisor
+                    // code is unrestricted, matching `check_privilege`'s general convention
+                    // elsewhere). Raising the fault here (rather than jumping to the vector this
+                    // cycle) is sufficient to suppress dispatch: `Fault` can only ever be this
+                    // op-code when `pending_fault` was already `Some` going in
+                    // (`get_cause_register_value` checks it first), so this guard can never
+                    // accidentally intercept a genuine fault dispatch.
+                    ExceptionUnitOpCodes::SoftwareException
+                        if vector < USER_EXCEPTION_VECTOR_START
+                            && sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) =>
+                    {
+                        raise_fault(
+                            eu_registers,
+                            Faults::PrivilegeViolation,
+                            &bus_assertions,
+                            registers.get_full_pc_address(),
+                        );
+                    }
                     ExceptionUnitOpCodes::Fault
                     | ExceptionUnitOpCodes::HardwareException
                     | ExceptionUnitOpCodes::SoftwareException => {
@@ -446,5 +479,84 @@ impl Executor for ExceptionUnitExecutor {
         }
 
         BusAssertions::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::registers::set_hardware_interrupt_enable;
+
+    // IB-3 (docs/reference/review/implementation-bugs.md): dispatch used to only ever look at
+    // the single highest-priority *pending* interrupt line. If that one line's enable bit had
+    // been cleared since it was latched, dispatch gave up for the whole cycle instead of
+    // considering any other pending line -- even a lower-priority one that was still enabled.
+    // Line 4 (bit 3, the highest-priority maskable line) and line 1 (bit 0, the lowest) are both
+    // latched as pending; only line 1 is enabled -- as if line 4's enable bit was cleared after
+    // it was latched but before its turn to dispatch.
+    const LINE_1_AND_LINE_4_PENDING: u8 = 0b0_1001;
+    const LINE_4_PENDING_ONLY: u8 = 0b0_1000;
+
+    #[test]
+    fn masked_high_priority_pending_interrupt_does_not_block_a_lower_priority_one() {
+        let mut registers = Registers::default();
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b0001);
+
+        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
+        let (op_code, vector, _level) = deconstruct_cause_value(cause_value);
+
+        assert_eq!(op_code, ExceptionUnitOpCodes::HardwareException);
+        assert_eq!(
+            vector,
+            hardware_exception_level_to_vector(1),
+            "line 1 (the only enabled pending line) should be dispatched"
+        );
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions, LINE_4_PENDING_ONLY,
+            "only line 1's pending bit should be cleared; line 4 stays latched, still masked"
+        );
+    }
+
+    #[test]
+    fn nothing_dispatches_when_every_pending_line_is_masked() {
+        let mut registers = Registers::default();
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b0000);
+
+        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
+
+        assert_eq!(cause_value, 0, "no coprocessor command should be injected");
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions, LINE_1_AND_LINE_4_PENDING,
+            "both lines stay latched, since neither is enabled"
+        );
+    }
+
+    #[test]
+    fn reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking() {
+        // IB-2 (docs/reference/review/implementation-bugs.md): opcodes 0x2-0x8 are reserved --
+        // architecturally undefined, not a crash. Construct the raw cause value directly since
+        // `construct_cause_value` only accepts real `ExceptionUnitOpCodes` variants.
+        for reserved_op_code in 0x2u8..=0x8 {
+            let cause_value = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
+                << COPROCESSOR_ID_LENGTH)
+                & COPROCESSOR_ID_MASK
+                | (u16::from(reserved_op_code) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK;
+
+            let (op_code, _vector, _level) = deconstruct_cause_value(cause_value);
+
+            assert_eq!(
+                op_code,
+                ExceptionUnitOpCodes::None,
+                "reserved op code 0x{reserved_op_code:X} should decode as a harmless no-op, not panic"
+            );
+        }
     }
 }

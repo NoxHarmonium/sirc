@@ -10,7 +10,7 @@ static PROGRAM_SEGMENT: &str = "PROGRAM";
 static FILE_SEGMENT: &str = "FILE";
 
 fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     // Jump to reset vector
     cpu_peripheral.reset();
 

@@ -38,7 +38,10 @@ where
 
     ProtectedModeResult {
         registers: cpu.registers,
-        pending_fault: cpu.eu_registers.pending_fault,
+        pending_fault: cpu
+            .eu_registers
+            .pending_fault
+            .map(|pending_fault| pending_fault.fault),
         pending_coprocessor_command: cpu.registers.pending_coprocessor_command,
     }
 }
@@ -129,6 +132,23 @@ fn direct_status_register_writes_fault_in_protected_mode() {
         StatusRegisterFields::ProtectedMode as u16,
         result.registers.sr
     );
+}
+
+#[test]
+fn all_zero_instruction_word_does_not_fault_in_protected_mode() {
+    // An erased/uninitialized-memory word decodes as `ADDI[N] r1, #0` -- register field 0x0 now
+    // names r1 (an ordinary general-purpose register), not sr, so it must not be privileged.
+    let noop = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::AddImmediate,
+        register: 0x0,
+        value: 0x0,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x0,
+    });
+    let result = run_instruction(&noop, |registers, _| {
+        enable_protected_mode(registers);
+    });
+    assert_no_fault(&result);
 }
 
 #[test]

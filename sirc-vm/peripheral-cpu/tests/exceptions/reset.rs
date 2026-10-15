@@ -3,7 +3,7 @@ use peripheral_bus::{
     device::BusAssertions, memory_mapped_device::new_stub_memory_mapped_device, new_bus_peripheral,
 };
 use peripheral_cpu::{
-    coprocessors::exception_unit::definitions::Faults,
+    coprocessors::exception_unit::definitions::{Faults, PendingFault},
     coprocessors::processing_unit::{
         definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
         encoding::encode_instruction,
@@ -14,7 +14,7 @@ use peripheral_cpu::{
 };
 
 fn set_up_reset_test() -> peripheral_bus::BusPeripheral {
-    let cpu = new_cpu_peripheral(0x0);
+    let cpu = new_cpu_peripheral();
     let mut bus = new_bus_peripheral(Box::new(cpu));
     // Segment at address 0 so the EU can fetch the reset vector (all zeroes → PC = 0x0).
     bus.map_segment(
@@ -140,8 +140,8 @@ fn test_software_rset_hold() {
         assertions.bus_access_strobe,
         "EU should be fetching reset vector"
     );
-    // The reset vector table lives at system_ram_offset|0 = 0, which is also where the RSET
-    // instruction was written. The EU will read those instruction bytes as the vector address.
+    // The reset vector table lives at address 0, which is also where the RSET instruction was
+    // written. The EU will read those instruction bytes as the vector address.
     // This is a test-setup artifact, not a bug. Checking bus_access_strobe is sufficient to
     // confirm the RSTO hold completed and the EU resumed correctly.
 }
@@ -255,7 +255,10 @@ fn test_reset_clears_pending_exception_state() {
 
     {
         let cpu = get_cpu(&mut bus);
-        cpu.eu_registers.pending_fault = Some(Faults::BusProtection);
+        cpu.eu_registers.pending_fault = Some(PendingFault {
+            fault: Faults::BusProtection,
+            pc: 0x0,
+        });
         cpu.eu_registers.pending_hardware_exceptions = 0x1F;
         cpu.eu_registers.current_exception_level = 7;
         cpu.eu_registers.waiting_for_exception = true;

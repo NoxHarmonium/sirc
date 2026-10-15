@@ -99,10 +99,9 @@ into logical groups:
 \end{table}
 
 See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. The Flags column shows \texttt{--} for
-\mnemonic{LOAD} (\opcode{07}, \opcode{37}) only when the default \texttt{[N]} status update source is used; an
-explicit status update override on \mnemonic{LOAD} leaves all four flags architecturally undefined. See
-Chapter~\ref{ch:alu-instructions} for
-details.
+\mnemonic{LOAD} (\opcode{07}, \opcode{37}) only when the default \texttt{[N]} status update source is used; an encoding
+of the \mnemonic{LOAD} opcode with a non-\texttt{[N]} AF field, not reachable from public assembly syntax, leaves all
+four flags architecturally undefined (\texttt{U U U U}). See Chapter~\ref{ch:alu-instructions} for details.
 
 \section{Instruction Grouping Patterns}
 
@@ -122,8 +121,10 @@ The opcode space is systematically organized:
 Many ALU instructions have two variants:
 
 \begin{itemize}
-	\item \textbf{+\opcode{00} to +\opcode{07}}: Save result to destination register
-	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only (update flags, discard result)
+	\item \textbf{+\opcode{00} to +\opcode{06}}: Save result to destination register
+	\item \textbf{+\opcode{07}}: \mnemonic{LOAD} (\opcode{27} is undocumented)
+	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only where a documented mnemonic exists (update flags, discard
+	      result)
 	\item \textbf{+\opcode{0F}}: Coprocessor call (neither result nor flags are written)
 \end{itemize}
 

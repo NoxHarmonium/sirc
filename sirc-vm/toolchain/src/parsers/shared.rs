@@ -1,5 +1,5 @@
 use nom::branch::alt;
-use nom::bytes::complete::{is_a, is_not};
+use nom::bytes::complete::{is_a, take_till};
 use nom::character::complete::{char, multispace0, one_of, space0};
 use nom::combinator::{cut, eof, map, map_res, opt, recognize};
 use nom::error::{ErrorKind, ParseError};
@@ -241,12 +241,10 @@ fn parse_origin_token(i: &str) -> AsmResult<Token> {
 fn parse_comment_(i: &str) -> AsmResult<Token> {
     // TODO: Should there be a more flexible parser for eol?
     // category=Toolchain
-    // TODO: Comments with nothing after the semicolon currently fail
-    // category=Toolchain
-    // TODO: Comments with a semi-colon in the body  them seem to fail
-    map(pair(char(';'), cut(is_not("\n\r"))), |(_, text)| {
-        Token::Comment(String::from(text))
-    })(i)
+    map(
+        pair(char(';'), take_till(|c| c == '\n' || c == '\r')),
+        |(_, text)| Token::Comment(String::from(text)),
+    )(i)
 }
 
 fn parse_comment(i: &str) -> AsmResult<Token> {

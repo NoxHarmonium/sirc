@@ -23,7 +23,7 @@ during the initial style derivation was ruled on by the author and is recorded i
 | general-purpose register | general purpose register | Compound adjective before a noun takes a hyphen; usage is split (11/8) but this is a grammar fix, not a terminology choice. |
 | architecturally undefined | undefined (bare), implementation-defined (when describing undocumented-opcode behavior) | Handover resolution: undocumented opcodes are valid encodings with *architecturally undefined* behavior, not vendor-style "implementation-defined" behavior. `appendix-a-opcode-map.tex:140` still says "implementation-defined" for undocumented opcodes — flag for correction to match the resolved definition; true implementation-defined language stays reserved for genuine per-model timing variance (e.g., extra maths-coprocessor cycles). |
 | reserved | — | See §2. Do not use "undocumented" and "reserved" interchangeably: "reserved" = architecturally set aside; "undocumented" (App. C) = a specific, currently-unassigned opcode with observed behavior worth describing as a caution, not a promise. |
-| displacement | offset (for addressing-mode/branch values) | Keep "displacement" for addressing-mode and branch/call values; keep "offset" for memory/structure offsets and the `system_ram_offset` register name. Do not swap the two. |
+| displacement | offset (for addressing-mode/branch values) | Keep "displacement" for addressing-mode and branch/call values; keep "offset" for memory/structure offsets, e.g. `program_offset`. Do not swap the two. |
 | R1/R2/R3 (upper case, no macro) | — | Reserved for abstract *field-position* labels in instruction-format diagrams and field-order prose (Ch.7). Never use for a concrete register operand. |
 | `\reg{r7}` | bare "R7" for a concrete register | `06-exceptions.tex:648–649` uses bare "R7" for the real register `r7`; correct to `\reg{r7}` to match the 89-instance convention. |
 
@@ -33,7 +33,7 @@ during the initial style derivation was ruled on by the author and is recorded i
 - **may** — a permitted option; the CPU, the assembler, or the programmer is free to choose.
 - **should / should not** — a recommendation. Not required for conformance. Do not use for anything that is actually mandatory.
 - **shall** — do not use. The manual currently has zero instances; keep it that way and use "must" instead.
-- **reserved** — a field, opcode, or coprocessor ID not currently assigned. Software must not assume a read value and must write zero unless a chapter states an explicit encoding. (See Decisions needing approval — current wording is softer than this in places.)
+- **reserved** — a field, opcode, or coprocessor ID not currently assigned. Software must not assume any particular read value and must not rely on any behavior it may have. Do *not* require writing zero (see "Reserved fields stay advisory" below).
 - **undefined / architecturally undefined** — the architecture does not specify the result. It may vary by implementation, by revision, or between executions; software must not depend on any particular outcome, and doing so is not a portability guarantee. Prefer "architecturally undefined" in instruction-reference prose; bare "undefined" is acceptable in flag tables and informal descriptions.
 - **implementation-defined** — behavior that is fixed and consistent within one CPU implementation/model but may differ between models (e.g., extra maths-coprocessor cycles). Not a synonym for "architecturally undefined."
 - **unpredictable** — not used in this manual. Do not introduce it as a synonym for "undefined"; the manual already distinguishes "architecturally undefined" from "implementation-defined" and a third term would blur that line.
@@ -115,6 +115,14 @@ matching the unanimous form already in Chapters 13–17. Do not use "Status Flag
 - Architecture/reset/bus/exception/memory-model chapters should prefer pseudocode,
   diagrams, and tables over assembly listings (per handover Workstream 12); confine
   assembly listings mainly to the instruction-reference chapters and the examples appendix.
+- Label declarations use a **leading** colon (`:loop`), never a trailing one (`loop:`) — the
+  assembler only accepts the leading form, confirmed 2026-09-16 (`examples/crc-report`) after
+  several existing manual listings turned out to use the trailing form and fail to assemble.
+  Label *references* (branch/call targets, and any operand naming a symbol's address) use
+  `@label`, with no `#` prefix even where the operand position is otherwise an immediate value
+  (`BRAN|cond @loop`, `LOAD al, @buffer` — not `LOAD al, #buffer`). When adding or editing a
+  listing that uses labels, prefer actually assembling it (`cargo run --bin assembler`, from
+  `docs/reference/` add `../../sirc-vm` to the path) over eyeballing the syntax.
 
 ## Approved decisions (Gate 1, 2026-09-05)
 

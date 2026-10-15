@@ -71,7 +71,8 @@ interconnections.
 	\label{fig:cpu-block-diagram}
 \end{figure}
 
-%TODO: Update the diagram so that the memory component is obviously separate to the other components that live together in the chip
+% TODO: Update the diagram so that the memory component is obviously separate to the other components that live together in the chip
+% category=Manual
 
 \subsection{Control Unit (CU)}
 
@@ -171,4 +172,7 @@ instructions without additional clock cycles.
 
 \section{External Interface}
 
-The SIRC-1 CPU exposes its bus, interrupt, and reset signals as physical pins; the chip package, the pin-by-pin descriptions, and the bus timing diagrams are given in Appendix~\ref{appendix:external-interface}. One architectural fact the rest of this chapter relies on: on \texttt{RSTI} assertion the CPU aborts the current instruction or bus wait and restarts at phase 0, as described in the six-stage execution phases above.
+The SIRC-1 CPU exposes its bus, interrupt, and reset signals as physical pins; the chip package, the pin-by-pin
+descriptions, and the bus timing diagrams are given in Appendix~\ref{appendix:external-interface}. One architectural
+fact the rest of this chapter relies on: on \texttt{RSTI} assertion the CPU aborts the current instruction or bus wait
+and restarts at phase 0, as described in the six-stage execution phases above.

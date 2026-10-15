@@ -8,20 +8,20 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 \footnotesize
 \begin{longtable}{clll}
 	\caption{Complete SIRCIS Opcode Map}
-	\label{tab:opcode-map} \\
+	\label{tab:opcode-map}                                                                                        \\
 	\toprule
-	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description} \\
+	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description}                                     \\
 	\midrule
 	\endfirsthead
 
-	\multicolumn{4}{l}{\small\textit{Table~\ref{tab:opcode-map} (continued)}} \\
+	\multicolumn{4}{l}{\small\textit{Table~\ref{tab:opcode-map} (continued)}}                                     \\
 	\toprule
-	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description} \\
+	\textbf{Hex} & \textbf{Binary} & \textbf{Mnemonic} & \textbf{Description}                                     \\
 	\midrule
 	\endhead
 
 	\midrule
-	\multicolumn{4}{r}{\small\textit{continued on next page}} \\
+	\multicolumn{4}{r}{\small\textit{continued on next page}}                                                     \\
 	\endfoot
 
 	\bottomrule
@@ -29,79 +29,79 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 
 	\multicolumn{4}{c}{\textbf{ALU Immediate (\opcode{00}--\opcode{0F})}}                                         \\
 	\midrule
-		\opcode{00}  & 000000          & ADDI              & Add Immediate                                            \\
-		\opcode{01}  & 000001          & ADCI              & Add with Carry Immediate                                 \\
-		\opcode{02}  & 000010          & SUBI              & Subtract Immediate                                       \\
-		\opcode{03}  & 000011          & SBCI              & Subtract with Carry Immediate                            \\
-		\opcode{04}  & 000100          & ANDI              & AND Immediate                                            \\
-		\opcode{05}  & 000101          & ORRI              & OR Immediate                                             \\
-		\opcode{06}  & 000110          & XORI              & XOR Immediate                                            \\
-		\opcode{07}  & 000111          & LOAD              & Load Immediate                                           \\
-		\opcode{08}  & 001000          & --                & Undocumented                                             \\
-		\opcode{09}  & 001001          & --                & Undocumented                                             \\
-		\opcode{0A}  & 001010          & CMPI              & Compare Immediate                                        \\
-		\opcode{0B}  & 001011          & --                & Undocumented                                             \\
-		\opcode{0C}  & 001100          & TSAI              & Test AND Immediate                                       \\
-		\opcode{0D}  & 001101          & --                & Undocumented                                             \\
-		\opcode{0E}  & 001110          & TSXI              & Test XOR Immediate                                       \\
-		\opcode{0F}  & 001111          & COPI              & Coprocessor Immediate                                    \\
-		\midrule
-		\multicolumn{4}{c}{\textbf{Memory and Control (\opcode{10}--\opcode{1F})}}                                    \\
-		\midrule
-		\opcode{10}  & 010000          & STOR              & Store Indirect Immediate                                 \\
-		\opcode{11}  & 010001          & STOR              & Store Indirect Register                                  \\
-		\opcode{12}  & 010010          & STOR              & Store Pre-Decrement Immediate                            \\
-		\opcode{13}  & 010011          & STOR              & Store Pre-Decrement Register                             \\
-		\opcode{14}  & 010100          & LOAD              & Load Indirect Immediate                                  \\
-		\opcode{15}  & 010101          & LOAD              & Load Indirect Register                                   \\
-		\opcode{16}  & 010110          & LOAD              & Load Post-Increment Immediate                            \\
-		\opcode{17}  & 010111          & LOAD              & Load Post-Increment Register                             \\
-		\opcode{18}  & 011000          & LDEA              & Load Effective Address Immediate                         \\
-		\opcode{19}  & 011001          & LDEA              & Load Effective Address Register                          \\
-		\opcode{1A}  & 011010          & LDEA              & Load Effective Address Pre-Decrement Immediate           \\
-		\opcode{1B}  & 011011          & LDEA              & Load Effective Address Pre-Decrement Register            \\
-		\opcode{1C}  & 011100          & LDEL              & Load Effective Address and Link Immediate                \\
-		\opcode{1D}  & 011101          & LDEL              & Load Effective Address and Link Register                 \\
-		\opcode{1E}  & 011110          & LDEL              & Load Effective Address and Link Post-Increment Immediate \\
-		\opcode{1F}  & 011111          & LDEL              & Load Effective Address and Link Post-Increment Register  \\
-		\midrule
-		\multicolumn{4}{c}{\textbf{ALU Short Immediate (\opcode{20}--\opcode{2F})}}                                   \\
-		\midrule
-		\opcode{20}  & 100000          & ADDI              & Add Short Immediate                                      \\
-		\opcode{21}  & 100001          & ADCI              & Add with Carry Short Immediate                           \\
-		\opcode{22}  & 100010          & SUBI              & Subtract Short Immediate                                 \\
-		\opcode{23}  & 100011          & SBCI              & Subtract with Carry Short Immediate                      \\
-		\opcode{24}  & 100100          & ANDI              & AND Short Immediate                                      \\
-		\opcode{25}  & 100101          & ORRI              & OR Short Immediate                                       \\
-		\opcode{26}  & 100110          & XORI              & XOR Short Immediate                                      \\
-		\opcode{27}  & 100111          & --                & Undocumented (LOAD-like)                                 \\
-		\opcode{28}  & 101000          & --                & Undocumented                                             \\
-		\opcode{29}  & 101001          & --                & Undocumented                                             \\
-		\opcode{2A}  & 101010          & CMPI              & Compare Short Immediate                                  \\
-		\opcode{2B}  & 101011          & --                & Undocumented                                             \\
-		\opcode{2C}  & 101100          & TSAI              & Test AND Short Immediate                                 \\
-		\opcode{2D}  & 101101          & --                & Undocumented                                             \\
-		\opcode{2E}  & 101110          & TSXI              & Test XOR Short Immediate                                 \\
-		\opcode{2F}  & 101111          & --                & Undocumented (COP-like)                                  \\
-		\midrule
-		\multicolumn{4}{c}{\textbf{ALU Register (\opcode{30}--\opcode{3F})}}                                          \\
-		\midrule
-		\opcode{30}  & 110000          & ADDR              & Add Register                                             \\
-		\opcode{31}  & 110001          & ADCR              & Add with Carry Register                                  \\
-		\opcode{32}  & 110010          & SUBR              & Subtract Register                                        \\
-		\opcode{33}  & 110011          & SBCR              & Subtract with Carry Register                             \\
-		\opcode{34}  & 110100          & ANDR              & AND Register                                             \\
-		\opcode{35}  & 110101          & ORRR              & OR Register                                              \\
-		\opcode{36}  & 110110          & XORR              & XOR Register                                             \\
-		\opcode{37}  & 110111          & LOAD              & Load Register                                            \\
-		\opcode{38}  & 111000          & --                & Undocumented                                             \\
-		\opcode{39}  & 111001          & --                & Undocumented                                             \\
-		\opcode{3A}  & 111010          & CMPR              & Compare Register                                         \\
-		\opcode{3B}  & 111011          & --                & Undocumented                                             \\
-		\opcode{3C}  & 111100          & TSAR              & Test AND Register                                        \\
-		\opcode{3D}  & 111101          & --                & Undocumented                                             \\
-		\opcode{3E}  & 111110          & TSXR              & Test XOR Register                                        \\
-		\opcode{3F}  & 111111          & COPR              & Coprocessor Register                                     \\
+	\opcode{00}  & 000000          & ADDI              & Add Immediate                                            \\
+	\opcode{01}  & 000001          & ADCI              & Add with Carry Immediate                                 \\
+	\opcode{02}  & 000010          & SUBI              & Subtract Immediate                                       \\
+	\opcode{03}  & 000011          & SBCI              & Subtract with Carry Immediate                            \\
+	\opcode{04}  & 000100          & ANDI              & AND Immediate                                            \\
+	\opcode{05}  & 000101          & ORRI              & OR Immediate                                             \\
+	\opcode{06}  & 000110          & XORI              & XOR Immediate                                            \\
+	\opcode{07}  & 000111          & LOAD              & Load Immediate                                           \\
+	\opcode{08}  & 001000          & --                & Undocumented                                             \\
+	\opcode{09}  & 001001          & --                & Undocumented                                             \\
+	\opcode{0A}  & 001010          & CMPI              & Compare Immediate                                        \\
+	\opcode{0B}  & 001011          & --                & Undocumented                                             \\
+	\opcode{0C}  & 001100          & TSAI              & Test AND Immediate                                       \\
+	\opcode{0D}  & 001101          & --                & Undocumented                                             \\
+	\opcode{0E}  & 001110          & TSXI              & Test XOR Immediate                                       \\
+	\opcode{0F}  & 001111          & COPI              & Coprocessor Immediate                                    \\
+	\midrule
+	\multicolumn{4}{c}{\textbf{Memory and Control (\opcode{10}--\opcode{1F})}}                                    \\
+	\midrule
+	\opcode{10}  & 010000          & STOR              & Store Indirect Immediate                                 \\
+	\opcode{11}  & 010001          & STOR              & Store Indirect Register                                  \\
+	\opcode{12}  & 010010          & STOR              & Store Pre-Decrement Immediate                            \\
+	\opcode{13}  & 010011          & STOR              & Store Pre-Decrement Register                             \\
+	\opcode{14}  & 010100          & LOAD              & Load Indirect Immediate                                  \\
+	\opcode{15}  & 010101          & LOAD              & Load Indirect Register                                   \\
+	\opcode{16}  & 010110          & LOAD              & Load Post-Increment Immediate                            \\
+	\opcode{17}  & 010111          & LOAD              & Load Post-Increment Register                             \\
+	\opcode{18}  & 011000          & LDEA              & Load Effective Address Immediate                         \\
+	\opcode{19}  & 011001          & LDEA              & Load Effective Address Register                          \\
+	\opcode{1A}  & 011010          & LDEA              & Load Effective Address Pre-Decrement Immediate           \\
+	\opcode{1B}  & 011011          & LDEA              & Load Effective Address Pre-Decrement Register            \\
+	\opcode{1C}  & 011100          & LDEL              & Load Effective Address and Link Immediate                \\
+	\opcode{1D}  & 011101          & LDEL              & Load Effective Address and Link Register                 \\
+	\opcode{1E}  & 011110          & LDEL              & Load Effective Address and Link Post-Increment Immediate \\
+	\opcode{1F}  & 011111          & LDEL              & Load Effective Address and Link Post-Increment Register  \\
+	\midrule
+	\multicolumn{4}{c}{\textbf{ALU Short Immediate (\opcode{20}--\opcode{2F})}}                                   \\
+	\midrule
+	\opcode{20}  & 100000          & ADDI              & Add Short Immediate                                      \\
+	\opcode{21}  & 100001          & ADCI              & Add with Carry Short Immediate                           \\
+	\opcode{22}  & 100010          & SUBI              & Subtract Short Immediate                                 \\
+	\opcode{23}  & 100011          & SBCI              & Subtract with Carry Short Immediate                      \\
+	\opcode{24}  & 100100          & ANDI              & AND Short Immediate                                      \\
+	\opcode{25}  & 100101          & ORRI              & OR Short Immediate                                       \\
+	\opcode{26}  & 100110          & XORI              & XOR Short Immediate                                      \\
+	\opcode{27}  & 100111          & --                & Undocumented (LOAD-like)                                 \\
+	\opcode{28}  & 101000          & --                & Undocumented                                             \\
+	\opcode{29}  & 101001          & --                & Undocumented                                             \\
+	\opcode{2A}  & 101010          & CMPI              & Compare Short Immediate                                  \\
+	\opcode{2B}  & 101011          & --                & Undocumented                                             \\
+	\opcode{2C}  & 101100          & TSAI              & Test AND Short Immediate                                 \\
+	\opcode{2D}  & 101101          & --                & Undocumented                                             \\
+	\opcode{2E}  & 101110          & TSXI              & Test XOR Short Immediate                                 \\
+	\opcode{2F}  & 101111          & --                & Undocumented (COP-like)                                  \\
+	\midrule
+	\multicolumn{4}{c}{\textbf{ALU Register (\opcode{30}--\opcode{3F})}}                                          \\
+	\midrule
+	\opcode{30}  & 110000          & ADDR              & Add Register                                             \\
+	\opcode{31}  & 110001          & ADCR              & Add with Carry Register                                  \\
+	\opcode{32}  & 110010          & SUBR              & Subtract Register                                        \\
+	\opcode{33}  & 110011          & SBCR              & Subtract with Carry Register                             \\
+	\opcode{34}  & 110100          & ANDR              & AND Register                                             \\
+	\opcode{35}  & 110101          & ORRR              & OR Register                                              \\
+	\opcode{36}  & 110110          & XORR              & XOR Register                                             \\
+	\opcode{37}  & 110111          & LOAD              & Load Register                                            \\
+	\opcode{38}  & 111000          & --                & Undocumented                                             \\
+	\opcode{39}  & 111001          & --                & Undocumented                                             \\
+	\opcode{3A}  & 111010          & CMPR              & Compare Register                                         \\
+	\opcode{3B}  & 111011          & --                & Undocumented                                             \\
+	\opcode{3C}  & 111100          & TSAR              & Test AND Register                                        \\
+	\opcode{3D}  & 111101          & --                & Undocumented                                             \\
+	\opcode{3E}  & 111110          & TSXR              & Test XOR Register                                        \\
+	\opcode{3F}  & 111111          & COPR              & Coprocessor Register                                     \\
 \end{longtable}
 
 \section{Opcode Patterns}

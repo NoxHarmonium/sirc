@@ -41,6 +41,7 @@ use coprocessors::{
     exception_unit::{
         definitions::{
             vectors::DOUBLE_FAULT_VECTOR, ExceptionPriorities, ExceptionUnitOpCodes, Faults,
+            PendingFault,
         },
         execution::{
             construct_cause_value, deconstruct_cause_value, get_cause_register_value,
@@ -56,12 +57,15 @@ use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
 
 use crate::registers::{
-    get_hardware_interrupt_enable, sr_bit_is_set, ExceptionLinkRegister, Registers,
-    StatusRegisterFields,
+    get_hardware_interrupt_enable, sr_bit_is_set, ExceptionLinkRegister, FullAddressRegisterAccess,
+    Registers, SegmentedAddress, StatusRegisterFields,
 };
 
 // The 8th exception link register stores metadata about faults
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
+
+// Bit 4 of the hardware-interrupt bitmask passed to `raise_hardware_interrupt` -- Level 5 (NMI).
+const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u8 = 6;
@@ -93,6 +97,9 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+// These four bools are independent, orthogonal pieces of simulator bookkeeping state (not a
+// combinatorial state machine), so a state-machine/enum refactor wouldn't clarify anything here.
+#[allow(clippy::struct_excessive_bools)]
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
@@ -114,6 +121,9 @@ pub struct CpuPeripheral {
     // and re-asserts reset_requested every cycle until reset() clears it. Models the hardware
     // flip-flop that a triple fault would set to hold the reset line.
     reset_pending: bool,
+    // Tracks the Level 5 (NMI) pin's state as of the last poll cycle, so a rising edge can be
+    // detected. Unlike levels 1-4 (level-sensitive), Level 5 only latches on a 0->1 transition.
+    l5_interrupt_pin_previously_asserted: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -144,11 +154,20 @@ pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
         | u16::from(reg.bus_access_type as u8)
 }
 
+/// Raises `fault`, setting `eu_registers.pending_fault` (escalating to `DoubleFault` if one is
+/// already being serviced).
+///
+/// `fault_pc` is the address `handle_exception` should later store as the fault's return
+/// address: the faulting instruction's own address for a retryable fault, or the following
+/// instruction's address otherwise. This is the sole place `pending_fault` is set, other than
+/// the double-fault-during-vector-fetch escalation in `handle_vector_fetch_bus_fault`, which
+/// must preserve the original fault's `pc` rather than compute a new one.
 pub fn raise_fault(
     eu_registers: &mut ExceptionUnitRegisters,
     fault: Faults,
     bus_assertions: &BusAssertions,
-) -> Option<Faults> {
+    fault_pc: u32,
+) {
     if let Some(pending_fault) = eu_registers.pending_fault {
         // TODO: What would happen in hardware if a fault was raised when one was already pending
         // category=Hardware
@@ -184,7 +203,10 @@ pub fn raise_fault(
         }),
         saved_exception_level: 0, // Not used for fault metadata
     };
-    Some(resolved_fault)
+    eu_registers.pending_fault = Some(PendingFault {
+        fault: resolved_fault,
+        pc: fault_pc,
+    });
 }
 
 ///
@@ -194,12 +216,9 @@ pub fn raise_fault(
 /// Will panic if the specified `program_segment_label` is not a segment defined in the provided `memory_peripheral`
 ///
 #[must_use]
-pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
+pub fn new_cpu_peripheral() -> CpuPeripheral {
     CpuPeripheral {
-        registers: Registers {
-            system_ram_offset,
-            ..Registers::default()
-        },
+        registers: Registers::default(),
         eu_registers: ExceptionUnitRegisters::default(),
         phase: 0,
         processing_unit_executor: ProcessingUnitExecutor::default(),
@@ -209,6 +228,7 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         pending_bus_request: None,
         is_halted: false,
         reset_pending: false,
+        l5_interrupt_pin_previously_asserted: false,
     }
 }
 
@@ -292,10 +312,10 @@ impl CpuPeripheral {
             }
         }
 
-        // Allow wake up if there is a hardware interrupt
-        if bus_assertions.interrupt_assertion > 0 {
-            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
-        }
+        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
+        // asserted) so Level 5's edge-detection can observe the pin being released, not only
+        // asserted.
+        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
 
         if self.eu_registers.waiting_for_exception {
             return BusAssertions::default();
@@ -316,11 +336,31 @@ impl CpuPeripheral {
                 return vector_fetch_fault_response;
             }
 
+            // An instruction-fetch bus error means the fetch itself is what's failing, so `pl`
+            // is still the faulting address. Any later phase means the error came from a bus
+            // request issued during this instruction's own execution (in practice only a
+            // `MemoryAccessExecutor` data read/write) -- by then `pl` has already been advanced
+            // to the next instruction, so recover this instruction's own fetch address instead.
+            let fault_pc = match phase {
+                ExecutionPhase::InstructionFetchLow | ExecutionPhase::InstructionFetchHigh => {
+                    self.registers.get_full_pc_address()
+                }
+                _ => (
+                    self.processing_unit_executor.decoded_instruction.pc_h_,
+                    self.processing_unit_executor.decoded_instruction.pc_l_,
+                )
+                    .to_full_address(),
+            };
+
             // TODO: Reduce number of mutable references in `CpuPeripheral` poll
             // category=Refactoring
             // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
-            self.eu_registers.pending_fault =
-                raise_fault(&mut self.eu_registers, bus_fault, &fault_bus_assertions);
+            raise_fault(
+                &mut self.eu_registers,
+                bus_fault,
+                &fault_bus_assertions,
+                fault_pc,
+            );
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
@@ -378,14 +418,26 @@ impl CpuPeripheral {
                 {
                     warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
                     let invalid_coprocessor_command = self.cause_register_value;
+                    // This arm only runs at InstructionFetchLow, one poll cycle after the
+                    // faulting instruction's own WriteBackExecutor wrote
+                    // `pending_coprocessor_command` -- since the coprocessor ID has been invalid
+                    // for the whole intervening cycle, `processing_unit_executor.step()` (and so
+                    // its decode) was never invoked, so `decoded_instruction` is still exactly
+                    // that faulting instruction's own decode, untouched.
+                    let fault_pc = (
+                        self.processing_unit_executor.decoded_instruction.pc_h_,
+                        self.processing_unit_executor.decoded_instruction.pc_l_,
+                    )
+                        .to_full_address();
                     // Can be used for forwards compatibility if co-processors are added in later models
-                    self.eu_registers.pending_fault = raise_fault(
+                    raise_fault(
                         &mut self.eu_registers,
                         Faults::InvalidOpCode,
                         &BusAssertions {
                             address: u32::from(invalid_coprocessor_command),
                             ..bus_assertions
                         },
+                        fault_pc,
                     );
                     self.registers.pending_coprocessor_command = 0x0;
                 }
@@ -398,10 +450,13 @@ impl CpuPeripheral {
             && self.eu_registers.pending_fault.is_none()
             && self.trace_mode_sampled
         {
-            self.eu_registers.pending_fault = raise_fault(
+            // InstructionTrace is a "next instruction" fault, not retryable, so it keeps reading
+            // the current PC directly rather than the faulting instruction's own address.
+            raise_fault(
                 &mut self.eu_registers,
                 Faults::InstructionTrace,
                 &bus_assertions,
+                self.registers.get_full_pc_address(),
             );
         }
 
@@ -487,34 +542,67 @@ impl CpuPeripheral {
                     ),
                     saved_exception_level: 0,
                 };
-            self.eu_registers.pending_fault = Some(Faults::DoubleFault);
+            // Escalating to a double fault, not raising a new one: preserve the *original*
+            // fault's return address rather than computing a new one, so the double-fault
+            // handler still returns to the instruction that started the whole chain. This is
+            // the one place `pending_fault` is constructed outside `raise_fault`.
+            let original_pc = self
+                .eu_registers
+                .pending_fault
+                .expect("a fault must already be pending when its own vector fetch bus-faults")
+                .pc;
+            self.eu_registers.pending_fault = Some(PendingFault {
+                fault: Faults::DoubleFault,
+                pc: original_pc,
+            });
             return Some(BusAssertions::default());
         }
 
-        self.eu_registers.pending_fault =
-            raise_fault(&mut self.eu_registers, fault, &fault_bus_assertions);
+        // A vector fetch for a hardware/software exception (not yet an active fault dispatch)
+        // has itself bus-faulted. `handle_exception` for that original dispatch never ran, so
+        // `pl`/`ph` are untouched -- still the address execution should resume at once this new
+        // fault's handler is done.
+        raise_fault(
+            &mut self.eu_registers,
+            fault,
+            &fault_bus_assertions,
+            self.registers.get_full_pc_address(),
+        );
         Some(BusAssertions::default())
     }
 
+    /// Called every poll cycle (not just when `level > 0`) so Level 5's edge-detection can
+    /// observe the pin being released, not only asserted.
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
         // This level is a bitmask
-        if level > 0 {
-            // Only mark interrupts as pending if they are enabled
-            let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
-            let enabled_interrupts = level & hw_interrupt_enable;
+        // Only mark interrupts as pending if they are enabled
+        let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
+        let enabled_interrupts = level & hw_interrupt_enable;
 
-            if enabled_interrupts > 0 {
-                trace!("Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
-                // TODO: Clarify what happens when software exception is triggered in interrupt handler
-                // category=Hardware
-                // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-                // TODO: Use consistent terminology for exceptions
-                // category=Refactoring
-                // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
-                self.eu_registers.pending_hardware_exceptions |= enabled_interrupts;
-                self.eu_registers.waiting_for_exception = false;
-            }
+        // Levels 1-4 are level-sensitive: latch whenever the (enabled) pin is observed
+        // asserted. Unaffected by Level 5's edge-tracking below.
+        let level_sensitive_interrupts = enabled_interrupts & !LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        if level_sensitive_interrupts > 0 {
+            trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
+            // TODO: Clarify what happens when software exception is triggered in interrupt handler
+            // category=Hardware
+            // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+            // TODO: Use consistent terminology for exceptions
+            // category=Refactoring
+            // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+            self.eu_registers.pending_hardware_exceptions |= level_sensitive_interrupts;
+            self.eu_registers.waiting_for_exception = false;
         }
+
+        // Level 5 (NMI) is edge-triggered: only latch on a 0->1 transition of the pin, and it
+        // won't latch again until it's released and reasserted.
+        let l5_asserted = (level & LEVEL_FIVE_INTERRUPT_PIN_BIT) != 0;
+        if l5_asserted && !self.l5_interrupt_pin_previously_asserted {
+            trace!("Level 5 (NMI) interrupt raised on rising edge");
+            self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
+            self.eu_registers.waiting_for_exception = false;
+        }
+        self.l5_interrupt_pin_previously_asserted = l5_asserted;
     }
 
     fn advance_phase(&mut self) {
@@ -525,6 +613,7 @@ impl CpuPeripheral {
         self.pending_bus_request = None;
         self.is_halted = false;
         self.reset_pending = false;
+        self.l5_interrupt_pin_previously_asserted = false;
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;

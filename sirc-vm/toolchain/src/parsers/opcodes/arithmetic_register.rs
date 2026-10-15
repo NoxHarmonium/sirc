@@ -44,9 +44,9 @@ use super::super::shared::AsmResult;
 /// };
 ///
 /// assert_eq!(op_code, Instruction::AddRegister);
-/// assert_eq!(r1, 1);
-/// assert_eq!(r2, 1);
-/// assert_eq!(r3, 3);
+/// assert_eq!(r1, 0); // r1
+/// assert_eq!(r2, 0); // r1
+/// assert_eq!(r3, 2); // r3
 /// assert_eq!(shift_type, ShiftType::RotateLeft);
 /// assert_eq!(shift_count, 4);
 /// assert_eq!(additional_flags, 0x1);
@@ -59,9 +59,9 @@ use super::super::shared::AsmResult;
 /// };
 ///
 /// assert_eq!(op_code, Instruction::AddRegister);
-/// assert_eq!(r1, 1);
-/// assert_eq!(r2, 2);
-/// assert_eq!(r3, 3);
+/// assert_eq!(r1, 0); // r1
+/// assert_eq!(r2, 1); // r2
+/// assert_eq!(r3, 2); // r3
 /// assert_eq!(additional_flags, 0x1);
 /// assert_eq!(condition_flag, ConditionFlags::GreaterOrEqual);
 /// ```

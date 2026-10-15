@@ -18,8 +18,8 @@ follow, in this order, for every entry:
 	      instruction's encoding use \textbf{Assembles to} instead of \textbf{Opcodes}.
 	\item[Instruction Fields] One line per encoding field the instruction uses: register fields, the condition field, the status
 	      update source field and which of its encodings are legal for this instruction, shift type and count, and immediate
-	      width. Values come from Chapter~\ref{ch:instruction-formats} and the facts digest; an entry must not invent a value
-	      here.
+	      width. Values come from Chapter~\ref{ch:instruction-formats}; an entry does not introduce a value that is not defined
+	      there.
 	\item[Syntax] The accepted assembler forms. Meta-instructions are called out separately from real CPU instruction encodings.
 	\item[Operands] The permitted operand kinds and addressing modes for the instruction. Addressing-mode names come from the
 	      closed set in Table~\ref{tab:addr-modes} (Chapter~\ref{ch:addressing-modes}): Immediate, Register Direct, Address
@@ -32,7 +32,7 @@ follow, in this order, for every entry:
 	\item[Write-back] Whether the computed result is written to a register, discarded, or used to update control state.
 	\item[Exceptions] Faults or traps that can be raised by the instruction. When an exception can occur, the entry must state
 	      whether partial side effects are possible.
-	\item[Condition field] The condition field values the instruction accepts for predicated execution. Every normal instruction
+	\item[Condition field] The condition field values the instruction accepts for predicated execution. Every real instruction
 	      may be conditional. If the condition is false, the instruction has no architectural side effects unless a later
 	      instruction description explicitly states otherwise.
 	\item[Timing] The base execution time and any circumstances that add wait states.
@@ -71,7 +71,8 @@ follow, in this order, for every entry:
 		register field                                                                                                        \\
 		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                           \\
 		\texttt{@label}            & Symbol reference resolved by the linker; PC-relative for \mnemonic{BRAN} and
-		\mnemonic{BRSR}, an absolute low-word address otherwise                                                               \\
+		\mnemonic{BRSR}, a low-word address in other instruction operands (see Section~\ref{sec:assembler-directives} for
+		the full resolution rules, including data directives)                                                                 \\
 		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                 \\
 		\bottomrule
 	\end{tabular}
@@ -104,9 +105,11 @@ Flag tables use the following symbols:
 
 \section{Conditional Execution}
 
-Every encoded instruction contains a condition-code field. If the condition evaluates true, the instruction executes
-normally. If the condition evaluates false, the instruction is skipped: destination registers, address registers,
-memory, the program counter, link register, coprocessor state, and status flags are not modified by that instruction.
+Every encoded instruction contains a condition field. If the condition evaluates true, the instruction executes
+normally. If the condition evaluates false, the instruction is skipped: it has no architectural effect beyond the
+normal two-word advance of \reg{p} (set unconditionally at decode, before the condition is evaluated). No destination
+register, address register, memory, link register, coprocessor state, or status flag is modified by a skipped
+instruction.
 
 \section{Status Update Overrides}
 
@@ -129,5 +132,5 @@ ALU instructions can select the source of status flag updates with the status up
 \end{table}
 
 When no override is written, ALU instructions use \texttt{[A]}. \mnemonic{SHFT} defaults to \texttt{[S]} instead, and
-\mnemonic{LOAD} always encodes \texttt{[N]} and never updates the status flags, regardless of any override syntax.
-Instructions that do not support status updates must not use status update override syntax.
+\mnemonic{LOAD} always encodes \texttt{[N]} and never updates the status flags; its public syntax does not accept a
+status update override. Instructions that do not support status updates must not use status update override syntax.

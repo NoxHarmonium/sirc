@@ -848,7 +848,6 @@ fn test_arithmetic_shift_right_immediate() {
             &vec![],
             StatusRegisterUpdateSource::Shift,
         );
-        // Failing
         test_short_immediate_arithmetic_instruction(
             Instruction::AddShortImmediate,
             register_index,
@@ -857,7 +856,7 @@ fn test_arithmetic_shift_right_immediate() {
             ShiftOperand::Immediate,
             ShiftType::ArithmeticRightShift,
             15,
-            0x8001,
+            0xFFFF,
             &vec![],
             &vec![StatusRegisterFields::Negative],
             StatusRegisterUpdateSource::Shift,

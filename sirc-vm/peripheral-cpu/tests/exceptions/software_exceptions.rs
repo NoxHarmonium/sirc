@@ -27,7 +27,7 @@ pub fn build_software_exception_instruction() -> InstructionData {
 
 #[test]
 fn test_software_exception_vector() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     let software_exception: InstructionData = build_software_exception_instruction();
@@ -73,7 +73,7 @@ fn test_software_exception_vector() {
 
 #[test]
 fn test_software_exception_cannot_interrupt_another_software_exception() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     let software_exception: InstructionData = build_software_exception_instruction();
@@ -113,7 +113,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
 
 #[test]
 fn test_software_exception_is_ignored_during_fault_handler() {
-    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
     let software_exception: InstructionData = build_software_exception_instruction();

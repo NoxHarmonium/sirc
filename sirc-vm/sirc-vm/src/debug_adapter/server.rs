@@ -291,7 +291,6 @@ pub fn start_server(
                         },
                         // TODO Misc:
                         // cause
-                        // system_ram_offset
                         // pending_coprocessor_command
                         // ExceptionUnitRegisters
                     ],

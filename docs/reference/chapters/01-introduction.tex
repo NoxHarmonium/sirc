@@ -56,18 +56,18 @@ The SIRC-1 is designed for general-purpose computing, such as the core of a micr
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Feature}            & \textbf{Specification}             \\
+		\textbf{Feature}            & \textbf{Specification}                                          \\
 		\midrule
-		Data Width                  & 16-bit                             \\
-		Addressing                  & Word Addressing                    \\
-		Address Bus                 & 24-bit word address                \\
-		Instruction Size            & 32-bit fixed                       \\
-		General-Purpose Registers   & 7 (r1--r7)                         \\
+		Data Width                  & 16-bit                                                          \\
+		Addressing                  & Word Addressing                                                 \\
+		Address Bus                 & 24-bit word address                                             \\
+		Instruction Size            & 32-bit fixed                                                    \\
+		General-Purpose Registers   & 7 (r1--r7)                                                      \\
 		Address Register Pairs      & 4 (l, a, s, p -- link, address, stack pointer, program counter) \\
-		Total Addressable Registers & 16                                 \\
-		Instruction Formats         & 3                                  \\
-		Addressing Modes            & 7 (see Table~\ref{tab:addr-modes}) \\
-		Condition Codes             & 16                                 \\
+		Total Addressable Registers & 16                                                              \\
+		Instruction Formats         & 3                                                               \\
+		Addressing Modes            & 7 (see Table~\ref{tab:addr-modes})                              \\
+		Condition Codes             & 16                                                              \\
 		\bottomrule
 	\end{tabular}
 	\caption{SIRC-1 CPU Specifications}
@@ -85,23 +85,22 @@ operations do not require wait states, regardless of their complexity. Every cop
 12 cycles in total, before the next instruction is fetched. DMA commands add further cycles on top of that: the DMA
 unit holds instruction fetch after dispatch until its transfer has completed, so their total cost scales with the
 transfer size. A bus device may hold the current phase by delaying bus acknowledgement, adding wait cycles without
-adding execution phases. While having a fixed 6-cycle
-instruction execution model may seem wasteful for simple register operations that do not require memory access, it
-dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or
-microcode.
+adding execution phases. While having a fixed 6-cycle instruction execution model may seem wasteful for simple register
+operations that do not require memory access, it dramatically simplifies the hardware design by eliminating the need
+for variable-length execution sequences or microcode.
 
 \subsection{Coprocessors}
 
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
 register file. Only one coprocessor can be active at a time. Coprocessors are usually activated using the
-\mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions (see Chapter~\ref{ch:coprocessor}), except for the "exception unit," which can also be
-activated when physical pins are asserted on the chip. All implementations of the SIRC-1 will have the "processing
-unit" as coprocessor \texttt{0x0}, the "exception unit" as coprocessor \texttt{0x1}, and the DMA unit as coprocessor
-\texttt{0x2}. Other coprocessors are optional and vary by SIRC-1 model. The instruction set supports up to 16
-coprocessors. The coprocessor IDs are stable between models, so that programs are cross-compatible. For example,
-coprocessor \texttt{0x3} will always be the Integer Maths Unit. This means that if a CPU model is missing an optional
-coprocessor and a program requires it, the CPU raises an invalid-opcode fault so that the behavior can be emulated in
-software where practical.
+\mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions (see Chapter~\ref{ch:coprocessor}), except for the
+"exception unit," which can also be activated when physical pins are asserted on the chip. All implementations of the
+SIRC-1 will have the "processing unit" as coprocessor \texttt{0x0} and the "exception unit" as coprocessor
+\texttt{0x1}; every other coprocessor, including the DMA unit at \texttt{0x2}, is optional and varies by SIRC-1 model.
+The instruction set supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that programs are
+cross-compatible. For example, coprocessor \texttt{0x3} will always be the Integer Maths Unit, whether or not a given
+model implements it. This means that if a CPU model is missing an optional coprocessor and a program requires it, the
+CPU raises an invalid-opcode fault so that the behavior can be emulated in software where practical.
 
 \begin{table}[H]
 	\centering
@@ -111,7 +110,7 @@ software where practical.
 		\midrule
 		\texttt{0x0}               & Processing Unit    & No                & Executes instructions                       \\
 		\texttt{0x1}               & Exception Unit     & No                & Handles interrupts and exceptions           \\
-		\texttt{0x2}               & DMA Unit           & No                & Transfers blocks of data via the bus        \\
+		\texttt{0x2}               & DMA Unit           & Yes               & Transfers blocks of data via the bus        \\
 		\texttt{0x3}               & Integer Maths Unit & Yes               & Multiplies and divides integer values       \\
 		\texttt{0x4}--\texttt{0xF} & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
 		\bottomrule

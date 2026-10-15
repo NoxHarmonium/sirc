@@ -1,0 +1,91 @@
+name: SIRC-1 Reference Manual
+
+# Standalone (not chained into coverage.yml like sirc-vm.yml/sirc-tiledit.yml
+# are): this builds a LaTeX PDF, an entirely different artifact from the
+# Rust workspace those cover, and doesn't need their coverage upload. Path
+# filters keep it from running on unrelated Rust-only changes, since
+# installing TeX Live is the slow part of this job.
+#
+# Deliberately does NOT re-run `make check` for the Appendix D example
+# programs (byte-sieve, faults, hardware-exception, software-exception,
+# store-load): sirc-vm.yml's `examples` job already does that, unconditionally,
+# on every push -- duplicating it here would just double CI time for the
+# same signal. This job covers what nothing else does: the PDF actually
+# builds, every cross-reference resolves, and every inline code listing in
+# the manual assembles with the real toolchain.
+#
+# examples/**/*.sasm is in the path filter (not just examples/manual-examples/)
+# because docs/reference/Makefile treats every example .sasm file as a PDF
+# build input too -- Appendix D pulls several of them in directly via
+# \lstinputlisting.
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/reference/**"
+      - "examples/manual-examples/**"
+      - "examples/**/*.sasm"
+      - ".github/workflows/manual.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "docs/reference/**"
+      - "examples/manual-examples/**"
+      - "examples/**/*.sasm"
+      - ".github/workflows/manual.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Manual - Build and QA
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Graphviz isn't part of TeX Live -- it's a separate system tool the
+      # Makefile shells out to for the block diagrams.
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+
+      # scheme-full, not a hand-picked package list or apt's texlive-*
+      # metapackages: the manual uses a handful of less-common packages
+      # (tcolorbox, bytefield, eso-pic, tikz-timing), and hand-picking
+      # individual TeX Live package names risks silently missing one of
+      # their transitive dependencies -- exactly the kind of gap that's easy
+      # to miss locally (a real TeX Live/MacTeX install already has
+      # everything) and only shows up as a CI-only failure. Costs a slower
+      # first install, but zauguin/install-texlive caches ~/texlive, so that
+      # cost is paid once, not on every run. (zauguin/install-texlive is the
+      # actively maintained successor once TeX-Live/setup-texlive-action
+      # deprecated itself in favour of it; the search for this ended up
+      # going through two other actions first, see the commit that added
+      # this workflow step for the trail.)
+      - uses: zauguin/install-texlive@v4
+        with:
+          packages: scheme-full
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          workspaces: sirc-vm
+
+      - name: Format check
+        run: make format-check
+        working-directory: ./docs/reference
+
+      - name: Build PDF and check cross-references
+        run: make all
+        working-directory: ./docs/reference
+
+      - name: Assemble listings extracted from the manual
+        run: make objects
+        working-directory: ./examples/manual-examples
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sirc-1-reference-manual
+          path: ./docs/reference/SIRC-1-reference-manual.pdf
+          if-no-files-found: error

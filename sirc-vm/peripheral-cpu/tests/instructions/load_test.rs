@@ -18,7 +18,9 @@ use quickcheck::{Arbitrary, Gen, TestResult};
 
 use crate::instructions::common;
 
-use super::common::get_expected_registers;
+use super::common::{
+    get_expected_registers, get_non_address_register_index_range, get_register_index_range,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct LoadTestData {
@@ -28,12 +30,17 @@ struct LoadTestData {
     offset: i16,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 impl Arbitrary for LoadTestData {
     fn arbitrary(g: &mut Gen) -> Self {
+        let register_indices: Vec<u8> = get_register_index_range().collect();
         Self {
             src_address_register_index: u8::arbitrary(g) % 4,
-            dest_register_index: (u8::arbitrary(g) % 13) + 1,
-            offset_register_index: (u8::arbitrary(g) % 7) + 1,
+            dest_register_index: register_indices
+                [usize::from(u8::arbitrary(g)) % register_indices.len()],
+            offset_register_index: (u8::arbitrary(g)
+                % get_non_address_register_index_range().len() as u8)
+                + get_non_address_register_index_range().start,
             offset: i16::arbitrary(g),
         }
     }

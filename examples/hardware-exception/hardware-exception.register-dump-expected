@@ -16,7 +16,6 @@ Registers {
     sl: 0x24e,
     ph: 0x0,
     pl: 0x250,
-    system_ram_offset: 0x0,
     pending_coprocessor_command: 0x0,
 }
 ===EXCEPTION UNIT REGISTERS===

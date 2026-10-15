@@ -7,7 +7,8 @@ Most SIRCIS instructions follow the six-stage execution phase model and complete
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
 adding execution phases. Coprocessor calls are the exception: the dispatched coprocessor occupies at least one further
 slot after the six-phase call. This fixed execution sequence greatly simplifies software development and hardware
-design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority rules.
+design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority
+rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -53,8 +54,8 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
 \mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, the DMA unit gets at least one post-dispatch cycle after the
 6-cycle \mnemonic{COPI} dispatch. For non-zero transfers, that first post-dispatch cycle may also be the first no-wait
-DMA bus access. A conditional DMA meta-instruction whose condition is false does not dispatch to the DMA unit and takes
-only 6 cycles.
+DMA bus access. A conditional \mnemonic{DMAR}/\mnemonic{DMAW}/\mnemonic{DMAT} whose condition is false does not
+dispatch to the DMA unit and takes only 6 cycles.
 
 \subsection{Exception and Fault Timing}
 

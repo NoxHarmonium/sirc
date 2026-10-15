@@ -20,7 +20,6 @@
 % Better character spacing / kerning.
 \usepackage{microtype}
 
-
 % ------------------------------------------------------------
 % Page layout
 % ------------------------------------------------------------
@@ -28,14 +27,13 @@
 \usepackage{geometry}
 
 \geometry{
-    a4paper,
-    left=25mm,
-    right=20mm,
-    top=22mm,
-    bottom=25mm,
-    headheight=14pt
+	a4paper,
+	left=25mm,
+	right=20mm,
+	top=22mm,
+	bottom=25mm,
+	headheight=14pt
 }
-
 
 % ------------------------------------------------------------
 % General packages
@@ -74,11 +72,11 @@
 \usepackage{tikz}
 \usepackage{tikz-timing}
 \usetikzlibrary{
-    shapes.geometric,
-    arrows.meta,
-    positioning,
-    fit,
-    calc
+	shapes.geometric,
+	arrows.meta,
+	positioning,
+	fit,
+	calc
 }
 
 \usepackage{tcolorbox}
@@ -87,21 +85,19 @@
 % Load hyperref relatively late.
 \usepackage{hyperref}
 
-
 % ------------------------------------------------------------
 % Timing diagrams
 % ------------------------------------------------------------
 
 \tikzset{
-    sirc timing diagram/.style={
-        timing/slope=0,
-        timing/dslope=0.15,
-        timing/xunit=3.4em,
-        timing/rowdist=2.2,
-        timing/coldist=2.2,
-    },
+	sirc timing diagram/.style={
+			timing/slope=0,
+			timing/dslope=0.15,
+			timing/xunit=3.4em,
+			timing/rowdist=2.2,
+			timing/coldist=2.2,
+		},
 }
-
 
 % ------------------------------------------------------------
 % Colours
@@ -112,7 +108,6 @@
 \definecolor{sirclightgray}{RGB}{232,232,232}
 \definecolor{codebg}{RGB}{245,245,245}
 \definecolor{opcodecolor}{RGB}{153,0,0}
-
 
 % ------------------------------------------------------------
 % Header / footer
@@ -131,62 +126,59 @@
 \renewcommand{\headrulewidth}{0.8pt}
 \renewcommand{\footrulewidth}{0.4pt}
 
-
 % ------------------------------------------------------------
 % PDF / hyperlink setup
 % ------------------------------------------------------------
 
 \hypersetup{
-    colorlinks=true,
-    linkcolor=sircred,
-    filecolor=sircred,
-    urlcolor=sircred,
-    citecolor=sircred,
-    bookmarksnumbered=true,
-    pdfauthor={SIRC Development Team},
-    pdftitle={SIRC-1 CPU Reference Manual},
-    pdfsubject={SIRCIS Instruction Set Architecture},
+	colorlinks=true,
+	linkcolor=sircred,
+	filecolor=sircred,
+	urlcolor=sircred,
+	citecolor=sircred,
+	bookmarksnumbered=true,
+	pdfauthor={SIRC Development Team},
+	pdftitle={SIRC-1 CPU Reference Manual},
+	pdfsubject={SIRCIS Instruction Set Architecture},
 }
-
 
 % ------------------------------------------------------------
 % Assembly code listings
 % ------------------------------------------------------------
 
 \lstdefinelanguage{SIRC}{
-    morekeywords={
-        ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,
-        ANDI,ANDR,ORRI,ORRR,XORI,XORR,
-        LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
-        LDEA,LDEL,BRAN,LJMP,LJSR,BRSR,RETS,NOOP,
-        WAIT,RETE,COPI,COPR,SHFT,EXCP,RSET,
-        ETFR,ETTR,DMAR,DMAW,DMAT,MULU,MULS,DIVU,DIVS
-    },
-    keywordstyle=\color{sircred}\bfseries,
-    sensitive=false,
-    morecomment=[l]{;},
-    commentstyle=\itshape\color{sircgray},
-    morestring=[b]",
-    stringstyle=\color{opcodecolor},
-    basicstyle=\ttfamily\small,
-    breaklines=true,
-    showstringspaces=false
+	morekeywords={
+			ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,
+			ANDI,ANDR,ORRI,ORRR,XORI,XORR,
+			LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
+			LDEA,LDEL,BRAN,LJMP,LJSR,BRSR,RETS,NOOP,
+			WAIT,RETE,COPI,COPR,SHFT,EXCP,RSET,
+			ETFR,ETTR,DMAR,DMAW,DMAT,MULU,MULS,DIVU,DIVS
+		},
+	keywordstyle=\color{sircred}\bfseries,
+	sensitive=false,
+	morecomment=[l]{;},
+	commentstyle=\itshape\color{sircgray},
+	morestring=[b]",
+	stringstyle=\color{opcodecolor},
+	basicstyle=\ttfamily\small,
+	breaklines=true,
+	showstringspaces=false
 }
 
 \lstset{
-    language=SIRC,
-    backgroundcolor=\color{codebg},
-    frame=single,
-    rulecolor=\color{sircgray},
-    framesep=5pt,
-    numbers=left,
-    numberstyle=\tiny\color{sircgray},
-    numbersep=7pt,
-    xleftmargin=15pt,
-    framexleftmargin=15pt,
-    columns=fullflexible
+	language=SIRC,
+	backgroundcolor=\color{codebg},
+	frame=single,
+	rulecolor=\color{sircgray},
+	framesep=5pt,
+	numbers=left,
+	numberstyle=\tiny\color{sircgray},
+	numbersep=7pt,
+	xleftmargin=15pt,
+	framexleftmargin=15pt,
+	columns=fullflexible
 }
-
 
 % ------------------------------------------------------------
 % Instruction reference pages
@@ -210,15 +202,15 @@
 % Chapter 16) -- so every instruction is individually findable via the ToC
 % or bookmarks either way, matching the "flip through to find it" goal.
 \newenvironment{instructionbox}[2]{%
-    \clearpage
-    \phantomsection
-    \addcontentsline{toc}{section}{#1 -- #2}
-    \noindent{\Huge\bfseries\color{sircred}#1}\par
-    \vspace{3pt}
-    \noindent{\Large\bfseries #2}\par
-    \vspace{6pt}
-    \titlerule
-    \vspace{10pt}
+	\clearpage
+	\phantomsection
+	\addcontentsline{toc}{section}{#1 -- #2}
+	\noindent{\Huge\bfseries\color{sircred}#1}\par
+	\vspace{3pt}
+	\noindent{\Large\bfseries #2}\par
+	\vspace{6pt}
+	\titlerule
+	\vspace{10pt}
 }{%
 }
 
@@ -228,17 +220,16 @@
 % page break -- there are only seven addressing modes and each is short
 % enough that several fit per page.
 \newtcolorbox{addrmodebox}[1]{
-    colback=sirclightgray,
-    colframe=sircred,
-    coltitle=black,
-    fonttitle=\bfseries\large,
-    title=#1,
-    arc=0mm,
-    boxrule=0.8pt,
-    breakable,
-    enhanced jigsaw,
+	colback=sirclightgray,
+	colframe=sircred,
+	coltitle=black,
+	fonttitle=\bfseries\large,
+	title=#1,
+	arc=0mm,
+	boxrule=0.8pt,
+	breakable,
+	enhanced jigsaw,
 }
-
 
 % ------------------------------------------------------------
 % Architectural notation
@@ -258,7 +249,6 @@
 
 \newcommand{\shift}[2]{\texttt{#1 \##2}}
 
-
 % ------------------------------------------------------------
 % Chapter / section styling
 % ------------------------------------------------------------
@@ -267,45 +257,44 @@
 % display typography.
 
 \titleformat{\chapter}[display]
-    {\normalfont\bfseries\color{sircred}}
-    {\Large CHAPTER \thechapter}
-    {8pt}
-    {\Huge}
-    [\vspace{4pt}\titlerule]
+{\normalfont\bfseries\color{sircred}}
+{\Large CHAPTER \thechapter}
+{8pt}
+{\Huge}
+[\vspace{4pt}\titlerule]
 
 \titlespacing*{\chapter}
-    {0pt}
-    {-10pt}
-    {28pt}
+{0pt}
+{-10pt}
+{28pt}
 
 \titleformat{\section}
-    {\normalfont\Large\bfseries\color{sircred}}
-    {\thesection}
-    {1em}
-    {}
+{\normalfont\Large\bfseries\color{sircred}}
+{\thesection}
+{1em}
+{}
 
 \titleformat{\subsection}
-    {\normalfont\large\bfseries\color{sircred}}
-    {\thesubsection}
-    {1em}
-    {}
+{\normalfont\large\bfseries\color{sircred}}
+{\thesubsection}
+{1em}
+{}
 
 \titleformat{\subsubsection}
-    {\normalfont\normalsize\bfseries}
-    {\thesubsubsection}
-    {1em}
-    {}
+{\normalfont\normalsize\bfseries}
+{\thesubsubsection}
+{1em}
+{}
 
 \titlespacing*{\section}
-    {0pt}
-    {2.5ex plus 0.5ex minus 0.2ex}
-    {1ex}
+{0pt}
+{2.5ex plus 0.5ex minus 0.2ex}
+{1ex}
 
 \titlespacing*{\subsection}
-    {0pt}
-    {2ex plus 0.5ex minus 0.2ex}
-    {0.8ex}
-
+{0pt}
+{2ex plus 0.5ex minus 0.2ex}
+{0.8ex}
 
 % ------------------------------------------------------------
 % Tables

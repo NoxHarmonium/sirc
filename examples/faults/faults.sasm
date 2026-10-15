@@ -56,6 +56,8 @@ LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_BUS_ERROR
 STOR    (a), r1
 
+:after_bus_error_store
+
 ; Jumping to an odd address triggers an alignment fault
 LOAD    pl, #0x0201
 
@@ -80,6 +82,9 @@ LOAD    r7, (#2, a)
 ORRI    sr, #0b0100_0000_0000_0000
 ; This _should_ trigger a fault
 LOAD    r7, (#2, a)
+
+:after_segment_overflow_load
+
 ; Switch off trap on overflow bit
 ANDI    sr, #0b1011_1111_1111_1111
 
@@ -121,20 +126,31 @@ LOAD    al, $DEBUG_DEVICE_BUS_PROTECTION_ERROR
 LOAD    r7, #0x1
 STOR    (a), r7
 
-; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
-COPI    #0x4000
+:after_bus_protection_error_store
 
 ; Switch to non privileged mode
 ORRI     sr, #0b0000_0001_0000_0000
-; Try to escape the current segment
+; Try to escape the current segment (this should be blocked -- the fault handler must not
+; let this write actually take effect)
 LOAD     ph, #0xFEFE
 
+:after_privilege_violation_load
 
 ; Get the debug device to raise an interrupt (this one should be fine)
 LOAD    r7, #0x1
 LOAD    ah, $DEBUG_DEVICE_SEGMENT
 LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
+
+; Invalid opcode fault test (kept last: its handler deliberately triggers a nested double
+; fault, which -- since faults share a single link register with no stack -- leaves
+; current_exception_level stuck at the fault level rather than correctly unwinding back to
+; 0. Running it after every other fault test, rather than before, keeps that lingering state
+; from affecting them.)
+; There is no coprocessor at ID 4, so should trigger an invalid opcode fault
+COPI    #0x4000
+
+:after_invalid_opcode_copi
 
 ; Halt CPU
 COPI    #0b0001_0100_1111_1111
@@ -143,10 +159,24 @@ COPI    #0b0001_0100_1111_1111
 
 :bus_fault_handler
 ADDI    r1, #1
+
+; Bus Fault is retryable: fix up the return address so RETE doesn't retry the same
+; faulting STOR forever.
+ETFR    a, #6
+LOAD    al, @after_bus_error_store
+ETTR    #6, a
+
 RETE
 
 :bus_protection_fault_handler
 ADDI    r5, #1
+
+; Bus Protection Fault is retryable: fix up the return address so RETE doesn't retry the
+; same faulting STOR forever.
+ETFR    a, #6
+LOAD    al, @after_bus_protection_error_store
+ETTR    #6, a
+
 RETE
 
 :alignment_fault_handler
@@ -200,6 +230,13 @@ BRAN @segment_overflow_fault_handler_end
 
 ADDI    r3, #0x000F
 
+; Segment Overflow is retryable: fix up the return address so RETE doesn't retry the same
+; faulting access forever. (This branch is not reached by anything in this example today,
+; but is fixed defensively so it isn't a landmine if that changes.)
+ETFR    a, #6
+LOAD    al, @after_segment_overflow_load
+ETTR    #6, a
+
 :segment_overflow_fault_handler_end
 
 RETE
@@ -213,8 +250,16 @@ ADDI    r4, #1
 ; This will cause a fault while already handling a fault
 COPI    #0xF000
 
+:after_nested_invalid_opcode_copi
+
 ; Restore link register
 ETTR #6
+
+; Invalid Opcode Fault is retryable: fix up the return address so RETE doesn't retry the
+; trapped COPI forever.
+ETFR    a, #6
+LOAD    al, @after_invalid_opcode_copi
+ETTR    #6, a
 
 RETE
 
@@ -230,6 +275,14 @@ ANDI    r7, #0xFEFF
 ; Transfer corrected SR back to ELR
 ETTR    #6, r7
 
+; Privilege Violation is retryable: the link register holds the blocked instruction's own
+; address. Retrying it now that we're back in privileged mode would let it actually take
+; effect -- but this instruction is deliberately testing that an escape attempt is blocked,
+; so redirect past it instead of retrying it.
+ETFR    a, #6
+LOAD    al, @after_privilege_violation_load
+ETTR    #6, a
+
 RETE
 
 :double_fault_handler
@@ -237,6 +290,13 @@ RETE
 ; In this example, we'll increment r4 to show we were here
 ; and then return (though in production you'd probably reset)
 ADDI    r4, #1
+
+; The link register holds the address of the instruction that triggered the double fault
+; (the nested COPI above) -- fix up the return address so RETE doesn't retrigger it forever.
+ETFR    a, #6
+LOAD    al, @after_nested_invalid_opcode_copi
+ETTR    #6, a
+
 RETE
 
 :level_five_interrupt_conflict_handler

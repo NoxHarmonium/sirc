@@ -76,7 +76,10 @@ accepts onto one of the seven modes.
 
 \section{Legal Modes by Instruction Family}
 
-Table~\ref{tab:addressing-mode-matrix} answers "what does this addressing-mode syntax mean, and which instruction families can use it in general?" Table~\ref{tab:legal-modes-by-family} answers the reverse question, "for this specific instruction, exactly which operand forms are legal?" The two tables must agree; consult the one that matches the question you are asking.
+Table~\ref{tab:addressing-mode-matrix} answers "what does this addressing-mode syntax mean, and which instruction
+families can use it in general?" Table~\ref{tab:legal-modes-by-family} answers the reverse question, "for this specific
+instruction, exactly which operand forms are legal?" The two tables must agree; consult the one that matches the
+question you are asking.
 
 \begin{table}[H]
 	\centering
@@ -88,7 +91,7 @@ Table~\ref{tab:addressing-mode-matrix} answers "what does this addressing-mode s
 		ALU result instructions        & \texttt{OPI rD, \#imm16}; \texttt{OPI rD, \#imm8, shift}; \texttt{OPR rD, rS1, rS2[, shift]}; register shorthand \texttt{OPR rD, rS2}.                                                             & No memory operands. Full 16-bit immediate forms do not encode shifts.                                                                \\
 		ALU test instructions          & \texttt{CMPI/TSAI/TSXI rS, \#imm16}; \texttt{CMPI/TSAI/TSXI rS, \#imm8, shift}; \texttt{CMPR/TSAR/TSXR rS1, rS2[, shift]}.                                                                         & No destination write-back. No memory operands.                                                                                       \\
 		LOAD value                     & \texttt{LOAD rD, \#imm16}; \texttt{LOAD rD, rS}.                                                                                                                                                   & No public short-immediate LOAD syntax. Direct register-copy forms do not accept shift suffixes.                                      \\
-		LOAD memory                    & \texttt{LOAD rD, (\#offset, addr)}; \texttt{LOAD rD, (rO, addr)}; \texttt{LOAD rD, (\#offset, addr)+}; \texttt{LOAD rD, (rO, addr)+}.                                                              & No pre-decrement LOAD form. No shift suffix on any \mnemonic{LOAD} form.                                                              \\
+		LOAD memory                    & \texttt{LOAD rD, (\#offset, addr)}; \texttt{LOAD rD, (rO, addr)}; \texttt{LOAD rD, (\#offset, addr)+}; \texttt{LOAD rD, (rO, addr)+}.                                                              & No pre-decrement LOAD form. No shift suffix on any \mnemonic{LOAD} form.                                                             \\
 		STOR memory                    & \texttt{STOR (\#offset, addr), rS}; \texttt{STOR (rO, addr), rS[, shift]}; \texttt{STOR -(\#offset, addr), rS}; \texttt{STOR -(rO, addr), rS[, shift]}.                                            & No post-increment STOR form. Shift suffix is only available on register-displacement \mnemonic{STOR} forms.                          \\
 		LDEA                           & \texttt{LDEA dest, (\#offset, src)}; \texttt{LDEA dest, (rO, src)}; \texttt{LDEA dest, -(\#offset, src)}; \texttt{LDEA dest, -(rO, src)}.                                                          & No post-increment LDEA form. No shift suffixes.                                                                                      \\
 		LDEL                           & \texttt{LDEL dest, (\#offset, src)}; \texttt{LDEL dest, (rO, src)}; \texttt{LDEL dest, (\#offset, src)+}; \texttt{LDEL dest, (rO, src)+}.                                                          & No pre-decrement LDEL form. No shift suffixes.                                                                                       \\
@@ -160,10 +163,10 @@ displacement of 0 re-executes the branch. \mnemonic{BRSR} and \mnemonic{LDEL} st
 
 \section{Per-Mode Encoding Reference}
 
-Every SIRC-1 instruction is a fixed 32-bit (2-word) quantity regardless of addressing mode -- unlike architectures
-with variable-length extension words per mode, there is no mode whose word count differs from any other's. Each box
-below states this explicitly for completeness against that comparison point, alongside the generation formula,
-assembler syntax, and field encoding for that mode.
+Every SIRC-1 instruction is a fixed 32-bit (2-word) quantity regardless of addressing mode -- unlike architectures with
+variable-length extension words per mode, there is no mode whose word count differs from any other's. Each box below
+states this explicitly for completeness against that comparison point, alongside the generation formula, assembler
+syntax, and field encoding for that mode.
 
 \begin{addrmodebox}{Immediate Addressing}
 	\textbf{Generation:} Operand = the 16-bit value encoded directly in the instruction.

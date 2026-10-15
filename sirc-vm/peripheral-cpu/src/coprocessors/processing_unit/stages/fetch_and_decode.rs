@@ -82,7 +82,8 @@ fn do_shift(
 /// use peripheral_cpu::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
 ///
 /// let mut registers = Registers::default();
-/// registers.r4 = 0xCE;
+/// // Raw register field 0x4 now names r5 (r1..r7 occupy 0x0..0x6, sr moved to 0x7).
+/// registers.r5 = 0xCE;
 /// registers.sl = 0xFA;
 /// registers.al = 0xCE;
 /// registers.ah = 0xBB;
@@ -204,6 +205,12 @@ pub fn decode_and_register_fetch(
 
     let npc_h_ = registers.ph;
 
+    // Captured before the caller advances `registers.pl` to `npc_l_`, so later pipeline stages
+    // (and, for an invalid coprocessor call, even the following poll cycle) can still recover
+    // this instruction's own address if it turns out to be the one that faults.
+    let pc_l_ = registers.pl;
+    let pc_h_ = registers.ph;
+
     (
         DecodedInstruction {
             ins: op_code,
@@ -228,6 +235,8 @@ pub fn decode_and_register_fetch(
             con_: condition_flag.should_execute(registers),
             npc_l_,
             npc_h_,
+            pc_l_,
+            pc_h_,
         },
         npc_overflowed,
     )

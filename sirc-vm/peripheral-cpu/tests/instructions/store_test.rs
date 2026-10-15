@@ -37,10 +37,10 @@ impl Arbitrary for StoreTestData {
                 % get_address_register_index_range().len() as u8,
             src_register_index: (u8::arbitrary(g)
                 % get_non_address_register_index_range().len() as u8)
-                + 1,
+                + get_non_address_register_index_range().start,
             offset_register_index: (u8::arbitrary(g)
                 % get_non_address_register_index_range().len() as u8)
-                + 1,
+                + get_non_address_register_index_range().start,
             offset: i16::arbitrary(g),
         }
     }
