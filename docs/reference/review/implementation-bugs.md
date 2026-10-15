@@ -6,19 +6,49 @@ while fact-checking the manual against the implementation.
 
 ## Open
 
-### IB-5: Linker only supports `FullAddress` label references on data directives, so explicit `.r`/`.l`/`.u` suffixes panic there
-
-- **Where:** `sirc-vm/toolchain/src/bin/linker.rs:125-134`
-- **What:** `.DW @label.l` (or `.r`/`.u`) assembles without error, but the linker panics at link
-  time: "Only FullAddress ref type currently supported for data directives." Only the implicit,
-  no-suffix form (which resolves to `FullAddress` for a data directive) actually works.
-- **Manual side:** no change. Author's call (2026-09-16): log this as a toolchain gap rather than
-  scoping Appendix D.1's description of the `.r`/`.l`/`.u` suffixes to instruction operands only.
-- **Suggested fix:** implement `LowerWord`/`UpperWord`/`Offset` handling for data directives in the
-  linker, matching what already exists for instruction operands.
-- **Status:** logged only, not fixed this pass.
+None currently — all findings from the 2026-09-16 editorial pass have been fixed.
 
 ## Fixed this pass
+
+### IB-5: Linker only supports `FullAddress` label references on data directives, so explicit `.r`/`.l`/`.u` suffixes panic there
+
+- **Where:** `sirc-vm/toolchain/src/bin/linker.rs`, `main`'s per-`symbol_ref` loop (the
+  `calculate_32_bit_value` closure, previously lines 125-134).
+- **What:** `.DW @label.l` (or `.r`/`.u`) assembled without error, but the linker panicked at link
+  time: "Only FullAddress ref type currently supported for data directives." Only the implicit,
+  no-suffix form (which resolves to `FullAddress` for a data directive) actually worked. Confirmed:
+  the assembler already produced the "unsupported" `ref_type` unvalidated
+  (`parse_data.rs`'s `override_ref_token_type_if_implied` only rewrites `Implied → FullAddress`,
+  leaving an explicit suffix as-is), deferring the failure entirely to the linker, exactly as
+  reported.
+- **Confirmed data directives always occupy a fixed 4-byte program slot** regardless of
+  `.DB`/`.DW`/`.DQ` (same width as instructions), so the fix places a resolved 16-bit
+  `LowerWord`/`UpperWord`/`Offset` value in the low 2 bytes of that slot, zero-padding the upper 2
+  — the same convention `.DW`'s own numeric literal already uses. `SymbolRef` carries no
+  `size_bytes`, so (as today, for the unaffected `FullAddress` case) the linker can't and doesn't
+  need to distinguish `.DB @label.l` from `.DW @label.l`; this extends an existing, unchanged
+  pattern rather than introducing a new inconsistency.
+- **Fix:** replaced the two inline resolution closures (`calculate_16_bit_value`,
+  `calculate_32_bit_value`) with two free functions, `resolve_16_bit_ref_value` and
+  `resolve_data_symbol_ref_bytes`, so the logic is directly unit-testable. The new
+  `resolve_data_symbol_ref_bytes` handles `FullAddress` as before (unchanged) and now also handles
+  `Offset`/`LowerWord`/`UpperWord` by reusing the same resolution logic instruction operands
+  already use, placed in the slot's low 2 bytes.
+- **Confirmed wider than the original report**: `toolchain/src/printers/data.rs`'s
+  `print_data_token` had an independent copy of the exact same restriction (`FullAddress` only,
+  panic otherwise) — not on the assemble/link path, but the same bug, and would have rejected the
+  very same `.DW @label.l` form if ever printed/round-tripped. Fixed by delegating unconditionally
+  to `print_ref_token` (`printers/shared.rs`), which already prints every `RefType` correctly and
+  is already used this way for instruction operands.
+- **Test coverage added:** since no linker tests existed at all before this fix (for any `RefType`,
+  including the previously-working `FullAddress`/instruction paths), added an inline
+  `#[cfg(test)] mod tests` in `linker.rs` covering all four reachable ref types for
+  `resolve_data_symbol_ref_bytes` (including the exact `LowerWord` case this bug reports) plus the
+  pre-existing offset-overflow panic. Added a second doctest example to `print_data_token`
+  demonstrating `.DW @some_symbol.l` printing without panicking.
+- **Manual side:** no change needed — Appendix D.1 (`chapters/appendix-d-examples.tex`) already
+  describes `.r`/`.l`/`.u` suffix resolution generically, not scoped to instructions; confirmed
+  independently.
 
 ### IB-4: `.EQU` constants can't be used as a data directive's value, despite the manual's claim
 
