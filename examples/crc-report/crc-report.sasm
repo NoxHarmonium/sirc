@@ -1,0 +1,203 @@
+; ============================================================================
+; crc-report.sasm -- STAGE 6: full integration.
+; -
+; Computes CRC-16/XMODEM (poly 0x1021, init 0x0000, no reflection, no final
+; XOR) over a 16-word buffer holding byte values 0x00..0x0F (one byte value
+; per word -- SIRC-1 is word-addressed, there is no narrower unit; see
+; docs/reference/chapters/04-data-representation.tex), converts the result
+; to 5 zero-padded decimal ASCII digits via itoa5, then writes those 5 bytes
+; into the report_file segment (0x00E00000) by calling the supervisor-mode
+; monitor in monitor.sasm through EXCP -- never by touching the segment's
+; address-register high word directly.
+; -
+; :main runs in protected mode (SR.P set) for its entire body, per PLAN.md:
+; "The main program should run in protected mode throughout ... it must not
+; be able to write the destination segment's address-register high word
+; itself." The only direct write to `ah` anywhere in this file happens
+; before protected mode is entered (for the CRC/itoa scratch buffers, which
+; live in this program's own segment 0); every later address-register
+; adjustment uses only `al` (unprivileged) or goes through the monitor trap.
+; -
+; NOTE: the leading NOOP below is a required workaround for an empirically
+; observed simulator quirk -- see NOTES.md ("leading NOOP requirement").
+; ============================================================================
+
+:start
+    NOOP
+    BRAN @main                    ; skip over the exception vector table region
+
+    ; User exception vector table entries. Vector table entries live at
+    ; fixed word addresses vector*2 (high word) / vector*2+1 (low word), per
+    ; Chapter 6. A single ".DW @label" emits exactly that 2-word
+    ; stored-address form (see NOTES.md .DW tooling discovery), so each of
+    ; these directives is a complete vector-table entry by itself.
+    .ORG 0x0100
+    .DW @monitor_entry             ; vector 0x80 ("write_word") -> 0x100/0x101
+    .DW @monitor_halt              ; vector 0x81 ("halt")       -> 0x102/0x103
+
+:main
+    LOAD ah, #0x0000               ; still supervisor mode here: a direct
+                                    ; write to ah is allowed. This is the
+                                    ; only direct ah write in the whole main
+                                    ; program; from here on `a` only ever
+                                    ; gets a new low word (al).
+    ORRI sr, #0x0100                ; enter protected mode -- stays set for
+                                    ; the rest of the program (see header)
+
+    ; --- Build the fixed 16-word buffer: buffer[i] = i, for i in 0..15 ---
+    LOAD al, @crc_buffer
+    LOAD r2, #0
+:buf_fill
+    STOR (r2, a), r2
+    ADDI r2, #1
+    CMPI r2, #16
+    BRAN|!= @buf_fill
+
+    ; --- CRC-16/XMODEM over buffer[0..15] ---
+    ; r1 = crc accumulator, r2 = byte index, r3 = current byte (shifted into
+    ; position), r4 = inner bit-loop counter.
+    LOAD r1, #0
+    LOAD r2, #0
+:crc_byte_loop
+    CMPI r2, #16
+    BRAN|== @crc_done
+    LOAD r3, (r2, a)
+    ADDI r3, #0, LSL #8          ; r3 = byte << 8
+    XORR r1, r1, r3              ; crc ^= (byte << 8)
+
+    LOAD r4, #0
+:crc_bit_loop
+    CMPI r4, #8
+    BRAN|== @crc_bit_done
+    CMPI r1, #0                  ; N flag <- bit 15 of crc (subtracting 0)
+    BRAN|NC @crc_no_xor
+    ADDI r1, #0, LSL #1          ; crc <<= 1
+    XORI r1, #0x1021             ; crc ^= poly
+    BRAN @crc_bit_next
+:crc_no_xor
+    ADDI r1, #0, LSL #1          ; crc <<= 1
+:crc_bit_next
+    ADDI r4, #1
+    BRAN @crc_bit_loop
+:crc_bit_done
+    ADDI r2, #1
+    BRAN @crc_byte_loop
+:crc_done
+    ; r1 now holds the CRC-16/XMODEM result (confirmed 0x513D in stage 1).
+
+    ; --- Feed the CRC result into itoa5 ---
+    LOAD al, @digits_buf
+    BRSR @itoa5                  ; r1 = crc value (still set); a = digits_buf
+
+    ; Read the 5 ASCII digit bytes back into r3-r7.
+    LOAD r3, (#0, a)
+    LOAD r4, (#1, a)
+    LOAD r5, (#2, a)
+    LOAD r6, (#3, a)
+    LOAD r7, (#4, a)
+
+    ; --- Write the 5 digits into report_file via the monitor trap ---
+    ; (see the calling-convention comment in monitor.sasm)
+    LOAD r1, #0
+    LOAD r2, r3
+    EXCP #0x80
+    LOAD r1, #1
+    LOAD r2, r4
+    EXCP #0x80
+    LOAD r1, #2
+    LOAD r2, r5
+    EXCP #0x80
+    LOAD r1, #3
+    LOAD r2, r6
+    EXCP #0x80
+    LOAD r1, #4
+    LOAD r2, r7
+    EXCP #0x80
+
+    EXCP #0x81                   ; halt, via the monitor (see monitor.sasm --
+                                  ; keeps this program in protected mode
+                                  ; right up to the end)
+
+:halt
+    BRAN @halt                   ; should never actually be reached
+
+; ============================================================================
+; itoa5: convert a 16-bit unsigned value to 5-digit zero-padded decimal
+; ASCII, ordinary shift-subtract division (no DIVU -- see PLAN.md).
+; -
+; Calling convention (this program's own design; the manual leaves calling
+; conventions out of scope -- see Chapter 3/6): r1 = value (0-65535) on
+; entry; a = pointer to a 5-word destination buffer. Clobbers r1, r2.
+; Preserves a. Returns via RETS.
+; ============================================================================
+:itoa5
+    LOAD r2, #0
+:d10000
+    CMPI r1, #10000
+    BRAN|CS @d10000_done
+    SUBI r1, #10000
+    ADDI r2, #1
+    BRAN @d10000
+:d10000_done
+    ADDI r2, #0x30
+    STOR (#0, a), r2
+
+    LOAD r2, #0
+:d1000
+    CMPI r1, #1000
+    BRAN|CS @d1000_done
+    SUBI r1, #1000
+    ADDI r2, #1
+    BRAN @d1000
+:d1000_done
+    ADDI r2, #0x30
+    STOR (#1, a), r2
+
+    LOAD r2, #0
+:d100
+    CMPI r1, #100
+    BRAN|CS @d100_done
+    SUBI r1, #100
+    ADDI r2, #1
+    BRAN @d100
+:d100_done
+    ADDI r2, #0x30
+    STOR (#2, a), r2
+
+    LOAD r2, #0
+:d10
+    CMPI r1, #10
+    BRAN|CS @d10_done
+    SUBI r1, #10
+    ADDI r2, #1
+    BRAN @d10
+:d10_done
+    ADDI r2, #0x30
+    STOR (#3, a), r2
+
+    ADDI r1, #0x30               ; last digit = whatever remains (0-9)
+    STOR (#4, a), r1
+
+    RETS
+
+; 16 words of filler reserve exactly the buffer range crc_buffer..crc_buffer+15
+; (8 .DW directives x 2 words each, per the .DW tooling discovery in NOTES.md)
+; so segment 0 is backed out to the buffer's own addresses even though the
+; buffer is filled at runtime, not from this initial data.
+:crc_buffer
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000
+
+; 5 words of filler reserve the digits_buf..digits_buf+4 range for itoa5's
+; output (3 .DW directives x 2 words each -- more than the 5 words needed,
+; but .DW has no 1-word form; see NOTES.md).
+:digits_buf
+    .DW #0x0000
+    .DW #0x0000
+    .DW #0x0000

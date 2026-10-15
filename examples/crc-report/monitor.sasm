@@ -1,0 +1,39 @@
+; ============================================================================
+; monitor.sasm -- STAGE 5/6: the real supervisor-mode monitor.
+; -
+; Reached only via EXCP from the main program in crc-report.sasm, which runs
+; in protected mode throughout (see the comment above :main there). Two user
+; trap vectors are wired into the vector table by crc-report.sasm's own
+; .ORG/.DW block at word addresses 0x100/0x101 (vector 0x80) and 0x102/0x103
+; (vector 0x81) -- see the comment there for why a single ".DW @label" is a
+; complete vector-table entry.
+; -
+; Calling convention (this program's own design; the manual leaves calling
+; conventions entirely out of scope -- see Chapter 3/6):
+; -
+;   EXCP #0x80 ("write_word"): r1 = word offset (0-based) within the
+;     report_file segment (0x00E00000, wired up via the Makefile's --segment
+;     flag); r2 = the 16-bit value to write there. This program always
+;     passes a single ASCII digit byte, zero-extended to a full word,
+;     matching itoa5's own word-per-digit buffer layout. This handler
+;     performs the actual privileged cross-segment write -- writing ah
+;     directly is exactly the operation protected mode forbids the caller,
+;     which is the entire reason this trap exists. Clobbers the shared
+;     (unbanked) ah/al registers; the caller never relies on `a` surviving a
+;     call. Touches no other registers.
+; -
+;   EXCP #0x81 ("halt"): no arguments. Ends the simulation via the
+;     simulator's COP 0x14FF hook (see NOTES.md "simulation-termination
+;     discovery"). Issued from here, in supervisor mode, purely so the main
+;     program never has to leave protected mode itself just to halt.
+; ============================================================================
+
+:monitor_entry
+    LOAD ah, #0x00E0
+    LOAD al, r1
+    STOR (#0, a), r2
+    RETE
+
+:monitor_halt
+    COPI #0x14FF                  ; simulator-recognized "abort simulation" call
+    RETE                           ; unreachable -- COPI #0x14FF ends the run
