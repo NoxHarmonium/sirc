@@ -3,6 +3,85 @@
 
 This appendix contains sample programs that demonstrate several features of the CPU.
 
+\section{Assembler Directives}
+\label{sec:assembler-directives}
+
+The assembler and linker toolchain used to build the programs in this appendix are outside the scope of this manual,
+which documents the SIRC-1 architecture rather than any particular toolchain. The handful of directives below are the
+exception: every worked example in this appendix relies on them, so this section gives their syntax and effect before
+the examples put them to use.
+
+\begin{description}
+	\item[\texttt{.ORG \#addr}] Sets the word address at which subsequent instructions and data are assembled. The
+	      address is a bare hexadecimal (\texttt{0x}-prefixed) or decimal number, without the \texttt{\#} used elsewhere
+	      for immediate operands. \texttt{.ORG} can appear more than once in a file, to place code or data at specific
+	      fixed addresses such as the reset and exception vector table described in Chapter~\ref{ch:exceptions}.
+	\item[\texttt{:label}] Declares a label at the current assembly address, for later reference with \texttt{@label}.
+	      The colon is written before the name, not after it.
+	\item[\texttt{@label}] References a previously declared label. How the reference is resolved depends on where it is
+	      used:
+	      \begin{itemize}
+		      \item In \mnemonic{BRAN} or \mnemonic{BRSR}, it resolves to a 16-bit signed word displacement from the instruction to the
+		            label.
+		      \item In an immediate-form \mnemonic{LOAD}, it resolves to the label's low word only.
+		      \item In a \texttt{.DB}, \texttt{.DW}, or \texttt{.DQ} directive (below), it resolves to the label's full 32-bit address.
+	      \end{itemize}
+	      An explicit suffix overrides this default: \texttt{@label.r} forces the PC-relative displacement form,
+	      \texttt{@label.l} forces the low word, and \texttt{@label.u} forces the high word.
+	\item[\texttt{.DB \#value}, \texttt{.DW \#value}, \texttt{.DQ \#value}] Reserve one program slot and initialize it
+	      with a numeric value, or, written as \texttt{.DB @label}, \texttt{.DW @label}, or \texttt{.DQ @label}, with a
+	      label's full 32-bit address. \emph{Despite their names, all three directives occupy exactly one 4-byte
+		      (2-word) program slot, the same size as an instruction} -- \texttt{.DB} does not pack four byte values into
+	      one slot, and \texttt{.DW} does not pack two word values into one slot. The difference between them is only
+	      where a numeric \texttt{\#value} is placed within that slot:
+	      \begin{itemize}
+		      \item \texttt{.DB \#0xAB} assembles to the bytes \texttt{00 00 00 AB} (value in the low byte).
+		      \item \texttt{.DW \#0xABCD} assembles to the bytes \texttt{00 00 AB CD} (value in the low word).
+		      \item \texttt{.DQ \#0xABCD1234} assembles to the bytes \texttt{AB CD 12 34} (value fills the whole slot).
+	      \end{itemize}
+	      A label reference, on any of the three directives, always assembles to the full 4-byte slot holding the
+	      label's address, since a stored address must be able to address anywhere in the 32-bit address space. Choose
+	      whichever of the three names best documents the intended width of a numeric value; there is no behavioral
+	      difference between them.
+	\item[\texttt{.EQU \$NAME \#value}] Defines a named constant equal to \texttt{\#value}, usable anywhere a
+	      \texttt{\#immediate} operand is accepted by writing \texttt{\$NAME} in its place. The dollar sign is part of
+	      the name and is written at both the definition and every use, but a use of the constant is \emph{not}
+	      \texttt{\#}-prefixed even though it stands in for an immediate value.
+\end{description}
+
+The reset vector shown in Example~\ref{ex:assembler-directives} below is not optional: per Chapter~\ref{ch:exceptions},
+the CPU begins execution by reading a stored pointer from word addresses \texttt{0x000000}--\texttt{0x000001}, not by
+executing whatever instruction happens to be placed there. Every program in this appendix begins with a \texttt{.ORG
+	0x0000} / \texttt{.DQ @label} pair for exactly this reason.
+
+\begin{example}
+	\begin{lstlisting}
+    .EQU $ANSWER #42
+
+    .ORG 0x0000
+    .DQ @start                     ; reset vector: CPU begins by loading this pointer
+
+    .ORG 0x0080
+    .DQ @overflow_handler          ; vector 0x40: exception vector table entry
+
+:start
+    LOAD al, @lookup                ; @label defaults to the low word for LOAD's immediate form
+    LOAD r1, (#0, a)                ; r1 = lookup[0]
+    CMPI r1, $ANSWER                ; constants defined with .EQU are used without '#'
+    BRAN|== @start                  ; @label defaults to a PC-relative offset for BRAN/BRSR
+
+:overflow_handler
+    RETE
+
+:lookup
+    .DW #10
+    .DW #20
+    .DW #30
+	\end{lstlisting}
+	\caption{Directive usage: reset vector, exception vector table entry, a label-addressed table, and a named constant}
+	\label{ex:assembler-directives}
+\end{example}
+
 \section{Byte Sieve}
 
 This program computes primes below 1000 using the Sieve of Eratosthenes, storing one byte per candidate number in a

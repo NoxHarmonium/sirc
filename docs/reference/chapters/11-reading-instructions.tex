@@ -71,7 +71,8 @@ follow, in this order, for every entry:
 		register field                                                                                                        \\
 		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                           \\
 		\texttt{@label}            & Symbol reference resolved by the linker; PC-relative for \mnemonic{BRAN} and
-		\mnemonic{BRSR}, an absolute low-word address otherwise                                                               \\
+		\mnemonic{BRSR}, a low-word address otherwise (see Section~\ref{sec:assembler-directives} for the full
+		resolution rules, including data directives)                                                                          \\
 		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                 \\
 		\bottomrule
 	\end{tabular}
