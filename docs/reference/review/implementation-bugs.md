@@ -11,38 +11,6 @@ later entry already recorded as fixed. No technical content was changed in this 
 deduplication, merging of same-cause findings, and reorganization into Open / Already fixed /
 Superseded.
 
-## Open — needs a Rust (or generator) fix
-
-### SHFR (register-count shift) — undocumented, unimplemented feature gap — NEW 2026-09-15
-
-- category: enhancement
-- claim: none -- not a manual/code mismatch (the manual documents no `SHFR` or register-count-shift
-  meta-instruction anywhere); noticed while investigating a misplaced `SHFT` example row in the
-  generated register-format-encodings table (see "SHFT generator row..." under Already fixed).
-- evidence: `StatusRegisterUpdateSource::Shift` (`peripheral-cpu/src/coprocessors/processing_unit/definitions.rs`)
-  is a fully decoder-supported value with an explicit comment: "At the moment hardcoded to Alu for
-  all ALU instructions except for SHFI/SHFR ... It is supported by the decode[r], I just need to
-  work out a syntax for the assembler." A test-file comment
-  (`peripheral-cpu/tests/instructions/arithmetic_register_test.rs`) independently names the same
-  planned feature: "These tests would be the equivalent of the SHFR meta instruction -- reuses the
-  same opcode as ADDR but the StatusRegisterUpdateSource is Shift." Register-format ALU instructions
-  already support `ShiftOperand::Register` (a register-supplied shift count, e.g. `SUBR|>> r1, r2,
-  r3, ASR r4`), so the hardware primitive SHFR would need already exists, and is exercised by
-  existing tests under a raw `Instruction::AddRegister` encoding, not through an assembler mnemonic.
-  `SHFR`/`SHFI` appear nowhere in the manual, any `.sasm` example, or the toolchain parser (`grep`
-  across all three: zero matches) -- there is currently no way to write this in assembly.
-- resolution: n/a (feature gap, not a bug -- nothing documents SHFR as existing today, so there is no
-  contradiction to resolve)
-- fix (if implemented): add assembler syntax for a register-count shift meta-instruction (working
-  name `SHFR`, matching the existing `SHFT`/short-immediate naming and the code comments), lowering
-  to the ALU opcode already used by the corresponding register-format instruction (e.g. `ADDR`) with
-  `StatusRegisterUpdateSource::Shift` set and a redundant zero-valued operand, mirroring how `SHFT`
-  lowers to `OrShortImmediate` with `AF=10` today. Would need manual coverage (a new entry in the
-  meta-instructions or ALU-instructions chapter) and a `reference-encodings.sasm` example once
-  implemented.
-- confidence: high (the decoder-side support and the two independent code comments are unambiguous)
-- status: not started; author's call on timing and whether this is wanted at all.
-
 ## Already fixed (kept for the record)
 
 ### F-mem-5 / F-data-10 (code-wrong, blocker) — FIXED 2026-09-14 — pre-decrement effective-address overflow check was inverted
@@ -339,8 +307,13 @@ Superseded.
   genuine "SHFT has a register-count form" design, not a mistake? Verified it wasn't a working
   stub -- the line read `SHFT r1, ASL #3`, an *immediate* count, byte-for-byte identical to the
   correctly-placed short-immediate example; a register-count form would need syntax like `SHFR r1,
-  ASL r2`, which appears nowhere. The question did surface a real, separate finding: see "SHFR
-  (register-count shift)" under Open.
+  ASL r2`, which appears nowhere. The question did surface a real, separate idea (a register-format
+  `SHFR` reusing `ADDR`'s opcode), investigated and rejected 2026-09-16: it is not safely feasible,
+  since `StatusRegisterUpdateSource::Shift` only changes which flags get latched, not what gets
+  written back, and this ISA has no hardwired-zero register to make the second ALU operand
+  genuinely redundant -- so `shift(R2) + R3` would silently corrupt the result unless the caller
+  manually zeroed `R3` first. Not pursued; no entry kept for it since it was never implemented or
+  documented.
 - resolution: code-wrong (fixed)
 - fix (applied): removed the stray `@manual-example SHFT r1, ASL #3` annotation and instruction from
   `examples/reference-encodings/reference-encodings.sasm` (its correctly-placed short-immediate
