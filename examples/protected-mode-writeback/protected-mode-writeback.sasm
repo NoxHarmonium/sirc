@@ -148,6 +148,14 @@ ETFR r7, #6
 ANDI r7, #0xFEFF
 ETTR #6, r7
 
+; Privilege Violation is retryable: the link register holds the blocked instruction's own
+; address. Retrying it now that we're back in supervisor mode would let it actually take
+; effect -- but every one of these test cases is deliberately testing that the write is
+; blocked, so redirect past the blocked (single-word-pair) instruction instead of retrying it.
+ETFR a, #6
+ADDI al, #2
+ETTR #6, a
+
 :privilege_violation_handler_return
 LOAD r6, #0
 RETE

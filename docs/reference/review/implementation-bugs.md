@@ -598,6 +598,49 @@ top = 0x00F0_FFFF".
 - confidence: high
 - status: manual updated (done); no code fix needed or expected.
 
+### `examples/protected-mode-writeback` double-fault crash — FIXED 2026-09-16
+
+- category: fact (not a manual/code mismatch -- an example program left behind by an earlier
+  architecture change; found incidentally while sweeping the example matrix for the bundled cleanup
+  above)
+- claim: none from the manual pass -- `make clean check` in this example crashed with a repeating
+  "Double fault! [PrivilegeViolation] raised when a fault was already being serviced" cascade,
+  ending in a u32 overflow panic.
+- evidence: `git bisect` across the 122 commits since this example was added (`92789a7`, June 2026;
+  no `Cargo.lock`/`Cargo.toml` changes in that range, so a clean automated bisect with no
+  dependency-refetch risk) isolated the regression to `a5d82c3` ("fix: match fault behaviour with the
+  spec in the manual", 2026-09-14) -- well before this session, confirmed by reverting to the
+  pre-session commit and reproducing the identical crash there. `a5d82c3` made `PrivilegeViolation`
+  retryable (the fault's stored return address is the faulting instruction's own, not the following
+  one's), matching the manual's "Retryable" designation and the pattern already used correctly
+  elsewhere (`write_back.rs`'s `set_address_register_values`, `check_privilege`'s call site) -- this
+  CPU change is correct and intentional, not a bug. Traced (via a tightly-bounded `-vvvv` capture --
+  the unbounded `-vv` run was killed after producing 78MB+ with no end in sight) to the example's own
+  `privilege_violation_handler`: it clears `ProtectedMode` in the saved SR before `RETE` (correct, to
+  get back to supervisor mode) but never redirects the *return address* past the blocked instruction.
+  Since the return address is the faulting instruction's own, `RETE` retries it -- now in supervisor
+  mode, so the previously-blocked write actually succeeds, corrupting `ph` (confirmed via trace: the
+  very next fault's `pc` was `0x34023C`, exactly `(ph=0x1234, pl=~0x23E)` combined -- `0x1234` being
+  the literal value the deliberately-blocked `LOAD ph, #0x1234` test case was trying to write).
+  `examples/faults/faults.sasm`'s `privilege_violation_fault_handler` already has the exact fix
+  (found and applied during this session's earlier `F-exc-3` work) with a comment describing the
+  identical mechanism; `protected-mode-writeback.sasm` predates that fix and isn't part of the CI
+  example matrix, so nothing caught the drift when `a5d82c3` landed.
+- resolution: code-wrong in the example only (fixed); no Rust change
+- fix (applied): added the same redirect-past-the-instruction pattern to
+  `protected-mode-writeback.sasm`'s shared handler, adapted to a uniform "+2 to the stored return
+  address's low word" (skip exactly one instruction) rather than per-call-site labels, since one
+  handler serves six single-instruction negative test cases here (`ETFR a, #6` / `ADDI al, #2` /
+  `ETTR #6, a`, mirroring `faults.sasm`'s `ETFR a, #6` / `LOAD al, @label` / `ETTR #6, a`).
+- consequence: no `.register-dump-expected` regeneration needed -- the fix restores exactly the
+  original (pre-`a5d82c3`) end-to-end behavior, so the file committed alongside the example in
+  `92789a7` (June 2026) already matched byte-for-byte once this session's earlier, unrelated
+  `system_ram_offset` line removal was applied. Confirmed `r1` (success marker) = `0x600D`, `r2`
+  (fault count) = `6` (all six negative test cases), `r6` (handler guard) = `0`, matching the file's
+  own header comment exactly.
+- confidence: high
+- status: fixed
+
 ## Superseded / no longer applicable
 
 ### F-tim-1 — superseded by `F-data-1`
