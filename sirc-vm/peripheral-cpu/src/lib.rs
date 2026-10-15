@@ -64,6 +64,9 @@ use crate::registers::{
 // The 8th exception link register stores metadata about faults
 const FAULT_METADATA_LINK_REGISTER_INDEX: usize = 7;
 
+// Bit 4 of the hardware-interrupt bitmask passed to `raise_hardware_interrupt` -- Level 5 (NMI).
+const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
+
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u8 = 6;
 
@@ -94,6 +97,9 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+// These four bools are independent, orthogonal pieces of simulator bookkeeping state (not a
+// combinatorial state machine), so a state-machine/enum refactor wouldn't clarify anything here.
+#[allow(clippy::struct_excessive_bools)]
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
@@ -115,6 +121,9 @@ pub struct CpuPeripheral {
     // and re-asserts reset_requested every cycle until reset() clears it. Models the hardware
     // flip-flop that a triple fault would set to hold the reset line.
     reset_pending: bool,
+    // Tracks the Level 5 (NMI) pin's state as of the last poll cycle, so a rising edge can be
+    // detected. Unlike levels 1-4 (level-sensitive), Level 5 only latches on a 0->1 transition.
+    l5_interrupt_pin_previously_asserted: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -222,6 +231,7 @@ pub fn new_cpu_peripheral(system_ram_offset: u32) -> CpuPeripheral {
         pending_bus_request: None,
         is_halted: false,
         reset_pending: false,
+        l5_interrupt_pin_previously_asserted: false,
     }
 }
 
@@ -305,10 +315,10 @@ impl CpuPeripheral {
             }
         }
 
-        // Allow wake up if there is a hardware interrupt
-        if bus_assertions.interrupt_assertion > 0 {
-            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
-        }
+        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
+        // asserted) so Level 5's edge-detection can observe the pin being released, not only
+        // asserted.
+        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
 
         if self.eu_registers.waiting_for_exception {
             return BusAssertions::default();
@@ -564,25 +574,38 @@ impl CpuPeripheral {
         Some(BusAssertions::default())
     }
 
+    /// Called every poll cycle (not just when `level > 0`) so Level 5's edge-detection can
+    /// observe the pin being released, not only asserted.
     pub fn raise_hardware_interrupt(&mut self, level: u8) {
         // This level is a bitmask
-        if level > 0 {
-            // Only mark interrupts as pending if they are enabled
-            let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
-            let enabled_interrupts = level & hw_interrupt_enable;
+        // Only mark interrupts as pending if they are enabled
+        let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
+        let enabled_interrupts = level & hw_interrupt_enable;
 
-            if enabled_interrupts > 0 {
-                trace!("Interrupt level [b{enabled_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
-                // TODO: Clarify what happens when software exception is triggered in interrupt handler
-                // category=Hardware
-                // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
-                // TODO: Use consistent terminology for exceptions
-                // category=Refactoring
-                // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
-                self.eu_registers.pending_hardware_exceptions |= enabled_interrupts;
-                self.eu_registers.waiting_for_exception = false;
-            }
+        // Levels 1-4 are level-sensitive: latch whenever the (enabled) pin is observed
+        // asserted. Unaffected by Level 5's edge-tracking below.
+        let level_sensitive_interrupts = enabled_interrupts & !LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        if level_sensitive_interrupts > 0 {
+            trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
+            // TODO: Clarify what happens when software exception is triggered in interrupt handler
+            // category=Hardware
+            // By design it should be ignored, or cause a fault. At the moment it might just queue it up?
+            // TODO: Use consistent terminology for exceptions
+            // category=Refactoring
+            // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
+            self.eu_registers.pending_hardware_exceptions |= level_sensitive_interrupts;
+            self.eu_registers.waiting_for_exception = false;
         }
+
+        // Level 5 (NMI) is edge-triggered: only latch on a 0->1 transition of the pin, and it
+        // won't latch again until it's released and reasserted.
+        let l5_asserted = (level & LEVEL_FIVE_INTERRUPT_PIN_BIT) != 0;
+        if l5_asserted && !self.l5_interrupt_pin_previously_asserted {
+            trace!("Level 5 (NMI) interrupt raised on rising edge");
+            self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
+            self.eu_registers.waiting_for_exception = false;
+        }
+        self.l5_interrupt_pin_previously_asserted = l5_asserted;
     }
 
     fn advance_phase(&mut self) {
@@ -593,6 +616,7 @@ impl CpuPeripheral {
         self.pending_bus_request = None;
         self.is_halted = false;
         self.reset_pending = false;
+        self.l5_interrupt_pin_previously_asserted = false;
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;

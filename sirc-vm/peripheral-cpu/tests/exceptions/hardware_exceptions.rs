@@ -209,3 +209,51 @@ fn test_hardware_exception_higher_priority_interrupts_handler() {
 // TODO: Unit test hardware exception priorities
 // category=Testing
 // It is currently tested by the faults example project but there isn't unit test coverage
+
+// Level 5 (NMI) bit within the `raise_hardware_interrupt` bitmask.
+const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
+
+#[test]
+fn test_level_five_interrupt_is_edge_triggered() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+
+    // First assertion from a released pin: should latch.
+    cpu_peripheral.raise_hardware_interrupt(LEVEL_FIVE_INTERRUPT_PIN_BIT);
+    assert_eq_hex!(
+        LEVEL_FIVE_INTERRUPT_PIN_BIT,
+        cpu_peripheral.eu_registers.pending_hardware_exceptions
+    );
+
+    // Simulate the exception being dispatched (as `get_cause_register_value` would do).
+    cpu_peripheral.eu_registers.pending_hardware_exceptions = 0;
+
+    // Pin held high across further poll cycles, with no release in between: must NOT re-latch.
+    cpu_peripheral.raise_hardware_interrupt(LEVEL_FIVE_INTERRUPT_PIN_BIT);
+    cpu_peripheral.raise_hardware_interrupt(LEVEL_FIVE_INTERRUPT_PIN_BIT);
+    assert_eq_hex!(0, cpu_peripheral.eu_registers.pending_hardware_exceptions);
+
+    // Pin released for one poll cycle, then reasserted: should latch again.
+    cpu_peripheral.raise_hardware_interrupt(0x0);
+    cpu_peripheral.raise_hardware_interrupt(LEVEL_FIVE_INTERRUPT_PIN_BIT);
+    assert_eq_hex!(
+        LEVEL_FIVE_INTERRUPT_PIN_BIT,
+        cpu_peripheral.eu_registers.pending_hardware_exceptions
+    );
+}
+
+#[test]
+fn test_level_one_to_four_interrupts_remain_level_sensitive() {
+    let mut cpu_peripheral = new_cpu_peripheral(0x0);
+    set_hardware_interrupt_enable(&mut cpu_peripheral.registers, 0xF);
+
+    cpu_peripheral.raise_hardware_interrupt(0xF);
+    assert_eq_hex!(0xF, cpu_peripheral.eu_registers.pending_hardware_exceptions);
+
+    // Simulate dispatch, but -- unlike Level 5 -- the pin is never released afterward.
+    cpu_peripheral.eu_registers.pending_hardware_exceptions = 0;
+
+    // Levels 1-4 are level-sensitive: holding the pin high must re-latch, with no release
+    // required (the opposite of Level 5's edge-triggered behavior above).
+    cpu_peripheral.raise_hardware_interrupt(0xF);
+    assert_eq_hex!(0xF, cpu_peripheral.eu_registers.pending_hardware_exceptions);
+}

@@ -76,33 +76,6 @@ Superseded.
   it yet. Manual stands (both locations). Originally filed as two separate findings, `F-arch-6` and
   `F-cop-14`; merged here since they're the same gap.
 
-### Make Level 5 (NMI) hardware exception edge-triggered in the simulator (code-wrong, major) — NEW 2026-09-12
-
-- category: fact
-- claim: chapter 6 Section 6.3.4 ("Level 5 NMI-like Behavior") and Appendix F ("Non-Maskable
-  Interrupt Inputs (NMI)" and the external input sampling rules table) now document Level 5 as
-  edge-triggered, unlike interrupt levels 1-4, which are level-sensitive. This was the original
-  design intent (author-confirmed 2026-09-12): edge-triggering avoids spurious Level Five Hardware
-  Exception Conflict faults from a line that simply stays asserted, matching the period convention
-  of level-sensitive maskable IRQs alongside an edge-triggered NMI.
-- evidence: `peripheral-cpu/src/lib.rs:499-518` (`raise_hardware_interrupt()`) ORs the asserted
-  interrupt bits, including Level 5's, into `eu_registers.pending_hardware_exceptions` on every poll
-  cycle the pin is high -- pure level sampling, with no rising/falling-edge detection anywhere in the
-  codebase. The NMI-like re-entry special case in `get_cause_register_value()` /
-  `handle_exception()` (`exception_unit/execution.rs:176-184, 242-249`) only governs what happens
-  while the CPU is *already at* exception level 6 (raising a Level Five Hardware Exception Conflict
-  fault instead of coalescing); it does not implement edge-triggering, and a Level 5 pin held high
-  while the CPU is below level 6 is still just OR-latched exactly like levels 1-4.
-- resolution: code-wrong (manual now documents the intended design; simulator has not implemented
-  it).
-- fix: add real rising-edge detection for the Level 5 / NMI line specifically -- latch a pending
-  Level 5 exception only on a 0→1 transition of the pin, and require the pin to be released and
-  reasserted before it can latch again -- separate from the OR-latch level-sampling logic used for
-  interrupt levels 1-4.
-- confidence: high
-- status: not started; author's call for a future simulator branch. Manual updated to the target
-  (edge-triggered) design in this pass.
-
 ### F-con2-20 (code-wrong, major) — stray `SHFT` row in the register-format generator output
 
 - category: contradiction
@@ -373,6 +346,43 @@ Superseded.
 - confidence: high
 - status: fixed; `LSL`/`LSR`/`ASL`/`RTL`/`RTR` never needed a code change (only the documentation
   fix, already applied); `ASR` is now fixed too.
+
+### Make Level 5 (NMI) hardware exception edge-triggered in the simulator (code-wrong, major) — FIXED 2026-09-15
+
+- category: fact
+- claim: chapter 6 ("Level 5 NMI-like Behavior") and Appendix F ("Non-Maskable Interrupt Inputs
+  (NMI)" and the external input sampling rules table) document Level 5 as edge-triggered, unlike
+  interrupt levels 1-4, which are level-sensitive: edge-triggering avoids spurious Level Five
+  Hardware Exception Conflict faults from a line that simply stays asserted.
+- evidence: `raise_hardware_interrupt()` (`sirc-vm/peripheral-cpu/src/lib.rs`) ORed every asserted
+  interrupt bit, including Level 5's, into `eu_registers.pending_hardware_exceptions` on every poll
+  cycle the pin was high -- pure level sampling, with no rising/falling-edge detection anywhere in
+  the codebase. The existing NMI re-entry special case in `get_cause_register_value()`/
+  `handle_exception()` only governs what happens once a *second* L5 is already latched while the
+  CPU is at exception level 6 (raising `LevelFiveInterruptConflict`) -- it's downstream of, and
+  orthogonal to, the latching mechanism and needed no changes.
+- resolution: code-wrong (fixed)
+- fix (applied): added a private `l5_interrupt_pin_previously_asserted: bool` field to
+  `CpuPeripheral` (following the exact precedent of the existing `is_halted` pin-edge-tracking
+  field -- reset in `reset()`, not an architectural register so it doesn't live in
+  `ExceptionUnitRegisters`). `raise_hardware_interrupt` now splits levels 1-4 (unchanged
+  level-sensitive OR-latch) from level 5 (only latches on a 0→1 transition of its bit versus the
+  previous call, and won't re-latch until released and reasserted). A critical wiring fix was
+  needed alongside this: `raise_hardware_interrupt` was previously only called when
+  `bus_assertions.interrupt_assertion > 0`, so it had no way to ever observe "the pin went low" --
+  the call site in `poll_internal` now calls it unconditionally every poll cycle (a no-op for
+  levels 1-4 when nothing is asserted, exactly as before).
+- test coverage added: `sirc-vm/peripheral-cpu/tests/exceptions/hardware_exceptions.rs` gained
+  `test_level_five_interrupt_is_edge_triggered` (proves a held-high pin latches once, not
+  re-latching until released and reasserted) and
+  `test_level_one_to_four_interrupts_remain_level_sensitive` (regression-proves levels 1-4 are
+  unaffected by the restructuring). No existing test needed correcting -- every prior L5 touchpoint
+  (unit tests and `examples/faults/faults.sasm`, whose L5 assertions go through a one-shot,
+  self-clearing debug-device register write) already asserted L5 as a single discrete pulse, so
+  this was a pure coverage gap, not a masked regression.
+- confidence: high
+- status: fixed
+- ruling: manual stands; the simulator now matches the documented edge-triggered design.
 
 ### F-sum-30 (minor) — FIXED 2026-09-09 — vector count comment in every example source
 
