@@ -44,6 +44,19 @@ Open tasks:
   which names the real "SIRC-VM" simulator directly, has a subsection literally titled "Current Simulator," and a
   "For Researchers/Hackers" section that reads like modern engineering documentation rather than a period manual
   (not yet fixed -- flagged for a future pass, since it's a larger rewrite than a single sentence).
+- Fix label syntax in the manual's own worked examples: several existing code samples across `chapters/*.tex` use
+  a trailing-colon label (`while_start:`), but the assembler only accepts a leading colon (`:while_start`) --
+  confirmed 2026-09-16 while writing `examples/crc-report` strictly from the manual, where the trailing-colon form
+  (copied from one of these examples) failed to assemble. Needs an audit of every labeled code sample in the
+  manual and a fix to whichever form is wrong; worth cross-checking against `STYLE.md` for which form (if either)
+  is the intended house style before mass-editing.
+- Document the assembler's data directives (`.DW`, `.DB`, `.DQ`) and `.ORG` somewhere in the manual -- they appear
+  in exactly zero worked examples or reference chapters today (confirmed 2026-09-16, same exercise as above), so
+  a reader has no manual-sourced way to learn how to lay out static data or place code at a specific address.
+  Might be deliberately out of scope if the manual treats these as assembler-specific rather than architectural
+  (the manual's own scope statement in the preface excludes assembler/toolchain conventions), but if so that
+  should be stated explicitly rather than left as a silent gap, since instruction-reference examples throughout
+  the manual assume the reader already knows this syntax.
 
 Acceptance criteria:
 

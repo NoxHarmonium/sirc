@@ -11,6 +11,61 @@ later entry already recorded as fixed. No technical content was changed in this 
 deduplication, merging of same-cause findings, and reorganization into Open / Already fixed /
 Superseded.
 
+## Open — needs a Rust (or generator) fix
+
+### Fault storm unless a program's first instruction is NOOP — NEW 2026-09-16, root cause not yet found
+
+- category: fact (simulator behavior contradicts the manual's own execution model, cause unknown)
+- claim: none in the manual asserts a program's first instruction is special-cased -- Chapter 2 (six-stage
+  execution phases), Chapter 6 (reset and exception dispatch), and Chapter 10 ("no overlapped pipeline to
+  flush") all describe execution as a strict, non-overlapped sequence of whole instructions with no
+  first-instruction exception. Loading a program via `--program-file` is documented (by every example in
+  `examples/`) as simply starting execution at word address `0x000000`.
+- evidence: discovered 2026-09-16 while writing `examples/crc-report` strictly from the manual (see that
+  directory's `NOTES.md`, "Leading NOOP requirement"). If the *first* instruction in the loaded image is
+  anything other than `NOOP` (the all-zero encoding), the very first run reliably raises a Bus Fault
+  ("No device was mapped for address [...]" at a garbage segment such as `0x800000` or `0xC00030`)
+  immediately followed by a Double Fault, which then loops forever (consistent with the manual's own statement
+  that double-fault dispatch has no retry limit -- Chapter 6). Reproduced with several different, genuinely
+  unprivileged first instructions (`LOAD al, #0x0020`; `LOAD ah, #0x0000`), ruling out a privilege-violation
+  explanation. Prefixing the exact same program with one extra leading `NOOP` made the fault disappear every
+  time, confirmed independently on multiple minimal test programs and again in the much larger final
+  `crc-report` program (large forward jumps, dynamic `EXCP`/`RETE` dispatch, mode switches) with no
+  recurrence once the leading `NOOP` was present.
+- resolution: unknown -- this was found via black-box testing only (per that exercise's own rule against
+  reading `sirc-vm/` source), so the mechanism hasn't been diagnosed. Plausible candidates, unconfirmed:
+  something in `PROGRAM_SEGMENT` initialization or the very first fetch/decode cycle after a fresh
+  `--program-file` load reads from an uninitialized or wrong address before the "real" first instruction is
+  reached; or the loader's handling of address `0x000000` specifically has an off-by-one that only a NOOP's
+  all-zero encoding happens to survive harmlessly.
+- fix: needs investigation starting from `sirc-vm/peripheral-cpu`'s program load path and the first few CPU
+  cycles after reset/load -- trace what address is actually fetched first and compare against what
+  `--program-file`'s loader claims to have mapped.
+- confidence: high that the symptom is real and reproducible; none yet on the root cause.
+- status: not started.
+
+### Segment 0 only backed by the loaded program's own length — NEW 2026-09-16
+
+- category: fact (undocumented VM-loader behavior, not a manual contradiction)
+- claim: none -- the manual doesn't describe how much of segment 0 is backed by real memory when a program is
+  loaded via `--program-file`, so there's no manual claim this contradicts.
+- evidence: discovered 2026-09-16, same exercise as above (see `examples/crc-report/NOTES.md`, "Segment 0 is
+  only backed by the loaded program's own length"). A `STOR` to an address beyond the end of the loaded
+  `--program-file` image (e.g. word address `0x0300` when the loaded file was only ~25 instructions / 50
+  words long) raised a Bus Fault. Once the assembled image was padded (via a trailing `.ORG`/`.DW`) so the
+  file itself covered the target address, the identical `STOR` succeeded with no fault. Plausibly just the
+  loader mapping exactly as many words as the file contains for segment 0, rather than a full 64K segment
+  backed by zero-fill past the image -- consistent with how every `--segment` flag for *additional* segments
+  in the sibling examples' Makefiles specifies an explicit size, but segment 0's sizing isn't stated anywhere.
+- resolution: n/a (clarification, not a contradiction -- nothing in the manual asserts otherwise).
+- fix: not a code fix; a documentation fix. Worth a line in the manual (or in `examples/README`-style
+  onboarding material, if one exists) stating explicitly that a program's own segment is only backed out to
+  the loaded file's length, so anyone writing a program that touches memory past its own code+static-data
+  needs to pad the assembled image (e.g. via `.ORG`) or use a separate `--segment` instead.
+- confidence: high (directly reproduced, and consistent with the sibling examples' own `--segment` usage
+  patterns).
+- status: not started; low priority, workaround is simple and now documented in `examples/crc-report/NOTES.md`.
+
 ## Already fixed (kept for the record)
 
 ### F-mem-5 / F-data-10 (code-wrong, blocker) — FIXED 2026-09-14 — pre-decrement effective-address overflow check was inverted
