@@ -191,7 +191,7 @@ selected coprocessor does not implement, the CPU raises an invalid-opcode fault.
 		\midrule
 		0x0         & Processing Unit      & Yes               & Internal                                           & Executes SIRCIS processing-unit instructions         \\
 		0x1         & Exception Unit       & Yes               & 0x1, 0x9--0xD (software); 0x0, 0xE--0xF (internal) & Handles reset, faults, interrupts, traps, and links  \\
-		0x2         & DMA Unit             & Yes               & 0x8--0xA                                           & Required standard DMA transfer unit                  \\
+		0x2         & DMA Unit             & No                & 0x8--0xA                                           & Optional standard DMA transfer unit                  \\
 		0x3         & Integer Maths Unit   & No                & 0x0--0x3                                           & Optional standard integer multiply/divide unit       \\
 		0x4--0xF    & Reserved/model space & No                & Model-defined                                      & Reserved unless a CPU model documents the assignment \\
 		\bottomrule
@@ -648,11 +648,11 @@ instructions.
 \section{DMA Unit (Coprocessor 2)}
 \label{sec:dma-unit}
 
-The required DMA unit provides bulk word transfers using the existing address register pairs and the general-purpose
+The optional DMA unit provides bulk word transfers using the existing address register pairs and the general-purpose
 register file. It is intentionally simple: it has no descriptor table, hidden parameter registers, or autonomous
 background execution. When a DMA command is accepted, the processing unit stops fetching further instructions until the
-DMA command completes or faults. As of this printing, the reference SIRC-1 emulator has not yet implemented the DMA
-unit; software must not assume Coprocessor 2 is present until an emulator release documents it.
+DMA command completes or faults. CPU models without the hardware raise an invalid-opcode fault for these commands,
+allowing supervisor software to fall back to ordinary \mnemonic{LOAD}/\mnemonic{STOR} loops.
 
 DMA operations are supervisor-only because they perform memory access using supervisor-visible address state. In
 protected mode, they raise a privilege-violation fault before dispatch.
@@ -698,15 +698,146 @@ write bus access then takes one further cycle in the no-wait case. Therefore \mn
 $12 + \max(|n| - 1, 0)$ cycles, and \mnemonic{DMAT} takes $12 + \max(2n - 1, 0)$ cycles. A false condition skips the DMA
 command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
 
-\noindent DMA memory reads and writes can raise data bus and bus-protection faults using DMA read/write bus access
+\noindent Missing DMA hardware, unsupported DMA operations, and reserved operand encodings raise invalid-opcode
+faults. DMA memory reads and writes can raise data bus and bus-protection faults using DMA read/write bus access
 types. If an address-register low word overflows or underflows and \texttt{SR.A} is set, the DMA operation raises a
 segment-overflow fault; otherwise the low word wraps modulo $2^{16}$. Partial side effects are possible if a fault
 occurs mid-transfer, and software must not assume that re-executing the same DMA instruction restarts the original
-operation.
+operation; see each operation's \textbf{Fault side effects} entry below for what state a handler can rely on, and see
+Section~\ref{sec:dma-fault-retry} for what this means for a fault handler's recovery strategy.
+
+\subsection{Retrying After a Fault}
+\label{sec:dma-fault-retry}
+
+Bus Fault, Bus Protection Fault, and Segment Overflow Fault are all classified \textit{Retryable}
+(Chapter~\ref{ch:exceptions}), and for an ordinary single-access instruction that classification means
+\mnemonic{RETE} safely re-executes the whole instruction from a clean, unstarted state. \mnemonic{DMAR},
+\mnemonic{DMAW}, and \mnemonic{DMAT} are the only instructions in the SIRCIS instruction set whose execution spans
+more than one bus access, and for them this guarantee does not hold uniformly: simply returning with \mnemonic{RETE}
+after fixing the fault condition can re-run the instruction from the wrong starting point instead of from the
+beginning.
+
+\textbf{Forward transfers (\mnemonic{DMAR}/\mnemonic{DMAW} with a positive count) are the one case where a bare
+\mnemonic{RETE} is safe.} The selected address register's advance is the last step of the operation and only runs
+once the whole transfer has completed, so a fault partway through leaves the address register exactly where it
+started. Retrying with \mnemonic{RETE} re-reads that unchanged value and redoes the entire transfer from the true
+beginning; some already-transferred words are transferred a second time, but the result is correct once the fault
+condition is fixed.
+
+\textbf{Backward transfers (\mnemonic{DMAR}/\mnemonic{DMAW} with a negative count) are not safe to retry directly.}
+The address register is decremented to its final target address \textit{before} the transfer loop begins -- the same
+eager-decrement pattern used by pre-decrement addressing elsewhere in this architecture (Chapter~\ref{ch:addressing-modes}) -- so by the time a fault can occur, the address register already holds the fully-decremented
+address, regardless of how many words actually transferred. A bare \mnemonic{RETE} re-reads that already-decremented
+value and decrements it a second time, landing the retried transfer on the wrong memory range entirely.
+
+\textbf{\mnemonic{DMAT} is not safe to retry directly either, for a related reason.} \reg{a} and \reg{l} only advance
+once a complete chunk (up to seven words) has been both read and written, so a fault leaves them reflecting every
+fully-completed prior chunk -- but the instruction's \texttt{\#n} operand stays fixed at its original encoded value,
+not the remaining count. A bare \mnemonic{RETE} restarts from the already-advanced addresses and transfers the full
+original count again, overrunning the intended end of the transfer by however many words the first attempt already
+completed.
+
+\textbf{What a handler can and cannot recover.} Except for \mnemonic{DMAT}'s chunk boundary, the CPU exposes no
+transfer-progress counter: for \mnemonic{DMAR}/\mnemonic{DMAW}, the address register's fault-time value carries no
+information about how many of the \texttt{\#n} words actually transferred, since it is either left untouched or
+already at its final position -- never in between -- and a partially-filled register range from \mnemonic{DMAR}
+cannot be distinguished from stale values left over from before the instruction ran. A fault handler cannot
+reconstruct a precise resume point for a backward \mnemonic{DMAR}/\mnemonic{DMAW}, or for the in-flight chunk of a
+faulted \mnemonic{DMAT}, from architectural state alone. In practice:
+
+\begin{itemize}
+	\item For a positive-count \mnemonic{DMAR}/\mnemonic{DMAW}, correct the fault condition and return with
+	      \mnemonic{RETE} as for any other retryable fault -- the address register is already untouched, so this
+	      naturally redoes the whole transfer.
+	\item For a negative-count \mnemonic{DMAR}/\mnemonic{DMAW}, or for \mnemonic{DMAT}, do not return directly into
+	      the faulted instruction without first repairing its inputs. The instruction word itself is unchanged, so
+	      the simplest safe strategy is to restore the address register(s) to the values they held before the
+	      original attempt -- values software must have saved independently, since the CPU will not hand them back
+	      -- and only then return with \mnemonic{RETE}. This reruns the identical instruction from a clean state
+	      instead of resuming mid-transfer. Use \mnemonic{ETFR}/\mnemonic{ETTR} instead, to redirect the return
+	      address elsewhere, only once a retry budget is exhausted and the caller needs to be told the transfer
+	      failed.
+	\item Treat a mid-transfer fault on a backward \mnemonic{DMAR}/\mnemonic{DMAW} as destructive to the original
+	      operand values: software that needs to recover precisely should keep its own record of the transfer's
+	      starting address and count before issuing the instruction, rather than relying on reconstructing it
+	      afterward.
+\end{itemize}
+
+Example~\ref{ex:dma-copy-safe} below wraps this pattern into a small, retryable block-copy routine: it saves the
+original transfer parameters on the stack before issuing \mnemonic{DMAT} (registers \reg{r1}--\reg{r7} are not a safe
+place to keep them, since \mnemonic{DMAT} clobbers them as its own transfer window), and the fault handler installed
+at the Bus Fault, Bus Protection Fault, and Segment Overflow Fault vectors restores those parameters and retries in
+place, up to a fixed retry budget, before giving up.
+
+\begin{example}
+	\begin{lstlisting}
+; Safely copies 7 words from (a) to (l) via DMAT, retrying the whole
+; transfer up to 3 times if a recoverable DMA fault occurs partway
+; through. DMAT clobbers r1-r7 and can leave a/l pointing at the wrong
+; address if it faults mid-transfer (see above), so the original
+; addresses -- and the retry budget, which DMAT would also clobber if
+; kept in a register -- are saved on the stack instead, and restored
+; before every retry attempt.
+
+dma_copy_safe:
+    STOR -(#0, s), ah          ; save the original source/dest addresses
+    STOR -(#0, s), al          ; and the retry budget where DMAT can't
+    STOR -(#0, s), lh          ; touch them
+    STOR -(#0, s), ll
+    LOAD r1, #3                ; retry budget
+    STOR -(#0, s), r1
+
+dma_copy_attempt:
+    DMAT a, l, #7              ; may fault partway through
+    ADDI sl, #5                ; success: discard the saved state
+    RETS
+
+; Install at the Bus Fault, Bus Protection Fault, and Segment Overflow
+; Fault vectors (Chapter 6). Falls through to whatever other handling
+; those vectors need for faults unrelated to this transfer.
+dma_fault_handler:
+    ETFR r7, #7                ; r7 = fault metadata
+    LOAD r6, r7                ; copy it -- ANDI below would destroy r7
+    ANDI r6, #0x0007           ; isolate the bus-access-type field
+    CMPI r6, #0x0005           ; BAT = 0x5 (DMA read burst)?
+    BRAN|== dma_fault_is_dma
+    CMPI r6, #0x0006           ; BAT = 0x6 (DMA write burst)?
+    BRAN|!= dma_fault_not_dma  ; neither -- not this handler's fault
+
+dma_fault_is_dma:
+    LOAD r1, (#0, s)           ; retry budget
+    SUBI r1, #1
+    STOR (#0, s), r1
+    BRAN|== dma_copy_give_up   ; out of retries
+
+    LOAD ll, (#1, s)           ; restore the original addresses -- a/l
+    LOAD lh, (#2, s)           ; may already be wrong, e.g. double-
+    LOAD al, (#3, s)           ; decremented by a backward transfer
+    LOAD ah, (#4, s)
+    RETE                       ; retry dma_copy_attempt from a clean state
+
+dma_copy_give_up:
+    ADDI sl, #5                ; discard the saved state
+    ETFR a, #6                 ; get the faulting return address
+    LOAD al, #dma_copy_failed  ; redirect past the retry loop
+    ETTR #6, a
+    RETE
+
+dma_fault_not_dma:
+    ; ... handling for faults unrelated to this transfer ...
+
+dma_copy_failed:
+    ; ... signal failure to the caller; left to the calling convention
+    ; in use ...
+    RETS
+	\end{lstlisting}
+	\caption{A Retry-Safe DMA Copy Routine}
+	\label{ex:dma-copy-safe}
+\end{example}
 
 \begin{instructionbox}{DMAR}{DMA Read To Registers Meta-Instruction}
-	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
-	in all SIRC-1 models.
+	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
+	on models that do not implement it.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2800 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
 	\begin{center}
@@ -763,9 +894,18 @@ if n > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Unsupported DMA operations, reserved operand encodings, and invalid counts raise invalid-opcode
-	faults. In protected mode, raises a privilege-violation fault. DMA reads can raise data bus, bus-protection, and
-	segment-overflow faults.
+	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, reserved operand encodings, and invalid
+	counts raise invalid-opcode faults. In protected mode, raises a privilege-violation fault. DMA reads can raise
+	data bus, bus-protection, and segment-overflow faults.
+
+	\textbf{Fault side effects:} If a fault occurs mid-transfer, only the registers among \reg{r1} through \reg{rn}
+	read before the fault contain memory data; the rest are unmodified. The selected address register's state
+	depends on direction, per the operation above: for a positive count, the address-register advance is the last
+	step of the operation and does not run until the whole transfer completes, so a fault leaves it at its original,
+	pre-transfer value no matter how many words were read. For a negative count, the address register is decremented
+	to its final position \textit{before} the transfer loop begins, so it already reflects the full decrement even if
+	the fault occurs on the very first word. Software must not assume the full requested count completed in either
+	case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.
@@ -788,8 +928,8 @@ DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]
 \end{instructionbox}
 
 \begin{instructionbox}{DMAW}{DMA Write From Registers Meta-Instruction}
-	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
-	in all SIRC-1 models.
+	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
+	on models that do not implement it.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2900 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
 	\begin{center}
@@ -848,9 +988,18 @@ if n > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Unsupported DMA operations, reserved operand encodings, and invalid counts raise invalid-opcode
-	faults. In protected mode, raises a privilege-violation fault. DMA writes can raise data bus, bus-protection, and
-	segment-overflow faults.
+	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, reserved operand encodings, and invalid
+	counts raise invalid-opcode faults. In protected mode, raises a privilege-violation fault. DMA writes can raise
+	data bus, bus-protection, and segment-overflow faults.
+
+	\textbf{Fault side effects:} If a fault occurs mid-transfer, only the memory words written before the fault
+	reflect the source registers; the rest of the destination range is unchanged. The selected address register's
+	state depends on direction, per the operation above: for a positive count, the address-register advance is the
+	last step of the operation and does not run until the whole transfer completes, so a fault leaves it at its
+	original, pre-transfer value no matter how many words were written. For a negative count, the address register
+	is decremented to its final position \textit{before} the transfer loop begins, so it already reflects the full
+	decrement even if the fault occurs on the very first word. Software must not assume the full requested count
+	completed in either case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.
@@ -873,8 +1022,8 @@ DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3
 \end{instructionbox}
 
 \begin{instructionbox}{DMAT}{DMA Memory Transfer Meta-Instruction}
-	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), a required coprocessor present
-	in all SIRC-1 models.
+	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
+	on models that do not implement it.
 
 	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
 	\begin{center}
@@ -923,12 +1072,19 @@ while remaining > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Unsupported DMA operations and reserved operand encodings raise invalid-opcode faults. In
-	protected mode, raises a privilege-violation fault. DMA reads and writes can raise data bus, bus-protection, and
-	segment-overflow faults.
+	\textbf{Exceptions:} Missing DMA hardware, unsupported DMA operations, and reserved operand encodings raise
+	invalid-opcode faults. In protected mode, raises a privilege-violation fault. DMA reads and writes can raise data
+	bus, bus-protection, and segment-overflow faults.
 
-	\textbf{Fault side effects:} Registers, memory, and address registers reflect the last completed word transfer if a
-	fault occurs mid-transfer.
+	\textbf{Fault side effects:} \reg{a} and \reg{l} only advance once a full chunk (up to seven words) has both been
+	read and written successfully, so a fault leaves both address registers at the last fully completed chunk
+	boundary, not at the exact word. Within the chunk where the fault occurs, the state of \reg{r1}--\reg{r7} depends
+	on which half of the chunk failed: a fault during the chunk's memory reads can leave them holding a mix of this
+	chunk's already-read words and the previous chunk's stale contents for the words not yet read; a fault during
+	the chunk's memory writes (after its reads all succeeded) means \reg{r1}--\reg{r7} fully reflect the current
+	chunk, but the destination range may be only partially written for it. Software must not assume the full
+	requested count completed, and cannot use \reg{r1}--\reg{r7} alone to identify which words within the current
+	chunk were actually transferred. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.

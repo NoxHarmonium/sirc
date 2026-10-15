@@ -32,6 +32,18 @@ Open tasks:
   listings should live mainly in the instruction-reference chapters, assembler-facing sections, and the examples
   appendix. Where architecture chapters currently use assembly to illustrate behavior, decide whether to replace
   it with pseudocode, move it to the relevant instruction chapter, or mark it as non-normative example code.
+- Audit the whole manual for anachronistic references that break the 1989 "in-universe" framing established by the
+  title page, preface, and front/back covers. The manual should read as a period vendor document; it should not
+  reference the real, modern tooling used to build or test the fictional SIRC-1 -- either omit the concept
+  entirely, or mention emulators/simulators only in the vague, generic sense a real 1989 manual might ("assembler,
+  compiler backend, emulator, or hardware implementation," as `preface.tex` already does), never by naming a
+  specific tool or describing its current implementation status. Two instances found and worth using as a
+  starting point (2026-09-15, author's call): a sentence in `16-coprocessor-instructions.tex`'s DMA Unit section
+  claiming "the reference SIRC-1 emulator has not yet implemented the DMA unit" (fixed -- removed, since the
+  optional-coprocessor framing already covers the point without the anachronism); and `appendix-c-undocumented.tex`,
+  which names the real "SIRC-VM" simulator directly, has a subsection literally titled "Current Simulator," and a
+  "For Researchers/Hackers" section that reads like modern engineering documentation rather than a period manual
+  (not yet fixed -- flagged for a future pass, since it's a larger rewrite than a single sentence).
 
 Acceptance criteria:
 

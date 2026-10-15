@@ -93,7 +93,15 @@ categories:
 
 	      Because ALU results and status-register updates are only committed during the write-back phase
 	      (Chapter~\ref{ch:cpu-architecture}), which always runs after the memory-access phase where a bus fault is
-	      detected, a bus fault can never leave a partial status-register or register update behind.
+	      detected, a bus fault can never leave a partial status-register or register update behind for an ordinary
+	      single-access instruction.
+
+	      This atomicity does not extend to a DMA burst: \mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT} are each
+	      one instruction that performs multiple bus accesses in sequence, so a bus fault partway through a burst
+	      leaves the words already transferred in effect -- retrying with \mnemonic{RETE} does not undo them. The
+	      fault metadata register's DMA read/write burst bus-access-type codes
+	      (Section~\ref{sec:fault-metadata-register-format}) let a handler recognize this case. See
+	      Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\item \textbf{Bus Protection Fault} \textit{(Retryable)} — Raised when an external device asserts the bus
 	      protection error CPU pin.
@@ -102,6 +110,10 @@ categories:
 	      writing to ROM or accessing a protected memory region while the CPU is in protected mode. The instruction is cancelled
 	      before it takes effect, and the link register stores the address of the faulting instruction, so a handler can adjust
 	      the permission (if that is the correct response) and retry with \mnemonic{RETE}.
+
+	      As with Bus Fault, this applies cleanly to an ordinary single-access instruction; a DMA burst
+	      (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}) can raise this fault partway through, in which case
+	      words already transferred before the fault remain in effect. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\item \textbf{Alignment Fault} \textit{(Retryable)} — Raised when fetching instructions if the program counter
 	      contains an odd word address.
@@ -119,6 +131,10 @@ categories:
 	      metadata register help identify where the overflow occurred. The link register stores the address of the faulting
 	      instruction, whether the overflow occurred in the program counter or in any other address computation, so a handler
 	      can bring the address back into range and retry with \mnemonic{RETE}.
+
+	      The same DMA-burst caveat as Bus Fault and Bus Protection Fault applies here: a segment-overflow fault raised
+	      partway through a \mnemonic{DMAR}, \mnemonic{DMAW}, or \mnemonic{DMAT} burst does not undo words already
+	      transferred before the fault. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\item \textbf{Invalid Opcode Fault} \textit{(Retryable)} — Raised when a coprocessor call targets a
 	      non-existent coprocessor or requests an operation that the selected coprocessor does not implement.
