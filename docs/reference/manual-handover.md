@@ -91,20 +91,17 @@ Open tasks:
   listings should live mainly in the instruction-reference chapters, assembler-facing sections, and the examples
   appendix. Where architecture chapters currently use assembly to illustrate behavior, decide whether to replace
   it with pseudocode, move it to the relevant instruction chapter, or mark it as non-normative example code.
-- Audit the whole manual for anachronistic references that break the 1989 "in-universe" framing established by the
-  title page, preface, and front/back covers. The manual should read as a period vendor document; it should not
-  reference the real, modern tooling used to build or test the fictional SIRC-1 -- either omit the concept
-  entirely, or mention emulators/simulators only in the vague, generic sense a real 1989 manual might ("assembler,
-  compiler backend, emulator, or hardware implementation," as `preface.tex` already does), never by naming a
-  specific tool or describing its current implementation status. Two instances found so far (2026-09-15, author's
-  call), both now fixed, but this was only ever a starting point, not a full sweep -- the rest of the manual
-  hasn't been systematically audited for the same pattern:
+- **Done (2026-09-16):** audit the whole manual for anachronistic references that break the 1989 "in-universe"
+  framing established by the title page, preface, and front/back covers. Two instances found on 2026-09-15 as a
+  starting point, both fixed (one on 2026-09-15, the other -- `appendix-c-undocumented.tex` -- on 2026-09-16, see
+  below), then followed by a full sweep of every chapter/appendix/front-matter file on 2026-09-16 rather than
+  leaving the rest unaudited:
   - A sentence in `16-coprocessor-instructions.tex`'s DMA Unit section claiming "the reference SIRC-1 emulator has
     not yet implemented the DMA unit" (fixed 2026-09-15 -- removed, since the optional-coprocessor framing already
     covers the point without the anachronism).
-  - **Done (2026-09-16):** `appendix-c-undocumented.tex`, which named the real "SIRC-VM" simulator directly, had a
-    subsection literally titled "Current Simulator" (citing "the reference test suite" as its evidence basis), and
-    a "For Researchers/Hackers" section that read like modern engineering documentation. Per the author's guidance:
+  - `appendix-c-undocumented.tex` (fixed 2026-09-16): named the real "SIRC-VM" simulator directly, had a subsection
+    literally titled "Current Simulator" (citing "the reference test suite" as its evidence basis), and a "For
+    Researchers/Hackers" section that read like modern engineering documentation. Per the author's guidance:
     referring to a general toolchain SIRC itself provides is fine, but no command-line specifics and no references
     to what the current Rust simulator does or doesn't implement. Fixed: "current reference implementation" (in
     the Observed Behavior section) and "current simulator or hardware behaviour" (Overview) reworded to the
@@ -113,8 +110,24 @@ Open tasks:
     any implementation does, since once the software one couldn't be named, they were describing the same
     behaviour from two angles that didn't need separating; "For Researchers/Hackers" removed outright rather than
     reworded, since a 1989 vendor manual wouldn't carve out a hobbyist/reverse-engineer audience and its content
-    (test thoroughly, expect behavior changes) was already redundant with "For Application Developers." Rebuilt
-    clean (0 undefined references) and re-ran the QA target.
+    (test thoroughly, expect behavior changes) was already redundant with "For Application Developers."
+  - **Full sweep (2026-09-16):** grepped every `chapters/*.tex` file, `preface.tex`, and `notation-and-glossary.tex`
+    for a broad set of anachronism-risk terms (`simulator`, `emulat-`, `SIRC-VM`, `reference implementation`, `test
+    suite`, `rust`, `cargo`, `github`, `repository`, `CI`/`continuous integration`, `not yet implement-`, `hacker`,
+    `debugg-`, `makefile`, `commit`, `pull request`, `http`/`www`/`.com`, `python`, `json`, `git`, `license`,
+    `pipeline`, and several more) and read every hit in context. Everything else was a false positive (`.ORG` the
+    assembler directive matching a `\.org` pattern, "make" the English verb matching `\bmake\b`) or already
+    legitimate period-appropriate architecture prose: extensive "software emulation of a missing/optional
+    coprocessor via an invalid-opcode trap" language throughout Chapter 6 and Chapter 16 is exactly how real 1980s
+    CPU manuals described FPU-less models trapping to software float emulation (the M68000 family did this for the
+    68881/68882), not an anachronism; "commits"/"committed" is the manual's own write-back/bus-transaction
+    terminology, unrelated to version control; "pipeline" is the CPU execution pipeline, unrelated to CI/CD;
+    generic "debuggers"/"emulator and simulator authors" plurals already match the established vague-implementation
+    convention. One pleasant find while sweeping: `05-status-register.tex`'s Trace Mode entry already names
+    "SIRCIT (SIRC Instruction Tracer)" as the in-universe debugging tool -- a good example of the pattern this item
+    asks for (a fictional SIRC-branded tool, no real specifics), not something to fix. Rebuilt clean (0 undefined
+    references) and re-ran the QA target after the `appendix-c-undocumented.tex` fixes; the sweep itself found
+    nothing further to change.
 - **Done (2026-09-16):** label syntax in the manual's worked examples. Audited every labeled code sample across
   `chapters/*.tex` (18 labels in `10-condition-codes.tex`, `15-control-flow.tex`, and
   `16-coprocessor-instructions.tex`) and converted every trailing-colon label (`while_start:`) to the leading-colon
