@@ -100,9 +100,10 @@ explicit multi-instruction technique where it comes up, not given its own meta-i
 
 	\begin{example}
 		\begin{lstlisting}
-NOOP                          ; Wait 6 cycles
+; Wait 18 cycles (6 cycles per NOOP)
 NOOP
-NOOP                          ; Total 18 cycles delay
+NOOP
+NOOP
 		\end{lstlisting}
 		\caption{Timing Delay with NOOP}
 	\end{example}

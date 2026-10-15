@@ -14,7 +14,7 @@ EXAMPLE_ASM := $(filter-out ../../examples/reference-encodings/%.sasm ../../exam
 DOT := $(wildcard diagrams/*.dot)
 DIAGRAM_PDF := $(DOT:.dot=.pdf)
 
-.PHONY: all clean cleanall quick graphviz view format format-check
+.PHONY: all clean cleanall quick graphviz view format format-check qa
 
 # Default target - build the PDF
 all: $(OUTPUT).pdf
@@ -72,3 +72,10 @@ format-check: .format-check.stamp
 
 .format-check.stamp: $(MAIN).tex preamble.tex chapters/*.tex
 	latexindent -m -l --cruft=.cruft/ --silent --check $? || (cat .cruft/indent.log && exit 1)
+
+# QA: build the PDF, verify every worked-example listing against the real
+# assembler/linker, and check for undefined cross-references. See qa.py for
+# what "verified" means and how to opt an inline listing in with a
+# "% qa:assemble" comment.
+qa:
+	python3 qa.py

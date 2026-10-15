@@ -17,8 +17,34 @@ Goal: prevent the manual from drifting away from the implementation.
 
 Open tasks:
 
-- Add a reference-manual QA target: build the PDF, verify generated examples, check references, check
-  glossary/terminology, and optionally render selected pages for visual inspection, all from one command.
+- **Done (2026-09-16):** added a reference-manual QA target (`make qa`, or `python3 qa.py` directly -- see
+  `docs/reference/README.md`'s "QA" section for full detail). One command runs `make format-check`, a full `make
+  all` build, then verifies content against the real `sirc-vm` toolchain rather than just checking it typesets:
+  every Appendix D worked-example program is checked via its own `examples/<name>/Makefile`'s existing `check`
+  target (assemble, link, run under the VM, diff against a checked-in expected fixture -- this also handles
+  multi-file programs like `hardware-exception.sasm`+`data.sasm` for free, since it just runs the real recipe
+  instead of reimplementing it), every inline Usage Example listing is fed to the real assembler, and the build log
+  is checked for unresolved references/citations. `--render N,N` optionally rasterizes given pages to PNG for a
+  visual spot-check. Deliberately scoped: bare `Syntax:`/`Operation:` pseudocode blocks (placeholder operands like
+  `#opcode`, not real code) are skipped by default rather than reported as failures, with an opt-in
+  `% qa:assemble` comment marker for the few bare blocks that are real code; deep prose/terminology review is left
+  to the `manual-cold-reader` agent rather than approximated with regexes.
+
+  First run found 3 real problems (all now fixed), which is a reasonable signal the check is pulling its weight
+  rather than just passing trivially:
+  - `16-coprocessor-instructions.tex`'s `EXCP` example used a character-literal immediate, `LOAD r1, #'A'` --
+    character literals aren't part of the assembler's grammar (confirmed against `parsers/shared.rs`'s
+    `parse_number`, and this was the only place in the manual using that syntax, so not an intended-but-unbuilt
+    feature). Fixed to `LOAD r1, #0x41`.
+  - Two Usage Examples (`15-control-flow.tex`'s `RETS` example, `17-meta-instructions.tex`'s `NOOP` timing-delay
+    example) put an inline comment on the same line as a zero-operand meta-instruction. That's a genuine toolchain
+    parser gap, not a manual mistake: confirmed with a minimal repro (`NOOP ; hello` alone fails to parse, but bare
+    `NOOP` or an operand-bearing instruction with the identical trailing comment both parse fine) that zero-operand
+    instructions' grammar doesn't consume a trailing same-line comment the way every other instruction's grammar
+    does. Worked around in both examples by moving the comment to its own line so the manual's examples match what
+    the assembler actually accepts today; the underlying parser gap is not fixed and has no tracking file to live
+    in right now (`implementation-bugs.md` was retired earlier this pass since nothing was open -- worth deciding
+    whether to recreate it or track findings like this one somewhere else next time one turns up).
 - Chapter 2's 24 MHz maximum clock rate and 5 V +/- 5% supply figures have no stated basis. Deliberately left
   unresolved for now (author's call, 2026-09-12) rather than fixed as part of this pass.
 - Generate more tables from source where possible: opcode map, register map, condition codes, instruction

@@ -327,8 +327,8 @@ endif
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD r1, #'A'                 ; Character to print
-EXCP #0x80                    ; Trap to OS print routine
+LOAD r1, #0x41                 ; Character to print ('A')
+EXCP #0x80                     ; Trap to OS print routine
 		\end{lstlisting}
 		\caption{Triggering a Software Exception}
 	\end{example}
