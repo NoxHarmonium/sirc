@@ -710,15 +710,14 @@ Section~\ref{sec:dma-fault-retry} for what this means for a fault handler's reco
 \label{sec:dma-fault-retry}
 
 Bus Fault, Bus Protection Fault, and Segment Overflow Fault are all classified \textit{Retryable}
-(Chapter~\ref{ch:exceptions}), and for an ordinary single-access instruction that classification means
-\mnemonic{RETE} safely re-executes the whole instruction from a clean, unstarted state. \mnemonic{DMAR},
-\mnemonic{DMAW}, and \mnemonic{DMAT} are the only instructions in the SIRCIS instruction set whose execution spans
-more than one bus access, and for them this guarantee does not hold uniformly: simply returning with \mnemonic{RETE}
-after fixing the fault condition can re-run the instruction from the wrong starting point instead of from the
-beginning.
+(Chapter~\ref{ch:exceptions}), and for an ordinary single-access instruction that classification means \mnemonic{RETE}
+safely re-executes the whole instruction from a clean, unstarted state. \mnemonic{DMAR}, \mnemonic{DMAW}, and
+\mnemonic{DMAT} are the only instructions in the SIRCIS instruction set whose execution spans more than one bus access,
+and for them this guarantee does not hold uniformly: simply returning with \mnemonic{RETE} after fixing the fault
+condition can re-run the instruction from the wrong starting point instead of from the beginning.
 
 \textbf{Forward transfers (\mnemonic{DMAR}/\mnemonic{DMAW} with a positive count) are the one case where a bare
-\mnemonic{RETE} is safe.} The selected address register's advance is the last step of the operation and only runs
+	\mnemonic{RETE} is safe.} The selected address register's advance is the last step of the operation and only runs
 once the whole transfer has completed, so a fault partway through leaves the address register exactly where it
 started. Retrying with \mnemonic{RETE} re-reads that unchanged value and redoes the entire transfer from the true
 beginning; some already-transferred words are transferred a second time, but the result is correct once the fault
@@ -746,28 +745,26 @@ reconstruct a precise resume point for a backward \mnemonic{DMAR}/\mnemonic{DMAW
 faulted \mnemonic{DMAT}, from architectural state alone. In practice:
 
 \begin{itemize}
-	\item For a positive-count \mnemonic{DMAR}/\mnemonic{DMAW}, correct the fault condition and return with
-	      \mnemonic{RETE} as for any other retryable fault -- the address register is already untouched, so this
-	      naturally redoes the whole transfer.
-	\item For a negative-count \mnemonic{DMAR}/\mnemonic{DMAW}, or for \mnemonic{DMAT}, do not return directly into
-	      the faulted instruction without first repairing its inputs. The instruction word itself is unchanged, so
-	      the simplest safe strategy is to restore the address register(s) to the values they held before the
-	      original attempt -- values software must have saved independently, since the CPU will not hand them back
-	      -- and only then return with \mnemonic{RETE}. This reruns the identical instruction from a clean state
-	      instead of resuming mid-transfer. Use \mnemonic{ETFR}/\mnemonic{ETTR} instead, to redirect the return
-	      address elsewhere, only once a retry budget is exhausted and the caller needs to be told the transfer
-	      failed.
-	\item Treat a mid-transfer fault on a backward \mnemonic{DMAR}/\mnemonic{DMAW} as destructive to the original
-	      operand values: software that needs to recover precisely should keep its own record of the transfer's
-	      starting address and count before issuing the instruction, rather than relying on reconstructing it
-	      afterward.
+	\item For a positive-count \mnemonic{DMAR}/\mnemonic{DMAW}, correct the fault condition and return with \mnemonic{RETE} as
+	      for any other retryable fault -- the address register is already untouched, so this naturally redoes the whole
+	      transfer.
+	\item For a negative-count \mnemonic{DMAR}/\mnemonic{DMAW}, or for \mnemonic{DMAT}, do not return directly into the faulted
+	      instruction without first repairing its inputs. The instruction word itself is unchanged, so the simplest safe strategy
+	      is to restore the address register(s) to the values they held before the original attempt -- values software must have
+	      saved independently, since the CPU will not hand them back -- and only then return with \mnemonic{RETE}. This reruns
+	      the identical instruction from a clean state instead of resuming mid-transfer. Use \mnemonic{ETFR}/\mnemonic{ETTR}
+	      instead, to redirect the return address elsewhere, only once a retry budget is exhausted and the caller needs to be
+	      told the transfer failed.
+	\item Treat a mid-transfer fault on a backward \mnemonic{DMAR}/\mnemonic{DMAW} as destructive to the original operand values:
+	      software that needs to recover precisely should keep its own record of the transfer's starting address and count before
+	      issuing the instruction, rather than relying on reconstructing it afterward.
 \end{itemize}
 
 Example~\ref{ex:dma-copy-safe} below wraps this pattern into a small, retryable block-copy routine: it saves the
 original transfer parameters on the stack before issuing \mnemonic{DMAT} (registers \reg{r1}--\reg{r7} are not a safe
-place to keep them, since \mnemonic{DMAT} clobbers them as its own transfer window), and the fault handler installed
-at the Bus Fault, Bus Protection Fault, and Segment Overflow Fault vectors restores those parameters and retries in
-place, up to a fixed retry budget, before giving up.
+place to keep them, since \mnemonic{DMAT} clobbers them as its own transfer window), and the fault handler installed at
+the Bus Fault, Bus Protection Fault, and Segment Overflow Fault vectors restores those parameters and retries in place,
+up to a fixed retry budget, before giving up.
 
 \begin{example}
 	\begin{lstlisting}

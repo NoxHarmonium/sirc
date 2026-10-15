@@ -325,12 +325,12 @@ than 15 is well defined:
 \begin{itemize}
 	\item Shift count of 0 means no shift is performed
 	\item Maximum immediate shift count is 15
-	\item For \mnemonic{LSL}, \mnemonic{LSR}, and \mnemonic{ASL}, a register-supplied count of 16 or more produces the
-	      same result as a count of exactly 16: every original bit is shifted out, giving \texttt{0x0000}. The carry
-	      flag reflects the last bit shifted out at count 16, as for any other count.
-	\item For \mnemonic{ASR}, a register-supplied count of 16 or more sign-extends fully: \texttt{0xFFFF} if the
-	      original value was negative, \texttt{0x0000} if it was positive or zero. This is the same rule as any other
-	      count, just carried to its limit -- every vacated bit is the sign bit.
+	\item For \mnemonic{LSL}, \mnemonic{LSR}, and \mnemonic{ASL}, a register-supplied count of 16 or more produces the same
+	      result as a count of exactly 16: every original bit is shifted out, giving \texttt{0x0000}. The carry flag reflects the
+	      last bit shifted out at count 16, as for any other count.
+	\item For \mnemonic{ASR}, a register-supplied count of 16 or more sign-extends fully: \texttt{0xFFFF} if the original value
+	      was negative, \texttt{0x0000} if it was positive or zero. This is the same rule as any other count, just carried to its
+	      limit -- every vacated bit is the sign bit.
 	\item \mnemonic{RTL} and \mnemonic{RTR} have no vacated bits to define, since a rotate never discards data; a
 	      register-supplied count is used modulo 16, so a count of 16 behaves as a count of 0, a count of 17 behaves
 	      as a count of 1, and so on.

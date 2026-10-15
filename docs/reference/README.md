@@ -35,4 +35,11 @@ make quick
 # Indent the tex files automatically to make everything consistent
 # On MacOS you might need to install this with `brew install latexindent`. The version that comes with maxtex seems broken.
 make format
+
+# Check formatting without changing anything (exits non-zero if `make format` would change a file)
+make format-check
 ```
+
+Run `make format` after every change to the manual, before committing. This is enforced by the repo's pre-commit
+hook (`.githooks/pre-commit`), which runs `make format-check` whenever a commit touches `docs/reference` and fails
+the commit if any file is unformatted -- it does not format for you, so run `make format` yourself and re-stage.

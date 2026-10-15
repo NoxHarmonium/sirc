@@ -181,20 +181,20 @@ public assembly syntax, leaves all four status flags architecturally undefined (
 
 \subsection{Flag Computation Formulas}
 
-Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how,
-as a Boolean formula in terms of the sign bit (bit 15) of the destination operand (\texttt{Dm}), the source
-operand (\texttt{Sm}), and the result (\texttt{Rm}). $\cdot$ is Boolean AND, $+$ is Boolean OR, and $\overline{X}$
-is the complement of $X$.
+Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how, as a
+Boolean formula in terms of the sign bit (bit 15) of the destination operand (\texttt{Dm}), the source operand
+(\texttt{Sm}), and the result (\texttt{Rm}). $\cdot$ is Boolean AND, $+$ is Boolean OR, and $\overline{X}$ is the
+complement of $X$.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lp{4.2cm}p{4.2cm}}
 		\toprule
-		\textbf{Family}        & \textbf{C}                                                                 & \textbf{V}                                                                 \\
+		\textbf{Family}         & \textbf{C}                                                      & \textbf{V}                                                                     \\
 		\midrule
-		ADD, ADC               & Carry out of bit 15 of the full addition                                  & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
-		SUB, SBC, CMP          & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$            & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
-		AND, ORR, XOR, TSA, TSX & $0$ (always cleared)                                                      & $0$ (always cleared)                                                       \\
+		ADD, ADC                & Carry out of bit 15 of the full addition                        & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
+		SUB, SBC, CMP           & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$ & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
+		AND, ORR, XOR, TSA, TSX & $0$ (always cleared)                                            & $0$ (always cleared)                                                           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Carry and Overflow Flag Formulas}

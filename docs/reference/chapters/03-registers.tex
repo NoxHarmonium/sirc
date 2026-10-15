@@ -20,12 +20,12 @@ all other registers are architecturally undefined. See Chapter~\ref{ch:exception
 \section{Programming Model}
 
 Figure~\ref{fig:register-programming-model} shows the complete sixteen-register programming model: the seven
-general-purpose registers, both words of each of the four address register pairs, and \reg{sr}. The high word of
-each address register pair, marked \textsuperscript{*}, is read-only in protected mode: a protected-mode program can
-read its real value but a direct write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter
-still: in protected mode it is hidden even from reads, which are redacted to zero, on top of being unwritable. Its
-low byte, shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully accessible in both
-modes. See Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
+general-purpose registers, both words of each of the four address register pairs, and \reg{sr}. The high word of each
+address register pair, marked \textsuperscript{*}, is read-only in protected mode: a protected-mode program can read
+its real value but a direct write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter still: in
+protected mode it is hidden even from reads, which are redacted to zero, on top of being unwritable. Its low byte,
+shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully accessible in both modes. See
+Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
 
 \begin{figure}[H]
 	\centering
@@ -60,8 +60,8 @@ modes. See Section~\ref{sec:privilege-restrictions} below for the full read/writ
 	among these: despite sharing a row with a hidden half, it is unprivileged and fully accessible in both modes.
 \end{figure}
 
-Table~\ref{tab:register-encoding} below lists every register's encoding and states exactly which ones are
-privileged; see Section~\ref{sec:privilege-restrictions} for the full read/write privilege rules.
+Table~\ref{tab:register-encoding} below lists every register's encoding and states exactly which ones are privileged;
+see Section~\ref{sec:privilege-restrictions} for the full read/write privilege rules.
 
 \section{General-Purpose Registers}
 

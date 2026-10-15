@@ -7,7 +7,8 @@ Most SIRCIS instructions follow the six-stage execution phase model and complete
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
 adding execution phases. Coprocessor calls are the exception: the dispatched coprocessor occupies at least one further
 slot after the six-phase call. This fixed execution sequence greatly simplifies software development and hardware
-design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority rules.
+design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority
+rules.
 
 \section{Six-Stage Execution Phases}
 

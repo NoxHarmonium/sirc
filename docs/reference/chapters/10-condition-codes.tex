@@ -54,14 +54,12 @@ These conditions test a single status flag:
 
 	\item[!= (Not Equal)] Executes when Z = 0. Typical use: test inequality.
 
-	\item[CS (Carry Set)] Executes when C = 1. The Carry flag's meaning depends on which
-	      instruction last set it: after an add (\mnemonic{ADDR}, \mnemonic{ADDI}, and so on),
-	      C = 1 means an unsigned overflow occurred. After a subtraction or \mnemonic{CMP}, C = 1
-	      means a \emph{borrow} occurred -- the first operand was unsigned lower than the second.
+	\item[CS (Carry Set)] Executes when C = 1. The Carry flag's meaning depends on which instruction last set it: after an add
+	      (\mnemonic{ADDR}, \mnemonic{ADDI}, and so on), C = 1 means an unsigned overflow occurred. After a subtraction or
+	      \mnemonic{CMP}, C = 1 means a \emph{borrow} occurred -- the first operand was unsigned lower than the second.
 
-	\item[CC (Carry Clear)] Executes when C = 0. After an add, C = 0 means no unsigned overflow
-	      occurred. After a subtraction or \mnemonic{CMP}, C = 0 means no borrow occurred: the
-	      first operand was unsigned higher than or equal to the second.
+	\item[CC (Carry Clear)] Executes when C = 0. After an add, C = 0 means no unsigned overflow occurred. After a subtraction or
+	      \mnemonic{CMP}, C = 0 means no borrow occurred: the first operand was unsigned higher than or equal to the second.
 
 	\item[NS (Negative Set)] Executes when N = 1. Tests if result is negative (signed).
 
@@ -89,8 +87,8 @@ These conditions are used after comparing unsigned integers:
 	\item \texttt{LO} tests if first $\leq$ second (unsigned)
 	\item \texttt{CS} is equivalent to unsigned $<$
 	\item \texttt{CC} is equivalent to unsigned $\geq$
-	\item Prefer \texttt{HI}/\texttt{LO} over \texttt{CS}/\texttt{CC} for unsigned comparisons if
-	      that is easier to remember, since their names match their meaning directly.
+	\item Prefer \texttt{HI}/\texttt{LO} over \texttt{CS}/\texttt{CC} for unsigned comparisons if that is easier to remember,
+	      since their names match their meaning directly.
 \end{itemize}
 
 \subsection{Signed Comparisons}
@@ -185,14 +183,14 @@ BRAN|!= @non_zero_case
 	\centering
 	\begin{tabular}{cccccc}
 		\toprule
-		\textbf{Relationship}   & \textbf{Z}                         & \textbf{C} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
+		\textbf{Relationship}   & \textbf{Z}                               & \textbf{C} & \textbf{Condition} & \textbf{Code} & \textbf{Meaning} \\
 		\midrule
-		rA = rB                 & 1                                  & X          & ==                 & 0001          & Equal            \\
-		rA $\neq$ rB            & 0                                  & X          & !=                 & 0010          & Not Equal        \\
-		rA $>$ rB (unsigned)    & 0                                  & 0          & HI                 & 1001          & Higher           \\
-		rA $<$ rB (unsigned)    & X                                  & 1          & CS                 & 0011          & Lower            \\
-		rA $\geq$ rB (unsigned) & X                                  & 0          & CC                 & 0100          & Higher or Same   \\
-		rA $\leq$ rB (unsigned) & \multicolumn{2}{c}{C = 1 OR Z = 1$^{*}$} & LO   & 1010          & Lower or Same    \\
+		rA = rB                 & 1                                        & X          & ==                 & 0001          & Equal            \\
+		rA $\neq$ rB            & 0                                        & X          & !=                 & 0010          & Not Equal        \\
+		rA $>$ rB (unsigned)    & 0                                        & 0          & HI                 & 1001          & Higher           \\
+		rA $<$ rB (unsigned)    & X                                        & 1          & CS                 & 0011          & Lower            \\
+		rA $\geq$ rB (unsigned) & X                                        & 0          & CC                 & 0100          & Higher or Same   \\
+		rA $\leq$ rB (unsigned) & \multicolumn{2}{c}{C = 1 OR Z = 1$^{*}$} & LO         & 1010               & Lower or Same                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Unsigned Comparison Results}
