@@ -199,6 +199,7 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 
 In supervisor mode, the status register can be directly manipulated like any other register:
 
+% qa:assemble
 \begin{lstlisting}
 ; Set protected mode bit (only in supervisor mode)
 ORRI sr, #0x0100
@@ -231,6 +232,7 @@ they cannot directly load or store \reg{sr}.
 In supervisor mode, reading \reg{sr} returns the full 16-bit value. In protected mode, reading \reg{sr} returns the
 lower byte in bits 7--0, with bits 15--8 masked to zero (for security).
 
+% qa:assemble
 \begin{lstlisting}
 ; In supervisor mode - gets full 16 bits
 LOAD r1, sr  ; r1 = 0xXXXX (all bits)
@@ -255,50 +257,14 @@ When returning from an exception with \mnemonic{RETE}, the saved status register
 
 \section{Usage Examples}
 
-\begin{example}
-	\begin{lstlisting}
-; Compare r1 with r2
-CMPR r1, r2
-
-; Branch if equal
-BRAN|== @label_equal
-
-; Branch if r1 > r2 (unsigned)
-BRAN|HI @label_greater
-
-; Add 0x16 to r1 if r1 >= r2 (signed)
-ADDI|>= r1, #0x16
-	\end{lstlisting}
-	\caption{Conditional Execution}
-\end{example}
-
 The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
 particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
-Chapter~\ref{ch:shift-operations} for complete details.
+Chapter~\ref{ch:shift-operations} for complete details and worked examples.
 
-\begin{example}
-	\begin{lstlisting}
-; Update flags from shift instead of ALU
-ADDI[S] r2, #1, LSL #2        ; Flags from shift, not addition
-
-; Preserve flags across operations
-CMPR r1, r2                   ; Set comparison flags
-ADDI[N] r3, #1                ; Increment without changing flags
-BRAN|== @still_uses_cmpr_flags ; Branch uses CMPR flags
-	\end{lstlisting}
-	\caption{Manual Status Flag Control}
-\end{example}
-
-\begin{example}
-	\begin{lstlisting}
-; Test if bit 5 is set in r1
-TSAI r1, #0x0020  ; AND with 0x0020, update flags only
-
-; Branch if bit was set (result non-zero)
-BRAN|!= @bit_was_set
-	\end{lstlisting}
-	\caption{Testing Bits}
-\end{example}
+Condition-code-driven branching and conditional execution (comparing registers, testing bits, and acting on the result)
+are a property of the condition flags this chapter defines, but the idioms themselves belong to
+Chapter~\ref{ch:condition-codes} and the individual instruction entries (e.g. \mnemonic{TSAI}/\mnemonic{TSAR} in
+Chapter~\ref{ch:alu-instructions}), which cover them in more depth than a status-register-focused example could.
 
 \begin{example}
 	\begin{lstlisting}

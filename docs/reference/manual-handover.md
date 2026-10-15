@@ -114,11 +114,31 @@ Open tasks:
   Retrofitted the two pre-existing bare `% TODO:` comments (`02-cpu-architecture.tex`, one about the block diagram;
   `appendix-f-external-interface.tex`, one about decoupling-capacitor guidance) with the missing
   `% category=Manual` line so they match going forward.
-- Audit assembly examples by chapter: architecture/reset/bus/exception/memory-model chapters should generally
-  prefer pseudocode, diagrams, timing tables, and state-transition descriptions over raw assembly; assembly
-  listings should live mainly in the instruction-reference chapters, assembler-facing sections, and the examples
-  appendix. Where architecture chapters currently use assembly to illustrate behavior, decide whether to replace
-  it with pseudocode, move it to the relevant instruction chapter, or mark it as non-normative example code.
+- **Done (2026-09-16):** audited assembly examples by chapter. Surveyed every architecture-side chapter (1
+  Introduction, 2 CPU Architecture, 4 Data Representation, 5 Status Register, 6 Exceptions) plus Appendix F
+  (external interface/bus) for raw SIRC-1 listings. Chapters 1, 2, 4, 6, and Appendix F had none, inline or
+  external -- already clean, nothing to do. Chapter 5 had 7 (2 bare, under "Manual Updates" and "Reading the
+  Status Register"; 5 in a "Usage Examples" section), and Appendix B (Timing) had 7 more, but Appendix B's are
+  cycle-count optimization tips ("instead of X, use Y -- saves N cycles"), which is exactly what a
+  timing/optimization appendix should contain, not a candidate for this item.
+  - Chapter 5's two bare listings ("Manual Updates": `ORRI sr`/`ANDI sr`/`LOAD sr, (s)+`; "Reading the Status
+    Register": `LOAD r1, sr` in both modes) directly illustrate the mechanism their own section just described, the
+    same way a real CPU manual's status-register chapter would show `ORI #imm,SR` -- legitimate, kept. Verified
+    both actually assemble (they'd never been checked, being bare blocks outside an `example` float) and opted
+    them into the QA target with `% qa:assemble`.
+  - Three of the five "Usage Examples" were straight duplicates of content already covered better elsewhere, so
+    removed rather than kept or moved: "Conditional Execution" (comparison/branch idioms) duplicated Chapter 10's
+    "Unsigned Comparison"/"Signed Comparison"/"Equality Testing" examples; "Manual Status Flag Control" duplicated
+    Chapter 9's own "Status Flag Update Control" section (`sec:status-override`), which Chapter 5's surrounding
+    prose already pointed to as the complete reference; "Testing Bits" was a strict subset of Chapter 13's
+    `TSAI`/`TSAR` entry's own "Bit Testing with TSA" example. Replaced with a short paragraph pointing to Chapters
+    9, 10, and 13 instead of restating their content.
+  - The remaining two ("Enabling Protected Mode," "Saving and Restoring Status") are unique to this chapter --
+    tied to the P bit and the EA-bit-not-restored caveat specifically documented here -- and were kept as-is.
+  - Net effect: Chapter 5 went from 7 unverified/partly-duplicate listings to 4, all either newly verified or
+    already example-float-verified, and the manual has three fewer places a future edit to condition-code or
+    status-override behavior could drift out of sync. Rebuilt clean (0 undefined references, 69 verified listings
+    down from 70 -- 3 removed, 2 newly opted in) and re-ran the QA target.
 - **Done (2026-09-16):** audit the whole manual for anachronistic references that break the 1989 "in-universe"
   framing established by the title page, preface, and front/back covers. Two instances found on 2026-09-15 as a
   starting point, both fixed (one on 2026-09-15, the other -- `appendix-c-undocumented.tex` -- on 2026-09-16, see
