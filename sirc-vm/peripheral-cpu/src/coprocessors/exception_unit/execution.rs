@@ -158,49 +158,59 @@ pub fn get_cause_register_value(
 
         return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
     }
-    let exception_level =
-        interrupt_flags_to_exception_level(eu_registers.pending_hardware_exceptions);
-
     trace!(
-        "eu_registers.pending_hardware_exceptions: 0x[{:X}] interrupt exception level: 0x[{exception_level:X}] hw_interrupt_enable: 0x[{:X}] current_exception_level: 0x[{:X}]",
+        "eu_registers.pending_hardware_exceptions: 0x[{:X}] hw_interrupt_enable: 0x[{:X}] current_exception_level: 0x[{:X}]",
         eu_registers.pending_hardware_exceptions,
         get_hardware_interrupt_enable(registers),
         eu_registers.current_exception_level
     );
 
-    // Check if this specific hardware interrupt line is enabled
-    // exception_level 2-6 maps to interrupt lines 1-5
-    // So we check bit (exception_level - 2) of the enable mask
-    // Also check that this exception is higher priority than the current level
-    // (higher priority = higher exception level number).
-    // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
-    // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
-    // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
-    // by handle_exception's priority filter, which silently ignores lower-priority exceptions.
-    let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
-        && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
-    if (2..=6).contains(&exception_level)
-        && (exception_level > eu_registers.current_exception_level || is_nmi_reentry)
-    {
+    // Walk every pending line from highest to lowest priority (exception_level 6 down to 2,
+    // mapping to interrupt lines 5 down to 1) and dispatch the first one that is both pending
+    // and still enabled. This used to only ever look at the single highest *pending* line
+    // (via interrupt_flags_to_exception_level/find_highest_active_interrupt): if that one line's
+    // enable bit had been cleared since it was latched, the function gave up for the whole
+    // cycle and never considered any other pending line, even a lower-priority one that was
+    // still enabled -- see docs/reference/review/implementation-bugs.md, IB-3.
+    let hw_interrupt_enable = get_hardware_interrupt_enable(registers);
+    for exception_level in (2..=6).rev() {
         let interrupt_line = exception_level - 2;
-        let hw_interrupt_enable = get_hardware_interrupt_enable(registers);
-        let is_enabled = (hw_interrupt_enable & (1 << interrupt_line)) != 0;
-
-        if is_enabled {
-            trace!(
-                "servicing interrupt by injecting cause value. exception_level {exception_level}"
-            );
-            let vector = hardware_exception_level_to_vector(exception_level - 1);
-            // Clear highest interrupt because we will now service it
-            eu_registers.pending_hardware_exceptions &=
-                !find_highest_active_interrupt(eu_registers.pending_hardware_exceptions);
-
-            debug!(
-                "eu_registers.pending_hardware_exceptions: {}",
-                eu_registers.pending_hardware_exceptions
-            );
-            return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
+        let is_pending = (eu_registers.pending_hardware_exceptions & (1 << interrupt_line)) != 0;
+        if !is_pending {
+            continue;
         }
+
+        // Also check that this exception is higher priority than the current level
+        // (higher priority = higher exception level number).
+        // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
+        // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
+        // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
+        // by handle_exception's priority filter, which silently ignores lower-priority
+        // exceptions.
+        let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
+            && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
+        if !(exception_level > eu_registers.current_exception_level || is_nmi_reentry) {
+            continue;
+        }
+
+        // Check if this specific hardware interrupt line is still enabled -- it may have been
+        // latched while enabled and then masked before its turn to dispatch.
+        let is_enabled = (hw_interrupt_enable & (1 << interrupt_line)) != 0;
+        if !is_enabled {
+            continue;
+        }
+
+        trace!("servicing interrupt by injecting cause value. exception_level {exception_level}");
+        let vector = hardware_exception_level_to_vector(exception_level - 1);
+        // Clear this interrupt specifically (not necessarily the highest pending bit) because
+        // we are now servicing it.
+        eu_registers.pending_hardware_exceptions &= !(1 << interrupt_line);
+
+        debug!(
+            "eu_registers.pending_hardware_exceptions: {}",
+            eu_registers.pending_hardware_exceptions
+        );
+        return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
     }
     trace!(
         "returning registers.pending_coprocessor_command 0x[{:X}]",
@@ -471,5 +481,63 @@ impl Executor for ExceptionUnitExecutor {
         }
 
         BusAssertions::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::registers::set_hardware_interrupt_enable;
+
+    // IB-3 (docs/reference/review/implementation-bugs.md): dispatch used to only ever look at
+    // the single highest-priority *pending* interrupt line. If that one line's enable bit had
+    // been cleared since it was latched, dispatch gave up for the whole cycle instead of
+    // considering any other pending line -- even a lower-priority one that was still enabled.
+    // Line 4 (bit 3, the highest-priority maskable line) and line 1 (bit 0, the lowest) are both
+    // latched as pending; only line 1 is enabled -- as if line 4's enable bit was cleared after
+    // it was latched but before its turn to dispatch.
+    const LINE_1_AND_LINE_4_PENDING: u8 = 0b0_1001;
+    const LINE_4_PENDING_ONLY: u8 = 0b0_1000;
+
+    #[test]
+    fn masked_high_priority_pending_interrupt_does_not_block_a_lower_priority_one() {
+        let mut registers = Registers::default();
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b0001);
+
+        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
+        let (op_code, vector, _level) = deconstruct_cause_value(cause_value);
+
+        assert_eq!(op_code, ExceptionUnitOpCodes::HardwareException);
+        assert_eq!(
+            vector,
+            hardware_exception_level_to_vector(1),
+            "line 1 (the only enabled pending line) should be dispatched"
+        );
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions, LINE_4_PENDING_ONLY,
+            "only line 1's pending bit should be cleared; line 4 stays latched, still masked"
+        );
+    }
+
+    #[test]
+    fn nothing_dispatches_when_every_pending_line_is_masked() {
+        let mut registers = Registers::default();
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b0000);
+
+        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
+
+        assert_eq!(cause_value, 0, "no coprocessor command should be injected");
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions, LINE_1_AND_LINE_4_PENDING,
+            "both lines stay latched, since neither is enabled"
+        );
     }
 }

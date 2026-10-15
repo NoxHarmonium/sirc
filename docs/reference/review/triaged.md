@@ -752,171 +752,122 @@ Legend: **status: accepted** = will be applied by a chapter editor without furth
 
 ---
 
-## Deferred (Gate 2)
+## Resolved at Gate 2 (2026-09-16, author's calls, now accepted)
 
-### F-data-1
-- file: chapters/04-data-representation.tex
-- lines: 162-163
-- severity: blocker
-- category: fact
-- claim: "the trap fires only when the low-word calculation wraps, whether the displacement is
-  positive or negative" (segment-overflow trap).
-- evidence: `execution_effective_address.rs:79-80` uses an *unsigned* `overflowing_add` for the
-  displacement, whose carry-out is inverted relative to a signed wrap for a negative displacement.
-  `STOR (#-4, s), r2` with `al=0x1000` spuriously faults; `al=0x0000` with `#-1` (a genuine
-  underflow) does not trap at all. Chapters 8 and 14 restate the same (correct) manual rule, so
-  this is self-consistent manual content, not a manual error.
-- resolution: code-wrong
-- fix: This is a Rust implementation bug, not a manual fix. `execution_effective_address.rs:79-80`
-  needs a signed-wrap check for the displacement add (mirroring the existing pre-decrement fix at
-  lines 84-94), plus a regression test for a negative displacement with `SR.A` set.
-- confidence: high
-- why deferred: `code-wrong` findings go to `implementation-bugs.md` for a separate Rust pass, not
-  into this manual edit.
+### F-data-1 — no manual change, logged as implementation bug
+- file: chapters/04-data-representation.tex (unchanged)
+- Author confirmed this is a real Rust bug, not a manual error, and that the September 14 fix
+  (`d6b8eb4`) only covered the pre-decrement special case, not the general displacement path.
+  Logged as **IB-1** in `implementation-bugs.md`. No manual edit; the manual's rule is already
+  correct and consistent across Chapters 4, 8, and 14.
+- status: no manual change (implementation-bugs.md only)
 
-### F-exc-3
+### F-exc-3 — accepted, manual-wrong
 - file: chapters/06-exceptions.tex
 - lines: 358-359
 - severity: blocker
-- category: fact
-- claim: "Bits 8--11: Original fault type... indicates the fault type that was being handled when
-  the double fault occurred."
-- evidence: The implementation's `original_fault` field holds the *newly raised, triggering*
-  fault, not the one already being serviced (lib.rs:185-203, 530-540); the field's own doc comment
-  says "the fault that caused the double fault." The only double-fault test uses the same fault
-  type on both sides, so it cannot distinguish the two readings.
-- resolution: unclear
-- fix: Needs a decision: does bits 8-11 hold the *first* fault (manual's current reading, requires
-  a Rust change to carry the in-flight fault forward) or the *second/triggering* fault (code's
-  reading, requires a manual wording change)? Either is a legitimate design; nothing currently
-  settles which was intended.
-- confidence: high (on the contradiction existing; the resolution itself needs a call)
-- why deferred: genuine architectural decision, not a fact to look up.
+- Author's call: bits 8-11 should hold the fault that *triggered* the double-fault escalation
+  (matching current code), not the fault already being serviced. Reasoning: the fault already
+  being serviced is always cheaply recoverable by convention (any handler can note its own
+  identity on entry, since it has its own cause-register value at hand before anything else can
+  go wrong), while the triggering fault is genuinely unrecoverable any other way once inside the
+  double-fault handler -- so the code's choice is more informative to preserve, and the manual is
+  the side that should change.
+- fix: Reword bits 8-11's description from "the fault type that was being handled when the double
+  fault occurred" to "the fault that triggered the escalation to a double fault (the second fault,
+  not the one already being handled when it occurred)."
+- status: accepted, confidence: high
 
-### F-exc-4
+### F-exc-4 — fixed in Rust (IB-3), manual gets one clarifying sentence
 - file: chapters/06-exceptions.tex
 - lines: 438-441
 - severity: major
-- category: fact
-- claim: Pending lower-priority interrupts "remain latched and are considered again after the
-  current handler returns."
-- evidence: The implementation re-tests the enable mask at *dispatch* time and only considers the
-  single highest pending line; if that line was disabled after being latched, the function returns
-  without dispatching anything, so a masked high-priority pending interrupt silently blocks all
-  lower-priority ones too. The manual describes masking only at the sampling point.
-- resolution: unclear
-- fix: Needs a decision on intended behavior for an interrupt latched-then-disabled before
-  dispatch: document the implementation's blocking behavior, or rule that latched interrupts
-  dispatch regardless of a later mask change (requiring a Rust fix).
-- confidence: medium
-- why deferred: architectural decision.
+- Author confirmed this was an oversight, not a deliberate simplification. **Fixed in Rust this
+  pass**: `get_cause_register_value` now iterates every pending interrupt line from highest to
+  lowest priority and dispatches the first one that is both pending and still enabled, instead of
+  only ever considering the single highest pending line (see the commit that added this entry;
+  two new unit tests cover it). Logged as **IB-3** (fixed) in `implementation-bugs.md`.
+- fix: Add one sentence after the existing text: "If the highest-priority pending interrupt's
+  enable bit has been cleared since it was latched, it does not block dispatch of any other
+  pending, enabled interrupt of lower priority."
+- status: accepted, confidence: high (manual edit is now describing settled, tested behavior)
 
-### F-exc-5
-- file: chapters/06-exceptions.tex
-- lines: 139-140
+### F-exc-5 / Invalid Opcode Fault scope — accepted, manual-wrong (both chapters), plus a logged Rust gap
+- file: chapters/06-exceptions.tex (139-140), chapters/16-coprocessor-instructions.tex (702-703
+  and, if the same pattern repeats, the DMAR/DMAW/DMAT entries' own Exceptions fields)
 - severity: major
-- category: contradiction
-- claim: "Invalid Opcode Fault... raised when a coprocessor call targets a non-existent coprocessor
-  or requests an operation that the selected coprocessor does not implement."
-- evidence: The same chapter (line 804) separately says reserved exception-unit opcodes are
-  "architecturally undefined," not an invalid-opcode fault -- i.e. an unimplemented operation on
-  an *existing* coprocessor is NOT always this fault. Chapter 16 takes the broader reading for the
-  DMA unit. The implementation only raises InvalidOpCode for an unmapped coprocessor ID and panics
-  (a TODO, unfinished) on a reserved exception-unit opcode.
-- resolution: unclear
-- fix: Reconcile: either scope the Invalid Opcode Fault description to "unmapped coprocessor ID or
-  implemented-but-unsupported operation" and change line 804 to match, or carve out reserved
-  exception-unit opcodes as a named exception.
-- confidence: medium
-- why deferred: two chapters disagree and the code path for one side is an acknowledged TODO/panic,
-  not settled behavior.
+- Author's call, confirmed against the manual's own existing "Model and Revision Policy" (Chapter
+  16, ~line 209-213), which already states the intended design precisely: "Reserved coprocessor
+  IDs must raise invalid-opcode faults when they are not implemented by the selected CPU model.
+  Reserved operation nibbles and reserved operand values within an implemented coprocessor are
+  architecturally undefined." Chapter 6's broad wording and Chapter 16's DMA-specific line
+  (702-703, "unsupported DMA operations... raise invalid-opcode faults") both contradict this
+  already-settled policy; the policy statement itself is correct and should not change.
+- fix (Ch. 6, 139-140): narrow to "Raised when a coprocessor call targets a coprocessor ID not
+  implemented by the selected CPU model." Drop "or requests an operation that the selected
+  coprocessor does not implement" -- that case is architecturally undefined, not this fault. Keep
+  the following paragraph about forward-compatible probing (it's specifically about the
+  missing-coprocessor case, still correct under the narrower scope).
+- fix (Ch. 16, 702-703): "Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA
+  operations and reserved operand encodings are architecturally undefined (see \S16.2, Model and
+  Revision Policy)." Check the DMAR/DMAW/DMAT instruction entries' own Exceptions fields for the
+  same "unsupported operation -> invalid-opcode fault" phrasing and correct them to match if
+  present.
+- Rust side: the exception-unit's reserved-opcode panic (`exception_unit/execution.rs:69-77`) is
+  already a known gap -- it should become non-crashing undefined behavior, not a fault. Logged as
+  **IB-2** in `implementation-bugs.md`, not fixed this pass (author did not ask for this one to be
+  fixed now, unlike F-exc-4/IB-3).
+- status: accepted, confidence: high
 
-### F-cop-9
-- file: chapters/16-coprocessor-instructions.tex
-- lines: 899-906, 993-1000, 1077-1085
-- severity: major
-- category: fact
-- claim: DMA forward/backward address-register-advance timing and the fault-side-effect asymmetry
-  between them.
-- evidence: There is no DMA execution code or test anywhere in `sirc-vm/` to check this against --
-  only the assembler, bus-access-type constants, and a single fault test exist. This is a case
-  where the manual is entirely ahead of any implementation.
-- resolution: unclear
-- fix: No manual change proposed. Author question: is the DMA unit intended-but-unbuilt (fine as
-  spec-ahead-of-code, worth logging as an implementation gap) or should an emulator model exist
-  before the manual commits to this level of fault-time detail? Everything here is at least
-  internally self-consistent (Fault side effects match the Operation pseudocode; operand encoding
-  matches the assembler).
-- confidence: low
-- why deferred: nothing to verify against; a scope/priority call, not a fact.
+### F-cop-9 — no change, confirmed acceptable as spec-ahead-of-code
+- file: chapters/16-coprocessor-instructions.tex (unchanged)
+- Author confirmed: "DMA is just a spec for now. As long as it sounds reasonable it's all good."
+  No manual change, no implementation-bugs entry (nothing is broken -- there's just no
+  implementation yet to check against).
+- status: no change
 
-### F-sum-4
-- file: chapters/appendix-d-examples.tex
-- lines: 46-49
-- severity: major
-- category: fact
-- claim: ".EQU... usable anywhere a #immediate operand is accepted."
-- evidence: Data directives (`.DW`/`.DB`/`.DQ`) reject `$NAME` outright, even though
-  `toolchain/src/data/object.rs` already contains an unreachable `DataType::PlaceHolder` arm --
-  looking like an unfinished toolchain feature rather than a deliberate restriction.
-- resolution: unclear
-- fix: Either narrow the manual claim to "usable anywhere an instruction takes a #immediate
-  operand" (data directives take a literal or label only), or keep the broader claim and log the
-  parser gap (`parse_data_type` needs a `parse_placeholder` branch) as an implementation bug.
-- confidence: high (on the gap; the choice of manual vs. code fix is the open question)
-- why deferred: per Source of Truth, the default lean is to log this as an implementation gap
-  rather than narrow the manual -- but flagging for confirmation since it changes what the manual
-  promises.
+### F-sum-4 — no manual change, logged as unfinished toolchain feature
+- file: chapters/appendix-d-examples.tex (unchanged)
+- Author's call: keep the manual's broader `.EQU` claim as-is; log the parser gap instead of
+  narrowing the manual. Logged as **IB-4** in `implementation-bugs.md`.
+- status: no manual change
 
-### F-sum-5
+### F-sum-5 — accepted, manual-wrong
 - file: chapters/appendix-d-examples.tex
 - lines: 15-18
 - severity: major
-- category: fact
-- claim: ".ORG addr sets the word address..." (no alignment requirement stated).
-- evidence: An odd `.ORG` address is silently rounded down to the containing 2-word slot rather
-  than erroring or being explicitly disallowed (verified by assembling/linking a test case).
-- resolution: unclear
-- fix: State the alignment rule ("the address must be even, since instructions and data
-  directives each occupy a 2-word slot"), and/or log the silent-truncation-instead-of-error
-  behavior as an implementation gap.
-- confidence: high
-- why deferred: whether silent truncation is acceptable-as-is or should error is a design call.
+- Author's call: state the alignment rule directly, matching the architectural fact that every
+  instruction and data directive occupies a fixed 2-word slot.
+- fix: Add to the `.ORG` entry: "The address must be even (2-word aligned), since instructions and
+  data directives each occupy a 2-word slot."
+- status: accepted, confidence: high
 
-### F-sum-6
-- file: chapters/appendix-d-examples.tex
-- lines: 29-30
-- severity: minor
-- category: fact
-- claim: "@label.r/.l/.u" override suffixes, described without scope restriction.
-- evidence: On a data directive, any ref type other than FullAddress currently panics the linker
-  ("Only FullAddress ref type currently supported for data directives").
-- resolution: unclear
-- fix: Either scope the manual text to instruction operands only ("a label reference in a
-  .DB/.DW/.DQ directive is always a full address"), or log the linker's missing data-directive
-  support for the other ref types as an implementation gap.
-- confidence: high
-- why deferred: same shape as F-sum-4/5 -- narrow the manual or log a toolchain gap.
+### F-sum-6 — no manual change, logged as unfinished toolchain feature
+- file: chapters/appendix-d-examples.tex (unchanged)
+- Author's call: log the linker's missing data-directive ref-type support as an implementation gap
+  rather than narrowing the manual's description of the `.r`/`.l`/`.u` suffixes. Logged as **IB-5**
+  in `implementation-bugs.md`.
+- status: no manual change
 
-### F-cons-13
+### F-cons-13 — accepted, manual-wrong
 - file: chapters/appendix-f-external-interface.tex
 - lines: 370-374, 739
 - severity: minor
-- category: contradiction
-- claim: "...only an assertion that begins and ends while the enable bit is 0 is lost" (implies
-  sub-instruction-boundary pulses are latched).
-- evidence: This contradicts the same paragraph's own opening sentence ("sampled at instruction
-  boundaries") and makes a guarantee neither Chapter 5 nor Chapter 6 makes about pulses shorter
-  than an instruction.
-- resolution: unclear
-- fix: Decide whether IRQ1-4 are latched continuously or only sampled at boundaries, then align
-  Appendix F (both this paragraph and its summary row at line 739) with Chapter 6.
-- confidence: medium
-- why deferred: architectural decision about interrupt-controller behavior, not a lookup.
+- Author's call, on period-appropriate grounds: real level-sensitive IRQ lines on simple 1980s
+  CPUs without an external interrupt controller (68000/6502/6800-style designs) put the burden of
+  holding the line on the requesting device, not on the CPU to remember a sub-instruction pulse --
+  matching what Chapter 5 and Chapter 6 already say about lines 1-4 being plain level-sensitive.
+- fix: Replace the "even if released before the next boundary" latching guarantee with: "The
+  requesting device must hold the line asserted until it is sampled and serviced; an assertion
+  that begins and ends between instruction boundaries, before the CPU samples it, is not
+  recognized." Apply the same correction to the summary row at line 739.
+- status: accepted, confidence: high
 
 ---
 
-## Disputed — two reviewers reached different conclusions
+## Still open — author wants to investigate further before deciding
+
+### F-exc-2 vs. F-cons-3 (disputed)
 
 ### F-exc-2 vs. F-cons-3
 - file: chapters/06-exceptions.tex (729-732) vs. chapters/appendix-b-timing.tex (47),
@@ -937,3 +888,7 @@ Legend: **status: accepted** = will be applied by a chapter editor without furth
   reports that actually checked the implementation rather than just comparing manual passages. But
   since one report calls this "unclear" and the other "high confidence," it's surfaced here rather
   than silently accepted.
+- author's response (2026-09-16): "probably 6 cycles but I'll need to dig into this one a bit
+  more" -- not resolved yet. **Excluded from Phase 3**: neither `06-exceptions.tex:729-732` nor
+  the two Appendix B/Chapter 16 passages that cite the 18-cycle `RSET` total should be touched
+  until the author confirms which side is right.
