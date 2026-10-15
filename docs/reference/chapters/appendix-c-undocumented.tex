@@ -10,7 +10,7 @@ tested behaviour (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bi
 coprocessor command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged)
 but no public assembly syntax, and they are listed here for that reason rather than because their behaviour is
 undefined. Undocumented opcodes are reserved for future CPU revisions and may be repurposed without preserving their
-current simulator or hardware behaviour.
+current behaviour.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -70,8 +70,7 @@ accidentally depend on undefined write-back ordering.
 
 The undocumented opcodes with bit 3 set in the ALU operation field compute \texttt{alu\_code \& 0x7} as the operation,
 discard the result, and update all four flags exactly as the corresponding documented operation does. This is the
-observed behavior of the current reference implementation; it is architecturally undefined, so software must not rely
-on it.
+observed behavior of current implementations; it is architecturally undefined, so software must not rely on it.
 
 \subsection{\opcode{08}, \opcode{28}, \opcode{38} (ADD Test)}
 
@@ -125,30 +124,16 @@ result = operand1 | operand2
 
 \section{Implementation Notes}
 
-\subsection{Current Simulator}
+\subsection{Implementation Behavior}
 
-In the current SIRC-VM simulator:
+An implementation -- whether an emulator or a hardware implementation -- decodes undocumented instructions normally
+rather than rejecting them, and, for the undocumented ALU test-variant opcodes, executes the operation and updates
+flags exactly as the corresponding documented operation would. Only the write-back stage differs: the decoder treats
+bit 3 of the operation field as a "don't write back" bit, so the computed result is discarded rather than committed to
+a register.
 
-\begin{itemize}
-	\item Undocumented instructions are recognized and decoded
-	\item The undocumented ALU test-variant opcodes execute following the "test variant" pattern (no write-back)
-	\item Flag updates match the corresponding documented operation exactly, as verified by the reference test suite
-	\item Behavior may change in future versions
-\end{itemize}
-
-\subsection{Hardware Implementation}
-
-In a hardware implementation:
-
-\begin{itemize}
-	\item The decoder treats bit 3 = 1 as "don't write back"
-	\item ALU operations still execute normally
-	\item Flags are still updated
-	\item The write-back stage is simply disabled
-\end{itemize}
-
-This means undocumented encodings may execute, but their exact behavior depends on the hardware implementation details
-and is not part of the architectural contract.
+This means undocumented encodings may execute, but their exact behavior depends on implementation details and is not
+part of the architectural contract. It is not required to be preserved in future CPU revisions.
 
 \section{Why Undocumented?}
 
@@ -188,17 +173,6 @@ These instructions were left undocumented for several reasons:
 	\item These opcodes may be implemented following the logical pattern
 	\item Document any implementation-specific behavior
 	\item Consider reserving them for future standardization
-\end{itemize}
-
-\subsection{For Researchers/Hackers}
-
-Experimenting with undocumented instructions requires the following precautions:
-
-\begin{itemize}
-	\item Test thoroughly on the specific hardware or simulator version in use
-	\item Document the findings
-	\item Isolate usage in test code, not production
-	\item Be prepared for behavior changes
 \end{itemize}
 
 \section{Future Standardization}

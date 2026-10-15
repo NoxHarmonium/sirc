@@ -96,13 +96,25 @@ Open tasks:
   reference the real, modern tooling used to build or test the fictional SIRC-1 -- either omit the concept
   entirely, or mention emulators/simulators only in the vague, generic sense a real 1989 manual might ("assembler,
   compiler backend, emulator, or hardware implementation," as `preface.tex` already does), never by naming a
-  specific tool or describing its current implementation status. Two instances found and worth using as a
-  starting point (2026-09-15, author's call): a sentence in `16-coprocessor-instructions.tex`'s DMA Unit section
-  claiming "the reference SIRC-1 emulator has not yet implemented the DMA unit" (fixed -- removed, since the
-  optional-coprocessor framing already covers the point without the anachronism); and `appendix-c-undocumented.tex`,
-  which names the real "SIRC-VM" simulator directly, has a subsection literally titled "Current Simulator," and a
-  "For Researchers/Hackers" section that reads like modern engineering documentation rather than a period manual
-  (not yet fixed -- flagged for a future pass, since it's a larger rewrite than a single sentence).
+  specific tool or describing its current implementation status. Two instances found so far (2026-09-15, author's
+  call), both now fixed, but this was only ever a starting point, not a full sweep -- the rest of the manual
+  hasn't been systematically audited for the same pattern:
+  - A sentence in `16-coprocessor-instructions.tex`'s DMA Unit section claiming "the reference SIRC-1 emulator has
+    not yet implemented the DMA unit" (fixed 2026-09-15 -- removed, since the optional-coprocessor framing already
+    covers the point without the anachronism).
+  - **Done (2026-09-16):** `appendix-c-undocumented.tex`, which named the real "SIRC-VM" simulator directly, had a
+    subsection literally titled "Current Simulator" (citing "the reference test suite" as its evidence basis), and
+    a "For Researchers/Hackers" section that read like modern engineering documentation. Per the author's guidance:
+    referring to a general toolchain SIRC itself provides is fine, but no command-line specifics and no references
+    to what the current Rust simulator does or doesn't implement. Fixed: "current reference implementation" (in
+    the Observed Behavior section) and "current simulator or hardware behaviour" (Overview) reworded to the
+    manual's existing generic phrasing ("current implementations," "current behaviour"); the "Current Simulator"
+    and "Hardware Implementation" subsections merged into one "Implementation Behavior" subsection describing what
+    any implementation does, since once the software one couldn't be named, they were describing the same
+    behaviour from two angles that didn't need separating; "For Researchers/Hackers" removed outright rather than
+    reworded, since a 1989 vendor manual wouldn't carve out a hobbyist/reverse-engineer audience and its content
+    (test thoroughly, expect behavior changes) was already redundant with "For Application Developers." Rebuilt
+    clean (0 undefined references) and re-ran the QA target.
 - **Done (2026-09-16):** label syntax in the manual's worked examples. Audited every labeled code sample across
   `chapters/*.tex` (18 labels in `10-condition-codes.tex`, `15-control-flow.tex`, and
   `16-coprocessor-instructions.tex`) and converted every trailing-colon label (`while_start:`) to the leading-colon
