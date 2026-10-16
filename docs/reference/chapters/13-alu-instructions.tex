@@ -112,16 +112,16 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                     \\
+		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                   \\
 		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                           \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                              \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                            \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                                 \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                          \\
-		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                            \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                          \\
-		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction whose register field names a privileged register raises a privilege-violation fault at decode; see the notes below. \\
+		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                         \\
+		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                            \\
+		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
+		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
+		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                        \\
+		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                          \\
+		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                        \\
+		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction that writes a privileged high address register raises a privilege-violation fault at decode; see the notes below. \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common ALU Semantics}
@@ -129,9 +129,9 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 \end{table}
 
 \noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
-bus-protection, data alignment, segment-overflow, or invalid-opcode faults. In protected mode, an ALU instruction whose
-register field names \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} raises a privilege-violation fault at decode
-and has no other effect. An ALU instruction whose register field names \reg{sr} is permitted in protected mode, but only
+bus-protection, data alignment, segment-overflow, or invalid-opcode faults. In protected mode, an ALU instruction that
+writes \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} through its register field raises a privilege-violation fault at
+decode and has no other effect; compare and test instructions only read that field and never fault. An ALU instruction whose register field names \reg{sr} is permitted in protected mode, but only
 bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
 If trace mode was enabled when the instruction began, an instruction-trace fault is raised after the instruction
 commits. Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
@@ -298,7 +298,7 @@ SR = flags_from_shift_result
 
 	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -421,7 +421,7 @@ SR.V = signed_overflow
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -545,7 +545,7 @@ SR.V = signed_overflow
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -663,7 +663,7 @@ SR.V = signed_overflow
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -784,7 +784,7 @@ SR.V = signed_overflow
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -902,7 +902,7 @@ SR.V = 0
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -1025,7 +1025,7 @@ SR.V = 0
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -1151,7 +1151,7 @@ SR.V = 0
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -1259,7 +1259,7 @@ destination = operand
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
@@ -1392,10 +1392,10 @@ SR.V = signed_overflow
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
-	privilege check is made on the register field even though this instruction writes no register, so
-	\texttt{CMPI ah, \#0} in protected mode raises a privilege-violation fault.
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CMPI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1527,10 +1527,10 @@ SR.V = 0
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
-	privilege check is made on the register field even though this instruction writes no register, so
-	\texttt{TSAI ah, \#0} in protected mode raises a privilege-violation fault.
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSAI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1659,10 +1659,10 @@ SR.V = 0
 
 	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
 
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when the register field names a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}. The
-	privilege check is made on the register field even though this instruction writes no register, so
-	\texttt{TSXI ah, \#0} in protected mode raises a privilege-violation fault.
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSXI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}

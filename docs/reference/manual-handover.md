@@ -225,8 +225,12 @@ Open tasks:
   are redacted in protected mode, so a read-modify-write can never reproduce the real high byte. Rust: removed `sr`
   from `PRIVILEGED_REGISTERS` and restored the masked write in `set_register_value`; replaced the fault test with
   masked-write, read-modify-write, and `CMPI sr` tests. Manual: Chapters 3, 5, 6, 13, 14 and Appendix E updated.
-  Remaining wart, unchanged: `CMPI`/`TSAI`/`TSXI` that name a high address register (`ah`/`lh`/`ph`/`sh`) still
-  fault, because the privilege check is made at decode on the register field rather than on an actual write.
+  Follow-up (same day): the decode-time privilege check also faulted compare/test/store instructions that merely
+  name `ah`/`lh`/`ph`/`sh` in their register field. It now fires only for instructions that actually write that
+  register, reusing the write-back stage's instruction classifier (`writes_register_field`), so `CMPI`/`CMPR`/
+  `TSAI`/`TSXI`/`STOR` on a high address register no longer fault; direct writes and pair write-back still do. The
+  check stays at decode (not write-back) so a faulting `LOAD` never performs its data-bus read. Chapters 13 and 14
+  updated.
 
 Acceptance criteria:
 

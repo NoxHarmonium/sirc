@@ -103,10 +103,10 @@ assembler rejects it.
 16-bit displacement is signed two's-complement; effective-address calculation can raise a segment-overflow fault when
 \texttt{SR.A} (Trap on Address Overflow) is set and the low-word address calculation wraps. This segment-overflow
 fault is retryable: the saved return address is the address of the faulting instruction (see
-Chapter~\ref{ch:exceptions}). A memory instruction raises a privilege-violation fault in
+Chapter~\ref{ch:exceptions}). A \mnemonic{LOAD} raises a privilege-violation fault in
 protected mode when its register field names a privileged high address register (\reg{ah}, \reg{lh}, \reg{ph}, or
-\reg{sh}); this applies to the \mnemonic{LOAD} destination register and to the \mnemonic{STOR} source register, even
-though \mnemonic{STOR} only reads it. Naming \reg{sr} is permitted in protected mode: \mnemonic{LOAD} into \reg{sr}
+\reg{sh}); this applies to the \mnemonic{LOAD} destination register only: \mnemonic{STOR} merely reads its
+register field, so storing a high address register is permitted. Naming \reg{sr} is permitted in protected mode: \mnemonic{LOAD} into \reg{sr}
 updates only bits 7--0, and \mnemonic{STOR} of \reg{sr} stores the redacted value (bits 15--8 read as zero). Post-increment and pre-decrement address-register auto-update writes only the
 low word of the pair, so it never changes the high word and never raises a privilege-violation fault. Documented
 memory forms do not raise invalid-opcode faults. Instruction fetch can still raise the normal fetch faults before a
@@ -253,7 +253,7 @@ endif
 	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory read. May raise a
 	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set; this fault is
 	retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
-	\texttt{rD} names a privileged register.
+	\texttt{rD} names a privileged high address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}).
 
 	\textbf{Condition field:} If the condition is false, no memory read occurs, no destination register is written, no
 	address register is incremented, and status flags are preserved.
@@ -262,8 +262,9 @@ endif
 	phase.
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rD} names a privileged register
-	(\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}).
+	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rD} names a privileged high address
+	register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}); a \mnemonic{LOAD} into \reg{sr} is permitted but updates only
+	bits 7--0.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -408,8 +409,7 @@ endif
 
 	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory write. May raise a
 	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set; this fault is
-	retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
-	\texttt{rS} names a privileged register.
+	retryable (see Chapter~\ref{ch:exceptions}).
 
 	\textbf{Condition field:} If the condition is false, no memory write occurs, no address register is decremented, and
 	status flags are preserved.
@@ -418,8 +418,8 @@ endif
 	phase.
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rS} names a privileged register
-	(\reg{sr}, \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}), even though \mnemonic{STOR} only reads it.
+	bus protection. \mnemonic{STOR} only reads \texttt{rS}, so it may name any register, including the privileged ones; in protected mode
+	\reg{sr} is stored with bits 15--8 redacted to zero.
 
 	\begin{example}
 		\begin{lstlisting}
