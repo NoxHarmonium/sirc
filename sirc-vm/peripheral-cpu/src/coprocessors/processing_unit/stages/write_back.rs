@@ -189,6 +189,17 @@ fn update_status_flags(
     }
 }
 
+/// Whether this instruction commits a value to the register named by its register field
+/// (as opposed to only reading it, e.g. compare/test/store, or writing an address register pair).
+pub fn writes_register_field(decoded: &DecodedInstruction) -> bool {
+    matches!(
+        decode_write_back_step_instruction_type(decoded.ins, decoded),
+        WriteBackInstructionType::AluToRegister
+            | WriteBackInstructionType::MemoryLoad
+            | WriteBackInstructionType::AddressWriteLoadPostIncrement
+    )
+}
+
 impl StageExecutor for WriteBackExecutor {
     fn execute(
         decoded: &DecodedInstruction,

@@ -193,6 +193,55 @@ fn compare_instructions_naming_sr_do_not_fault_in_protected_mode() {
 }
 
 #[test]
+fn read_only_uses_of_high_address_registers_do_not_fault_in_protected_mode() {
+    // Compare and test instructions name their first operand in the register field but only read it
+    let setup = |registers: &mut Registers, _: &mut BusPeripheral| {
+        enable_protected_mode(registers);
+        registers.ph = 0x00CC;
+    };
+
+    for op_code in [Instruction::CompareImmediate, Instruction::TestAndImmediate] {
+        let instruction = InstructionData::Immediate(ImmediateInstructionData {
+            op_code,
+            register: RegisterName::Ph.to_register_index(),
+            value: 0x00CC,
+            condition_flag: ConditionFlags::Always,
+            additional_flags: 0x1,
+        });
+        let result = run_instruction(&instruction, setup);
+        assert_no_fault(&result);
+        assert_eq!(0x00CC, result.registers.ph);
+    }
+
+    let cmpr = InstructionData::Register(RegisterInstructionData {
+        op_code: Instruction::CompareRegister,
+        r1: RegisterName::Ph.to_register_index(),
+        r2: RegisterName::R1.to_register_index(),
+        r3: RegisterName::R1.to_register_index(),
+        shift_operand: ShiftOperand::Immediate,
+        shift_type: ShiftType::None,
+        shift_count: 0,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0x1,
+    });
+    let result = run_instruction(&cmpr, setup);
+    assert_no_fault(&result);
+    assert_eq!(0x00CC, result.registers.ph);
+
+    // STOR only reads the register named by its register field, so storing a high word is allowed
+    let stor = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::StoreRegisterToIndirectImmediate,
+        register: RegisterName::Ph.to_register_index(),
+        value: 0x0000,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: AddressRegisterName::StackPointer.to_register_index(),
+    });
+    let result = run_instruction(&stor, setup);
+    assert_ne!(Some(Faults::PrivilegeViolation), result.pending_fault);
+    assert_eq!(0x00CC, result.registers.ph);
+}
+
+#[test]
 fn all_zero_instruction_word_does_not_fault_in_protected_mode() {
     // An erased/uninitialized-memory word decodes as `ADDI[N] r1, #0` -- register field 0x0 now
     // names r1 (an ordinary general-purpose register), not sr, so it must not be privileged.
