@@ -270,6 +270,29 @@ The status register differs slightly from the high address registers:
 	      silently leave it unchanged instead of faulting.
 \end{itemize}
 
+\subsection{Summary of Privilege Checks}
+\label{sec:privilege-check-flow}
+
+Figure~\ref{fig:privilege-checks} shows where the CPU applies each privilege check as an instruction moves through
+decode, execute, and write-back. The checks apply to different kinds of instruction, so an instruction is only affected
+by the check for its own kind. Every violation raises the same Privilege Violation Fault (vector \texttt{0x05}), which
+is retryable (Chapter~\ref{ch:exceptions}).
+
+\begin{figure}[H]
+	\centering
+	\includegraphics{diagrams/privilege-checks.pdf}
+	\caption{Privilege Checks in Protected Mode}
+	\label{fig:privilege-checks}
+\end{figure}
+
+The following are not violations in protected mode:
+\begin{itemize}
+	\item Writing \reg{sr}: only bits 7--0 are written, and bits 15--8 are ignored.
+	\item Reading \reg{sr}: bits 15--8 read as zero.
+	\item Compare, test, and store instructions, which only read the register named by their register field.
+	\item Reading any register, including \reg{ah}, \reg{lh}, \reg{ph}, and \reg{sh}.
+\end{itemize}
+
 \section{Register Addressing}
 
 Registers are addressed using 4-bit register identifiers in instruction encoding:

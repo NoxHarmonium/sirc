@@ -1,0 +1,57 @@
+digraph privilege_checks {
+	graph [rankdir=TB, nodesep=0.40, ranksep=0.16, fontname="Helvetica", fontsize=10, newrank=true];
+	node  [fontname="Helvetica", fontsize=10, margin="0.04,0.02"];
+	edge  [fontname="Helvetica", fontsize=9, color="#444444", arrowsize=0.7];
+
+	start [label="Instruction fetched", shape=box, style="rounded,filled", fillcolor="#E8E8E8"];
+
+	subgraph cluster_decode {
+		label="Decode"; labeljust=l; style="rounded"; color="#6E6E6E"; fontname="Helvetica-Bold"; margin=6;
+		d_mode [label="SR.P set?\n(protected mode)", shape=diamond];
+		d_cond [label="Condition\ntrue?", shape=diamond];
+		d_cop  [label="Coprocessor operation\nnibble (bits 11-8) >= 0x8?", shape=diamond];
+		d_wr   [label="Writes ah, lh, ph, or sh\nthrough its register field?", shape=diamond];
+	}
+
+	subgraph cluster_exec {
+		label="Execute"; labeljust=l; style="rounded"; color="#6E6E6E"; fontname="Helvetica-Bold"; margin=6;
+		e_excp [label="Software exception (EXCP)\nwith vector < 0x60?", shape=diamond];
+	}
+
+	subgraph cluster_wb {
+		label="Write-back"; labeljust=l; style="rounded"; color="#6E6E6E"; fontname="Helvetica-Bold"; margin=6;
+		w_pair [label="Address-pair write would\nchange a high word?", shape=diamond];
+	}
+
+	nochk [label="Supervisor mode:\nno checks", shape=box, style="rounded"];
+	skip  [label="Condition false:\nno effect, cannot fault", shape=box, style="rounded"];
+	ok    [label="Instruction completes", shape=box, style="rounded,filled", fillcolor="#E8E8E8"];
+
+	f_cop  [label="Fault", shape=box, style="filled", fillcolor="#990000", fontcolor="white"];
+	f_wr   [label="Fault", shape=box, style="filled", fillcolor="#990000", fontcolor="white"];
+	f_excp [label="Fault", shape=box, style="filled", fillcolor="#990000", fontcolor="white"];
+	f_pair [label="Fault", shape=box, style="filled", fillcolor="#990000", fontcolor="white"];
+
+	start  -> d_mode;
+	d_mode -> d_cond [label=" yes"];
+	d_cond -> d_cop  [label=" yes"];
+	d_cop  -> d_wr   [label=" no"];
+	d_wr   -> e_excp [label=" no"];
+	e_excp -> w_pair [label=" no"];
+	w_pair -> ok     [label=" no"];
+
+	d_mode -> nochk  [label=" no"];
+	d_cond -> skip   [label=" no"];
+	d_cop  -> f_cop  [label=" yes"];
+	d_wr   -> f_wr   [label=" yes"];
+	e_excp -> f_excp [label=" yes"];
+	w_pair -> f_pair [label=" yes"];
+
+	{ rank=same; d_mode; nochk; }
+	{ rank=same; d_cond; skip; }
+	{ rank=same; d_cop; f_cop; }
+	{ rank=same; d_wr; f_wr; }
+	{ rank=same; e_excp; f_excp; }
+	{ rank=same; w_pair; f_pair; }
+
+}
