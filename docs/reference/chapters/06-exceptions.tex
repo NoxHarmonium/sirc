@@ -155,11 +155,12 @@ three categories:
 	      while not in supervisor mode:
 	      \begin{enumerate}
 		      \item Directly writing to the high word of any address register
-		      \item Directly writing to the status register
 		      \item Address-register-pair write-back that would change a high address-register word
 		      \item Executing a supervisor-only coprocessor operation
 		      \item Triggering a software exception with a vector below \texttt{0x60}
 	      \end{enumerate}
+
+	      Figure~\ref{fig:privilege-checks} (Chapter~\ref{ch:registers}) shows where each of these checks is made.
 
 	      The illegal instruction never takes effect: it is cancelled before it writes anything, and the link register stores its
 	      own address so \mnemonic{RETE} returns to it directly. This matters because a supervisor-mode handler needs to be able

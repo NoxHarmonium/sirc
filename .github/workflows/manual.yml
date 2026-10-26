@@ -45,10 +45,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Graphviz isn't part of TeX Live -- it's a separate system tool the
-      # Makefile shells out to for the block diagrams.
-      - name: Install Graphviz
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      # Graphviz renders the block diagrams. latexindent also needs Perl
+      # modules that aren't included in TeX Live's scheme-full installation.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends graphviz libyaml-tiny-perl libfile-homedir-perl
 
       # scheme-full, not a hand-picked package list or apt's texlive-*
       # metapackages: the manual uses a handful of less-common packages

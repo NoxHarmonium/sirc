@@ -215,6 +215,22 @@ Open tasks:
   displacement fix, logged only) plus three more logged-only implementation gaps (`IB-2`, `IB-4`, `IB-5`). One
   item is still open: the reset-vector-fetch cycle count (Chapter 6 says 4, Appendix B/Chapter 16 say 6) has two
   reviewers disagreeing and the author wants to dig in further before deciding -- not touched this pass.
+- **Done (2026-10-16):** reversed the June 2026 decision (`ca39e82`) that any protected-mode write to `sr` raises a
+  privilege violation fault, back to the original design: in protected mode a direct write to `sr` updates only the
+  low byte (bits 7--0) and silently ignores the privileged byte (bits 15--8), with no fault -- the same masked-write
+  model as x86 `POPF` and ARM user-mode flag writes, and unlike the 68000's split of the CCR/SR into separate
+  instructions. Motivation: the fault-on-any-write rule also faulted flag-only instructions that merely name `sr`
+  (`CMPI sr`, `TSAI sr`, ...) even though they write nothing, and period CPUs let user code write the arithmetic
+  flags directly. A "fault only if the privileged byte would change" rule was considered and rejected: reads of `sr`
+  are redacted in protected mode, so a read-modify-write can never reproduce the real high byte. Rust: removed `sr`
+  from `PRIVILEGED_REGISTERS` and restored the masked write in `set_register_value`; replaced the fault test with
+  masked-write, read-modify-write, and `CMPI sr` tests. Manual: Chapters 3, 5, 6, 13, 14 and Appendix E updated.
+  Follow-up (same day): the decode-time privilege check also faulted compare/test/store instructions that merely
+  name `ah`/`lh`/`ph`/`sh` in their register field. It now fires only for instructions that actually write that
+  register, reusing the write-back stage's instruction classifier (`writes_register_field`), so `CMPI`/`CMPR`/
+  `TSAI`/`TSXI`/`STOR` on a high address register no longer fault; direct writes and pair write-back still do. The
+  check stays at decode (not write-back) so a faulting `LOAD` never performs its data-bus read. Chapters 13 and 14
+  updated.
 
 Acceptance criteria:
 

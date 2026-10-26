@@ -123,9 +123,9 @@ link register; \mnemonic{RSET} clears all four flags to zero as part of clearing
 \label{sec:qr-sr-bits}
 % ==========================================
 
-The status register (\reg{sr}) is 16 bits wide. The high byte (bits 15--8) is privileged: reads in protected mode
-return zero for those bits. In protected mode any instruction that names \reg{sr} as its destination raises a privilege
-violation fault, regardless of which bits the write would change.
+The status register (\reg{sr}) is 16 bits wide. The high byte (bits 15--8) is privileged: in protected mode, reads
+return zero for those bits and writes to them are silently ignored, with no fault. The low byte (bits 7--0) can be read
+and written in both modes.
 
 \begin{table}[H]
 	\centering

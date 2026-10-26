@@ -10,7 +10,9 @@ use crate::coprocessors::processing_unit::stages::execution_effective_address::E
 use crate::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
 use crate::coprocessors::processing_unit::stages::memory_access::MemoryAccessExecutor;
 use crate::coprocessors::processing_unit::stages::shared::{IntermediateRegisters, StageExecutor};
-use crate::coprocessors::processing_unit::stages::write_back::WriteBackExecutor;
+use crate::coprocessors::processing_unit::stages::write_back::{
+    writes_register_field, WriteBackExecutor,
+};
 use crate::coprocessors::shared::{ExecutionPhase, Executor};
 use crate::raise_fault;
 use crate::registers::{
@@ -19,7 +21,6 @@ use crate::registers::{
 };
 
 const PRIVILEGED_REGISTERS: &[u8] = &[
-    RegisterName::Sr as u8,
     RegisterName::Ah as u8,
     RegisterName::Lh as u8,
     RegisterName::Ph as u8,
@@ -39,8 +40,10 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
     let is_cop_instruction = instruction.ins == Instruction::CoprocessorCallImmediate
         || instruction.ins == Instruction::CoprocessorCallRegister
         || instruction.ins == Instruction::CoprocessorCallShortImmediate;
+    // Only an actual write to a privileged register is a violation: compare, test and store
+    // instructions merely read the register named by their register field.
     let writing_to_privileged_registers =
-        !is_cop_instruction && PRIVILEGED_REGISTERS.contains(&instruction.des);
+        writes_register_field(instruction) && PRIVILEGED_REGISTERS.contains(&instruction.des);
     // TODO: Magic numbers in `check_privilege`
     // category=Refactoring
     let cop_opcode = instruction.sr_b_ & 0x0F00;
