@@ -22,7 +22,7 @@ The SIRC-1 design was guided by Reduced Instruction Set Computer (RISC) design p
 
 	\item \textbf{Register-Rich:} Sixteen addressable registers provide ample workspace for computations without frequent memory access.
 
-	\item \textbf{Consistent Execution Time:} Most instructions use exactly 6 execution phases and complete in 6 clock cycles when no bus wait states are required, eliminating the need for microcode and simplifying hardware implementation. DMA commands add transfer cycles after dispatch.
+	\item \textbf{Simple Execution Model:} The SIRC-1 uses a regular instruction set designed for straightforward hardware implementation without microcode. Most instructions execute in six clock cycles, corresponding to six fixed execution phases, excluding bus wait states. DMA commands require additional transfer cycles.
 \end{itemize}
 
 \subsection{Design Goals}
@@ -92,15 +92,24 @@ for variable-length execution sequences or microcode.
 \subsection{Coprocessors}
 
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
-register file. Only one coprocessor can be active at a time. Coprocessors are usually activated using the
-\mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions (see Chapter~\ref{ch:coprocessor}), except for the
-"exception unit," which can also be activated when physical pins are asserted on the chip. All implementations of the
-SIRC-1 will have the "processing unit" as coprocessor \texttt{0x0} and the "exception unit" as coprocessor
-\texttt{0x1}; every other coprocessor, including the DMA unit at \texttt{0x2}, is optional and varies by SIRC-1 model.
-The instruction set supports up to 16 coprocessors. The coprocessor IDs are stable between models, so that programs are
-cross-compatible. For example, coprocessor \texttt{0x3} will always be the Integer Maths Unit, whether or not a given
-model implements it. This means that if a CPU model is missing an optional coprocessor and a program requires it, the
-CPU raises an invalid-opcode fault so that the behavior can be emulated in software where practical.
+register file. Only one coprocessor can be active at a time.
+
+The primary coprocessor is the "processing unit" (coprocessor \texttt{0x0}) which is active the majority of the time
+and executes SIRCIS instructions. The CPU will revert to this coprocessor at power on, after a reset and when another
+coprocessor is done and returns control to it.
+
+Other coprocessors are usually activated using the \mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions
+(see Chapter~\ref{ch:coprocessor}), except for the "exception unit," which can also be activated when external
+interrupts are asserted. Activating a coprocessor using the coprocessor-call instructions is also known as
+"dispatching" to a coprocessor.
+
+All implementations of the SIRC-1 will have the "processing unit" (coprocessor \texttt{0x0}) and the "exception unit"
+(coprocessor \texttt{0x1}). Every other coprocessor, including the DMA unit (coprocessor \texttt{0x2}), is optional and
+may not be present in some SIRC-1 models. The instruction set supports up to 16 coprocessors. The coprocessor IDs are
+stable between models, so that programs are cross-compatible. For example, coprocessor \texttt{0x3} will always be the
+Integer Maths Unit, whether or not a given CPU model implements it. This means that if a CPU model is missing an
+optional coprocessor and a program requires it, the CPU can raise an invalid-opcode fault so that the behavior can be
+emulated in software where practical.
 
 \begin{table}[H]
 	\centering
@@ -121,6 +130,11 @@ CPU raises an invalid-opcode fault so that the behavior can be emulated in softw
 
 Each coprocessor can execute 16 opcodes: the first 8 (\texttt{0x0}--\texttt{0x7}) can be called in any mode, and the
 last 8 (\texttt{0x8}--\texttt{0xF}) can be called only in supervisor mode.
+
+Note: You will generally not want to dispatch to the the "processing unit" (coprocessor \texttt{0x0}) like you would
+with the other coprocessors, as it is the default coprocessor, and will automatically regain control when the other
+coprocessors are finished. Using \mnemonic{COPI} or \mnemonic{COPR} with coprocessor 0x0 is technically valid, but any
+operand passed into \mnemonic{COPI} or \mnemonic{COPR} will be ignored. It is effectively a no-op.
 
 \subsection{Privilege Levels}
 
