@@ -3,11 +3,11 @@
 \label{ch:notation-glossary}
 
 This section collects the typographic conventions, normative vocabulary, and architectural terminology used throughout
-the manual, in one place, so a reader does not have to hunt through individual chapters to look one up.
-Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar placeholder names used only
-inside instruction descriptions) is defined separately in Chapter~\ref{ch:reading-instructions}, Table
-\ref{tab:instruction-description-notation}, alongside the status-flag-effect symbols
-(Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the conventions that apply manual-wide.
+the manual, in one place. Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar
+placeholder names used only inside instruction descriptions) is defined separately in
+Chapter~\ref{ch:reading-instructions}, Table \ref{tab:instruction-description-notation}, alongside the
+status-flag-effect symbols (Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the
+conventions that apply manual-wide.
 
 \section*{Typographic Conventions}
 
@@ -15,27 +15,27 @@ inside instruction descriptions) is defined separately in Chapter~\ref{ch:readin
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Convention}          & \textbf{Meaning}                                                                 \\
+		\textbf{Convention}          & \textbf{Meaning}                                                                                            \\
 		\midrule
 		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font, whether general-purpose, address-pair,
-		or status.                                                                                                      \\
+		or status.                                                                                                                                 \\
 		\opcode{1A}                  & A literal instruction-opcode byte value, written \texttt{0x} followed by two
-		uppercase hex digits.                                                                                           \\
-		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}.     \\
-		\addr{0x0002}                & A concrete memory address or vector target.                                      \\
-		\mnemonic{ADDI}              & An instruction mnemonic, always bold typewriter and always uppercase.            \\
+		uppercase hex digits.                                                                                                                      \\
+		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}. Can be decimal or hexadecimal. \\
+		\addr{0x0002}                & A concrete memory address or vector target.                                                                 \\
+		\mnemonic{ADDI}              & An instruction mnemonic, always bold typewriter and always uppercase.                                       \\
 		\texttt{SR.X}                & A field or bit of the status register, named by its bit label (for example
-		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                    \\
+		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                                               \\
 		\indirectimm{4}{a}           & Parentheses denote indirection through an address-register pair; a leading
 		\texttt{-} denotes pre-decrement and a trailing \texttt{+} denotes post-increment, for example
-		\predec{0}{a} and \postinc{0}{a}.                                                                               \\
+		\predec{0}{a} and \postinc{0}{a}.                                                                                                          \\
 		\bottomrule
 	\end{tabular}
 	\caption{Manual-Wide Typographic Conventions}
 	\label{tab:manual-wide-notation}
 \end{table}
 
-Other conventions that do not have a dedicated macro:
+Other conventions that do not have a dedicated style:
 
 \begin{itemize}
 	\item \textbf{Hex literals} that aren't a register, opcode, immediate, or address value in one of the forms above
@@ -91,7 +91,7 @@ encoding, and privilege rules.
 	      (\texttt{0x2}), and the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
 	\item[Displacement] A signed value added to an address register's low word to compute an effective address, as used by memory
 	      and effective-address instructions. Distinct from \textit{offset}, which this manual reserves for memory/structure
-	      offsets and the \texttt{system\_ram\_offset} register.
+	      offsets.
 	\item[Exception] The general term for any event that diverts program flow to a vector: a \textit{fault}, a \textit{hardware
 		      exception}, or a \textit{software exception}. See Chapter~\ref{ch:exceptions}.
 	\item[Exception level] The priority level of the exception currently being serviced (0 when not handling any exception). A
@@ -101,18 +101,18 @@ encoding, and privilege rules.
 	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
 	      \texttt{SR.T} or the \texttt{TRCE} input.
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
-	\item[Hardware exception] An exception signaled by an external interrupt pin. Also informally called an \textit{interrupt} at
-	      the pin level (interrupt pins, interrupt priority, interrupt enable) -- the two terms are synonyms at different
-	      registers of formality, not competing definitions.
+	\item[Hardware exception] An exception signaled by an external interrupt. Also informally called an \textit{interrupt} at the
+	      hardware level (interrupt pins, interrupt priority, interrupt enable) -- the two terms are synonymous.
 	\item[Meta-instruction] An assembler-level mnemonic (for example \mnemonic{BRAN}, \mnemonic{NOOP}, \mnemonic{LJSR}) that
-	      assembles to a real CPU instruction's encoding rather than having an opcode of its own. See the relevant
+	      assembles to a specific CPU instruction encoding rather than having an opcode of its own. See the relevant
 	      instruction-family chapter for each meta-instruction's lowering.
 	\item[Protected mode] The non-privileged CPU mode (\texttt{SR.P} set). Most privileged operations fault if attempted in
-	      protected mode; see Chapter~\ref{ch:status-register}.
+	      protected mode; see Chapter~\ref{ch:status-register}. The inverse of supervisor mode.
 	\item[Retryable fault] A fault whose triggering operation does not take effect, so that returning with \mnemonic{RETE} safely
 	      retries it. See Chapter~\ref{ch:exceptions} for the full retryable set.
 	\item[Software exception] An exception raised deliberately by executing \mnemonic{EXCP}. Also called a \textit{trap}.
-	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available.
+	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available. The inverse of protected
+	      mode.
 	\item[Word address] SIRC-1 addresses memory in units of 16-bit words, not 8-bit bytes; incrementing an address register by
 	      one advances by one word. See Chapter~\ref{ch:data-representation} for the boundary between this architectural word
 	      addressing and any external byte-level representation.
