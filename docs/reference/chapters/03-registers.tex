@@ -212,7 +212,7 @@ modes are particularly useful with this register.
 
 The program counter register pair points to the instruction currently being fetched. It is not modified during either
 fetch phase; the low word \reg{pl} advances by 2 during the Decode and Register Fetch phase, and \reg{ph} is never
-incremented, so a wrap stays inside the segment.
+incremented, so an overflow stays inside the segment.
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -227,8 +227,8 @@ The status register (\reg{sr}) is a special 16-bit register that contains CPU st
 divided into two bytes:
 
 \begin{itemize}
-	\item \textbf{Low Byte (bits 7--0):} Condition flags, readable in both modes and updated as a side effect of ALU and
-	      shift instructions in both modes, and directly writable in both modes
+	\item \textbf{Low Byte (bits 7--0):} Condition flags, readable and writable in both modes; optionally updated as a
+	      side effect of instructions in both modes.
 	\item \textbf{High Byte (bits 15--8):} Control and privileged state
 \end{itemize}
 
@@ -324,11 +324,6 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 	\caption{Register Encoding}
 	\label{tab:register-encoding}
 \end{table}
-
-The register-index assignment is deliberate: \reg{sr} does not occupy field \texttt{0x0} (unlike an earlier revision of
-this encoding), so an all-zero instruction word decodes as \mnemonic{ADDI[N]} \reg{r1}, \texttt{\#0} -- a genuine,
-always-unprivileged no-op. This is what lets erased or uninitialized memory (which reads back as all-zero words) be
-executed safely instead of faulting; see the \mnemonic{NOOP} entry in Chapter~\ref{ch:meta-instructions}.
 
 \section{Usage Examples}
 
