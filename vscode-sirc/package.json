@@ -85,7 +85,7 @@
     "update-snapshot": "vscode-tmgrammar-snap -s source.sirc-asm -u -g syntaxes/sirc.tmLanguage.json test/*.test.sasm"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.0.0",
     "@vscode/vsce": "^4.0.0",
     "vscode-tmgrammar-test": "^0.1.3"
   }
