@@ -7,7 +7,7 @@ The Status Register (\reg{sr}) is a 16-bit special-purpose register that contain
 the CPU. It is divided into two bytes with different privilege levels:
 
 \begin{itemize}
-	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4) -- readable and directly writable in both modes, and updated as a side effect of ALU and shift instructions in both modes
+	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4) -- readable and directly writable in both modes, and optionally updated as a side effect of ALU instructions in both modes
 	\item \textbf{High Byte (bits 15--8):} Control and mode flags -- accessible only in supervisor mode; in protected mode it reads as zero and direct writes to it are silently ignored, with no fault
 \end{itemize}
 
@@ -84,9 +84,11 @@ privilege level (see Section~\ref{sec:sr-manual-updates}).
 
 \subsection{Reserved Flags -- Bits 4--7}
 
-Bits 4 through 7 of the lower byte are reserved for future use; software must not rely on them. These bits can be
-written by a supervisor-mode direct write to \reg{sr}, but any subsequent ALU or shift flag update clears them to zero.
-They read as zero after any flag-updating instruction.
+Bits 4 through 7 of the lower byte are reserved for future use; software must not rely on them. They can be
+read/written to but the value of these bits after any instruction that updates the condition flags is undefined.
+
+Consequently, it is recommended to test specific bits with instructions such as \mnemonic{TSAR}/\mnemonic{TSAI}, rather
+than do a comparison of the whole status register word with something like \mnemonic{CMPR}/\mnemonic{CMPI}.
 
 \section{Control Flags (Privileged)}
 
@@ -165,14 +167,15 @@ cannot directly modify it -- it is managed automatically by the exception handli
 	      overflow fault (vector \texttt{0x03}). For a program-counter wrap the fault is raised at the following instruction
 	      fetch
 	\item[When Clear (0):] Address overflows wrap around without any side effects
-	\item[Purpose:] Helps detect pointer errors during development
+	\item[Purpose:] When set, helps detect pointer errors during development or can be used to increment/decrement the current
+	      segment if the address goes out of bounds of the segment.
 	\item[Typical Use:] Enabled during debugging, disabled in production for performance
 \end{description}
 
 \subsection{Trace Mode (T) -- Bit 15}
 
 \begin{description}
-	\item[When Set (1):] An exception is generated after every instruction
+	\item[When Set (1):] An instruction trace fault (vector \texttt{0x06}) is generated after every instruction
 	\item[When Clear (0):] Normal execution
 	\item[Purpose:] Allows debuggers to single-step through code
 	\item[Note:] Used by SIRCIT (SIRC Instruction Tracer) for debugging
@@ -193,8 +196,10 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 	      flags -- its public syntax always encodes status source \texttt{[N]} and does not accept a status update
 	      override, giving the flag row \texttt{- - - -}. An encoding of the \mnemonic{LOAD} opcode with a
 	      non-\texttt{[N]} AF field, not reachable from public assembly syntax, leaves all four flags architecturally
-	      undefined (\texttt{U U U U}). \mnemonic{LDEA} never updates the condition flags
-	\item \textbf{Shift Operations}: Can optionally update flags based on the instruction's status register update source field
+	      undefined (\texttt{U U U U}).
+	      \mnemonic{LDEA} never updates the condition flags and has no status source encoding to override.
+	\item \textbf{ALU Instructions with a Shift Operand}: The flags come from the ALU result by default. They come from the
+	      shift instead when the \texttt{[S]} status override modifier is used, or with the \mnemonic{SHFT} meta instruction.
 \end{itemize}
 
 \subsection{Manual Updates}
@@ -237,7 +242,7 @@ flag-only comparison and test instructions (\mnemonic{CMPI}, \mnemonic{CMPR}, \m
 \section{Reading the Status Register}
 
 In supervisor mode, reading \reg{sr} returns the full 16-bit value. In protected mode, reading \reg{sr} returns the
-lower byte in bits 7--0, with bits 15--8 masked to zero (for security).
+lower byte in bits 7--0, with bits 15--8 masked to zero (to hide supervisor-only state).
 
 % qa:assemble
 \begin{lstlisting}
@@ -264,9 +269,9 @@ When returning from an exception with \mnemonic{RETE}, the saved status register
 
 \section{Usage Examples}
 
-The SIRC-1 provides syntax to manually control how status flags are updated during ALU and shift operations. This is
-particularly useful for advanced control flow and flag preservation. See Section~\ref{sec:status-override} in
-Chapter~\ref{ch:shift-operations} for complete details and worked examples.
+The SIRC-1 provides syntax to manually control how status flags are updated during ALU instructions, including those
+with a shift operand. This is particularly useful for advanced control flow and flag preservation. See
+Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details and worked examples.
 
 Condition-code-driven branching and conditional execution (comparing registers, testing bits, and acting on the result)
 are a property of the condition flags this chapter defines, but the idioms themselves belong to
