@@ -348,8 +348,28 @@ both a "save result" and a "test only" variant:
 \end{itemize}
 
 Adding \texttt{0x8} to a "save result" opcode in the range \texttt{0x\_0}--\texttt{0x\_6} gives its "test only" form.
-Opcodes \texttt{0x27} and \texttt{0x2F} are exceptions to this pattern: they are undocumented opcodes (see
-Appendix~\ref{appendix:undocumented}), not a "save result" operation or a coprocessor call.
+Opcode \texttt{0x\_7} (\mnemonic{LOAD}) has no test-only form. Opcodes \texttt{0x27} and \texttt{0x2F} are exceptions
+to this pattern: they are undocumented opcodes (see Appendix~\ref{appendix:undocumented}), not a "save result"
+operation or a coprocessor call.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clll}
+		\toprule
+		\textbf{Operation}  & \textbf{Save result}              & \textbf{Test only}                & \textbf{Opcodes (Imm / Short / Reg)}    \\
+		\midrule
+		Add                 & \mnemonic{ADDI} / \mnemonic{ADDR} & \mnemonic{CMNI} / \mnemonic{CMNR} & \opcode{08} / \opcode{28} / \opcode{38} \\
+		Add with carry      & \mnemonic{ADCI} / \mnemonic{ADCR} & \mnemonic{CNCI} / \mnemonic{CNCR} & \opcode{09} / \opcode{29} / \opcode{39} \\
+		Subtract            & \mnemonic{SUBI} / \mnemonic{SUBR} & \mnemonic{CMPI} / \mnemonic{CMPR} & \opcode{0A} / \opcode{2A} / \opcode{3A} \\
+		Subtract with carry & \mnemonic{SBCI} / \mnemonic{SBCR} & \mnemonic{CPCI} / \mnemonic{CPCR} & \opcode{0B} / \opcode{2B} / \opcode{3B} \\
+		AND                 & \mnemonic{ANDI} / \mnemonic{ANDR} & \mnemonic{TSAI} / \mnemonic{TSAR} & \opcode{0C} / \opcode{2C} / \opcode{3C} \\
+		OR                  & \mnemonic{ORRI} / \mnemonic{ORRR} & \mnemonic{TSOI} / \mnemonic{TSOR} & \opcode{0D} / \opcode{2D} / \opcode{3D} \\
+		XOR                 & \mnemonic{XORI} / \mnemonic{XORR} & \mnemonic{TSXI} / \mnemonic{TSXR} & \opcode{0E} / \opcode{2E} / \opcode{3E} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Save and Test-Only ALU Instructions}
+	\label{tab:save-and-test-instructions}
+\end{table}
 
 For example:
 

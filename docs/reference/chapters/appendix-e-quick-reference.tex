@@ -52,10 +52,16 @@ underlying CPU instruction. For full encoding details, see the chapter cited in 
 	\mnemonic{BRSR}   & Meta          & LDEL p,\ldots                                    & -          & -          & -          & -                        & PC-relative call (saves return address to l)                                                                  \\
 	\midrule
 	\multicolumn{8}{l}{\textit{C -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:coprocessor}}}                                                                                                                                                                               \\
+	\mnemonic{CMNI}   & ALU           & \opcode{08}/\opcode{28} & *          & *          & *          & *                        & Compare negative immediate or short immediate (no write-back) \\
+	\mnemonic{CMNR}   & ALU           & \opcode{38} & *          & *          & *          & *                        & Compare negative register (no write-back) \\
 	\mnemonic{CMPI}   & ALU           & \opcode{0A}/\opcode{2A}                          & *          & *          & *          & *                        & Compare immediate or short immediate (no write-back)                                                          \\
 	\mnemonic{CMPR}   & ALU           & \opcode{3A}                                      & *          & *          & *          & *                        & Compare register (no write-back)                                                                              \\
+	\mnemonic{CNCI}   & ALU           & \opcode{09}/\opcode{29} & *          & *          & *          & *                        & Compare negative with carry, immediate or short immediate (no write-back) \\
+	\mnemonic{CNCR}   & ALU           & \opcode{39} & *          & *          & *          & *                        & Compare negative with carry, register (no write-back) \\
 	\mnemonic{COPI}   & COP           & \opcode{0F}                                      & -          & -          & -          & -\textsuperscript{\dag}  & Coprocessor call immediate                                                                                    \\
 	\mnemonic{COPR}   & COP           & \opcode{3F}                                      & -          & -          & -          & -\textsuperscript{\dag}  & Coprocessor call register                                                                                     \\
+	\mnemonic{CPCI}   & ALU           & \opcode{0B}/\opcode{2B} & *          & *          & *          & *                        & Compare with carry, immediate or short immediate (no write-back) \\
+	\mnemonic{CPCR}   & ALU           & \opcode{3B} & *          & *          & *          & *                        & Compare with carry, register (no write-back) \\
 	\midrule
 	\multicolumn{8}{l}{\textit{D -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
 	\mnemonic{DIVS}   & Meta          & COPI \#0x3300                                    & -          & -          & -          & -\textsuperscript{\dag}  & Signed divide (Integer Maths Unit, coprocessor 0x3)                                                           \\
@@ -103,6 +109,8 @@ underlying CPU instruction. For full encoding details, see the chapter cited in 
 	\multicolumn{8}{l}{\textit{T -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
 	\mnemonic{TSAI}   & ALU           & \opcode{0C}/\opcode{2C}                          & *          & *          & 0          & 0                        & Test AND immediate or short (no write-back)                                                                   \\
 	\mnemonic{TSAR}   & ALU           & \opcode{3C}                                      & *          & *          & 0          & 0                        & Test AND register (no write-back)                                                                             \\
+	\mnemonic{TSOI}   & ALU           & \opcode{0D}/\opcode{2D} & *          & *          & 0          & 0                        & Test OR immediate or short (no write-back) \\
+	\mnemonic{TSOR}   & ALU           & \opcode{3D} & *          & *          & 0          & 0                        & Test OR register (no write-back) \\
 	\mnemonic{TSXI}   & ALU           & \opcode{0E}/\opcode{2E}                          & *          & *          & 0          & 0                        & Test XOR immediate or short (no write-back)                                                                   \\
 	\mnemonic{TSXR}   & ALU           & \opcode{3E}                                      & *          & *          & 0          & 0                        & Test XOR register (no write-back)                                                                             \\
 	\midrule

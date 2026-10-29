@@ -190,8 +190,10 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 \begin{itemize}
 	\item \textbf{Arithmetic Instructions} (\mnemonic{ADDI}, \mnemonic{SUBI}, \mnemonic{ADCI}, \mnemonic{SBCI}): Update all four condition flags
 	\item \textbf{Logical Instructions} (\mnemonic{ANDI}, \mnemonic{ORRI}, \mnemonic{XORI}): Update Z and N flags; C and V flags are cleared
-	\item \textbf{Compare Instructions} (\mnemonic{CMPI}, \mnemonic{CMPR}): Same as Arithmetic Instructions but does not update destination
-	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
+	\item \textbf{Compare Instructions} (\mnemonic{CMNI}, \mnemonic{CMNR}, \mnemonic{CNCI}, \mnemonic{CNCR},
+	      \mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{CPCI}, \mnemonic{CPCR}): Same as Arithmetic Instructions but does not update destination
+	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSOI}, \mnemonic{TSOR},
+	      \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
 	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): \mnemonic{LOAD} never updates the condition
 	      flags -- its public syntax always encodes status source \texttt{[N]} and does not accept a status update
 	      override, giving the flag row \texttt{- - - -}. An encoding of the \mnemonic{LOAD} opcode with a
@@ -236,8 +238,10 @@ Bits 15--8 -- including the Protected Mode bit itself -- are left unchanged, sil
 protected-mode program cannot leave protected mode or alter the interrupt-enable, trace, or address-overflow bits this
 way. Because bits 15--8 read as zero in protected mode, a read-modify-write of \reg{sr} behaves consistently: the high
 byte is never disturbed. This applies to every instruction that names \reg{sr} as its destination, including the
-flag-only comparison and test instructions (\mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{TSAI}, \mnemonic{TSAR},
-\mnemonic{TSXI}, \mnemonic{TSXR}), which do not write their destination and are therefore unaffected.
+flag-only comparison and test instructions (\mnemonic{CMNI}, \mnemonic{CMNR}, \mnemonic{CNCI}, \mnemonic{CNCR},
+\mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{CPCI}, \mnemonic{CPCR}, \mnemonic{TSAI}, \mnemonic{TSAR},
+\mnemonic{TSOI}, \mnemonic{TSOR}, \mnemonic{TSXI}, \mnemonic{TSXR}), which do not write their destination and are
+therefore unaffected.
 
 \section{Reading the Status Register}
 

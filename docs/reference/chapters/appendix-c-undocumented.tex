@@ -3,14 +3,11 @@
 
 \section{Overview}
 
-The SIRCIS instruction set includes 14 undocumented instruction opcodes. Most of these opcodes are valid encodings with
-architecturally undefined behavior: software must not depend on their results, side effects, timing, flag behavior, or
-fault behavior. Two of the fourteen, \opcode{27} and \opcode{2F}, are the exception -- each has fully defined, tested
-behavior (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the coprocessor
-command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged) but no
-public assembly syntax, and they are listed here for that reason rather than because their behavior is undefined.
-Undocumented opcodes are reserved for future CPU revisions and may be repurposed without preserving their current
-behavior.
+The SIRCIS instruction set includes two undocumented instruction opcodes, \opcode{27} and \opcode{2F}. Each has fully
+defined, tested behavior (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the
+coprocessor command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged)
+but no public assembly syntax, and they are listed here for that reason. Undocumented opcodes are reserved for future
+CPU revisions and may be repurposed without preserving their current behavior.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -45,105 +42,28 @@ accidentally depend on undefined write-back ordering.
 	\centering
 	\begin{tabular}{clll}
 		\toprule
-		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern}        & \textbf{Notes}            \\
+		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}            \\
 		\midrule
-		\opcode{08}     & Immediate       & ADD-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{09}     & Immediate       & ADC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{0B}     & Immediate       & SBC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{0D}     & Immediate       & OR-like + \texttt{0x8}  & Test variant (no save)    \\
-		\opcode{27}     & Short Imm       & LOAD-like               & No public assembly syntax \\
-		\opcode{28}     & Short Imm       & ADD-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{29}     & Short Imm       & ADC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{2B}     & Short Imm       & SBC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{2D}     & Short Imm       & OR-like + \texttt{0x8}  & Test variant (no save)    \\
-		\opcode{2F}     & Short Imm       & COP-like                & No public assembly syntax \\
-		\opcode{38}     & Register        & ADD-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{39}     & Register        & ADC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{3B}     & Register        & SBC-like + \texttt{0x8} & Test variant (no save)    \\
-		\opcode{3D}     & Register        & OR-like + \texttt{0x8}  & Test variant (no save)    \\
+		\opcode{27}     & Short Imm       & LOAD-like        & No public assembly syntax \\
+		\opcode{2F}     & Short Imm       & COP-like         & No public assembly syntax \\
 		\bottomrule
 	\end{tabular}
 	\caption{Undocumented Instruction Opcodes}
 \end{table}
-
-\section{Observed Behavior}
-
-The undocumented opcodes whose ALU operation field is \texttt{0x8}--\texttt{0xE} compute \texttt{alu\_code \& 0x7} as
-the operation, discard the result, and update all four flags exactly as the corresponding documented operation does.
-This is the observed behavior of current implementations; it is architecturally undefined, so software must not rely on
-it.
-
-\subsection{\opcode{08}, \opcode{28}, \opcode{38} (ADD Test)}
-
-Computes the sum of the two operands but discards the result, updating flags as an ADD would. This is comparable to
-\mnemonic{CMP}, but using ADD semantics instead of SUB.
-
-\begin{lstlisting}
-result = operand1 + operand2  ; Calculate
-; result is discarded (not written to register)
-; Flags updated based on result
-\end{lstlisting}
-
-\textbf{Utility:} Limited. \mnemonic{CMP} already provides comparison functionality.
-
-\subsection{\opcode{09}, \opcode{29}, \opcode{39} (ADC Test)}
-
-Computes the sum of the two operands plus the incoming carry, but discards the result, updating flags.
-
-\begin{lstlisting}
-result = operand1 + operand2 + C
-; result is discarded
-; Flags updated
-\end{lstlisting}
-
-\textbf{Utility:} Possibly useful for testing carry propagation without modifying registers.
-
-\subsection{\opcode{0B}, \opcode{2B}, \opcode{3B} (SBC Test)}
-
-Computes the difference of the two operands minus the incoming borrow, but discards the result, updating flags.
-
-\begin{lstlisting}
-result = operand1 - operand2 - C  ; C is the borrow input
-; result is discarded
-; Flags updated
-\end{lstlisting}
-
-\textbf{Utility:} Possibly useful for testing borrow propagation in multi-precision arithmetic.
-
-\subsection{\opcode{0D}, \opcode{2D}, \opcode{3D} (OR Test)}
-
-Computes the bitwise OR of the two operands but discards the result. N and Z are updated from the OR result; C and V
-are cleared.
-
-\begin{lstlisting}
-result = operand1 | operand2
-; result is discarded
-; N and Z updated from result; C and V cleared
-\end{lstlisting}
-
-\textbf{Utility:} Limited. \mnemonic{ORRI} already provides the same flag effects with a result write-back.
 
 \section{Implementation Notes}
 
 \subsection{Implementation Behavior}
 
 An implementation -- whether an emulator or a hardware implementation -- decodes undocumented instructions normally
-rather than rejecting them, and, for the undocumented ALU test-variant opcodes, executes the operation and updates
-flags exactly as the corresponding documented operation would. Only the write-back stage differs: for operation field
-values \texttt{0x8}--\texttt{0xE}, the decoder treats bit 3 of the operation field as a "don't write back" bit, so the
-computed result is discarded rather than committed to a register. Operation field value \texttt{0xF} is the coprocessor
-call (\opcode{2F}) and is not affected.
-
-This means undocumented encodings may execute, but their exact behavior depends on implementation details and is not
-part of the architectural contract. It is not required to be preserved in future CPU revisions.
+rather than rejecting them. Their exact behavior depends on implementation details and is not part of the architectural
+contract. It is not required to be preserved in future CPU revisions.
 
 \section{Why Undocumented?}
 
-These instructions were left undocumented for several reasons:
+These instructions were left undocumented for two reasons:
 
 \begin{enumerate}
-	\item \textbf{Limited utility}: Most have no practical use beyond documented instructions.
-	\item \textbf{Incomplete semantics}: The designer has not fully defined their behavior.
 	\item \textbf{Opcode space reservation}: May be used for future features.
 	\item \textbf{Implementation flexibility}: Allows hardware optimizations.
 \end{enumerate}
@@ -179,24 +99,15 @@ These instructions were left undocumented for several reasons:
 
 \section{Future Standardization}
 
-Some undocumented instructions may be formally specified in future SIRCIS revisions. Candidates for standardization
-include:
-
-\begin{itemize}
-	\item \textbf{ADC Test (\opcode{09}/\opcode{29}/\opcode{39})}: For carry flag testing in multi-precision
-	      arithmetic
-	\item \textbf{SBC Test (\opcode{0B}/\opcode{2B}/\opcode{3B})}: For borrow flag testing in multi-precision
-	      arithmetic
-\end{itemize}
-
-Others (the ADD Test and OR Test variants) will likely remain undocumented or be repurposed.
+Either undocumented opcode may be formally specified in a future SIRCIS revision, or repurposed. Until then, software
+must not depend on either.
 
 \section{Opcode Space for Expansion}
 
 The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
-	\item 14 undocumented opcodes (could be formally specified)
+	\item 2 undocumented opcodes, \opcode{27} and \opcode{2F} (could be formally specified)
 	\item Reserved shift type (111) could enable additional shift modes.
 	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source.
 	\item Standard optional coprocessors and model-specific coprocessors can provide extended functionality through the

@@ -37,8 +37,12 @@ ALU instructions are available in three format variants:
 
 \subsection{Test and Compare}
 \begin{itemize}
+	\item \mnemonic{CMN} -- Compare Negative (add without saving result)
+	\item \mnemonic{CNC} -- Compare Negative with Carry (add with carry without saving result)
 	\item \mnemonic{CMP} -- Compare (subtract without saving result)
+	\item \mnemonic{CPC} -- Compare with Carry (subtract with carry without saving result)
 	\item \mnemonic{TSA} -- Test AND (AND without saving result)
+	\item \mnemonic{TSO} -- Test OR (OR without saving result)
 	\item \mnemonic{TSX} -- Test XOR (XOR without saving result)
 \end{itemize}
 
@@ -84,12 +88,24 @@ are not legal for this instruction family.
 		XOR                  & \texttt{XORR rD, rS2[, shift]}      & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
 		LOAD                 & \texttt{LOAD rD, \#imm16}           & \opcode{07}       & Writes result; preserves flags      \\
 		LOAD                 & \texttt{LOAD rD, rS}                & \opcode{37}       & Writes result; preserves flags      \\
+		CMN                  & \texttt{CMNI rS, \#imm16}           & \opcode{08}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNI rS, \#imm8, shift}     & \opcode{28}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNR rS1, rS2[, shift]}     & \opcode{38}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm16}           & \opcode{09}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm8, shift}     & \opcode{29}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCR rS1, rS2[, shift]}     & \opcode{39}       & Updates flags only                  \\
 		CMP                  & \texttt{CMPI rS, \#imm16}           & \opcode{0A}       & Updates flags only                  \\
 		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & \opcode{2A}       & Updates flags only                  \\
 		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & \opcode{3A}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm16}           & \opcode{0B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm8, shift}     & \opcode{2B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCR rS1, rS2[, shift]}     & \opcode{3B}       & Updates flags only                  \\
 		TSA                  & \texttt{TSAI rS, \#imm16}           & \opcode{0C}       & Updates flags only                  \\
 		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & \opcode{2C}       & Updates flags only                  \\
 		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & \opcode{3C}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm16}           & \opcode{0D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm8, shift}     & \opcode{2D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOR rS1, rS2[, shift]}     & \opcode{3D}       & Updates flags only                  \\
 		TSX                  & \texttt{TSXI rS, \#imm16}           & \opcode{0E}       & Updates flags only                  \\
 		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & \opcode{2E}       & Updates flags only                  \\
 		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & \opcode{3E}       & Updates flags only                  \\
@@ -118,7 +134,7 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                            \\
 		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
 		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                        \\
+		Test variants          & \mnemonic{CMN}, \mnemonic{CNC}, \mnemonic{CMP}, \mnemonic{CPC}, \mnemonic{TSA}, \mnemonic{TSO}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.        \\
 		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                          \\
 		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                        \\
 		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction that writes a privileged high address register raises a privilege-violation fault at decode; see the notes below. \\
@@ -142,8 +158,8 @@ documented ALU forms execute with architecturally undefined results (see Appendi
 Most ALU instructions update the status register flags:
 
 \begin{description}
-	\item[Arithmetic (ADD, ADC, SUB, SBC, CMP)] Update all four flags: N, Z, C, V
-	\item[Logical (AND, ORR, XOR, TSA, TSX)] Update N and Z; clear C and V
+	\item[Arithmetic (ADD, ADC, SUB, SBC, CMN, CNC, CMP, CPC)] Update all four flags: N, Z, C, V
+	\item[Logical (AND, ORR, XOR, TSA, TSO, TSX)] Update N and Z; clear C and V
 	\item[Load (LOAD)] Do not update flags
 \end{description}
 
@@ -157,11 +173,15 @@ Most ALU instructions update the status register flags:
 		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out.                                   \\
 		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs.                                     \\
 		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
+		CMN             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as ADD; result is discarded.                            \\
+		CNC             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as ADC; result is discarded.                            \\
 		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded.                            \\
+		CPC             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SBC; result is discarded.                            \\
 		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded.                            \\
+		TSO             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as ORR; result is discarded.                            \\
 		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded.                            \\
 		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved.                                        \\
 		\bottomrule
@@ -191,11 +211,11 @@ complement of $X$.
 	\centering
 	\begin{tabular}{lp{4.2cm}p{4.2cm}}
 		\toprule
-		\textbf{Family}         & \textbf{C}                                                      & \textbf{V}                                                                     \\
+		\textbf{Family}              & \textbf{C}                                                      & \textbf{V}                                                                     \\
 		\midrule
-		ADD, ADC                & Carry out of bit 15 of the full addition                        & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
-		SUB, SBC, CMP           & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$ & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
-		AND, ORR, XOR, TSA, TSX & $0$ (always cleared)                                            & $0$ (always cleared)                                                           \\
+		ADD, ADC, CMN, CNC           & Carry out of bit 15 of the full addition                        & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
+		SUB, SBC, CMP, CPC           & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$ & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
+		AND, ORR, XOR, TSA, TSO, TSX & $0$ (always cleared)                                            & $0$ (always cleared)                                                           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Carry and Overflow Flag Formulas}
@@ -206,8 +226,10 @@ $N$ and $Z$ are the same for every family: $N = Rm$ (the result's own sign bit),
 16-bit result is zero. \mnemonic{ADC} and \mnemonic{SBC} use the same formulas as \mnemonic{ADD} and
 \mnemonic{SUB} respectively -- the incoming carry/borrow is folded into the addition or subtraction before
 \texttt{Rm} (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
-\mnemonic{CMP}/\mnemonic{TSA}/\mnemonic{TSX} compute the same flags as the corresponding
-\mnemonic{SUB}/\mnemonic{AND}/\mnemonic{XOR} family and simply discard the result.
+\mnemonic{CMN}/\mnemonic{CNC}/\mnemonic{CMP}/\mnemonic{CPC}/\mnemonic{TSA}/\mnemonic{TSO}/\mnemonic{TSX} compute
+the same flags as the corresponding
+\mnemonic{ADD}/\mnemonic{ADC}/\mnemonic{SUB}/\mnemonic{SBC}/\mnemonic{AND}/\mnemonic{ORR}/\mnemonic{XOR} family
+and simply discard the result.
 
 \subsection{Manual Flag Update Control}
 
@@ -1305,6 +1327,273 @@ ORRI r5, #0x34             ; r5 = 0x1234
 \end{instructionbox}
 
 % ============================================================================
+\begin{instructionbox}{CMNI / CMNR}{Compare Negative Immediate / Compare Negative Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{08} (Imm), \opcode{28} (Short Imm), \opcode{38} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{08}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{28}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{38}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CMNI rS, #imm16                ; Flags from rS + imm16
+CMNI rS, #imm8, shift          ; Flags from shift(rS) + imm8
+CMNR rS1, rS2                  ; Flags from rS1 + rS2
+CMNR rS1, rS2, shift           ; Flags from shift(rS1) + rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADD}. The first operand is added to the second operand;
+	no destination register is written.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
+	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
+	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \texttt{r1} holds $-5$. In short
+	immediate format with shift, the source register is shifted before the immediate is added.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CMNI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\begin{example}
+		\begin{lstlisting}
+; Test if r1 is -1 (0xFFFF): r1 + 1 == 0
+CMNI r1, #1
+BRAN|== @is_minus_one
+
+; Test if r1 is the negation of r2
+CMNR r1, r2
+BRAN|== @are_negations
+
+; Would r3 + r4 overflow a signed 16-bit result?
+; Neither register is changed
+CMNR r3, r4
+BRAN|OS @would_overflow
+		\end{lstlisting}
+		\caption{Testing Sums Without Writing Them}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means the operands sum to zero, so the first operand equals the negation of the second
+		\item C is the carry out of the addition and V is signed overflow of the addition; the flags describe the sum, not an
+		      ordering, so the unsigned and signed ordering conditions that are meaningful after \mnemonic{CMP} are not meaningful
+		      after \mnemonic{CMN}
+		\item Use \mnemonic{CNC} to continue the test across multiple words
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{CNCI / CNCR}{Compare Negative with Carry Immediate / Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{09} (Imm), \opcode{29} (Short Imm), \opcode{39} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{09}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{29}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{39}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CNCI rS, #imm16                ; Flags from rS + imm16 + C
+CNCI rS, #imm8, shift          ; Flags from shift(rS) + imm8 + C
+CNCR rS1, rS2                  ; Flags from rS1 + rS2 + C
+CNCR rS1, rS2, shift           ; Flags from shift(rS1) + rS2 + C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADC}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input; no destination register is written.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2 + SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Adds two values plus the carry flag but discards the result, only updating the status flags. It is the flag-only
+	counterpart of \mnemonic{ADC} and continues a \mnemonic{CMN} across multiple words: \mnemonic{CMN} on the low words
+	followed by \mnemonic{CNC} on the high words leaves C, V and N describing the whole multi-word sum. In short immediate
+	format with shift, the source register is shifted before the immediate is added.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CNCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\begin{example}
+		\begin{lstlisting}
+; Would the 32-bit signed sum r1:r2 + r3:r4 overflow?
+; Low words first, then high words with the carry
+CMNR r2, r4
+CNCR r1, r3
+BRAN|OS @overflowed        ; V = signed overflow of the 32-bit sum
+
+; Would the 32-bit unsigned sum carry out?
+CMNR r2, r4
+CNCR r1, r3
+BRAN|CS @carried
+		\end{lstlisting}
+		\caption{Testing 32-bit Sums Without Writing Them}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Use after \mnemonic{CMN} (or \mnemonic{ADD}) for multi-word arithmetic; the carry flag must be in the correct state
+		      before \mnemonic{CNC}
+		\item Z reflects only the result of this instruction, not the whole multi-word sum, so use C, V and N rather than Z to
+		      describe the combined value
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
 \begin{instructionbox}{CMPI / CMPR}{Compare Immediate / Compare Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
@@ -1445,6 +1734,138 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 \end{instructionbox}
 
 % ============================================================================
+\begin{instructionbox}{CPCI / CPCR}{Compare with Carry Immediate / Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{0B} (Imm), \opcode{2B} (Short Imm), \opcode{3B} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0B}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{2B}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3B}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CPCI rS, #imm16                ; Flags from rS - imm16 - C
+CPCI rS, #imm8, shift          ; Flags from shift(rS) - imm8 - C
+CPCR rS1, rS2                  ; Flags from rS1 - rS2 - C
+CPCR rS1, rS2, shift           ; Flags from shift(rS1) - rS2 - C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{SBC}. The incoming \texttt{C} flag is read as the borrow
+	input; no destination register is written.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2 - SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Subtracts the second operand and the borrow from the first operand but discards the result, only updating the status
+	flags. It is the flag-only counterpart of \mnemonic{SBC} and continues a \mnemonic{CMP} across multiple words:
+	\mnemonic{CMP} on the low words followed by \mnemonic{CPC} on the high words compares the whole multi-word values. In
+	short immediate format with shift, the source register is shifted before the immediate is subtracted.
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The difference is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CPCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\begin{example}
+		\begin{lstlisting}
+; Unsigned 32-bit compare: is r1:r2 lower than r3:r4?
+CMPR r2, r4                ; Low words
+CPCR r1, r3                ; High words, borrowing from the low compare
+BRAN|CS @first_is_lower    ; C = borrow out of the whole 32-bit subtraction
+
+; Signed 32-bit compare: is r1:r2 >= r3:r4?
+CMPR r2, r4
+CPCR r1, r3
+BRAN|>= @first_is_gte      ; N = V for the 32-bit result
+		\end{lstlisting}
+		\caption{32-bit Comparison with Borrow Propagation}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Always use after \mnemonic{CMP} (or \mnemonic{SUB}) for multi-word comparison; carry is treated as the borrow input
+		\item After the final \mnemonic{CPC}, the \texttt{CS}, \texttt{CC}, \texttt{>=} and \texttt{<<} conditions describe the whole
+		      multi-word comparison
+		\item Z reflects only the result of this instruction, not the whole multi-word difference, so conditions that test Z
+		      (\texttt{==}, \texttt{!=}, \texttt{HI}, \texttt{LO}, \texttt{>>}, \texttt{<=}) do not describe the combined value
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
 \begin{instructionbox}{TSAI / TSAR}{Test AND Immediate / Test AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
@@ -1577,6 +1998,134 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		\item Z=0 means at least one tested bit was 1
 		\item Use for bit testing without side effects
 		\item More efficient than AND + CMP for simple tests
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{TSOI / TSOR}{Test OR Immediate / Test OR Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Opcodes:} \opcode{0D} (Imm), \opcode{2D} (Short Imm), \opcode{3D} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0D}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{2D}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3D}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{1}{SO} &
+			\bitbox{3}{ST} &
+			\bitbox{4}{SA} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSOI rS, #imm16                ; Test rS | imm16
+TSOI rS, #imm8, shift          ; Test shift(rS) | imm8
+TSOR rS1, rS2                  ; Test rS1 | rS2
+TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ORR}. The result is used only for status flag updates; no
+	destination register is written.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 OR operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Description:}
+
+	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands is zero,
+	so a single \mnemonic{TSOR} tests whether two registers are both zero.
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The OR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSOI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\begin{example}
+		\begin{lstlisting}
+; Test if the 32-bit value in r1:r2 is zero
+TSOR r1, r2
+BRAN|== @is_zero           ; Branch if both words are zero
+
+; Test if either of two flag words has bit 15 set
+TSOR r3, r4
+BRAN|NS @flag_set
+		\end{lstlisting}
+		\caption{Testing Two Values at Once with TSO}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means every bit of both operands is 0
+		\item Z=0 means at least one bit is 1 in one of the operands
+		\item N=1 means bit 15 is set in at least one of the operands
+		\item More efficient than ORR into a scratch register for testing whether two values are both zero
 	\end{itemize}
 \end{instructionbox}
 
@@ -1719,7 +2268,7 @@ The ALU instructions form the computational core of the SIRCIS instruction set. 
 \begin{itemize}
 	\item All ALU operations work only on registers (load/store architecture)
 	\item Three format variants provide flexibility (immediate, short+shift, register)
-	\item Test variants (CMP, TSA, TSX) allow non-destructive testing
+	\item Test variants (CMN, CNC, CMP, CPC, TSA, TSO, TSX) allow non-destructive testing
 	\item Shift operations can be combined with ALU ops for powerful single-instruction operations
 	\item Consistent flag behavior makes conditional execution predictable
 \end{itemize}

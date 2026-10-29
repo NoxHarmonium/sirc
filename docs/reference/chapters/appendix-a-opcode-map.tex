@@ -37,12 +37,12 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{05}  & 000101          & ORRI              & OR Immediate                                             \\
 	\opcode{06}  & 000110          & XORI              & XOR Immediate                                            \\
 	\opcode{07}  & 000111          & LOAD              & Load Immediate                                           \\
-	\opcode{08}  & 001000          & --                & Undocumented                                             \\
-	\opcode{09}  & 001001          & --                & Undocumented                                             \\
+	\opcode{08}  & 001000          & CMNI              & Compare Negative Immediate                               \\
+	\opcode{09}  & 001001          & CNCI              & Compare Negative with Carry Immediate                    \\
 	\opcode{0A}  & 001010          & CMPI              & Compare Immediate                                        \\
-	\opcode{0B}  & 001011          & --                & Undocumented                                             \\
+	\opcode{0B}  & 001011          & CPCI              & Compare with Carry Immediate                             \\
 	\opcode{0C}  & 001100          & TSAI              & Test AND Immediate                                       \\
-	\opcode{0D}  & 001101          & --                & Undocumented                                             \\
+	\opcode{0D}  & 001101          & TSOI              & Test OR Immediate                                        \\
 	\opcode{0E}  & 001110          & TSXI              & Test XOR Immediate                                       \\
 	\opcode{0F}  & 001111          & COPI              & Coprocessor Immediate                                    \\
 	\midrule
@@ -75,12 +75,12 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{25}  & 100101          & ORRI              & OR Short Immediate                                       \\
 	\opcode{26}  & 100110          & XORI              & XOR Short Immediate                                      \\
 	\opcode{27}  & 100111          & --                & Undocumented (LOAD-like)                                 \\
-	\opcode{28}  & 101000          & --                & Undocumented                                             \\
-	\opcode{29}  & 101001          & --                & Undocumented                                             \\
+	\opcode{28}  & 101000          & CMNI              & Compare Negative Short Immediate                         \\
+	\opcode{29}  & 101001          & CNCI              & Compare Negative with Carry Short Immediate              \\
 	\opcode{2A}  & 101010          & CMPI              & Compare Short Immediate                                  \\
-	\opcode{2B}  & 101011          & --                & Undocumented                                             \\
+	\opcode{2B}  & 101011          & CPCI              & Compare with Carry Short Immediate                       \\
 	\opcode{2C}  & 101100          & TSAI              & Test AND Short Immediate                                 \\
-	\opcode{2D}  & 101101          & --                & Undocumented                                             \\
+	\opcode{2D}  & 101101          & TSOI              & Test OR Short Immediate                                  \\
 	\opcode{2E}  & 101110          & TSXI              & Test XOR Short Immediate                                 \\
 	\opcode{2F}  & 101111          & --                & Undocumented (COP-like)                                  \\
 	\midrule
@@ -94,12 +94,12 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{35}  & 110101          & ORRR              & OR Register                                              \\
 	\opcode{36}  & 110110          & XORR              & XOR Register                                             \\
 	\opcode{37}  & 110111          & LOAD              & Load Register                                            \\
-	\opcode{38}  & 111000          & --                & Undocumented                                             \\
-	\opcode{39}  & 111001          & --                & Undocumented                                             \\
+	\opcode{38}  & 111000          & CMNR              & Compare Negative Register                                \\
+	\opcode{39}  & 111001          & CNCR              & Compare Negative with Carry Register                     \\
 	\opcode{3A}  & 111010          & CMPR              & Compare Register                                         \\
-	\opcode{3B}  & 111011          & --                & Undocumented                                             \\
+	\opcode{3B}  & 111011          & CPCR              & Compare with Carry Register                              \\
 	\opcode{3C}  & 111100          & TSAR              & Test AND Register                                        \\
-	\opcode{3D}  & 111101          & --                & Undocumented                                             \\
+	\opcode{3D}  & 111101          & TSOR              & Test OR Register                                         \\
 	\opcode{3E}  & 111110          & TSXR              & Test XOR Register                                        \\
 	\opcode{3F}  & 111111          & COPR              & Coprocessor Register                                     \\
 \end{longtable}
@@ -150,18 +150,8 @@ For opcodes \opcode{10}--\opcode{1F}, bits encode memory operation type:
 
 \section{Undocumented Instructions}
 
-The following opcodes are undocumented and should not be used in production code:
-
-\begin{itemize}
-	\item \opcode{08}, \opcode{09}, \opcode{0B}, \opcode{0D} (Immediate format, test variants)
-	\item \opcode{28}, \opcode{29}, \opcode{2B}, \opcode{2D} (Short Immediate format, test variants)
-	\item \opcode{38}, \opcode{39}, \opcode{3B}, \opcode{3D} (Register format, test variants)
-	\item \opcode{27}, \opcode{2F} (no public assembly syntax)
-\end{itemize}
-
-The twelve test-variant opcodes above execute in hardware, but their behavior is architecturally undefined and may
-change between CPU revisions. See Appendix~\ref{appendix:undocumented} for details on all fourteen undocumented
-opcodes, including \opcode{27} and \opcode{2F}.
+Two opcodes are undocumented and have no public assembly syntax: \opcode{27} and \opcode{2F}, both in the Short
+Immediate group. Do not use them in production code. See Appendix~\ref{appendix:undocumented} for the behavior of both.
 
 \section{Quick Lookup Table}
 
@@ -180,8 +170,12 @@ opcodes, including \opcode{27} and \opcode{2F}.
 		ORR                & \opcode{05}        & \opcode{25}                    & \opcode{35}       \\
 		XOR                & \opcode{06}        & \opcode{26}                    & \opcode{36}       \\
 		LOAD               & \opcode{07}        & \opcode{27}\textsuperscript{*} & \opcode{37}       \\
+		CMN                & \opcode{08}        & \opcode{28}                    & \opcode{38}       \\
+		CNC                & \opcode{09}        & \opcode{29}                    & \opcode{39}       \\
 		CMP                & \opcode{0A}        & \opcode{2A}                    & \opcode{3A}       \\
+		CPC                & \opcode{0B}        & \opcode{2B}                    & \opcode{3B}       \\
 		TSA                & \opcode{0C}        & \opcode{2C}                    & \opcode{3C}       \\
+		TSO                & \opcode{0D}        & \opcode{2D}                    & \opcode{3D}       \\
 		TSX                & \opcode{0E}        & \opcode{2E}                    & \opcode{3E}       \\
 		COP                & \opcode{0F}        & \opcode{2F}\textsuperscript{*} & \opcode{3F}       \\
 		\bottomrule
