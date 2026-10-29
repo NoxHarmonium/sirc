@@ -20,8 +20,12 @@ fn tag_to_instruction(tag: &str) -> Instruction {
         "ANDR" => Instruction::AndRegister,
         "ORRR" => Instruction::OrRegister,
         "XORR" => Instruction::XorRegister,
+        "CMNR" => Instruction::CompareNegativeRegister,
+        "CNCR" => Instruction::CompareNegativeRegisterWithCarry,
         "CMPR" => Instruction::CompareRegister,
+        "CPCR" => Instruction::CompareRegisterWithCarry,
         "TSAR" => Instruction::TestAndRegister,
+        "TSOR" => Instruction::TestOrRegister,
         "TSXR" => Instruction::TestXorRegister,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -75,8 +79,12 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("ANDR"),
         parse_instruction_tag("ORRR"),
         parse_instruction_tag("XORR"),
+        parse_instruction_tag("CMNR"),
+        parse_instruction_tag("CNCR"),
         parse_instruction_tag("CMPR"),
+        parse_instruction_tag("CPCR"),
         parse_instruction_tag("TSAR"),
+        parse_instruction_tag("TSOR"),
         parse_instruction_tag("TSXR"),
     ));
 

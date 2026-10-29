@@ -57,8 +57,12 @@ fn test_no_input() {
           expected "ANDI" at line 2, column 1, or
           expected "ORRI" at line 2, column 1, or
           expected "XORI" at line 2, column 1, or
+          expected "CMNI" at line 2, column 1, or
+          expected "CNCI" at line 2, column 1, or
           expected "CMPI" at line 2, column 1, or
+          expected "CPCI" at line 2, column 1, or
           expected "TSAI" at line 2, column 1, or
+          expected "TSOI" at line 2, column 1, or
           expected "TSXI" at line 2, column 1, or
           expected "SHFT" at line 2, column 1, or
         in section "Arithmetic Register Instruction" at line 2, column 1,
@@ -70,8 +74,12 @@ fn test_no_input() {
           expected "ANDR" at line 2, column 1, or
           expected "ORRR" at line 2, column 1, or
           expected "XORR" at line 2, column 1, or
+          expected "CMNR" at line 2, column 1, or
+          expected "CNCR" at line 2, column 1, or
           expected "CMPR" at line 2, column 1, or
+          expected "CPCR" at line 2, column 1, or
           expected "TSAR" at line 2, column 1, or
+          expected "TSOR" at line 2, column 1, or
           expected "TSXR" at line 2, column 1, or
         in section "Branching instruction" at line 2, column 1,
         one of:
