@@ -141,4 +141,8 @@ fn load_only_accepts_memory_forms() {
 
     assert!(parse_result("LOAD r1, #5\n").is_err());
     assert!(parse_result("LOAD r1, r2\n").is_err());
+
+    // The shift fields of the LOAD encodings are reserved, so there is no shift suffix
+    assert!(parse_result("LOAD r1, (r2, a), LSL #1\n").is_err());
+    assert!(parse_result("LOAD r1, (r2, a)+, ASR #2\n").is_err());
 }

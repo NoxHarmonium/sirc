@@ -699,7 +699,8 @@
     MOVI r1, #0x0003        ; Value to store: 0x0003
     STOR (a), r1
     MOVI r2, #0x0000        ; Offset register
-    LOAD r3, (r2, a), LSL #2  ; Load 0x0003 and shift left by 2: 0x000C
+    LOAD r3, (r2, a)
+    SHFT[N] r3, LSL #2  ; Load 0x0003 and shift left by 2: 0x000C
     CMPI r3, #0x000C
     MOVI|== r7, #1
     BRSR @store_test_result
@@ -711,7 +712,8 @@
     MOVI r1, #0x00F0        ; Value to store: 0x00F0
     STOR (a), r1
     MOVI r2, #0x0000        ; Offset register
-    LOAD r4, (r2, a), LSR #4  ; Load 0x00F0 and shift right by 4: 0x000F
+    LOAD r4, (r2, a)
+    SHFT[N] r4, LSR #4  ; Load 0x00F0 and shift right by 4: 0x000F
     CMPI r4, #0x000F
     MOVI|== r7, #1
     BRSR @store_test_result
@@ -723,7 +725,8 @@
     MOVI r1, #0x0005        ; Value to store: 0x0005
     STOR (a), r1
     MOVI r2, #0x0000        ; Offset register
-    LOAD r5, (r2, a), ASL #3  ; Load 0x0005 and shift left by 3: 0x0028
+    LOAD r5, (r2, a)
+    SHFT[N] r5, ASL #3  ; Load 0x0005 and shift left by 3: 0x0028
     CMPI r5, #0x0028
     MOVI|== r7, #1
     BRSR @store_test_result
@@ -735,7 +738,8 @@
     MOVI r1, #0x8000        ; Value to store: 0x8000 (negative)
     STOR (a), r1
     MOVI r2, #0x0000        ; Offset register
-    LOAD r6, (r2, a), ASR #2  ; Load 0x8000 and shift right by 2: 0xE000 (sign extended)
+    LOAD r6, (r2, a)
+    SHFT[N] r6, ASR #2  ; Load 0x8000 and shift right by 2: 0xE000 (sign extended)
     CMPI r6, #0xE000
     MOVI|== r7, #1
     BRSR @store_test_result
@@ -795,7 +799,8 @@
     MOVI r1, #0x000C        ; Value to store: 0x000C
     STOR (a), r1
     MOVI r2, #0x0000        ; Offset register
-    LOAD r3, (r2, a)+, LSL #1  ; Load 0x000C, shift left by 1: 0x0018, then increment al
+    LOAD r3, (r2, a)+
+    SHFT[N] r3, LSL #1  ; Load 0x000C, shift left by 1: 0x0018, then increment al
     CMPI r3, #0x0018
     MOVI|== r7, #1
     BRSR @store_test_result
@@ -832,7 +837,8 @@
     MOVI r1, #0x00AA        ; Value to store: 0x00AA
     STOR (#0x0005, a), r1    ; Store at offset 0x05
     MOVI r2, #0x0005        ; Offset register = 5
-    LOAD r3, (r2, a), LSL #1  ; Load from (al + r2) = 0x04A5, shift left: 0x0154
+    LOAD r3, (r2, a)
+    SHFT[N] r3, LSL #1  ; Load from (al + r2) = 0x04A5, shift left: 0x0154
     CMPI r3, #0x0154
     MOVI|== r7, #1
     BRSR @store_test_result

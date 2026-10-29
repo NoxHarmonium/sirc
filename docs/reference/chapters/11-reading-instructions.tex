@@ -68,9 +68,9 @@ follow, in this order, for every entry:
 		\texttt{\#imm16}           & 16-bit immediate word encoded in immediate format                                                            \\
 		\texttt{\#imm8}            & 8-bit immediate encoded in short immediate format                                                            \\
 		\texttt{shift}             & Optional shift definition. It applies to the register operand being shifted (the first
-		source register in register and short-immediate formats, or the offset register for register-displacement
-		\mnemonic{LOAD}/\mnemonic{STOR} forms); it never applies to an immediate value, a second source register, or
-		loaded data. See Chapter~\ref{ch:shift-operations} for the full encoding.                                                                 \\
+		source register in register and short-immediate formats, or the source register for register-displacement
+		\mnemonic{STOR} forms); it never applies to an immediate value, a second source register, or loaded data.
+		\mnemonic{LOAD} has no shift. See Chapter~\ref{ch:shift-operations} for the full encoding.                                                \\
 		\texttt{SR.X}              & Status register field \texttt{X}                                                                             \\
 		\texttt{SUS}               & Status update source: the AF field of ALU instructions, selecting \texttt{[N]}, \texttt{[A]} or \texttt{[S]} \\
 		\texttt{addr / src}        & Source address-register pair (\reg{l}, \reg{a}, \reg{s}, or \reg{p}) supplying the base

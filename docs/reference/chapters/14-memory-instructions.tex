@@ -201,6 +201,9 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 		      assembler does not accept a shift suffix on any \mnemonic{LOAD} form: \mnemonic{LOAD} has no field that
 		      shifts the offset register or the loaded value. Use \mnemonic{SHFT} on \texttt{rO} before the
 		      \mnemonic{LOAD} if a scaled offset is needed.
+		\item \textbf{SO, ST, SA (bits 13--6, Register format, \opcode{15}/\opcode{17}):} Reserved, fixed at \texttt{0}. A
+		      non-zero value is architecturally undefined; implementations are expected to ignore it, since a shift would apply
+		      to the unused R2 field and \mnemonic{LOAD} takes its offset from R3, so portable software must not rely on that.
 		\item \textbf{rO (R3, bits 17--14, Register format, \opcode{15}/\opcode{17}):} Offset register, used unshifted.
 		\item \textbf{offset (Immediate Value, bits 21--6, Immediate format, \opcode{14}/\opcode{16}):} 16-bit signed
 		      displacement.

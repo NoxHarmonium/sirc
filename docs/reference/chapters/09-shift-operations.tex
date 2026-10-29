@@ -49,9 +49,8 @@ register-displacement \mnemonic{LOAD}/\mnemonic{STOR} forms. It is rejected on \
 For ALU instructions, the shift is applied in the "Decode and Register Fetch" phase, before the ALU operation. In
 register-format instructions the shifted operand is R2 (first source); in short-immediate instructions it is the
 register named by the Reg field (first source, since the short-immediate format has no separate source register). In
-register-displacement \mnemonic{LOAD} forms the shift is applied to the offset register used to compute the effective
-address, never to the value loaded from memory; in register-displacement \mnemonic{STOR} forms it is applied to the
-source register before its value is written to memory.
+register-displacement \mnemonic{STOR} forms it is applied to the source register before its value is written to memory.
+\mnemonic{LOAD} has no shift: its shift fields are reserved (see Chapter~\ref{ch:memory-instructions}).
 
 If using the three-operand form of an instruction, the shifted operand is the second operand. If using the two-operand
 form, the second operand is inferred to be the same as the destination.

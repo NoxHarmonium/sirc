@@ -1,6 +1,5 @@
 use super::super::shared::AsmResult;
 use super::{direct_register_aliases_address_register, reject_aliased_address_register_write};
-use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
 use crate::{
     parsers::{
@@ -129,29 +128,14 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
-        // LOAD r1, (r2, a), ASL #1
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacement(displacement_register, address_register), AddressingMode::ShiftDefinition(shift_definition_data)] =>
-        {
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromIndirectRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: displacement_register.to_register_index(),
-                        shift_operand,
-                        shift_type,
-                        shift_count,
-                        condition_flag,
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
+        // LOAD r1, (r2, a), ASL #1 and LOAD r1, (r2, a)+, ASL #1
+        [AddressingMode::DirectRegister(_), AddressingMode::IndirectRegisterDisplacement(_, _) | AddressingMode::IndirectRegisterDisplacementPostIncrement(_, _), AddressingMode::ShiftDefinition(_)] => {
+            // The shift fields of the LOAD encodings are reserved, so there is no way to encode a shift
+            Err(nom::Err::Failure(ErrorTree::from_external_error(
+                i_after_instruction,
+                ErrorKind::Fail,
+                "Invalid addressing mode for LOAD: LOAD does not support a shift. Use SHFT on the offset register before the LOAD, or on the destination register after it.",
+            )))
         }
         // LOAD r1, (#0, a)+
         [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacementPostIncrement(offset, address_register)] =>
@@ -207,40 +191,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                     },
                 )),
             }
-        }
-        // LOAD r1, (r2, a)+
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
-            displacement_register,
-            address_register,
-        ), AddressingMode::ShiftDefinition(shift_definition_data)] => {
-            if direct_register_aliases_address_register(dest_register, address_register) {
-                reject_aliased_address_register_write(
-                    i_after_instruction,
-                    "LOAD",
-                    "destination register overlaps the post-increment address register",
-                )?;
-            }
-
-            let (shift_operand, shift_type, shift_count) =
-                split_shift_definition_data(shift_definition_data);
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromIndirectRegisterPostIncrement,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: displacement_register.to_register_index(),
-                        shift_operand,
-                        shift_type,
-                        shift_count,
-                        condition_flag,
-                        additional_flags: address_register.to_register_index(),
-                    }),
-                    ..Default::default()
-                },
-            ))
         }
         // LOAD r1, (r2, a)+, ASL #1
         [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectRegisterDisplacementPostIncrement(
