@@ -125,14 +125,14 @@ These four bits individually control whether each of the four maskable hardware 
 \textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
 be disabled via the status register.
 
-When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when asserted.
+When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when requested.
 When cleared to 0, interrupts on that line are disabled and are not serviced.
 
 \textbf{Important behavior:}
 \begin{itemize}
 	\item Disabled interrupts are not queued while the enable bit is 0.
-	\item Hardware interrupt lines 1-4 are level-sensitive, not edge-triggered. If an interrupt pin remains asserted, it will be
-	      serviced again as soon as the current handler is finished.
+	\item Hardware interrupt lines 1-4 are level-sensitive, not edge-triggered. If an interrupt request remains active, it will
+	      be serviced again as soon as the current handler is finished.
 	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
 	      exception level
 	\item This prevents the same interrupt from re-triggering while its handler is executing

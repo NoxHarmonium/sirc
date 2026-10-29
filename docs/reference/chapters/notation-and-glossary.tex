@@ -74,6 +74,23 @@ everyday English sense:
 	      least self-consistent, even though the manual does not pin down what that behavior is.
 \end{description}
 
+\section*{Signals, Requests and Pins}
+
+This manual describes the architecture, not a particular chip. It uses three terms for the CPU's external interface:
+
+\begin{description}
+	\item[Signal] A logical input or output of the CPU, such as \texttt{BERR}, \texttt{RSTI} or \texttt{TRCE}. The manual names a
+	      signal only where the architectural behaviour is defined by it. Signal names are written in typewriter font.
+	\item[Request / event] What a signal means architecturally: an \textit{interrupt request}, a \textit{reset request}, a bus
+	      error. A request is raised, recognised and withdrawn; the manual describes what the CPU does when that happens, and
+	      when requests are recognised, but not how the request physically reaches the CPU.
+	\item[Pin] A physical connection on a particular package. Pins, electrical levels and timing are implementation details and
+	      are documented in the \textit{SIRC-1 Hardware Reference Manual}, not here.
+\end{description}
+
+A simulator or other implementation may carry the same signals by other means (a software call, an interrupt
+controller) and still conform to this manual.
+
 \section*{Register Name Conventions}
 
 SIRC-1 has sixteen 16-bit registers: seven general-purpose registers \reg{r1}--\reg{r7}, four address register pairs
@@ -101,10 +118,10 @@ encoding, and privilege rules.
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
 	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred, though two of them are
 	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
-	      \texttt{SR.T} or the \texttt{TRCE} input.
+	      \texttt{SR.T} or the force-trace request (\texttt{TRCE}).
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
 	\item[Hardware exception] An exception signaled by an external interrupt. Also informally called an \textit{interrupt} at the
-	      hardware level (interrupt pins, interrupt priority, interrupt enable) -- the two terms are synonymous.
+	      hardware level (interrupt requests, interrupt priority, interrupt enable) -- the two terms are synonymous.
 	\item[Meta-instruction] An assembler-level mnemonic (for example \mnemonic{BRAN}, \mnemonic{NOOP}, \mnemonic{LJSR}) that
 	      assembles to a specific CPU instruction encoding rather than having an opcode of its own. See the relevant
 	      instruction-family chapter for each meta-instruction's lowering.

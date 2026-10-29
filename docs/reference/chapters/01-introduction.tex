@@ -100,7 +100,7 @@ coprocessor is done and returns control to it.
 
 Other coprocessors are usually activated using the \mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions
 (see Chapter~\ref{ch:coprocessor}), except for the "exception unit," which can also be activated when external
-interrupts are asserted. Activating a coprocessor using the coprocessor-call instructions is also known as
+interrupt requests are raised. Activating a coprocessor using the coprocessor-call instructions is also known as
 "dispatching" to a coprocessor.
 
 All implementations of the SIRC-1 will have the "processing unit" (coprocessor \texttt{0x0}) and the "exception unit"

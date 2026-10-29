@@ -173,8 +173,8 @@ Hardware interrupt line 5 (level 5) is a Non-Maskable Interrupt (NMI) and is alw
 \label{sec:qr-bat}
 % ==========================================
 
-The 3-bit Bus Access Type field is driven onto the BAT pins during every bus cycle. External devices (memory
-controllers, coprocessors) can inspect these pins to determine the nature of the access.
+The 3-bit Bus Access Type (BAT) field accompanies every bus cycle and is also captured in fault metadata. External
+devices (memory controllers, coprocessors) can use it to determine the nature of the access.
 
 \begin{table}[H]
 	\centering
@@ -196,8 +196,8 @@ controllers, coprocessors) can inspect these pins to determine the nature of the
 	\label{tab:bat-quick-ref}
 \end{table}
 
-See the \textit{SIRC-1 Hardware Reference Manual} for the pin-level description, including usage examples that combine
-the BAT pins with the PROT pin.
+See the \textit{SIRC-1 Hardware Reference Manual} for how the BAT and PROT (protected-mode) signals reach external
+devices, including usage examples that combine them.
 
 % ==========================================
 \section{Where to Find Other Tables}

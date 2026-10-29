@@ -378,13 +378,13 @@ if condition_true then
         raise privilege_violation_fault
     else
         stop instruction fetch
-        wait until an enabled hardware interrupt line is asserted or the CPU is reset
+        wait until an enabled hardware interrupt is requested or the CPU is reset
     endif
 endif
 \end{verbatim}
 
 	\textbf{Description:} Stops instruction fetch and places the CPU in a low-power wait state. The CPU issues no bus
-	cycles while waiting. It leaves the wait state only when an enabled hardware interrupt line is asserted (NMI is
+	cycles while waiting. It leaves the wait state only when an enabled hardware interrupt is requested (NMI is
 	always enabled) or when the CPU is reset. Interrupts masked by the hardware interrupt enable bits
 	(\texttt{SR.E1}--\texttt{SR.E4}) do not wake the CPU, and faults and software exceptions cannot occur while
 	waiting.

@@ -62,8 +62,9 @@ dispatch to the DMA unit and takes only 6 cycles.
 
 A hardware-exception or fault dispatch occupies one 6-cycle slot: the vector's high word is fetched at phase 0, the low
 word at phase 1, and entry to the handler is committed at phase 3. A latched interrupt is dispatched at the next phase
-0, so the worst-case latency from assertion to the handler's first instruction fetch is 6 cycles to finish the current
-instruction plus 6 cycles to dispatch. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector fetch.
+0, so the worst-case latency from the interrupt request to the handler's first instruction fetch is 6 cycles to finish
+the current instruction plus 6 cycles to dispatch. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector
+fetch.
 
 A retryable fault cancels the faulting instruction at the phase that detects it. The six-phase sequence is never cut
 short: the instruction's remaining phases still run, but as no-ops that perform no bus access and commit no results, so
@@ -148,8 +149,8 @@ simultaneously. Instead:
 \begin{itemize}
 	\item Instruction fetch, data memory access, and exception vector fetch each occupy one execution phase per 16-bit word
 	      transferred.
-	\item If BACK is not asserted and neither BERR nor BPER aborts the request, the CPU holds that phase until the bus operation
-	      is acknowledged.
+	\item If the external memory system has not acknowledged the transfer (\texttt{BACK}) and has not aborted it with a bus error
+	      (\texttt{BERR}) or bus protection error (\texttt{BPER}), the CPU holds that phase until the transfer is acknowledged.
 	\item Each wait state adds one clock cycle to the instruction
 	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception or
 	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own. A

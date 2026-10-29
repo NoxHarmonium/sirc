@@ -225,7 +225,8 @@ instructions without additional clock cycles.
 
 \section{External Interface}
 
-The SIRC-1 CPU exposes its bus, interrupt, and reset signals as physical pins; the chip package, the pin-by-pin
-descriptions, and the bus timing diagrams are given in the \textit{SIRC-1 Hardware Reference Manual}. One architectural
-fact the rest of this chapter relies on: on \texttt{RSTI} assertion the CPU aborts the current instruction or bus wait
-and restarts at phase 0, as described in the six execution phases above.
+The SIRC-1 CPU communicates with memory and peripherals over an external bus, and receives interrupt and reset requests
+from external hardware. How those signals are carried (the package, pinout, electrical characteristics and bus timing)
+is implementation-specific and is described in the \textit{SIRC-1 Hardware Reference Manual}. One architectural fact
+the rest of this chapter relies on: when the reset request (\texttt{RSTI}) is raised the CPU aborts the current
+instruction or bus wait and restarts at phase 0, as described in the six execution phases above.
