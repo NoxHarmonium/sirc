@@ -108,9 +108,10 @@ Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 		      coprocessors must not interpret it as a destination register.
 		\item \textbf{Register 1, Register 2 (Register format, bits 25--18):} reserved; the assembler emits
 		      \texttt{0x0} for both.
-		\item \textbf{Register 3 (Register format, bits 17--14):} \texttt{rS}, any of the 16 registers,
-		      \texttt{0x0}--\texttt{0xF}; its value becomes the 16-bit command operand.
-		\item \textbf{Immediate (bits 21--6, Immediate format only):} 16-bit command operand for \mnemonic{COPI}.
+		\item \textbf{rS (R3, Register format, bits 17--14):} any of the 16 registers, \texttt{0x0}--\texttt{0xF}; its value
+		      becomes the 16-bit command operand.
+		\item \textbf{Command (Immediate Value, bits 21--6, Immediate format only):} 16-bit command operand for
+		      \mnemonic{COPI}.
 		\item \textbf{Shift fields (Register format, bits 13--6):} reserved; the assembler emits \texttt{0} and
 		      coprocessors must not interpret them.
 		\item \textbf{AF (bits 5--4):} reserved; the assembler emits \texttt{00} and coprocessors must not interpret

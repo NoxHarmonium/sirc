@@ -80,7 +80,8 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
 	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
 	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field; bits 25--24 are unused for these opcodes.
+	      field. Bits 25--24 are reserved for these opcodes: always write them as zero. The CPU's behaviour with a non-zero value
+	      is architecturally undefined, and a future revision may give them a meaning.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
@@ -201,7 +202,8 @@ The register format allows operations on up to three registers with optional shi
 	\item[Register 1 (bits 25--22)] 4-bit destination register. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
 	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
 	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field; bits 25--24 are unused for these opcodes.
+	      field. Bits 25--24 are reserved for these opcodes: always write them as zero. The CPU's behaviour with a non-zero value
+	      is architecturally undefined, and a future revision may give them a meaning.
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted

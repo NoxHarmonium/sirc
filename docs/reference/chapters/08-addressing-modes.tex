@@ -218,9 +218,10 @@ LJMP a                ; p = a (source named directly)
 	\end{lstlisting}
 
 	\textbf{Field Encoding:} For \mnemonic{LDEA}/\mnemonic{LDEL} (opcodes \opcode{18}--\opcode{1F}), a 2-bit
-	address-register-pair index in bits 23--22 (00 = l, 01 = a, 10 = s, 11 = p); bits 25--24 are unused for this
-	purpose. \mnemonic{LJMP}/\mnemonic{LJSR} are meta-instructions that lower to this same encoding with \reg{p}
-	as the named pair.
+	address-register-pair index in bits 23--22 of the Register (Immediate format) or R1 (Register format) field
+	(00 = l, 01 = a, 10 = s, 11 = p). Bits 25--24 are reserved and always written as zero.
+	\mnemonic{LJMP}/\mnemonic{LJSR} are meta-instructions that lower to this same encoding with \reg{p} as the named
+	pair.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
@@ -245,8 +246,8 @@ STOR (#-4, s), r2     ; Store to address (s - 4)
 LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Memory/control format, an even opcode in \opcode{10}--\opcode{1F}; 2-bit
-	address-register-pair index in bits 23--22; 16-bit signed immediate offset in bits 21--6.
+	\textbf{Field Encoding:} Immediate format, an even opcode in \opcode{10}--\opcode{1F}; base address-register pair in
+	AF, bits 5--4; 16-bit signed immediate offset in bits 21--6.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
@@ -268,9 +269,9 @@ LOAD r1, (r2, a)      ; Load from address (a + r2)
 STOR (r4, s), r3      ; Store to address (s + r4)
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Memory/control format, an odd opcode in \opcode{10}--\opcode{1F}; 2-bit
-	address-register-pair index in bits 23--22; index register in bits 17--14. Bits 21--18 are unused for
-	\mnemonic{LOAD} and hold the (shifted) source value for \mnemonic{STOR}.
+	\textbf{Field Encoding:} Register format, an odd opcode in \opcode{10}--\opcode{1F}; base address-register pair in AF,
+	bits 5--4; index register in R3, bits 17--14. R2, bits 21--18, is unused for \mnemonic{LOAD} and holds the
+	(shifted) source register for \mnemonic{STOR}.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 

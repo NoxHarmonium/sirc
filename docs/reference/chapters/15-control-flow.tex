@@ -143,7 +143,8 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{18}} &
-			\bitbox{4}{p} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
 			\bitbox{16}{disp} &
 			\bitbox{2}{p} &
 			\bitbox{4}{Cond}
@@ -152,10 +153,10 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. 
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
-		      meta-instruction.
+		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x3} (\reg{p}) by the meta-instruction.
-		\item \textbf{Immediate (bits 21--6):} signed 16-bit displacement.
+		\item \textbf{disp (Immediate Value, bits 21--6):} signed 16-bit displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -221,7 +222,8 @@ BRAN #20                      ; Jump ahead 20 words
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1C}} &
-			\bitbox{4}{p} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
 			\bitbox{16}{disp} &
 			\bitbox{2}{p} &
 			\bitbox{4}{Cond}
@@ -230,10 +232,10 @@ BRAN #20                      ; Jump ahead 20 words
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
-		      meta-instruction.
+		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x3} (\reg{p}) by the meta-instruction.
-		\item \textbf{Immediate (bits 21--6):} signed 16-bit displacement.
+		\item \textbf{disp (Immediate Value, bits 21--6):} signed 16-bit displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -299,17 +301,18 @@ RETS
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{18}} &
-			\bitbox{4}{p} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
 			\bitbox{16}{0x0000} &
-			\bitbox{2}{0x0} &
+			\bitbox{2}{l} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
-		      meta-instruction.
+		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{AF (bits 5--4):} fixed at \texttt{0x0} (\reg{l}) by the meta-instruction.
 		\item \textbf{Immediate (bits 21--6):} fixed at \texttt{0x0000} by the meta-instruction.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
@@ -372,8 +375,9 @@ if condition:
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{18}} &
-			\bitbox{4}{dest} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -382,7 +386,8 @@ if condition:
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{19}} &
-			\bitbox{4}{dest} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -396,8 +401,9 @@ if condition:
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1A}} &
-			\bitbox{4}{dest} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -406,7 +412,8 @@ if condition:
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1B}} &
-			\bitbox{4}{dest} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -419,13 +426,13 @@ if condition:
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} destination address-register pair \texttt{dest};
-		      \texttt{0x0} = \reg{l}, \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
-		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		\item \textbf{dest (Reg or R1, bits 25--22):} bits 23--22 hold the destination address-register pair;
+		      \texttt{0x0} = \reg{l}, \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}. Bits 25--24 are
+		      reserved for future use and always written as zero.
+		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
-		\item \textbf{Immediate (bits 21--6, immediate forms only):} 16-bit signed displacement.
-		\item \textbf{R3 (bits 17--14, register forms only):} \texttt{rO}, a general-purpose register supplying the
-		      displacement.
+		\item \textbf{offset (Immediate Value, bits 21--6, immediate forms only):} 16-bit signed displacement.
+		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -499,8 +506,9 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1C}} &
-			\bitbox{4}{dest} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -509,7 +517,8 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1D}} &
-			\bitbox{4}{dest} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -523,8 +532,9 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1E}} &
-			\bitbox{4}{dest} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -533,7 +543,8 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1F}} &
-			\bitbox{4}{dest} &
+			\bitbox{2}{00} &
+			\bitbox{2}{dest} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -546,14 +557,13 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} destination address-register pair \texttt{dest};
+		\item \textbf{dest (Reg or R1, bits 25--22):} bits 23--22 hold the destination address-register pair;
 		      \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} (\texttt{0x0} = \reg{l} is not a legal
-		      \mnemonic{LDEL} destination).
-		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		      \mnemonic{LDEL} destination). Bits 25--24 are reserved for future use and always written as zero.
+		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
-		\item \textbf{Immediate (bits 21--6, immediate forms only):} 16-bit signed displacement.
-		\item \textbf{R3 (bits 17--14, register forms only):} \texttt{rO}, a general-purpose register supplying the
-		      displacement.
+		\item \textbf{offset (Immediate Value, bits 21--6, immediate forms only):} 16-bit signed displacement.
+		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -629,8 +639,9 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{18}} &
-			\bitbox{4}{p} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -639,7 +650,8 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{19}} &
-			\bitbox{4}{p} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -652,14 +664,13 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
-		      meta-instruction.
-		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
+		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
-		\item \textbf{Immediate (bits 21--6, \texttt{\#offset} form only):} 16-bit signed displacement; fixed at
+		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#offset} form only):} 16-bit signed displacement; fixed at
 		      \texttt{0x0000} for plain \texttt{LJMP src}.
-		\item \textbf{R3 (bits 17--14, \texttt{rO} form only):} \texttt{rO}, a general-purpose register supplying the
-		      displacement.
+		\item \textbf{rO (R3, bits 17--14, register form only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -724,8 +735,9 @@ LJMP a, r1                     ; p = a + r1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1C}} &
-			\bitbox{4}{p} &
-			\bitbox{16}{Offset} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
+			\bitbox{16}{offset} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -734,7 +746,8 @@ LJMP a, r1                     ; p = a + r1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{1D}} &
-			\bitbox{4}{p} &
+			\bitbox{2}{00} &
+			\bitbox{2}{p} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rO} &
 			\bitbox{1}{0} &
@@ -747,16 +760,15 @@ LJMP a, r1                     ; p = a + r1
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register field (bits 25--22, low 2 bits used):} fixed at \texttt{0x3} (\reg{p}) by the
-		      meta-instruction.
-		\item \textbf{AF (bits 5--4):} source address-register pair \texttt{src}; \texttt{0x0} = \reg{l}, \texttt{0x1} =
+		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
+		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
+		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} for non-post-increment forms. Post-increment forms
 		      accept only \texttt{0x1} = \reg{a} or \texttt{0x2} = \reg{s}; \reg{l} and \reg{p} are aliased
 		      address-register writes with architecturally undefined behavior and are rejected by the assembler.
-		\item \textbf{Immediate (bits 21--6, \texttt{\#offset} forms only):} 16-bit signed displacement; fixed at
+		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#offset} forms only):} 16-bit signed displacement; fixed at
 		      \texttt{0x0000} for plain \texttt{LJSR src}.
-		\item \textbf{R3 (bits 17--14, \texttt{rO} forms only):} \texttt{rO}, a general-purpose register supplying the
-		      displacement.
+		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}

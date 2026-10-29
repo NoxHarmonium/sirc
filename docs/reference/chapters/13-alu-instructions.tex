@@ -258,7 +258,7 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 		\item \textbf{Register (bits 25--22):} \texttt{rD}, the destination and shifted source register; any of the 16
 		      registers, \texttt{0x0}--\texttt{0xF}.
 		\item \textbf{Immediate (bits 21--14):} fixed at \texttt{0x00} by the meta-instruction.
-		\item \textbf{Shift type and count:} \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
+		\item \textbf{SO, ST, SA (bits 13--6):} shift operand, type and count. Types: \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
 		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}; a register count is used in
 		      full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is
 		      taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
@@ -333,9 +333,9 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{00}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -343,12 +343,12 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{20}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -356,27 +356,28 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{30}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -459,9 +460,9 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{01}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -469,12 +470,12 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{21}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -482,27 +483,28 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{31}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -578,9 +580,9 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{02}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -588,12 +590,12 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{22}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -601,27 +603,28 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{32}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -699,9 +702,9 @@ BRAN|!= @loop              ; Branch if not zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{03}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -709,12 +712,12 @@ BRAN|!= @loop              ; Branch if not zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{23}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -722,27 +725,28 @@ BRAN|!= @loop              ; Branch if not zero
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{33}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -816,9 +820,9 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{04}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -826,12 +830,12 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{24}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -839,27 +843,28 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{34}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -939,9 +944,9 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{05}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -949,12 +954,12 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{25}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -962,27 +967,28 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{35}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -1065,9 +1071,9 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{06}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1075,12 +1081,12 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{26}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1088,27 +1094,28 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{36}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -1193,9 +1200,9 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{07}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1203,23 +1210,25 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{37}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rS} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate form) or \texttt{rD, rS} (register form); any of the
-		      16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6). The register form has no immediate field.
-		\item \textbf{AF (bits 5--4):} the public assembly syntax always encodes \texttt{00} (None), which preserves the
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{R2 (bits 21--18), register form only:} unused, encoded as 0.
+		\item \textbf{rS (R3, bits 17--14), register form only:} source register.
+		\item \textbf{imm16 (Immediate Value, bits 21--6), immediate form only:} 16-bit value. The register form has no
+		      immediate field.
+		\item \textbf{SUS (AF, bits 5--4):} the public assembly syntax always encodes \texttt{00} (None), which preserves the
 		      status flags. An encoding of this opcode with a different AF value, not reachable from assembly syntax,
 		      leaves all four status flags architecturally undefined (\texttt{U U U U}).
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
@@ -1305,9 +1314,9 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{0A}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1315,12 +1324,12 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{2A}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1328,27 +1337,31 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{3A}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -1441,9 +1454,9 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{0C}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1451,12 +1464,12 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{2C}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1464,27 +1477,31 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{3C}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -1573,9 +1590,9 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{0E}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1583,12 +1600,12 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{2E}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -1596,27 +1613,31 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{3E}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
 		      Reserved.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.

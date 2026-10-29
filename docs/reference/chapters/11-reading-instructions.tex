@@ -16,10 +16,17 @@ follow, in this order, for every entry:
 	      listed together when they perform the same operation.
 	\item[Opcodes] The 6-bit opcode values for each supported instruction format. Meta-instructions that assemble to another
 	      instruction's encoding use \textbf{Assembles to} instead of \textbf{Opcodes}.
+	\item[Encoding diagrams] A bit-field diagram for each encoding listed under Opcodes. A box labelled with an operand name
+	      (\texttt{rD}, \texttt{rS1}, \texttt{rO}, \texttt{imm16}, \texttt{offset}, \texttt{dest}, \texttt{src}, \texttt{addr}
+	      and so on) carries that operand; Table~\ref{tab:instruction-description-notation} defines the names. The shift fields
+	      \texttt{SO}, \texttt{ST} and \texttt{SA}, the condition field \texttt{Cond}, and the status update source \texttt{SUS}
+	      (the AF field of ALU instructions) keep their field names. A box showing a literal value (for example \texttt{0x0},
+	      \texttt{00} or \texttt{p}) is a field the instruction fixes to that value.
 	\item[Instruction Fields] One line per encoding field the instruction uses: register fields, the condition field, the status
 	      update source field and which of its encodings are legal for this instruction, shift type and count, and immediate
 	      width. Values come from Chapter~\ref{ch:instruction-formats}; an entry does not introduce a value that is not defined
-	      there.
+	      there. Each line leads with the diagram label and gives the field's name in Chapter~\ref{ch:instruction-formats} and
+	      its bit range in parentheses.
 	\item[Syntax] The accepted assembler forms. Meta-instructions are called out separately from real CPU instruction encodings.
 	\item[Operands] The permitted operand kinds and addressing modes for the instruction. Addressing-mode names come from the
 	      closed set in Table~\ref{tab:addr-modes} (Chapter~\ref{ch:addressing-modes}): Immediate, Register Direct, Address
@@ -50,30 +57,31 @@ follow, in this order, for every entry:
 	\centering
 	\begin{tabular}{lp{10cm}}
 		\toprule
-		\textbf{Notation}          & \textbf{Meaning}                                                                         \\
+		\textbf{Notation}          & \textbf{Meaning}                                                                                             \\
 		\midrule
-		\texttt{rD}                & Destination general-purpose register                                                     \\
-		\texttt{rS}                & Source general-purpose register                                                          \\
-		\texttt{rS1}               & First source register, usually the left-hand operand                                     \\
-		\texttt{rS2}               & Second source register, usually the right-hand operand                                   \\
+		\texttt{rD}                & Destination general-purpose register                                                                         \\
+		\texttt{rS}                & Source general-purpose register                                                                              \\
+		\texttt{rS1}               & First source register, usually the left-hand operand                                                         \\
+		\texttt{rS2}               & Second source register, usually the right-hand operand                                                       \\
 		\texttt{rO}                & Offset or index general-purpose register supplying a register displacement in a
-		memory or effective-address form                                                                                      \\
-		\texttt{\#imm16}           & 16-bit immediate word encoded in immediate format                                        \\
-		\texttt{\#imm8}            & 8-bit immediate encoded in short immediate format                                        \\
+		memory or effective-address form                                                                                                          \\
+		\texttt{\#imm16}           & 16-bit immediate word encoded in immediate format                                                            \\
+		\texttt{\#imm8}            & 8-bit immediate encoded in short immediate format                                                            \\
 		\texttt{shift}             & Optional shift definition. It applies to the register operand being shifted (the first
 		source register in register and short-immediate formats, or the offset register for register-displacement
 		\mnemonic{LOAD}/\mnemonic{STOR} forms); it never applies to an immediate value, a second source register, or
-		loaded data. See Chapter~\ref{ch:shift-operations} for the full encoding.                                             \\
-		\texttt{SR.X}              & Status register field \texttt{X}                                                         \\
+		loaded data. See Chapter~\ref{ch:shift-operations} for the full encoding.                                                                 \\
+		\texttt{SR.X}              & Status register field \texttt{X}                                                                             \\
+		\texttt{SUS}               & Status update source: the AF field of ALU instructions, selecting \texttt{[N]}, \texttt{[A]} or \texttt{[S]} \\
 		\texttt{addr / src}        & Source address-register pair (\reg{l}, \reg{a}, \reg{s}, or \reg{p}) supplying the base
-		address for a memory-class or address-calculation instruction                                                         \\
+		address for a memory-class or address-calculation instruction                                                                             \\
 		\texttt{dest}              & Destination address-register pair for an address-calculation instruction, encoded in the
-		register field                                                                                                        \\
-		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                           \\
+		register field                                                                                                                            \\
+		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                                               \\
 		\texttt{@label}            & Symbol reference resolved by the linker; PC-relative for \mnemonic{BRAN} and
 		\mnemonic{BRSR}, a low-word address in other instruction operands (see Section~\ref{sec:assembler-directives} for
-		the full resolution rules, including data directives)                                                                 \\
-		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                 \\
+		the full resolution rules, including data directives)                                                                                     \\
+		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Description Notation}

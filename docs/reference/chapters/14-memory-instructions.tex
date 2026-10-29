@@ -149,8 +149,8 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{14}} &
 			\bitbox{4}{rD} &
-			\bitbox{16}{Offset} &
-			\bitbox{2}{AF} &
+			\bitbox{16}{offset} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -164,7 +164,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitbox{1}{0} &
 			\bitbox{3}{000} &
 			\bitbox{4}{0x0} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -173,8 +173,8 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{16}} &
 			\bitbox{4}{rD} &
-			\bitbox{16}{Offset} &
-			\bitbox{2}{AF} &
+			\bitbox{16}{offset} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -188,24 +188,23 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitbox{1}{0} &
 			\bitbox{3}{000} &
 			\bitbox{4}{0x0} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register (bits 25--22, Immediate format, \opcode{14}/\opcode{16}):} Destination register
-		      \texttt{rD}.
-		\item \textbf{R1 (bits 25--22, Register format, \opcode{15}/\opcode{17}):} Destination register \texttt{rD}.
+		\item \textbf{rD (Reg, bits 25--22, Immediate format, \opcode{14}/\opcode{16}):} Destination register.
+		\item \textbf{rD (R1, bits 25--22, Register format, \opcode{15}/\opcode{17}):} Destination register.
 		\item \textbf{R2 (bits 21--18, Register format, \opcode{15}/\opcode{17}):} Unused, fixed at \texttt{0}. The
 		      assembler does not accept a shift suffix on any \mnemonic{LOAD} form: \mnemonic{LOAD} has no field that
 		      shifts the offset register or the loaded value. Use \mnemonic{SHFT} on \texttt{rO} before the
 		      \mnemonic{LOAD} if a scaled offset is needed.
-		\item \textbf{R3 (bits 17--14, Register format, \opcode{15}/\opcode{17}):} Offset register \texttt{rO}, used
-		      unshifted.
-		\item \textbf{Immediate (bits 21--6, Immediate format, \opcode{14}/\opcode{16}):} 16-bit signed displacement.
-		\item \textbf{AF (bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
+		\item \textbf{rO (R3, bits 17--14, Register format, \opcode{15}/\opcode{17}):} Offset register, used unshifted.
+		\item \textbf{offset (Immediate Value, bits 21--6, Immediate format, \opcode{14}/\opcode{16}):} 16-bit signed
+		      displacement.
+		\item \textbf{addr (AF, bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
 		      \texttt{10} = \reg{s}, \texttt{11} = \reg{p}. Not a status-update source for these opcodes.
 		\item \textbf{Condition field (bits 3--0):} All 16 condition-field encodings are legal; see \textbf{Condition
 			      field} below.
@@ -299,8 +298,8 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{10}} &
 			\bitbox{4}{rS} &
-			\bitbox{16}{Offset} &
-			\bitbox{2}{AF} &
+			\bitbox{16}{offset} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -314,7 +313,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -323,8 +322,8 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{12}} &
 			\bitbox{4}{rS} &
-			\bitbox{16}{Offset} &
-			\bitbox{2}{AF} &
+			\bitbox{16}{offset} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -338,18 +337,19 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register (bits 25--22, Immediate format, \opcode{10}/\opcode{12}):} Source register \texttt{rS}.
+		\item \textbf{rS (Reg, bits 25--22, Immediate format, \opcode{10}/\opcode{12}):} Source register.
 		\item \textbf{R1 (bits 25--22, Register format, \opcode{11}/\opcode{13}):} Unused, encoded as 0.
-		\item \textbf{R2 (bits 21--18, Register format, \opcode{11}/\opcode{13}):} Source register \texttt{rS}.
-		\item \textbf{R3 (bits 17--14, Register format, \opcode{11}/\opcode{13}):} Offset register \texttt{rO}.
-		\item \textbf{Immediate (bits 21--6, Immediate format, \opcode{10}/\opcode{12}):} 16-bit signed displacement.
+		\item \textbf{rS (R2, bits 21--18, Register format, \opcode{11}/\opcode{13}):} Source register.
+		\item \textbf{rO (R3, bits 17--14, Register format, \opcode{11}/\opcode{13}):} Offset register.
+		\item \textbf{offset (Immediate Value, bits 21--6, Immediate format, \opcode{10}/\opcode{12}):} 16-bit signed
+		      displacement.
 		\item \textbf{Shift Type (bits 12--10, Register format, \opcode{11}/\opcode{13}):} \texttt{000} none,
 		      \texttt{001} LSL, \texttt{010} LSR, \texttt{011} ASL, \texttt{100} ASR, \texttt{101} RTL, \texttt{110}
 		      RTR, \texttt{111} reserved. Applies to \texttt{rS} before the value is written to memory.
@@ -357,7 +357,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 		      (Shift Operand bit set) a register holding the count; a register count is used in full (16 or more
 		      clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16
 		      for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
+		\item \textbf{addr (AF, bits 5--4):} Address-register pair -- \texttt{00} = \reg{l}, \texttt{01} = \reg{a},
 		      \texttt{10} = \reg{s}, \texttt{11} = \reg{p}. Not a status-update source for these opcodes.
 		\item \textbf{Condition field (bits 3--0):} All 16 condition-field encodings are legal; see \textbf{Condition
 			      field} below.
