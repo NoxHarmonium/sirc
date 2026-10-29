@@ -8,11 +8,12 @@ coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), whi
 privileged operations.
 
 Coprocessor calls are ordinary conditional instructions. If the instruction's condition is true, the processing unit
-computes a command operand and writes it to the 16-bit pending coprocessor-command latch during write-back. The
-selected coprocessor then interprets the command value. If the selected coprocessor is not present in the CPU model,
-the exception unit raises an invalid-opcode fault so the operation can be emulated or rejected by software. If the
-selected coprocessor is present but does not implement the requested operation, the result is architecturally undefined
-(see the Model and Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
+computes a command operand and writes it to the 16-bit coprocessor select register (CSR,
+Section~\ref{sec:coprocessors-and-csr}) during write-back. The selected coprocessor then interprets the command value.
+If the selected coprocessor is not present in the CPU model, the exception unit raises an invalid-opcode fault so the
+operation can be emulated or rejected by software. If the selected coprocessor is present but does not implement the
+requested operation, the result is architecturally undefined (see the Model and Revision Policy,
+Section~\ref{sec:coprocessor-model-revision-policy}).
 
 \section{Legal Forms}
 
@@ -46,15 +47,15 @@ architecturally undefined, opcode \opcode{2F}'s behavior is defined (see Appendi
 		\toprule
 		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                         \\
 		\midrule
-		Condition false    & The instruction is skipped and has no side effects. The pending coprocessor command, registers, memory, address registers, and status flags are preserved. The program counter still advances to the following instruction.                                                                                                                                                                                 \\
+		Condition false    & The instruction is skipped and has no side effects. The CSR, registers, memory, address registers, and status flags are preserved. The program counter still advances to the following instruction.                                                                                                                                                                                                         \\
 		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                                                                                                                                                                                                     \\
 		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                                                                                                                                                                                  \\
-		Write-back         & The processing unit writes the command operand to the pending coprocessor-command latch. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.                                                                                                                                                                            \\
+		Write-back         & The processing unit writes the command operand to the CSR. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.                                                                                                                                                                                                          \\
 		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                                                                                                                                                                                \\
 		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents. \\
 		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to coprocessor 1 then occupies one further complete 6-cycle slot beginning at the next phase 0, so a coprocessor-1 operation completes 12 cycles after the call's own fetch began.                                                                                              \\
 		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present are architecturally undefined. See the notes below.                                                                                                                                                                        \\
-		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the pending command latch after the fault. A pending coprocessor command is discarded if a fault or hardware exception is dispatched before the coprocessor's dispatch slot begins; the command is not re-issued after the handler returns.                                                                 \\
+		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is discarded if a fault or hardware exception is dispatched before the coprocessor's dispatch slot begins; the command is not re-issued after the handler returns.                                                                                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Coprocessor Instruction Semantics}
@@ -141,7 +142,7 @@ endif
 	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
 	next nibble selects that coprocessor's operation. The remaining low byte is defined by the selected operation.
 
-	\textbf{Write-back:} Writes the command operand to the pending coprocessor-command latch.
+	\textbf{Write-back:} Writes the command operand to the CSR.
 
 	\textbf{Flags:} Preserved by the coprocessor-call instruction.
 
@@ -149,7 +150,7 @@ endif
 	invalid-opcode faults for missing coprocessors. Unimplemented operations on a coprocessor that is present are
 	architecturally undefined (see the Model and Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 
-	\textbf{Condition field:} If the condition is false, no command is dispatched, the pending command latch is preserved,
+	\textbf{Condition field:} If the condition is false, no command is dispatched, the CSR is preserved,
 	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles for the processing-unit call, plus a further 6-cycle coprocessor dispatch slot (12
@@ -219,8 +220,8 @@ a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instructi
 	\item Software may probe optional coprocessors by executing the documented operation and handling an invalid-opcode fault, or
 	      by using a model-specific capability table if one is provided by system firmware. The invalid-opcode fault records the
 	      offending 16-bit coprocessor command word in the \texttt{return\_address} field of the fault-metadata link register
-	      (link register \imm{7}), which an emulation handler reads with \mnemonic{ETFR}. The pending command is cleared before
-	      the handler runs.
+	      (link register \imm{7}), which an emulation handler reads with \mnemonic{ETFR}. The CSR is cleared before the handler
+	      runs.
 	\item Processing-unit undocumented opcodes are a separate case: they are accepted by the processing unit and have
 	      architecturally undefined effects unless a future CPU revision documents them.
 \end{itemize}
@@ -320,7 +321,7 @@ endif
 
 	\textbf{Exceptions:} Dispatches a software exception through the exception unit. Raises a privilege-violation fault
 	in protected mode if the selected vector is below 0x60. Software exceptions are accepted only at exception level 0;
-	an \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the pending coprocessor command
+	an \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
 	is cleared, no vector is fetched, and no fault is raised. Nested system calls from a handler are therefore not
 	possible.
 
@@ -691,7 +692,7 @@ Table~\ref{tab:addr-reg-encoding} in Chapter~\ref{ch:addressing-modes}.
 
 \noindent For all DMA operations, a count of zero is a no-op: no memory access occurs, registers are preserved, and
 address registers are not advanced. CPU status flags are preserved. If the condition is false, no DMA command is
-dispatched, no coprocessor privilege or opcode checks are performed, and the pending coprocessor command, registers,
+dispatched, no coprocessor privilege or opcode checks are performed, and the CSR, registers,
 memory, address registers, and status flags are preserved; the program counter still advances to the following
 instruction.
 

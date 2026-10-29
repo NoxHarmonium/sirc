@@ -89,6 +89,8 @@ encoding, and privilege rules.
 	\item[Coprocessor] One of the specialized execution units a \mnemonic{COPI}/\mnemonic{COPR} call can dispatch to -- the
 	      processing unit itself (coprocessor \texttt{0x0}), the exception unit (\texttt{0x1}), the optional DMA unit
 	      (\texttt{0x2}), and the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
+	\item[Coprocessor select register (CSR)] The 16-bit internal register that holds the next coprocessor command: coprocessor
+	      ID, operation and operand. The CU dispatches to the coprocessor it selects. See Section~\ref{sec:coprocessors-and-csr}.
 	\item[Displacement] A signed value added to an address register's low word to compute an effective address, as used by memory
 	      and effective-address instructions. Distinct from \textit{offset}, which this manual reserves for memory/structure
 	      offsets.

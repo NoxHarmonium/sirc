@@ -94,7 +94,25 @@ Key responsibilities include:
 	\item Execution phase coordination
 	\item Control signal generation for all functional units
 	\item Condition code evaluation for conditional execution
+	\item Fetching exception vectors on behalf of the exception coprocessor
+	\item Dispatching coprocessor commands through the coprocessor select register (CSR)
 \end{itemize}
+
+\subsection{Coprocessors and the Coprocessor Select Register}
+\label{sec:coprocessors-and-csr}
+
+Operations are carried out by coprocessors. The processing unit (coprocessor \texttt{0x0}) executes ordinary
+instructions using the ALU, AU and barrel shifter described below. Other coprocessors, such as the exception
+coprocessor (\texttt{0x1}), carry out specialized operations on request. Every coprocessor reaches the register file
+and the bus interface through the coprocessor interface, and only one is active at a time.
+
+The coprocessor select register (CSR) tells the CU which coprocessor runs next and what it should do. It is a 16-bit
+internal register: bits 15--12 hold the coprocessor ID, bits 11--8 the coprocessor operation, and bits 7--0 an operand
+or vector. A \mnemonic{COPI} or \mnemonic{COPR} instruction writes its command operand to the CSR during write-back,
+and the exception coprocessor writes it when an exception is pending. The CU then dispatches the command to the
+selected coprocessor in a further six-phase slot. While nothing is pending the CSR is \texttt{0x0000}, which selects
+the processing unit, so the CPU carries on running the program. Chapter~\ref{ch:coprocessor} describes the instructions
+and Section~\ref{sec:coprocessor-select-register} the register's layout.
 
 \subsection{Arithmetic Logic Unit (ALU)}
 
@@ -148,6 +166,24 @@ left (\mnemonic{ASL}), arithmetic shift right (\mnemonic{ASR}), rotate left (\mn
 The shift is applied to the first source operand when fetching the source registers for an instruction. Shifts cannot
 be applied to the result or any other source operand.
 
+\subsection{Exception Coprocessor}
+
+The Exception Coprocessor (coprocessor ID \texttt{0x1}) manages faults, hardware interrupts, software exceptions and
+reset. When an exception is pending, it takes control of the processor and diverts execution to the handler through a
+vector. It is responsible for:
+
+\begin{itemize}
+	\item Receiving faults, interrupt requests and reset
+	\item Comparing each exception's priority with the current exception level
+	\item Cancelling an instruction that raises a retryable fault, so its remaining phases run as no-ops
+	\item Holding the link registers that save the return address, status register and exception level
+	\item Writing the exception to service into the coprocessor select register (CSR)
+\end{itemize}
+
+The Control Unit runs the resulting entry sequence through the normal execution phases. The exception instructions
+(\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{WAIT}, \mnemonic{RSET}, \mnemonic{ETFR} and \mnemonic{ETTR}) reach the
+coprocessor as coprocessor calls. Chapter~\ref{ch:exceptions} describes exception handling in detail.
+
 \section{Design Characteristics}
 
 \subsection{Hardwired Control Implementation}
@@ -171,6 +207,11 @@ Combined with the regularity of the SIRCIS instruction set, this approach offers
 Ordinary instructions execute in exactly 6 phases, regardless of instruction type or operands, and complete in 6 clock
 cycles when no bus wait states are required. This design choice reduces the complexity of instruction sequencing and
 simplifies execution timing.
+
+The sequence is never cut short. If a retryable fault cancels an instruction, its remaining phases still run, but as
+no-ops that access no bus and commit no results, and the exception dispatch begins at the next phase 0. Hardware
+interrupts, software exceptions and the instruction trace fault let the current instruction finish before they are
+dispatched.
 
 Coprocessor calls are the exception: the processing-unit instruction takes six cycles and the coprocessor dispatch
 usually takes a further six. Some coprocessors like the DMA coprocessor can additionally hold instruction fetch until
