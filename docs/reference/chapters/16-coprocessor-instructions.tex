@@ -709,11 +709,36 @@ command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction t
 \noindent Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA operations and reserved operand
 encodings are architecturally undefined (see the Model and Revision Policy above). DMA memory reads and writes can
 raise data bus and bus-protection faults using DMA read/write bus access
-types. If an address-register low word overflows or underflows and \texttt{SR.A} is set, the DMA operation raises a
-segment-overflow fault; otherwise the low word wraps modulo $2^{16}$. Partial side effects are possible if a fault
+types. They can also raise segment-overflow faults, as described in Section~\ref{sec:dma-segment-overflow}. Partial side effects are possible if a fault
 occurs mid-transfer, and software must not assume that re-executing the same DMA instruction restarts the original
 operation; see each operation's \textbf{Fault side effects} entry below for what state a handler can rely on, and see
 Section~\ref{sec:dma-fault-retry} for what this means for a fault handler's recovery strategy.
+
+\subsection{Segment Overflow}
+\label{sec:dma-segment-overflow}
+
+DMA address arithmetic works on the low word of the selected address register only; the high word is never changed. The
+segment-overflow check is made at access time, one access at a time. It is never made up front for the whole transfer.
+
+\begin{itemize}
+	\item \textbf{Each word access.} The address of every access is the register's low word plus the word's offset. If
+	      \texttt{SR.A} is set and forming that address would carry out of the low word (wrap past \texttt{0xFFFF}), a
+	      segment-overflow fault is raised at that access, before it is performed. Words already transferred stay
+	      transferred. If \texttt{SR.A} is clear, the low word wraps modulo $2^{16}$ and the transfer continues.
+	\item \textbf{Negative counts.} The decrement of the address register is the address calculation for the first
+	      access. If it underflows with \texttt{SR.A} set, the fault is raised before the register is modified and before any
+	      word is transferred, so the register still holds its original value.
+	\item \textbf{Address-register advance.} The advance at the end of a forward \mnemonic{DMAR} or \mnemonic{DMAW}, and
+	      after each completed \mnemonic{DMAT} chunk, is checked the same way. If it carries out of the low word with
+	      \texttt{SR.A} set, the fault is raised at that point, after the words have been transferred and with the
+	      register unchanged. A transfer that ends exactly at the top of the segment therefore faults on the advance even
+	      though every access was in range, as a post-increment \mnemonic{LOAD} does.
+	\item \textbf{\mnemonic{DMAT}.} Reads use \reg{a} and writes use \reg{l}; an overflowing read access faults at the read
+	      and an overflowing write access faults at the write.
+\end{itemize}
+
+The fault metadata is captured as for any other segment-overflow fault, with the bus access type of the DMA access
+whose address overflowed (or, for the advance, of the last access performed).
 
 \subsection{Retrying After a Fault}
 \label{sec:dma-fault-retry}
@@ -923,7 +948,7 @@ if n > 0:
 	not to guard against an otherwise-representable illegal value. Unsupported DMA
 	operations and reserved operand encodings are architecturally undefined (see the Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA reads can raise
-	data bus, bus-protection, and segment-overflow faults.
+	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
 
 	\textbf{Fault side effects:} If a fault occurs mid-transfer, only the registers among \reg{r1} through \reg{rn}
 	read before the fault contain memory data; the rest are unmodified. The selected address register's state
@@ -931,7 +956,8 @@ if n > 0:
 	step of the operation and does not run until the whole transfer completes, so a fault leaves it at its original,
 	pre-transfer value no matter how many words were read. For a negative count, the address register is decremented
 	to its final position \textit{before} the transfer loop begins, so it already reflects the full decrement even if
-	the fault occurs on the very first word. Software must not assume the full requested count completed in either
+	the fault occurs on the very first word (unless the decrement itself underflowed, which faults before the register
+	is modified). Software must not assume the full requested count completed in either
 	case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
@@ -1021,7 +1047,7 @@ if n > 0:
 	not to guard against an otherwise-representable illegal value. Unsupported DMA
 	operations and reserved operand encodings are architecturally undefined (see the Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA writes can raise
-	data bus, bus-protection, and segment-overflow faults.
+	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
 
 	\textbf{Fault side effects:} If a fault occurs mid-transfer, only the memory words written before the fault
 	reflect the source registers; the rest of the destination range is unchanged. The selected address register's
@@ -1029,7 +1055,8 @@ if n > 0:
 	last step of the operation and does not run until the whole transfer completes, so a fault leaves it at its
 	original, pre-transfer value no matter how many words were written. For a negative count, the address register
 	is decremented to its final position \textit{before} the transfer loop begins, so it already reflects the full
-	decrement even if the fault occurs on the very first word. Software must not assume the full requested count
+	decrement even if the fault occurs on the very first word (unless the decrement itself underflowed, which faults
+	before the register is modified). Software must not assume the full requested count
 	completed in either case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
@@ -1108,7 +1135,7 @@ while remaining > 0:
 	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA operations and reserved
 	operand encodings are architecturally undefined (see the Model and Revision Policy in Section~\ref{sec:coprocessor-model-revision-policy}).
 	In protected mode, raises a privilege-violation fault. DMA reads and writes can raise data
-	bus, bus-protection, and segment-overflow faults.
+	bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
 
 	\textbf{Fault side effects:} \reg{a} and \reg{l} only advance once a full chunk (up to seven words) has both been
 	read and written successfully, so a fault leaves both address registers at the last fully completed chunk

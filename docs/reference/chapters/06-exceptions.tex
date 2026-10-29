@@ -212,7 +212,8 @@ bring the address back into range and retry with \mnemonic{RETE}.
 
 The same DMA-burst caveat as Bus Fault and Bus Protection Fault applies here: a segment-overflow fault raised partway
 through a \mnemonic{DMAR}, \mnemonic{DMAW}, or \mnemonic{DMAT} burst does not undo words already transferred before the
-fault. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
+fault. See Section~\ref{sec:dma-segment-overflow} for where a DMA burst checks for overflow and
+Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 \subsection{Invalid Opcode Fault}
 
