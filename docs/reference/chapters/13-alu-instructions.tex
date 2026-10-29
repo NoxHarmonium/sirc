@@ -86,8 +86,8 @@ are not legal for this instruction family.
 		XOR                  & \texttt{XORI rD, \#imm8, shift}     & \opcode{26}       & Writes result                       \\
 		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & \opcode{36}       & Writes result                       \\
 		XOR                  & \texttt{XORR rD, rS2[, shift]}      & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
-		MOV                  & \texttt{MOVI rD, \#imm16}           & \opcode{07}       & Writes result; preserves flags      \\
-		MOV                  & \texttt{MOVR rD, rS}                & \opcode{37}       & Writes result; preserves flags      \\
+		MOV                  & \texttt{MOVI rD, \#imm16}           & \opcode{07}       & Writes result                       \\
+		MOV                  & \texttt{MOVR rD, rS}                & \opcode{37}       & Writes result                       \\
 		CMN                  & \texttt{CMNI rS, \#imm16}           & \opcode{08}       & Updates flags only                  \\
 		CMN                  & \texttt{CMNI rS, \#imm8, shift}     & \opcode{28}       & Updates flags only                  \\
 		CMN                  & \texttt{CMNR rS1, rS2[, shift]}     & \opcode{38}       & Updates flags only                  \\
@@ -135,7 +135,7 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
 		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
 		Test variants          & \mnemonic{CMN}, \mnemonic{CNC}, \mnemonic{CMP}, \mnemonic{CPC}, \mnemonic{TSA}, \mnemonic{TSO}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.        \\
-		MOV                    & \mnemonic{MOVI} and \mnemonic{MOVR} write the selected operand to \texttt{rD} and do not update status flags.                                                                         \\
+		MOV                    & \mnemonic{MOVI} and \mnemonic{MOVR} write the selected operand to \texttt{rD}.                                                                                                        \\
 		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                        \\
 		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction that writes a privileged high address register raises a privilege-violation fault at decode; see the notes below. \\
 		\bottomrule
@@ -155,12 +155,11 @@ documented ALU forms execute with architecturally undefined results (see Appendi
 
 \section{Status Flag Updates}
 
-Most ALU instructions update the status register flags:
+ALU instructions update the status register flags:
 
 \begin{description}
 	\item[Arithmetic (ADD, ADC, SUB, SBC, CMN, CNC, CMP, CPC)] Update all four flags: N, Z, C, V
-	\item[Logical (AND, ORR, XOR, TSA, TSO, TSX)] Update N and Z; clear C and V
-	\item[Move (MOV)] Do not update flags
+	\item[Logical and move (AND, ORR, XOR, TSA, TSO, TSX, MOVI, MOVR)] Update N and Z; clear C and V
 \end{description}
 
 \begin{table}[H]
@@ -183,7 +182,7 @@ Most ALU instructions update the status register flags:
 		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded.                            \\
 		TSO             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as ORR; result is discarded.                            \\
 		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded.                            \\
-		MOV             & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved.                                        \\
+		MOV             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		\bottomrule
 	\end{tabular}
 	\caption{ALU Status Flag Effects}
@@ -196,9 +195,9 @@ instruction uses its default status update source. If \texttt{[N]} is encoded, a
 encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
 the shifter flag rules. The immediate format has no shift fields, so \texttt{[S]} on an immediate-format instruction
 writes a constant zero into the flag byte: N, Z, C, and V are all cleared. Use \texttt{[S]} only with short-immediate
-and register forms. Public \mnemonic{MOVI} and \mnemonic{MOVR} forms do not support status update override syntax and
-always preserve the status flags; an encoding of those opcodes with a non-\texttt{None} AF field, which is not
-reachable from public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
+and register forms. \mnemonic{MOVI} and \mnemonic{MOVR} have no shifted operand and do not accept \texttt{[S]}; an
+encoding of those opcodes with AF \texttt{10}, which is not reachable from public assembly syntax, leaves all four
+status flags architecturally undefined (\texttt{U U U U}).
 
 \subsection{Flag Computation Formulas}
 
@@ -233,14 +232,14 @@ and simply discard the result.
 
 \subsection{Manual Flag Update Control}
 
-ALU instructions except \mnemonic{MOVI} and \mnemonic{MOVR} support manual control over how status flags are updated
-using the status override syntax. See Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for
-complete details.
+ALU instructions support manual control over how status flags are updated using the status override syntax. See
+Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
 
 \begin{itemize}
 	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
 	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
 	\item \texttt{INSTR[N]} -- Do not update status flags
+	\item \mnemonic{MOVI} and \mnemonic{MOVR} do not accept \texttt{[S]}.
 	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax.
 \end{itemize}
 
@@ -1251,9 +1250,10 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 		\item \textbf{rS (R3, bits 17--14), register form only:} source register.
 		\item \textbf{imm16 (Immediate Value, bits 21--6), immediate form only:} 16-bit value. The register form has no
 		      immediate field.
-		\item \textbf{SUS (AF, bits 5--4):} the public assembly syntax always encodes \texttt{00} (None), which preserves the
-		      status flags. An encoding of either opcode with a different AF value, not reachable from assembly syntax,
-		      leaves all four status flags architecturally undefined (\texttt{U U U U}).
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved. \texttt{[S]} is not accepted by these instructions, which have no shifted operand; an encoding with
+		      AF \texttt{10}, not reachable from assembly syntax, leaves all four status flags architecturally undefined
+		      (\texttt{U U U U}).
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1266,13 +1266,17 @@ MOVR rD, rS                    ; rD = rS
 
 	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
 	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax; the register-to-register form
-	does not accept a shift definition (use \mnemonic{SHFT}). Neither instruction accesses memory; the memory forms of
+	does not accept a shift definition (use \mnemonic{SHFT}), and the \texttt{[S]} status update source is not accepted. Neither instruction accesses memory; the memory forms of
 	\mnemonic{LOAD} are documented in Chapter~\ref{ch:memory-instructions}.
 
 	\textbf{Operation:}
 	\begin{verbatim}
-destination = operand
-; Flags NOT updated
+result = operand
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
 \end{verbatim}
 
 	\textbf{Description:}
@@ -1281,7 +1285,7 @@ destination = operand
 	primary way to load constants into registers or move data between them. Opcode \opcode{27} has no public assembly
 	syntax and is undocumented.
 
-	\textbf{Flags:} Preserved.
+	\textbf{Flags:} N Z (C and V cleared)
 
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 
@@ -1319,7 +1323,6 @@ ORRI r5, #0x34             ; r5 = 0x1234
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item Does not update flags, unlike \mnemonic{ADD}
 		\item Most efficient way to move data between registers
 		\item For 16-bit constants, use \mnemonic{MOVI}
 		\item To build shifted or composite constants, combine \mnemonic{MOVI} with ALU instructions such as \mnemonic{ADDI} or

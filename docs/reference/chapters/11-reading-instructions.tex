@@ -139,7 +139,6 @@ ALU instructions can select the source of status flag updates with the status up
 	\label{tab:status-update-source-encoding}
 \end{table}
 
-When no override is written, ALU instructions use \texttt{[A]}. \mnemonic{SHFT} defaults to \texttt{[S]} instead, and
-\mnemonic{MOVI} and \mnemonic{MOVR} always encode \texttt{[N]} and never update the status flags; their public syntax
-does not accept a status update override. Instructions that do not support status updates must not use status update
-override syntax.
+When no override is written, ALU instructions use \texttt{[A]}. \mnemonic{SHFT} defaults to \texttt{[S]} instead.
+\mnemonic{MOVI} and \mnemonic{MOVR} do not accept \texttt{[S]}. Instructions that do not support status updates must
+not use status update override syntax.

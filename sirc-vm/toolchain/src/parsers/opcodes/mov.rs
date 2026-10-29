@@ -12,12 +12,15 @@ use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ImmediateInstructionData, Instruction, InstructionData, RegisterInstructionData, ShiftOperand,
-    ShiftType,
+    ShiftType, StatusRegisterUpdateSource,
 };
 
 ///
 /// Parses the ALU move instructions: `MOVI` loads an immediate value into a register and `MOVR`
-/// copies one register to another. Neither updates the status register.
+/// copies one register to another.
+///
+/// Like the other ALU instructions they update the status register from the ALU result (`[A]`)
+/// unless `[N]` is given. `[S]` is rejected because there is no shifted operand.
 ///
 /// ```
 /// use toolchain::parsers::opcodes::mov::mov;
@@ -33,6 +36,14 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 /// assert_eq!(register, 1); // r2
 /// assert_eq!(value, 0x1234);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
+///
+/// let (_, parsed_instruction) = mov("MOVI[N] r2, #0x1234\n").unwrap();
+/// let additional_flags = match parsed_instruction.instruction {
+///     InstructionData::Immediate(inner) => inner.additional_flags,
+///     _ => panic!("Incorrect instruction was parsed")
+/// };
+///
+/// assert_eq!(additional_flags, 0x0); // [N] preserves the status register
 ///
 /// let (_, parsed_instruction) = mov("MOVR r1, r3\n").unwrap();
 /// let (op_code, r1, r3) = match parsed_instruction.instruction {
@@ -52,9 +63,10 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
     let (i_after_instruction, (tag, condition_flag, status_register_update_source)) =
         instructions(i)?;
 
-    if status_register_update_source.is_some() {
+    // There is no shifted operand to take flags from, so only [A] and [N] are meaningful
+    if status_register_update_source == Some(StatusRegisterUpdateSource::Shift) {
         let error_string = format!(
-            "The [{tag}] opcode does not support an explicit status register update source. It never updates the status register."
+            "The [{tag}] opcode does not support the [S] status register update source because it has no shift operand. Use [A] or [N]."
         );
         return Err(nom::Err::Failure(ErrorTree::from_external_error(
             i_after_instruction,
@@ -65,13 +77,17 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
+    let additional_flags = status_register_update_source
+        .unwrap_or(StatusRegisterUpdateSource::Alu)
+        .to_flags();
+
     let construct_immediate_instruction = |value: u16, dest_register_index: u8| {
         InstructionData::Immediate(ImmediateInstructionData {
             op_code: Instruction::LoadRegisterFromImmediate,
             register: dest_register_index,
             value,
             condition_flag,
-            additional_flags: 0x0,
+            additional_flags,
         })
     };
 
@@ -133,7 +149,7 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
                         shift_type: ShiftType::None,
                         shift_count: 0,
                         condition_flag,
-                        additional_flags: 0x00,
+                        additional_flags,
                     }),
                     ..Default::default()
                 },

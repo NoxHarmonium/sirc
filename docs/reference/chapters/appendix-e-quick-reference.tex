@@ -83,8 +83,8 @@ underlying CPU instruction. For full encoding details, see the chapter cited in 
 	\mnemonic{LOAD}   & Mem           & \opcode{14}--\opcode{17} & -          & -          & -          & -                        & Load from memory \\
 	\midrule
 	\multicolumn{8}{l}{\textit{M -- Ch.\ref{ch:alu-instructions} / Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
-	\mnemonic{MOVI}   & ALU           & \opcode{07}                                      & -          & -          & -          & -                        & Move immediate                                \\
-	\mnemonic{MOVR}   & ALU           & \opcode{37}                                      & -          & -          & -          & -                        & Move register                                 \\
+	\mnemonic{MOVI}   & ALU           & \opcode{07}                                      & *          & *          & 0          & 0                        & Move immediate                                \\
+	\mnemonic{MOVR}   & ALU           & \opcode{37}                                      & *          & *          & 0          & 0                        & Move register                                 \\
 	\mnemonic{MULS}   & Meta          & COPI \#0x3100                                    & -          & -          & -          & -\textsuperscript{\dag}  & Signed multiply (Integer Maths Unit, coprocessor 0x3)                                                         \\
 	\mnemonic{MULU}   & Meta          & COPI \#0x3000                                    & -          & -          & -          & -\textsuperscript{\dag}  & Unsigned multiply (Integer Maths Unit, coprocessor 0x3)                                                       \\
 	\midrule

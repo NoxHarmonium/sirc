@@ -153,7 +153,7 @@
 
     ; Choose which template based on r2 (pass/fail)
     CMPI r2, #0
-    MOVI|== ll, @fail_message
+    MOVI[N]|== ll, @fail_message
     MOVI|!= ll, @pass_message
 
     ; Copy string to buffer (simple byte copy)
@@ -286,7 +286,7 @@
     BRSR @reset_test
     MOVI r1, #0x00FF
     ADDI r1, #0xFF01    ; Sets carry
-    MOVI r2, #0x0001
+    MOVI[N] r2, #0x0001
     ADCI r2, #0x0000    ; Should add carry: 0x0001 + 0x0000 + 1 = 0x0002
     CMPI r2, #0x0002
     MOVI|== r7, #1
@@ -670,7 +670,7 @@
     BRSR @reset_test
     MOVI r1, #0xFFFF
     ADDI r1, #0x0001        ; Sets carry
-    MOVI r2, #0x0000
+    MOVI[N] r2, #0x0000
     ADCI r2, #0x0000        ; r2 = 0 + 0 + carry = 1
     CMPI r2, #0x0001
     MOVI|== r7, #1
@@ -953,7 +953,7 @@
     BRSR @count_passed_tests
     ; r7 should now equal 72 if all tests passed
     CMPI r7, #72
-    MOVI|== r1, #0x0FAB     ; Success marker
+    MOVI[N]|== r1, #0x0FAB     ; Success marker
     MOVI|!= r1, #0xFA11     ; Failure marker (0xFA11)
 
 ; Store final test count for inspection

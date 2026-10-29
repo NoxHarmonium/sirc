@@ -194,11 +194,9 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 	      \mnemonic{CMPI}, \mnemonic{CMPR}, \mnemonic{CPCI}, \mnemonic{CPCR}): Same as Arithmetic Instructions but does not update destination
 	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSOI}, \mnemonic{TSOR},
 	      \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
-	\item \textbf{Move Instructions} (\mnemonic{MOVI}, \mnemonic{MOVR}): Never update the condition flags -- their public
-	      syntax always encodes status source \texttt{[N]} and does not accept a status update override, giving the flag
-	      row \texttt{- - - -}. An encoding of the \mnemonic{MOVI} or \mnemonic{MOVR} opcode with a non-\texttt{[N]} AF
-	      field, not reachable from public assembly syntax, leaves all four flags architecturally undefined
-	      (\texttt{U U U U}).
+	\item \textbf{Move Instructions} (\mnemonic{MOVI}, \mnemonic{MOVR}): Same as Logical Instructions. They do not accept
+	      \texttt{[S]}, since they have no shifted operand; an encoding of the opcode with AF \texttt{10}, not reachable
+	      from public assembly syntax, leaves all four flags architecturally undefined (\texttt{U U U U}).
 	\item \textbf{Load Instructions} (\mnemonic{LOAD}, \mnemonic{LDEA}): Never update the condition flags and have no
 	      status source encoding to override.
 	\item \textbf{ALU Instructions with a Shift Operand}: The flags come from the ALU result by default. They come from the
@@ -230,7 +228,7 @@ LOAD sr, (s)+
 An ALU instruction that targets \reg{sr} writes its result to \reg{sr} and then overwrites bits 7--0 with the flags
 produced by that same instruction, so only bits 15--8 can be set this way. To write the low byte, suppress the flag
 update with the \texttt{[N]} status source (for example \mnemonic{ORRI[N]} \reg{sr}, \imm{0x0003}) or use
-\mnemonic{MOVR} \reg{sr}, \texttt{rN}. A direct write to \reg{sr} also preserves the current value of bit 13
+\mnemonic{MOVR[N]} \reg{sr}, \texttt{rN}. A direct write to \reg{sr} also preserves the current value of bit 13
 (\texttt{EA}); only \mnemonic{RETE} restores it, so the \mnemonic{LOAD} \reg{sr}, (s)+ restore above does not reproduce
 the exception-active state saved at the time of the original write.
 
@@ -304,8 +302,8 @@ MOVR r7, sr
 ADDR r1, r2, r3
 CMPI r1, #100
 
-; Restore original status
-MOVR sr, r7
+; Restore original status ([N] stops the flag update overwriting the low byte)
+MOVR[N] sr, r7
 	\end{lstlisting}
 	\caption{Saving and Restoring Status}
 \end{example}

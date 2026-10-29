@@ -21,16 +21,41 @@ fn test_immediate_arithmetic_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
 ) {
+    test_immediate_arithmetic_instruction_with_update_source(
+        instruction,
+        target_register,
+        register_value,
+        immediate_value,
+        expected_value,
+        initial_status_flags,
+        expected_status_flags,
+        // [S] on an immediate-format instruction writes a constant zero into the flags, which
+        // the MOVI tests below rely on to check flag clearing
+        if instruction == Instruction::LoadRegisterFromImmediate {
+            StatusRegisterUpdateSource::Shift
+        } else {
+            StatusRegisterUpdateSource::Alu
+        },
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn test_immediate_arithmetic_instruction_with_update_source(
+    instruction: Instruction,
+    target_register: u8,
+    register_value: u16,
+    immediate_value: u16,
+    expected_value: u16,
+    initial_status_flags: &Vec<StatusRegisterFields>,
+    expected_status_flags: &Vec<StatusRegisterFields>,
+    status_register_update_source: StatusRegisterUpdateSource,
+) {
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: instruction,
         register: target_register,
         value: immediate_value,
         condition_flag: ConditionFlags::Always,
-        additional_flags: if instruction == Instruction::LoadRegisterFromImmediate {
-            StatusRegisterUpdateSource::Shift as u8
-        } else {
-            StatusRegisterUpdateSource::Alu as u8
-        },
+        additional_flags: status_register_update_source as u8,
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
@@ -510,6 +535,61 @@ fn test_xor_immediate() {
             0x0000,
             &vec![],
             &vec![StatusRegisterFields::Zero],
+        );
+    }
+}
+
+//
+// #### MOVI ####
+//
+
+#[test]
+fn test_movi_updates_flags_from_the_moved_value() {
+    for register_index in get_register_index_range() {
+        // N and Z follow the moved value; C and V are cleared
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x8000,
+            0x8000,
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
+        );
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x0000,
+            0x0000,
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+            ],
+            &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
+        );
+    }
+}
+
+#[test]
+fn test_movi_with_no_update_source_preserves_flags() {
+    for register_index in get_register_index_range() {
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x0000,
+            0x0000,
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::None,
         );
     }
 }
