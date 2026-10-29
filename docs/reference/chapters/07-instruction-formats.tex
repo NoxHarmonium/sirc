@@ -378,6 +378,221 @@ For example:
 	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (does not save the result)
 \end{itemize}
 
+\section{Decode Trees}
+\label{sec:decode-trees}
+
+The opcode alone determines how the rest of a 32-bit instruction is decoded. The figures in this section show that
+process as a decision tree for each opcode group. In every figure the top strip is the instruction word, drawn to
+scale. The shaded boxes are the opcode bits consulted at each level of the tree, with the same shading on the matching
+tree node, and the unshaded boxes are operand fields, whose interpretation is given in the box below the tree.
+\texttt{op[n]} means opcode bit n, which is instruction bit n + 26. Appendix~\ref{appendix:opcode-map} lists every
+opcode in a single table.
+
+% ---- Decode tree helpers ------------------------------------------------------------------------
+\newcommand{\dtu}{0.46}% width of one instruction bit in the word strip, in cm
+
+\tikzset{
+	dt node/.style={draw, rounded corners=1.5pt, align=center, font=\footnotesize, inner sep=3pt},
+	dt edge/.style={-{Latex[length=1.8mm]}, thick},
+	dt label/.style={font=\scriptsize\ttfamily, inner sep=1.5pt}
+}
+
+% \dtbox{first bit column}{width in bits}{fill}{label}{instruction bit range}
+\newcommand{\dtbox}[5]{%
+	\draw[fill=#3] ({\dtu*(#1)},0) rectangle ({\dtu*((#1)+(#2))},-0.55);
+	\node[font=\footnotesize\ttfamily] at ({\dtu*((#1)+(#2)/2)},-0.275) {#4};
+	\node[font=\tiny, text=sircgray] at ({\dtu*((#1)+(#2)/2)},-0.78) {#5};
+}
+
+% \dtrow{op[2:0]}{opcode}{mnemonic}{description}
+\newcommand{\dtrow}[4]{\texttt{#1} & \opcode{#2} & \mnemonic{#3} & #4\\}
+\newcommand{\dtrowx}[4]{\textcolor{sircgray}{\texttt{#1}} & \textcolor{sircgray}{\texttt{0x#2}} & \textcolor{sircgray}{#3} & \textcolor{sircgray}{#4}\\}
+
+% Save rows 0x_0--0x_6 and the move at 0x_7; #1 = opcode high digit, #2 = mnemonic suffix
+\newcommand{\dtsaverows}[2]{%
+	\dtrow{000}{#10}{ADD#2}{Add}
+	\dtrow{001}{#11}{ADC#2}{Add with carry}
+	\dtrow{010}{#12}{SUB#2}{Subtract}
+	\dtrow{011}{#13}{SBC#2}{Subtract with carry}
+	\dtrow{100}{#14}{AND#2}{AND}
+	\dtrow{101}{#15}{ORR#2}{OR}
+	\dtrow{110}{#16}{XOR#2}{XOR}%
+}
+% Test rows 0x_8--0x_E
+\newcommand{\dttestrows}[2]{%
+	\dtrow{000}{#18}{CMN#2}{Compare negative}
+	\dtrow{001}{#19}{CNC#2}{Compare negative with carry}
+	\dtrow{010}{#1A}{CMP#2}{Compare}
+	\dtrow{011}{#1B}{CPC#2}{Compare with carry}
+	\dtrow{100}{#1C}{TSA#2}{Test AND}
+	\dtrow{101}{#1D}{TSO#2}{Test OR}
+	\dtrow{110}{#1E}{TSX#2}{Test XOR}%
+}
+
+% \dtalu{format node text}{strip boxes after the opcode}{op[3]=0 op[2:0]=111 row}{op[3]=1 op[2:0]=111 row}{ALU suffix}{opcode high digit}{legend rows}
+\newcommand{\dtalu}[7]{%
+	\begin{tikzpicture}
+		% Instruction word strip: the opcode is split into the three parts that drive the tree
+		\dtbox{0}{2}{black!4}{5:4}{31--30}
+		\dtbox{2}{1}{black!10}{3}{29}
+		\dtbox{3}{3}{black!16}{2:0}{28--26}
+		#2
+		% Tree
+		\node[dt node, fill=black!4, text width=2.5cm] (fmt) at (1.45,-5.4) {#1};
+		\node[dt node, fill=black!10] (b3) at (5.0,-5.4) {\texttt{op[3]}};
+		\node[dt node, fill=black!16, anchor=north west, inner sep=4pt] (save) at (7.6,-1.7)
+		{\begin{tabular}{@{}c@{\hspace{6pt}}c@{\hspace{6pt}}l@{\hspace{6pt}}l@{}}
+				\multicolumn{4}{@{}l@{}}{\textbf{Save result:} \texttt{op[2:0]} selects the operation} \\[2pt]
+				\dtsaverows{#6}{#5}
+				#3
+			\end{tabular}};
+		\node[dt node, fill=black!16, anchor=north west, inner sep=4pt] (test) at (7.6,-6.1)
+		{\begin{tabular}{@{}c@{\hspace{6pt}}c@{\hspace{6pt}}l@{\hspace{6pt}}l@{}}
+				\multicolumn{4}{@{}l@{}}{\textbf{Test only:} \texttt{op[2:0]} selects the operation} \\[2pt]
+				\dttestrows{#6}{#5}
+				#4
+			\end{tabular}};
+		\draw[dt edge] (fmt) -- (b3);
+		\draw[dt edge] (b3.east) -- ++(0.5,0) |- (save.west) node[dt label, pos=0.82, above] {0};
+		\draw[dt edge] (b3.east) -- ++(0.5,0) |- (test.west) node[dt label, pos=0.82, above] {1};
+		% Operand fields
+		\node[draw, rounded corners=1.5pt, anchor=north west, inner sep=4pt, font=\footnotesize] at (0,-10.5)
+		{\begin{tabular}{@{}p{2.9cm}p{11.4cm}@{}}
+				\multicolumn{2}{@{}l@{}}{\textbf{Operand fields} (read the same way for every opcode above, unless noted)} \\[2pt]
+				#7
+			\end{tabular}};
+	\end{tikzpicture}%
+}
+
+% ---- Figures --------------------------------------------------------------------------------------
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,00}\\Immediate format}
+	{%
+		\dtbox{6}{4}{white}{Reg}{25--22}
+		\dtbox{10}{16}{white}{Immediate}{21--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrow{111}{07}{MOVI}{Move}}
+	{\dtrow{111}{0F}{COPI$^{*}$}{Coprocessor call}}
+	{I}{0}
+	{%
+		Reg (25--22) & \texttt{rD}, the destination, for save forms; \texttt{rS}, the register tested, for test-only forms\\
+		Immediate (21--6) & 16-bit value. This format has no shift fields\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\[2pt]
+		\multicolumn{2}{@{}l@{}}{\scriptsize $^{*}$\mnemonic{COPI} is a coprocessor call, not a test form; its fields are described in Chapter~\ref{ch:coprocessor}.}\\
+	}
+	\caption{Decode tree for the immediate ALU group (\texttt{0x0\_})}
+	\label{fig:decode-tree-immediate}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,10}\\Short immediate\\format}
+	{%
+		\dtbox{6}{4}{white}{Reg}{25--22}
+		\dtbox{10}{8}{white}{Imm}{21--14}
+		\dtbox{18}{1}{white}{SO}{13}
+		\dtbox{19}{3}{white}{ST}{12--10}
+		\dtbox{22}{4}{white}{SA}{9--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrowx{111}{27}{--}{Undocumented, Appendix~\ref{appendix:undocumented}}}
+	{\dtrowx{111}{2F}{--}{Undocumented, Appendix~\ref{appendix:undocumented}}}
+	{I}{2}
+	{%
+		Reg (25--22) & \texttt{rD}, the destination, for save forms; \texttt{rS}, the register tested, for test-only forms\\
+		Imm (21--14) & 8-bit unsigned value, zero-extended to 16 bits\\
+		SO, ST, SA (13--6) & \texttt{ST} selects the shift type (Table~\ref{tab:shift-types}). If \texttt{SO} is 0, \texttt{SA} is the literal shift count; if 1, \texttt{SA} names the register holding the count. The shift applies to the register operand, never the immediate\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\
+	}
+	\caption{Decode tree for the short immediate ALU group (\texttt{0x2\_})}
+	\label{fig:decode-tree-short-immediate}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,11}\\Register format}
+	{%
+		\dtbox{6}{4}{white}{R1}{25--22}
+		\dtbox{10}{4}{white}{R2}{21--18}
+		\dtbox{14}{4}{white}{R3}{17--14}
+		\dtbox{18}{1}{white}{SO}{13}
+		\dtbox{19}{3}{white}{ST}{12--10}
+		\dtbox{22}{4}{white}{SA}{9--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrow{111}{37}{MOVR}{Move}}
+	{\dtrow{111}{3F}{COPR$^{*}$}{Coprocessor call}}
+	{R}{3}
+	{%
+		R1 (25--22) & \texttt{rD}, the destination, for save forms; ignored by test-only forms\\
+		R2 (21--18) & \texttt{rS1}, the left operand. \mnemonic{MOVR} does not use it\\
+		R3 (17--14) & \texttt{rS2}, the right operand (for \mnemonic{MOVR}, the source)\\
+		SO, ST, SA (13--6) & \texttt{ST} selects the shift type (Table~\ref{tab:shift-types}). If \texttt{SO} is 0, \texttt{SA} is the literal shift count; if 1, \texttt{SA} names the register holding the count. The shift applies to \texttt{rS1}\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\[2pt]
+		\multicolumn{2}{@{}l@{}}{\scriptsize $^{*}$\mnemonic{COPR} is a coprocessor call, not a test form; its fields are described in Chapter~\ref{ch:coprocessor}.}\\
+	}
+	\caption{Decode tree for the register ALU group (\texttt{0x3\_})}
+	\label{fig:decode-tree-register}
+\end{figure}
+
+% Memory and control group (0x1_)
+% \dtmem{y}{op1 node text}{op[1]=0 leaf}{op[1]=1 leaf}{label for op[3:2]}
+\newcommand{\dtmemfamily}[6]{%
+	% #1 index (0--3), #2 op[3:2] bits, #3 family mnemonic, #4 leaf 0 text, #5 leaf 1 text, #6 opcode high/low base digit
+	\pgfmathsetmacro{\ya}{-2.45-(2*#1)*1.05}
+	\pgfmathsetmacro{\yb}{-2.45-(2*#1+1)*1.05}
+	\pgfmathsetmacro{\ym}{(\ya+\yb)/2}
+	\node[dt node, fill=black!16] (fam#1) at (7.9,\ym) {\mnemonic{#3}\\\texttt{op[1]}};
+	\node[dt node, fill=black!24, anchor=west, text width=4.7cm] (leafa#1) at (9.5,\ya) {#4};
+	\node[dt node, fill=black!24, anchor=west, text width=4.7cm] (leafb#1) at (9.5,\yb) {#5};
+	\draw[dt edge] (op32.east) -- ++(0.45,0) |- (fam#1.west) node[dt label, pos=0.8, above] {#2};
+	\draw[dt edge] (fam#1.east) -- ++(0.3,0) |- (leafa#1.west) node[dt label, pos=0.8, above] {0};
+	\draw[dt edge] (fam#1.east) -- ++(0.3,0) |- (leafb#1.west) node[dt label, pos=0.8, above] {1};
+}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\begin{tikzpicture}
+		\dtbox{0}{2}{black!4}{5:4}{31--30}
+		\dtbox{2}{2}{black!10}{3:2}{29--28}
+		\dtbox{4}{1}{black!16}{1}{27}
+		\dtbox{5}{1}{black!24}{0}{26}
+		\dtbox{6}{26}{white}{Operand fields (layout chosen by \texttt{op[0]})}{25--0}
+		\node[dt node, fill=black!4, text width=2.5cm] (fmt) at (1.45,-5.7) {\texttt{op[5:4]\,=\,01}\\Memory and control};
+		\node[dt node, fill=black!10] (op32) at (4.9,-5.7) {\texttt{op[3:2]}};
+		\draw[dt edge] (fmt) -- (op32);
+		\node[font=\scriptsize, anchor=south west, align=left, text width=5.1cm, inner sep=1pt] at (9.6,-1.8) {\texttt{op[0]} then picks the format: 0 = \mbox{Immediate}, 1 = \mbox{Register}};
+		\dtmemfamily{0}{00}{STOR}{\textbf{Indirect}\\\opcode{10} imm \,/\, \opcode{11} reg}{\textbf{Pre-decrement}\\\opcode{12} imm \,/\, \opcode{13} reg}{}
+		\dtmemfamily{1}{01}{LOAD}{\textbf{Indirect}\\\opcode{14} imm \,/\, \opcode{15} reg}{\textbf{Post-increment}\\\opcode{16} imm \,/\, \opcode{17} reg}{}
+		\dtmemfamily{2}{10}{LDEA}{\textbf{Indirect}\\\opcode{18} imm \,/\, \opcode{19} reg}{\textbf{Pre-decrement}\\\opcode{1A} imm \,/\, \opcode{1B} reg}{}
+		\dtmemfamily{3}{11}{LDEL}{\textbf{Indirect}\\\opcode{1C} imm \,/\, \opcode{1D} reg}{\textbf{Post-increment}\\\opcode{1E} imm \,/\, \opcode{1F} reg}{}
+		\node[draw, rounded corners=1.5pt, anchor=north west, inner sep=4pt, font=\footnotesize] at (0,-11.4)
+		{\begin{tabular}{@{}p{1.9cm}p{6.1cm}p{6.3cm}@{}}
+				\multicolumn{3}{@{}l@{}}{\textbf{Operand fields} (chosen by \texttt{op[0]})}                                                                                                                                                                                                                                                                                                                     \\[2pt]
+				          & \textbf{Immediate} (\texttt{op[0]} = 0)                                                                                                                                    & \textbf{Register} (\texttt{op[0]} = 1)                                                                                                                                                                  \\[2pt]
+				25--22    & \texttt{rD} for \mnemonic{LOAD}, \texttt{rS} for \mnemonic{STOR}. \mnemonic{LDEA} and \mnemonic{LDEL} put the destination pair in bits 23--22 (25--24 are zero)            & As for the immediate format, except that \mnemonic{STOR} leaves them unused                                                                                                                             \\
+				21--6     & 16-bit offset added to the address register pair                                                                                                                           & \texttt{rO}, the offset register (17--14). \mnemonic{STOR} also uses \texttt{rS} (21--18) and a shift of \texttt{rO} (\texttt{SO}, \texttt{ST}, \texttt{SA}); those fields are zero for the other three \\
+				5--4 (AF) & \multicolumn{2}{@{}p{12.4cm}@{}}{Address register pair used for the effective address: \texttt{00} \reg{l}, \texttt{01} \reg{a}, \texttt{10} \reg{s}, \texttt{11} \reg{p}}                                                                                                                                                                                                           \\
+				3--0      & \multicolumn{2}{@{}p{12.4cm}@{}}{Condition code}                                                                                                                                                                                                                                                                                                                                     \\
+			\end{tabular}};
+	\end{tikzpicture}
+	\caption{Decode tree for the memory and control group (\texttt{0x1\_})}
+	\label{fig:decode-tree-memory}
+\end{figure}
+
 \section{Instruction Fetch and Alignment}
 
 \subsection{Fetch Process}
