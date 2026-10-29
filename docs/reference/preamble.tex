@@ -35,6 +35,11 @@
 	headheight=14pt
 }
 
+% The book class flushes page bottoms in two-sided mode. With many [H] tables
+% that cuts pages short, so the leftover space gets spread through lists and
+% paragraphs instead. Let short pages stay short.
+\raggedbottom
+
 % ------------------------------------------------------------
 % General packages
 % ------------------------------------------------------------
