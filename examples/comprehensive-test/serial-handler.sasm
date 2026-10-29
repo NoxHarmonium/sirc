@@ -30,9 +30,9 @@ STOR -(s), ah
 STOR -(s), al
 STOR -(s), r1
 
-LOAD    r1, #9600
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_BAUD
+MOVI    r1, #9600
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_BAUD
 STOR    (a), r1
 
 ; Restore the used registers
@@ -50,31 +50,31 @@ STOR -(s), al
 STOR -(s), r1
 STOR -(s), r2
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_BASE
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_BASE
 STOR    (a), r1
 
 ; Store segment
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_SEGMENT
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_SEGMENT
 STOR    (a), r2
 
 ; Align pointer
-LOAD    r1, #1
+MOVI    r1, #1
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 STOR    (a), r1
 
-LOAD    r1, $TRUE
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    r1, $TRUE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
 STOR    (a), r1
 
 :wait_for_print_finish
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
 LOAD    r1, (a)
 
 CMPI    r1, $TRUE
@@ -117,22 +117,22 @@ RETE
 :write_pending_byte
 
 ; Check if the device is ready to write
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_PENDING
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_PENDING
 LOAD    r1, (a)
 
 ; Return early if not (there is already a send pending)
 CMPI    r1, $TRUE
 RETS|==
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 LOAD    r2, (a)
-LOAD    al, $MESSAGE_SEND_SEGMENT
+MOVI    al, $MESSAGE_SEND_SEGMENT
 LOAD    r4, (a)
-LOAD    al, $MESSAGE_SEND_BASE
+MOVI    al, $MESSAGE_SEND_BASE
 LOAD    al, (a)
-LOAD    ah, r4
+MOVR    ah, r4
 
 LOAD    r3, (r2, a)
 
@@ -140,27 +140,27 @@ LOAD    r3, (r2, a)
 CMPI    r3, #0
 BRAN|== @stop_send
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_DATA
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_DATA
 STOR    (a), r3
 
 ; Increment by two because of lack of packing (a word actually is padded to a DW)
 ADDI    r2, #2
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 STOR    (a), r2
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r1, $TRUE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_PENDING
+MOVI    r1, $TRUE
 STOR    (a), r1
 
 RETS
 
 :stop_send
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-LOAD    r1, $FALSE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    r1, $FALSE
 STOR    (a), r1
 
 RETS

@@ -334,7 +334,7 @@ endif
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD r1, #0x41                 ; Character to print ('A')
+MOVI r1, #0x41                 ; Character to print ('A')
 EXCP #0x80                     ; Trap to OS print routine
 		\end{lstlisting}
 		\caption{Triggering a Software Exception}
@@ -642,7 +642,7 @@ endif
 		\begin{lstlisting}
 :alignment_fault_handler
     ETFR a, #6                ; Get faulting return address
-    LOAD al, #0x0100          ; Correct the address
+    MOVI al, #0x0100          ; Correct the address
     ETTR #6, a                ; Write corrected address back
     RETE
 		\end{lstlisting}
@@ -792,14 +792,14 @@ address (\mnemonic{ETFR} \reg{a}, \imm{6}) against the expected range before tre
 :dma_copy_safe
     STOR -(#0, s), lh          ; save the caller's return address first,
     STOR -(#0, s), ll          ; before l is repurposed as the destination
-    LOAD lh, r1                ; destination high word (parameter)
-    LOAD ll, r2                ; destination low word (parameter)
+    MOVR lh, r1                ; destination high word (parameter)
+    MOVR ll, r2                ; destination low word (parameter)
 
     STOR -(#0, s), ah          ; save the original source/dest addresses
     STOR -(#0, s), al          ; and the retry budget where DMAT can't
     STOR -(#0, s), lh          ; touch them
     STOR -(#0, s), ll
-    LOAD r1, #3                ; retry budget (3 attempts in total)
+    MOVI r1, #3                ; retry budget (3 attempts in total)
     STOR -(#0, s), r1
 
 :dma_copy_attempt
@@ -817,7 +817,7 @@ address (\mnemonic{ETFR} \reg{a}, \imm{6}) against the expected range before tre
 	\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
 :dma_fault_handler
     ETFR r7, #7                ; r7 = fault metadata
-    LOAD r6, r7                ; copy it -- ANDI below would destroy r7
+    MOVR r6, r7                ; copy it -- ANDI below would destroy r7
     ANDI r6, #0x0007           ; isolate the bus-access-type field
     CMPI r6, #0x0005           ; BAT = 0x5 (DMA read burst)?
     BRAN|== @dma_fault_is_dma
@@ -839,7 +839,7 @@ address (\mnemonic{ETFR} \reg{a}, \imm{6}) against the expected range before tre
 :dma_copy_give_up
     ADDI sl, #5                ; discard the retry-loop state
     ETFR a, #6                 ; get the faulting return address
-    LOAD al, @dma_copy_failed  ; redirect past the retry loop
+    MOVI al, @dma_copy_failed  ; redirect past the retry loop
     ETTR #6, a
     RETE
 
@@ -946,8 +946,8 @@ if n > 0:
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD ah, #0x0040
-LOAD al, #0x0000              ; a = 0x00400000, start of source block
+MOVI ah, #0x0040
+MOVI al, #0x0000              ; a = 0x00400000, start of source block
 DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]; a += 3
 		\end{lstlisting}
 		\caption{Reading a Memory Block into Registers}
@@ -1044,8 +1044,8 @@ if n > 0:
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD ah, #0x0040
-LOAD al, #0x0000              ; a = 0x00400000, start of destination block
+MOVI ah, #0x0040
+MOVI al, #0x0000              ; a = 0x00400000, start of destination block
 DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3; a += 3
 		\end{lstlisting}
 		\caption{Writing Registers to a Memory Block}
@@ -1157,10 +1157,10 @@ COPR rS                       ; dispatch -- identical to DMAT from here
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD ah, #0x0040
-LOAD al, #0x0000              ; a = 0x00400000, source block
-LOAD lh, #0x0050
-LOAD ll, #0x0000              ; l = 0x00500000, destination block
+MOVI ah, #0x0040
+MOVI al, #0x0000              ; a = 0x00400000, source block
+MOVI lh, #0x0050
+MOVI ll, #0x0000              ; l = 0x00500000, destination block
 DMAT a, l, #16                ; Copy 16 words from memory[a] to memory[l]
 		\end{lstlisting}
 		\caption{Copying a Memory Block with DMAT}
@@ -1300,8 +1300,8 @@ MULS:
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD r1, #1000                ; Multiplicand
-LOAD r2, #2000                ; Multiplier
+MOVI r1, #1000                ; Multiplicand
+MOVI r2, #2000                ; Multiplier
 MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 		\end{lstlisting}
 		\caption{Unsigned 16x16 Multiply}
@@ -1394,9 +1394,9 @@ else:
 
 	\begin{example}
 		\begin{lstlisting}
-LOAD r1, #0                   ; High word of dividend
-LOAD r2, #100                 ; Low word of dividend
-LOAD r3, #7                   ; Divisor
+MOVI r1, #0                   ; High word of dividend
+MOVI r2, #100                 ; Low word of dividend
+MOVI r3, #7                   ; Divisor
 DIVU                          ; r1 = remainder, r2 = quotient, r3 = 0 on success
 		\end{lstlisting}
 		\caption{Unsigned Divide}

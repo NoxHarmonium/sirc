@@ -43,38 +43,38 @@
 
 .ORG 0x0200
 :init
-LOAD    r1, #1
-LOAD    r2, #1
-LOAD    r3, #1
-LOAD    r4, #1
-LOAD    r5, #1
-LOAD    r6, #1
-LOAD    r7, #1
+MOVI    r1, #1
+MOVI    r2, #1
+MOVI    r3, #1
+MOVI    r4, #1
+MOVI    r5, #1
+MOVI    r6, #1
+MOVI    r7, #1
 
 ; Get the debug device to raise a fault on the bus
-LOAD    ah, $DEBUG_DEVICE_SEGMENT
-LOAD    al, $DEBUG_DEVICE_BUS_ERROR
+MOVI    ah, $DEBUG_DEVICE_SEGMENT
+MOVI    al, $DEBUG_DEVICE_BUS_ERROR
 STOR    (a), r1
 
 :after_bus_error_store
 
 ; Jumping to an odd address triggers an alignment fault
-LOAD    pl, #0x0201
+MOVI    pl, #0x0201
 
 :after_odd_address
 
 ; Loading/storing from an odd address should not trigger an alignment fault
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, #0x0
-LOAD    r7, #0xCAFE
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, #0x0
+MOVI    r7, #0xCAFE
 STOR    (#1, a), r7
 LOAD    r7, (#1, a)
 
 
 ; Calculating an effective address that overflows triggers a segment overflow fault
 ; (but only if the SR is set up the right way)
-LOAD    ah, $PROGRAM_SEGMENT
-LOAD    al, #0xFFFE
+MOVI    ah, $PROGRAM_SEGMENT
+MOVI    al, #0xFFFE
 
 ; This should not trigger fault
 LOAD    r7, (#2, a)
@@ -90,8 +90,8 @@ ANDI    sr, #0b1011_1111_1111_1111
 
 ; Segment overflow again, but this time the PC overflow causes it
 
-LOAD    ah, $PROGRAM_SEGMENT_HIGH
-LOAD    al, #0xFFFE
+MOVI    ah, $PROGRAM_SEGMENT_HIGH
+MOVI    al, #0xFFFE
 
 ; This should not trigger fault
 LJMP    a
@@ -101,8 +101,8 @@ LJMP    a
 ; Switch on trap on overflow bit
 ORRI    sr, #0b0100_0000_0000_0000
 
-LOAD    ah, $PROGRAM_SEGMENT_HIGH
-LOAD    al, #0xFFFE
+MOVI    ah, $PROGRAM_SEGMENT_HIGH
+MOVI    al, #0xFFFE
 
 ; This _should_ trigger a fault
 LJMP    a
@@ -121,9 +121,9 @@ NOOP
 
 ; Bus protection fault test
 ; Get the debug device to raise a protection error on the bus
-LOAD    ah, $DEBUG_DEVICE_SEGMENT
-LOAD    al, $DEBUG_DEVICE_BUS_PROTECTION_ERROR
-LOAD    r7, #0x1
+MOVI    ah, $DEBUG_DEVICE_SEGMENT
+MOVI    al, $DEBUG_DEVICE_BUS_PROTECTION_ERROR
+MOVI    r7, #0x1
 STOR    (a), r7
 
 :after_bus_protection_error_store
@@ -132,14 +132,14 @@ STOR    (a), r7
 ORRI     sr, #0b0000_0001_0000_0000
 ; Try to escape the current segment (this should be blocked -- the fault handler must not
 ; let this write actually take effect)
-LOAD     ph, #0xFEFE
+MOVI     ph, #0xFEFE
 
 :after_privilege_violation_load
 
 ; Get the debug device to raise an interrupt (this one should be fine)
-LOAD    r7, #0x1
-LOAD    ah, $DEBUG_DEVICE_SEGMENT
-LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
+MOVI    r7, #0x1
+MOVI    ah, $DEBUG_DEVICE_SEGMENT
+MOVI    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
 
 ; Invalid opcode fault test (kept last: its handler deliberately triggers a nested double
@@ -163,7 +163,7 @@ ADDI    r1, #1
 ; Bus Fault is retryable: fix up the return address so RETE doesn't retry the same
 ; faulting STOR forever.
 ETFR    a, #6
-LOAD    al, @after_bus_error_store
+MOVI    al, @after_bus_error_store
 ETTR    #6, a
 
 RETE
@@ -174,7 +174,7 @@ ADDI    r5, #1
 ; Bus Protection Fault is retryable: fix up the return address so RETE doesn't retry the
 ; same faulting STOR forever.
 ETFR    a, #6
-LOAD    al, @after_bus_protection_error_store
+MOVI    al, @after_bus_protection_error_store
 ETTR    #6, a
 
 RETE
@@ -188,7 +188,7 @@ ADDI    r2, #1
 ; Transfer current ELR into 'a' register
 ETFR a, #6
 ; Correct the lower word
-LOAD    al, @after_odd_address
+MOVI    al, @after_odd_address
 ; Transfer corrected address back to ELR
 ETTR #6, a
 
@@ -219,8 +219,8 @@ ADDI    r3, #0x0F00
 
 ; Fix up the return address because it isn't valid
 ; Load address after fault
-LOAD    ah, $PROGRAM_SEGMENT
-LOAD    al, @return_from_testing_pc_overflow_with_fault
+MOVI    ah, $PROGRAM_SEGMENT
+MOVI    al, @return_from_testing_pc_overflow_with_fault
 ; Transfer corrected address back to ELR
 ETTR    #6, a
 
@@ -234,7 +234,7 @@ ADDI    r3, #0x000F
 ; faulting access forever. (This branch is not reached by anything in this example today,
 ; but is fixed defensively so it isn't a landmine if that changes.)
 ETFR    a, #6
-LOAD    al, @after_segment_overflow_load
+MOVI    al, @after_segment_overflow_load
 ETTR    #6, a
 
 :segment_overflow_fault_handler_end
@@ -258,7 +258,7 @@ ETTR #6
 ; Invalid Opcode Fault is retryable: fix up the return address so RETE doesn't retry the
 ; trapped COPI forever.
 ETFR    a, #6
-LOAD    al, @after_invalid_opcode_copi
+MOVI    al, @after_invalid_opcode_copi
 ETTR    #6, a
 
 RETE
@@ -280,7 +280,7 @@ ETTR    #6, r7
 ; effect -- but this instruction is deliberately testing that an escape attempt is blocked,
 ; so redirect past it instead of retrying it.
 ETFR    a, #6
-LOAD    al, @after_privilege_violation_load
+MOVI    al, @after_privilege_violation_load
 ETTR    #6, a
 
 RETE
@@ -294,7 +294,7 @@ ADDI    r4, #1
 ; The link register holds the address of the instruction that triggered the double fault
 ; (the nested COPI above) -- fix up the return address so RETE doesn't retrigger it forever.
 ETFR    a, #6
-LOAD    al, @after_nested_invalid_opcode_copi
+MOVI    al, @after_nested_invalid_opcode_copi
 ETTR    #6, a
 
 RETE
@@ -308,9 +308,9 @@ ADDI    r6, #0x1000
 
 ; Trigger another L5 interupt while it is already being serviced
 ; which will trigger a fault
-LOAD    r7, #0x1
-LOAD    ah, $DEBUG_DEVICE_SEGMENT
-LOAD    al, $DEBUG_DEVICE_EXCEPTION_L5
+MOVI    r7, #0x1
+MOVI    ah, $DEBUG_DEVICE_SEGMENT
+MOVI    al, $DEBUG_DEVICE_EXCEPTION_L5
 STOR    (a), r7
 
 RETE
@@ -325,4 +325,4 @@ RETE
 
 ; Trampoline for faults-high to come back
 .ORG 0xFFF0
-LOAD    pl, @return_from_testing_pc_overflow_no_fault
+MOVI    pl, @return_from_testing_pc_overflow_no_fault

@@ -142,7 +142,7 @@ The most common use of condition codes is with compare (\mnemonic{CMP}) instruct
 	\begin{lstlisting}
 ; if (r1 > r2) { r3 = r4; } (unsigned)
 CMPR r1, r2          ; Compare r1 and r2
-LOAD|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
+MOVR|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
 
 ; if (r1 <= 100) { branch } (unsigned)
 CMPI r1, #100
@@ -155,7 +155,7 @@ BRAN|LO @target
 	\begin{lstlisting}
 ; if (r1 >= r2) { r3 = r4; } (signed)
 CMPR r1, r2          ; Compare r1 and r2
-LOAD|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
+MOVR|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
 
 ; if (r1 < -10) { branch } (signed)
 CMPI r1, #-10
@@ -242,8 +242,8 @@ BRAN|!= @non_zero_case
 	\begin{lstlisting}
 ; max = (a > b) ? a : b (unsigned)
 CMPR r1, r2              ; Compare a and b
-LOAD|HI r3, r1           ; r3 = a if a > b
-LOAD|LO r3, r2           ; r3 = b if a <= b
+MOVR|HI r3, r1           ; r3 = a if a > b
+MOVR|LO r3, r2           ; r3 = b if a <= b
 	\end{lstlisting}
 	\caption{Conditional Assignment}
 \end{example}
@@ -269,7 +269,7 @@ LJSR|>> a                ; Call function if r1 > 0 (signed)
 \begin{example}
 	\begin{lstlisting}
 ; for (i = 10; i > 0; i--)
-LOAD r1, #10             ; i = 10
+MOVI r1, #10             ; i = 10
 :loop
     ; ... loop body ...
     SUBI r1, #1          ; i--

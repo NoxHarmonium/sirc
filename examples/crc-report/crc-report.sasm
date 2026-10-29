@@ -34,7 +34,7 @@
     .DW @monitor_halt              ; vector 0x81 ("halt")       -> 0x102/0x103
 
 :main
-    LOAD ah, #0x0000               ; still supervisor mode here: a direct
+    MOVI ah, #0x0000               ; still supervisor mode here: a direct
                                     ; write to ah is allowed. This is the
                                     ; only direct ah write in the whole main
                                     ; program; from here on `a` only ever
@@ -43,8 +43,8 @@
                                     ; the rest of the program (see header)
 
     ; --- Build the fixed 16-word buffer: buffer[i] = i, for i in 0..15 ---
-    LOAD al, @crc_buffer
-    LOAD r2, #0
+    MOVI al, @crc_buffer
+    MOVI r2, #0
 :buf_fill
     STOR (r2, a), r2
     ADDI r2, #1
@@ -54,8 +54,8 @@
     ; --- CRC-16/XMODEM over buffer[0..15] ---
     ; r1 = crc accumulator, r2 = byte index, r3 = current byte (shifted into
     ; position), r4 = inner bit-loop counter.
-    LOAD r1, #0
-    LOAD r2, #0
+    MOVI r1, #0
+    MOVI r2, #0
 :crc_byte_loop
     CMPI r2, #16
     BRAN|== @crc_done
@@ -63,7 +63,7 @@
     ADDI r3, #0, LSL #8          ; r3 = byte << 8
     XORR r1, r1, r3              ; crc ^= (byte << 8)
 
-    LOAD r4, #0
+    MOVI r4, #0
 :crc_bit_loop
     CMPI r4, #8
     BRAN|== @crc_bit_done
@@ -84,7 +84,7 @@
     ; r1 now holds the CRC-16/XMODEM result (confirmed 0x513D in stage 1).
 
     ; --- Feed the CRC result into itoa5 ---
-    LOAD al, @digits_buf
+    MOVI al, @digits_buf
     BRSR @itoa5                  ; r1 = crc value (still set); a = digits_buf
 
     ; Read the 5 ASCII digit bytes back into r3-r7.
@@ -96,20 +96,20 @@
 
     ; --- Write the 5 digits into report_file via the monitor trap ---
     ; (see the calling-convention comment in monitor.sasm)
-    LOAD r1, #0
-    LOAD r2, r3
+    MOVI r1, #0
+    MOVR r2, r3
     EXCP #0x80
-    LOAD r1, #1
-    LOAD r2, r4
+    MOVI r1, #1
+    MOVR r2, r4
     EXCP #0x80
-    LOAD r1, #2
-    LOAD r2, r5
+    MOVI r1, #2
+    MOVR r2, r5
     EXCP #0x80
-    LOAD r1, #3
-    LOAD r2, r6
+    MOVI r1, #3
+    MOVR r2, r6
     EXCP #0x80
-    LOAD r1, #4
-    LOAD r2, r7
+    MOVI r1, #4
+    MOVR r2, r7
     EXCP #0x80
 
     EXCP #0x81                   ; halt, via the monitor (see monitor.sasm --
@@ -129,7 +129,7 @@
 ; Preserves a. Returns via RETS.
 ; ============================================================================
 :itoa5
-    LOAD r2, #0
+    MOVI r2, #0
 :d10000
     CMPI r1, #10000
     BRAN|CS @d10000_done
@@ -140,7 +140,7 @@
     ADDI r2, #0x30
     STOR (#0, a), r2
 
-    LOAD r2, #0
+    MOVI r2, #0
 :d1000
     CMPI r1, #1000
     BRAN|CS @d1000_done
@@ -151,7 +151,7 @@
     ADDI r2, #0x30
     STOR (#1, a), r2
 
-    LOAD r2, #0
+    MOVI r2, #0
 :d100
     CMPI r1, #100
     BRAN|CS @d100_done
@@ -162,7 +162,7 @@
     ADDI r2, #0x30
     STOR (#2, a), r2
 
-    LOAD r2, #0
+    MOVI r2, #0
 :d10
     CMPI r1, #10
     BRAN|CS @d10_done

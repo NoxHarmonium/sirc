@@ -10,18 +10,18 @@
 :main
 
 ; File I/O segment
-LOAD    ah, #0x00F0
+MOVI    ah, #0x00F0
 ; Array Start = 0x00F0_0000
-LOAD    al, #0x0000
+MOVI    al, #0x0000
 
 ; Stack segment (other end of mapped file)
-LOAD    sh, #0x00F0
+MOVI    sh, #0x00F0
 ; Stack top = 0x00F0_FFFF
-LOAD    sl, #0xFFFF
+MOVI    sl, #0xFFFF
 
-LOAD    r7, #2
-LOAD    r1, #2
-LOAD    r2, #1
+MOVI    r7, #2
+MOVI    r1, #2
+MOVI    r2, #1
 
 :1
 
@@ -29,8 +29,8 @@ STOR    (r1, a), r2
 ADDI    r1, #2
 CMPI    r1, $MAX_PRIME
 BRAN|<= @1
-LOAD    r1, #3
-LOAD    r3, #1
+MOVI    r1, #3
+MOVI    r3, #1
 
 :2
 
@@ -40,8 +40,8 @@ BRAN|== @4
 ; THIS NUMBER IS A PRIME!
 ; TODO: Log this somehow
 STOR    -(s), r1
-LOAD    r7, r1
-LOAD    r2, r1
+MOVR    r7, r1
+MOVR    r2, r1
 
 :3
 STOR    (r2, a), r3

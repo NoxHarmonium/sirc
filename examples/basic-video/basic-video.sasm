@@ -62,8 +62,8 @@
 ORRI sr, #0b0001_1110_0000_0000
 
 ; Setup stack frame - stack works backwards from end of segment
-LOAD sh, $SCRATCH_SEGMENT
-LOAD sl, #0xFFFF
+MOVI sh, $SCRATCH_SEGMENT
+MOVI sl, #0xFFFF
 
 ; Setup routines
 BRSR @setup_serial
@@ -75,8 +75,8 @@ BRSR @setup_video
 WAIT
 
 ; Exit when MAX_FRAMES have been rendered so it doesn't loop forever
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $FRAME_COUNTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $FRAME_COUNTER
 LOAD    r1, (a)
 CMPI    r1, $MAX_FRAMES
 BRAN|>= @finish
@@ -92,13 +92,13 @@ COPI    #0x14FF
 
 :print_exit
 
-LOAD    r1, @exit_message
+MOVI    r1, @exit_message
 BRAN    @print
 
 
 :print_delimiter
 
-LOAD    r1, @delimiter
+MOVI    r1, @delimiter
 BRAN    @print
 
 
@@ -116,8 +116,8 @@ STOR -(s), r1
 ; TODO: Make sure exception handlers don't stomp all over the registers
 
 ; Increment frame count
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $FRAME_COUNTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $FRAME_COUNTER
 LOAD    r1, (a)
 ADDI    r1, #1
 STOR    (a), r1
@@ -138,89 +138,89 @@ RETE
 LDEA s, (l)
 
 ; 1. Copy Tileset (10224 words)
-LOAD r1, @tileset_0.l
-LOAD r2, @tileset_0.u
-LOAD r3, $VRAM_TILESET_BASE
-LOAD r4, $VIDEO_DEVICE_SEGMENT
+MOVI r1, @tileset_0.l
+MOVI r2, @tileset_0.u
+MOVI r3, $VRAM_TILESET_BASE
+MOVI r4, $VIDEO_DEVICE_SEGMENT
 ; TODO: Embed the number of words in the generated data so we don't need to hardcode this
-LOAD r5, #6176
+MOVI r5, #6176
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; 2. Copy Tilemaps (1024 words each)
 ; BG1
-LOAD r1, @tilemap__0_2.l
-LOAD r2, @tilemap__0_2.u
-LOAD r3, $VRAM_BG1_TILEMAP_BASE
-LOAD r4, $VIDEO_DEVICE_SEGMENT
-LOAD r5, #1024
+MOVI r1, @tilemap__0_2.l
+MOVI r2, @tilemap__0_2.u
+MOVI r3, $VRAM_BG1_TILEMAP_BASE
+MOVI r4, $VIDEO_DEVICE_SEGMENT
+MOVI r5, #1024
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; BG2
-LOAD r1, @tilemap__0_0.l
-LOAD r2, @tilemap__0_0.u
-LOAD r3, $VRAM_BG2_TILEMAP_BASE
-LOAD r4, $VIDEO_DEVICE_SEGMENT
-LOAD r5, #1024
+MOVI r1, @tilemap__0_0.l
+MOVI r2, @tilemap__0_0.u
+MOVI r3, $VRAM_BG2_TILEMAP_BASE
+MOVI r4, $VIDEO_DEVICE_SEGMENT
+MOVI r5, #1024
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; BG3
-LOAD r1, @tilemap__0_1.l
-LOAD r2, @tilemap__0_1.u
-LOAD r3, $VRAM_BG3_TILEMAP_BASE
-LOAD r4, $VIDEO_DEVICE_SEGMENT
-LOAD r5, #1024
+MOVI r1, @tilemap__0_1.l
+MOVI r2, @tilemap__0_1.u
+MOVI r3, $VRAM_BG3_TILEMAP_BASE
+MOVI r4, $VIDEO_DEVICE_SEGMENT
+MOVI r5, #1024
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; 3. Copy Palette (9 words)
-LOAD r1, @palette__0_0.l
-LOAD r2, @palette__0_0.u
-LOAD r3, $CGRAM_PALETTE_BASE
-LOAD r4, $VIDEO_DEVICE_SEGMENT
-LOAD r5, #14
+MOVI r1, @palette__0_0.l
+MOVI r2, @palette__0_0.u
+MOVI r3, $CGRAM_PALETTE_BASE
+MOVI r4, $VIDEO_DEVICE_SEGMENT
+MOVI r5, #14
 BRSR @memcpy
 
 BRSR @print_delimiter
 
 ; 4. Setup PPU Registers
-LOAD ah, $VIDEO_DEVICE_SEGMENT
+MOVI ah, $VIDEO_DEVICE_SEGMENT
 
 ; Tile Size (all 8x8, all Single tilemap size)
-LOAD al, $PPU_TILE_SIZE
-LOAD r1, #0
+MOVI al, $PPU_TILE_SIZE
+MOVI r1, #0
 STOR (a), r1
 
 ; BG Tilemap Addresses
-LOAD al, $PPU_BG1_TILEMAP_ADDR
-LOAD r1, $VRAM_BG1_TILEMAP_BASE
+MOVI al, $PPU_BG1_TILEMAP_ADDR
+MOVI r1, $VRAM_BG1_TILEMAP_BASE
 STOR (a), r1
 
-LOAD al, $PPU_BG2_TILEMAP_ADDR
-LOAD r1, $VRAM_BG2_TILEMAP_BASE
+MOVI al, $PPU_BG2_TILEMAP_ADDR
+MOVI r1, $VRAM_BG2_TILEMAP_BASE
 STOR (a), r1
 
-LOAD al, $PPU_BG3_TILEMAP_ADDR
-LOAD r1, $VRAM_BG3_TILEMAP_BASE
+MOVI al, $PPU_BG3_TILEMAP_ADDR
+MOVI r1, $VRAM_BG3_TILEMAP_BASE
 STOR (a), r1
 
 ; BG Tile Data Addresses
-LOAD al, $PPU_BG1_TILE_ADDR
-LOAD r1, $VRAM_TILESET_BASE
+MOVI al, $PPU_BG1_TILE_ADDR
+MOVI r1, $VRAM_TILESET_BASE
 STOR (a), r1
 
-LOAD al, $PPU_BG2_TILE_ADDR
-LOAD r1, $VRAM_TILESET_BASE
+MOVI al, $PPU_BG2_TILE_ADDR
+MOVI r1, $VRAM_TILESET_BASE
 STOR (a), r1
 
-LOAD al, $PPU_BG3_TILE_ADDR
-LOAD r1, $VRAM_TILESET_BASE
+MOVI al, $PPU_BG3_TILE_ADDR
+MOVI r1, $VRAM_TILESET_BASE
 STOR (a), r1
 
 ; pub struct PaletteRegister {
@@ -229,22 +229,22 @@ STOR (a), r1
 ;    pub palette_offset: u8,        // Bits 8-15
 ; }
 ; Size 16 is 2. (0 << 8) | 2 = 0x0002
-LOAD r1, #0x0002
+MOVI r1, #0x0002
 
-LOAD al, $PPU_BG1_PALETTE_CONFIG
+MOVI al, $PPU_BG1_PALETTE_CONFIG
 STOR (a), r1
 
-LOAD al, $PPU_BG2_PALETTE_CONFIG
+MOVI al, $PPU_BG2_PALETTE_CONFIG
 STOR (a), r1
 
-LOAD al, $PPU_BG3_PALETTE_CONFIG
+MOVI al, $PPU_BG3_PALETTE_CONFIG
 STOR (a), r1
 
 ; Base Config (Enable all BG and Sprites, Brightness 15)
 ; Brightness 15 = 0xF << 3 = 0x0078
 ; All disable bits = 0
-LOAD al, $PPU_BASE_CONFIG
-LOAD r1, #0x0078
+MOVI al, $PPU_BASE_CONFIG
+MOVI r1, #0x0078
 STOR (a), r1
 
 ; Restore link register
@@ -266,16 +266,16 @@ RETS
     ; The destination pointer doesn't need the same treatment
     ADDI r1, #1
     ; Set lower byte to zero and use register displacement addressing to reduce number of instructions
-    LOAD al, #0
+    MOVI al, #0
 
 
 :memcpy_loop
     ; Load from source
-    LOAD ah, r2
+    MOVR ah, r2
     LOAD r6, (r1, a)
 
     ; Store to destination
-    LOAD ah, r4
+    MOVR ah, r4
     STOR (r3, a), r6
 
     ; Increment pointers

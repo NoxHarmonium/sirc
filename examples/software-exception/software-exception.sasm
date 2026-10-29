@@ -13,7 +13,7 @@
 :start
 
 ; Reset register
-LOAD    r1, #1
+MOVI    r1, #1
 ; Trigger Software Exception
 EXCP    #0x60
 
@@ -27,7 +27,7 @@ COPI    #0x14FF
 
 ; Load a value to detect if this code runs
 ; Final value of r1 should be this value
-LOAD    r1, #0xFF
+MOVI    r1, #0xFF
 ; Try and trigger nested software exception (should be ignored)
 EXCP    #0x61
 ; Return from exception
@@ -38,6 +38,6 @@ RETE
 
 ; Load a value to detect if this code runs
 ; Final value of r1 should _not_ be BB because this vector should never be jumped to
-LOAD    r1, #0xBB
+MOVI    r1, #0xBB
 ; Return from exception
 RETE

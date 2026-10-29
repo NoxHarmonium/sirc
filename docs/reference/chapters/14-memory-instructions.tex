@@ -25,7 +25,8 @@ post-increment and \mnemonic{STOR} additionally supports pre-decrement:
 \textbf{Important:} \mnemonic{STOR}'s register-offset forms support an optional shift suffix, applied to the source
 register value before it is written to memory. \mnemonic{LOAD} does not support a shift suffix on any form: the
 offset register \texttt{rO} is always used unshifted. See Section~\ref{sec:memory-shifts} for details. Shifts are
-also \textbf{not} supported when loading immediate values or copying register values directly.
+also \textbf{not} supported by \mnemonic{MOVI} and \mnemonic{MOVR}, which load immediate values and copy register values
+directly.
 
 \section{Effective Address Calculation}
 
@@ -119,9 +120,8 @@ architecturally undefined; they are not required to raise an invalid-opcode faul
 Memory instructions do not update status flags. All four condition flags are preserved regardless of addressing form,
 shift result, or auto-update side effect. This applies only to the memory-access \mnemonic{LOAD} forms
 (\opcode{14}--\opcode{17}) and \mnemonic{STOR} (\opcode{10}--\opcode{13}); see Chapter~\ref{ch:alu-instructions} for
-the flag behavior of the LOAD-immediate (\opcode{07}) and LOAD-register (\opcode{37}) forms. The AF field (bits 5--4)
-is not a status-update source for these opcodes; it selects the address-register pair used to form the effective
-address.
+the flag behavior of \mnemonic{MOVI} (\opcode{07}) and \mnemonic{MOVR} (\opcode{37}). The AF field (bits 5--4) is not a
+status-update source for these opcodes; it selects the address-register pair used to form the effective address.
 
 \begin{table}[H]
 	\centering
@@ -514,8 +514,8 @@ All standard shift types are supported:
 following do \textbf{not} support a shift suffix:
 \begin{itemize}
 	\item Any \mnemonic{LOAD} form, register-offset included -- \texttt{LOAD r1, (r2, a)} -- No shift suffix exists
-	\item Loading immediate values: \texttt{LOAD r1, \#0x1234} -- No shift allowed
-	\item Copying registers: \texttt{LOAD r1, r2} -- No shift allowed
+	\item Loading immediate values: \texttt{MOVI r1, \#0x1234} -- No shift allowed
+	\item Copying registers: \texttt{MOVR r1, r2} -- No shift allowed
 	\item Immediate-offset memory load: \texttt{LOAD r1, (\#0, a)} -- No shift allowed
 	\item Immediate-offset memory store: \texttt{STOR (\#0, a), r1} -- No shift allowed
 \end{itemize}

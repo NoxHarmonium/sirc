@@ -29,8 +29,8 @@
 ; ============================================================================
 
 :monitor_entry
-    LOAD ah, #0x00E0
-    LOAD al, r1
+    MOVI ah, #0x00E0
+    MOVR al, r1
     STOR (#0, a), r2
     RETE
 

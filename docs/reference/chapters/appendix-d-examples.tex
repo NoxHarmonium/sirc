@@ -24,8 +24,8 @@ the examples put them to use.
 	      \begin{itemize}
 		      \item In \mnemonic{BRAN} or \mnemonic{BRSR}, it resolves to a 16-bit signed word displacement from the instruction to the
 		            label.
-		      \item In any other instruction that takes a symbol operand (\mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA},
-		            \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}), it resolves to the label's low word only.
+		      \item In any other instruction that takes a symbol operand (\mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR},
+		            \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}), it resolves to the label's low word only.
 		      \item In a \texttt{.DB}, \texttt{.DW}, or \texttt{.DQ} directive (below), it resolves to the label's full 24-bit address.
 	      \end{itemize}
 	      An explicit suffix overrides this default: \texttt{@label.r} forces the PC-relative displacement form,
@@ -70,7 +70,7 @@ segment and the standalone data segment shown later do not need one.
     .DQ @level2_handler             ; vector 0x40: level 2 hardware exception vector
 
 :start
-    LOAD al, @lookup                ; @label defaults to the low word for LOAD's immediate form
+    MOVI al, @lookup                ; @label defaults to the low word for MOVI
     LOAD r1, (#0, a)                ; r1 = lookup[0]
     CMPI r1, $ANSWER                ; constants defined with .EQU are used without '#'
     BRAN|== @start                  ; @label defaults to a PC-relative offset for BRAN/BRSR

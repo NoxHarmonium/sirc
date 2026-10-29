@@ -89,6 +89,10 @@ fn test_no_input() {
         expected "LJMP" at line 2, column 1, or
         in section "LJSR instruction" at line 2, column 1,
         expected "LJSR" at line 2, column 1, or
+        in section "MOVI/MOVR instruction" at line 2, column 1,
+        one of:
+          expected "MOVI" at line 2, column 1, or
+          expected "MOVR" at line 2, column 1, or
         in section "LOAD instruction" at line 2, column 1,
         expected "LOAD" at line 2, column 1, or
         in section "STOR instruction" at line 2, column 1,
@@ -137,7 +141,7 @@ fn test_short_input() {
 
 #[test]
 fn test_rets_invalid_addressing_mode_error_context() {
-    let input = "LOAD r1, #0\nRETS r3\nLOAD r2, #5\n";
+    let input = "MOVI r1, #0\nRETS r3\nMOVI r2, #5\n";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for invalid LOAD addressing mode",
@@ -145,10 +149,10 @@ fn test_rets_invalid_addressing_mode_error_context() {
     assert_snapshot!(combined, @r#"
     error: parsing failed
       --> test.sasm:2:6
-    1 | LOAD r1, #0
+    1 | MOVI r1, #0
     2 | RETS r3
       |      ^
-    3 | LOAD r2, #5
+    3 | MOVI r2, #5
 
     in section "instruction" at line 2, column 1,
     in section "Meta instruction" at line 2, column 1,
@@ -159,7 +163,7 @@ fn test_rets_invalid_addressing_mode_error_context() {
 
 #[test]
 fn test_wait_invalid_addressing_mode_error_context() {
-    let input = "LOAD r1, #0\nWAIT r3\nLOAD r2, #5\n";
+    let input = "MOVI r1, #0\nWAIT r3\nMOVI r2, #5\n";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for invalid LOAD addressing mode",
@@ -167,10 +171,10 @@ fn test_wait_invalid_addressing_mode_error_context() {
     assert_snapshot!(combined, @r#"
     error: parsing failed
       --> test.sasm:2:6
-    1 | LOAD r1, #0
+    1 | MOVI r1, #0
     2 | WAIT r3
       |      ^
-    3 | LOAD r2, #5
+    3 | MOVI r2, #5
 
     in section "instruction" at line 2, column 1,
     in section "Exception Unit Instruction" at line 2, column 1,
@@ -181,7 +185,7 @@ fn test_wait_invalid_addressing_mode_error_context() {
 
 #[test]
 fn test_load_invalid_addressing_mode_error_context() {
-    let input = "LOAD r1, #0\nLOAD r1, r2, r3\nLOAD r2, #5\n";
+    let input = "MOVI r1, #0\nLOAD r1, r2, r3\nMOVI r2, #5\n";
     let combined = test_error_formatting(
         input,
         "Expected parsing to fail for invalid LOAD addressing mode",
@@ -189,10 +193,10 @@ fn test_load_invalid_addressing_mode_error_context() {
     assert_snapshot!(combined, @r#"
             error: parsing failed
               --> test.sasm:2:6
-            1 | LOAD r1, #0
+            1 | MOVI r1, #0
             2 | LOAD r1, r2, r3
               |      ^
-            3 | LOAD r2, #5
+            3 | MOVI r2, #5
 
             in section "instruction" at line 2, column 1,
             in section "LOAD instruction" at line 2, column 1,

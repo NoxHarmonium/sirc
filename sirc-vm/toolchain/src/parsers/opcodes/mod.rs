@@ -10,6 +10,7 @@ pub mod ljmp;
 pub mod ljsr;
 pub mod load;
 pub mod meta;
+pub mod mov;
 pub mod store;
 
 use nom::error::{ErrorKind, FromExternalError};

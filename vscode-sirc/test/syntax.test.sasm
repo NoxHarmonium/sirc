@@ -91,3 +91,7 @@ $test123
 LOAD r1, (#5, a)
 LOAD r2, (#0, p)+
 STOR -(#0, s), r2
+
+; ALU moves
+MOVI r1, #5
+MOVR|== r2, r3

@@ -98,7 +98,7 @@ execution time.
 \subsection{Simple Loop}
 \begin{lstlisting}
 ; Process 10 elements (assuming no bus wait states)
-LOAD r7, #10                  ; 6 cycles
+MOVI r7, #10                  ; 6 cycles
 :loop
     LOAD r1, (#0, a)+         ; 6 cycles
     ADDI r1, #1               ; 6 cycles

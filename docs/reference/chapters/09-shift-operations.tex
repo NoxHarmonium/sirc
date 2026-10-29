@@ -43,7 +43,7 @@ register writeback.
 \section{Shift Syntax}
 
 A shift suffix may follow the ALU short-immediate and ALU register forms, the \mnemonic{SHFT} meta-instruction, and the
-register-displacement \mnemonic{LOAD}/\mnemonic{STOR} forms. It is rejected on \mnemonic{LOAD rD, rS}, on
+register-displacement \mnemonic{LOAD}/\mnemonic{STOR} forms. It is rejected on \mnemonic{MOVR rD, rS}, on
 \mnemonic{LDEA}/\mnemonic{LDEL}, and on coprocessor instructions.
 
 For ALU instructions, the shift is applied in the "Decode and Register Fetch" phase, before the ALU operation. In
@@ -393,11 +393,11 @@ ADDR r1, r2, r2, LSL #2   ; r1 = (r2 << 2) + r2 = r2 * 5
 \begin{example}
 	\begin{lstlisting}
 ; Unsigned divide by 4
-LOAD r1, r2        ; r1 = r2
+MOVR r1, r2        ; r1 = r2
 ADDI r1, #0, LSR #2   ; r1 = (r1 >> 2) = r1 / 4 (unsigned)
 
 ; Signed divide by 8
-LOAD r1, r2        ; r1 = r2
+MOVR r1, r2        ; r1 = r2
 ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 	\end{lstlisting}
 	\caption{Division by Powers of 2}
@@ -406,12 +406,12 @@ ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 \begin{example}
 	\begin{lstlisting}
 ; Extract bits 8-11 from r1
-LOAD r2, r1        ; r2 = r1
+MOVR r2, r1        ; r2 = r1
 ADDI r2, #0, LSR #8   ; Shift down
 ANDI r2, #0x0F            ; Mask to 4 bits
 
 ; Extract and sign-extend bit 7
-LOAD r2, r1        ; r2 = r1
+MOVR r2, r1        ; r2 = r1
 ADDI r2, #0, LSL #8   ; Shift bit 7 to bit 15
 ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
 	\end{lstlisting}
@@ -421,19 +421,19 @@ ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
 \begin{example}
 	\begin{lstlisting}
 ; Set bit N (where N is in r2)
-LOAD r3, #1               ; r3 = 1
+MOVI r3, #1               ; r3 = 1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 ORRR r1, r3               ; r1 |= (1 << N)
 
 ; Clear bit N
-LOAD r3, #1
+MOVI r3, #1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
-LOAD r4, #0xFFFF
+MOVI r4, #0xFFFF
 XORR r3, r4, r3           ; r3 = 0xFFFF ^ (1 << N) = ~(1 << N)
 ANDR r1, r1, r3           ; r1 = r1 & ~(1 << N)
 
 ; Test bit N
-LOAD r3, #1
+MOVI r3, #1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 TSAR r1, r3               ; Test r1 & (1 << N)
 BRAN|!= @bit_was_set      ; Branch if bit set

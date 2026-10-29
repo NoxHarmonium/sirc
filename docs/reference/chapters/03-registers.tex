@@ -329,11 +329,11 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 
 \begin{example}
 	\begin{lstlisting}
-; Load immediate value into r1
-LOAD r1, #100
+; Move immediate value into r1
+MOVI r1, #100
 
 ; Add 2 to the value stored in r1 and store the result into r2
-LOAD r2, r1
+MOVR r2, r1
 ADDI r2, #2
 
 ; Add r1 and r2, store in r3

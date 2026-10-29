@@ -120,7 +120,7 @@ matching the unanimous form already in Chapters 13–17. Do not use "Status Flag
   several existing manual listings turned out to use the trailing form and fail to assemble.
   Label *references* (branch/call targets, and any operand naming a symbol's address) use
   `@label`, with no `#` prefix even where the operand position is otherwise an immediate value
-  (`BRAN|cond @loop`, `LOAD al, @buffer` — not `LOAD al, #buffer`). When adding or editing a
+  (`BRAN|cond @loop`, `MOVI al, @buffer` — not `MOVI al, #buffer`). When adding or editing a
   listing that uses labels, prefer actually assembling it (`cargo run --bin assembler`, from
   `docs/reference/` add `../../sirc-vm` to the path) over eyeballing the syntax.
 

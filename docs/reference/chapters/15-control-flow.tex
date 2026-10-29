@@ -719,7 +719,7 @@ LJMP a                         ; p = a
 LJMP a, #16                    ; p = a + 16
 
 ; Jump with register displacement
-LOAD r1, #4
+MOVI r1, #4
 LJMP a, r1                     ; p = a + r1
 		\end{lstlisting}
 		\caption{Jumping Through a Register with LJMP}
@@ -823,15 +823,15 @@ if condition:
 		\begin{lstlisting}
 ; Call function at address in a
 ; supervisor mode only -- writing ah is privileged
-LOAD ah, #0x0040
-LOAD al, #0x0000              ; a = 0x00400000
+MOVI ah, #0x0040
+MOVI al, #0x0000              ; a = 0x00400000
 LJSR a                        ; Call 0x00400000
 
 ; Call with offset
 LJSR a, @function_offset      ; p = a + function_offset
 
 ; Call with register displacement
-LOAD r1, #8
+MOVI r1, #8
 LJSR a, r1                    ; p = a + r1
 
 ; Call through a table entry and advance to the next entry
@@ -874,7 +874,7 @@ BRAN @end
 \subsection{Switch/Jump Table}
 \begin{lstlisting}
 ; Switch on r1 (0-3)
-LOAD r2, r1                   ; r2 = r1
+MOVR r2, r1                   ; r2 = r1
 ; Scale the index to a 2-word BRAN entry and skip over this LDEA
 ADDI r2, #2, LSL #1           ; r2 = (r2 << 1) + 2
 LDEA p, (r2, p)               ; Jump into the branch table below

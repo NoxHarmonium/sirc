@@ -38,16 +38,6 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
-    let construct_immediate_instruction = |value: u16, dest_register: &RegisterName| {
-        InstructionData::Immediate(ImmediateInstructionData {
-            op_code: Instruction::LoadRegisterFromImmediate,
-            register: dest_register.to_register_index(),
-            value: value.to_owned(),
-            condition_flag,
-            additional_flags: 0x0,
-        })
-    };
-
     let construct_indirect_immediate_instruction =
         |offset: u16, dest_register: &RegisterName, address_register: &AddressRegisterName| {
             InstructionData::Immediate(ImmediateInstructionData {
@@ -70,78 +60,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
             })
         };
 
-    // NOTE: No shifting with immediate operands because there is no short immediate representation of LOAD
     match operands.as_slice() {
-        // LOAD r1, #0
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::Immediate(offset)] => {
-            match offset {
-                ImmediateType::Value(value) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(
-                            value.to_owned(),
-                            dest_register,
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::SymbolRef(ref_token) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, dest_register),
-                        symbol_ref: Some(override_ref_token_type_if_implied(
-                            ref_token,
-                            RefType::LowerWord,
-                        )),
-                        ..Default::default()
-                    },
-                )),
-                ImmediateType::PlaceHolder(placeholder_name) => Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: construct_immediate_instruction(0x0, dest_register),
-                        placeholder_name: Some(placeholder_name.clone()),
-                        ..Default::default()
-                    },
-                )),
-            }
-        }
-        // LOAD r1, r2
-        [AddressingMode::DirectRegister(dest_register), AddressingMode::DirectRegister(src_register)] =>
-        {
-            Ok((
-                i,
-                InstructionToken {
-                    input_length,
-                    instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromRegister,
-                        r1: dest_register.to_register_index(),
-                        r2: 0x0, // Unused
-                        r3: src_register.to_register_index(),
-                        shift_operand: ShiftOperand::Immediate,
-                        shift_type: ShiftType::None,
-                        shift_count: 0,
-                        condition_flag,
-                        additional_flags: 0x00,
-                    }),
-                    ..Default::default()
-                },
-            ))
-        }
-        // LOAD r1, r2, ASL #1
-        [AddressingMode::DirectRegister(_), AddressingMode::DirectRegister(_), AddressingMode::ShiftDefinition(_)] =>
-        {
-            // NOTE: No shifting with direct register -> direct register because of the way the CPU architecture works - use SHFT instead
-            // LOAD r1, r2, ASL #1 would translate directly to SHFT r1, r2, ASL #1.
-            Err(nom::Err::Failure(ErrorTree::from_external_error(
-                i_after_instruction,
-                ErrorKind::Fail,
-                "Invalid addressing mode for LOAD:. Cannot use a shift with direct register -> direct register loads. Use SHFT instruction instead.",
-            )))
-        }
         // LOAD r1, (#0, a)
         [AddressingMode::DirectRegister(dest_register), AddressingMode::IndirectImmediateDisplacement(offset, address_register)] => {
             match offset {
@@ -355,6 +274,21 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                 },
             ))
         }
+        // LOAD only accesses memory. Loading an immediate or copying a register is done with MOVI/MOVR
+        [AddressingMode::DirectRegister(_), AddressingMode::Immediate(_)] => Err(nom::Err::Failure(
+            ErrorTree::from_external_error(
+                i_after_instruction,
+                ErrorKind::Fail,
+                "Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVI to load an immediate value into a register.",
+            ),
+        )),
+        [AddressingMode::DirectRegister(_), AddressingMode::DirectRegister(_)] => Err(nom::Err::Failure(
+            ErrorTree::from_external_error(
+                i_after_instruction,
+                ErrorKind::Fail,
+                "Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVR to copy one register to another.",
+            ),
+        )),
         modes => {
             let error_string = format!("Invalid addressing mode for LOAD: ({modes:?})");
             Err(nom::Err::Failure(ErrorTree::from_external_error(

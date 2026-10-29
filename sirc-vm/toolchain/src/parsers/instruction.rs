@@ -431,6 +431,7 @@ pub fn parse_instruction_token_(i: &str) -> AsmResult<Token> {
         opcodes::ldel::ldel.context("LDEL instruction"),
         opcodes::ljmp::ljmp.context("LJMP instruction"),
         opcodes::ljsr::ljsr.context("LJSR instruction"),
+        opcodes::mov::mov.context("MOVI/MOVR instruction"),
         opcodes::load::load.context("LOAD instruction"),
         opcodes::store::stor.context("STOR instruction"),
         opcodes::exception::exception.context("Exception Unit Instruction"),

@@ -32,7 +32,7 @@ into logical groups:
 		\opcode{04}     & ANDI              & Immediate       & NZ (C,V=0)     & AND immediate                                   \\
 		\opcode{05}     & ORRI              & Immediate       & NZ (C,V=0)     & OR immediate                                    \\
 		\opcode{06}     & XORI              & Immediate       & NZ (C,V=0)     & XOR immediate                                   \\
-		\opcode{07}     & LOAD              & Immediate       & --             & Load immediate (move)                           \\
+		\opcode{07}     & MOVI              & Immediate       & --             & Move immediate                                  \\
 		\opcode{08}     & CMNI              & Immediate       & NZCV           & Compare negative immediate                      \\
 		\opcode{09}     & CNCI              & Immediate       & NZCV           & Compare negative with carry immediate           \\
 		\opcode{0A}     & CMPI              & Immediate       & NZCV           & Compare immediate                               \\
@@ -83,7 +83,7 @@ into logical groups:
 		\opcode{34}     & ANDR              & Register        & NZ (C,V=0)     & AND register                                    \\
 		\opcode{35}     & ORRR              & Register        & NZ (C,V=0)     & OR register                                     \\
 		\opcode{36}     & XORR              & Register        & NZ (C,V=0)     & XOR register                                    \\
-		\opcode{37}     & LOAD              & Register        & --             & Load from register (move)                       \\
+		\opcode{37}     & MOVR              & Register        & --             & Move register                                   \\
 		\opcode{38}     & CMNR              & Register        & NZCV           & Compare negative register                       \\
 		\opcode{39}     & CNCR              & Register        & NZCV           & Compare negative with carry register            \\
 		\opcode{3A}     & CMPR              & Register        & NZCV           & Compare register                                \\
@@ -99,9 +99,9 @@ into logical groups:
 \end{table}
 
 See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. The Flags column shows \texttt{--} for
-\mnemonic{LOAD} (\opcode{07}, \opcode{37}) only when the default \texttt{[N]} status update source is used; an encoding
-of the \mnemonic{LOAD} opcode with a non-\texttt{[N]} AF field, not reachable from public assembly syntax, leaves all
-four flags architecturally undefined (\texttt{U U U U}). See Chapter~\ref{ch:alu-instructions} for details.
+\mnemonic{MOVI} (\opcode{07}) and \mnemonic{MOVR} (\opcode{37}) only when the default \texttt{[N]} status update source
+is used; an encoding of those opcodes with a non-\texttt{[N]} AF field, not reachable from public assembly syntax,
+leaves all four flags architecturally undefined (\texttt{U U U U}). See Chapter~\ref{ch:alu-instructions} for details.
 
 \section{Instruction Grouping Patterns}
 
@@ -122,7 +122,7 @@ Many ALU instructions have two variants:
 
 \begin{itemize}
 	\item \textbf{+\opcode{00} to +\opcode{06}}: Save result to destination register
-	\item \textbf{+\opcode{07}}: \mnemonic{LOAD} (\opcode{27} is undocumented)
+	\item \textbf{+\opcode{07}}: \mnemonic{MOVI}/\mnemonic{MOVR} (\opcode{27} is undocumented)
 	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only (update flags, discard result)
 	\item \textbf{+\opcode{0F}}: Coprocessor call (neither result nor flags are written)
 \end{itemize}

@@ -348,9 +348,9 @@ both a "save result" and a "test only" variant:
 \end{itemize}
 
 Adding \texttt{0x8} to a "save result" opcode in the range \texttt{0x\_0}--\texttt{0x\_6} gives its "test only" form.
-Opcode \texttt{0x\_7} (\mnemonic{LOAD}) has no test-only form. Opcodes \texttt{0x27} and \texttt{0x2F} are exceptions
-to this pattern: they are undocumented opcodes (see Appendix~\ref{appendix:undocumented}), not a "save result"
-operation or a coprocessor call.
+Opcode \texttt{0x\_7} (\mnemonic{MOVI}/\mnemonic{MOVR}) has no test-only form. Opcodes \texttt{0x27} and \texttt{0x2F}
+are exceptions to this pattern: they are undocumented opcodes (see Appendix~\ref{appendix:undocumented}), not a "save
+result" operation or a coprocessor call.
 
 \begin{table}[H]
 	\centering

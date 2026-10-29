@@ -36,7 +36,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{04}  & 000100          & ANDI              & AND Immediate                                            \\
 	\opcode{05}  & 000101          & ORRI              & OR Immediate                                             \\
 	\opcode{06}  & 000110          & XORI              & XOR Immediate                                            \\
-	\opcode{07}  & 000111          & LOAD              & Load Immediate                                           \\
+	\opcode{07}  & 000111          & MOVI              & Move Immediate                                           \\
 	\opcode{08}  & 001000          & CMNI              & Compare Negative Immediate                               \\
 	\opcode{09}  & 001001          & CNCI              & Compare Negative with Carry Immediate                    \\
 	\opcode{0A}  & 001010          & CMPI              & Compare Immediate                                        \\
@@ -74,7 +74,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{24}  & 100100          & ANDI              & AND Short Immediate                                      \\
 	\opcode{25}  & 100101          & ORRI              & OR Short Immediate                                       \\
 	\opcode{26}  & 100110          & XORI              & XOR Short Immediate                                      \\
-	\opcode{27}  & 100111          & --                & Undocumented (LOAD-like)                                 \\
+	\opcode{27}  & 100111          & --                & Undocumented (MOVI-like)                                 \\
 	\opcode{28}  & 101000          & CMNI              & Compare Negative Short Immediate                         \\
 	\opcode{29}  & 101001          & CNCI              & Compare Negative with Carry Short Immediate              \\
 	\opcode{2A}  & 101010          & CMPI              & Compare Short Immediate                                  \\
@@ -93,7 +93,7 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 	\opcode{34}  & 110100          & ANDR              & AND Register                                             \\
 	\opcode{35}  & 110101          & ORRR              & OR Register                                              \\
 	\opcode{36}  & 110110          & XORR              & XOR Register                                             \\
-	\opcode{37}  & 110111          & LOAD              & Load Register                                            \\
+	\opcode{37}  & 110111          & MOVR              & Move Register                                            \\
 	\opcode{38}  & 111000          & CMNR              & Compare Negative Register                                \\
 	\opcode{39}  & 111001          & CNCR              & Compare Negative with Carry Register                     \\
 	\opcode{3A}  & 111010          & CMPR              & Compare Register                                         \\
@@ -126,7 +126,7 @@ Bit numbers in this section refer to the 6-bit opcode value (instruction bits 31
 	\item Bit 3 = 1 and low nibble \texttt{8}--\texttt{E}: test only, discard result (\opcode{08}--\opcode{0E},
 	      \opcode{28}--\opcode{2E}, \opcode{38}--\opcode{3E})
 	\item Low nibble \texttt{F} is the coprocessor call (\opcode{0F}, \opcode{3F}), not a test form
-	\item Low nibble \texttt{7} is \mnemonic{LOAD} (\opcode{07}, \opcode{37})
+	\item Low nibble \texttt{7} is \mnemonic{MOVI}/\mnemonic{MOVR} (\opcode{07}, \opcode{37})
 	\item \opcode{27} and \opcode{2F} are undocumented
 \end{itemize}
 
@@ -169,7 +169,7 @@ Immediate group. Do not use them in production code. See Appendix~\ref{appendix:
 		AND                & \opcode{04}        & \opcode{24}                    & \opcode{34}       \\
 		ORR                & \opcode{05}        & \opcode{25}                    & \opcode{35}       \\
 		XOR                & \opcode{06}        & \opcode{26}                    & \opcode{36}       \\
-		LOAD               & \opcode{07}        & \opcode{27}\textsuperscript{*} & \opcode{37}       \\
+		MOV                & \opcode{07}        & \opcode{27}\textsuperscript{*} & \opcode{37}       \\
 		CMN                & \opcode{08}        & \opcode{28}                    & \opcode{38}       \\
 		CNC                & \opcode{09}        & \opcode{29}                    & \opcode{39}       \\
 		CMP                & \opcode{0A}        & \opcode{2A}                    & \opcode{3A}       \\
