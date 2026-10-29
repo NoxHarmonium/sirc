@@ -1,0 +1,105 @@
+\chapter{Instruction Syntax}
+\label{ch:instructions}
+
+\section{Anatomy of an Instruction}
+
+An instruction is written as a mnemonic, an optional status update source, an optional condition, and then its
+operands:
+
+\begin{center}
+	\texttt{MNEMONIC[S]|cond operand, operand, \ldots}
+\end{center}
+
+The three parts must be written in that order and with no spaces between them. The operands follow after at least one
+space.
+
+% qa:assemble
+\begin{lstlisting}
+    ADDI r1, #1                  ; mnemonic and operands
+    ADDI[N] r1, #1               ; with a status update source
+    ADDI|== r1, #1               ; with a condition
+    ADDI[N]|== r1, #1            ; with both
+\end{lstlisting}
+
+\section{Status Update Source}
+\label{sec:status-update-syntax}
+
+\texttt{[N]}, \texttt{[A]} or \texttt{[S]} after the mnemonic selects what updates the status flags: nothing, the ALU
+result, or the shifter result. Without it the instruction uses its default, which is \texttt{[A]} for most ALU
+instructions. The default of each instruction and the meaning of each source are in the \archmanual{}.
+
+Only ALU instructions have a status update source. \mnemonic{MOVI} and \mnemonic{MOVR} accept \texttt{[A]} and
+\texttt{[N]} but not \texttt{[S]}, because they have no shifted operand. Memory and control-flow instructions never
+update the flags and must not be written with a status update source.
+
+\section{Conditions}
+
+\texttt{|cond} after the mnemonic, and after the status update source if there is one, makes the instruction
+conditional. The sixteen conditions are:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Written as}                                & \textbf{Meaning}                                  \\
+		\midrule
+		\texttt{AL}                                        & Always (the default when no condition is written) \\
+		\texttt{==}, \texttt{!=}                           & Equal, not equal                                  \\
+		\texttt{CS}, \texttt{CC}                           & Carry set, carry clear                            \\
+		\texttt{NS}, \texttt{NC}                           & Negative set, negative clear                      \\
+		\texttt{OS}, \texttt{OC}                           & Overflow set, overflow clear                      \\
+		\texttt{HI}, \texttt{LO}                           & Unsigned higher, unsigned lower or same           \\
+		\texttt{>=}, \texttt{<<}, \texttt{>>}, \texttt{<=} & Signed comparisons                                \\
+		\texttt{NV}                                        & Never                                             \\
+		\bottomrule
+	\end{tabular}
+	\caption{Condition codes in source}
+	\label{tab:conditions-in-source}
+\end{table}
+
+The Condition Codes chapter of the \archmanual{} defines the flags each condition tests and how to choose between them.
+
+\section{Choosing the Immediate Format}
+
+The assembler picks the encoding from how the operands are written. For the ALU instructions that have both forms, an
+immediate operand on its own is encoded in the 16-bit immediate format, and an immediate operand followed by a shift is
+encoded in the 8-bit short immediate format:
+
+% qa:assemble
+\begin{lstlisting}
+    ADDI r1, #5                  ; immediate format, 16-bit value
+    ADDI r1, #5, LSL #1          ; short immediate format, 8-bit value
+\end{lstlisting}
+
+The register-register form is selected by writing registers for the operands: \mnemonic{ADDR} rather than
+\mnemonic{ADDI}.
+
+\section{Mnemonics}
+
+The assembler recognises the mnemonics in Table~\ref{tab:mnemonic-families}. Each is documented in the chapter of the
+\archmanual{} named in the table.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lp{6.2cm}l}
+		\toprule
+		\textbf{Family}      & \textbf{Mnemonics}                                                                                                                                                                                                                                                     & \textbf{Architecture manual chapter} \\
+		\midrule
+		ALU                  & \mnemonic{ADDI}/\mnemonic{ADDR}, \mnemonic{ADCI}/\mnemonic{ADCR}, \mnemonic{SUBI}/\mnemonic{SUBR}, \mnemonic{SBCI}/\mnemonic{SBCR}, \mnemonic{ANDI}/\mnemonic{ANDR}, \mnemonic{ORRI}/\mnemonic{ORRR}, \mnemonic{XORI}/\mnemonic{XORR}, \mnemonic{MOVI}/\mnemonic{MOVR} & ALU Instructions                     \\
+		ALU test             & \mnemonic{CMNI}/\mnemonic{CMNR}, \mnemonic{CNCI}/\mnemonic{CNCR}, \mnemonic{CMPI}/\mnemonic{CMPR}, \mnemonic{CPCI}/\mnemonic{CPCR}, \mnemonic{TSAI}/\mnemonic{TSAR}, \mnemonic{TSOI}/\mnemonic{TSOR}, \mnemonic{TSXI}/\mnemonic{TSXR}                                  & ALU Instructions                     \\
+		Memory               & \mnemonic{LOAD}, \mnemonic{STOR}                                                                                                                                                                                                                                       & Memory Access Instructions           \\
+		Addresses            & \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}                                                                                                                                                                                                     & Control Flow Instructions            \\
+		Branches and returns & \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{RETS}                                                                                                                                                                                                                      & Control Flow Instructions            \\
+		Coprocessor          & \mnemonic{COPI}, \mnemonic{COPR}, \mnemonic{EXCP}, \mnemonic{WAIT}, \mnemonic{RETE}, \mnemonic{RSET}, \mnemonic{ETFR}, \mnemonic{ETTR}                                                                                                                                 & Coprocessor Instructions             \\
+		Maths and DMA        & \mnemonic{MULU}, \mnemonic{MULS}, \mnemonic{DIVU}, \mnemonic{DIVS}, \mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}                                                                                                                                                  & Coprocessor Instructions             \\
+		Other meta           & \mnemonic{NOOP}, \mnemonic{SHFT}                                                                                                                                                                                                                                       & Meta-Instructions, ALU Instructions  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Mnemonics recognised by the assembler}
+	\label{tab:mnemonic-families}
+\end{table}
+
+Many of these are \textit{meta-instructions}: names for a single real instruction encoding. The Meta-Instructions
+chapter of the architecture manual lists what each one assembles to. The assembler has no pseudoinstructions that
+expand to more than one instruction.

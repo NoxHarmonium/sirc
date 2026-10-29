@@ -5,7 +5,7 @@ The SIRC manual set has three parts:
 | Manual | Scope | Location |
 | --- | --- | --- |
 | SIRC Architecture Reference Manual | ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state | `../reference` |
-| SIRC Assembly Programmer's Manual | Complete assembly syntax, directives, macros, pseudoinstructions | not written yet |
+| SIRC Assembly Programmer's Manual | Complete assembly syntax, directives, macros, pseudoinstructions | `../assembly` |
 | SIRC Hardware Reference Manual | Pinout, bus interface, timing, electrical characteristics | this directory |
 
 This manual describes the SIRC-1 as a physical device. Anything that is about what the processor *does* (instructions,

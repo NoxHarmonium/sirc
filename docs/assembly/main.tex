@@ -1,0 +1,45 @@
+\documentclass[11pt,letterpaper,twoside]{book}
+
+% ==========================================
+% SIRC-1 Assembly Programmer's Manual
+% Assembly syntax, directives and the toolchain
+% ==========================================
+
+% Manual-specific strings used by the shared preamble (footer, PDF metadata).
+\newcommand{\sircManualFooter}{SIRC-1 ASSEMBLY PROGRAMMER'S MANUAL}
+\newcommand{\sircManualTitle}{SIRC-1 Assembly Programmer's Manual}
+\newcommand{\sircManualSubject}{SIRC-1 assembly language and toolchain}
+
+% Names of the sibling manuals, used for cross-manual references
+% (a LaTeX \ref cannot point into another PDF).
+\newcommand{\archmanual}{\textit{SIRC-1 Architecture Reference Manual}}
+\newcommand{\hwmanual}{\textit{SIRC-1 Hardware Reference Manual}}
+
+\input{../reference/preamble}
+
+\begin{document}
+
+% Front Matter
+\frontmatter
+\input{chapters/front-cover}
+\input{chapters/preface}
+\tableofcontents
+\listoftables
+\listoffigures
+
+% Main Content
+\mainmatter
+\input{chapters/01-introduction}
+\input{chapters/02-source-language}
+\input{chapters/03-operands}
+\input{chapters/04-instructions}
+\input{chapters/05-directives-and-symbols}
+\input{chapters/06-toolchain}
+\input{chapters/07-diagnostics}
+\input{chapters/08-limitations}
+
+\backmatter
+
+\input{chapters/back-cover}
+
+\end{document}

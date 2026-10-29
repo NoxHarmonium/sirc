@@ -1,0 +1,83 @@
+\chapter{Source Language}
+\label{ch:source-language}
+
+\section{Lines, Whitespace and Comments}
+
+A source file is a sequence of instructions, directives and labels separated by whitespace. By convention each is
+written on its own line, with directives and instructions indented under the label they follow. Whitespace, including
+blank lines, is otherwise insignificant.
+
+A comment starts with a semicolon and runs to the end of the line. It may follow an instruction on the same line.
+
+% qa:assemble
+\begin{lstlisting}
+; a whole-line comment
+    MOVI r1, #1        ; a trailing comment
+\end{lstlisting}
+
+\section{Case}
+
+Mnemonics, condition codes, shift types and directives are written in uppercase. Register names are written in
+lowercase. The status update letters inside square brackets (Section~\ref{sec:status-update-syntax}) may be either
+case. Label and constant names are case-sensitive.
+
+\section{Names}
+
+Label names and constant names are made of letters, digits and underscores. A label is declared by writing a colon
+before its name, and referred to by writing an at sign before it:
+
+% qa:assemble
+\begin{lstlisting}
+:loop                 ; declare the label
+    BRAN @loop        ; refer to it
+\end{lstlisting}
+
+The colon is written before the name, not after it. A label may be referred to before or after its declaration, and
+from any object file linked into the same program.
+
+\section{Numbers}
+
+A number used as an operand value is prefixed with a hash sign. Three bases are accepted, and an underscore may be used
+anywhere inside the digits to make them easier to read.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Base} & \textbf{Written as}                    & \textbf{Examples}                               \\
+		\midrule
+		Decimal       & \texttt{\#} then digits, optional sign & \texttt{\#42}, \texttt{\#-3}, \texttt{\#1\_000} \\
+		Hexadecimal   & \texttt{\#0x} then hex digits          & \texttt{\#0x2A}, \texttt{\#0xFF\_00}            \\
+		Binary        & \texttt{\#0b} then binary digits       & \texttt{\#0b0010\_1010}                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{Number forms}
+	\label{tab:number-forms}
+\end{table}
+
+A negative decimal number is stored in two's complement. The value must fit the field it is encoded into; for example
+an immediate operand of a 16-bit instruction is 16 bits wide.
+
+Two directive operands are written without the hash: the address of \texttt{.ORG} is a bare decimal or
+\texttt{0x}-prefixed hexadecimal number (Section~\ref{sec:org}).
+
+\section{Registers}
+
+The general-purpose registers are \texttt{r1} to \texttt{r7}. The status register is \texttt{sr}. Each address register
+pair is addressed as a whole by a single letter (\texttt{a}, \texttt{s}, \texttt{p} or \texttt{l}) and as two separate
+halves: \texttt{ah} and \texttt{al}, \texttt{sh} and \texttt{sl}, \texttt{ph} and \texttt{pl}, \texttt{lh} and
+\texttt{ll}. The \archmanual{} describes what each register is for, and which are privileged.
+
+\section{Named Constants}
+
+\texttt{.EQU} defines a named constant. The name starts with a dollar sign at the definition and at every use:
+
+% qa:assemble
+\begin{lstlisting}
+    .EQU $ANSWER #42
+
+    MOVI r1, $ANSWER       ; no '#' at the use
+\end{lstlisting}
+
+A constant stands in for a numeric value in an immediate operand or in a data directive. It cannot be used as the
+address of \texttt{.ORG}.

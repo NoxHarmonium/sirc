@@ -1,0 +1,59 @@
+\chapter{Diagnostics}
+\label{ch:diagnostics}
+
+\section{Assembler Errors}
+
+The assembler stops at the first error. It prints the file, line and column, the lines around the error with a marker
+under the offending token, and the chain of syntax contexts it was inside. The final line states the reason:
+
+\begin{lstlisting}[language={}]
+error: parsing failed
+  --> bad.sasm:6:10
+4 |     ADDI r1, #5
+5 |     ADDI r1, #5, LSL #1
+6 |     LOAD r1, #5
+  |          ^
+
+in section "instruction" at line 6, column 5,
+in section "LOAD instruction" at line 6, column 5,
+external error:
+  Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVI to load an
+  immediate value into a register. at line 6, column 10
+\end{lstlisting}
+
+Where the instruction has a correct alternative the message names it. The messages for the commonest mistakes are:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{5.2cm}p{8.8cm}}
+		\toprule
+		\textbf{You wrote}                                             & \textbf{What the assembler says}                                                                  \\
+		\midrule
+		\texttt{LOAD r1, \#5}, \texttt{LOAD r1, r2}                    & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVI} or \mnemonic{MOVR}                         \\
+		\texttt{LOAD r1, (r2, a), LSL \#1}                             & \mnemonic{LOAD} does not support a shift; use \mnemonic{SHFT}                                     \\
+		\texttt{MOVI[S] r1, \#5}                                       & \texttt{[S]} is not supported because there is no shift operand; use \texttt{[A]} or \texttt{[N]} \\
+		\texttt{MOVR r1, r2, LSL \#1}                                  & Cannot shift a register-to-register move; use \mnemonic{SHFT}                                     \\
+		\texttt{ADDR r1, r2, LSL \#16}                                 & Shift definitions can only be in the range of 0--15                                               \\
+		An instruction whose destination overlaps its address register & Aliased register writes are undefined for that instruction                                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common assembler diagnostics}
+	\label{tab:assembler-diagnostics}
+\end{table}
+
+When an instruction is given operands it does not accept, the message lists the operand forms the assembler tried in
+turn.
+
+\section{Linker Errors}
+
+The linker reports two problems, each as a failure with the cause in the message:
+
+\begin{itemize}
+	\item \textbf{Unresolved symbol.} \texttt{Cannot find symbol [name] in symbol definitions.} A reference names a label
+	      that no linked object declares. Check the spelling, and that the object file that declares it is on the linker's
+	      command line.
+	\item \textbf{Displacement out of range.} \texttt{Offset \ldots{} does not fit into a 16 bit signed integer.} A
+	      \mnemonic{BRAN} or \mnemonic{BRSR} (or a reference forced with \texttt{.r}) is further from its label than a
+	      16-bit signed word displacement can reach. Use \mnemonic{LJMP} or \mnemonic{LJSR} for a long jump.
+\end{itemize}

@@ -1,0 +1,114 @@
+\chapter{Using the Toolchain}
+\label{ch:toolchain}
+
+This chapter walks through building and running a program with the three tools. In this repository they are built from
+the \texttt{sirc-vm} Cargo workspace; the commands below show the tool names, and \texttt{cargo run --bin \emph{tool}
+	--} can be used in front of the arguments to build and run a tool in one step.
+
+\section{A Worked Example}
+
+Save this program as \texttt{count.sasm}. It counts \texttt{r1} up to ten and stops the simulator.
+
+% qa:assemble
+\begin{lstlisting}
+    .ORG 0x0000
+    .DQ @start                  ; reset vector
+
+    .ORG 0x0200
+:start
+    MOVI r1, #0
+:loop
+    ADDI r1, #1
+    CMPI r1, #10
+    BRAN|!= @loop
+    COPI #0x14FF                ; stop the simulator (test exit)
+\end{lstlisting}
+
+Assemble it, link it, and run it:
+
+\begin{lstlisting}[language={}]
+assembler --input-file count.sasm --output-file count.o
+linker --segment-offset 0 --output-file count.bin count.o
+sirc_vm --program-file count.bin --register-dump-file count.register-dump
+\end{lstlisting}
+
+The register dump written at the end shows \texttt{r1} holding \texttt{0xA}.
+
+\section{The Assembler}
+
+\begin{lstlisting}[language={}]
+assembler --input-file <FILE> --output-file <FILE>
+\end{lstlisting}
+
+The assembler reads one source file and writes one object file; both options are required and have the short forms
+\texttt{-i} and \texttt{-o}. It stops at the first syntax error and prints the offending line
+(Chapter~\ref{ch:diagnostics}).
+
+The object file is a binary file for the linker. It holds the assembled program, the labels the file declares, the
+references it makes, and a copy of the source for the debug map. It is not meant to be read or edited.
+
+\section{The Linker}
+
+\begin{lstlisting}[language={}]
+linker --segment-offset <N> --output-file <FILE> <OBJECT FILES>...
+\end{lstlisting}
+
+The linker joins its input objects in the order they are given, so the first object starts at the lowest address.
+Labels declared in any object can be referred to from any other. It then patches every reference using the final
+address of its label, and writes:
+
+\begin{itemize}
+	\item the program as a flat binary at the output path, and
+	\item a debug map at the output path with \texttt{.dbg} added, which relates program addresses to source lines.
+\end{itemize}
+
+\texttt{--segment-offset} (short form \texttt{-s}) is added to every label's address before it is patched in. A program
+that is mapped into its own memory segment, as every example in the architecture manual is, is linked with an offset of
+0.
+
+A program made of several files is linked in one step:
+
+\begin{lstlisting}[language={}]
+linker --segment-offset 0 --output-file prog.bin main.o data.o
+\end{lstlisting}
+
+\section{The Simulator}
+
+\begin{lstlisting}[language={}]
+sirc_vm --program-file <FILE> [--segment <SEGMENT>]... [--register-dump-file <FILE>]
+\end{lstlisting}
+
+The simulator loads the binary at the start of its program memory and starts the CPU through the reset vector.
+
+\begin{description}
+	\item[\texttt{--program-file}, \texttt{-p}] The linked binary to load.
+	\item[\texttt{--segment}, \texttt{-s}] Maps additional memory, written \texttt{label:offset:length} or
+	      \texttt{label:offset:length:file}, with the offset and length in hexadecimal. With a file, the segment is
+	      initialised from it. This option may be repeated.
+	\item[\texttt{--register-dump-file}, \texttt{-r}] Writes the final register state to a file when the program stops,
+	      which is how the repository's examples check their results.
+	\item[\texttt{-v}, \texttt{-q}] Raise or lower the amount of logging. \texttt{-vv} is common while developing.
+	\item[\texttt{--debug}, \texttt{-d}] Starts a debug adapter for an editor to attach to, using the debug map written
+	      by the linker.
+\end{description}
+
+For example, a program that needs 64\,K words of scratch memory away from the program binary is run with:
+
+\begin{lstlisting}[language={}]
+sirc_vm --program-file prog.bin --segment SCRATCH:00010000:FFFF
+\end{lstlisting}
+
+\section{Building with Make}
+
+A \texttt{Makefile} keeps the three steps in sync. This is the pattern used by the examples in the repository:
+
+\begin{lstlisting}[language={}]
+prog.o: prog.sasm
+	assembler --input-file prog.sasm --output-file prog.o
+
+prog.bin: prog.o
+	linker --segment-offset 0 --output-file prog.bin prog.o
+
+run: prog.bin
+	sirc_vm -vv --program-file prog.bin
+\end{lstlisting}

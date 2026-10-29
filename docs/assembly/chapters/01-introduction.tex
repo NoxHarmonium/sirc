@@ -1,0 +1,58 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Purpose and Scope}
+
+The SIRC-1 documentation is split into three manuals, each with its own scope:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Manual}                    & \textbf{Scope}                                                                                \\
+		\midrule
+		SIRC Architecture Reference Manual & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state \\
+		SIRC Assembly Programmer's Manual  & Complete assembly syntax, directives, macros, pseudoinstructions (this manual)                \\
+		SIRC Hardware Reference Manual     & Pinout, bus interface, timing, electrical characteristics                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC manual set}
+	\label{tab:manual-set}
+\end{table}
+
+This manual covers the language and the toolchain. It does not define what an instruction does, which registers exist,
+or how exceptions work. For those, see the \archmanual{}; this manual refers to it by chapter name.
+
+\section{The Toolchain}
+
+A SIRC program is built in three steps, each with its own tool:
+
+\begin{enumerate}
+	\item The \textbf{assembler} reads one assembly source file and writes an object file. It encodes every instruction and data
+	      directive, and records every label and every reference to a label.
+	\item The \textbf{linker} reads one or more object files, joins them end to end, resolves every reference to a label, and
+	      writes a flat binary program plus a debug map.
+	\item The \textbf{simulator} loads the binary at address zero, maps whatever memory the program needs, and runs it.
+\end{enumerate}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Tool}      & \textbf{Reads}           & \textbf{Writes}                                          \\
+		\midrule
+		\texttt{assembler} & \texttt{.sasm} source    & Object file (\texttt{.o})                                \\
+		\texttt{linker}    & One or more object files & Binary (\texttt{.bin}) and debug map (\texttt{.bin.dbg}) \\
+		\texttt{sirc\_vm}  & Binary                   & Register dump, terminal output                           \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC toolchain}
+	\label{tab:toolchain}
+\end{table}
+
+Chapter~\ref{ch:toolchain} describes how to run each tool.
+
+\section{Conventions}
+
+Source listings are shown in typewriter font. Mnemonics are bold typewriter, as in the architecture manual. File
+extensions are conventions, not requirements: the tools do not look at them.

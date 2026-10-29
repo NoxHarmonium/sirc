@@ -1,7 +1,7 @@
 # SIRC-1 Architecture Reference Manual
 
 This is one of the SIRC manuals. The others are the Hardware Reference Manual (`../hardware`: pinout, bus interface,
-timing, electrical characteristics) and, in future, the Assembly Programmer's Manual. This manual defines the
+timing, electrical characteristics) and the Assembly Programmer's Manual (`../assembly`: assembly syntax, directives and the toolchain). This manual defines the
 architecture: ISA, instruction encodings, canonical assembly notation, exceptions and programmer-visible state. The
 LaTeX preamble in this directory is shared by the hardware manual.
 

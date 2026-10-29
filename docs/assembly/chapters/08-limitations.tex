@@ -1,0 +1,37 @@
+\chapter{Limitations}
+\label{ch:limitations}
+
+The assembler in this repository is deliberately small. The following are \emph{not} supported. A listing that depends
+on any of them will not assemble.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Feature}                     & \textbf{Instead}                                                   \\
+		\midrule
+		Macros                               & Repeat the instructions, or generate the source                    \\
+		File inclusion                       & Assemble each file separately and link the objects together        \\
+		Expressions and arithmetic on labels & Compute the value by hand and write a number, or use \texttt{.EQU} \\
+		Conditional assembly                 & Maintain separate source files                                     \\
+		Named sections or segments           & Place code and data with \texttt{.ORG}                             \\
+		Local labels                         & Give every label a unique name                                     \\
+		Listing and map files                & Use the debug map written by the linker                            \\
+		Multi-instruction pseudoinstructions & Write the instructions explicitly                                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Features the assembler does not have}
+	\label{tab:unsupported}
+\end{table}
+
+The architecture requires that every meta-instruction assemble to exactly one instruction, so a source line is always
+one instruction (see the Meta-Instructions chapter of the \archmanual{}).
+
+Two behaviours are worth knowing about:
+
+\begin{itemize}
+	\item The assembler stops at the first error, so a file with several mistakes needs several runs.
+	\item The assembler does not promise to reject an immediate value that is wider than its field.
+\end{itemize}
+
+This chapter will shrink as the toolchain grows. A feature listed here is not an oversight in the manual.

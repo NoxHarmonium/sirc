@@ -52,6 +52,123 @@ Other conventions that do not have a dedicated style:
 	      shortened to plain "word" for the rest of that section.
 \end{itemize}
 
+\section*{Assembly Language Summary}
+
+Instruction entries in this manual use the canonical SIRC assembly notation. This summary is enough to read and write
+the listings in the manual. The complete language, including every directive and the tools that process it, is
+described in the \textit{SIRC Assembly Programmer's Manual}.
+
+\subsection*{Source Format}
+
+\begin{itemize}
+	\item A \textbf{comment} starts with \texttt{;} and runs to the end of the line.
+	\item A \textbf{label} is written \texttt{:name} before the next instruction or directive, and referred to as \texttt{@name}.
+	      Names use letters, digits and underscores. The colon is written before the name, not after it.
+	\item \textbf{Numbers} used as values are prefixed with \texttt{\#}: decimal (\texttt{\#42}, \texttt{\#-3}),
+	      hexadecimal (\texttt{\#0x2A}) or binary (\texttt{\#0b0010\_1010}). Underscores may be used to separate digits.
+	\item \textbf{Mnemonics} and condition codes are uppercase; register names are lowercase.
+	\item A named constant is defined with \texttt{.EQU \$NAME \#value} and used as \texttt{\$NAME}, without a \texttt{\#}.
+\end{itemize}
+
+\subsection*{Instruction Syntax}
+
+An instruction is written as a mnemonic, an optional status update source, an optional condition, and its operands:
+
+\begin{center}
+	\texttt{MNEMONIC[S]|cond operand, operand, \ldots}
+\end{center}
+
+\begin{description}
+	\item[Status update source] \texttt{[N]}, \texttt{[A]} or \texttt{[S]} selects what updates the status flags
+	      (Chapter~\ref{ch:reading-instructions}). It may be omitted.
+	\item[Condition] \texttt{|cond} makes the instruction conditional, with one of \texttt{AL} (always, the default),
+	      \texttt{==}, \texttt{!=}, \texttt{CS}, \texttt{CC}, \texttt{NS}, \texttt{NC}, \texttt{OS}, \texttt{OC}, \texttt{HI},
+	      \texttt{LO}, \texttt{>=}, \texttt{<<}, \texttt{>>}, \texttt{<=} or \texttt{NV}
+	      (Table~\ref{tab:condition-code-encoding}).
+	\item[Destination first] In every operand list the destination is written first, on the left.
+\end{description}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Operand}           & \textbf{Written as}                                   & \textbf{Example}              \\
+		\midrule
+		Immediate value            & \texttt{\#n}, \texttt{@label} or \texttt{\$NAME}      & \texttt{MOVI r1, \#0x20}      \\
+		Register                   & \texttt{r1}--\texttt{r7}, \texttt{sr}, address halves & \texttt{MOVR r2, r1}          \\
+		Address register pair      & \texttt{a}, \texttt{s}, \texttt{p}, \texttt{l}        & \texttt{LJMP a}               \\
+		Indirect, immediate offset & \texttt{(\#n, addr)}                                  & \texttt{LOAD r1, (\#4, a)}    \\
+		Indirect, register offset  & \texttt{(rO, addr)}                                   & \texttt{LOAD r1, (r2, a)}     \\
+		Post-increment             & \texttt{(\#n, addr)+} or \texttt{(rO, addr)+}         & \texttt{LOAD r1, (\#0, a)+}   \\
+		Pre-decrement              & \texttt{-(\#n, addr)} or \texttt{-(rO, addr)}         & \texttt{STOR -(\#0, s), r1}   \\
+		Shift                      & \texttt{type \#count} or \texttt{type rC}             & \texttt{ADDR r1, r2, LSL \#2} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Operand forms}
+	\label{tab:assembly-operand-forms}
+\end{table}
+
+The address register halves are \texttt{ah}, \texttt{al}, \texttt{sh}, \texttt{sl}, \texttt{ph}, \texttt{pl},
+\texttt{lh} and \texttt{ll}. A shift type is one of \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL},
+\texttt{ASR}, \texttt{RTL} or \texttt{RTR} (Table~\ref{tab:shift-types}), and an immediate count is
+\texttt{0}--\texttt{15}. Chapter~\ref{ch:reading-instructions} defines the placeholder names (\texttt{rD},
+\texttt{rS1}, \texttt{\#imm16} and so on) used in instruction entries.
+
+\subsection*{Directives and Symbol References}
+
+\begin{description}
+	\item[\texttt{.ORG addr}] Sets the word address at which subsequent instructions and data are assembled. The address is
+	      a bare hexadecimal (\texttt{0x}-prefixed) or decimal number, without the \texttt{\#} used elsewhere for immediate
+	      operands. It must be even (2-word aligned), since instructions and data directives each occupy a 2-word slot.
+	      \texttt{.ORG} can appear more than once in a file, to place code or data at specific fixed addresses such as the
+	      reset and exception vector table described in Chapter~\ref{ch:exceptions}.
+	\item[\texttt{.DB \#value}, \texttt{.DW \#value}, \texttt{.DQ \#value}] Reserve one program slot and initialize it with a
+	      numeric value, or, written as \texttt{.DB @label}, \texttt{.DW @label} or \texttt{.DQ @label}, with a label's full
+	      24-bit address. \emph{Despite their names, all three directives occupy exactly one 4-byte (2-word) program slot,
+		      the same size as an instruction.} \texttt{.DB \#0xAB} assembles to the bytes \texttt{00 00 00 AB} (value in the
+	      low byte), \texttt{.DW \#0xABCD} to \texttt{00 00 AB CD} (value in the low word), and \texttt{.DQ \#0xABCD1234} to
+	      \texttt{AB CD 12 34} (value fills the slot). A label reference always fills the whole slot, so any of the three
+	      directives can hold an address anywhere in the 24-bit address space.
+	\item[\texttt{.EQU \$NAME \#value}] Defines a named constant, usable anywhere a \texttt{\#immediate} operand is accepted
+	      by writing \texttt{\$NAME} in its place.
+	\item[\texttt{@label}] References a label declared anywhere in the program, before or after the reference; references are
+	      resolved at link time. In \mnemonic{BRAN} or \mnemonic{BRSR} it resolves to a 16-bit signed word displacement from the
+	      instruction to the label. In any other instruction operand (\mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR},
+	      \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}) it resolves to the label's low word only. In a
+	      \texttt{.DB}, \texttt{.DW} or \texttt{.DQ} directive it resolves to the label's full 24-bit address. An explicit
+	      suffix overrides this default: \texttt{@label.r} forces the PC-relative displacement form, \texttt{@label.l} the low
+	      word, and \texttt{@label.u} the high word.
+\end{description}
+
+% qa:assemble
+\begin{lstlisting}
+    .EQU $ANSWER #42
+
+    .ORG 0x0000
+    .DQ @start                     ; reset vector: CPU begins by loading this pointer
+
+    .ORG 0x0080
+    .DQ @level2_handler            ; vector 0x40: level 2 hardware exception vector
+
+:start
+    MOVI al, @lookup               ; @label defaults to the low word for MOVI
+    LOAD r1, (#0, a)               ; r1 = lookup[0]
+    CMPI r1, $ANSWER               ; constants defined with .EQU are used without '#'
+    BRAN|== @start                 ; @label defaults to a PC-relative offset for BRAN/BRSR
+
+:level2_handler
+    RETE
+
+:lookup
+    .DW #10
+    .DW #20
+    .DW #30
+\end{lstlisting}
+
+The reset vector in the listing is not optional: per Chapter~\ref{ch:exceptions}, the CPU begins execution by reading a
+stored pointer from word addresses \texttt{0x000000}--\texttt{0x000001}, not by executing whatever instruction happens
+to be placed there.
+
 \section*{Normative Vocabulary}
 
 The following words carry a specific technical meaning whenever they appear in this manual, distinct from their

@@ -24,6 +24,7 @@ on:
     paths:
       - "docs/reference/**"
       - "docs/hardware/**"
+      - "docs/assembly/**"
       - "examples/manual-examples/**"
       - "examples/**/*.sasm"
       - ".github/workflows/manual.yml"
@@ -32,6 +33,7 @@ on:
     paths:
       - "docs/reference/**"
       - "docs/hardware/**"
+      - "docs/assembly/**"
       - "examples/manual-examples/**"
       - "examples/**/*.sasm"
       - ".github/workflows/manual.yml"
@@ -109,4 +111,25 @@ jobs:
         with:
           name: sirc-1-hardware-reference-manual
           path: ./docs/hardware/SIRC-1-hardware-reference-manual.pdf
+          if-no-files-found: error
+
+      # The assembly manual also shares the preamble. Its code listings are
+      # assembled with the real assembler (`make listings`), so it needs the
+      # Rust toolchain set up above.
+      - name: Assembly manual - format check
+        run: make format-check
+        working-directory: ./docs/assembly
+
+      - name: Assembly manual - build PDF and check cross-references
+        run: make all
+        working-directory: ./docs/assembly
+
+      - name: Assembly manual - assemble listings
+        run: make listings
+        working-directory: ./docs/assembly
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sirc-1-assembly-programmers-manual
+          path: ./docs/assembly/SIRC-1-assembly-programmers-manual.pdf
           if-no-files-found: error
