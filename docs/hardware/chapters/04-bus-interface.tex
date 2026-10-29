@@ -1,0 +1,105 @@
+\chapter{Bus Interface}
+\label{ch:bus-interface}
+
+\section{Clocked Bus Model}
+
+All bus timing is described relative to the rising edge of CLKI. The CPU presents a bus request during the execution
+phase that needs external access. If no response is asserted, the CPU repeats the same request and does not advance to
+the next execution phase.
+
+A no-wait-state bus access assumes that the selected external device can assert \texttt{BACK} and, for reads, drive
+valid data during the same CLKI interval in which \texttt{BAS} is asserted, so the CPU accepts the transfer on the next
+rising edge. A device that samples the request on one clock edge and cannot return \texttt{BACK} or read data until a
+later edge adds wait states; this is the normal way to attach slower synchronous memory or peripherals.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Signal} & \textbf{Timing rule}                                                                                                               \\
+		\midrule
+		A0--A23         & Valid whenever BAS is asserted. Stable until the request completes or aborts.                                                      \\
+		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when BACK is accepted. \\
+		BRW             & Valid whenever BAS is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.          \\
+		BAT0--BAT2      & Valid whenever BAS is asserted. Encodes the access type for the active request and is stable until completion or abort.            \\
+		PROT            & Reflects the status register P bit and may be used with BAS, BAT, and A0--A23 by external protection logic.                        \\
+		BAS             & Asserted while a bus request is active. Remains asserted across wait states.                                                       \\
+		SYNC            & Asserted while phase 0 (Instruction Fetch, high word) of an instruction or exception-unit dispatch is active.                      \\
+		\bottomrule
+	\end{tabularx}
+	\caption{CPU bus output timing rules}
+	\label{tab:bus-output-timing-rules}
+\end{table}
+
+When BAS is deasserted there is no active bus transaction. External devices must ignore A0--A23, D0--D15, BRW, and
+BAT0--BAT2 unless BAS is asserted.
+
+\section{Bus Transaction Completion}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Response} & \textbf{Effect when sampled while BAS is asserted}                                                                                                       \\
+		\midrule
+		BACK              & Completes the request successfully. For reads, D0--D15 is sampled on the accepting clock edge. For writes, the write is considered externally committed. \\
+		BERR              & Aborts the request and raises a bus fault. Read data is ignored and writes are not considered successfully committed by the CPU.                         \\
+		BPER              & Aborts the request and raises a bus protection fault. Read data is ignored and writes are not considered successfully committed by the CPU.              \\
+		No response       & Inserts a wait state. The CPU remains in the current execution phase and keeps A0--A23, D0--D15 for writes, BRW, BAT0--BAT2, PROT, and BAS stable.       \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Bus response timing rules}
+	\label{tab:bus-response-timing-rules}
+\end{table}
+
+A bus transaction terminated by Bus Error or Bus Protection Error is architecturally unsuccessful. An external device
+must not commit any externally visible effect from a transaction for which it asserts the corresponding error signal:
+for a write, the device must not act on the data driven to it; for a read, any side effect the access would otherwise
+have (for example, a status register that clears on read) must not occur either. This is what makes Bus Fault and Bus
+Protection Fault safe to retry (see the Exception and Interrupt Handling chapter of the \archmanual{}) -- the CPU can
+assume that a transaction it aborted with one of these signals never happened.
+
+BACK, BERR, and BPER are logically mutually exclusive. If more than one is asserted for the same request, BERR has
+priority, then BPER, then BACK.
+
+\section{Bus Cycle Types}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lXXX}
+		\toprule
+		\textbf{Cycle} & \textbf{CPU drives}                       & \textbf{External device drives}      & \textbf{Completion}                              \\
+		\midrule
+		Read           & A0--A23, BRW=1, BAT, BAS, PROT            & D0--D15 for the selected address     & BACK samples data; BERR/BPER aborts.             \\
+		Write          & A0--A23, D0--D15, BRW=0, BAT, BAS, PROT   & No data bus drive                    & BACK accepts write; BERR/BPER aborts.            \\
+		Wait state     & Same values as the previous request cycle & Same ownership as the active request & Continues until BACK, BERR, or BPER is asserted. \\
+		No bus cycle   & No active transaction                     & No device drives D0--D15             & CPU advances internally.                         \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External bus cycle ownership}
+	\label{tab:bus-cycle-ownership}
+\end{table}
+
+\section{Control Input Sampling}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Input}   & \textbf{Sampling rule}                                                                                                                                                                                   \\
+		\midrule
+		BACK, BERR, BPER & Sampled while BAS is asserted. They complete or abort the active bus request.                                                                                                                            \\
+		IRQ1--IRQ4       & Level-sensitive. The requesting device must hold the line asserted until it is sampled and serviced; an assertion that begins and ends between boundaries, before the CPU samples it, is not recognized. \\
+		NMI              & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                                   \\
+		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.                                                                             \\
+		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                                                                                 \\
+		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                           \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External input sampling rules}
+	\label{tab:external-input-sampling-rules}
+\end{table}

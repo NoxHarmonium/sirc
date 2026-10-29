@@ -1,4 +1,4 @@
-name: SIRC-1 Reference Manual
+name: SIRC-1 Manuals
 
 # Standalone (not chained into coverage.yml like sirc-vm.yml/sirc-tiledit.yml
 # are): this builds a LaTeX PDF, an entirely different artifact from the
@@ -23,6 +23,7 @@ on:
     branches: ["main"]
     paths:
       - "docs/reference/**"
+      - "docs/hardware/**"
       - "examples/manual-examples/**"
       - "examples/**/*.sasm"
       - ".github/workflows/manual.yml"
@@ -30,6 +31,7 @@ on:
     branches: ["main"]
     paths:
       - "docs/reference/**"
+      - "docs/hardware/**"
       - "examples/manual-examples/**"
       - "examples/**/*.sasm"
       - ".github/workflows/manual.yml"
@@ -90,4 +92,21 @@ jobs:
         with:
           name: sirc-1-reference-manual
           path: ./docs/reference/SIRC-1-reference-manual.pdf
+          if-no-files-found: error
+
+      # The hardware manual shares the architecture manual's LaTeX preamble and
+      # has no code listings, so it only needs formatting and a build with
+      # reference checking.
+      - name: Hardware manual - format check
+        run: make format-check
+        working-directory: ./docs/hardware
+
+      - name: Hardware manual - build PDF and check cross-references
+        run: make all
+        working-directory: ./docs/hardware
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sirc-1-hardware-reference-manual
+          path: ./docs/hardware/SIRC-1-hardware-reference-manual.pdf
           if-no-files-found: error

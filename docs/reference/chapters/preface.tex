@@ -4,8 +4,9 @@
 
 \section*{About This Manual}
 
-This reference manual documents the SIRC-1 CPU architecture and the SIRCIS (SIRC Instruction Set) instruction set
-completely enough that an assembler, compiler backend, emulator, or hardware implementation can be built.
+This architecture reference manual documents the SIRC-1 CPU architecture and the SIRCIS (SIRC Instruction Set)
+instruction set completely enough that an assembler, compiler backend, emulator, or hardware implementation can be
+built.
 
 It is written for:
 
@@ -36,14 +37,31 @@ that restate information from the main chapters in a faster-to-scan form.
 
 \section*{Scope}
 
-This manual covers the SIRC-1 hardware itself: the instruction set architecture, register model, bus interface,
-exception handling, and coprocessor interface. It does not cover software conventions built on top of that hardware ---
-register usage conventions, calling conventions, stack frame layout, or object/binary file format --- which are the
-concern of the (forthcoming) SIRC-1 ABI and Toolchain documentation, not the hardware architecture. See
-Chapter~\ref{ch:introduction}'s Scope section for the full statement.
+This manual defines the SIRC-1 architecture: the instruction set and its encodings, the canonical assembly notation,
+the register model and other programmer-visible state, exceptions and interrupts, and the coprocessor interface. It
+does not cover the physical chip, which is the subject of the companion hardware manual, nor software conventions built
+on top of the architecture --- register usage conventions, calling conventions, stack frame layout, or object/binary
+file format --- which are the concern of the (forthcoming) SIRC-1 ABI and Toolchain documentation.
+
+The SIRC-1 documentation is divided into three manuals:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.6cm}}
+		\toprule
+		\textbf{Manual}                    & \textbf{Scope}                                                                                \\
+		\midrule
+		SIRC Architecture Reference Manual & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state \\
+		SIRC Assembly Programmer's Manual  & Complete assembly syntax, directives, macros, pseudoinstructions (forthcoming)                \\
+		SIRC Hardware Reference Manual     & Pinout, bus interface, timing, electrical characteristics                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC manual set (this manual is the first)}
+	\label{tab:manual-set}
+\end{table}
 
 \section*{Revision Status}
 
-This is Version 1.0 of the SIRC-1 CPU Reference Manual, issued in draft for internal review and not for external
-distribution. Except where an entry explicitly notes otherwise, every instruction, register, and behavior described
-here applies to \textit{SIRC-1, all revisions}.
+This is Version 1.0 of the SIRC-1 Architecture Reference Manual, issued in draft for internal review and not for
+external distribution. Except where an entry explicitly notes otherwise, every instruction, register, and behavior
+described here applies to \textit{SIRC-1, all revisions}.

@@ -1,5 +1,5 @@
 % ==========================================
-% Preamble for SIRC-1 CPU Reference Manual
+% Shared preamble for the SIRC-1 manuals (docs/reference and docs/hardware)
 % ==========================================
 
 % ------------------------------------------------------------
@@ -115,6 +115,16 @@
 \definecolor{opcodecolor}{RGB}{153,0,0}
 
 % ------------------------------------------------------------
+% Manual-specific strings
+% ------------------------------------------------------------
+% A manual's main.tex defines these (with \newcommand) before it inputs this
+% preamble. The defaults are for the Architecture Reference Manual.
+
+\providecommand{\sircManualFooter}{SIRC-1 ARCHITECTURE REFERENCE MANUAL}
+\providecommand{\sircManualTitle}{SIRC-1 Architecture Reference Manual}
+\providecommand{\sircManualSubject}{SIRCIS Instruction Set Architecture}
+
+% ------------------------------------------------------------
 % Header / footer
 % ------------------------------------------------------------
 
@@ -126,7 +136,7 @@
 \fancyhead[RE,LO]{\small\textcolor{sircred}{DRAFT --- Not for Distribution}}
 
 \fancyfoot[LE,RO]{\thepage}
-\fancyfoot[C]{\small\textcolor{sircgray}{SIRC-1 REFERENCE MANUAL}}
+\fancyfoot[C]{\small\textcolor{sircgray}{\sircManualFooter}}
 
 \renewcommand{\headrulewidth}{0.8pt}
 \renewcommand{\footrulewidth}{0.4pt}
@@ -143,8 +153,8 @@
 	citecolor=sircred,
 	bookmarksnumbered=true,
 	pdfauthor={SIRC Development Team},
-	pdftitle={SIRC-1 CPU Reference Manual},
-	pdfsubject={SIRCIS Instruction Set Architecture},
+	pdftitle={\sircManualTitle},
+	pdfsubject={\sircManualSubject},
 }
 
 % ------------------------------------------------------------

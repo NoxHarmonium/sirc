@@ -251,7 +251,7 @@ of that is possible if the illegal instruction had already been allowed to run.
 
 \textit{(Post-instruction)} — Raised after every instruction completes
 when the \texttt{TraceMode} SR bit is set, or when the \texttt{TRCE} input is asserted at the instruction boundary
-(see Appendix~\ref{appendix:external-interface}, Force Trace Mode Input).
+(see the Force Trace Mode Input in the \textit{SIRC-1 Hardware Reference Manual}).
 
 Used for single-step debugging. Because the fault fires after the instruction commits, RETE returns to the instruction
 \textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the
