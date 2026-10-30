@@ -530,12 +530,11 @@ the Return Address and the Return Status Register between a link register and \r
 level is not accessible to software through these instructions.
 
 When an exception occurs, the appropriate link register (determined by the exception priority level) is populated with
-the current program counter and status register values. For faults in the retryable category (Alignment Fault, Bus
-Fault, Bus Protection Fault, Invalid Opcode Fault, Privilege Violation Fault, and Segment Overflow Fault), the return
-address is the address of the faulting instruction, so it can be retried. For regular exceptions (hardware and software
-exceptions) and Instruction Trace Fault, the return address is the address after the current instruction; see
-Section~\ref{sec:fault-categories} for the exception-dispatch faults (Level Five Hardware Exception Conflict, Double
-Fault), which instead store the program counter at the point the fault was detected.
+the current program counter and status register values. For the retryable faults (Section~\ref{sec:fault-categories}),
+the return address is the address of the faulting instruction, so it can be retried. For regular exceptions (hardware
+and software exceptions) and Instruction Trace Fault, the return address is the address after the current instruction;
+see Section~\ref{sec:fault-categories} for the exception-dispatch faults (Level Five Hardware Exception Conflict,
+Double Fault), which instead store the program counter at the point the fault was detected.
 
 \begin{table}[H]
 	\centering
@@ -679,12 +678,17 @@ enabled) will be serviced before the next instruction executes.
 
 Executing \mnemonic{RETE} while the current exception level is 0 is architecturally undefined.
 
-For faults in the retryable category (Alignment Fault, Bus Fault, Bus Protection Fault, Invalid Opcode Fault, Privilege
-Violation Fault, and Segment Overflow Fault), \mnemonic{RETE} returns to the faulting instruction, allowing it to be
-retried. This retry is not always a clean undo for a DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}),
-since it performs several bus accesses per instruction; see Section~\ref{sec:dma-fault-retry}. For all other faults and
-for regular exceptions, \mnemonic{RETE} returns to the instruction following the one that was executing when the
-exception occurred.
+Where \mnemonic{RETE} returns depends on the kind of exception:
+
+\begin{itemize}
+	\item For the retryable faults (Section~\ref{sec:fault-categories}), it returns to the faulting instruction, allowing it to
+	      be retried. This retry is not always a clean undo for a DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}),
+	      since it performs several bus accesses per instruction; see Section~\ref{sec:dma-fault-retry}.
+	\item For the Instruction Trace Fault and for regular exceptions (hardware and software), it returns to the instruction
+	      following the one that was executing when the exception occurred.
+	\item For the exception dispatch faults (Level Five Hardware Exception Conflict and Double Fault), it returns to the program
+	      counter at the point the fault was detected.
+\end{itemize}
 
 \subsection{Accessing Link Registers}
 
