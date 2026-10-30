@@ -47,12 +47,16 @@ priority level (exception level) is \textit{higher} than the currently active ex
 \begin{itemize}
 	\item An interrupt handler from being interrupted by its own interrupt (same level)
 	\item Lower priority interrupts from interrupting higher priority handlers
-	\item Software exceptions from running during any hardware interrupt (would corrupt link register 0)
 \end{itemize}
+
+Software exceptions follow a separate rule. An \mnemonic{EXCP} executed inside any exception or fault handler is
+discarded rather than deferred, so a trap can never overwrite link register 0 (Section~\ref{sec:user-exceptions}).
 
 The exception unit maintains a \texttt{current\_exception\_level} field that tracks the active exception level (0--7).
 When not handling any exception, this is 0. When handling an exception at level N, only exceptions at level > N can
-interrupt.
+interrupt. Two cases fall outside this rule. Faults are dispatched at any level: a fault raised inside a fault handler
+becomes a double fault. A Level 5 request that arrives while a Level 5 handler is running (level 6) is not deferred but
+raises a Level Five Hardware Exception Conflict fault (Section~\ref{sec:level-five-conflict-fault}).
 
 \subsection{Vector Table}
 
@@ -459,6 +463,7 @@ In short: the fault (priority 7) blocks the second L5 (priority 6) from firing w
 Hardware Exception Conflict fault is raised then, not during the inner fault handler.
 
 \section{User Exceptions (Traps)}
+\label{sec:user-exceptions}
 
 A user exception occurs when the program executes an \mnemonic{EXCP} instruction that signals the exception coprocessor
 that it should trigger an exception. They are usually used by programs running in protected mode to switch to
