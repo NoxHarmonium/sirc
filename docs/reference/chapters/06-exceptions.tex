@@ -319,16 +319,15 @@ the resulting behavior is architecturally undefined.
 
 \subsubsection{Link Register Preservation}
 
-\textbf{Important:} Link registers can be overwritten when a fault occurs during the handling of another fault (a double fault).
-In this case, the fault link register (register 6) and the fault metadata register (register 7) are overwritten.
-This means the original return address is lost.
-
 There is no way to fully recover from a double fault: the valid response is to declare the CPU state invalid, perform
 some last-chance error handling (for example, dumping the registers), and reset the CPU.
 
 A fault handler that wants a better chance of capturing useful diagnostics before that reset should still save the link
 register contents early -- before doing anything else that might fault again -- using the \mnemonic{ETFR} instruction,
 so the original fault's return address and status register can be included in whatever gets dumped.
+
+The values can be stored on the stack but since the stack pointer may be corrupted, a more robust implementation stores
+and loads from hardcoded memory addresses that are known to always be valid, instead of relying on the stack pointer.
 
 \mnemonic{ETFR} only transfers the return address and status register of link registers 6 and 7; the saved exception
 level is not accessible to software through it, nor can \mnemonic{ETTR} write it back. This is not just a missing
@@ -340,9 +339,6 @@ interrupt or software exception, including Level 5, since nothing outranks the h
 still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU would keep
 running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the program's
 life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault.
-
-The values can be stored on the stack but since the stack pointer may be corrupted, a more robust implementation stores
-and loads from hardcoded memory addresses that are known to always be valid, instead of relying on the stack pointer.
 
 \section{Hardware Exceptions (Interrupts)}
 
