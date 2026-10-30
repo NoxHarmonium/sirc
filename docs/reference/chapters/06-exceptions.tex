@@ -388,7 +388,8 @@ At an instruction boundary, the exception unit selects the highest-priority pend
 is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Pending
 lower-priority interrupts remain latched and are considered again after the current handler returns with
 \mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was latched, it does
-not block dispatch of any other pending, enabled interrupt of lower priority.
+not block dispatch of any other pending, enabled interrupt of lower priority. The disabled interrupt stays pending, and
+is dispatched if its line is re-enabled, even if the device has since withdrawn its request.
 
 \subsection{Interrupt Recognition and Latency}
 \label{sec:interrupt-latency}
