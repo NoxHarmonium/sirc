@@ -769,18 +769,9 @@ performs an exception-vector fetch with bus access type \texttt{ExceptionVectorF
 	\item Load the fetched target address into \reg{p}.
 \end{enumerate}
 
-These four steps are not one clock cycle each. Steps 1 and 2 each occupy their own fetch cycle, an instruction-decode
-cycle follows between step 2 and step 3 (not itemized above), and steps 3 and 4 then happen together in a single
-execute cycle -- four clock cycles of substantive work. Like every other exception-unit dispatch, though, the
-reset-vector fetch runs through the same fixed six-phase instruction pipeline described in
-Chapter~\ref{ch:cpu-architecture}, so it still occupies two further cycles -- a memory-access phase and a write-back
-phase -- in which reset has nothing left to do. The reset-vector fetch therefore takes six clock cycles in total, not
-four, separate from and following the reset-output hold described in Section~\ref{sec:reset-output-hold}.
-
-Step 3's status-register clear is listed here, rather than only in the Reset State table (Table~\ref{tab:reset-state}),
-because it marks the specific point in the pipeline where the clear actually happens -- useful for anyone modeling
-cycle-accurate timing. Table~\ref{tab:reset-state} instead documents the eventual, settled reset state; no other
-register is touched during the reset-vector fetch itself, so it is the only state change covered both here and there.
+Like every other exception-unit dispatch, the reset-vector fetch occupies one six-phase slot; steps 3 and 4 happen
+together in its execute phase. See Appendix~\ref{appendix:timing} for the cycle counts, including the reset-output hold
+described in Section~\ref{sec:reset-output-hold}.
 
 If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded. The CPU raises the
 corresponding fault with the bus access type set to \texttt{ExceptionVectorFetch}. From that point the normal
