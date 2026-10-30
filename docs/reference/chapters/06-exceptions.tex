@@ -592,8 +592,9 @@ information to determine how to handle the fault appropriately.
 \section{Exception Processing}
 \label{sec:exception-processing}
 
-Figure~\ref{fig:exception-entry-return} summarises how an exception is entered and returned from. The steps are
-described in detail below and in Section~\ref{sec:return-from-exception}.
+Figure~\ref{fig:exception-entry-return} shows how an exception is entered and returned from. This section gives the
+rules the figure does not: which exceptions are accepted, what is preserved, and what happens when entry fails.
+Section~\ref{sec:return-from-exception} describes the return.
 
 \begin{figure}[tbp]
 	\centering
@@ -602,89 +603,35 @@ described in detail below and in Section~\ref{sec:return-from-exception}.
 	\label{fig:exception-entry-return}
 \end{figure}
 
-\subsection{Exception Handling Flow}
-
-When an exception occurs, the following steps are executed:
-
-\begin{enumerate}
-	\item For hardware exceptions, the exception unit checks if the interrupt line is enabled in the status register. If
-	      disabled, the interrupt is ignored and not queued.
-
-	\item The exception unit checks if the exception priority level is higher than the current active exception level. If not,
-	      the exception is deferred until the current handler completes.
-
-	\item For level 5 hardware exceptions being raised when one is already being handled (both have exception level 6), a Level
-	      Five Hardware Exception Conflict fault is raised instead. The same fault is raised instead of dispatching a queued
-	      level 5 hardware exception when the L5 overrun flag is set (Section~\ref{sec:level-5-nmi-behavior}), and that flag is
-	      cleared.
-
-	\item The vector-table address is computed by multiplying the vector ID by 2, since each vector is a 24-bit address stored as
-	      two 16-bit words.
-
-	\item The exception unit reads the high word and then the low word of the vector target address from the vector table.
-
-	\item The current program counter, status register, and current exception level are stored in the appropriate link register
-	      based on the exception priority level.
-
-	\item The Protected Mode bit in the status register is cleared, switching the CPU to supervisor mode.
-
-	\item The TraceMode bit in the status register is cleared, preventing trace faults from firing inside the handler.
-
-	\item The Exception Active bit in the status register is set, indicating that an exception handler is active.
-
-	\item The current exception level is updated to the level of the exception being serviced.
-
-	\item The program counter is set to the fetched vector target address, transferring control to the exception handler.
-\end{enumerate}
-
-\subsection{Exception Entry Side Effects}
+\subsection{Exception Entry}
 \label{sec:exception-entry-side-effects}
 
-For pending hardware interrupts, priority and mask checks occur before the exception-vector fetch. A hardware interrupt
-that is disabled or not high enough priority to preempt the current handler does not fetch its vector; if it is already
-latched as pending, it remains pending for later service according to the pending-interrupt rules in
-Section~\ref{sec:pending-hardware-interrupts}.
-
-Software exceptions are also screened before the exception-vector fetch. A software exception is accepted only when no
-exception handler is active.
-
-After an exception source is selected for service, the exception unit fetches the high word and low word of the handler
-target address from the vector table. Architectural entry side effects commit only after the vector target has been
-fetched and the exception is accepted for service.
-
-When entry commits, the exception unit performs the following state updates as one architectural action:
+\paragraph{Acceptance.} Acceptance is decided before the exception-vector fetch, so an exception that is not accepted has no side effects.
 
 \begin{itemize}
-	\item Writes the selected link register with the current program counter, current status register, and current exception
-	      level.
-	\item Clears \texttt{SR.P}, entering supervisor mode.
-	\item Clears \texttt{SR.T}, preventing trace faults from firing inside the handler.
-	\item Sets \texttt{SR.EA}, indicating that an exception handler is active.
-	\item Preserves the condition flags, reserved lower status bits, interrupt-enable bits, and \texttt{SR.A} in the live status
-	      register.
-	\item Updates the current exception level to the level of the exception being serviced.
-	\item Loads the program counter from the fetched vector target address.
+	\item A hardware interrupt is accepted only if its line is enabled in the status register and its priority is higher than the
+	      current exception level. Otherwise it does not fetch its vector. A disabled interrupt is ignored and not queued; one
+	      that is only outranked remains pending, according to the rules in Section~\ref{sec:pending-hardware-interrupts}.
+	\item A level 5 hardware exception that collides with another one raises a Level Five Hardware Exception Conflict fault
+	      instead (Section~\ref{sec:level-five-conflict-fault}).
+	\item A software exception is accepted only when no exception handler is active.
 \end{itemize}
 
-The saved status register in the link register is the pre-entry value, before \texttt{SR.P}, \texttt{SR.T}, or
-\texttt{SR.EA} are modified. \mnemonic{RETE} restores that saved status register, so a handler can inspect or edit the
-saved value with \mnemonic{ETFR} and \mnemonic{ETTR} before returning.
+\paragraph{Commit.} After an exception is selected, the exception unit fetches the high word and then the low word of the handler address
+from the vector table. The state updates shown in the figure commit as one architectural action, and only after the
+vector fetch has succeeded. The condition flags, reserved lower status bits, interrupt-enable bits and \texttt{SR.A}
+are preserved in the live status register.
 
-The T bit (TraceMode) in the status register is always cleared when entering any exception handler, including fault
-handlers. This ensures that trace faults do not fire inside handlers. RETE restores the saved status register, so if T
-was set before the exception, tracing resumes after RETE returns.
+The status register saved in the link register is the value from before entry, with \texttt{SR.P}, \texttt{SR.T} and
+\texttt{SR.EA} unmodified. \mnemonic{RETE} restores it, so a handler can inspect or edit the saved value with
+\mnemonic{ETFR} and \mnemonic{ETTR} before returning. \texttt{SR.T} is cleared on entry to every handler, including
+fault handlers, so trace faults cannot fire inside handlers; if it was set before the exception, tracing resumes after
+\mnemonic{RETE}.
 
-If an exception is not accepted because its priority is not higher than the current exception level, none of these
-entry side effects occur. Pending hardware interrupts remain subject to the priority and pending-interrupt rules
-described in Sections~\ref{sec:exception-levels-and-priority} and~\ref{sec:pending-hardware-interrupts}.
-
-If a bus or protection fault occurs during an exception-vector fetch before entry commits, the original exception does
-not enter and the remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-and-fault-timing}).
-The CPU raises the corresponding fault with the bus access type set to \texttt{ExceptionVectorFetch}. If a fault-vector
-fetch itself fails, the CPU escalates to double fault. If the double-fault vector fetch fails, the CPU will reset.
-
-\textbf{Returning from Exceptions:} see Section~\ref{sec:return-from-exception} for how \mnemonic{RETE} restores this
-state.
+\paragraph{Vector fetch failure.} If a bus or protection fault occurs during an exception-vector fetch, the original exception does not enter and the
+remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-and-fault-timing}). The CPU raises the
+corresponding fault with the bus access type set to \texttt{ExceptionVectorFetch}. If a fault-vector fetch itself
+fails, the CPU escalates to a double fault. If the double-fault vector fetch fails, the CPU resets.
 
 \section{Return from Exception}
 \label{sec:return-from-exception}
