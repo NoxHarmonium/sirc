@@ -119,14 +119,14 @@ current exception level. Two faults are conditional on whether they are raised a
 \subsection{Fault Categories}
 \label{sec:fault-categories}
 
-Not all faults behave the same way with respect to the faulting instruction and the RETE return address. There are
-three categories:
+Not all faults behave the same way with respect to the faulting instruction and the \mnemonic{RETE} return address.
+There are three categories:
 
 \subsubsection{Retryable faults}
 The operation that triggered the fault does not take effect. For most faults this means the instruction takes no
 architectural effect (the exceptions to this are listed below). The link register stores the address of the faulting
-instruction. RETE returns to that instruction so it can be retried, typically after the fault handler has corrected the
-condition that caused the fault.
+instruction. \mnemonic{RETE} returns to that instruction so it can be retried, typically after the fault handler has
+corrected the condition that caused the fault.
 
 Examples of how a handler can correct the cause of a fault:
 
@@ -155,7 +155,8 @@ The retryable faults are: \textit{Alignment Fault; Bus Fault; Bus Protection Fau
 
 \subsubsection{Post-instruction faults}
 The instruction completes normally and its effects are committed before the fault fires. The link register stores the
-address of the \textit{next} instruction. RETE advances to that instruction; the traced instruction is not re-executed.
+address of the \textit{next} instruction. \mnemonic{RETE} advances to that instruction; the traced instruction is not
+re-executed.
 
 The only post-instruction fault is the \textit{Instruction Trace Fault}.
 
@@ -264,16 +265,16 @@ of that is possible if the illegal instruction had already been allowed to run.
 \subsection{Instruction Trace Fault}
 
 \textit{(Post-instruction)} — Raised after every instruction completes
-when the \texttt{TraceMode} SR bit is set, or when the force-trace request (\texttt{TRCE}) is active at the instruction boundary
+when \texttt{SR.T} is set, or when the force-trace request (\texttt{TRCE}) is active at the instruction boundary
 (see the Force Trace Mode Input in the \textit{SIRC-1 Hardware Reference Manual}).
 
 Used for single-step debugging. The fault fires after the instruction commits; for a coprocessor call, that includes
-the call's dispatch slot (Section~\ref{sec:interrupt-latency}). RETE returns to the instruction \textit{following} the
-traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the handler itself is not
-traced. RETE restores the saved SR, which re-enables tracing unless the handler explicitly clears T from the saved
-status register via \texttt{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each instruction,
-before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next instruction
-boundary; exception-unit dispatches are never traced.
+the call's dispatch slot (Section~\ref{sec:interrupt-latency}). \mnemonic{RETE} returns to the instruction
+\textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the
+handler itself is not traced. \mnemonic{RETE} restores the saved SR, which re-enables tracing unless the handler
+explicitly clears T from the saved status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is sampled once
+at the start of each instruction, before that instruction can modify it, so a write to \texttt{SR.T} takes effect
+starting with the next instruction boundary; exception-unit dispatches are never traced.
 
 \subsection{Level Five Hardware Exception Conflict}
 \label{sec:level-five-conflict-fault}
@@ -418,7 +419,7 @@ handler. However, Level 5 is \textit{not} fully non-maskable. Because faults car
 priority 6), an L5 interrupt that arrives while a fault is being handled is \textit{queued} in the pending hardware
 exceptions register rather than serviced immediately.
 
-Once the fault handler returns via \texttt{RETE} and the exception level drops back below 6, the pending L5 interrupt
+Once the fault handler returns via \mnemonic{RETE} and the exception level drops back below 6, the pending L5 interrupt
 fires normally.
 
 The pending hardware exceptions register holds a single bit for L5, so only one L5 request can be queued. If a further
@@ -653,8 +654,8 @@ fault handlers, so trace faults cannot fire inside handlers; if it was set befor
 
 \paragraph{Vector fetch failure.} If a bus or protection fault occurs during an exception-vector fetch, the original exception does not enter and the
 remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-and-fault-timing}). The CPU raises the
-corresponding fault with the bus access type set to \texttt{ExceptionVectorFetch}. If a fault-vector fetch itself
-fails, the CPU escalates to a double fault. If the double-fault vector fetch fails, the CPU resets.
+corresponding fault with the bus access type set to exception vector fetch. If a fault-vector fetch itself fails, the
+CPU escalates to a double fault. If the double-fault vector fetch fails, the CPU resets.
 
 \section{Return from Exception}
 \label{sec:return-from-exception}
@@ -670,8 +671,8 @@ from the current link register:
 	\item Execution resumes at the return address
 \end{enumerate}
 
-After RETE, any pending interrupts that are now eligible to run (higher priority than the restored exception level and
-enabled) will be serviced before the next instruction executes.
+After \mnemonic{RETE}, any pending interrupts that are now eligible to run (higher priority than the restored exception
+level and enabled) will be serviced before the next instruction executes.
 
 Executing \mnemonic{RETE} while the current exception level is 0 is architecturally undefined.
 
@@ -760,7 +761,7 @@ fetch begins.
 \label{sec:reset-vector-fetch}
 
 The reset vector is vector \texttt{0x00} in the exception vector table. After the reset-output hold, the exception unit
-performs an exception-vector fetch with bus access type \texttt{ExceptionVectorFetch}:
+performs an exception-vector fetch with bus access type exception vector fetch:
 
 \begin{enumerate}
 	\item Read the high word of the reset target address from \addr{0x0000}.
@@ -774,9 +775,9 @@ together in its execute phase. See Appendix~\ref{appendix:timing} for the cycle 
 described in Section~\ref{sec:reset-output-hold}.
 
 If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded. The CPU raises the
-corresponding fault with the bus access type set to \texttt{ExceptionVectorFetch}. From that point the normal
-exception-vector fetch fault rules apply: a fault-vector fetch failure escalates to double fault, and a double-fault
-vector fetch failure will reset the CPU.
+corresponding fault with the bus access type set to exception vector fetch. From that point the normal exception-vector
+fetch fault rules apply: a fault-vector fetch failure escalates to double fault, and a double-fault vector fetch
+failure will reset the CPU.
 
 \section{Exception Coprocessor Instructions}
 \label{sec:exception-coprocessor-instructions}
