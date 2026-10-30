@@ -313,14 +313,16 @@ single \mnemonic{RETE}; the fault is not retryable, so \mnemonic{RETE} resumes t
 was raised. A program that does care can use the handler to log the overrun or take corrective action.
 
 \subsection{Double Fault}
+\label{sec:double-fault}
 
 \textit{(Exception dispatch)} -- Raised when a fault occurs while another fault is
 already being handled.
 
 When the CPU is already at fault level (priority 7) and another fault occurs, there is no additional banked link
 register available. The fault link register (register 6) is overwritten with the new return address, losing the
-original fault's return address. The fault metadata register (register 7) is also overwritten; it encodes a
-double-fault flag along with both the current and original fault types.
+original fault's return address. The fault metadata register (register 7) is also overwritten; it records the double
+fault flag, the original fault's type, and the type of the fault that caused the escalation
+(Section~\ref{sec:fault-metadata-register-format}).
 
 The CPU jumps to vector \texttt{0x08}. This is typically a last-chance handler that dumps registers and resets. If
 another fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector \texttt{0x08} again.
@@ -574,7 +576,7 @@ Return Status Register field is used to encode fault-specific metadata in the fo
 	\centering
 	\begin{bytefield}[bitwidth=1.5em]{16}
 		\bitheader{0,2,3,4,7,8,11,12,15} \\
-		\bitbox{4}{Reserved} & \bitbox{4}{Original Fault} & \bitbox{4}{Current Fault} & \bitbox{1}{D} &
+		\bitbox{4}{Escalating Fault} & \bitbox{4}{Original Fault} & \bitbox{4}{Fault} & \bitbox{1}{D} &
 		\bitbox{3}{BAT}
 	\end{bytefield}
 	\caption{Fault Metadata Register Status Field Layout}
@@ -594,11 +596,17 @@ Return Status Register field is used to encode fault-specific metadata in the fo
 		      \item \texttt{0x7}: Reserved
 	      \end{itemize}
 	\item \textbf{Bit 3:} Double fault flag (1 bit) -- set to 1 if this is a double fault
-	\item \textbf{Bits 4--7:} Current fault type (4 bits) -- the type of fault that occurred
-	\item \textbf{Bits 8--11:} Original fault type (4 bits) -- only meaningful for double faults, indicates the fault that
-	      triggered the escalation to a double fault (the second fault, not the one already being handled when it occurred)
-	\item \textbf{Bits 12--15:} Unused (reserved for future use)
+	\item \textbf{Bits 4--7:} Fault type (4 bits) -- the fault being dispatched; always \texttt{0x08} when the double fault
+	      flag is set
+	\item \textbf{Bits 8--11:} Original fault type (4 bits) -- for a double fault, the fault that was already being
+	      handled, or whose vector could not be fetched (Section~\ref{sec:double-fault}). If a double-fault handler itself
+	      faults, this is \texttt{0x08}. Reserved and read as zero when the double fault flag is clear
+	\item \textbf{Bits 12--15:} Escalating fault type (4 bits) -- for a double fault, the fault that caused the escalation.
+	      Reserved and read as zero when the double fault flag is clear
 \end{itemize}
+
+For a double fault, the bus access type and the Return Address field describe the escalating fault. The original
+fault's bus access type and address are lost.
 
 Fault types use the following values:
 
