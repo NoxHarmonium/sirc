@@ -118,49 +118,58 @@ current exception level. Two faults are conditional on whether they are raised a
 Not all faults behave the same way with respect to the faulting instruction and the RETE return address. There are
 three categories:
 
-\begin{description}
-	\item[Retryable faults] The operation that triggered the fault does not take effect. For most faults this means the
-	      instruction is cancelled before it commits; Alignment Fault is the exception, since the fetch itself is what fails, so
-	      there is no decoded instruction to cancel in the first place -- but the effect is the same either way. A cancelled
-	      instruction still passes through its remaining phases, which run as no-ops
-	      (Section~\ref{sec:exception-and-fault-timing}). A DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}) is a
-	      further exception: because it performs several bus accesses per instruction, a fault partway through can leave some of
-	      those accesses already committed; see the individual fault descriptions below and Section~\ref{sec:dma-fault-retry}.
-	      The link register stores the address of the faulting instruction. RETE returns to that instruction so it can be
-	      retried, typically after the fault handler has corrected the condition that caused the fault: remapping or paging in a
-	      device for a bus fault, adjusting a permission for a bus protection fault, bringing an out-of-range address back into
-	      range for a segment overflow, or emulating the missing operation for an invalid opcode fault. This is also why
-	      Privilege Violation is retryable: the CPU guarantees that the instruction that triggered it never took effect, so a
-	      supervisor-mode handler can safely inspect it, emulate the privileged effect if appropriate, and either retry it or
-	      advance past it under its own control. Every fault in this category follows the same pattern: a handler is always free
-	      to advance past the faulting instruction with \mnemonic{ETFR}/\mnemonic{ETTR} instead of retrying it. For Invalid
-	      Opcode Fault this is usually the right choice -- simply retrying an unemulated invalid opcode will raise the same fault
-	      again.
+\subsubsection{Retryable faults}
+The operation that triggered the fault does not take effect. For most faults this means the instruction takes no
+architectural effect (the exceptions to this are listed below). The link register stores the address of the faulting
+instruction. RETE returns to that instruction so it can be retried, typically after the fault handler has corrected the
+condition that caused the fault.
 
-	      \textit{Alignment Fault; Bus Fault; Bus Protection Fault; Invalid Opcode Fault; Privilege Violation Fault; Segment
-		      Overflow Fault.}
+Examples of how a handler can correct the cause of a fault:
 
-	\item[Post-instruction faults] The instruction completes normally and its effects are committed before the fault fires. The
-	      link register stores the address of the \textit{next} instruction. RETE advances to that instruction; the traced
-	      instruction is not re-executed.
+\begin{itemize}
+	\item Remapping or paging in a device for a bus fault
+	\item Switching to supervisor mode for a bus protection fault or privilege violation
+	\item Bringing an out-of-range address back into range for a segment overflow
+	\item Emulating the missing operation for an invalid opcode fault
+\end{itemize}
 
-	      \textit{Instruction Trace Fault.}
+Every fault in this category follows the same pattern: a handler is always free to advance past the faulting
+instruction with \mnemonic{ETFR}/\mnemonic{ETTR} instead of retrying it. For Invalid Opcode Fault this is usually the
+right choice -- simply retrying an unemulated invalid opcode will raise the same fault again.
 
-	\item[Exception dispatch faults] Raised during the exception handling machinery itself, not during normal instruction
-	      execution. The link register stores the program counter at the point the fault was detected within the exception
-	      handler. Recovery may require careful state management; these faults often indicate a hardware misconfiguration or a
-	      programming error in an exception handler.
+Two cases do not follow the pattern of the instruction being cancelled before it commits:
 
-	      \textit{Level Five Hardware Exception Conflict, Double Fault.}
-\end{description}
+\begin{itemize}
+	\item An alignment fault is raised by the instruction fetch itself, so there is no decoded instruction to cancel.
+	\item A DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}) performs several bus accesses per instruction; a fault
+	      partway through can leave some of those accesses already committed; see the individual fault descriptions below and
+	      Section~\ref{sec:dma-fault-retry}.
+\end{itemize}
+
+The retryable faults are: \textit{Alignment Fault; Bus Fault; Bus Protection Fault; Invalid Opcode Fault; Privilege
+	Violation Fault; Segment Overflow Fault.}
+
+\subsubsection{Post-instruction faults}
+The instruction completes normally and its effects are committed before the fault fires. The link register stores the
+address of the \textit{next} instruction. RETE advances to that instruction; the traced instruction is not re-executed.
+
+The only post-instruction fault is the \textit{Instruction Trace Fault}.
+
+\subsubsection{Exception dispatch faults}
+Raised during the exception handling machinery itself, not during normal instruction execution. The link register
+stores the program counter at the point the fault was detected within the exception handler. Recovery may require
+careful state management; these faults often indicate a hardware misconfiguration or a programming error in an
+exception handler.
+
+The exception dispatch faults are: \textit{Level Five Hardware Exception Conflict, Double Fault.}
 
 \subsection{Bus Fault}
 
 \textit{(Retryable)} — Raised when the external memory system reports a bus transaction as failed by signalling a bus error
 (\texttt{BERR}).
 
-This could happen, for example, if an unmapped address is presented by the CPU and another chip detects this and raises
-an error. The instruction is cancelled before it takes effect, and the link register stores the address of the
+This could happen, for example, if an unmapped address is presented by the CPU and another device detects this and
+raises an error. The instruction is cancelled before it takes effect, and the link register stores the address of the
 \textit{faulting} instruction, so a handler implementing virtual memory can map in the missing page and return with
 \mnemonic{RETE} to retry the same instruction.
 
@@ -182,8 +191,8 @@ transaction.
 
 This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
 writing to ROM or accessing a protected memory region while the CPU is in protected mode. The instruction is cancelled
-before it takes effect, and the link register stores the address of the faulting instruction, so a handler can adjust
-the permission (if that is the correct response) and retry with \mnemonic{RETE}.
+before it takes effect, and the link register stores the address of the faulting instruction, so a handler can make the
+necessary corrections and retry with \mnemonic{RETE}.
 
 As with Bus Fault, this applies cleanly to an ordinary single-access instruction; a DMA burst (\mnemonic{DMAR},
 \mnemonic{DMAW}, \mnemonic{DMAT}) can raise this fault partway through, in which case words already transferred before
@@ -227,8 +236,7 @@ the link register stores the address of the faulting instruction; a handler that
 returning with \mnemonic{RETE} -- retrying the instruction unmodified will simply raise the same fault again.
 
 Note that this fault is specific to coprocessor instructions. Other instruction encodings outside the documented
-instruction set -- that is, normal processing-unit encodings -- are reserved or architecturally undefined; they are not
-required to raise an invalid-opcode fault.
+instruction set are reserved or architecturally undefined, and are not required to raise an invalid-opcode fault.
 
 \subsection{Privilege Violation Fault}
 
@@ -265,12 +273,23 @@ instruction boundary; exception-unit dispatches are never traced.
 \subsection{Level Five Hardware Exception Conflict}
 \label{sec:level-five-conflict-fault}
 
-\textit{(Exception dispatch)} — Raised when a level five
-hardware exception arrives while one is already being serviced.
+\textit{(Exception dispatch)} — Raised when a level five hardware exception cannot be handled normally because it
+collides with another one. There are two cases:
 
-The exception unit has no spare link register above level 6, so a second L5 cannot be handled normally. Rather than
-silently dropping it (which could mask a hardware misconfiguration), the CPU raises this fault. Level 5 interrupts
-should be treated as NMIs.
+\begin{itemize}
+	\item A level five hardware exception is dispatched while one is already being serviced (exception level 6).
+	\item The exception unit is about to dispatch a queued level five hardware exception, but one or more further level five
+	      requests arrived while it was queued and could not be queued as well (the \emph{L5 overrun} described in
+	      Section~\ref{sec:level-5-nmi-behavior}).
+\end{itemize}
+
+The exception unit has no spare link register above level 6, and the pending hardware exceptions register holds only
+one bit per line, so a second L5 cannot be handled normally. Rather than silently dropping it (which could mask a
+hardware misconfiguration), the CPU raises this fault. Level 5 interrupts should be treated as NMIs.
+
+A program that does not care about conflicting L5 requests can install a handler for this fault that consists of a
+single \mnemonic{RETE}; the fault is not retryable, so \mnemonic{RETE} resumes the code that was running when the fault
+was raised. A program that does care can use the handler to log the overrun or take corrective action.
 
 \subsection{Double Fault}
 
@@ -381,6 +400,16 @@ exceptions register rather than serviced immediately.
 Once the fault handler returns via \texttt{RETE} and the exception level drops back below 6, the pending L5 interrupt
 fires normally.
 
+The pending hardware exceptions register holds a single bit for L5, so only one L5 request can be queued. If a further
+L5 request arrives while the L5 pending bit is already set (for example, during a long fault handler), the request is
+lost, and the exception unit records the loss in an internal \emph{L5 overrun} flag. This flag is not part of the
+status register or any other software-visible register. When the exception unit next selects L5 for dispatch and the L5
+overrun flag is set, it clears the flag and raises a Level Five Hardware Exception Conflict fault
+(Section~\ref{sec:level-five-conflict-fault}) instead of dispatching L5. The L5 pending bit remains set. Because that
+fault is not retryable, \mnemonic{RETE} from its handler resumes the code that was running, and the still-pending L5
+interrupt is then dispatched normally. Any number of lost L5 requests while one is queued are reported by a single
+conflict fault. The L5 pending bit and the L5 overrun flag are both cleared by reset.
+
 This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use of the
 NMI line, fault handlers should be kept as short as possible.
 
@@ -453,10 +482,7 @@ Link registers 0--6 each store three pieces of information; register 7 uses the 
 (Section~\ref{sec:fault-metadata-register-format}):
 
 \begin{itemize}
-	\item \textbf{Return Address:} The 24-bit return address, held in a 32-bit field whose top 8 bits are always zero.
-	      This is enforced by the same address masking applied whenever a full address is derived from an address register
-	      pair (Figure~\ref{fig:addr-pair}), so even if the source address register's high word carries data in its own top
-	      8 bits, that data is discarded before the address ever reaches the link register.
+	\item \textbf{Return Address:} The 32-bit value copied verbatim from the \reg{p} register pair at the time of the exception.
 	\item \textbf{Return Status Register:} The 16-bit status register value at the time of the exception
 	\item \textbf{Saved Exception Level:} The exception level that was active when the exception was taken;
 	      \mnemonic{RETE} restores it into \texttt{current\_exception\_level}
@@ -588,7 +614,9 @@ When an exception occurs, the following steps are executed:
 	      the exception is deferred until the current handler completes.
 
 	\item For level 5 hardware exceptions being raised when one is already being handled (both have exception level 6), a Level
-	      Five Hardware Exception Conflict fault is raised instead.
+	      Five Hardware Exception Conflict fault is raised instead. The same fault is raised instead of dispatching a queued
+	      level 5 hardware exception when the L5 overrun flag is set (Section~\ref{sec:level-5-nmi-behavior}), and that flag is
+	      cleared.
 
 	\item The vector-table address is computed by multiplying the vector ID by 2, since each vector is a 24-bit address stored as
 	      two 16-bit words.
@@ -829,9 +857,9 @@ supervisor-mode \mnemonic{COPI} instruction, is architecturally undefined.
 \subsection{Coprocessor Select Register (CSR)}
 \label{sec:coprocessor-select-register}
 
-The coprocessor select register (CSR) is a 16-bit internal register used to communicate between different CPU units and
-coordinate exception handling; Section~\ref{sec:coprocessors-and-csr} describes its role in coprocessor dispatch. It
-has the following structure:
+The coprocessor select register (CSR) is a 16-bit internal register used to select the target coprocessor and
+coordinate exception handling. Section~\ref{sec:coprocessors-and-csr} describes how it is used when dispatching. It has
+the following structure:
 
 \begin{itemize}
 	\item \textbf{Bits 15--12 (First Nibble):} Coprocessor ID (\texttt{0x1} for exception unit, \texttt{0x0} for processing
