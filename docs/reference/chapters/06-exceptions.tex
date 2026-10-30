@@ -263,12 +263,13 @@ of that is possible if the illegal instruction had already been allowed to run.
 when the \texttt{TraceMode} SR bit is set, or when the force-trace request (\texttt{TRCE}) is active at the instruction boundary
 (see the Force Trace Mode Input in the \textit{SIRC-1 Hardware Reference Manual}).
 
-Used for single-step debugging. Because the fault fires after the instruction commits, RETE returns to the instruction
-\textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the
-handler itself is not traced. RETE restores the saved SR, which re-enables tracing unless the handler explicitly clears
-T from the saved status register via \texttt{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each
-instruction, before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next
-instruction boundary; exception-unit dispatches are never traced.
+Used for single-step debugging. The fault fires after the instruction commits; for a coprocessor call, that includes
+the call's dispatch slot (Section~\ref{sec:interrupt-latency}). RETE returns to the instruction \textit{following} the
+traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the handler itself is not
+traced. RETE restores the saved SR, which re-enables tracing unless the handler explicitly clears T from the saved
+status register via \texttt{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each instruction,
+before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next instruction
+boundary; exception-unit dispatches are never traced.
 
 \subsection{Level Five Hardware Exception Conflict}
 \label{sec:level-five-conflict-fault}
@@ -384,6 +385,21 @@ is higher than the current exception level. The selected bit is cleared as the h
 lower-priority interrupts remain latched and are considered again after the current handler returns with
 \mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was latched, it does
 not block dispatch of any other pending, enabled interrupt of lower priority.
+
+\subsection{Interrupt Recognition and Latency}
+\label{sec:interrupt-latency}
+
+Exceptions are recognized only at an instruction boundary, and only when the CSR is empty and no coprocessor is active
+(Section~\ref{sec:coprocessors-and-csr}). A coprocessor call (\mnemonic{COPI}, \mnemonic{COPR}, or a meta-instruction
+that assembles to one) is part of its instruction: its dispatch slot, and the command it starts, complete before a
+pending hardware interrupt or an instruction trace fault is taken. Nothing is lost by the wait. Level-sensitive
+requests stay asserted, a Level 5 request stays in its pending bit, and a trace fault is still raised. A fault raised
+by the call itself, such as a privilege violation or a failed DMA bus access, is serviced as soon as it occurs.
+
+The worst-case wait for an interrupt is therefore the remainder of the current instruction, plus the dispatch slot of a
+pending coprocessor call, plus the time a running coprocessor command takes, plus the dispatch slot of the interrupt
+itself. A DMA transfer cannot be interrupted, including by Level 5 (Section~\ref{sec:dma-unit}).
+Appendix~\ref{appendix:timing} gives the cycle counts.
 
 \subsection{Level 5 NMI-like Behavior}
 \label{sec:level-5-nmi-behavior}
@@ -617,10 +633,11 @@ Section~\ref{sec:return-from-exception} describes the return.
 	\item A software exception is accepted only when no exception handler is active.
 \end{itemize}
 
-\paragraph{Commit.} After an exception is selected, the exception unit fetches the high word and then the low word of the handler address
-from the vector table. The state updates shown in the figure commit as one architectural action, and only after the
-vector fetch has succeeded. The condition flags, reserved lower status bits, interrupt-enable bits and \texttt{SR.A}
-are preserved in the live status register.
+\paragraph{Selection and commit.} An exception is selected only when the CSR is empty and no coprocessor is active (Section~\ref{sec:interrupt-latency}).
+The exception unit then fetches the high word and then the low word of the handler address from the vector table. The
+state updates shown in the figure commit as one architectural action, and only after the vector fetch has succeeded.
+The condition flags, reserved lower status bits, interrupt-enable bits and \texttt{SR.A} are preserved in the live
+status register.
 
 The status register saved in the link register is the value from before entry, with \texttt{SR.P}, \texttt{SR.T} and
 \texttt{SR.EA} unmodified. \mnemonic{RETE} restores it, so a handler can inspect or edit the saved value with
@@ -815,10 +832,11 @@ the following structure:
 	\item \textbf{Bits 7--0 (Third and Fourth Nibbles):} Vector or parameter value
 \end{itemize}
 
-The CSR is automatically populated by the exception unit when a pending exception needs to be serviced. The priority of
-exceptions is determined by examining the first nibble of the vector ID, calculated as 7 minus the value of the first
-nibble (for example, \texttt{0x00} is priority 7, \texttt{0x40} is priority 3, and \texttt{0x60} and above are all
-priority 1).
+The exception unit loads the CSR when a pending exception needs to be serviced, but only when the CSR is empty and no
+coprocessor is active, so an exception never replaces a command written by \mnemonic{COPI} or \mnemonic{COPR}
+(Section~\ref{sec:interrupt-latency}). The priority of exceptions is determined by the high nibble of the vector ID,
+calculated as 7 minus the value of that nibble (for example, \texttt{0x00} is priority 7, \texttt{0x40} is priority 3,
+and \texttt{0x60} and above are all priority 1).
 
 A CSR value of \texttt{0x0000} -- the value left in place once the reset sequence has completed, and whenever no
 exception is pending -- selects coprocessor ID \texttt{0x0}, the processing unit, so the CPU simply continues executing

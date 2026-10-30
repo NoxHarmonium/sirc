@@ -106,13 +106,19 @@ instructions using the ALU, AU and barrel shifter described below. Other coproce
 coprocessor (\texttt{0x1}), carry out specialized operations on request. Every coprocessor reaches the register file
 and the bus interface through the coprocessor interface, and only one is active at a time.
 
-The coprocessor select register (CSR) tells the CU which coprocessor runs next and what it should do. It is a 16-bit
-internal register: bits 15--12 hold the coprocessor ID, bits 11--8 the coprocessor operation, and bits 7--0 an operand
-or vector. A \mnemonic{COPI} or \mnemonic{COPR} instruction writes its command operand to the CSR during write-back,
-and the exception coprocessor writes it when an exception is pending. The CU then dispatches the command to the
-selected coprocessor in a further six-phase slot. While nothing is pending the CSR is \texttt{0x0000}, which selects
-the processing unit, so the CPU carries on running the program. Chapter~\ref{ch:coprocessor} describes the instructions
-and Section~\ref{sec:coprocessor-select-register} the register's layout.
+The coprocessor select register (CSR) holds the pending coprocessor command: it tells the CU which coprocessor runs
+next and what it should do. It is a 16-bit internal register: bits 15--12 hold the coprocessor ID, bits 11--8 the
+coprocessor operation, and bits 7--0 an operand or vector. A \mnemonic{COPI} or \mnemonic{COPR} instruction writes its
+command operand to the CSR during write-back. The CU consumes the CSR by dispatching the command to the selected
+coprocessor in a further six-phase slot, and that coprocessor stays active until the command completes. While nothing
+is pending the CSR is \texttt{0x0000}, which selects the processing unit, so the CPU carries on running the program.
+Chapter~\ref{ch:coprocessor} describes the instructions and Section~\ref{sec:coprocessor-select-register} the
+register's layout.
+
+The exception coprocessor never overwrites a pending command. It keeps its own record of the exception it wants to
+service, and loads the CSR with it only when the CSR is empty and no coprocessor is active. A coprocessor call is
+therefore part of its instruction: its dispatch slot, and the command it starts, complete before any pending interrupt
+or instruction trace fault is taken (Section~\ref{sec:interrupt-latency}).
 
 \subsection{Arithmetic Logic Unit (ALU)}
 
