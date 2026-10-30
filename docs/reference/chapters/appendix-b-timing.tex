@@ -49,6 +49,7 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Timing}
+	\label{tab:instruction-timing}
 \end{table}
 
 The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
@@ -62,9 +63,20 @@ dispatch to the DMA unit and takes only 6 cycles.
 
 A hardware-exception or fault dispatch occupies one 6-cycle slot: the vector's high word is fetched at phase 0, the low
 word at phase 1, and entry to the handler is committed at phase 3. A latched interrupt is dispatched at the next phase
-0, so the worst-case latency from the interrupt request to the handler's first instruction fetch is 6 cycles to finish
-the current instruction plus 6 cycles to dispatch. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector
-fetch.
+0 at which the CSR is empty and no coprocessor is active (Section~\ref{sec:interrupt-latency}). The worst-case latency
+from the interrupt request to the handler's first instruction fetch is the time the current instruction still needs
+plus 6 cycles to dispatch, with the current instruction being as long as its entry in
+Table~\ref{tab:instruction-timing} allows:
+
+\begin{itemize}
+	\item Most instructions: 6 + 6 = 12 cycles.
+	\item A coprocessor call: 12 + 6 = 18 cycles, because its dispatch slot completes first.
+	\item \mnemonic{DMAR} or \mnemonic{DMAW} with a count of 7: 18 + 6 = 24 cycles.
+	\item \mnemonic{DMAT} with a count of 255: 521 + 6 = 527 cycles (about 22 microseconds at 24~MHz), because a DMA
+	      transfer cannot be interrupted.
+\end{itemize}
+
+These figures assume no bus wait states. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector fetch.
 
 A retryable fault cancels the faulting instruction at the phase that detects it. The six-phase sequence is never cut
 short: the instruction's remaining phases still run, but as no-ops that perform no bus access and commit no results, so
