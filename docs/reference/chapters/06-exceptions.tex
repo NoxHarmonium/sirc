@@ -288,6 +288,10 @@ collides with another one. There are two cases:
 	      Section~\ref{sec:level-5-nmi-behavior}).
 \end{itemize}
 
+In the first case the fault consumes the pending request: it is not dispatched after the handler returns. In the second
+case the request stays pending and is dispatched after the fault handler returns. If both cases apply at once, a single
+fault is raised, and it also clears the L5 overrun flag.
+
 The exception unit has no spare link register above level 6, and the pending hardware exceptions register holds only
 one bit per line, so a second L5 cannot be handled normally. Rather than silently dropping it (which could mask a
 hardware misconfiguration), the CPU raises this fault. Level 5 interrupts should be treated as NMIs.
@@ -435,8 +439,8 @@ This means Level 5 response latency is not deterministic when a fault is in prog
 NMI line, fault handlers should be kept as short as possible.
 
 If a second L5 interrupt arrives \textit{while the CPU is already executing an L5 handler} (exception level 6), it is
-not queued. It will raise a Level Five Hardware Exception Conflict fault instead. See
-Section~\ref{sec:level-five-conflict-fault}.
+not queued. It will raise a Level Five Hardware Exception Conflict fault instead, which consumes the pending request.
+See Section~\ref{sec:level-five-conflict-fault}.
 
 These two rules compose in a non-obvious way when a fault is raised \textit{inside} an L5 handler while a second L5
 interrupt is pending. Table~\ref{tab:l5-fault-timeline} walks through the sequence step by step.
