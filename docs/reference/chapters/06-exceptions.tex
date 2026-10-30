@@ -556,7 +556,7 @@ Double Fault), which instead store the program counter at the point the fault wa
 \label{sec:fault-metadata-register-format}
 
 The fault metadata register (register 7) stores additional information about faults beyond just the return address. The
-return\_status\_register field is used to encode fault-specific metadata in the following format:
+Return Status Register field is used to encode fault-specific metadata in the following format:
 
 \begin{figure}[H]
 	\centering
@@ -602,10 +602,11 @@ Fault types use the following values:
 	\item \textbf{\texttt{0x09}:} Bus protection fault
 \end{itemize}
 
-The return\_address field of register 7 stores the bus address that was being accessed when the fault occurred (for
-faults that involve memory access). For coprocessor invalid-opcode faults that occur during coprocessor dispatch before
-bus access, the low word of this field stores the 16-bit coprocessor command that could not be dispatched, and the high
-word is zero. This lets an invalid-opcode handler emulate missing optional coprocessor operations.
+The Return Address field of register 7 stores the bus address that was being accessed when the fault occurred. For a
+fault that does not access the bus, this field is architecturally undefined. The exception is an invalid-opcode fault
+raised during coprocessor dispatch, before any bus access: the low word of the field stores the 16-bit coprocessor
+command that could not be dispatched, and the high word is zero. This lets an invalid-opcode handler emulate missing
+optional coprocessor operations.
 
 Exception handlers can use the \mnemonic{ETFR} instruction to read the fault metadata register and decode this
 information to determine how to handle the fault appropriately.
