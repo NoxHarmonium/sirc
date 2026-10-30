@@ -163,9 +163,10 @@ The only post-instruction fault is the \textit{Instruction Trace Fault}.
 
 \subsubsection{Exception dispatch faults}
 Raised during the exception handling machinery itself, not during normal instruction execution. The link register
-stores the program counter at the point the fault was detected within the exception handler. Recovery may require
-careful state management; these faults often indicate a hardware misconfiguration or a programming error in an
-exception handler.
+stores the program counter at the point the fault was detected within the exception handler. The one exception is a
+double fault caused by a failed fault-vector fetch, which keeps the original fault's return address
+(Section~\ref{sec:double-fault-vector-fetch}). Recovery may require careful state management; these faults often
+indicate a hardware misconfiguration or a programming error in an exception handler.
 
 The exception dispatch faults are: \textit{Level Five Hardware Exception Conflict, Double Fault.}
 
@@ -316,7 +317,7 @@ was raised. A program that does care can use the handler to log the overrun or t
 \label{sec:double-fault}
 
 \textit{(Exception dispatch)} -- Raised when a fault occurs while another fault is
-already being handled.
+already being handled, or when a fault's own vector cannot be fetched (Section~\ref{sec:double-fault-vector-fetch}).
 
 When the CPU is already at fault level (priority 7) and another fault occurs, there is no additional banked link
 register available. The fault link register (register 6) is overwritten with the new return address, losing the
@@ -333,8 +334,8 @@ the resulting behavior is architecturally undefined.
 
 \subsubsection{Link Register Preservation}
 
-There is no way to fully recover from a double fault: the valid response is to declare the CPU state invalid, perform
-some last-chance error handling (for example, dumping the registers), and reset the CPU.
+There is no way to fully recover from a double fault raised inside a fault handler: the valid response is to declare
+the CPU state invalid, perform some last-chance error handling (for example, dumping the registers), and reset the CPU.
 
 A fault handler that wants a better chance of capturing useful diagnostics before that reset should still save the link
 register contents early -- before doing anything else that might fault again -- using the \mnemonic{ETFR} instruction,
@@ -346,13 +347,41 @@ and loads from hardcoded memory addresses that are known to always be valid, ins
 \mnemonic{ETFR} only transfers the return address and status register of link registers 6 and 7; the saved exception
 level is not accessible to software through it, nor can \mnemonic{ETTR} write it back. This is not just a missing
 diagnostic field: \mnemonic{RETE} always restores \texttt{current\_exception\_level} directly from whatever value is
-currently latched in the link register, and after a double fault that value is the fault level (7), not the level that
-was active before the original fault. Even a handler that perfectly restores the return address and status register
-and attempts \mnemonic{RETE} anyway would leave the CPU stuck at exception level 7 -- unable to service any hardware
-interrupt or software exception, including Level 5, since nothing outranks the highest priority level. New faults
-still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU would keep
-running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the program's
-life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault.
+currently latched in the link register, and after a double fault raised inside a fault handler that value is the fault
+level (7), not the level that was active before the original fault. Even a handler that perfectly restores the return
+address and status register and attempts \mnemonic{RETE} anyway would leave the CPU stuck at exception level 7 -- unable
+to service any hardware interrupt or software exception, including Level 5, since nothing outranks the highest priority
+level. New faults still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU
+would keep running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the
+program's life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault
+raised inside a fault handler.
+
+\subsubsection{Fault Vector Fetch Failure}
+\label{sec:double-fault-vector-fetch}
+
+A double fault is also raised when the vector fetch for a fault fails with a bus or bus protection fault. This case is
+different from a fault raised inside a fault handler, because exception entry commits only after the vector fetch
+succeeds (Section~\ref{sec:exception-entry-side-effects}). The original fault never entered its handler, so nothing has
+been overwritten yet:
+
+\begin{itemize}
+	\item The CPU is still at the exception level from before the original fault.
+	\item Link register 6 receives the original fault's return address, the status register from before the original fault, and
+	      that exception level, exactly as the original fault would have saved them.
+	\item The fault metadata register has the double fault flag set and bus access type \texttt{0x4} (exception vector fetch).
+	      The Original Fault field holds the fault whose vector could not be fetched, the Escalating Fault field holds the bus or
+	      bus protection fault raised by the fetch, and the Return Address field holds the vector-table address that failed.
+\end{itemize}
+
+A double fault raised inside a fault handler never records an exception vector fetch, so a double-fault handler can
+identify this case from the double fault flag together with bus access type \texttt{0x4}.
+
+Unlike a double fault raised inside a fault handler, this case is recoverable: \mnemonic{RETE} restores the state from
+before the original fault and returns to the original fault's return address. The handler must first repair whatever
+made the vector fetch fail, typically the vector-table entry or the memory mapping that holds it. For a retryable
+original fault, \mnemonic{RETE} retries the faulting instruction, which raises the original fault again; if its vector
+still cannot be fetched, the CPU double faults again and loops. If the original fault was an Instruction Trace Fault or
+a Level Five Hardware Exception Conflict, \mnemonic{RETE} continues past it and that fault is not raised again.
 
 \section{Hardware Exceptions (Interrupts)}
 
@@ -674,7 +703,8 @@ fault handlers, so trace faults cannot fire inside handlers; if it was set befor
 \paragraph{Vector fetch failure.} If a bus or protection fault occurs during an exception-vector fetch, the original exception does not enter and the
 remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-and-fault-timing}). The CPU raises the
 corresponding fault with the bus access type set to exception vector fetch. If a fault-vector fetch itself fails, the
-CPU escalates to a double fault. If the double-fault vector fetch fails, the CPU resets.
+CPU escalates to a double fault, which keeps the original fault's saved state so it can be recovered
+(Section~\ref{sec:double-fault-vector-fetch}). If the double-fault vector fetch fails, the CPU resets.
 
 \section{Return from Exception}
 \label{sec:return-from-exception}
@@ -704,7 +734,8 @@ Where \mnemonic{RETE} returns depends on the kind of exception:
 	\item For the Instruction Trace Fault and for regular exceptions (hardware and software), it returns to the instruction
 	      following the one that was executing when the exception occurred.
 	\item For the exception dispatch faults (Level Five Hardware Exception Conflict and Double Fault), it returns to the program
-	      counter at the point the fault was detected.
+	      counter at the point the fault was detected. A double fault caused by a failed fault-vector fetch instead returns to
+	      the original fault's return address (Section~\ref{sec:double-fault-vector-fetch}).
 \end{itemize}
 
 \subsection{Accessing Link Registers}
