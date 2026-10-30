@@ -55,7 +55,7 @@ architecturally undefined, opcode \opcode{2F}'s behavior is defined (see Appendi
 		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents. \\
 		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to coprocessor 1 then occupies one further complete 6-cycle slot beginning at the next phase 0, so a coprocessor-1 operation completes 12 cycles after the call's own fetch began.                                                                                              \\
 		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present are architecturally undefined. See the notes below.                                                                                                                                                                        \\
-		Fault side effects & If a fault is raised while dispatching the command, software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is discarded if a fault or hardware exception is dispatched before the coprocessor's dispatch slot begins; the command is not re-issued after the handler returns.                                                                                    \\
+		Fault side effects & A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed (Section~\ref{sec:interrupt-latency}).               \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Coprocessor Instruction Semantics}
@@ -66,8 +66,8 @@ architecturally undefined, opcode \opcode{2F}'s behavior is defined (see Appendi
 bus-protection, data alignment, or effective-address segment-overflow faults. A program-counter wrap with
 \texttt{SR.A} set still raises a segment-overflow fault at the following instruction fetch, as it does for every
 instruction. Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
-enabled when the instruction began, an instruction-trace fault is raised after the processing-unit call commits,
-unless an earlier fault prevents the instruction from completing. In protected mode, supervisor-only coprocessor
+enabled when the instruction began, an instruction-trace fault is raised after the processing-unit call commits and
+its command has been dispatched and has completed, unless an earlier fault prevents the instruction from completing. In protected mode, supervisor-only coprocessor
 operation nibbles are rejected before the command is dispatched. A missing coprocessor is detected after the command
 has been latched for dispatch and raises an invalid-opcode fault through the exception unit. An unimplemented
 coprocessor operation on a coprocessor that is present is architecturally undefined (see the Model and Revision
@@ -661,6 +661,12 @@ register file. It is intentionally simple: it has no descriptor table, hidden pa
 background execution. When a DMA command is accepted, the processing unit stops fetching further instructions until the
 DMA command completes or faults. CPU models without the hardware raise an invalid-opcode fault for these commands,
 allowing supervisor software to fall back to ordinary \mnemonic{LOAD}/\mnemonic{STOR} loops.
+
+A DMA transfer cannot be interrupted. Hardware interrupts, including Level 5, wait until the transfer has completed
+(Section~\ref{sec:interrupt-latency}); only a fault raised by the transfer itself, or a reset, ends it early. Masking
+the maskable interrupt lines does not shorten the wait. The count of a single command is limited
+(Table~\ref{tab:dma-unit-operations}), so a program that needs a bounded interrupt latency can split a large copy into
+several commands, which leaves an instruction boundary between them where interrupts are taken.
 
 DMA operations are supervisor-only because they perform memory access using supervisor-visible address state. In
 protected mode, they raise a privilege-violation fault before dispatch.
