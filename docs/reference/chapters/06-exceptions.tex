@@ -849,28 +849,28 @@ the program normally in the absence of any exception activity.
 \begin{table}[H]
 	\centering
 	\scriptsize
-	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.1cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.2cm}}
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.1cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.3cm}}
 		\toprule
-		\textbf{Vector}              & \textbf{Address}             & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address} & \textbf{Metadata} & \textbf{P Mode} \\
+		\textbf{Vector}              & \textbf{Address}             & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address} & \textbf{Link Register} \\
 		\midrule
-		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                     & None              & Yes             \\
-		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction        & Fault metadata    & Yes             \\
-		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point          & Fault metadata    & Yes             \\
-		\texttt{0x08}                & \addr{0x0010}--\addr{0x0011} & 7                 & Double fault     & Not maskable         & Dispatch point          & Fault metadata    & Yes             \\
-		\texttt{0x09}                & \addr{0x0012}--\addr{0x0013} & 7                 & Bus protection   & Not maskable         & Faulting instruction    & Fault metadata    & Yes             \\
-		\texttt{0x0A}--\texttt{0x0F} & \addr{0x0014}--\addr{0x001F} & 7                 & Reserved faults  & Reserved             & Reserved                & Reserved          & Reserved        \\
-		\texttt{0x10}                & \addr{0x0020}--\addr{0x0021} & 6                 & Level 5 hardware & Not maskable         & Next instruction        & Link register 5   & Yes             \\
-		\texttt{0x20}                & \addr{0x0040}--\addr{0x0041} & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction        & Link register 4   & Yes             \\
-		\texttt{0x30}                & \addr{0x0060}--\addr{0x0061} & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction        & Link register 3   & Yes             \\
-		\texttt{0x40}                & \addr{0x0080}--\addr{0x0081} & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction        & Link register 2   & Yes             \\
-		\texttt{0x50}                & \addr{0x00A0}--\addr{0x00A1} & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction        & Link register 1   & Yes             \\
-		\texttt{0x11}--\texttt{0x5F} & \addr{0x0022}--\addr{0x00BF} & n/a               & Reserved         & Reserved             & Reserved                & Reserved          & Reserved        \\
-		\texttt{0x60}--\texttt{0xFF} & \addr{0x00C0}--\addr{0x01FF} & 1                 & Software trap    & Priority gated       & Next instruction        & Link register 0   & Yes             \\
+		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                     & None                   \\
+		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction        & 6 (metadata in 7)      \\
+		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point          & 6 (metadata in 7)      \\
+		\texttt{0x08}                & \addr{0x0010}--\addr{0x0011} & 7                 & Double fault     & Not maskable         & Dispatch point          & 6 (metadata in 7)      \\
+		\texttt{0x09}                & \addr{0x0012}--\addr{0x0013} & 7                 & Bus protection   & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
+		\texttt{0x0A}--\texttt{0x0F} & \addr{0x0014}--\addr{0x001F} & 7                 & Reserved faults  & Reserved             & Reserved                & Reserved               \\
+		\texttt{0x10}                & \addr{0x0020}--\addr{0x0021} & 6                 & Level 5 hardware & Not maskable         & Next instruction        & 5                      \\
+		\texttt{0x20}                & \addr{0x0040}--\addr{0x0041} & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction        & 4                      \\
+		\texttt{0x30}                & \addr{0x0060}--\addr{0x0061} & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction        & 3                      \\
+		\texttt{0x40}                & \addr{0x0080}--\addr{0x0081} & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction        & 2                      \\
+		\texttt{0x50}                & \addr{0x00A0}--\addr{0x00A1} & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction        & 1                      \\
+		\texttt{0x11}--\texttt{0x5F} & \addr{0x0022}--\addr{0x00BF} & n/a               & Reserved         & Reserved             & Reserved                & Reserved               \\
+		\texttt{0x60}--\texttt{0xFF} & \addr{0x00C0}--\addr{0x01FF} & 1                 & Software trap    & Priority gated       & Next instruction        & 0                      \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Exception Quick Reference}
