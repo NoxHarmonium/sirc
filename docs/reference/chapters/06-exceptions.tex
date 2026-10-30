@@ -209,8 +209,8 @@ contains an odd word address.
 
 This is to simplify fetching: the second word of an instruction is always at \texttt{pl | 0x1}, which ensures that
 instructions can never overflow a segment boundary. The saved return address is itself odd; a fault handler must
-correct \reg{p} (for example, by clearing bit 0) before returning with \mnemonic{RETE}, or the CPU raises the same
-fault again immediately.
+correct the saved return address in link register 6 (for example, by clearing bit 0 using \mnemonic{ETFR} and
+\mnemonic{ETTR}) before returning with \mnemonic{RETE}, or the CPU raises the same fault again immediately.
 
 \subsection{Segment Overflow Fault}
 
