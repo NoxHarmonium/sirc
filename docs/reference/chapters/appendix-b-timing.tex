@@ -40,8 +40,8 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 		Conditional (executed)                                                                                & 6                                                         \\
 		Conditional (not executed)                                                                            & 6                                                         \\
 		\mnemonic{NOOP}                                                                                       & 6                                                         \\
-		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $12 + \max(|n| - 1, 0)$                                   \\
-		\mnemonic{DMAT}                                                                                       & $12 + \max(2n - 1, 0)$                                    \\
+		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $6 + 6\lceil (|n| + 1)/6 \rceil$                          \\
+		\mnemonic{DMAT}                                                                                       & $6 + 6\lceil (2n + 1)/6 \rceil$                           \\
 		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch)                           \\
 		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch)                                       \\
 		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch) \\
@@ -53,10 +53,10 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 \end{table}
 
 The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
-\mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, the DMA unit gets at least one post-dispatch cycle after the
-6-cycle \mnemonic{COPI} dispatch. For non-zero transfers, that first post-dispatch cycle may also be the first no-wait
-DMA bus access. A conditional \mnemonic{DMAR}/\mnemonic{DMAW}/\mnemonic{DMAT} whose condition is false does not
-dispatch to the DMA unit and takes only 6 cycles.
+\mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, phase 0 of the DMA slot is a setup cycle with no bus access, and
+the DMA unit then performs one bus access per cycle from phase 1, running on into further whole 6-cycle slots as needed
+(Section~\ref{sec:dma-unit}). A conditional \mnemonic{DMAR}/\mnemonic{DMAW}/\mnemonic{DMAT} whose condition is false
+does not dispatch to the DMA unit and takes only 6 cycles.
 
 \subsection{Exception and Fault Timing}
 \label{sec:exception-and-fault-timing}
@@ -72,7 +72,7 @@ Table~\ref{tab:instruction-timing} allows:
 	\item Most instructions: 6 + 6 = 12 cycles.
 	\item A coprocessor call: 12 + 6 = 18 cycles, because its dispatch slot completes first.
 	\item \mnemonic{DMAR} or \mnemonic{DMAW} with a count of 7: 18 + 6 = 24 cycles.
-	\item \mnemonic{DMAT} with a count of 255: 521 + 6 = 527 cycles (about 22 microseconds at 24~MHz), because a DMA
+	\item \mnemonic{DMAT} with a count of 255: 522 + 6 = 528 cycles (22 microseconds at 24~MHz), because a DMA
 	      transfer cannot be interrupted.
 \end{itemize}
 
@@ -174,9 +174,9 @@ simultaneously. Instead:
 	      (\texttt{BERR}) or bus protection error (\texttt{BPER}), the CPU holds that phase until the transfer is acknowledged.
 	\item Each wait state adds one clock cycle to the instruction
 	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception or
-	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own. A
-	      system that inserts $w$ wait states per access therefore adds $2w$ cycles to an ALU instruction and $3w$ cycles to a
-	      load or store.
+	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own,
+	      although a DMA command then adds one access per word read or written. A system that inserts $w$ wait states per access
+	      therefore adds $2w$ cycles to an ALU instruction and $3w$ cycles to a load or store.
 \end{itemize}
 
 \subsection{Optimization Guidelines}

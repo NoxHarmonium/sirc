@@ -727,10 +727,13 @@ instruction.
 \noindent DMA timing assumes the command condition is true and every bus access is acknowledged without wait states. The
 \mnemonic{COPI} dispatch takes the normal 6 cycles; dispatch to the DMA unit then occupies one further complete 6-cycle
 slot beginning at the next phase 0, matching the coprocessor-1 dispatch model (see Table~\ref{tab:coprocessor-common-semantics}).
-For a zero count, that slot accepts the command, decodes the count, and resumes instruction fetch, and no further cycles
-are needed. For a non-zero count, the same slot performs the first no-wait DMA bus access. Each additional DMA read or
-write bus access then takes one further cycle in the no-wait case. Therefore \mnemonic{DMAR} and \mnemonic{DMAW} take
-$12 + \max(|n| - 1, 0)$ cycles, and \mnemonic{DMAT} takes $12 + \max(2n - 1, 0)$ cycles. A false condition skips the DMA
+Phase 0 of that slot is a setup cycle with no bus access: the DMA unit accepts the command, decodes the count, and
+latches the address registers. From phase 1, the DMA unit performs one bus access per cycle in the no-wait case.
+\mnemonic{DMAT} alternates a read from \reg{a} with a write to \reg{l}, so each word takes two cycles. The transfer
+runs on into further complete 6-cycle slots as needed, and instruction fetch resumes at the phase 0 after the slot in
+which the last access completes. With $k$ bus accesses ($|n|$ for \mnemonic{DMAR} and \mnemonic{DMAW}, $2n$ for
+\mnemonic{DMAT}), the instruction takes $6 + 6\lceil (k + 1)/6 \rceil$ cycles: 12 cycles for up to five accesses, 18 for six
+to eleven, and so on. A zero count needs only the setup cycle and takes 12 cycles. A false condition skips the DMA
 command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
 
 \noindent Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA operations and reserved operand
@@ -994,8 +997,8 @@ if n > 0:
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.
 
-	\textbf{Timing:} $12 + \max(|n| - 1, 0)$ cycles when the command condition is true and the DMA read cycles are
-	acknowledged without wait states. The $n = 0$ no-op form and one-word transfer forms take 12 cycles. Wait states add
+	\textbf{Timing:} $6 + 6\lceil (|n| + 1)/6 \rceil$ cycles when the command condition is true and the DMA read cycles are
+	acknowledged without wait states. The $n = 0$ no-op form and transfers of up to five words take 12 cycles. Wait states add
 	to the relevant DMA read bus cycle. If the condition is false, the DMA command is not dispatched and the instruction
 	takes 6 cycles.
 
@@ -1094,8 +1097,8 @@ if n > 0:
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.
 
-	\textbf{Timing:} $12 + \max(|n| - 1, 0)$ cycles when the command condition is true and the DMA write cycles are
-	acknowledged without wait states. The $n = 0$ no-op form and one-word transfer forms take 12 cycles. Wait states add
+	\textbf{Timing:} $6 + 6\lceil (|n| + 1)/6 \rceil$ cycles when the command condition is true and the DMA write cycles are
+	acknowledged without wait states. The $n = 0$ no-op form and transfers of up to five words take 12 cycles. Wait states add
 	to the relevant DMA write bus cycle. If the condition is false, the DMA command is not dispatched and the instruction
 	takes 6 cycles.
 
@@ -1182,9 +1185,8 @@ while remaining > 0:
 	\textbf{Condition field:} If the condition is false, no DMA command is dispatched and registers, memory, address
 	registers, and status flags are preserved; the program counter still advances to the following instruction.
 
-	\textbf{Timing:} $12 + \max(2n - 1, 0)$ cycles when the command condition is true and all DMA read and write cycles
-	are acknowledged without wait states. The $n = 0$ no-op form takes 12 cycles, and a one-word memory transfer takes 13
-	cycles. Wait states add to the relevant DMA read or write bus cycle. Instruction fetch resumes only after the DMA
+	\textbf{Timing:} $6 + 6\lceil (2n + 1)/6 \rceil$ cycles when the command condition is true and all DMA read and write
+	cycles are acknowledged without wait states. The $n = 0$ no-op form and transfers of up to two words take 12 cycles. Wait states add to the relevant DMA read or write bus cycle. Instruction fetch resumes only after the DMA
 	operation completes or faults. If the condition is false, the DMA command is not dispatched and the instruction takes 6
 	cycles.
 
