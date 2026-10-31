@@ -264,6 +264,7 @@ When an exception occurs:
 	\item The current status register is saved
 	\item Protected mode bit (P) is cleared (entering supervisor mode)
 	\item Trace mode bit (T) is cleared (disabling single-stepping in exception handler)
+	\item Exception active bit (EA) is set
 	\item The hardware interrupt enable bits are not changed. A pending interrupt is serviced during a handler only if its
 	      priority level is higher than the current exception level
 \end{enumerate}
