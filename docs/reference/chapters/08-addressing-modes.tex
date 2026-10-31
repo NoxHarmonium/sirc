@@ -428,6 +428,10 @@ Protected mode restricts writes to the high word of an address register:
 	\item \textbf{Post-increment/Pre-decrement}: Always allowed in protected mode; the auto-update writes only the low word of the pair and never carries into the high word
 \end{itemize}
 
+In every mode, the auto-update forms must not name \reg{p} as the address-register pair, because the update would
+compete with the program-counter advance. Such an encoding is architecturally undefined and the assembler rejects it
+(Appendix~\ref{appendix:undocumented}).
+
 \subsection{Alignment}
 
 \begin{itemize}

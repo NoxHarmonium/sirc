@@ -75,8 +75,9 @@ pre-decrement form and \mnemonic{STOR} has no post-increment form.
 
 \noindent\textbf{Aliased register writes:} In post-increment \mnemonic{LOAD} forms the destination register must not
 be either half of the auto-updated address-register pair; in pre-decrement \mnemonic{STOR} forms the source register
-must not be either half of the auto-updated pair. The result of such an encoding is architecturally undefined and the
-assembler rejects it.
+must not be either half of the auto-updated pair. The auto-updated pair must not be \reg{p} in either form, because
+the update would compete with the program-counter advance. The result of such an encoding is architecturally undefined
+and the assembler rejects it (Appendix~\ref{appendix:undocumented}).
 
 \section{Common Memory Semantics}
 

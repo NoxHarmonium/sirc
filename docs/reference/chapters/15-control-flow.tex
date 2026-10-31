@@ -435,7 +435,7 @@ if condition:
 		      \texttt{0x0} = \reg{l}, \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}. Bits 25--24 are
 		      reserved for future use and always written as zero.
 		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
-		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}. \reg{p} must not be used with an auto-update form.
 		\item \textbf{offset (Immediate Value, bits 21--6, immediate forms only):} 16-bit signed displacement.
 		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
@@ -566,7 +566,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 		      \texttt{0x1} = \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} (\texttt{0x0} = \reg{l} is not a legal
 		      \mnemonic{LDEL} destination). Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
-		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}. \reg{p} must not be used with an auto-update form.
 		\item \textbf{offset (Immediate Value, bits 21--6, immediate forms only):} 16-bit signed displacement.
 		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
@@ -672,7 +672,7 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 		\item \textbf{Register (bits 25--22):} bits 23--22 are fixed at \texttt{0x3} (\reg{p}) by the
 		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
-		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
+		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}. \reg{p} must not be used with an auto-update form.
 		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#offset} form only):} 16-bit signed displacement; fixed at
 		      \texttt{0x0000} for plain \texttt{LJMP src}.
 		\item \textbf{rO (R3, bits 17--14, register form only):} a general-purpose register supplying the displacement.
