@@ -3,11 +3,10 @@
 
 \section{Overview}
 
-The SIRCIS instruction set includes two undocumented instruction opcodes, \opcode{27} and \opcode{2F}. Each has fully
-defined, tested behavior (\opcode{27}: \texttt{rD} is loaded with the zero-extended 8-bit immediate; \opcode{2F}: the
-coprocessor command is the 8-bit immediate and the coprocessor ID is always 0, so the instruction is never privileged)
-but no public assembly syntax, and they are listed here for that reason. Undocumented opcodes are reserved for future
-CPU revisions and may be repurposed without preserving their current behavior.
+The SIRCIS instruction set includes two undocumented instruction opcodes, \opcode{27} and \opcode{2F}. They have no
+public assembly syntax and are reserved for expansion in future CPU revisions. Their behavior is architecturally
+undefined: an implementation decodes them without raising an invalid-opcode fault, but what they do is not part of the
+architectural contract and may change in any later revision. Software must not use them.
 
 \textbf{Warning:} Use of undocumented instructions is not recommended for production code.
 
@@ -107,7 +106,7 @@ must not depend on either.
 The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
-	\item 2 undocumented opcodes, \opcode{27} and \opcode{2F} (could be formally specified)
+	\item 2 undocumented opcodes, \opcode{27} and \opcode{2F}, reserved for future revisions
 	\item Reserved shift type (111) could enable additional shift modes.
 	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source.
 	\item Standard optional coprocessors and model-specific coprocessors can provide extended functionality through the
