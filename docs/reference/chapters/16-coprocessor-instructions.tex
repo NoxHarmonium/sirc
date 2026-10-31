@@ -12,8 +12,8 @@ computes a command operand and writes it to the 16-bit coprocessor select regist
 Section~\ref{sec:coprocessors-and-csr}) during write-back. The selected coprocessor then interprets the command value.
 If the selected coprocessor is not present in the CPU model, the exception unit raises an invalid-opcode fault so the
 operation can be emulated or rejected by software. If the selected coprocessor is present but does not implement the
-requested operation, the result is architecturally undefined (see the Model and Revision Policy,
-Section~\ref{sec:coprocessor-model-revision-policy}).
+requested operation, the exception unit raises an invalid-opcode fault in the same way (see the Model and Revision
+Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 
 \section{Legal Forms}
 
@@ -53,7 +53,7 @@ public assembly syntax (see Appendix~\ref{appendix:undocumented}).
 		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                                                                                                                                                                                \\
 		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents. \\
 		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to coprocessor 1 then occupies one further complete 6-cycle slot beginning at the next phase 0, so a coprocessor-1 operation completes 12 cycles after the call's own fetch began.                                                                                              \\
-		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present are architecturally undefined. See the notes below.                                                                                                                                                                        \\
+		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present also raise invalid-opcode faults. See the notes below.                                                                                                                                                                     \\
 		Fault side effects & A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed (Section~\ref{sec:interrupt-latency}).               \\
 		\bottomrule
 	\end{tabular}
@@ -71,8 +71,8 @@ A traced \mnemonic{EXCP} is the exception: its trace fault is taken first and th
 handler returns (Section~\ref{sec:instruction-trace-fault}). In protected mode, supervisor-only coprocessor
 operation nibbles are rejected before the command is dispatched. A missing coprocessor is detected after the command
 has been latched for dispatch and raises an invalid-opcode fault through the exception unit. An unimplemented
-coprocessor operation on a coprocessor that is present is architecturally undefined (see the Model and Revision
-Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
+operation on a coprocessor that is present is detected at the same point and raises the same fault (see the Model and
+Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 
 \begin{instructionbox}{COPI/COPR}{Coprocessor Call}
 	\textbf{Applicability:} SIRC-1, all revisions
@@ -186,8 +186,8 @@ COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
 
 Standard coprocessor IDs are stable across SIRC-1 models. A CPU model may omit an optional coprocessor, but it must not
 assign that coprocessor ID to an incompatible unit. If software calls a coprocessor ID absent from the selected CPU
-model, the CPU raises an invalid-opcode fault. Calling an operation that an implemented coprocessor does not support is
-architecturally undefined; see the Model and Revision Policy below.
+model, the CPU raises an invalid-opcode fault. Calling an operation that an implemented coprocessor does not support
+raises the same fault; see the Model and Revision Policy below.
 
 \begin{table}[H]
 	\centering
@@ -212,8 +212,8 @@ every operation nibble and operand. The supervisor-only check still applies: in 
 0x8--0xF raise a privilege-violation fault as for any other coprocessor. The CSR is \texttt{0x0000} again by the next
 instruction boundary, so the call never delays exception selection.
 
-\noindent Exception-unit operation nibble 0x0 is the internal no-operation encoding and operation nibbles 0x2--0x8 are
-architecturally undefined. Operations 0xE and 0xF are internal encodings the exception unit uses to dispatch a fault or
+\noindent Exception-unit operation nibble 0x0 is the internal no-operation encoding, and is also a no-op when software
+issues it. Operation nibbles 0x2--0x8 are reserved and raise an invalid-opcode fault. Operations 0xE and 0xF are internal encodings the exception unit uses to dispatch a fault or
 a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instruction mechanism.
 
 \subsection{Model and Revision Policy}
@@ -223,7 +223,9 @@ a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instructi
 	\item Required coprocessors and documented operations must remain backward compatible within the SIRC-1 family.
 	\item Optional standard coprocessors keep their assigned IDs even on models that omit them.
 	\item Reserved coprocessor IDs must raise invalid-opcode faults when they are not implemented by the selected CPU model.
-	      Reserved operation nibbles and reserved operand values within an implemented coprocessor are architecturally undefined.
+	      Reserved operation nibbles within an implemented coprocessor raise invalid-opcode faults, so a later model can add an
+	      operation and older models can emulate it. Reserved operand values within an implemented operation are architecturally
+	      undefined.
 	\item Software may probe optional coprocessors by executing the documented operation and handling an invalid-opcode fault, or
 	      by using a model-specific capability table if one is provided by system firmware. The invalid-opcode fault records the
 	      offending 16-bit coprocessor command word in the \texttt{return\_address} field of the fault-metadata link register
@@ -974,7 +976,8 @@ if n > 0:
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
 	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check exists only to keep source syntax honest,
 	not to guard against an otherwise-representable illegal value. Unsupported DMA
-	operations and reserved operand encodings are architecturally undefined (see the Model and Revision Policy in
+	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
+	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA reads can raise
 	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
 
@@ -1073,7 +1076,8 @@ if n > 0:
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
 	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check exists only to keep source syntax honest,
 	not to guard against an otherwise-representable illegal value. Unsupported DMA
-	operations and reserved operand encodings are architecturally undefined (see the Model and Revision Policy in
+	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
+	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA writes can raise
 	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
 
@@ -1268,7 +1272,7 @@ listings are examples of a supervisor compatibility handler, not additional inst
 \end{table}
 
 \noindent Integer maths operations preserve CPU status flags. Missing maths hardware raises an invalid-opcode fault.
-Unsupported maths operations are architecturally undefined (see the Model and Revision Policy,
+Unsupported maths operations raise an invalid-opcode fault (see the Model and Revision Policy,
 Section~\ref{sec:coprocessor-model-revision-policy}). Divide by zero and quotient overflow are reported in \reg{r3}, not as arithmetic
 exceptions. If the condition is false, no maths command is dispatched, no coprocessor opcode check is performed, and
 registers and status flags are preserved.
