@@ -207,6 +207,11 @@ architecturally undefined; see the Model and Revision Policy below.
 	\label{tab:standard-coprocessor-ids}
 \end{table}
 
+\noindent A command with coprocessor ID 0x0 selects the processing unit, which is already running, so it is a no-op for
+every operation nibble and operand. The supervisor-only check still applies: in protected mode, operation nibbles
+0x8--0xF raise a privilege-violation fault as for any other coprocessor. The CSR is \texttt{0x0000} again by the next
+instruction boundary, so the call never delays exception selection.
+
 \noindent Exception-unit operation nibble 0x0 is the internal no-operation encoding and operation nibbles 0x2--0x8 are
 architecturally undefined. Operations 0xE and 0xF are internal encodings the exception unit uses to dispatch a fault or
 a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instruction mechanism.

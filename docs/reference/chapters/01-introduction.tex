@@ -134,7 +134,8 @@ last 8 (\texttt{0x8}--\texttt{0xF}) can be called only in supervisor mode.
 Note: You will generally not want to dispatch to the the "processing unit" (coprocessor \texttt{0x0}) like you would
 with the other coprocessors, as it is the default coprocessor, and will automatically regain control when the other
 coprocessors are finished. Using \mnemonic{COPI} or \mnemonic{COPR} with coprocessor 0x0 is technically valid, but any
-operand passed into \mnemonic{COPI} or \mnemonic{COPR} will be ignored. It is effectively a no-op.
+operand passed into \mnemonic{COPI} or \mnemonic{COPR} will be ignored. It is effectively a no-op, although the
+supervisor-only check on operations 0x8--0xF still applies (see Chapter~\ref{ch:coprocessor}).
 
 \subsection{Privilege Levels}
 
