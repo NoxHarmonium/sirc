@@ -147,7 +147,9 @@ Address Overflow)\footnote{\texttt{SR.\textit{X}} denotes bit or field \textit{X
 	Chapter~\ref{ch:status-register} for the bit layout and Chapter~\ref{ch:reading-instructions} for the full notation
 	convention.} is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps modulo
 $2^{16}$. Displacements are signed two's-complement, and the trap fires only when the low-word calculation wraps,
-whether the displacement is positive or negative.
+whether the displacement is positive or negative. For pre-decrement and post-increment forms, the address-register
+auto-update and the effective-address calculation are checked separately: either one wrapping raises the fault, even if
+the other brings the result back into range.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
