@@ -178,7 +178,8 @@ PROT (Protected-mode output) pin. A memory controller might trigger a bus error 
 
 Indicates whether the CPU is in protected mode (high) or in supervisor mode (low).
 
-Connected directly to the status register Protected Mode (P) bit.
+Follows the status register Protected Mode (P) bit, except that it is deasserted for every exception-vector fetch (BAT
+100), which is a supervisor access even when the exception is taken from protected mode.
 
 When the CPU is in protected mode, programs have access to fewer types of instructions, for example they cannot write
 to the high word of the address registers.

@@ -17,15 +17,15 @@ later edge adds wait states; this is the normal way to attach slower synchronous
 	\small
 	\begin{tabularx}{\textwidth}{lX}
 		\toprule
-		\textbf{Signal} & \textbf{Timing rule}                                                                                                               \\
+		\textbf{Signal} & \textbf{Timing rule}                                                                                                                                                    \\
 		\midrule
-		A0--A23         & Valid whenever BAS is asserted. Stable until the request completes or aborts.                                                      \\
-		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when BACK is accepted. \\
-		BRW             & Valid whenever BAS is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.          \\
-		BAT0--BAT2      & Valid whenever BAS is asserted. Encodes the access type for the active request and is stable until completion or abort.            \\
-		PROT            & Reflects the status register P bit and may be used with BAS, BAT, and A0--A23 by external protection logic.                        \\
-		BAS             & Asserted while a bus request is active. Remains asserted across wait states.                                                       \\
-		SYNC            & Asserted while phase 0 (Instruction Fetch, high word) of an instruction or exception-unit dispatch is active.                      \\
+		A0--A23         & Valid whenever BAS is asserted. Stable until the request completes or aborts.                                                                                           \\
+		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when BACK is accepted.                                      \\
+		BRW             & Valid whenever BAS is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.                                               \\
+		BAT0--BAT2      & Valid whenever BAS is asserted. Encodes the access type for the active request and is stable until completion or abort.                                                 \\
+		PROT            & Reflects the status register P bit, except that it is deasserted for exception-vector fetches, and may be used with BAS, BAT, and A0--A23 by external protection logic. \\
+		BAS             & Asserted while a bus request is active. Remains asserted across wait states.                                                                                            \\
+		SYNC            & Asserted while phase 0 (Instruction Fetch, high word) of an instruction or exception-unit dispatch is active.                                                           \\
 		\bottomrule
 	\end{tabularx}
 	\caption{CPU bus output timing rules}

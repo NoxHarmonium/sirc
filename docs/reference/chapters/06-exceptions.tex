@@ -454,11 +454,12 @@ the same level coalesce into a single pending interrupt. If the request is still
 \mnemonic{RETE}, it is sampled again and becomes pending again.
 
 At an instruction boundary, the exception unit selects the highest-priority pending hardware interrupt whose priority
-is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Lower-priority
-interrupts latched before the handler was entered remain latched and are considered again after the current handler
-returns with \mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was
-latched, it does not block dispatch of any other pending, enabled interrupt of lower priority. The disabled interrupt
-stays pending, and is dispatched if its line is re-enabled, even if the device has since withdrawn its request.
+is higher than the current exception level. The selected bit is cleared as the handler is dispatched, and set again if
+the handler's vector fetch fails (Section~\ref{sec:exception-entry-side-effects}). Lower-priority interrupts latched
+before the handler was entered remain latched and are considered again after the current handler returns with
+\mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was latched, it does
+not block dispatch of any other pending, enabled interrupt of lower priority. The disabled interrupt stays pending, and
+is dispatched if its line is re-enabled, even if the device has since withdrawn its request.
 
 \subsection{Interrupt Recognition and Latency}
 \label{sec:interrupt-latency}
@@ -737,6 +738,17 @@ remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-
 corresponding fault with the bus access type set to exception vector fetch. If a fault-vector fetch itself fails, the
 CPU escalates to a double fault, which keeps the original fault's saved state so it can be recovered
 (Section~\ref{sec:double-fault-vector-fetch}). If the double-fault vector fetch fails, the CPU resets.
+
+When the failed fetch belongs to a hardware interrupt, a Level 5 request or a software exception, that exception is not
+lost. Link register 6 stores the state the exception would have saved: its return address, and the status register and
+exception level from before entry. The fault-metadata register records the vector address with bus access type
+\texttt{0x4}. The pending bit of an interrupt, including the Level 5 bit, is set again, so the interrupt is selected
+again once the fault handler returns with \mnemonic{RETE}. A software exception is retryable: its return address is the
+address of the \mnemonic{EXCP} itself, so \mnemonic{RETE} executes the \mnemonic{EXCP} again.
+
+Every exception-vector fetch is made as a supervisor access. \texttt{PROT} is deasserted for it, even for an exception
+taken from protected mode, although \texttt{SR.P} is not cleared until entry commits. A memory controller that blocks
+protected-mode access to the vector table therefore does not block exception entry.
 
 \section{Return from Exception}
 \label{sec:return-from-exception}
