@@ -180,7 +180,7 @@ everyday English sense:
 	\item[may] A permitted option. The CPU, the assembler, or the programmer is free to choose either way.
 	\item[should / should not] A recommendation, not a conformance requirement.
 	\item[reserved] A field, opcode, or coprocessor ID that is not currently assigned a meaning. Software must not assume any
-	      particular value when reading a reserved field, and must not rely on any behaviour it may have. A future CPU revision
+	      particular value when reading a reserved field, and must not rely on any behavior it may have. A future CPU revision
 	      may assign a reserved field a meaning.
 	\item[architecturally undefined] The architecture does not specify the result. It may vary by CPU implementation, by
 	      revision, or even between two executions of the identical instruction on the identical CPU; software must never depend
@@ -197,7 +197,7 @@ This manual describes the architecture, not a particular chip. It uses three ter
 
 \begin{description}
 	\item[Signal] A logical input or output of the CPU, such as \texttt{BERR}, \texttt{RSTI}, \texttt{HALT} or \texttt{TRCE}. The
-	      manual names a signal only where the architectural behaviour is defined by it. Signal names are written in typewriter
+	      manual names a signal only where the architectural behavior is defined by it. Signal names are written in typewriter
 	      font.
 	\item[Request / event] What a signal means architecturally: an \textit{interrupt request}, a \textit{reset request}, a bus
 	      error. A request is raised, recognised and withdrawn; the manual describes what the CPU does when that happens, and

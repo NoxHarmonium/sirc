@@ -174,7 +174,7 @@ COPI #0x1900                  ; Coprocessor 1, operation 0x9
 COPI #0x1A00                  ; Coprocessor 1, operation 0xA
 ; Prefer the RETE meta-instruction for normal assembly code.
 
-; User exception (system call)
+; Software exception (system call)
 COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
 ; Prefer EXCP #0x80 for normal assembly code.
 		\end{lstlisting}
@@ -274,7 +274,7 @@ is architecturally undefined.
 
 \section{Exception Unit Meta-Instructions}
 
-\begin{instructionbox}{EXCP}{User Exception Meta-Instruction}
+\begin{instructionbox}{EXCP}{Software Exception Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
@@ -303,7 +303,7 @@ is architecturally undefined.
 
 	\textbf{Syntax:} \texttt{EXCP \#vector}
 
-	\textbf{Operands:} \texttt{\#vector} is the low 8-bit user exception vector selector.
+	\textbf{Operands:} \texttt{\#vector} is the low 8-bit software exception vector selector.
 
 	\textbf{Operation:}
 	\begin{verbatim}

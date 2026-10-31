@@ -86,7 +86,7 @@ table layout is:
 	\item \textbf{\texttt{0x40}:} Level 2 hardware exception vector
 	\item \textbf{\texttt{0x50}:} Level 1 hardware exception vector
 	\item \textbf{\texttt{0x11}--\texttt{0x5F} (excluding \texttt{0x20}, \texttt{0x30}, \texttt{0x40}, \texttt{0x50}):} Reserved
-	\item \textbf{\texttt{0x60}--\texttt{0xFF}:} User exception vectors (160 user-accessible trap vectors)
+	\item \textbf{\texttt{0x60}--\texttt{0xFF}:} Software exception vectors (160 user-accessible trap vectors)
 \end{itemize}
 
 \subsection{Instructions Used in This Chapter}
@@ -554,15 +554,15 @@ In short: the fault (priority 7) blocks the second L5 (priority 6) from firing w
 \mnemonic{RETE} returns to level 6, the queued L5 collides with the still-active outer L5 handler, and a Level Five
 Hardware Exception Conflict fault is raised then, not during the inner fault handler.
 
-\section{User Exceptions (Traps)}
+\section{Software Exceptions (Traps)}
 \label{sec:user-exceptions}
 
-A user exception occurs when the program executes an \mnemonic{EXCP} instruction that signals the exception coprocessor
-that it should trigger an exception. They are usually used by programs running in protected mode to switch to
-supervisor mode in a controlled way. They are also referred to as ``traps''. The vectors for user exceptions are in the
-\texttt{0x60}--\texttt{0xFF} range. Supervisor code may also name a vector below \texttt{0x60}; the trap still enters
-at priority 1 through link register 0, so the handler it reaches does not find its own link register filled in (see
-\mnemonic{EXCP} in Chapter~\ref{ch:coprocessor}).
+A software exception occurs when the program executes an \mnemonic{EXCP} instruction that signals the exception
+coprocessor that it should trigger an exception. They are usually used by programs running in protected mode to switch
+to supervisor mode in a controlled way. They are also referred to as ``traps''. The vectors for software exceptions are
+in the \texttt{0x60}--\texttt{0xFF} range. Supervisor code may also name a vector below \texttt{0x60}; the trap still
+enters at priority 1 through link register 0, so the handler it reaches does not find its own link register filled in
+(see \mnemonic{EXCP} in Chapter~\ref{ch:coprocessor}).
 
 As with hardware exceptions, the return address stored in the link register is the instruction following the
 \mnemonic{EXCP} call, so \mnemonic{RETE} resumes the calling program immediately after the trap.
