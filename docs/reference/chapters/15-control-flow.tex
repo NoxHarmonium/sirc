@@ -174,8 +174,8 @@ BRAN|cond #disp               ; Conditional PC-relative branch
 
 	\textbf{Operands:} \texttt{\#disp} is a signed 16-bit word displacement (\texttt{-32768} to \texttt{+32767}) added to
 	the low word of \reg{p} modulo $2^{16}$; a branch cannot change the program segment, so the displacement wraps within
-	the current 64K segment. \texttt{@label} is resolved by the linker to a word displacement from the address of the
-	branch instruction itself.
+	the current 64K segment, unless \texttt{SR.A} is set, in which case a wrap raises a segment-overflow fault.
+	\texttt{@label} is resolved by the linker to a word displacement from the address of the branch instruction itself.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -252,9 +252,9 @@ BRSR|cond #disp               ; Conditional PC-relative call
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{\#disp} is a signed 16-bit word displacement (\texttt{-32768} to \texttt{+32767}) added to
-	the low word of \reg{p} modulo $2^{16}$; a call cannot change the program segment, so the displacement wraps within
-	the current 64K segment. \texttt{@label} is resolved by the linker to a word displacement from the address of the
-	call instruction itself.
+	the low word of \reg{p} modulo $2^{16}$; a call cannot change the program segment, so the displacement wraps within the
+	current 64K segment, unless \texttt{SR.A} is set, in which case a wrap raises a segment-overflow fault. \texttt{@label}
+	is resolved by the linker to a word displacement from the address of the call instruction itself.
 
 	\textbf{Operation:}
 	\begin{verbatim}
