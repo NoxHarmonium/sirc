@@ -247,7 +247,7 @@ wrap-around. With \texttt{SR.A} set, there are two cases:
 	      metadata register records bus access type \texttt{0x0} (none). Retrying with \mnemonic{RETE} raises the same fault
 	      again, so a handler must emulate the instruction or redirect the saved return address with
 	      \mnemonic{ETFR}/\mnemonic{ETTR}. With \texttt{SR.A} set, the last instruction slot of a segment can therefore only
-	      usefully hold a taken branch or jump.
+	      usefully hold a taken branch or jump, or an ALU or \mnemonic{LOAD} instruction that writes \reg{pl}.
 \end{itemize}
 
 The same DMA-burst caveat as Bus Fault and Bus Protection Fault applies here: a segment-overflow fault raised partway

@@ -147,7 +147,7 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 \noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
 bus-protection, data alignment, effective-address segment-overflow, or invalid-opcode faults. An ALU instruction in the
 last instruction slot of a segment still raises a segment-overflow fault when \texttt{SR.A} is set, because it
-advances the program counter (Section~\ref{sec:segment-overflow-fault}). In protected mode, an ALU instruction that
+advances the program counter, unless it writes \reg{pl} (Section~\ref{sec:segment-overflow-fault}). In protected mode, an ALU instruction that
 writes \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} through its register field raises a privilege-violation fault at
 decode and has no other effect; compare and test instructions only read that field and never fault. An ALU instruction whose register field names \reg{sr} is permitted in protected mode, but only
 bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
