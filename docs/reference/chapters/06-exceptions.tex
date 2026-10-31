@@ -782,6 +782,11 @@ from the current link register:
 	\item Execution resumes at the return address
 \end{enumerate}
 
+Because \mnemonic{RETE} replaces the whole status register with the saved copy, any change a handler makes to \reg{sr}
+-- including the interrupt enable bits -- is undone when it returns. To change the status register that the interrupted
+code resumes with, for example to leave an interrupt line disabled, a handler edits the saved copy with \mnemonic{ETFR}
+and \mnemonic{ETTR} before \mnemonic{RETE}.
+
 After \mnemonic{RETE}, any pending interrupts that are now eligible to run (higher priority than the restored exception
 level and enabled) will be serviced before the next instruction executes.
 
