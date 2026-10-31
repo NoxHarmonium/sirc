@@ -256,7 +256,7 @@ the link register stores the address of the faulting instruction; a handler that
 returning with \mnemonic{RETE} -- retrying the instruction unmodified will simply raise the same fault again.
 
 Note that this fault is specific to coprocessor instructions. Other instruction encodings outside the documented
-instruction set are reserved or architecturally undefined, and are not required to raise an invalid-opcode fault.
+instruction set are reserved or architecturally undefined, and do not raise an invalid-opcode fault.
 
 \subsection{Privilege Violation Fault}
 

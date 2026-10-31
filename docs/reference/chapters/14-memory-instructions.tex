@@ -113,7 +113,7 @@ low word of the pair, so it never changes the high word and never raises a privi
 memory forms do not raise invalid-opcode faults. Instruction fetch can still raise the normal fetch faults before a
 memory instruction executes. If trace mode was enabled when the instruction began, an instruction-trace fault is
 raised after the instruction commits. Processing-unit encodings outside the documented memory forms are reserved or
-architecturally undefined; they are not required to raise an invalid-opcode fault.
+architecturally undefined; they do not raise an invalid-opcode fault.
 
 \section{Status Flag Effects}
 
