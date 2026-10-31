@@ -98,7 +98,9 @@ When a conditional instruction's condition is not met:
 \begin{itemize}
 	\item All six phases still occur and consume one cycle each
 	\item The execute, memory-access, and write-back phases perform no operation: no effective address is computed, no
-	      \texttt{SR.A} overflow check is made, and no data bus cycle is driven
+	      data-address \texttt{SR.A} overflow check is made, and no data bus cycle is driven
+	\item The program-counter advance is still checked: with \texttt{SR.A} set, a skipped instruction in the last instruction
+	      slot of a segment raises a segment-overflow fault in phase 3 (Section~\ref{sec:segment-overflow-fault})
 	\item No register, memory, or address-register update occurs
 	\item Status flags are not updated
 \end{itemize}

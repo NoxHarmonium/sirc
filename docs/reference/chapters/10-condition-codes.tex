@@ -9,7 +9,8 @@ register. This allows for efficient implementation of conditional logic without 
 The 4-bit condition code field in each instruction specifies the conditions under which the instruction executes. If
 the condition is not met, the instruction has no architectural effect beyond the normal two-word advance of \reg{p}: no
 general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
-performed.
+performed. The advance itself is still checked: with \texttt{SR.A} set, a skipped instruction in the last instruction
+slot of a segment raises a segment-overflow fault (Section~\ref{sec:segment-overflow-fault}).
 
 \section{Condition Code Encoding}
 

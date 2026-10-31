@@ -89,7 +89,8 @@ explicit multi-instruction technique where it comes up, not given its own meta-i
 
 	\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
 	instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
-	occur after it commits.
+	occur after it commits. Like any instruction that does not branch, it raises a segment-overflow fault if it occupies
+	the last instruction slot of a segment while \texttt{SR.A} is set (Section~\ref{sec:segment-overflow-fault}).
 
 	\textbf{Condition field:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
 	normally not useful.

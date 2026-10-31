@@ -117,7 +117,8 @@ Every encoded instruction contains a condition field. If the condition evaluates
 normally. If the condition evaluates false, the instruction is skipped: it has no architectural effect beyond the
 normal two-word advance of \reg{p} (set unconditionally at decode, before the condition is evaluated). No destination
 register, address register, memory, link register, coprocessor state, or status flag is modified by a skipped
-instruction.
+instruction. With \texttt{SR.A} set, a skipped instruction in the last instruction slot of a segment still raises a
+segment-overflow fault, because it uses the advanced address (Section~\ref{sec:segment-overflow-fault}).
 
 \section{Status Update Overrides}
 
