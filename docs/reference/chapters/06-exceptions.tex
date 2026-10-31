@@ -423,8 +423,11 @@ exception level.
 
 Interrupt requests at levels 1--4 are level-sensitive; Level 5 is edge-triggered and is described separately in
 Section~\ref{sec:level-5-nmi-behavior}. When an enabled level-sensitive interrupt request is observed active, the
-corresponding bit is set in the pending hardware-exceptions register. Requests at disabled maskable levels are ignored
-at this sampling point and are not latched for later service.
+corresponding bit is set in the pending hardware-exceptions register. The request lines are sampled on every clock
+cycle against the current enable bits. Requests at disabled maskable levels are ignored and are not latched for later
+service. A write to \reg{sr} that sets an enable bit therefore lets an already-active request on that line be
+dispatched at the next instruction boundary, straight after the instruction that set it. A write that clears an enable
+bit does not discard a request already latched on that line; see below.
 
 For the level-sensitive lines, the pending register stores one bit per hardware interrupt line, so repeated requests at
 the same level coalesce into a single pending interrupt. If the request is still active after the interrupt is
