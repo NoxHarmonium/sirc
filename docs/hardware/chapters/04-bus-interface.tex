@@ -96,7 +96,7 @@ priority, then BPER, then BACK.
 		IRQ1--IRQ4       & Level-sensitive and sampled every cycle. The requesting device must hold the line asserted until its handler acknowledges it; a line is not latched while its own or a higher-priority handler runs. \\
 		NMI              & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                               \\
 		HALT             & Sampled at instruction boundaries. If asserted, the CPU halts before the next instruction fetch and resumes when deasserted.                                                                         \\
-		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced.                                                                                                             \\
+		TRCE             & Sampled at instruction boundaries. If asserted, the instruction being started is traced, except inside a fault handler.                                                                              \\
 		RSTI             & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                       \\
 		\bottomrule
 	\end{tabularx}

@@ -66,7 +66,9 @@ bus-protection, data alignment, or effective-address segment-overflow faults. A 
 instruction slot of a segment still raises a segment-overflow fault when \texttt{SR.A} is set, because it advances the
 program counter; the call is cancelled before its command is dispatched (Section~\ref{sec:segment-overflow-fault}). Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
 enabled when the instruction began, an instruction-trace fault is raised after the processing-unit call commits and
-its command has been dispatched and has completed, unless an earlier fault prevents the instruction from completing. In protected mode, supervisor-only coprocessor
+its command has been dispatched and has completed, unless an earlier fault prevents the instruction from completing.
+A traced \mnemonic{EXCP} is the exception: its trace fault is taken first and the trap is entered when the trace
+handler returns (Section~\ref{sec:instruction-trace-fault}). In protected mode, supervisor-only coprocessor
 operation nibbles are rejected before the command is dispatched. A missing coprocessor is detected after the command
 has been latched for dispatch and raises an invalid-opcode fault through the exception unit. An unimplemented
 coprocessor operation on a coprocessor that is present is architecturally undefined (see the Model and Revision
