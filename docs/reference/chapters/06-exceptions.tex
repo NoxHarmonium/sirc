@@ -167,8 +167,10 @@ The only post-instruction fault is the \textit{Instruction Trace Fault}.
 Raised during the exception handling machinery itself, not during normal instruction execution. The link register
 stores the program counter at the point the fault was detected within the exception handler. The one exception is a
 double fault caused by a failed fault-vector fetch, which keeps the original fault's return address
-(Section~\ref{sec:double-fault-vector-fetch}). Recovery may require careful state management; these faults often
-indicate a hardware misconfiguration or a programming error in an exception handler.
+(Section~\ref{sec:double-fault-vector-fetch}). For a double fault raised inside a fault handler by a retryable fault,
+the point the fault was detected is the instruction that raised it, so the link register stores that instruction's
+address, as the escalating fault would have done on its own. Recovery may require careful state management; these
+faults often indicate a hardware misconfiguration or a programming error in an exception handler.
 
 The exception dispatch faults are: \textit{Level Five Hardware Exception Conflict, Double Fault.}
 
@@ -508,6 +510,10 @@ overrun flag is set, it clears the flag and raises a Level Five Hardware Excepti
 fault is not retryable, \mnemonic{RETE} from its handler resumes the code that was running, and the still-pending L5
 interrupt is then dispatched normally. Any number of lost L5 requests while one is queued are reported by a single
 conflict fault. The L5 pending bit and the L5 overrun flag are both cleared by reset.
+
+The L5 pending bit is cleared at the moment L5 is selected for dispatch, and set again only if its vector fetch fails.
+An edge that arrives after selection, even during the dispatch slot, is therefore a new request: it sets the pending
+bit again, and once the L5 handler is running it raises a Level Five Hardware Exception Conflict fault.
 
 This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use of the
 NMI line, fault handlers should be kept as short as possible.
