@@ -700,10 +700,15 @@ Fault types use the following values:
 \end{itemize}
 
 The Return Address field of register 7 stores the bus address that was being accessed when the fault occurred. For a
-fault that does not access the bus, this field is architecturally undefined. The exception is an invalid-opcode fault
-raised during coprocessor dispatch, before any bus access: the low word of the field stores the 16-bit coprocessor
-command that could not be dispatched, and the high word is zero. An alignment fault also defines this field: it stores
-the odd instruction address. This lets an invalid-opcode handler emulate missing optional coprocessor operations.
+fault that does not access the bus, this field is architecturally undefined, with three exceptions:
+
+\begin{itemize}
+	\item An invalid-opcode fault raised during coprocessor dispatch, before any bus access, stores the 16-bit coprocessor
+	      command that could not be dispatched in the low word, and the high word is zero. This lets an invalid-opcode handler
+	      emulate missing optional coprocessor operations.
+	\item An alignment fault stores the odd instruction address.
+	\item An effective-address segment overflow stores the wrapped address (Section~\ref{sec:segment-overflow-fault}).
+\end{itemize}
 
 Exception handlers can use the \mnemonic{ETFR} instruction to read the fault metadata register and decode this
 information to determine how to handle the fault appropriately.
