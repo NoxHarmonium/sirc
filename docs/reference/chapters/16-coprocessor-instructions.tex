@@ -149,8 +149,9 @@ endif
 	\textbf{Flags:} Preserved by the coprocessor-call instruction.
 
 	\textbf{Exceptions:} May raise privilege-violation faults for supervisor-only operations in protected mode. May raise
-	invalid-opcode faults for missing coprocessors. Unimplemented operations on a coprocessor that is present are
-	architecturally undefined (see the Model and Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
+	invalid-opcode faults for missing coprocessors and for operations that a coprocessor which is present does not
+	implement. Reserved operand values are architecturally undefined (see the Model and Revision Policy,
+	Section~\ref{sec:coprocessor-model-revision-policy}).
 
 	\textbf{Condition field:} If the condition is false, no command is dispatched, the CSR is preserved,
 	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
@@ -736,7 +737,7 @@ which the last access completes. With $k$ bus accesses ($|n|$ for \mnemonic{DMAR
 to eleven, and so on. A zero count needs only the setup cycle and takes 12 cycles. A false condition skips the DMA
 command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
 
-\noindent Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA operations and reserved operand
+\noindent Missing DMA hardware and unsupported DMA operations raise an invalid-opcode fault. Reserved operand
 encodings are architecturally undefined (see the Model and Revision Policy above). DMA memory reads and writes can
 raise data bus and bus-protection faults using DMA read/write bus access
 types. They can also raise segment-overflow faults, as described in Section~\ref{sec:dma-segment-overflow}. Partial side effects are possible if a fault
@@ -1167,7 +1168,7 @@ while remaining > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. Unsupported DMA operations and reserved
+	\textbf{Exceptions:} Missing DMA hardware and unsupported DMA operations raise an invalid-opcode fault. Reserved
 	operand encodings are architecturally undefined (see the Model and Revision Policy in Section~\ref{sec:coprocessor-model-revision-policy}).
 	In protected mode, raises a privilege-violation fault. DMA reads and writes can raise data
 	bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
@@ -1347,8 +1348,8 @@ MULS:
 
 	\textbf{Flags:} CPU status flags are preserved. \reg{r3} is written as zero.
 
-	\textbf{Exceptions:} Missing maths hardware raises an invalid-opcode fault. An unsupported multiply operation on a
-	maths coprocessor that is present is architecturally undefined (see the Model and Revision Policy,
+	\textbf{Exceptions:} Missing maths hardware, or an unsupported multiply operation on a maths coprocessor that is
+	present, raises an invalid-opcode fault (see the Model and Revision Policy,
 	Section~\ref{sec:coprocessor-model-revision-policy}). These operations perform no data-memory bus access.
 
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
@@ -1436,8 +1437,8 @@ else:
 
 	\textbf{Flags:} CPU status flags are preserved. Maths errors are reported through \reg{r3}, not through \reg{sr}.
 
-	\textbf{Exceptions:} Missing maths hardware raises an invalid-opcode fault. An unsupported divide operation on a
-	maths coprocessor that is present is architecturally undefined (see the Model and Revision Policy,
+	\textbf{Exceptions:} Missing maths hardware, or an unsupported divide operation on a maths coprocessor that is
+	present, raises an invalid-opcode fault (see the Model and Revision Policy,
 	Section~\ref{sec:coprocessor-model-revision-policy}). Divide by
 	zero and quotient overflow do not raise arithmetic exceptions. These operations perform no data-memory bus access.
 
