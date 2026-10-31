@@ -731,7 +731,8 @@ instruction.
 slot beginning at the next phase 0, matching the coprocessor-1 dispatch model (see Table~\ref{tab:coprocessor-common-semantics}).
 Phase 0 of that slot is a setup cycle with no bus access: the DMA unit accepts the command, decodes the count, and
 latches the address registers. From phase 1, the DMA unit performs one bus access per cycle in the no-wait case.
-\mnemonic{DMAT} alternates a read from \reg{a} with a write to \reg{l}, so each word takes two cycles. The transfer
+\mnemonic{DMAT} reads a chunk of up to seven words from \reg{a} and then writes it to \reg{l}, so each word takes
+two cycles. The transfer
 runs on into further complete 6-cycle slots as needed, and instruction fetch resumes at the phase 0 after the slot in
 which the last access completes. With $k$ bus accesses ($|n|$ for \mnemonic{DMAR} and \mnemonic{DMAW}, $2n$ for
 \mnemonic{DMAT}), the instruction takes $6 + 6\lceil (k + 1)/6 \rceil$ cycles: 12 cycles for up to five accesses, 18 for six
