@@ -24,7 +24,7 @@ register writeback.
 		\toprule
 		\textbf{Code} & \textbf{Mnemonic} & \textbf{Type}          & \textbf{Description}                               \\
 		\midrule
-		000           & NUL               & --                     & No shift performed                                 \\
+		000           & NUL               & --                     & No shift performed; any count is ignored           \\
 		001           & LSL               & Logical Shift Left     & Shift left, fill with zeros                        \\
 		010           & LSR               & Logical Shift Right    & Shift right, fill with zeros                       \\
 		011           & ASL               & Arithmetic Shift Left  & Same data result as LSL; sets V on signed overflow \\
@@ -353,9 +353,10 @@ For all shifts and rotates:
 \begin{itemize}
 	\item The last bit shifted out is placed in the carry flag
 	\item For shifts of more than 1 position, only the final bit shifted out matters
-	\item A shift count of 0 leaves the operand unchanged and clears the carry flag. When the status register is updated from the
-	      shifter, all four condition flags are written, so no flag survives a shift-sourced update; to preserve flags across a
-	      shift, use the \texttt{[N]} status override
+	\item A shift count of 0 leaves the operand unchanged and clears the carry flag. \texttt{NUL} ignores its count, immediate or
+	      register, and always behaves as a count of 0. When the status register is updated from the shifter, all four condition
+	      flags are written, so no flag survives a shift-sourced update; to preserve flags across a shift, use the \texttt{[N]}
+	      status override
 \end{itemize}
 
 \subsection{Zero Flag}
