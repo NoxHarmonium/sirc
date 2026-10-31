@@ -45,7 +45,7 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch)                           \\
 		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch)                                       \\
 		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch) \\
-		\mnemonic{WAIT}                                                                                       & 12 + idle until an enabled interrupt or reset             \\
+		\mnemonic{WAIT}                                                                                       & 12 + idle until an interrupt that can be taken, or reset  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Timing}
