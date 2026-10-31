@@ -231,7 +231,8 @@ encoding, and privilege rules.
 	\item[Exception] The general term for any event that diverts program flow to a vector: a \textit{fault}, a \textit{hardware
 		      exception}, or a \textit{software exception}. See Chapter~\ref{ch:exceptions}.
 	\item[Exception level] The priority level of the exception currently being serviced (0 when not handling any exception). A
-	      new exception can only preempt the current one if its priority is strictly higher.
+	      new exception can only preempt the current one if its priority is strictly higher, except that faults are dispatched at
+	      any level and a Level 5 request during a Level 5 handler raises a conflict fault (see Chapter~\ref{ch:exceptions}).
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
 	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred, though two of them are
 	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
