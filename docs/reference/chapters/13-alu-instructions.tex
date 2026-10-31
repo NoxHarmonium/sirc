@@ -196,10 +196,12 @@ instruction uses its default status update source. If \texttt{[N]} is encoded, a
 \texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
 encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
 the shifter flag rules. The immediate format has no shift fields, so \texttt{[S]} on an immediate-format instruction
-writes a constant zero into the flag byte: N, Z, C, and V are all cleared. Use \texttt{[S]} only with short-immediate
-and register forms. \mnemonic{MOVI} and \mnemonic{MOVR} have no shifted operand and do not accept \texttt{[S]}; an
-encoding of those opcodes with AF \texttt{10}, which is not reachable from public assembly syntax, leaves all four
-status flags architecturally undefined (\texttt{U U U U}).
+clears N, Z, C and V; reserved bits 7--4 follow the rule in Chapter~\ref{ch:status-register}. Use \texttt{[S]} only
+with short-immediate and register forms. An immediate written without a shift suffix always assembles to the immediate
+format, even when it fits in 8 bits, so \texttt{ADDI[S] r1, \#10} clears the flags; write \texttt{ADDI[S] r1, \#10, NUL
+	\#0} to get the short-immediate format and flags from the shifter. \mnemonic{MOVI} and \mnemonic{MOVR} have no shifted
+operand and do not accept \texttt{[S]}; an encoding of those opcodes with AF \texttt{10}, which is not reachable from
+public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
 
 \subsection{Flag Computation Formulas}
 
