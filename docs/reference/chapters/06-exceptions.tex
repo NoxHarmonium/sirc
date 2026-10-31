@@ -461,11 +461,12 @@ Appendix~\ref{appendix:timing} gives the cycle counts.
 Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). Unlike interrupt levels 1--4, which are
 level-sensitive (recognized for as long as the request remains active), Level 5 is edge-triggered: it fires once when
 the request becomes active, regardless of how long it is held, and must be withdrawn and raised again to fire again.
-This avoids spurious Level Five Hardware Exception Conflict faults from a request that simply stays active. Level 5
-cannot be disabled via the interrupt enable bits in the status register, and will preempt any lower-priority exception
-handler. However, Level 5 is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's
-priority 6), an L5 interrupt that arrives while a fault is being handled is \textit{queued} in the pending hardware
-exceptions register rather than serviced immediately.
+This avoids spurious Level Five Hardware Exception Conflict faults from a request that simply stays active. The edge is
+latched in every CPU state, including bus wait states, a halt, and \mnemonic{WAIT}, so a request that is active for at
+least one clock cycle is never lost. Level 5 cannot be disabled via the interrupt enable bits in the status register,
+and will preempt any lower-priority exception handler. However, Level 5 is \textit{not} fully non-maskable. Because
+faults carry priority 7 (higher than Level 5's priority 6), an L5 interrupt that arrives while a fault is being handled
+is \textit{queued} in the pending hardware exceptions register rather than serviced immediately.
 
 Once the fault handler returns via \mnemonic{RETE} and the exception level drops back below 6, the pending L5 interrupt
 fires normally.
