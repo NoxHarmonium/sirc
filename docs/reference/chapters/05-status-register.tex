@@ -156,7 +156,8 @@ Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
 	\item[When Set (1):] The CPU is currently executing an exception handler (\texttt{current\_exception\_level != 0})
 	\item[When Clear (0):] The CPU is executing normal code (\texttt{current\_exception\_level == 0})
 	\item[Automatically Set:] When any exception is entered (software, hardware, or fault)
-	\item[Automatically Cleared:] When returning to exception level 0 via \mnemonic{RETE}
+	\item[Set by RETE:] \mnemonic{RETE} sets it if the restored exception level is non-zero and clears it when returning to
+	      exception level 0
 	\item[Purpose:] Allows software to detect whether it is running within an exception handler context
 	\item[Typical Use:] OS code can check this bit to determine appropriate behavior, for example avoiding re-enabling interrupts
 	      during nested exception handling
@@ -236,8 +237,8 @@ An ALU instruction that targets \reg{sr} writes its result to \reg{sr} and then 
 produced by that same instruction, so only bits 15--8 can be set this way. To write the low byte, suppress the flag
 update with the \texttt{[N]} status source (for example \mnemonic{ORRI[N]} \reg{sr}, \imm{0x0003}) or use
 \mnemonic{MOVR[N]} \reg{sr}, \texttt{rN}. A direct write to \reg{sr} also preserves the current value of bit 13
-(\texttt{EA}); only \mnemonic{RETE} restores it, so the \mnemonic{LOAD} \reg{sr}, (s)+ restore above does not reproduce
-the exception-active state saved at the time of the original write.
+(\texttt{EA}); only exception entry and \mnemonic{RETE} change it, so the \mnemonic{LOAD} \reg{sr}, (s)+ restore above
+does not reproduce the exception-active state saved at the time of the original write.
 
 \textbf{Important:} When running in protected mode, a direct write to \reg{sr} updates only the low byte (bits 7--0).
 Bits 15--8 -- including the Protected Mode bit itself -- are left unchanged, silently and without a fault, so a
@@ -303,7 +304,7 @@ ORRI sr, #0x0100  ; Set protected mode bit
 
 \begin{example}
 	\begin{lstlisting}
-; Save status register (supervisor mode only -- see Section~\ref{sec:sr-manual-updates})
+; Save status register (supervisor mode only -- see the manual updates section)
 MOVR r7, sr
 
 ; Do some operations that change flags
@@ -317,4 +318,4 @@ MOVR[N] sr, r7
 \end{example}
 
 As with the stack restore in Section~\ref{sec:sr-manual-updates}, this restore does not reproduce bit 13 (\texttt{EA});
-only \mnemonic{RETE} restores it.
+only exception entry and \mnemonic{RETE} change it.
