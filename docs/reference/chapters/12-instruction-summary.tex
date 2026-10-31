@@ -184,7 +184,8 @@ states are required:
 
 Coprocessor calls (\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles to one) take a second
 6-cycle slot for the coprocessor dispatch that begins at the next phase 0, for 12 cycles in total before the next
-instruction is fetched.
+instruction is fetched. DMA transfers and maths-unit operations can take longer; Appendix~\ref{appendix:timing} and
+Chapter~\ref{ch:coprocessor} give their timing.
 
 This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles. DMA
 meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path and then add DMA command and transfer

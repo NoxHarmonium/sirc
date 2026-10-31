@@ -1352,8 +1352,9 @@ MULS:
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
 	preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. Hardware maths operations
-	may take additional implementation-defined cycles before instruction fetch resumes.
+	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
+	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
+	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}).
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
@@ -1441,8 +1442,9 @@ else:
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
 	preserved.
 
-	\textbf{Timing:} The \mnemonic{COPI} command dispatch uses the normal 6 execution phases. Hardware maths operations
-	may take additional implementation-defined cycles before instruction fetch resumes. Software emulation timing is
+	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
+	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
+	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}). Software emulation timing is
 	defined by the invalid-opcode handler.
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
