@@ -36,8 +36,7 @@ Section~\ref{sec:coprocessor-model-revision-policy}).
 fields of the register format (opcode \opcode{3F}); the immediate format has no shift fields. The programmer-facing
 \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields; assemblers emit canonical values and coprocessors must
 not interpret them as destination-register writes. Opcode \opcode{2F} is listed as Undocumented because it has no
-public assembly syntax; unlike opcodes \opcode{08}, \opcode{09}, \opcode{0B}, and \opcode{0D}, whose behavior is
-architecturally undefined, opcode \opcode{2F}'s behavior is defined (see Appendix~\ref{appendix:undocumented}).
+public assembly syntax (see Appendix~\ref{appendix:undocumented}).
 
 \section{Common Semantics}
 
