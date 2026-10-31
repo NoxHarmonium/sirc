@@ -146,7 +146,8 @@ right choice -- simply retrying an unemulated invalid opcode will raise the same
 Two cases do not follow the pattern of the instruction being cancelled before it commits:
 
 \begin{itemize}
-	\item An alignment fault is raised by the instruction fetch itself, so there is no decoded instruction to cancel.
+	\item An alignment fault is raised at phase 0, before the instruction fetch reaches the bus, so there is no decoded
+	      instruction to cancel.
 	\item A DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}) performs several bus accesses per instruction; a fault
 	      partway through can leave some of those accesses already committed; see the individual fault descriptions below and
 	      Section~\ref{sec:dma-fault-retry}.
@@ -209,7 +210,9 @@ the fault remain in effect. See Section~\ref{sec:dma-fault-retry} for what a han
 \subsection{Alignment Fault}
 
 \textit{(Retryable)} -- Raised when fetching instructions if the program counter
-contains an odd word address.
+contains an odd word address. The check is made at phase 0, before the fetch's bus cycle, so the odd address never
+reaches the bus. No instruction slot is used: the fault's dispatch slot begins at that same phase 0. The fault-metadata
+register records bus access type \texttt{0x1} (instruction fetch) and the odd address that would have been fetched.
 
 This is to simplify fetching: the second word of an instruction is always at \texttt{pl | 0x1}, which ensures that
 instructions can never overflow a segment boundary. The saved return address is itself odd; a fault handler must
@@ -690,8 +693,8 @@ Fault types use the following values:
 The Return Address field of register 7 stores the bus address that was being accessed when the fault occurred. For a
 fault that does not access the bus, this field is architecturally undefined. The exception is an invalid-opcode fault
 raised during coprocessor dispatch, before any bus access: the low word of the field stores the 16-bit coprocessor
-command that could not be dispatched, and the high word is zero. This lets an invalid-opcode handler emulate missing
-optional coprocessor operations.
+command that could not be dispatched, and the high word is zero. An alignment fault also defines this field: it stores
+the odd instruction address. This lets an invalid-opcode handler emulate missing optional coprocessor operations.
 
 Exception handlers can use the \mnemonic{ETFR} instruction to read the fault metadata register and decode this
 information to determine how to handle the fault appropriately.
