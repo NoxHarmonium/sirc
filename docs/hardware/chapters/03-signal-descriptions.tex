@@ -223,11 +223,11 @@ When asserted, the corresponding hardware interrupt line is sampled by the CPU.
 
 They can be masked by the Hardware Interrupt Enable Bits (E1--E4) of the status register.
 
-Interrupt inputs are level-sensitive and are sampled at instruction boundaries. Enabled interrupt lines are latched in
-the pending hardware-exceptions register; disabled maskable lines are ignored and not queued. The requesting device
-must hold the line asserted until it is sampled and serviced; an assertion that begins and ends between instruction
-boundaries, before the CPU samples it, is not recognized. If an interrupt pin remains asserted after its handler
-returns, it may be sampled again through the normal interrupt rules.
+Interrupt inputs are level-sensitive and are sampled on every clock cycle. Enabled interrupt lines are latched in the
+pending hardware-exceptions register; disabled maskable lines are ignored and not queued, and a line is not latched
+while its own handler or a higher-priority one is running. The requesting device must hold the line asserted until its
+handler acknowledges it; an assertion withdrawn before it is latched is not recognized. If an interrupt pin remains
+asserted after its handler returns, it may be sampled again through the normal interrupt rules.
 
 See the Exception and Interrupt Handling chapter of the \archmanual{} for more details.
 

@@ -139,8 +139,9 @@ When cleared to 0, interrupts on that line are disabled and are not serviced.
 	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
 	      exception level
 	\item This prevents the same interrupt from re-triggering while its handler is executing
-	\item Lower priority interrupts that occur while handling a higher priority interrupt are queued and serviced after the
-	      current handler completes (after RETE)
+	\item A line is not latched while its own handler or a higher-priority one is running, so a lower-priority request that
+	      arrives during a handler is serviced after \mnemonic{RETE} only if the device is still holding it then
+	      (Section~\ref{sec:pending-hardware-interrupts})
 \end{itemize}
 
 These bits are typically managed by the operating system's interrupt handling code. At reset, all interrupt enable bits

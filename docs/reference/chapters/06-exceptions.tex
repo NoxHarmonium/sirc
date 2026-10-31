@@ -425,20 +425,25 @@ Interrupt requests at levels 1--4 are level-sensitive; Level 5 is edge-triggered
 Section~\ref{sec:level-5-nmi-behavior}. When an enabled level-sensitive interrupt request is observed active, the
 corresponding bit is set in the pending hardware-exceptions register. The request lines are sampled on every clock
 cycle against the current enable bits. Requests at disabled maskable levels are ignored and are not latched for later
-service. A write to \reg{sr} that sets an enable bit therefore lets an already-active request on that line be
-dispatched at the next instruction boundary, straight after the instruction that set it. A write that clears an enable
-bit does not discard a request already latched on that line; see below.
+service. A line is also not latched while the current exception level is at or above the level its own handler would
+run at, that is, while its own handler or a higher-priority one is running. Without this rule, a request that is still
+active when its handler starts would be latched again before the handler could acknowledge the device, and the handler
+would be dispatched a second time after \mnemonic{RETE} with no request behind it. A device must therefore hold its
+request until it is serviced: a request withdrawn while a handler at or above its level runs is not seen. A write to
+\reg{sr} that sets an enable bit therefore lets an already-active request on that line be dispatched at the next
+instruction boundary, straight after the instruction that set it. A write that clears an enable bit does not discard a
+request already latched on that line; see below.
 
 For the level-sensitive lines, the pending register stores one bit per hardware interrupt line, so repeated requests at
-the same level coalesce into a single pending interrupt. If the request is still active after the interrupt is
-serviced, it may be sampled again and become pending again.
+the same level coalesce into a single pending interrupt. If the request is still active after its handler returns with
+\mnemonic{RETE}, it is sampled again and becomes pending again.
 
 At an instruction boundary, the exception unit selects the highest-priority pending hardware interrupt whose priority
-is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Pending
-lower-priority interrupts remain latched and are considered again after the current handler returns with
-\mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was latched, it does
-not block dispatch of any other pending, enabled interrupt of lower priority. The disabled interrupt stays pending, and
-is dispatched if its line is re-enabled, even if the device has since withdrawn its request.
+is higher than the current exception level. The selected bit is cleared as the handler is dispatched. Lower-priority
+interrupts latched before the handler was entered remain latched and are considered again after the current handler
+returns with \mnemonic{RETE}. If the highest-priority pending interrupt's enable bit has been cleared since it was
+latched, it does not block dispatch of any other pending, enabled interrupt of lower priority. The disabled interrupt
+stays pending, and is dispatched if its line is re-enabled, even if the device has since withdrawn its request.
 
 \subsection{Interrupt Recognition and Latency}
 \label{sec:interrupt-latency}
