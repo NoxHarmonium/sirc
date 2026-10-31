@@ -233,7 +233,10 @@ wrap-around. With \texttt{SR.A} set, there are two cases:
 \begin{itemize}
 	\item An effective-address calculation wraps the low address word. The instruction is cancelled before it takes effect, and
 	      the link register stores its address, so a handler can bring the address back into range and retry with
-	      \mnemonic{RETE}.
+	      \mnemonic{RETE}. The fault metadata register records the wrapped address and the bus access it was computed for:
+	      \texttt{0x2} (data read) or \texttt{0x3} (data write) for \mnemonic{LOAD} and \mnemonic{STOR}, \texttt{0x1}
+	      (instruction fetch) for the target of a branch, \mnemonic{LDEL}, \mnemonic{BRSR}, or \mnemonic{LJSR}, and \texttt{0x0}
+	      (none) for \mnemonic{LDEA}, which makes no access with it. No bus cycle is performed in any of these cases.
 	\item The instruction in the last slot of the segment would wrap the program counter's low word as it advances. The AU checks
 	      this in phase 3, before any memory access, for every instruction that uses the advanced address: as the next program
 	      counter (any instruction that does not branch, including a coprocessor call, and a branch whose condition is false), or
