@@ -380,9 +380,9 @@ STOR (rO, addr), rS, shift           ; Shift rS, then store
 STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{rS} is the source general-purpose register; a privileged high address register (\reg{ah},
-	\reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode, even though \mnemonic{STOR}
-	only reads it. \texttt{addr} is the address-register pair that supplies the segment and base low word.
+	\textbf{Operands:} \texttt{rS} is the source register. \mnemonic{STOR} only reads it, so it may name a privileged high
+	address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) in either mode without a fault. \texttt{addr} is the
+	address-register pair that supplies the segment and base low word.
 	Immediate-offset forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
 	register and may apply a shift to the source value before storing it.
 
