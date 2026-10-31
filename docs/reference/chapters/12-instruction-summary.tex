@@ -188,8 +188,8 @@ instruction is fetched. DMA transfers and maths-unit operations can take longer;
 Chapter~\ref{ch:coprocessor} give their timing.
 
 This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles. DMA
-meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path and then add DMA command and transfer
-cycles.
+meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path; a transfer of more than a few words then
+runs on into further 6-cycle slots.
 
 \section{Next Chapters}
 

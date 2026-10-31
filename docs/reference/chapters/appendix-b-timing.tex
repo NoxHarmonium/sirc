@@ -42,6 +42,7 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 		\mnemonic{NOOP}                                                                                       & 6                                                         \\
 		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $6 + 6\lceil (|n| + 1)/6 \rceil$                          \\
 		\mnemonic{DMAT}                                                                                       & $6 + 6\lceil (2n + 1)/6 \rceil$                           \\
+		\mnemonic{MULU}/\mnemonic{MULS}/\mnemonic{DIVU}/\mnemonic{DIVS}                                       & At least 12; implementation-defined                       \\
 		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch)                           \\
 		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch)                                       \\
 		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch) \\

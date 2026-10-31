@@ -157,7 +157,7 @@ endif
 	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles for the processing-unit call, plus a further 6-cycle coprocessor dispatch slot (12
-	cycles in total), plus any bus wait states.
+	cycles in total), plus any bus wait states. A DMA or maths-unit command can take longer; see its own entry.
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
 	0x8--0xF are supervisor-only and raise privilege-violation faults when executed. For \mnemonic{COPR} the privilege
