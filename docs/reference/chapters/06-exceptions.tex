@@ -485,11 +485,12 @@ Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). 
 level-sensitive (recognized for as long as the request remains active), Level 5 is edge-triggered: it fires once when
 the request becomes active, regardless of how long it is held, and must be withdrawn and raised again to fire again.
 This avoids spurious Level Five Hardware Exception Conflict faults from a request that simply stays active. The edge is
-latched in every CPU state except reset, including bus wait states, a halt, and \mnemonic{WAIT}, so a request that is
-active for at least one clock cycle is never lost. Level 5 cannot be disabled via the interrupt enable bits in the
-status register, and will preempt any lower-priority exception handler. However, Level 5 is \textit{not} fully
-non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), an L5 interrupt that arrives while a
-fault is being handled is \textit{queued} in the pending hardware exceptions register rather than serviced immediately.
+latched in every CPU state except reset, including bus wait states, a halt (Section~\ref{sec:halt-request}), and
+\mnemonic{WAIT}, so a request that is active for at least one clock cycle is never lost. Level 5 cannot be disabled via
+the interrupt enable bits in the status register, and will preempt any lower-priority exception handler. However, Level
+5 is \textit{not} fully non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), an L5
+interrupt that arrives while a fault is being handled is \textit{queued} in the pending hardware exceptions register
+rather than serviced immediately.
 
 Once the fault handler returns via \mnemonic{RETE} and the exception level drops back below 6, the pending L5 interrupt
 fires normally.
@@ -795,6 +796,21 @@ The exception coprocessor provides instructions to transfer data to and from the
 These instructions allow exception handlers to examine or modify the saved processor state before returning, enabling
 features like system calls, context switching, and debuggers.
 
+\section{Halt Request}
+\label{sec:halt-request}
+
+The halt request (\texttt{HALT}) lets external hardware stop the CPU, for example so that a debugger can examine the
+system. It is sampled at every instruction boundary. If it is active there, the CPU stops before the next instruction
+fetch; an instruction in progress, including its coprocessor dispatch slot, always completes first. While halted it
+issues no bus cycles and executes nothing. When the request is withdrawn, the CPU resumes at the next instruction
+boundary as if it had never stopped. The halt is the state of this request and nothing else: no instruction enters or
+leaves it, and it is not saved by exception entry.
+
+While halted, interrupt lines are still sampled under the normal rules, and a Level 5 edge is latched
+(Section~\ref{sec:level-5-nmi-behavior}). Nothing is dispatched until the CPU resumes: requests latched during the halt
+are taken at the first instruction boundary after the halt request is withdrawn. A reset ends a halt at once. The
+\textit{SIRC-1 Hardware Reference Manual} describes the pin that carries the request.
+
 \section{Reset and Startup}
 
 Reset can be initiated externally by raising the reset request (\texttt{RSTI}), or in software by executing the
@@ -808,21 +824,21 @@ program counter.
 	\centering
 	\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X}
 		\toprule
-		\textbf{State}                         & \textbf{Reset Behavior}                                                                              \\
+		\textbf{State}                         & \textbf{Reset Behavior}                                                                                             \\
 		\midrule
-		Instruction phase                      & Set to phase 0.                                                                                      \\
-		Pending bus request                    & Cleared; an in-progress stalled bus request is abandoned.                                            \\
-		Halt state                             & Cleared.                                                                                             \\
-		Wait-for-exception state               & Cleared.                                                                                             \\
-		Current exception level                & Cleared to 0. The CPU leaves reset outside any exception handler.                                    \\
-		Status register                        & Cleared to \texttt{0x0000} when reset is requested.                                                  \\
-		Program counter                        & Loaded from reset vector \texttt{0x00}.                                                              \\
-		General registers                      & Not architecturally cleared by reset. Software should treat their contents as undefined after reset. \\
-		Address register pairs                 & Not architecturally cleared by reset.                                                                \\
-		Exception link registers               & Not architecturally cleared by reset.                                                                \\
+		Instruction phase                      & Set to phase 0.                                                                                                     \\
+		Pending bus request                    & Cleared; an in-progress stalled bus request is abandoned.                                                           \\
+		Halt state                             & Not stored. If the halt request is still active, the CPU halts again at the first instruction boundary after reset. \\
+		Wait-for-exception state               & Cleared.                                                                                                            \\
+		Current exception level                & Cleared to 0. The CPU leaves reset outside any exception handler.                                                   \\
+		Status register                        & Cleared to \texttt{0x0000} when reset is requested.                                                                 \\
+		Program counter                        & Loaded from reset vector \texttt{0x00}.                                                                             \\
+		General registers                      & Not architecturally cleared by reset. Software should treat their contents as undefined after reset.                \\
+		Address register pairs                 & Not architecturally cleared by reset.                                                                               \\
+		Exception link registers               & Not architecturally cleared by reset.                                                                               \\
 		Pending hardware exceptions and faults & Cleared when reset is requested. Interrupt lines, including Level 5, are not sampled until the
-		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules.                        \\
-		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                     \\
+		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules.                                       \\
+		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                                    \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Reset State}
