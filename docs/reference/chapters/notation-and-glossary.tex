@@ -180,8 +180,9 @@ everyday English sense:
 	\item[may] A permitted option. The CPU, the assembler, or the programmer is free to choose either way.
 	\item[should / should not] A recommendation, not a conformance requirement.
 	\item[reserved] A field, opcode, or coprocessor ID that is not currently assigned a meaning. Software must not assume any
-	      particular value when reading a reserved field, and must not rely on any behavior it may have. A future CPU revision
-	      may assign a reserved field a meaning.
+	      particular value when reading a reserved field, and must not rely on any behavior it may have, except where this manual
+	      defines a fault for it (for example, a reserved coprocessor operation raises an invalid-opcode fault). A future CPU
+	      revision may assign a reserved field a meaning.
 	\item[architecturally undefined] The architecture does not specify the result. It may vary by CPU implementation, by
 	      revision, or even between two executions of the identical instruction on the identical CPU; software must never depend
 	      on any particular outcome.
