@@ -42,12 +42,12 @@ accidentally depend on undefined write-back ordering.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{clll}
+	\begin{tabular}{cll}
 		\toprule
-		\textbf{Opcode} & \textbf{Format} & \textbf{Pattern} & \textbf{Notes}            \\
+		\textbf{Opcode} & \textbf{Format} & \textbf{Notes}            \\
 		\midrule
-		\opcode{27}     & Short Imm       & MOVI-like        & No public assembly syntax \\
-		\opcode{2F}     & Short Imm       & COP-like         & No public assembly syntax \\
+		\opcode{27}     & Short Imm       & No public assembly syntax \\
+		\opcode{2F}     & Short Imm       & No public assembly syntax \\
 		\bottomrule
 	\end{tabular}
 	\caption{Undocumented Instruction Opcodes}
@@ -94,7 +94,6 @@ These instructions were left undocumented for two reasons:
 \subsection{For Hardware Implementers}
 
 \begin{itemize}
-	\item These opcodes may be implemented following the logical pattern.
 	\item Document any implementation-specific behavior.
 	\item Consider reserving them for future standardization.
 \end{itemize}
