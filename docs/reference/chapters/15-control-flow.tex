@@ -106,7 +106,11 @@ forms do not accept shift suffixes in the assembler.
 \noindent Control-flow and effective-address instructions do not perform data-memory access and do not raise data bus,
 data bus-protection, or invalid-opcode faults in documented forms. Effective-address calculation can raise a
 segment-overflow fault when \texttt{SR.A} (Trap on Address Overflow) is set and the 16-bit low-word address calculation
-wraps. Instruction fetch can still raise the normal fetch faults before the instruction executes. If trace mode was
+wraps. With \texttt{SR.A} set, an instruction in the last slot of a segment also raises a segment-overflow fault if it
+uses the wrapped next-instruction address, either as the next program counter (condition false) or as the return
+address saved by \mnemonic{LDEL}, \mnemonic{BRSR}, or \mnemonic{LJSR}; a taken branch or jump that saves no return
+address does not (Section~\ref{sec:segment-overflow-fault}). Instruction fetch can still raise the normal fetch faults
+before the instruction executes. If trace mode was
 enabled when the instruction began, an instruction-trace fault is raised after the instruction commits.
 
 \section{Status Flag Effects}

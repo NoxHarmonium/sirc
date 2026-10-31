@@ -38,8 +38,8 @@ This pair of programs exercises every fault type the CPU can raise and the vecto
 bus-protection fault, an invalid-opcode fault (which itself triggers a nested double fault), a privilege violation, and
 a level-five interrupt. Each handler, defined from line 158 onward, increments a distinct register so a reader can
 confirm which faults fired and in what order. The segment-overflow handler (lines 197--242) is worth particular
-attention: it reads exception metadata with \mnemonic{ETFR} to distinguish an instruction-fetch overflow from an
-effective-address overflow before deciding how to fix up the return address.
+attention: it reads exception metadata with \mnemonic{ETFR} to distinguish a program-counter overflow, which records no
+bus access, from an effective-address overflow before deciding how to fix up the return address.
 
 \refstepcounter{example}
 \label{ex:faults}

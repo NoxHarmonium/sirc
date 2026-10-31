@@ -163,12 +163,12 @@ cannot directly modify it -- it is managed automatically by the exception handli
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
 \begin{description}
-	\item[When Set (1):] An effective-address calculation or a program-counter advance that wraps the low word raises a segment
-	      overflow fault (vector \texttt{0x03}). For a program-counter wrap the fault is raised at the following instruction
-	      fetch
+	\item[When Set (1):] An effective-address calculation, address-register auto-update, or program-counter advance that wraps
+	      the low word raises a segment overflow fault (vector \texttt{0x03}) before the instruction commits
+	      (Section~\ref{sec:segment-overflow-fault})
 	\item[When Clear (0):] Address overflows wrap around without any side effects
 	\item[Purpose:] When set, helps detect pointer errors during development or can be used to increment/decrement the current
-	      segment if the address goes out of bounds of the segment.
+	      segment if a data address goes out of bounds of the segment.
 	\item[Typical Use:] Enabled during debugging, disabled in production for performance
 \end{description}
 

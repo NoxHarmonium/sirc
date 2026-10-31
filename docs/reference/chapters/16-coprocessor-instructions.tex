@@ -63,9 +63,9 @@ architecturally undefined, opcode \opcode{2F}'s behavior is defined (see Appendi
 \end{table}
 
 \noindent Coprocessor-call instructions do not perform data-memory access and do not raise data bus, data
-bus-protection, data alignment, or effective-address segment-overflow faults. A program-counter wrap with
-\texttt{SR.A} set still raises a segment-overflow fault at the following instruction fetch, as it does for every
-instruction. Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
+bus-protection, data alignment, or effective-address segment-overflow faults. A coprocessor call in the last
+instruction slot of a segment still raises a segment-overflow fault when \texttt{SR.A} is set, because it advances the
+program counter; the call is cancelled before its command is dispatched (Section~\ref{sec:segment-overflow-fault}). Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
 enabled when the instruction began, an instruction-trace fault is raised after the processing-unit call commits and
 its command has been dispatched and has completed, unless an earlier fault prevents the instruction from completing. In protected mode, supervisor-only coprocessor
 operation nibbles are rejected before the command is dispatched. A missing coprocessor is detected after the command

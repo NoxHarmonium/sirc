@@ -144,8 +144,7 @@ right choice -- simply retrying an unemulated invalid opcode will raise the same
 Two cases do not follow the pattern of the instruction being cancelled before it commits:
 
 \begin{itemize}
-	\item An alignment fault, and a segment overflow fault caused by a program-counter wrap, are raised by the instruction fetch
-	      itself, so there is no decoded instruction to cancel.
+	\item An alignment fault is raised by the instruction fetch itself, so there is no decoded instruction to cancel.
 	\item A DMA burst (\mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}) performs several bus accesses per instruction; a fault
 	      partway through can leave some of those accesses already committed; see the individual fault descriptions below and
 	      Section~\ref{sec:dma-fault-retry}.
@@ -216,6 +215,7 @@ correct the saved return address in link register 6 (for example, by clearing bi
 \mnemonic{ETTR}) before returning with \mnemonic{RETE}, or the CPU raises the same fault again immediately.
 
 \subsection{Segment Overflow Fault}
+\label{sec:segment-overflow-fault}
 
 \textit{(Retryable)} -- Raised when a computed address would fall outside the
 current segment.
@@ -227,13 +227,16 @@ wrap-around. With \texttt{SR.A} set, there are two cases:
 	\item An effective-address calculation wraps the low address word. The instruction is cancelled before it takes effect, and
 	      the link register stores its address, so a handler can bring the address back into range and retry with
 	      \mnemonic{RETE}.
-	\item The program counter wraps the low word as it advances past the last instruction in the segment. A taken branch or call
-	      does not count as a wrap. The instruction that caused the wrap has already completed, and the fault is raised by the
-	      next instruction fetch (Section~\ref{sec:arithmetic-and-address-wraparound}). As with an alignment fault, the link
-	      register stores the fetch address itself: the wrapped address, at low word \texttt{0x0000} of the same segment. The
-	      fault metadata register records an instruction fetch at that address. \mnemonic{RETE} resumes at the wrapped address,
-	      as if \texttt{SR.A} had been clear; a handler that wants execution to continue in the next segment must rewrite the
-	      saved return address with \mnemonic{ETFR}/\mnemonic{ETTR} first.
+	\item The instruction in the last slot of the segment would wrap the program counter's low word as it advances. The AU checks
+	      this in phase 3, before any memory access, for every instruction that uses the advanced address: as the next program
+	      counter (any instruction that does not branch, including a coprocessor call, and a branch whose condition is false), or
+	      as the return address saved in \reg{l} (\mnemonic{LDEL}, \mnemonic{BRSR}, \mnemonic{LJSR}). A taken branch or jump that
+	      writes \reg{p} without saving a return address does not use it and does not fault. The instruction is cancelled and the
+	      link register stores its own address, as for any other retryable fault. No bus access is involved, so the fault
+	      metadata register records bus access type \texttt{0x0} (none). Retrying with \mnemonic{RETE} raises the same fault
+	      again, so a handler must emulate the instruction or redirect the saved return address with
+	      \mnemonic{ETFR}/\mnemonic{ETTR}. With \texttt{SR.A} set, the last instruction slot of a segment can therefore only
+	      usefully hold a taken branch or jump.
 \end{itemize}
 
 The same DMA-burst caveat as Bus Fault and Bus Protection Fault applies here: a segment-overflow fault raised partway

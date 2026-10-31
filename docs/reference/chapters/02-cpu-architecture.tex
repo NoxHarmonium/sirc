@@ -141,7 +141,8 @@ The Addressing Unit calculates memory addresses and manages address-related oper
 \begin{itemize}
 	\item Computing effective addresses from base + displacement
 	\item Computing the updated base address for pre-decrement and post-increment
-	\item Detecting segment overflow in the address calculation
+	\item Detecting segment overflow in the address calculation, and when an instruction would use a program-counter advance that
+	      wraps the segment
 	\item Presenting calculated addresses to the address bus
 \end{itemize}
 

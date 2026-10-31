@@ -151,8 +151,9 @@ whether the displacement is positive or negative.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
-alignment fault. If the program counter wraps the low word while \texttt{SR.A} is set, a segment-overflow fault is
-raised at the next instruction fetch, not on the instruction that caused the wrap.
+alignment fault. If \texttt{SR.A} is set and advancing the program counter past an instruction would wrap the low word,
+that instruction raises a segment-overflow fault before it commits, unless it is a taken branch or jump that does not
+use the advanced address (Section~\ref{sec:segment-overflow-fault}).
 
 \section{Memory Ordering}
 
