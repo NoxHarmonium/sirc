@@ -244,14 +244,14 @@ The Exception Unit handles:
 	\centering
 	\begin{tabular}{llp{8cm}}
 		\toprule
-		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                        \\
+		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                      \\
 		\midrule
-		0x1100-0x11FF   & EXCP              & User exception (trap) at vector 0x60-0xFF \\
-		0x1900          & WAIT              & Wait for interrupt                        \\
-		0x1A00          & RETE              & Return from exception                     \\
-		0x1B00          & RSET              & System reset                              \\
-		0x1C00-0x1C37   & ETFR              & Transfer from exception link register     \\
-		0x1D00-0x1D37   & ETTR              & Transfer to exception link register       \\
+		0x1100-0x11FF   & EXCP              & Software exception (trap) at the vector \\
+		0x1900          & WAIT              & Wait for interrupt                      \\
+		0x1A00          & RETE              & Return from exception                   \\
+		0x1B00          & RSET              & System reset                            \\
+		0x1C00-0x1C37   & ETFR              & Transfer from exception link register   \\
+		0x1D00-0x1D37   & ETTR              & Transfer to exception link register     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Exception Unit Operations}
@@ -312,9 +312,16 @@ if condition_true then
 endif
 \end{verbatim}
 
-	\textbf{Description:} Triggers a software exception at the specified user vector, 0x60--0xFF; a vector below 0x60
-	raises a privilege-violation fault in protected mode. Used by programs running in protected mode to invoke system
-	calls or request supervisor-mode services.
+	\textbf{Description:} Triggers a software exception at the specified vector. Used by programs running in protected
+	mode to invoke system calls or request supervisor-mode services through the user trap vectors, 0x60--0xFF; a vector
+	below 0x60 raises a privilege-violation fault in protected mode.
+
+	In supervisor mode, a vector below 0x60 is accepted and runs the handler that vector points at, but as an ordinary
+	trap: priority 1, state saved in link register 0, exception level 1. Nothing else about the exception that normally
+	uses that vector happens. \textbf{Warning:} a handler entered this way that reads its own link register with
+	\mnemonic{ETFR} sees stale contents. A fault handler, for example, reads link register 7 and gets the metadata and
+	return address of whichever fault last ran, not this call. A plain \mnemonic{RETE} still returns correctly, because it
+	uses link register 0 at exception level 1.
 
 	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
 
@@ -323,8 +330,9 @@ endif
 
 	\textbf{Exceptions:} Dispatches a software exception through the exception unit. Raises a privilege-violation fault
 	in protected mode if the selected vector is below 0x60. Software exceptions are accepted only at exception level 0;
-	an \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
-	is cleared, no vector is fetched, and no fault is raised. Nested system calls from a handler are therefore not
+	an otherwise legal \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
+	is cleared, no vector is fetched, and no fault is raised. The privilege check comes first, so a protected-mode
+	\mnemonic{EXCP} with a vector below 0x60 inside a handler still raises a privilege-violation fault. Nested system calls from a handler are therefore not
 	possible.
 
 	\textbf{Condition field:} If the condition is false, no trap is dispatched and status flags are preserved.

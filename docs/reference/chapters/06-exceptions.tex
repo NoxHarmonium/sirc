@@ -64,7 +64,9 @@ The exception vectors are stored starting at address \addr{0x0}. Each vector is 
 consecutive 16-bit words in the address format described in Section~\ref{sec:exception-vector-storage}. The high word
 is stored first at \texttt{vector * 2}, followed by the low word at \texttt{vector * 2 + 1}. The vector table has 256
 entries. Vectors \texttt{0x00}--\texttt{0x5F} (96 entries) are reserved for the CPU; vectors
-\texttt{0x60}--\texttt{0xFF} (160 entries) are user trap vectors. The vector table layout is:
+\texttt{0x60}--\texttt{0xFF} (160 entries) are user trap vectors. Supervisor code can still name a CPU vector in
+\mnemonic{EXCP}; it is entered as an ordinary trap (see \mnemonic{EXCP} in Chapter~\ref{ch:coprocessor}). The vector
+table layout is:
 
 \begin{itemize}
 	\item \textbf{\texttt{0x00}:} Reset vector
@@ -539,7 +541,9 @@ Hardware Exception Conflict fault is raised then, not during the inner fault han
 A user exception occurs when the program executes an \mnemonic{EXCP} instruction that signals the exception coprocessor
 that it should trigger an exception. They are usually used by programs running in protected mode to switch to
 supervisor mode in a controlled way. They are also referred to as ``traps''. The vectors for user exceptions are in the
-\texttt{0x60}--\texttt{0xFF} range.
+\texttt{0x60}--\texttt{0xFF} range. Supervisor code may also name a vector below \texttt{0x60}; the trap still enters
+at priority 1 through link register 0, so the handler it reaches does not find its own link register filled in (see
+\mnemonic{EXCP} in Chapter~\ref{ch:coprocessor}).
 
 As with hardware exceptions, the return address stored in the link register is the instruction following the
 \mnemonic{EXCP} call, so \mnemonic{RETE} resumes the calling program immediately after the trap.
@@ -915,9 +919,10 @@ the following structure:
 
 The exception unit loads the CSR when a pending exception needs to be serviced, but only when the CSR is empty and no
 coprocessor is active, so an exception never replaces a command written by \mnemonic{COPI} or \mnemonic{COPR}
-(Section~\ref{sec:interrupt-latency}). The priority of exceptions is determined by the high nibble of the vector ID,
-calculated as 7 minus the value of that nibble (for example, \texttt{0x00} is priority 7, \texttt{0x40} is priority 3,
-and \texttt{0x60} and above are all priority 1).
+(Section~\ref{sec:interrupt-latency}). For the commands the exception unit builds itself to dispatch a fault or a
+hardware exception, the priority is determined by the high nibble of the vector ID, calculated as 7 minus the value of
+that nibble (for example, \texttt{0x00} is priority 7 and \texttt{0x40} is priority 3). A software exception
+(\mnemonic{EXCP}) is always priority 1, whatever its vector.
 
 A CSR value of \texttt{0x0000} -- the value left in place once the reset sequence has completed, and whenever no
 exception is pending -- selects coprocessor ID \texttt{0x0}, the processing unit, so the CPU simply continues executing
