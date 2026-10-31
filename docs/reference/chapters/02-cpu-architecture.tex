@@ -116,10 +116,11 @@ Chapter~\ref{ch:coprocessor} describes the instructions and Section~\ref{sec:cop
 register's layout.
 
 The exception coprocessor never overwrites a pending command. It keeps its own record of the exception it wants to
-service, and loads the CSR with it only when the CSR is empty and no coprocessor is active. A coprocessor call is
-therefore part of its instruction: its dispatch slot, and the command it starts, complete before any pending interrupt
-or instruction trace fault is taken, except that a traced \mnemonic{EXCP} takes its trace fault first
-(Section~\ref{sec:interrupt-latency}).
+service, and loads the CSR with a hardware interrupt, software exception or trace fault only when the CSR is empty and
+no coprocessor is active. A fault raised by the call or its command is the exception: it ends the command and is
+dispatched at once. A coprocessor call is therefore part of its instruction: its dispatch slot, and the command it
+starts, complete before any pending interrupt or instruction trace fault is taken, except that a traced \mnemonic{EXCP}
+takes its trace fault first (Section~\ref{sec:interrupt-latency}).
 
 \subsection{Arithmetic Logic Unit (ALU)}
 
