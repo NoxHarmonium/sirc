@@ -540,16 +540,17 @@ if condition_true then
     if protected_mode then
         raise privilege_violation_fault
     else
-        assert reset output for 6 cycles
         sr = 0x0000
+        assert reset output for 6 cycles
         pc = vector_table[reset_vector]
     endif
 endif
 \end{verbatim}
 
-	\textbf{Description:} Requests a full processor reset. The reset output is asserted and held for 6 cycles, after
-	which the exception unit fetches the reset vector, sets \reg{sr} to \texttt{0x0000}, and loads the program counter
-	from the vector. General-purpose registers, the \reg{a}, \reg{l}, and \reg{s} pairs, and the exception link
+	\textbf{Description:} Requests a full processor reset. The status register, the exception level, and the pending
+	hardware exceptions are cleared when reset is requested. The reset output is then asserted and held for 6 cycles,
+	after which the exception unit fetches the reset vector and loads the program counter from it
+	(Section~\ref{sec:reset-output-hold}). General-purpose registers, the \reg{a}, \reg{l}, and \reg{s} pairs, and the exception link
 	registers are not affected by reset and hold undefined values after power-on.
 
 	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
