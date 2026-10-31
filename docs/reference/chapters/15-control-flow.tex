@@ -73,8 +73,9 @@ not public syntax. The post-increment call shorthand \texttt{LJSR (src)+} is leg
 write-back path have architecturally undefined behavior. The assembler rejects exactly these forms: \mnemonic{LDEA}
 pre-decrement with destination equal to source; \mnemonic{LDEL} with destination \reg{l} (any form); \mnemonic{LDEL}
 post-increment with source \reg{l} or with destination equal to source; \mnemonic{LJSR} post-increment from \reg{l} or
-\reg{p}; \mnemonic{LOAD} post-increment whose destination is a half of the auto-updated pair; and \mnemonic{STOR}
-pre-decrement whose source is a half of the auto-updated pair.
+\reg{p}; \mnemonic{LOAD} post-increment whose destination is a half of the auto-updated pair; \mnemonic{STOR}
+pre-decrement whose source is a half of the auto-updated pair; and any auto-update of \reg{p} (\texttt{(p)+} or
+\texttt{-(p)} in any instruction), because the update would compete with the program-counter advance.
 
 \noindent\textbf{Shift suffixes:} Control-flow and effective-address displacements are not shifted. Register-offset
 forms do not accept shift suffixes in the assembler.

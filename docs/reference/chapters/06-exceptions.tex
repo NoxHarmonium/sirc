@@ -233,8 +233,9 @@ wrap-around. With \texttt{SR.A} set, there are two cases:
 	      this in phase 3, before any memory access, for every instruction that uses the advanced address: as the next program
 	      counter (any instruction that does not branch, including a coprocessor call, and a branch whose condition is false), or
 	      as the return address saved in \reg{l} (\mnemonic{LDEL}, \mnemonic{BRSR}, \mnemonic{LJSR}). A taken branch or jump that
-	      writes \reg{p} without saving a return address does not use it and does not fault. The instruction is cancelled and the
-	      link register stores its own address, as for any other retryable fault. No bus access is involved, so the fault
+	      writes \reg{p} without saving a return address does not use it and does not fault, and neither does an ALU or
+	      \mnemonic{LOAD} instruction that writes \reg{pl} (Section~\ref{sec:address-registers}). The instruction is cancelled
+	      and the link register stores its own address, as for any other retryable fault. No bus access is involved, so the fault
 	      metadata register records bus access type \texttt{0x0} (none). Retrying with \mnemonic{RETE} raises the same fault
 	      again, so a handler must emulate the instruction or redirect the saved return address with
 	      \mnemonic{ETFR}/\mnemonic{ETTR}. With \texttt{SR.A} set, the last instruction slot of a segment can therefore only
@@ -580,7 +581,9 @@ Link registers 0--6 each store three pieces of information; register 7 uses the 
 (Section~\ref{sec:fault-metadata-register-format}):
 
 \begin{itemize}
-	\item \textbf{Return Address:} The 32-bit value copied verbatim from the \reg{p} register pair at the time of the exception.
+	\item \textbf{Return Address:} The 32-bit program-counter value to resume at: the address of the faulting instruction
+	      for a retryable fault, or the address of the next instruction otherwise (see below), with bits 31--24 carried
+	      unchanged from \reg{p}.
 	\item \textbf{Return Status Register:} The 16-bit status register value at the time of the exception
 	\item \textbf{Saved Exception Level:} The exception level that was active when the exception was taken;
 	      \mnemonic{RETE} restores it into \texttt{current\_exception\_level}

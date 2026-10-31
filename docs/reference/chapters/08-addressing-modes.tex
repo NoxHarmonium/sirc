@@ -159,7 +159,8 @@ register participates only in the effective address calculation; it does not cha
 When \reg{p} is used as the source address register, the value used for address calculation is the address of the
 instruction currently executing. PC-relative displacements are therefore relative to the address of the branch
 instruction itself, not to the next instruction; a displacement of 2 targets the following instruction and a
-displacement of 0 re-executes the branch. \mnemonic{BRSR} and \mnemonic{LDEL} still link to \reg{pl} + 2.
+displacement of 0 re-executes the branch. \mnemonic{BRSR} and \mnemonic{LDEL} still link to the instruction's own
+address + 2.
 
 \section{Per-Mode Encoding Reference}
 

@@ -95,6 +95,7 @@ general purpose. Calling conventions and register-preservation rules are outside
 addressed in the SIRC-1 ABI and Toolchain documentation.
 
 \section{Address Register Pairs}
+\label{sec:address-registers}
 
 \subsection{Overview}
 
@@ -125,7 +126,12 @@ The exact address composition and stored-address layout are specified in Chapter
 Although each address register pair has a specific name and a suggested usage by convention, \mnemonic{STOR} and
 \mnemonic{LOAD} instructions treat all four pairs identically, and any pair may be used for indirect addressing.
 
-Loading a value directly into the \reg{p} pair performs a jump.
+Loading a value directly into the \reg{p} pair performs a jump. This includes an ALU or \mnemonic{LOAD} instruction
+that names \reg{pl} as its destination: its write-back replaces the advanced \reg{pl}, so execution continues at the
+written address within the current segment. Such an instruction does not use the advanced address, so it is exempt from
+the program-counter wrap check in the same way as a taken branch (Section~\ref{sec:segment-overflow-fault}). An odd
+value raises an alignment fault at the next instruction fetch. A write to \reg{ph} alone (supervisor mode only) changes
+the segment but not \reg{pl}, so it still uses the advanced address and is still checked.
 
 The link register pair updates automatically when \mnemonic{LDEL}, \mnemonic{LJSR}, or \mnemonic{BRSR} executes. The
 program counter pair increments after every instruction.

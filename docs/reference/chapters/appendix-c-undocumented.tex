@@ -30,6 +30,9 @@ LDEL p, (#0, l)+
 
 ; Undefined: l is both link register and destination
 LDEL l, (#0, a)
+
+; Undefined: the auto-update of p competes with the program-counter advance
+LOAD r1, (#0, p)+
 \end{lstlisting}
 
 Programs should avoid aliased register writes. The assembler rejects the known hazardous forms so that programs do not

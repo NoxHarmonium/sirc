@@ -605,8 +605,9 @@ Since instructions are 32 bits and the data bus is 16 bits wide, each instructio
 	\item After decode, \reg{pl} advances by 2.
 \end{enumerate}
 
-\reg{pl} still holds the address of the instruction being executed while it is decoded, because
-address calculations that select \reg{p} use that value.
+The address of the instruction is latched before \reg{pl} advances. Every read of \reg{p}, every address calculation
+that selects \reg{p}, and every link value uses that latched address, so they all see the instruction's own address
+even though \reg{pl} has already advanced by the time the address is calculated in phase 3.
 
 \subsection{Alignment Requirements}
 
