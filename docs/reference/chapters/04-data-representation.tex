@@ -46,7 +46,9 @@ Architectural addresses are 24-bit word addresses. The four address-register pai
 Bits 15--8 of the high register are not driven on the address bus. They are ignored by address calculation and are
 carried unchanged when an address pair is copied, loaded or stored. They will be preserved unless a direct write to the
 high register of an address register pair overwrites them. They can be used to store metadata with addresses and allow
-techniques like tagged pointers.
+techniques like tagged pointers. In protected mode, though, an address-register-pair write-back that would change any
+of the 16 bits of a high register raises a privilege-violation fault (Section~\ref{sec:privilege-restrictions}), so a
+protected-mode program can only load pointers whose tag bits match the high register they replace.
 
 \begin{table}[H]
 	\centering

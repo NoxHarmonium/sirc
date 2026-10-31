@@ -258,7 +258,7 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 		      \item Reading is allowed.
 		      \item Direct writes trigger a privilege exception.
 		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a
-		            privilege exception.
+		            privilege exception. The comparison covers all 16 bits, including tag bits 15--8.
 	      \end{itemize}
 \end{itemize}
 
