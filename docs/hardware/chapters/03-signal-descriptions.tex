@@ -280,7 +280,8 @@ externally to the CPU, and RSTI must remain asserted for as long as the other de
 
 Asserted while the RSTI pin is asserted and during the reset-output hold before reset-vector fetch.
 
-It is also asserted for the reset-output hold after a software reset.
+It is also asserted for the reset-output hold after a software reset, and for a further hold before the CPU retries a
+reset-vector fetch that failed.
 
 A reset can be triggered by asserting the Reset input (RSTI) pin, or in software by a special exception coprocessor
 meta-instruction (RSET).

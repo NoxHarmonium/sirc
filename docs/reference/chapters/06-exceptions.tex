@@ -485,11 +485,11 @@ Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). 
 level-sensitive (recognized for as long as the request remains active), Level 5 is edge-triggered: it fires once when
 the request becomes active, regardless of how long it is held, and must be withdrawn and raised again to fire again.
 This avoids spurious Level Five Hardware Exception Conflict faults from a request that simply stays active. The edge is
-latched in every CPU state, including bus wait states, a halt, and \mnemonic{WAIT}, so a request that is active for at
-least one clock cycle is never lost. Level 5 cannot be disabled via the interrupt enable bits in the status register,
-and will preempt any lower-priority exception handler. However, Level 5 is \textit{not} fully non-maskable. Because
-faults carry priority 7 (higher than Level 5's priority 6), an L5 interrupt that arrives while a fault is being handled
-is \textit{queued} in the pending hardware exceptions register rather than serviced immediately.
+latched in every CPU state except reset, including bus wait states, a halt, and \mnemonic{WAIT}, so a request that is
+active for at least one clock cycle is never lost. Level 5 cannot be disabled via the interrupt enable bits in the
+status register, and will preempt any lower-priority exception handler. However, Level 5 is \textit{not} fully
+non-maskable. Because faults carry priority 7 (higher than Level 5's priority 6), an L5 interrupt that arrives while a
+fault is being handled is \textit{queued} in the pending hardware exceptions register rather than serviced immediately.
 
 Once the fault handler returns via \mnemonic{RETE} and the exception level drops back below 6, the pending L5 interrupt
 fires normally.
@@ -815,13 +815,13 @@ program counter.
 		Halt state                             & Cleared.                                                                                             \\
 		Wait-for-exception state               & Cleared.                                                                                             \\
 		Current exception level                & Cleared to 0. The CPU leaves reset outside any exception handler.                                    \\
-		Status register                        & Cleared to \texttt{0x0000} when the reset operation is executed by the exception unit.               \\
+		Status register                        & Cleared to \texttt{0x0000} when reset is requested.                                                  \\
 		Program counter                        & Loaded from reset vector \texttt{0x00}.                                                              \\
 		General registers                      & Not architecturally cleared by reset. Software should treat their contents as undefined after reset. \\
 		Address register pairs                 & Not architecturally cleared by reset.                                                                \\
 		Exception link registers               & Not architecturally cleared by reset.                                                                \\
-		Pending hardware exceptions and faults & Cleared. Interrupt requests that remain active after reset may be
-		sampled again according to the normal interrupt rules.                                                                                        \\
+		Pending hardware exceptions and faults & Cleared when reset is requested. Interrupt lines, including Level 5, are not sampled until the
+		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules.                        \\
 		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                     \\
 		\bottomrule
 	\end{tabularx}
@@ -832,9 +832,10 @@ program counter.
 Because the status register is cleared to \texttt{0x0000} as part of the reset sequence, hardware interrupt lines 1--4
 are masked immediately after reset -- their enable bits, \texttt{SR.E1}--\texttt{SR.E4}
 (Section~\ref{sec:hardware-interrupt-enable-bits}), are all cleared to 0. The Level 5 (NMI) line is architecturally
-non-maskable and remains enabled regardless of \reg{sr}'s contents. Note also that the status register is not cleared
-the instant reset is requested: it is cleared during the reset-vector fetch sequence
-(Section~\ref{sec:reset-vector-fetch}), once that sequence reaches its execute phase.
+non-maskable and remains enabled regardless of \reg{sr}'s contents, but no interrupt line is sampled during the reset
+hold or the reset-vector fetch. The status register, the exception level and the pending hardware exceptions are all
+cleared at the moment reset is requested, so nothing latched before the reset survives it and the old enable bits never
+admit a request during the hold.
 
 \subsection{Reset Output Hold}
 \label{sec:reset-output-hold}
@@ -861,18 +862,17 @@ performs an exception-vector fetch with bus access type exception vector fetch:
 \begin{enumerate}
 	\item Read the high word of the reset target address from \addr{0x0000}.
 	\item Read the low word of the reset target address from \addr{0x0001}.
-	\item Clear the status register to \texttt{0x0000}.
 	\item Load the fetched target address into \reg{p}.
 \end{enumerate}
 
-Like every other exception-unit dispatch, the reset-vector fetch occupies one six-phase slot; steps 3 and 4 happen
-together in its execute phase. See Appendix~\ref{appendix:timing} for the cycle counts, including the reset-output hold
-described in Section~\ref{sec:reset-output-hold}.
+Like every other exception-unit dispatch, the reset-vector fetch occupies one six-phase slot; step 3 happens in its
+execute phase. See Appendix~\ref{appendix:timing} for the cycle counts, including the reset-output hold described in
+Section~\ref{sec:reset-output-hold}.
 
-If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded. The CPU raises the
-corresponding fault with the bus access type set to exception vector fetch. From that point the normal exception-vector
-fetch fault rules apply: a fault-vector fetch failure escalates to double fault, and a double-fault vector fetch
-failure will reset the CPU.
+If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded and no fault is
+raised: there is no valid state to save and no handler can be assumed to be reachable. The CPU re-enters reset instead,
+asserting \texttt{RSTO} for a further six-cycle hold before it tries the reset-vector fetch again, and keeps doing so
+until the fetch succeeds.
 
 \section{Exception Coprocessor Instructions}
 \label{sec:exception-coprocessor-instructions}
