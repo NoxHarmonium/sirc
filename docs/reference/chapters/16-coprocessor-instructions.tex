@@ -387,16 +387,18 @@ if condition_true then
         raise privilege_violation_fault
     else
         stop instruction fetch
-        wait until an enabled hardware interrupt is requested or the CPU is reset
+        wait until a hardware interrupt can be taken or the CPU is reset
     endif
 endif
 \end{verbatim}
 
 	\textbf{Description:} Stops instruction fetch and places the CPU in a low-power wait state. The CPU issues no bus
-	cycles while waiting. It leaves the wait state only when an enabled hardware interrupt is requested (NMI is
-	always enabled) or when the CPU is reset. Interrupts masked by the hardware interrupt enable bits
-	(\texttt{SR.E1}--\texttt{SR.E4}) do not wake the CPU, and faults and software exceptions cannot occur while
-	waiting.
+	cycles while waiting. It leaves the wait state only when a hardware interrupt can be taken -- one that is enabled
+	(Level 5 is always enabled) and whose priority is higher than the current exception level -- or when the CPU is
+	reset. A request of that kind that is already pending when \mnemonic{WAIT} starts ends the wait at once, so a
+	request that arrives just before the \mnemonic{WAIT} is not missed. Interrupts masked by the hardware interrupt
+	enable bits (\texttt{SR.E1}--\texttt{SR.E4}), or outranked by the current exception level, do not wake the CPU; they
+	stay pending under the normal rules. Faults and software exceptions cannot occur while waiting.
 
 	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
 
@@ -413,7 +415,7 @@ endif
 	\begin{example}
 		\begin{lstlisting}
 :idle_loop
-    WAIT                       ; Halt until an interrupt or reset occurs
+    WAIT                       ; Wait until an interrupt or reset occurs
     BRAN @idle_loop            ; Resume waiting if woken spuriously
 		\end{lstlisting}
 		\caption{Idling Until an Interrupt}

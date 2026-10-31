@@ -117,7 +117,7 @@ underlying CPU instruction. For full encoding details, see the chapter cited in 
 	\mnemonic{TSXR}   & ALU           & \opcode{3E}                                      & *          & *          & 0          & 0                        & Test XOR register (no write-back)                                                                             \\
 	\midrule
 	\multicolumn{8}{l}{\textit{W -- Ch.\ref{ch:meta-instructions}}}                                                                                                                                                                                                        \\
-	\mnemonic{WAIT}   & Meta          & COPI \#0x1900                                    & -          & -          & -          & -                        & Idle until an enabled hardware interrupt or a reset occurs                                                    \\
+	\mnemonic{WAIT}   & Meta          & COPI \#0x1900                                    & -          & -          & -          & -                        & Idle until a hardware interrupt can be taken or a reset occurs                                                    \\
 	\midrule
 	\multicolumn{8}{l}{\textit{X -- Ch.\ref{ch:alu-instructions}}}                                                                                                                                                                                                         \\
 	\mnemonic{XORI}   & ALU           & \opcode{06}/\opcode{26}                          & *          & *          & 0          & 0                        & Bitwise XOR immediate or short immediate                                                                      \\

@@ -97,7 +97,7 @@ This chapter refers to several exception-coprocessor instructions before their f
 	\item[\mnemonic{EXCP}] Triggers a software exception (trap).
 	\item[\mnemonic{RETE}] Returns from an exception handler, restoring the saved program counter, status register, and
 	      exception level.
-	\item[\mnemonic{WAIT}] Halts the CPU until an enabled interrupt or reset occurs.
+	\item[\mnemonic{WAIT}] Stops instruction fetch until an interrupt that can be taken, or a reset, occurs.
 	\item[\mnemonic{RSET}] Performs the reset sequence and jumps to the reset vector.
 	\item[\mnemonic{ETFR}] Copies the saved return address and/or status register from a link register into \reg{a}
 	      and/or \reg{r7}.
@@ -884,14 +884,14 @@ handling and system control.
 	\centering
 	\begin{tabularx}{\textwidth}{lll>{\raggedright\arraybackslash}X}
 		\toprule
-		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege}    & \textbf{Purpose}                                            \\
+		\textbf{Instruction} & \textbf{Opcode} & \textbf{Privilege}    & \textbf{Purpose}                                                 \\
 		\midrule
-		\mnemonic{EXCP}      & \texttt{0x1}    & Protected, supervisor & Trigger a software exception (trap)                         \\
-		\mnemonic{WAIT}      & \texttt{0x9}    & Supervisor            & Enter wait state until an enabled interrupt or reset occurs \\
-		\mnemonic{RETE}      & \texttt{0xA}    & Supervisor            & Return from an exception handler                            \\
-		\mnemonic{RSET}      & \texttt{0xB}    & Supervisor            & Perform reset sequence and jump to reset vector             \\
-		\mnemonic{ETFR}      & \texttt{0xC}    & Supervisor            & Copy saved exception state from a link register             \\
-		\mnemonic{ETTR}      & \texttt{0xD}    & Supervisor            & Write CPU register state back to a link register            \\
+		\mnemonic{EXCP}      & \texttt{0x1}    & Protected, supervisor & Trigger a software exception (trap)                              \\
+		\mnemonic{WAIT}      & \texttt{0x9}    & Supervisor            & Enter wait state until an interrupt can be taken or reset occurs \\
+		\mnemonic{RETE}      & \texttt{0xA}    & Supervisor            & Return from an exception handler                                 \\
+		\mnemonic{RSET}      & \texttt{0xB}    & Supervisor            & Perform reset sequence and jump to reset vector                  \\
+		\mnemonic{ETFR}      & \texttt{0xC}    & Supervisor            & Copy saved exception state from a link register                  \\
+		\mnemonic{ETTR}      & \texttt{0xD}    & Supervisor            & Write CPU register state back to a link register                 \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Exception Coprocessor Instruction Summary}
