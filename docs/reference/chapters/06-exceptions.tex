@@ -212,6 +212,7 @@ As with Bus Fault, this applies cleanly to an ordinary single-access instruction
 the fault remain in effect. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do about it.
 
 \subsection{Alignment Fault}
+\label{sec:alignment-fault}
 
 \textit{(Retryable)} -- Raised when fetching instructions if the program counter
 contains an odd word address. The check is made at phase 0, before the fetch's bus cycle, so the odd address never

@@ -217,10 +217,11 @@ Ordinary instructions execute in exactly 6 phases, regardless of instruction typ
 cycles when no bus wait states are required. This design choice reduces the complexity of instruction sequencing and
 simplifies execution timing.
 
-The sequence is never cut short. If a retryable fault cancels an instruction, its remaining phases still run, but as
-no-ops that access no bus and commit no results, and the exception dispatch begins at the next phase 0. Hardware
-interrupts, software exceptions and the instruction trace fault let the current instruction finish before they are
-dispatched.
+Once an instruction has started, the sequence is never cut short. If a retryable fault cancels an instruction, its
+remaining phases still run, but as no-ops that access no bus and commit no results, and the exception dispatch begins
+at the next phase 0. The alignment fault is the exception: it is detected at phase 0, before the instruction starts,
+and its dispatch begins at that same phase 0 (Section~\ref{sec:alignment-fault}). Hardware interrupts, software
+exceptions and the instruction trace fault let the current instruction finish before they are dispatched.
 
 Coprocessor calls are the exception: the processing-unit instruction takes six cycles and the coprocessor dispatch
 usually takes a further six. Some coprocessors like the DMA coprocessor can additionally hold instruction fetch until
