@@ -43,7 +43,7 @@ register writeback.
 \section{Shift Syntax}
 
 A shift suffix may follow the ALU short-immediate and ALU register forms, the \mnemonic{SHFT} meta-instruction, and the
-register-displacement \mnemonic{LOAD}/\mnemonic{STOR} forms. It is rejected on \mnemonic{MOVR rD, rS}, on
+register-displacement \mnemonic{STOR} forms. It is rejected on \mnemonic{MOVR rD, rS}, on
 \mnemonic{LDEA}/\mnemonic{LDEL}, and on coprocessor instructions.
 
 For ALU instructions, the shift is applied in the "Decode and Register Fetch" phase, before the ALU operation. In
