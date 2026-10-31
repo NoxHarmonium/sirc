@@ -768,7 +768,10 @@ unlike pre-decrement addressing (Chapter~\ref{ch:addressing-modes}), whose addre
 at write-back and so is undone by a fault; the DMA decrement is committed before the transfer loop begins, so by the
 time a fault can occur, the address register already holds the fully-decremented
 address, regardless of how many words actually transferred. A bare \mnemonic{RETE} re-reads that already-decremented
-value and decrements it a second time, landing the retried transfer on the wrong memory range entirely.
+value and decrements it a second time, landing the retried transfer on the wrong memory range entirely. The one
+exception is a decrement that underflows with \texttt{SR.A} set: that fault is raised before the register is modified
+(Section~\ref{sec:dma-segment-overflow}), so the register keeps its original value and a bare \mnemonic{RETE} raises
+the same fault again.
 
 \textbf{\mnemonic{DMAT} is not safe to retry directly either, for a related reason.} \reg{a} and \reg{l} only advance
 once a complete chunk (up to seven words) has been both read and written, so a fault leaves them reflecting every
