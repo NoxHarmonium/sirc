@@ -71,7 +71,7 @@
   <text class="badge" x="62" y="675.0" text-anchor="middle">1</text>
   <text class="ink label" x="84" y="675.0">Restore state</text>
   <text class="ink detail" x="214" y="665">RETE restores p, sr and the exception level from the current link register.</text>
-  <text class="ink detail" x="214" y="683">If the restored level is 0, SR.EA is cleared.</text>
+  <text class="ink detail" x="214" y="683">SR.EA is then set if the restored level is non-zero, and cleared if it is 0.</text>
   <path class="wire" d="M380 698 V712" marker-end="url(#arrow)"/>
   <rect class="functional" x="36" y="712" width="688" height="56"/>
   <circle cx="62" cy="740.0" r="13" fill="#405863"/>
