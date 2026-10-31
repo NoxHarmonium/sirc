@@ -329,7 +329,8 @@ than 15 is well defined:
 	      last bit shifted out at count 16, as for any other count.
 	\item For \mnemonic{ASR}, a register-supplied count of 16 or more sign-extends fully: \texttt{0xFFFF} if the original value
 	      was negative, \texttt{0x0000} if it was positive or zero. This is the same rule as any other count, just carried to its
-	      limit -- every vacated bit is the sign bit.
+	      limit -- every vacated bit is the sign bit. The carry flag is the original bit 15, since every bit shifted out at that
+	      point is a copy of the sign.
 	\item \mnemonic{RTL} and \mnemonic{RTR} have no vacated bits to define, since a rotate never discards data; a
 	      register-supplied count is used modulo 16, so a count of 16 behaves as a count of 0, a count of 17 behaves
 	      as a count of 1, and so on.
@@ -370,7 +371,9 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 \subsection{Overflow Flag}
 
 \begin{itemize}
-	\item For \textbf{ASL}: Set if the sign bit changes during the shift (signed overflow)
+	\item For \textbf{ASL}: Set if bit 15 changes at any point during the shift (signed overflow); that is, for a count $n$ from
+	      1 to 15, set unless the original bits 15 down to $15 - n$ are all equal. A count of 0 clears V. For a register-supplied
+	      count of 16 or more, V is set unless the original value was \texttt{0x0000}
 	\item For other shifts: Cleared to 0
 \end{itemize}
 
