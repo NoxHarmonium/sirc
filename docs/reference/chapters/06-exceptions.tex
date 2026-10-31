@@ -347,8 +347,8 @@ The CPU jumps to vector \texttt{0x08}. This is typically a last-chance handler t
 another fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector \texttt{0x08} again.
 There is no limit to the number of times vector \texttt{0x08} is dispatched. A double fault handler that causes a fault
 may cause an infinite loop without special handling from the programmer. If the double-fault vector fetch itself fails,
-the CPU will reset. If two fault conditions are detected within the same instruction before either has been dispatched,
-the resulting behavior is architecturally undefined.
+the CPU will reset. An instruction raises at most one fault: the first one detected cancels it, and the checks in its
+remaining phases are not made (Section~\ref{sec:exception-and-fault-timing}).
 
 \subsubsection{Link Register Preservation}
 
