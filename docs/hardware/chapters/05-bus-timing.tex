@@ -189,9 +189,10 @@ until \texttt{RSTI} is deasserted and the reset-output hold has completed.
 \end{figure}
 
 Figure~\ref{fig:irq-sampling-cycle-timing} shows an enabled maskable interrupt asserted before an instruction boundary.
-The CPU samples and latches the interrupt at the boundary. The following exception-unit dispatch fetches the selected
-hardware-interrupt vector instead of fetching the next processing-unit instruction. If an interrupt line is asserted
-after an instruction boundary, it is not sampled until the next boundary.
+The CPU samples the interrupt lines on every clock cycle, so the request is latched in the cycle it is first seen, but
+it is dispatched only at an instruction boundary. The following exception-unit dispatch fetches the selected
+hardware-interrupt vector instead of fetching the next processing-unit instruction. A request latched partway through
+an instruction waits for the next boundary.
 
 \begin{figure}[H]
 	\centering
@@ -209,6 +210,6 @@ after an instruction boundary, it is not sampled until the next boundary.
 		BACK        & H L L H H                              \\
 		BERR/BPER   & H H H H H                              \\
 	\end{tikztimingtable}
-	\caption{Enabled IRQ sampled at an instruction boundary and dispatched with no wait states}
+	\caption{Enabled IRQ latched before an instruction boundary and dispatched with no wait states}
 	\label{fig:irq-sampling-cycle-timing}
 \end{figure}
