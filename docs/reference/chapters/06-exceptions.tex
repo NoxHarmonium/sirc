@@ -748,7 +748,8 @@ from the current link register:
 	\item The return address is loaded from the link register into the program counter
 	\item The saved status register value is restored (including interrupt enable bits)
 	\item The saved exception level is restored to \texttt{current\_exception\_level}
-	\item If the restored exception level is 0, \texttt{SR.EA} is cleared; otherwise the restored value of \texttt{SR.EA} stands
+	\item \texttt{SR.EA} is set if the restored exception level is non-zero and cleared if it is 0, whatever the saved status
+	      register holds, so \texttt{SR.EA} always agrees with the exception level
 	\item Execution resumes at the return address
 \end{enumerate}
 

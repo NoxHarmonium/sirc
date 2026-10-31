@@ -162,7 +162,9 @@ Interrupt handling is discussed in detail in Chapter~\ref{ch:exceptions}.
 \end{description}
 
 \textbf{Note:} This bit reflects the internal \texttt{current\_exception\_level} state. Programs can read this bit but
-cannot directly modify it -- it is managed automatically by the exception handling hardware.
+cannot directly modify it -- it is managed automatically by the exception handling hardware. This includes
+\mnemonic{RETE}, which sets \texttt{EA} from the restored exception level rather than from the saved status register, so
+editing bit 13 of a saved status register with \mnemonic{ETTR} has no effect.
 
 \subsection{Trap on Address Overflow (A) -- Bit 14}
 
