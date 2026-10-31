@@ -739,6 +739,10 @@ which the last access completes. With $k$ bus accesses ($|n|$ for \mnemonic{DMAR
 to eleven, and so on. A zero count needs only the setup cycle and takes 12 cycles. A false condition skips the DMA
 command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction time.
 
+\noindent A wait state on a DMA access holds that phase until the access is acknowledged, as for any other bus access.
+The rest of the transfer, and the slot boundaries after it, move one cycle later for each wait state, so each wait
+state adds exactly one cycle to the totals above.
+
 \noindent Missing DMA hardware and unsupported DMA operations raise an invalid-opcode fault. Reserved operand
 encodings are architecturally undefined (see the Model and Revision Policy above). DMA memory reads and writes can
 raise data bus and bus-protection faults using DMA read/write bus access

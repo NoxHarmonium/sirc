@@ -173,11 +173,13 @@ simultaneously. Instead:
 	      transferred.
 	\item If the external memory system has not acknowledged the transfer (\texttt{BACK}) and has not aborted it with a bus error
 	      (\texttt{BERR}) or bus protection error (\texttt{BPER}), the CPU holds that phase until the transfer is acknowledged.
-	\item Each wait state adds one clock cycle to the instruction
+	\item Each wait state adds one clock cycle to the instruction, including a wait on a DMA access: the held phase delays the
+	      rest of the transfer and the slot boundaries after it, so the DMA total is not rounded up again
 	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception or
 	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own,
 	      although a DMA command then adds one access per word read or written. A system that inserts $w$ wait states per access
-	      therefore adds $2w$ cycles to an ALU instruction and $3w$ cycles to a load or store.
+	      therefore adds $2w$ cycles to an ALU instruction, $3w$ cycles to a load or store, and $(k + 2)w$ cycles to a DMA
+	      command with $k$ accesses.
 \end{itemize}
 
 \subsection{Optimization Guidelines}
