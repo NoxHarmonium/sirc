@@ -239,7 +239,10 @@ wrap-around. With \texttt{SR.A} set, there are two cases:
 	      \mnemonic{RETE}. The fault metadata register records the wrapped address and the bus access it was computed for:
 	      \texttt{0x2} (data read) or \texttt{0x3} (data write) for \mnemonic{LOAD} and \mnemonic{STOR}, \texttt{0x1}
 	      (instruction fetch) for the target of a branch, \mnemonic{LDEL}, \mnemonic{BRSR}, or \mnemonic{LJSR}, and \texttt{0x0}
-	      (none) for \mnemonic{LDEA}, which makes no access with it. No bus cycle is performed in any of these cases.
+	      (none) for \mnemonic{LDEA}, which makes no access with it. No bus cycle is performed in any of these cases. An
+	      address-register auto-update that wraps is recorded the same way, with the wrapped register value and the bus access
+	      type of the instruction's own access. If more than one calculation would wrap, only the first is recorded, in the order
+	      effective address, auto-update, program-counter advance.
 	\item The instruction in the last slot of the segment would wrap the program counter's low word as it advances. The AU checks
 	      this in phase 3, before any memory access, for every instruction that uses the advanced address: as the next program
 	      counter (any instruction that does not branch, including a coprocessor call, and a branch whose condition is false), or
