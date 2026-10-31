@@ -196,8 +196,11 @@ of memory by raising bus protection errors.
 
 When asserted, the CPU stops executing instructions.
 
-HALT is sampled at instruction boundaries. If asserted, the CPU completes the current instruction and halts before the
-next instruction fetch. It resumes as normal when the input is deasserted.
+HALT is sampled at instruction boundaries. If asserted, the CPU completes the current instruction, including the
+dispatch slot of a coprocessor call, and halts before the next instruction fetch. It performs no bus cycles while
+halted. The interrupt lines are still sampled and a Level 5 edge is still latched, but nothing is dispatched until the
+CPU resumes. It resumes as normal when the input is deasserted. A reset ends the halt, but if HALT is still asserted
+the CPU halts again at the first instruction boundary after reset.
 
 This pin is useful for hardware-driven debugging, as the CPU can be halted and the state of the system examined.
 
