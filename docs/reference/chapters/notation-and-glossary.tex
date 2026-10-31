@@ -235,9 +235,9 @@ encoding, and privilege rules.
 	      new exception can only preempt the current one if its priority is strictly higher, except that faults are dispatched at
 	      any level and a Level 5 request during a Level 5 handler raises a conflict fault (see Chapter~\ref{ch:exceptions}).
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
-	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred, though two of them are
-	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
-	      \texttt{SR.T} or the force-trace request (\texttt{TRCE}).
+	      privilege violation) or a debug event (instruction trace). Faults cannot be masked, though two of them are conditional
+	      on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
+	      \texttt{SR.T} or the force-trace request (\texttt{TRCE}) and is never raised at exception level 7.
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
 	\item[Hardware exception] An exception signaled by an external interrupt. Also informally called an \textit{interrupt} at the
 	      hardware level (interrupt requests, interrupt priority, interrupt enable) -- the two terms are synonymous.

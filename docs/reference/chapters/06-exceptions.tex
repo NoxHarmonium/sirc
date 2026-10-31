@@ -113,10 +113,12 @@ their opcodes, and Chapter~\ref{ch:coprocessor} gives the full syntax, operation
 \section{Faults}
 
 Faults are priority 7 exceptions raised by the CPU itself in response to error conditions or debug events. They use
-vectors in the \texttt{0x01}--\texttt{0x0F} range. Unlike hardware and software exceptions, faults cannot be masked or
-deferred: once a fault condition is raised, the fault is dispatched at the next instruction boundary regardless of the
-current exception level. Two faults are conditional on whether they are raised at all: Segment Overflow requires
-\texttt{SR.A}, and Instruction Trace requires \texttt{SR.T} or the force-trace request (\texttt{TRCE}).
+vectors in the \texttt{0x01}--\texttt{0x0F} range. Unlike hardware and software exceptions, faults cannot be masked:
+once a fault condition is raised, the fault is dispatched at the next instruction boundary regardless of the current
+exception level. The one wait is for an instruction trace fault, which is taken after a coprocessor call's dispatch
+slot and command complete (Section~\ref{sec:interrupt-latency}). Two faults are conditional on whether they are raised
+at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires \texttt{SR.T} or the force-trace
+request (\texttt{TRCE}) and is never raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
 
 \subsection{Fault Categories}
 \label{sec:fault-categories}
@@ -297,11 +299,12 @@ when \texttt{SR.T} is set, or when the force-trace request (\texttt{TRCE}) is ac
 
 Used for single-step debugging. The fault fires after the instruction commits; for a coprocessor call, that includes
 the call's dispatch slot (Section~\ref{sec:interrupt-latency}). \mnemonic{RETE} returns to the instruction
-\textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), so the
-handler itself is not traced. \mnemonic{RETE} restores the saved SR, which re-enables tracing unless the handler
-explicitly clears T from the saved status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is sampled once
-at the start of each instruction, before that instruction can modify it, so a write to \texttt{SR.T} takes effect
-starting with the next instruction boundary; exception-unit dispatches are never traced.
+\textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), and no
+trace fault is raised at exception level 7, so the handler itself is not traced even while \texttt{TRCE} is asserted.
+\mnemonic{RETE} restores the saved SR, which re-enables tracing unless the handler explicitly clears T from the saved
+status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each instruction,
+before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next instruction
+boundary; exception-unit dispatches are never traced.
 
 A traced \mnemonic{EXCP} is the one exception to the rule that a call's command completes before its trace fault. The
 trace fault is taken first, with the link register storing the address after the \mnemonic{EXCP}, and the exception
