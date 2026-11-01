@@ -73,7 +73,10 @@ not in scope. Run at most five agents at once.
 Run `git status --porcelain docs/` and stop if there are uncommitted changes other than
 untracked files the author keeps there (`general-todo.md`, `interaction-review.md`); the user
 must commit or stash first so each phase's diff is clean. Check whether `pdflatex`,
-`latexindent` and `cargo` are on PATH and remember the answers for phase 5.
+`latexindent`, `cargo`, `pdftotext` and `pdftoppm` are on PATH and remember the answers for
+phase 5. Without `pdftotext`, the benchmark and cold reader fall back to reading PDF pages as
+images, which costs several times as many tokens; tell the user `brew install poppler` adds
+both.
 
 ## Phase 1: ground truth (three agents)
 
@@ -120,7 +123,9 @@ Output file `review/consistency.md`.
 
 Reviewers are sometimes wrong, and a wrong `blocker` costs an editor's time and the author's
 trust. When all reviewers return, collect every `blocker` and every `major` with category
-`fact` or `contradiction`. Dispatch a `general-purpose` agent per batch of about fifteen with
+`fact` or `contradiction`. Dispatch a `general-purpose` agent with `model: sonnet` (it has no
+definition of its own, so without the override it inherits your model) per batch of about
+fifteen with
 this brief: for each finding, open the quoted text and the cited evidence, and return
 `confirmed`, `refuted` (with the reason) or `reclassify` (with the corrected severity or
 resolution). It reads only what the findings cite. Drop refuted findings, noting their IDs.
@@ -203,6 +208,22 @@ what was deferred and why, the design decisions the author made, the simulator t
 `general-todo.md` (by number), the accepted improvements still to do, and the pages needing a
 visual check. Keep it under a page. Tell the user the branch is ready for `git diff main`
 review.
+
+## Models
+
+Each agent definition pins its model in its frontmatter, matched to how much judgement the job
+needs:
+
+| Agent | Model | Why |
+|---|---|---|
+| `manual-facts-digest`, `manual-fact-checker`, `manual-consistency-checker` | opus | Precise reasoning over code, edge cases and the whole set |
+| `manual-chapter-editor`, `manual-style-editor`, `manual-period-benchmark`, `manual-cold-reader`, the verifier | sonnet | Careful reading and writing within a narrow brief |
+| `manual-latex-qa` | haiku | Run builds, read logs, fix broken braces |
+
+Dispatch each with the `Agent` tool and its `subagent_type`, and do not pass a `model`: an
+explicit `model` overrides the pinned one. The verifier is the only exception, as described in
+Phase 2. Do not run these phases through a `Workflow` script; a workflow `agent()` call without
+`agentType` and `model` inherits your model, which is how basic jobs end up on Opus.
 
 ## Context and cost discipline
 

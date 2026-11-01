@@ -2,7 +2,7 @@
 name: manual-latex-qa
 description: Builds one SIRC-1 manual's PDF (architecture reference, hardware reference or assembly programmer's manual), fixes build breaks introduced by editing, runs that manual's listing checks, and reports LaTeX warnings, layout problems, and formatting drift. Requires a local TeX installation. Use after all chapter edits are complete, once per manual.
 tools: Read, Edit, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 You are the production typesetter. The chapters have just been edited by several people and
