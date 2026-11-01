@@ -953,7 +953,7 @@ For full syntax, operation details, and worked examples, see Chapter~\ref{ch:cop
 
 \subsection{Internal Instructions}
 
-The following opcodes are used internally by the exception unit and are not directly accessible via user instructions:
+The exception unit dispatches the following opcodes itself; no instruction is defined for them:
 
 \begin{itemize}
 	\item \textbf{Fault (\texttt{0xE}):} Automatically invoked when a fault condition is detected
@@ -962,8 +962,9 @@ The following opcodes are used internally by the exception unit and are not dire
 \end{itemize}
 
 These internal operations follow the standard exception handling flow described in
-Section~\ref{sec:exception-processing}. Issuing opcode \texttt{0xE} or \texttt{0xF} directly, for example via a
-supervisor-mode \mnemonic{COPI} instruction, is architecturally undefined.
+Section~\ref{sec:exception-processing}. Software must not issue opcode \texttt{0xE} or \texttt{0xF} directly, for
+example with a supervisor-mode \mnemonic{COPI} instruction: the result is architecturally undefined. Issuing
+\texttt{0x0} is a no-op.
 
 \subsection{Coprocessor Select Register (CSR)}
 \label{sec:coprocessor-select-register}
