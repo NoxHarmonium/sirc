@@ -258,6 +258,42 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \begin{instructionbox}{SHFT}{Shift with Status Update Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SHFT rD, shift                ; rD = shifted rD; flags from shift
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is both the destination and shifted source register. \texttt{shift} may use any
+	standard immediate or register shift count supported by short-immediate ALU instructions.
+
+	\textbf{Description:}
+
+	Provides concise syntax for shifting a register value while taking status flags from the shifter result. It is not a
+	separate CPU operation. The zero OR operation preserves the shifted source value, while \texttt{[S]} makes the status
+	flags reflect the shift result instead of the OR result.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+shifted = shift(rD)
+rD = shifted OR 0
+SR = flags updated per the status-update suffix:
+     [S] shifter result (default for SHFT),
+     [A] ALU result, [N] no update
+\end{verbatim}
+
+	\textbf{Flags:} Updated from the shifter result by default.
+
+	\textbf{Write-back:} Inherits \mnemonic{ORRI} write-back to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no shift result is written and status flags are preserved.
+
+	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -288,42 +324,6 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-SHFT rD, shift                ; rD = shifted rD; flags from shift
-\end{lstlisting}
-
-	\textbf{Operands:} \texttt{rD} is both the destination and shifted source register. \texttt{shift} may use any
-	standard immediate or register shift count supported by short-immediate ALU instructions.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-shifted = shift(rD)
-rD = shifted OR 0
-SR = flags updated per the status-update suffix:
-     [S] shifter result (default for SHFT),
-     [A] ALU result, [N] no update
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Provides concise syntax for shifting a register value while taking status flags from the shifter result. It is not a
-	separate CPU operation. The zero OR operation preserves the shifted source value, while \texttt{[S]} makes the status
-	flags reflect the shift result instead of the OR result.
-
-	\textbf{Flags:} Updated from the shifter result by default.
-
-	\textbf{Write-back:} Inherits \mnemonic{ORRI} write-back to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no shift result is written and status flags are preserved.
-
-	\textbf{Timing:} Same as \mnemonic{ORRI}: 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Shift r1 left by 3 and update flags
@@ -350,6 +350,48 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 \begin{instructionbox}{ADDI / ADDR}{Add Immediate / Add Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ADDI rD, #imm16                ; rD = rD + imm16
+ADDI rD, #imm8, shift          ; rD = shift(rD) + imm8
+ADDR rD, rS1, rS2              ; rD = rS1 + rS2
+ADDR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is the destination and first source in immediate forms. Register forms use \texttt{rS1}
+	as the first source and \texttt{rS2} as the second source; assembler shorthand may omit \texttt{rS1}. Short-immediate
+	and register forms may apply a shift to the first source operand.
+
+	\textbf{Description:}
+
+	Adds two values and stores the result in the destination register. In short immediate format with shift, the
+	destination register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
+	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
+	the operation).
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -362,6 +404,7 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -375,6 +418,7 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -406,48 +450,6 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-ADDI rD, #imm16                ; rD = rD + imm16
-ADDI rD, #imm8, shift          ; rD = shift(rD) + imm8
-ADDR rD, rS1, rS2              ; rD = rS1 + rS2
-ADDR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2
-\end{lstlisting}
-
-	\textbf{Operands:} \texttt{rD} is the destination and first source in immediate forms. Register forms use \texttt{rS1}
-	as the first source and \texttt{rS2} as the second source; assembler shorthand may omit \texttt{rS1}. Short-immediate
-	and register forms may apply a shift to the first source operand.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 + operand2
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = carry_out
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Adds two values and stores the result in the destination register. In short immediate format with shift, the
-	destination register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
-	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
-	the operation).
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Simple addition
@@ -478,6 +480,46 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 \begin{instructionbox}{ADCI / ADCR}{Add with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ADCI rD, #imm16                ; rD = rD + imm16 + C
+ADCI rD, #imm8, shift          ; rD = shift(rD) + imm8 + C
+ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
+ADCR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2 + C
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input.
+
+	\textbf{Description:}
+
+	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
+	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
+	arithmetic to propagate the carry from lower-order additions to higher-order additions.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2 + SR.C
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -490,6 +532,7 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -503,6 +546,7 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -534,46 +578,6 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-ADCI rD, #imm16                ; rD = rD + imm16 + C
-ADCI rD, #imm8, shift          ; rD = shift(rD) + imm8 + C
-ADCR rD, rS1, rS2              ; rD = rS1 + rS2 + C
-ADCR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2 + C
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
-	least-significant carry input.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 + operand2 + SR.C
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = carry_out
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
-	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
-	arithmetic to propagate the carry from lower-order additions to higher-order additions.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; 32-bit addition (r1:r2 = r3:r4 + r5:r6)
@@ -598,6 +602,45 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 \begin{instructionbox}{SUBI / SUBR}{Subtract Immediate / Subtract Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SUBI rD, #imm16                ; rD = rD - imm16
+SUBI rD, #imm8, shift          ; rD = shift(rD) - imm8
+SUBR rD, rS1, rS2              ; rD = rS1 - rS2
+SUBR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
+
+	\textbf{Description:}
+
+	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
+	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
+	operand1 for unsigned). The overflow flag indicates signed overflow.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -610,6 +653,7 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -623,6 +667,7 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -654,45 +699,6 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-SUBI rD, #imm16                ; rD = rD - imm16
-SUBI rD, #imm8, shift          ; rD = shift(rD) - imm8
-SUBR rD, rS1, rS2              ; rD = rS1 - rS2
-SUBR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 - operand2
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = borrow
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
-	operand1 for unsigned). The overflow flag indicates signed overflow.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Decrement by 1
@@ -720,6 +726,45 @@ BRAN|!= @loop              ; Branch if not zero
 \begin{instructionbox}{SBCI / SBCR}{Subtract with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+SBCI rD, #imm16                ; rD = rD - imm16 - C
+SBCI rD, #imm8, shift          ; rD = shift(rD) - imm8 - C
+SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
+SBCR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2 - C
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
+
+	\textbf{Description:}
+
+	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
+	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
+	lower-order to higher-order subtractions.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2 - SR.C
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -732,6 +777,7 @@ BRAN|!= @loop              ; Branch if not zero
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -745,6 +791,7 @@ BRAN|!= @loop              ; Branch if not zero
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -776,45 +823,6 @@ BRAN|!= @loop              ; Branch if not zero
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-SBCI rD, #imm16                ; rD = rD - imm16 - C
-SBCI rD, #imm8, shift          ; rD = shift(rD) - imm8 - C
-SBCR rD, rS1, rS2              ; rD = rS1 - rS2 - C
-SBCR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2 - C
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 - operand2 - SR.C
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = borrow
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
-	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
-	lower-order to higher-order subtractions.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; 32-bit subtraction (r1:r2 = r3:r4 - r5:r6)
@@ -838,6 +846,46 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 \begin{instructionbox}{ANDI / ANDR}{AND Immediate / AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ANDI rD, #imm16                ; rD = rD & imm16
+ANDI rD, #imm8, shift          ; rD = shift(rD) & imm8
+ANDR rD, rS1, rS2              ; rD = rS1 & rS2
+ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
+	\textbf{Description:}
+
+	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
+	short immediate format with shift, the destination register is shifted before ANDing with the immediate. Commonly used
+	for bit masking and clearing specific bits.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 AND operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -850,6 +898,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -863,6 +912,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -894,46 +944,6 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-ANDI rD, #imm16                ; rD = rD & imm16
-ANDI rD, #imm8, shift          ; rD = shift(rD) & imm8
-ANDR rD, rS1, rS2              ; rD = rS1 & rS2
-ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
-	patterns; short immediates are zero-extended.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 AND operand2
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
-	short immediate format with shift, the destination register is shifted before ANDing with the immediate. Commonly used
-	for bit masking and clearing specific bits.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Mask lower byte
@@ -962,6 +972,46 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 \begin{instructionbox}{ORRI / ORRR}{OR Immediate / OR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ORRI rD, #imm16                ; rD = rD | imm16
+ORRI rD, #imm8, shift          ; rD = shift(rD) | imm8
+ORRR rD, rS1, rS2              ; rD = rS1 | rS2
+ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
+	\textbf{Description:}
+
+	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
+	immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly used for
+	setting specific bits.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 OR operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -974,6 +1024,7 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -987,6 +1038,7 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1017,46 +1069,6 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-ORRI rD, #imm16                ; rD = rD | imm16
-ORRI rD, #imm8, shift          ; rD = shift(rD) | imm8
-ORRR rD, rS1, rS2              ; rD = rS1 | rS2
-ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
-	patterns; short immediates are zero-extended.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 OR operand2
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
-	immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly used for
-	setting specific bits.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1089,6 +1101,46 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 \begin{instructionbox}{XORI / XORR}{XOR Immediate / XOR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+XORI rD, #imm16                ; rD = rD ^ imm16
+XORI rD, #imm8, shift          ; rD = shift(rD) ^ imm8
+XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
+XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
+	patterns; short immediates are zero-extended.
+
+	\textbf{Description:}
+
+	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
+	are different. In short immediate format with shift, the destination register is shifted before XORing with the
+	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 XOR operand2
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1101,6 +1153,7 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1114,6 +1167,7 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1144,46 +1198,6 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-XORI rD, #imm16                ; rD = rD ^ imm16
-XORI rD, #imm8, shift          ; rD = shift(rD) ^ imm8
-XORR rD, rS1, rS2              ; rD = rS1 ^ rS2
-XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
-	patterns; short immediates are zero-extended.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 XOR operand2
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
-	are different. In short immediate format with shift, the destination register is shifted before XORing with the
-	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} If the condition is true, writes the 16-bit result to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1218,6 +1232,46 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 \begin{instructionbox}{MOVI / MOVR}{Move Immediate / Move Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+MOVI rD, #imm16                ; rD = imm16
+MOVR rD, rS                    ; rD = rS
+\end{lstlisting}
+
+	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
+	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax; the register-to-register form
+	does not accept a shift definition (use \mnemonic{SHFT}), and the \texttt{[S]} status update source is not accepted. Neither instruction accesses memory; the memory forms of
+	\mnemonic{LOAD} are documented in Chapter~\ref{ch:memory-instructions}.
+
+	\textbf{Description:}
+
+	The ALU passes the second operand straight through to the destination; the first operand is ignored. This is the
+	primary way to load constants into registers or move data between them. Opcode \opcode{27} has no public assembly
+	syntax and is undocumented.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
+
+	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
+	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1230,6 +1284,7 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1259,46 +1314,6 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-MOVI rD, #imm16                ; rD = imm16
-MOVR rD, rS                    ; rD = rS
-\end{lstlisting}
-
-	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
-	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax; the register-to-register form
-	does not accept a shift definition (use \mnemonic{SHFT}), and the \texttt{[S]} status update source is not accepted. Neither instruction accesses memory; the memory forms of
-	\mnemonic{LOAD} are documented in Chapter~\ref{ch:memory-instructions}.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand
-destination = result
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	The ALU passes the second operand straight through to the destination; the first operand is ignored. This is the
-	primary way to load constants into registers or move data between them. Opcode \opcode{27} has no public assembly
-	syntax and is undocumented.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
-
-	\textbf{Exceptions:} Does not access memory in these forms and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no result is written and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
-	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1336,6 +1351,49 @@ ORRI r5, #0x34             ; r5 = 0x1234
 \begin{instructionbox}{CMNI / CMNR}{Compare Negative Immediate / Compare Negative Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CMNI rS, #imm16                ; Flags from rS + imm16
+CMNI rS, #imm8, shift          ; Flags from shift(rS) + imm8
+CMNR rS1, rS2                  ; Flags from rS1 + rS2
+CMNR rS1, rS2, shift           ; Flags from shift(rS1) + rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADD}. The first operand is added to the second operand;
+	no destination register is written.
+
+	\textbf{Description:}
+
+	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
+	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
+	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \reg{r1} holds $-5$. In short
+	immediate format with shift, the source register is shifted before the immediate is added.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CMNI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{08} (Imm), \opcode{28} (Short Imm), \opcode{38} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1348,6 +1406,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1361,6 +1420,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1395,49 +1455,6 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-CMNI rS, #imm16                ; Flags from rS + imm16
-CMNI rS, #imm8, shift          ; Flags from shift(rS) + imm8
-CMNR rS1, rS2                  ; Flags from rS1 + rS2
-CMNR rS1, rS2, shift           ; Flags from shift(rS1) + rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{ADD}. The first operand is added to the second operand;
-	no destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 + operand2
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = carry_out
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
-	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
-	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \reg{r1} holds $-5$. In short
-	immediate format with shift, the source register is shifted before the immediate is added.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{CMNI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Test if r1 is -1 (0xFFFF): r1 + 1 == 0
@@ -1471,6 +1488,49 @@ BRAN|OS @would_overflow
 \begin{instructionbox}{CNCI / CNCR}{Compare Negative with Carry Immediate / Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CNCI rS, #imm16                ; Flags from rS + imm16 + C
+CNCI rS, #imm8, shift          ; Flags from shift(rS) + imm8 + C
+CNCR rS1, rS2                  ; Flags from rS1 + rS2 + C
+CNCR rS1, rS2, shift           ; Flags from shift(rS1) + rS2 + C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADC}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input; no destination register is written.
+
+	\textbf{Description:}
+
+	Adds two values plus the carry flag but discards the result, only updating the status flags. It is the flag-only
+	counterpart of \mnemonic{ADC} and continues a \mnemonic{CMN} across multiple words: \mnemonic{CMN} on the low words
+	followed by \mnemonic{CNC} on the high words leaves C, V and N describing the whole multi-word sum. In short immediate
+	format with shift, the source register is shifted before the immediate is added.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2 + SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CNCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{09} (Imm), \opcode{29} (Short Imm), \opcode{39} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1483,6 +1543,7 @@ BRAN|OS @would_overflow
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1496,6 +1557,7 @@ BRAN|OS @would_overflow
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1530,49 +1592,6 @@ BRAN|OS @would_overflow
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-CNCI rS, #imm16                ; Flags from rS + imm16 + C
-CNCI rS, #imm8, shift          ; Flags from shift(rS) + imm8 + C
-CNCR rS1, rS2                  ; Flags from rS1 + rS2 + C
-CNCR rS1, rS2, shift           ; Flags from shift(rS1) + rS2 + C
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{ADC}. The incoming \texttt{C} flag is read as an additional
-	least-significant carry input; no destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 + operand2 + SR.C
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = carry_out
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Adds two values plus the carry flag but discards the result, only updating the status flags. It is the flag-only
-	counterpart of \mnemonic{ADC} and continues a \mnemonic{CMN} across multiple words: \mnemonic{CMN} on the low words
-	followed by \mnemonic{CNC} on the high words leaves C, V and N describing the whole multi-word sum. In short immediate
-	format with shift, the source register is shifted before the immediate is added.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{CNCI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Would the 32-bit signed sum r1:r2 + r3:r4 overflow?
@@ -1603,6 +1622,49 @@ BRAN|CS @carried
 \begin{instructionbox}{CMPI / CMPR}{Compare Immediate / Compare Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CMPI rS, #imm16                ; Compare rS with imm16
+CMPI rS, #imm8, shift          ; Compare shift(rS) with imm8
+CMPR rS1, rS2                  ; Compare rS1 with rS2
+CMPR rS1, rS2, shift           ; Compare shift(rS1) with rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
+	no destination register is written.
+
+	\textbf{Description:}
+
+	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
+	source register is shifted before comparing with the immediate. This is the primary instruction for implementing
+	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
+	the operands.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CMPI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1615,6 +1677,7 @@ BRAN|CS @carried
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1628,6 +1691,7 @@ BRAN|CS @carried
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1661,49 +1725,6 @@ BRAN|CS @carried
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-CMPI rS, #imm16                ; Compare rS with imm16
-CMPI rS, #imm8, shift          ; Compare shift(rS) with imm8
-CMPR rS1, rS2                  ; Compare rS1 with rS2
-CMPR rS1, rS2, shift           ; Compare shift(rS1) with rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
-	no destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 - operand2
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = borrow
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
-	source register is shifted before comparing with the immediate. This is the primary instruction for implementing
-	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
-	the operands.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} None. The subtraction result is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{CMPI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1743,6 +1764,49 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 \begin{instructionbox}{CPCI / CPCR}{Compare with Carry Immediate / Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CPCI rS, #imm16                ; Flags from rS - imm16 - C
+CPCI rS, #imm8, shift          ; Flags from shift(rS) - imm8 - C
+CPCR rS1, rS2                  ; Flags from rS1 - rS2 - C
+CPCR rS1, rS2, shift           ; Flags from shift(rS1) - rS2 - C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{SBC}. The incoming \texttt{C} flag is read as the borrow
+	input; no destination register is written.
+
+	\textbf{Description:}
+
+	Subtracts the second operand and the borrow from the first operand but discards the result, only updating the status
+	flags. It is the flag-only counterpart of \mnemonic{SBC} and continues a \mnemonic{CMP} across multiple words:
+	\mnemonic{CMP} on the low words followed by \mnemonic{CPC} on the high words compares the whole multi-word values. In
+	short immediate format with shift, the source register is shifted before the immediate is subtracted.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2 - SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = signed_overflow
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The difference is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CPCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{0B} (Imm), \opcode{2B} (Short Imm), \opcode{3B} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1755,6 +1819,7 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1768,6 +1833,7 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1802,49 +1868,6 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-CPCI rS, #imm16                ; Flags from rS - imm16 - C
-CPCI rS, #imm8, shift          ; Flags from shift(rS) - imm8 - C
-CPCR rS1, rS2                  ; Flags from rS1 - rS2 - C
-CPCR rS1, rS2, shift           ; Flags from shift(rS1) - rS2 - C
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{SBC}. The incoming \texttt{C} flag is read as the borrow
-	input; no destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 - operand2 - SR.C
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = borrow
-SR.V = signed_overflow
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Subtracts the second operand and the borrow from the first operand but discards the result, only updating the status
-	flags. It is the flag-only counterpart of \mnemonic{SBC} and continues a \mnemonic{CMP} across multiple words:
-	\mnemonic{CMP} on the low words followed by \mnemonic{CPC} on the high words compares the whole multi-word values. In
-	short immediate format with shift, the source register is shifted before the immediate is subtracted.
-
-	\textbf{Flags:} N Z C V
-
-	\textbf{Write-back:} None. The difference is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{CPCI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Unsigned 32-bit compare: is r1:r2 lower than r3:r4?
@@ -1875,6 +1898,48 @@ BRAN|>= @first_is_gte      ; N = V for the 32-bit result
 \begin{instructionbox}{TSAI / TSAR}{Test AND Immediate / Test AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSAI rS, #imm16                ; Test rS & imm16
+TSAI rS, #imm8, shift          ; Test shift(rS) & imm8
+TSAR rS1, rS2                  ; Test rS1 & rS2
+TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
+	destination register is written.
+
+	\textbf{Description:}
+
+	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying the
+	register. The zero flag indicates whether any tested bits were set.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 AND operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSAI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -1887,6 +1952,7 @@ BRAN|>= @first_is_gte      ; N = V for the 32-bit result
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1900,6 +1966,7 @@ BRAN|>= @first_is_gte      ; N = V for the 32-bit result
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1933,48 +2000,6 @@ BRAN|>= @first_is_gte      ; N = V for the 32-bit result
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-TSAI rS, #imm16                ; Test rS & imm16
-TSAI rS, #imm8, shift          ; Test shift(rS) & imm8
-TSAR rS1, rS2                  ; Test rS1 & rS2
-TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
-	destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 AND operand2
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying the
-	register. The zero flag indicates whether any tested bits were set.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} None. The AND result is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{TSAI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -2011,6 +2036,48 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 \begin{instructionbox}{TSOI / TSOR}{Test OR Immediate / Test OR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSOI rS, #imm16                ; Test rS | imm16
+TSOI rS, #imm8, shift          ; Test shift(rS) | imm8
+TSOR rS1, rS2                  ; Test rS1 | rS2
+TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ORR}. The result is used only for status flag updates; no
+	destination register is written.
+
+	\textbf{Description:}
+
+	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands is zero,
+	so a single \mnemonic{TSOR} tests whether two registers are both zero.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 OR operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The OR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSOI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{0D} (Imm), \opcode{2D} (Short Imm), \opcode{3D} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -2023,6 +2090,7 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -2036,6 +2104,7 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -2070,48 +2139,6 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-TSOI rS, #imm16                ; Test rS | imm16
-TSOI rS, #imm8, shift          ; Test shift(rS) | imm8
-TSOR rS1, rS2                  ; Test rS1 | rS2
-TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{ORR}. The result is used only for status flag updates; no
-	destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 OR operand2
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands is zero,
-	so a single \mnemonic{TSOR} tests whether two registers are both zero.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} None. The OR result is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{TSOI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Test if the 32-bit value in r1:r2 is zero
@@ -2139,6 +2166,48 @@ BRAN|NS @flag_set
 \begin{instructionbox}{TSXI / TSXR}{Test XOR Immediate / Test XOR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSXI rS, #imm16                ; Test rS ^ imm16
+TSXI rS, #imm8, shift          ; Test shift(rS) ^ imm8
+TSXR rS1, rS2                  ; Test rS1 ^ rS2
+TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
+	destination register is written.
+
+	\textbf{Description:}
+
+	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the source
+	register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to compare
+	values for equality. Z=1 indicates the values are identical.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 XOR operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSXI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
 	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -2151,6 +2220,7 @@ BRAN|NS @flag_set
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -2164,6 +2234,7 @@ BRAN|NS @flag_set
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -2197,48 +2268,6 @@ BRAN|NS @flag_set
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-TSXI rS, #imm16                ; Test rS ^ imm16
-TSXI rS, #imm8, shift          ; Test shift(rS) ^ imm8
-TSXR rS1, rS2                  ; Test rS1 ^ rS2
-TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
-\end{lstlisting}
-
-	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
-	destination register is written.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-result = operand1 XOR operand2
-; Result is discarded, only flags updated
-SR.N = result[15]
-SR.Z = (result == 0)
-SR.C = 0
-SR.V = 0
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to compare
-	values for equality. Z=1 indicates the values are identical.
-
-	\textbf{Flags:} N Z (C and V cleared)
-
-	\textbf{Write-back:} None. The XOR result is discarded after status flags are updated.
-
-	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
-
-	\textbf{Condition field:} If the condition is false, no status flags are updated.
-
-	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
-	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
-	names a privileged register such as \reg{ah} (for example, \texttt{TSXI ah, \#0}); see
-	Chapter~\ref{ch:exceptions}.
 
 	\begin{example}
 		\begin{lstlisting}

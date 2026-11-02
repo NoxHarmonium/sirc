@@ -149,6 +149,64 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 \begin{instructionbox}{LOAD}{Load from Memory}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+LOAD rD, (#disp, addr)      ; rD = memory[addr + disp]
+LOAD rD, (addr)               ; equivalent to LOAD rD, (#0, addr)
+LOAD rD, (rO, addr)           ; rD = memory[addr + rO]
+LOAD rD, (#disp, addr)+     ; rD = memory[addr + disp]; addr += 1
+LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
+LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rD} is the destination register: any register, including \reg{sr}, the address-register halves, and \reg{pl}. A privileged high address register
+	(\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. A \mnemonic{LOAD}
+	into \reg{pl} is a jump within the current segment: the loaded value replaces the advanced program counter, and an odd
+	value raises an alignment fault at the next fetch. A supervisor-mode \mnemonic{LOAD} into \reg{ph} changes the segment of
+	the next fetch. \texttt{addr} is the address-register pair that supplies the segment and base low word. Immediate-displacement forms use a 16-bit signed
+	displacement. Register-offset forms use \texttt{rO} as the displacement register, always unshifted; \mnemonic{LOAD}
+	does not accept a shift suffix.
+
+	\textbf{Description:}
+
+	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
+	the load, which is useful for array traversal.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if post_increment then
+    effective_address = addr + disp
+    destination = memory[effective_address]
+    addr.low = addr.low + 1
+else
+    effective_address = addr + disp
+    destination = memory[effective_address]
+endif
+; Flags are preserved
+\end{verbatim}
+
+	\textbf{Flags:} Preserved, unless the destination is \reg{sr}, which replaces the flags with the loaded value.
+
+	\textbf{Write-back:} If the condition is true, writes the loaded value to \texttt{rD}. Post-increment forms also write
+	the incremented address-register low word.
+
+	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory read. May raise a
+	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set. For post-increment forms, a
+	wrap of either the effective address or the updated low word raises the fault (Section~\ref{sec:arithmetic-and-address-wraparound}).
+	This fault is retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
+	\texttt{rD} names a privileged high address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}).
+
+	\textbf{Condition field:} If the condition is false, no memory read occurs, no destination register is written, no
+	address register is incremented, and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles with no wait states. Each wait state on either an instruction fetch or the data access adds
+	one cycle (3w cycles for w wait states per access).
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
+	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rD} names a privileged high address
+	register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}); a \mnemonic{LOAD} into \reg{sr} is permitted but updates only
+	bits 7--0.
+
 	\textbf{Opcodes:} \opcode{14} (Indirect Imm), \opcode{15} (Indirect Reg), \opcode{16} (Post-Inc Imm), \opcode{17} (Post-Inc Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
 
 	\begin{center}
@@ -161,6 +219,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -175,6 +234,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -185,6 +245,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -220,64 +281,6 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			      field} below.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-LOAD rD, (#disp, addr)      ; rD = memory[addr + disp]
-LOAD rD, (addr)               ; equivalent to LOAD rD, (#0, addr)
-LOAD rD, (rO, addr)           ; rD = memory[addr + rO]
-LOAD rD, (#disp, addr)+     ; rD = memory[addr + disp]; addr += 1
-LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
-LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
-\end{lstlisting}
-
-	\textbf{Operands:} \texttt{rD} is the destination register: any register, including \reg{sr}, the address-register halves, and \reg{pl}. A privileged high address register
-	(\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. A \mnemonic{LOAD}
-	into \reg{pl} is a jump within the current segment: the loaded value replaces the advanced program counter, and an odd
-	value raises an alignment fault at the next fetch. A supervisor-mode \mnemonic{LOAD} into \reg{ph} changes the segment of
-	the next fetch. \texttt{addr} is the address-register pair that supplies the segment and base low word. Immediate-displacement forms use a 16-bit signed
-	displacement. Register-offset forms use \texttt{rO} as the displacement register, always unshifted; \mnemonic{LOAD}
-	does not accept a shift suffix.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if post_increment then
-    effective_address = addr + disp
-    destination = memory[effective_address]
-    addr.low = addr.low + 1
-else
-    effective_address = addr + disp
-    destination = memory[effective_address]
-endif
-; Flags are preserved
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
-	the load, which is useful for array traversal.
-
-	\textbf{Flags:} Preserved, unless the destination is \reg{sr}, which replaces the flags with the loaded value.
-
-	\textbf{Write-back:} If the condition is true, writes the loaded value to \texttt{rD}. Post-increment forms also write
-	the incremented address-register low word.
-
-	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory read. May raise a
-	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set. For post-increment forms, a
-	wrap of either the effective address or the updated low word raises the fault (Section~\ref{sec:arithmetic-and-address-wraparound}).
-	This fault is retryable (see Chapter~\ref{ch:exceptions}). May raise a privilege-violation fault in protected mode if
-	\texttt{rD} names a privileged high address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}).
-
-	\textbf{Condition field:} If the condition is false, no memory read occurs, no destination register is written, no
-	address register is incremented, and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles with no wait states. Each wait state on either an instruction fetch or the data access adds
-	one cycle (3w cycles for w wait states per access).
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection. A privilege-violation fault is raised in protected mode if \texttt{rD} names a privileged high address
-	register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}); a \mnemonic{LOAD} into \reg{sr} is permitted but updates only
-	bits 7--0.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Load from fixed offset
@@ -298,11 +301,69 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 		\end{lstlisting}
 		\caption{Indirect, Post-Increment, and Register-Offset Loads}
 	\end{example}
-
 \end{instructionbox}
 
 \begin{instructionbox}{STOR}{Store to Memory}
 	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+STOR (#disp, addr), rS      ; memory[addr + disp] = rS
+STOR (addr), rS               ; equivalent to STOR (#0, addr), rS
+STOR (rO, addr), rS           ; memory[addr + rO] = rS
+STOR -(#disp, addr), rS     ; addr -= 1; memory[addr + disp] = rS
+STOR -(addr), rS              ; equivalent to STOR -(#0, addr), rS
+STOR -(rO, addr), rS          ; addr -= 1; memory[addr + rO] = rS
+
+; With optional shift on the source value (register-offset memory forms only)
+STOR (rO, addr), rS, shift           ; Shift rS, then store
+STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{rS} is the source register. \mnemonic{STOR} only reads it, so it may name a privileged high
+	address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) in either mode without a fault. \texttt{addr} is the
+	address-register pair that supplies the segment and base low word.
+	Immediate-displacement forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
+	register and may apply a shift to the source value before storing it.
+
+	\textbf{Description:}
+
+	Stores a 16-bit value from a register into memory. Pre-decrement forms use the decremented address for the store and
+	write the decremented address register value back after the memory access, useful for stack push operations.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if pre_decrement then
+    decremented_low = addr.low - 1
+    effective_address = (addr.high : decremented_low) + offset
+    memory[effective_address] = shift_if_encoded(source)
+    addr.low = decremented_low
+else
+    effective_address = addr + disp
+    memory[effective_address] = shift_if_encoded(source)
+endif
+; Source register and flags are preserved
+\end{verbatim}
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Write-back:} If the condition is true, writes the source value to memory. Pre-decrement forms also write the
+	decremented address-register low word.
+
+	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory write. May raise a
+	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set. For pre-decrement forms, a
+	wrap of either the effective address or the updated low word raises the fault (Section~\ref{sec:arithmetic-and-address-wraparound}).
+	This fault is retryable (see Chapter~\ref{ch:exceptions}).
+
+	\textbf{Condition field:} If the condition is false, no memory write occurs, no address register is decremented, and
+	status flags are preserved.
+
+	\textbf{Timing:} 6 cycles with no wait states. Each wait state on either an instruction fetch or the data access adds
+	one cycle (3w cycles for w wait states per access).
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
+	bus protection. \mnemonic{STOR} only reads \texttt{rS}, so it may name any register, including the privileged ones; in protected mode
+	\reg{sr} is stored with bits 15--8 redacted to zero.
 
 	\textbf{Opcodes:} \opcode{10} (Indirect Imm), \opcode{11} (Indirect Reg), \opcode{12} (Pre-Dec Imm), \opcode{13} (Pre-Dec Reg). See Table~\ref{tab:memory-legal-forms} for the full family of legal forms.
 
@@ -316,6 +377,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -330,6 +392,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -340,6 +403,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -377,65 +441,6 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			      field} below.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-STOR (#disp, addr), rS      ; memory[addr + disp] = rS
-STOR (addr), rS               ; equivalent to STOR (#0, addr), rS
-STOR (rO, addr), rS           ; memory[addr + rO] = rS
-STOR -(#disp, addr), rS     ; addr -= 1; memory[addr + disp] = rS
-STOR -(addr), rS              ; equivalent to STOR -(#0, addr), rS
-STOR -(rO, addr), rS          ; addr -= 1; memory[addr + rO] = rS
-
-; With optional shift on the source value (register-offset memory forms only)
-STOR (rO, addr), rS, shift           ; Shift rS, then store
-STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
-\end{lstlisting}
-
-	\textbf{Operands:} \texttt{rS} is the source register. \mnemonic{STOR} only reads it, so it may name a privileged high
-	address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) in either mode without a fault. \texttt{addr} is the
-	address-register pair that supplies the segment and base low word.
-	Immediate-displacement forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
-	register and may apply a shift to the source value before storing it.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if pre_decrement then
-    decremented_low = addr.low - 1
-    effective_address = (addr.high : decremented_low) + offset
-    memory[effective_address] = shift_if_encoded(source)
-    addr.low = decremented_low
-else
-    effective_address = addr + disp
-    memory[effective_address] = shift_if_encoded(source)
-endif
-; Source register and flags are preserved
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Stores a 16-bit value from a register into memory. Pre-decrement forms use the decremented address for the store and
-	write the decremented address register value back after the memory access, useful for stack push operations.
-
-	\textbf{Flags:} Preserved.
-
-	\textbf{Write-back:} If the condition is true, writes the source value to memory. Pre-decrement forms also write the
-	decremented address-register low word.
-
-	\textbf{Exceptions:} May raise data bus or data bus-protection faults during the memory write. May raise a
-	segment-overflow fault during effective-address calculation when \texttt{SR.A} is set. For pre-decrement forms, a
-	wrap of either the effective address or the updated low word raises the fault (Section~\ref{sec:arithmetic-and-address-wraparound}).
-	This fault is retryable (see Chapter~\ref{ch:exceptions}).
-
-	\textbf{Condition field:} If the condition is false, no memory write occurs, no address register is decremented, and
-	status flags are preserved.
-
-	\textbf{Timing:} 6 cycles with no wait states. Each wait state on either an instruction fetch or the data access adds
-	one cycle (3w cycles for w wait states per access).
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. Protected-mode data-memory access is subject to
-	bus protection. \mnemonic{STOR} only reads \texttt{rS}, so it may name any register, including the privileged ones; in protected mode
-	\reg{sr} is stored with bits 15--8 redacted to zero.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Store to fixed offset
@@ -453,7 +458,6 @@ STOR -(#0, s), r4             ; s -= 1; memory[s] = r4
 		\end{lstlisting}
 		\caption{Indirect, Shifted, and Pre-Decrement Stores}
 	\end{example}
-
 \end{instructionbox}
 
 \section{Common Memory Access Patterns}

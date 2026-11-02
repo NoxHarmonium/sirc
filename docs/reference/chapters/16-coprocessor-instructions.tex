@@ -79,7 +79,53 @@ Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 \begin{instructionbox}{COPI/COPR}{Coprocessor Call}
 	\textbf{Applicability:} SIRC-1, all revisions
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+COPI #opcode                  ; Call coprocessor with 16-bit command
+COPR rS                       ; Call coprocessor with command in rS
+\end{lstlisting}
+
+	\textbf{Operands:} \mnemonic{COPI} takes a 16-bit immediate command operand. \mnemonic{COPR} takes any register
+	name as its source; its 16-bit value is used as the command operand. A protected-mode \mnemonic{COPR sr} reads
+	only the low byte of \reg{sr} and therefore always builds a coprocessor-0 command. Hidden encoded register and
+	shift fields are canonicalized by the assembler and are not programmer-visible operands.
+
+	\textbf{Description:}
+
+	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
+	next nibble selects that coprocessor's operation. The remaining low byte is defined by the selected operation.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    CSR = command_operand
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} Writes the command operand to the CSR.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} May raise privilege-violation faults for supervisor-only operations in protected mode. May raise
+	invalid-opcode faults for missing coprocessors and for operations that a coprocessor which is present does not
+	implement. Reserved operand values are architecturally undefined (see the Model and Revision Policy,
+	Section~\ref{sec:coprocessor-model-revision-policy}).
+
+	\textbf{Condition field:} If the condition is false, no command is dispatched, the CSR is preserved,
+	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles for the processing-unit call, plus a further 6-cycle coprocessor dispatch slot (12
+	cycles in total), plus any bus wait states. A command naming coprocessor 0 has no dispatch slot and takes 6 cycles, as
+	does a call whose condition is false. \mnemonic{RSET}, \mnemonic{WAIT}, DMA commands, and maths-unit commands differ;
+	see their own entries.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
+	\texttt{0x8}--\texttt{0xF} are supervisor-only and raise privilege-violation faults when executed. For \mnemonic{COPR} the privilege
+	decision is made on the runtime value of \reg{rS} sampled during decode, not on any encoded field, so whether a
+	given \mnemonic{COPR} instruction faults depends on register contents.
+
 	\textbf{Opcodes:} \opcode{0F} (Immediate), \opcode{3F} (Register). Opcode \opcode{2F} is undocumented (Appendix~\ref{appendix:undocumented}); it is not a coprocessor call. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -90,6 +136,7 @@ Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -123,51 +170,6 @@ Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-COPI #opcode                  ; Call coprocessor with 16-bit command
-COPR rS                       ; Call coprocessor with command in rS
-\end{lstlisting}
-
-	\textbf{Operands:} \mnemonic{COPI} takes a 16-bit immediate command operand. \mnemonic{COPR} takes any register
-	name as its source; its 16-bit value is used as the command operand. A protected-mode \mnemonic{COPR sr} reads
-	only the low byte of \reg{sr} and therefore always builds a coprocessor-0 command. Hidden encoded register and
-	shift fields are canonicalized by the assembler and are not programmer-visible operands.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    CSR = command_operand
-endif
-\end{verbatim}
-
-	\textbf{Description:}
-
-	Transfers a command to a coprocessor. For the standard command layout, the high nibble selects the coprocessor and the
-	next nibble selects that coprocessor's operation. The remaining low byte is defined by the selected operation.
-
-	\textbf{Write-back:} Writes the command operand to the CSR.
-
-	\textbf{Flags:} Preserved by the coprocessor-call instruction.
-
-	\textbf{Exceptions:} May raise privilege-violation faults for supervisor-only operations in protected mode. May raise
-	invalid-opcode faults for missing coprocessors and for operations that a coprocessor which is present does not
-	implement. Reserved operand values are architecturally undefined (see the Model and Revision Policy,
-	Section~\ref{sec:coprocessor-model-revision-policy}).
-
-	\textbf{Condition field:} If the condition is false, no command is dispatched, the CSR is preserved,
-	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles for the processing-unit call, plus a further 6-cycle coprocessor dispatch slot (12
-	cycles in total), plus any bus wait states. A command naming coprocessor 0 has no dispatch slot and takes 6 cycles, as
-	does a call whose condition is false. \mnemonic{RSET}, \mnemonic{WAIT}, DMA commands, and maths-unit commands differ;
-	see their own entries.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
-	\texttt{0x8}--\texttt{0xF} are supervisor-only and raise privilege-violation faults when executed. For \mnemonic{COPR} the privilege
-	decision is made on the runtime value of \reg{rS} sampled during decode, not on any encoded field, so whether a
-	given \mnemonic{COPR} instruction faults depends on register contents.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Wait for interrupt (Exception Unit)
@@ -184,7 +186,6 @@ COPI #0x1180                  ; Coprocessor 1, operation 0x1, vector 0x80
 		\end{lstlisting}
 		\caption{Direct Coprocessor Calls}
 	\end{example}
-
 \end{instructionbox}
 
 \section{Coprocessor Compatibility}
@@ -284,7 +285,61 @@ is architecturally undefined.
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
+	\textbf{Syntax:} \texttt{EXCP \#vector}
+
+	\textbf{Operands:} \texttt{\#vector} is the low 8-bit software exception vector selector.
+
+	\textbf{Description:} Triggers a software exception at the specified vector. Used by programs running in protected
+	mode to invoke system calls or request supervisor-mode services through the user trap vectors, \texttt{0x60}--\texttt{0xFF}; a vector
+	below \texttt{0x60} raises a privilege-violation fault in protected mode.
+
+	In supervisor mode, a vector below \texttt{0x60} is accepted and runs the handler that vector points at, but as an
+	ordinary trap: priority 1, state saved in link register 0, exception level 1. Nothing else about the exception that
+	normally uses that vector happens. \textbf{Warning:} a handler entered this way that reads its own link register with
+	\mnemonic{ETFR} sees stale contents. A fault handler, for example, reads link register 7 and gets the metadata and
+	return address of whichever fault last ran, not this call. A plain \mnemonic{RETE} still returns correctly, because it
+	uses link register 0 at exception level 1.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    if protected_mode and vector < 0x60 then
+        raise privilege_violation_fault
+    else if current_exception_level != 0 then
+        CSR = 0x0000                ; discard the trap
+    else
+        link[0] = { address of next instruction, sr,
+                    current_exception_level }
+        sr.P = 0
+        sr.T = 0
+        sr.EA = 1
+        current_exception_level = 1
+        pc = vector_table[vector]
+    endif
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction; exception entry effects are defined by the exception
+	unit.
+
+	\textbf{Exceptions:} Dispatches a software exception through the exception unit. Raises a privilege-violation fault
+	in protected mode if the selected vector is below \texttt{0x60}. Software exceptions are accepted only at exception level 0;
+	an otherwise legal \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
+	is cleared, no vector is fetched, and no fault is raised. The privilege check comes first, so a protected-mode
+	\mnemonic{EXCP} with a vector below \texttt{0x60} inside a handler still raises a privilege-violation fault. Nested
+	system calls from a handler are therefore not possible.
+
+	\textbf{Condition field:} If the condition is false, no trap is dispatched and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot. A discarded \mnemonic{EXCP}
+	(inside a handler) also takes 12 cycles: its dispatch slot runs with no-op phases.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x1100 | vector}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -307,59 +362,6 @@ is architecturally undefined.
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:} \texttt{EXCP \#vector}
-
-	\textbf{Operands:} \texttt{\#vector} is the low 8-bit software exception vector selector.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    if protected_mode and vector < 0x60 then
-        raise privilege_violation_fault
-    else if current_exception_level != 0 then
-        CSR = 0x0000                ; discard the trap
-    else
-        link[0] = { address of next instruction, sr,
-                    current_exception_level }
-        sr.P = 0
-        sr.T = 0
-        sr.EA = 1
-        current_exception_level = 1
-        pc = vector_table[vector]
-    endif
-endif
-\end{verbatim}
-
-	\textbf{Description:} Triggers a software exception at the specified vector. Used by programs running in protected
-	mode to invoke system calls or request supervisor-mode services through the user trap vectors, \texttt{0x60}--\texttt{0xFF}; a vector
-	below \texttt{0x60} raises a privilege-violation fault in protected mode.
-
-	In supervisor mode, a vector below \texttt{0x60} is accepted and runs the handler that vector points at, but as an
-	ordinary trap: priority 1, state saved in link register 0, exception level 1. Nothing else about the exception that
-	normally uses that vector happens. \textbf{Warning:} a handler entered this way that reads its own link register with
-	\mnemonic{ETFR} sees stale contents. A fault handler, for example, reads link register 7 and gets the metadata and
-	return address of whichever fault last ran, not this call. A plain \mnemonic{RETE} still returns correctly, because it
-	uses link register 0 at exception level 1.
-
-	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
-
-	\textbf{Flags:} Preserved by the coprocessor-call instruction; exception entry effects are defined by the exception
-	unit.
-
-	\textbf{Exceptions:} Dispatches a software exception through the exception unit. Raises a privilege-violation fault
-	in protected mode if the selected vector is below \texttt{0x60}. Software exceptions are accepted only at exception level 0;
-	an otherwise legal \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
-	is cleared, no vector is fetched, and no fault is raised. The privilege check comes first, so a protected-mode
-	\mnemonic{EXCP} with a vector below \texttt{0x60} inside a handler still raises a privilege-violation fault. Nested
-	system calls from a handler are therefore not possible.
-
-	\textbf{Condition field:} If the condition is false, no trap is dispatched and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot. A discarded \mnemonic{EXCP}
-	(inside a handler) also takes 12 cycles: its dispatch slot runs with no-op phases.
-
-	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
-
 	\begin{example}
 		\begin{lstlisting}
 MOVI r1, #0x41                 ; Character to print ('A')
@@ -373,7 +375,45 @@ EXCP #0x80                     ; Trap to OS print routine
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
+	\textbf{Syntax:} \texttt{WAIT}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Stops instruction fetch and places the CPU in a low-power wait state. The CPU issues no bus
+	cycles while waiting. It leaves the wait state only when a hardware interrupt can be taken -- one that is enabled
+	(Level 5 is always enabled) and whose priority is higher than the current exception level -- or when the CPU is
+	reset. A request of that kind that is already pending when \mnemonic{WAIT} starts ends the wait at once, so a
+	request that arrives just before the \mnemonic{WAIT} is not missed. Interrupts masked by the hardware interrupt
+	enable bits (\texttt{SR.E1}--\texttt{SR.E4}), or outranked by the current exception level, do not wake the CPU; they
+	stay pending under the normal rules. Faults and software exceptions cannot occur while waiting.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    if protected_mode then
+        raise privilege_violation_fault
+    else
+        stop instruction fetch
+        wait until a hardware interrupt can be taken or the CPU is reset
+    endif
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition field:} If the condition is false, the CPU does not enter wait state and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot, then idle until an interrupt that
+	can be taken arrives or the CPU is reset.
+
+	\textbf{Privilege:} Supervisor mode only.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x1900}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -395,43 +435,6 @@ EXCP #0x80                     ; Trap to OS print routine
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:} \texttt{WAIT}
-
-	\textbf{Operands:} None.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    if protected_mode then
-        raise privilege_violation_fault
-    else
-        stop instruction fetch
-        wait until a hardware interrupt can be taken or the CPU is reset
-    endif
-endif
-\end{verbatim}
-
-	\textbf{Description:} Stops instruction fetch and places the CPU in a low-power wait state. The CPU issues no bus
-	cycles while waiting. It leaves the wait state only when a hardware interrupt can be taken -- one that is enabled
-	(Level 5 is always enabled) and whose priority is higher than the current exception level -- or when the CPU is
-	reset. A request of that kind that is already pending when \mnemonic{WAIT} starts ends the wait at once, so a
-	request that arrives just before the \mnemonic{WAIT} is not missed. Interrupts masked by the hardware interrupt
-	enable bits (\texttt{SR.E1}--\texttt{SR.E4}), or outranked by the current exception level, do not wake the CPU; they
-	stay pending under the normal rules. Faults and software exceptions cannot occur while waiting.
-
-	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
-
-	\textbf{Flags:} Preserved by the coprocessor-call instruction.
-
-	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
-
-	\textbf{Condition field:} If the condition is false, the CPU does not enter wait state and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot, then idle until an interrupt that
-	can be taken arrives or the CPU is reset.
-
-	\textbf{Privilege:} Supervisor mode only.
-
 	\begin{example}
 		\begin{lstlisting}
 :idle_loop
@@ -446,7 +449,46 @@ endif
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
+	\textbf{Syntax:} \texttt{RETE}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register.
+	\texttt{SR.EA} is not taken from the saved status register: it is set if the restored exception level is non-zero
+	and cleared if it is zero, so it always agrees with the exception level even if the saved value was edited with
+	\mnemonic{ETTR}. Executing \mnemonic{RETE} at exception level 0, that is, outside any exception or fault handler, is architecturally
+	undefined.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    if protected_mode then
+        raise privilege_violation_fault
+    else
+        n = current_exception_level - 1
+        pc = link[n].return_address
+        sr = link[n].return_status
+        current_exception_level = link[n].saved_level
+        sr.EA = (current_exception_level != 0)
+    endif
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+
+	\textbf{Flags:} Restored by the exception unit as part of exception return.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition field:} If the condition is false, no exception return occurs and current status flags are
+	preserved.
+
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
+
+	\textbf{Privilege:} Supervisor mode only.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x1A00}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -468,44 +510,6 @@ endif
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:} \texttt{RETE}
-
-	\textbf{Operands:} None.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    if protected_mode then
-        raise privilege_violation_fault
-    else
-        n = current_exception_level - 1
-        pc = link[n].return_address
-        sr = link[n].return_status
-        current_exception_level = link[n].saved_level
-        sr.EA = (current_exception_level != 0)
-    endif
-endif
-\end{verbatim}
-
-	\textbf{Description:} Returns from an exception handler by restoring the saved program counter and status register.
-	\texttt{SR.EA} is not taken from the saved status register: it is set if the restored exception level is non-zero
-	and cleared if it is zero, so it always agrees with the exception level even if the saved value was edited with
-	\mnemonic{ETTR}. Executing \mnemonic{RETE} at exception level 0, that is, outside any exception or fault handler, is architecturally
-	undefined.
-
-	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
-
-	\textbf{Flags:} Restored by the exception unit as part of exception return.
-
-	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
-
-	\textbf{Condition field:} If the condition is false, no exception return occurs and current status flags are
-	preserved.
-
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
-
-	\textbf{Privilege:} Supervisor mode only.
-
 	\begin{example}
 		\begin{lstlisting}
 :timer_handler
@@ -520,7 +524,48 @@ endif
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
+	\textbf{Syntax:} \texttt{RSET}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Requests a full processor reset. The status register, the exception level, and the pending
+	hardware exceptions are cleared when reset is requested. The reset output is then asserted and held for 6 cycles,
+	after which the exception unit fetches the reset vector and loads the program counter from it
+	(Section~\ref{sec:reset-output-hold}). General-purpose registers, the \reg{a}, \reg{l}, and \reg{s} pairs, and the exception link
+	registers are not cleared by reset; software must treat their contents as architecturally undefined.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    if protected_mode then
+        raise privilege_violation_fault
+    else
+        sr = 0x0000
+        current_exception_level = 0
+        clear pending hardware exceptions (and the L5 overrun flag)
+        assert reset output for 6 cycles
+        pc = vector_table[reset_vector]
+    endif
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit, except that the reset request
+	replaces the 6-cycle dispatch slot.
+
+	\textbf{Flags:} Reset by the exception unit as part of reset processing.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition field:} If the condition is false, no reset occurs and current status flags are preserved.
+
+	\textbf{Timing:} 6 cycles for the call, plus a 6-cycle \activelow{RSTO} hold, plus 6 cycles for the exception unit to
+	fetch the reset vector -- 18 cycles from the \mnemonic{RSET} fetch to the first instruction of the reset handler (no
+	dispatch slot).
+
+	\textbf{Privilege:} Supervisor mode only.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x1B00}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -542,46 +587,6 @@ endif
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:} \texttt{RSET}
-
-	\textbf{Operands:} None.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    if protected_mode then
-        raise privilege_violation_fault
-    else
-        sr = 0x0000
-        current_exception_level = 0
-        clear pending hardware exceptions (and the L5 overrun flag)
-        assert reset output for 6 cycles
-        pc = vector_table[reset_vector]
-    endif
-endif
-\end{verbatim}
-
-	\textbf{Description:} Requests a full processor reset. The status register, the exception level, and the pending
-	hardware exceptions are cleared when reset is requested. The reset output is then asserted and held for 6 cycles,
-	after which the exception unit fetches the reset vector and loads the program counter from it
-	(Section~\ref{sec:reset-output-hold}). General-purpose registers, the \reg{a}, \reg{l}, and \reg{s} pairs, and the exception link
-	registers are not cleared by reset; software must treat their contents as architecturally undefined.
-
-	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit, except that the reset request
-	replaces the 6-cycle dispatch slot.
-
-	\textbf{Flags:} Reset by the exception unit as part of reset processing.
-
-	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
-
-	\textbf{Condition field:} If the condition is false, no reset occurs and current status flags are preserved.
-
-	\textbf{Timing:} 6 cycles for the call, plus a 6-cycle \activelow{RSTO} hold, plus 6 cycles for the exception unit to
-	fetch the reset vector -- 18 cycles from the \mnemonic{RSET} fetch to the first instruction of the reset handler (no
-	dispatch slot).
-
-	\textbf{Privilege:} Supervisor mode only.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Request a full processor reset from supervisor code
@@ -595,7 +600,54 @@ RSET                           ; Reboots through the reset vector
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 1 (Exception Unit), a required coprocessor
 	present in all SIRC-1 models.
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+ETFR #n                       ; Transfer saved address and status to a and r7
+ETFR a, #n                    ; Transfer saved address to a only
+ETFR r7, #n                   ; Transfer saved status to r7 only
+ETTR #n                       ; Transfer a and r7 to saved address and status
+ETTR #n, a                    ; Transfer a to saved address only
+ETTR #n, r7                   ; Transfer r7 to saved status only
+\end{lstlisting}
+
+	\textbf{Operands:} \texttt{\#n} selects one of the eight exception link registers and must be in the range
+	\imm{0}--\imm{7}. Link register \imm{7} holds fault metadata; link register $L-1$ holds the state saved on entry to
+	an exception at level $L$. Values above \imm{7} are architecturally undefined. Optional operands select whether to transfer the saved
+	return address, saved status register, or both.
+
+	\textbf{Description:} \mnemonic{ETFR} copies saved exception state from an exception link register to CPU registers.
+	\mnemonic{ETTR} copies CPU register state back to the selected exception link register before returning.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if condition_true then
+    if protected_mode then
+        raise privilege_violation_fault
+    else if operation == ETFR then
+        if x includes saved address then a = link[n].return_address
+        if x includes saved status then r7 = link[n].return_status
+    else
+        if x includes saved address then link[n].return_address = a
+        if x includes saved status then link[n].return_status = r7
+    endif
+endif
+\end{verbatim}
+
+	\textbf{Write-back:} \mnemonic{ETFR} writes selected saved state to \reg{a}, \reg{r7}, or both. \mnemonic{ETTR} writes
+	\reg{a}, \reg{r7}, or both to selected saved exception state.
+
+	\textbf{Flags:} Preserved by the coprocessor-call instruction.
+
+	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
+
+	\textbf{Condition field:} If the condition is false, no transfer occurs and status flags are preserved.
+
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
+
+	\textbf{Privilege:} Supervisor mode only.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x1Cxy} or \texttt{COPI \#0x1Dxy}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -606,6 +658,7 @@ RSET                           ; Reboots through the reset vector
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -629,52 +682,6 @@ RSET                           ; Reboots through the reset vector
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-ETFR #n                       ; Transfer saved address and status to a and r7
-ETFR a, #n                    ; Transfer saved address to a only
-ETFR r7, #n                   ; Transfer saved status to r7 only
-ETTR #n                       ; Transfer a and r7 to saved address and status
-ETTR #n, a                    ; Transfer a to saved address only
-ETTR #n, r7                   ; Transfer r7 to saved status only
-\end{lstlisting}
-
-	\textbf{Operands:} \texttt{\#n} selects one of the eight exception link registers and must be in the range
-	\imm{0}--\imm{7}. Link register \imm{7} holds fault metadata; link register $L-1$ holds the state saved on entry to
-	an exception at level $L$. Values above \imm{7} are architecturally undefined. Optional operands select whether to transfer the saved
-	return address, saved status register, or both.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if condition_true then
-    if protected_mode then
-        raise privilege_violation_fault
-    else if operation == ETFR then
-        if x includes saved address then a = link[n].return_address
-        if x includes saved status then r7 = link[n].return_status
-    else
-        if x includes saved address then link[n].return_address = a
-        if x includes saved status then link[n].return_status = r7
-    endif
-endif
-\end{verbatim}
-
-	\textbf{Description:} \mnemonic{ETFR} copies saved exception state from an exception link register to CPU registers.
-	\mnemonic{ETTR} copies CPU register state back to the selected exception link register before returning.
-
-	\textbf{Write-back:} \mnemonic{ETFR} writes selected saved state to \reg{a}, \reg{r7}, or both. \mnemonic{ETTR} writes
-	\reg{a}, \reg{r7}, or both to selected saved exception state.
-
-	\textbf{Flags:} Preserved by the coprocessor-call instruction.
-
-	\textbf{Exceptions:} Raises a privilege-violation fault if executed in protected mode.
-
-	\textbf{Condition field:} If the condition is false, no transfer occurs and status flags are preserved.
-
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
-
-	\textbf{Privilege:} Supervisor mode only.
 
 	\begin{example}
 		\begin{lstlisting}
@@ -947,36 +954,14 @@ address (\mnemonic{ETFR} \reg{a}, \imm{6}) against the expected range before tre
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
 	on models that do not implement it.
 
-	\textbf{Assembles to:} \texttt{COPI \#0x2800 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0F}} &
-			\bitbox{4}{0x0} &
-			\bitbox{16}{0x2800 | operand} &
-			\bitbox{2}{00} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
-		\item \textbf{Immediate (bits 21--6):} \texttt{0x2800} \texttt{|} operand; bits 15--12 select coprocessor 2 and
-		      bits 11--8 select operation \texttt{0x8}. Within the low operand byte: bits 7--6 select the address
-		      register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved --
-		      this is not the AF address-register encoding), bit 5 selects direction (\texttt{0} forward, \texttt{1}
-		      backward), bits 4--3 are reserved and written as zero, and bits 2--0 hold the count magnitude,
-		      \texttt{0}--\texttt{7}.
-		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:} \texttt{DMAR addr, \#n}
 
 	\textbf{Operands:} \texttt{addr} must be \reg{a}, \reg{l}, or \reg{s}. \texttt{\#n} is a literal count operand in the
 	range \texttt{\#-7}--\texttt{\#7}; the assembler rejects a literal outside that range.
+
+	\textbf{Description:} Reads sequential words from the selected address register into \reg{r1} through \reg{rn}.
+	Positive counts read from the current address and advance it. Negative counts first move the address register backward
+	by the count magnitude, then read the ascending memory block from that new address.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -990,10 +975,6 @@ for i in 1 to count (inclusive):
 if n > 0:
     addr.low = addr.low + count
 \end{verbatim}
-
-	\textbf{Description:} Reads sequential words from the selected address register into \reg{r1} through \reg{rn}.
-	Positive counts read from the current address and advance it. Negative counts first move the address register backward
-	by the count magnitude, then read the ascending memory block from that new address.
 
 	\textbf{Write-back:} A successful positive-count \mnemonic{DMAR} advances the selected address register by the count
 	magnitude. A successful negative-count \mnemonic{DMAR} leaves the selected address register at its decremented start
@@ -1031,6 +1012,33 @@ if n > 0:
 
 	\textbf{Privilege:} Supervisor mode only.
 
+	\textbf{Assembles to:} \texttt{COPI \#0x2800 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2800 | operand} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
+		\item \textbf{Immediate (bits 21--6):} \texttt{0x2800} \texttt{|} operand; bits 15--12 select coprocessor 2 and
+		      bits 11--8 select operation \texttt{0x8}. Within the low operand byte: bits 7--6 select the address
+		      register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved --
+		      this is not the AF address-register encoding), bit 5 selects direction (\texttt{0} forward, \texttt{1}
+		      backward), bits 4--3 are reserved and written as zero, and bits 2--0 hold the count magnitude,
+		      \texttt{0}--\texttt{7}.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
 	\begin{example}
 		\begin{lstlisting}
 MOVI ah, #0x0040
@@ -1045,36 +1053,16 @@ DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
 	on models that do not implement it.
 
-	\textbf{Assembles to:} \texttt{COPI \#0x2900 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0F}} &
-			\bitbox{4}{0x0} &
-			\bitbox{16}{0x2900 | operand} &
-			\bitbox{2}{00} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
-		\item \textbf{Immediate (bits 21--6):} \texttt{0x2900} \texttt{|} operand; bits 15--12 select coprocessor 2 and
-		      bits 11--8 select operation \texttt{0x9}. Within the low operand byte: bits 7--6 select the address
-		      register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved --
-		      this is not the AF address-register encoding), bit 5 selects direction (\texttt{0} forward, \texttt{1}
-		      backward), bits 4--3 are reserved and written as zero, and bits 2--0 hold the count magnitude,
-		      \texttt{0}--\texttt{7}.
-		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:} \texttt{DMAW addr, \#n}
 
 	\textbf{Operands:} \texttt{addr} must be \reg{a}, \reg{l}, or \reg{s}. \texttt{\#n} is a literal count operand in the
 	range \texttt{\#-7}--\texttt{\#7}; the assembler rejects a literal outside that range.
+
+	\textbf{Description:} Writes \reg{r1} through \reg{rn} to sequential words at the selected address register. Positive
+	counts write from the current address and advance it. Negative counts first move the address register backward by the
+	count magnitude, then write the ascending memory block from that new address. Register order always corresponds to
+	ascending memory addresses, so \texttt{DMAW s, \#-n} followed by \texttt{DMAR s, \#n} restores \reg{r1} through
+	\reg{rn}.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1088,12 +1076,6 @@ for i in 1 to count (inclusive):
 if n > 0:
     addr.low = addr.low + count
 \end{verbatim}
-
-	\textbf{Description:} Writes \reg{r1} through \reg{rn} to sequential words at the selected address register. Positive
-	counts write from the current address and advance it. Negative counts first move the address register backward by the
-	count magnitude, then write the ascending memory block from that new address. Register order always corresponds to
-	ascending memory addresses, so \texttt{DMAW s, \#-n} followed by \texttt{DMAR s, \#n} restores \reg{r1} through
-	\reg{rn}.
 
 	\textbf{Write-back:} A successful positive-count \mnemonic{DMAW} advances the selected address register by the count
 	magnitude. A successful negative-count \mnemonic{DMAW} leaves the selected address register at its decremented start
@@ -1131,6 +1113,33 @@ if n > 0:
 
 	\textbf{Privilege:} Supervisor mode only.
 
+	\textbf{Assembles to:} \texttt{COPI \#0x2900 | operand}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2900 | operand} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
+		\item \textbf{Immediate (bits 21--6):} \texttt{0x2900} \texttt{|} operand; bits 15--12 select coprocessor 2 and
+		      bits 11--8 select operation \texttt{0x9}. Within the low operand byte: bits 7--6 select the address
+		      register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved --
+		      this is not the AF address-register encoding), bit 5 selects direction (\texttt{0} forward, \texttt{1}
+		      backward), bits 4--3 are reserved and written as zero, and bits 2--0 hold the count magnitude,
+		      \texttt{0}--\texttt{7}.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
 	\begin{example}
 		\begin{lstlisting}
 MOVI ah, #0x0040
@@ -1145,32 +1154,13 @@ DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
 	on models that do not implement it.
 
-	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0F}} &
-			\bitbox{4}{0x0} &
-			\bitbox{16}{0x2A00 | \#n} &
-			\bitbox{2}{00} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
-		\item \textbf{Immediate (bits 21--6):} \texttt{0x2A00} \texttt{|} \texttt{\#n}; bits 15--12 select coprocessor
-		      2, bits 11--8 select operation \texttt{0xA}, and bits 7--0 hold \texttt{\#n}, \texttt{0}--\texttt{255}.
-		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:} \texttt{DMAT a, l, \#n}
 
 	\textbf{Operands:} The source and destination address registers must be written explicitly as \reg{a} and \reg{l}.
 	\texttt{\#n} is an 8-bit literal count operand in the range 0--255. A count of zero is a no-op.
+
+	\textbf{Description:} Copies sequential words from the address in \reg{a} to the address in \reg{l}, using
+	\reg{r1}--\reg{r7} as an internal transfer window in chunks of up to seven words.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1183,9 +1173,6 @@ while remaining > 0:
     l.low = l.low + chunk
     remaining = remaining - chunk
 \end{verbatim}
-
-	\textbf{Description:} Copies sequential words from the address in \reg{a} to the address in \reg{l}, using
-	\reg{r1}--\reg{r7} as an internal transfer window in chunks of up to seven words.
 
 	\textbf{Write-back:} A successful non-zero \mnemonic{DMAT} advances \reg{a} and \reg{l} by the number of words
 	transferred. Address-register high words are not changed by the transfer increments. Each chunk writes
@@ -1221,6 +1208,29 @@ while remaining > 0:
 	cycles.
 
 	\textbf{Privilege:} Supervisor mode only.
+
+	\textbf{Assembles to:} \texttt{COPI \#0x2A00 | n}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0F}} &
+			\bitbox{4}{0x0} &
+			\bitbox{16}{0x2A00 | \#n} &
+			\bitbox{2}{00} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
+		\item \textbf{Immediate (bits 21--6):} \texttt{0x2A00} \texttt{|} \texttt{\#n}; bits 15--12 select coprocessor
+		      2, bits 11--8 select operation \texttt{0xA}, and bits 7--0 hold \texttt{\#n}, \texttt{0}--\texttt{255}.
+		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\textbf{Overlap:} Overlapping source and destination ranges are architecturally undefined unless the source and
 	destination addresses are identical.
@@ -1316,7 +1326,52 @@ registers and status flags are preserved.
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 3 (Integer Maths Unit), an optional
 	coprocessor absent on models that do not implement it.
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+MULU                          ; Unsigned multiply
+MULS                          ; Signed multiply
+\end{lstlisting}
+
+	\textbf{Operands:} None in assembly syntax. The operations multiply \reg{r1} by \reg{r2}.
+
+	\textbf{Description:} Multiplies two 16-bit operands and writes the 32-bit product to \reg{r1}:\reg{r2}, high word
+	first. \mnemonic{MULU} treats both inputs as unsigned. \mnemonic{MULS} treats both inputs as two's-complement signed
+	values.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+MULU:
+    product = unsigned(r1) * unsigned(r2)
+    r1 = product[31:16]
+    r2 = product[15:0]
+    r3 = 0
+
+MULS:
+    product = signed(r1) * signed(r2)
+    r1 = product[31:16]
+    r2 = product[15:0]
+    r3 = 0
+\end{verbatim}
+
+	\textbf{Write-back:} Writes \reg{r1}, \reg{r2}, and \reg{r3}.
+
+	\textbf{Flags:} CPU status flags are preserved. \reg{r3} is written as zero.
+
+	\textbf{Exceptions:} Missing maths hardware, or an unsupported multiply operation on a maths coprocessor that is
+	present, raises an invalid-opcode fault (see the Model and Revision Policy,
+	Section~\ref{sec:coprocessor-model-revision-policy}). These operations perform no data-memory bus access.
+
+	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
+	preserved.
+
+	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
+	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
+	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}).
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x3000} or \texttt{COPI \#0x3100}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1327,6 +1382,7 @@ registers and status flags are preserved.
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1349,50 +1405,6 @@ registers and status flags are preserved.
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:}
-	\begin{lstlisting}
-MULU                          ; Unsigned multiply
-MULS                          ; Signed multiply
-\end{lstlisting}
-
-	\textbf{Operands:} None in assembly syntax. The operations multiply \reg{r1} by \reg{r2}.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-MULU:
-    product = unsigned(r1) * unsigned(r2)
-    r1 = product[31:16]
-    r2 = product[15:0]
-    r3 = 0
-
-MULS:
-    product = signed(r1) * signed(r2)
-    r1 = product[31:16]
-    r2 = product[15:0]
-    r3 = 0
-\end{verbatim}
-
-	\textbf{Description:} Multiplies two 16-bit operands and writes the 32-bit product to \reg{r1}:\reg{r2}, high word
-	first. \mnemonic{MULU} treats both inputs as unsigned. \mnemonic{MULS} treats both inputs as two's-complement signed
-	values.
-
-	\textbf{Write-back:} Writes \reg{r1}, \reg{r2}, and \reg{r3}.
-
-	\textbf{Flags:} CPU status flags are preserved. \reg{r3} is written as zero.
-
-	\textbf{Exceptions:} Missing maths hardware, or an unsupported multiply operation on a maths coprocessor that is
-	present, raises an invalid-opcode fault (see the Model and Revision Policy,
-	Section~\ref{sec:coprocessor-model-revision-policy}). These operations perform no data-memory bus access.
-
-	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
-	preserved.
-
-	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
-	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
-	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}).
-
-	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
-
 	\begin{example}
 		\begin{lstlisting}
 MOVI r1, #1000                ; Multiplicand
@@ -1407,7 +1419,52 @@ MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 3 (Integer Maths Unit), an optional
 	coprocessor absent on models that do not implement it.
 
+	\textbf{Syntax:}
+	\begin{lstlisting}
+DIVU                          ; Unsigned divide
+DIVS                          ; Signed divide
+\end{lstlisting}
+
+	\textbf{Operands:} None in assembly syntax. The dividend is \reg{r1}:\reg{r2}, high word first. The divisor is
+	\reg{r3}.
+
+	\textbf{Description:} Divides a 32-bit dividend by a 16-bit divisor. Successful division writes the remainder to
+	\reg{r1}, the quotient to \reg{r2}, and zero to \reg{r3}.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+if divisor is zero:
+    r3 = E | DZ
+else if quotient is outside 0..0xFFFF (DIVU) or -32768..32767 (DIVS):
+    r3 = E | OV
+else:
+    r1 = remainder
+    r2 = quotient
+    r3 = 0
+\end{verbatim}
+
+	\textbf{Write-back:} Successful division writes \reg{r1}, \reg{r2}, and \reg{r3}. Divide-by-zero and
+	quotient-overflow cases leave \reg{r1}:\reg{r2} unchanged and write the maths status word to \reg{r3}.
+
+	\textbf{Flags:} CPU status flags are preserved. Maths errors are reported through \reg{r3}, not through \reg{sr}.
+
+	\textbf{Exceptions:} Missing maths hardware, or an unsupported divide operation on a maths coprocessor that is
+	present, raises an invalid-opcode fault (see the Model and Revision Policy,
+	Section~\ref{sec:coprocessor-model-revision-policy}). Divide by
+	zero and quotient overflow do not raise arithmetic exceptions. These operations perform no data-memory bus access.
+
+	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
+	preserved.
+
+	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
+	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
+	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}). Software emulation timing is
+	defined by the invalid-opcode handler.
+
+	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
+
 	\textbf{Assembles to:} \texttt{COPI \#0x3200} or \texttt{COPI \#0x3300}. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1418,6 +1475,7 @@ MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -1439,50 +1497,6 @@ MULU                          ; r1:r2 = 1000 * 2000, r3 = 0
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
-
-	\textbf{Syntax:}
-	\begin{lstlisting}
-DIVU                          ; Unsigned divide
-DIVS                          ; Signed divide
-\end{lstlisting}
-
-	\textbf{Operands:} None in assembly syntax. The dividend is \reg{r1}:\reg{r2}, high word first. The divisor is
-	\reg{r3}.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-if divisor is zero:
-    r3 = E | DZ
-else if quotient is outside 0..0xFFFF (DIVU) or -32768..32767 (DIVS):
-    r3 = E | OV
-else:
-    r1 = remainder
-    r2 = quotient
-    r3 = 0
-\end{verbatim}
-
-	\textbf{Description:} Divides a 32-bit dividend by a 16-bit divisor. Successful division writes the remainder to
-	\reg{r1}, the quotient to \reg{r2}, and zero to \reg{r3}.
-
-	\textbf{Write-back:} Successful division writes \reg{r1}, \reg{r2}, and \reg{r3}. Divide-by-zero and
-	quotient-overflow cases leave \reg{r1}:\reg{r2} unchanged and write the maths status word to \reg{r3}.
-
-	\textbf{Flags:} CPU status flags are preserved. Maths errors are reported through \reg{r3}, not through \reg{sr}.
-
-	\textbf{Exceptions:} Missing maths hardware, or an unsupported divide operation on a maths coprocessor that is
-	present, raises an invalid-opcode fault (see the Model and Revision Policy,
-	Section~\ref{sec:coprocessor-model-revision-policy}). Divide by
-	zero and quotient overflow do not raise arithmetic exceptions. These operations perform no data-memory bus access.
-
-	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
-	preserved.
-
-	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
-	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
-	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}). Software emulation timing is
-	defined by the invalid-opcode handler.
-
-	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
 	\textbf{Signed division:} \mnemonic{DIVS} treats \reg{r1}:\reg{r2} as a 32-bit two's-complement dividend and
 	\reg{r3} as a 16-bit two's-complement divisor. The quotient is truncated toward zero and the remainder has the sign
