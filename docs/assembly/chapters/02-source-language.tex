@@ -1,7 +1,7 @@
 \chapter{Source Language}
 \label{ch:source-language}
 
-\section{Lines, Whitespace and Comments}
+\section{Lines, Whitespace, and Comments}
 
 A source file is a sequence of instructions, directives and labels separated by whitespace. By convention each is
 written on its own line, with directives and instructions indented under the label they follow. Whitespace, including
@@ -17,7 +17,7 @@ A comment starts with a semicolon and runs to the end of the line. It may follow
 
 \section{Case}
 
-Mnemonics, condition codes, shift types and directives are written in uppercase. Register names are written in
+Mnemonics, condition codes, shift types, and directives are written in uppercase. Register names are written in
 lowercase. The status update letters inside square brackets (Section~\ref{sec:status-update-syntax}) may be either
 case. Label and constant names are case-sensitive.
 
@@ -33,7 +33,7 @@ before its name, and referred to by writing an at sign before it:
 \end{lstlisting}
 
 The colon is written before the name, not after it. A label may be referred to before or after its declaration, and
-from any object file linked into the same program.
+from any object file linked into the same program. A label name may be declared only once in a program.
 
 \section{Numbers}
 
@@ -51,22 +51,25 @@ anywhere inside the digits to make them easier to read.
 		Binary        & \texttt{\#0b} then binary digits       & \texttt{\#0b0010\_1010}                         \\
 		\bottomrule
 	\end{tabular}
-	\caption{Number forms}
+	\caption{Number Forms}
 	\label{tab:number-forms}
 \end{table}
 
-A negative decimal number is stored in two's complement. The value must fit the field it is encoded into; for example
-an immediate operand of a 16-bit instruction is 16 bits wide.
+A negative decimal number is stored in two's complement. The value must fit the field it is encoded into; for example,
+the immediate operand of an immediate-format instruction is 16 bits wide, and that of a short-immediate (shifted)
+instruction is 8 bits. The 8-bit short-immediate field and shift counts are unsigned, and the assembler rejects a
+negative number there.
 
-Two directive operands are written without the hash: the address of \texttt{.ORG} is a bare decimal or
-\texttt{0x}-prefixed hexadecimal number (Section~\ref{sec:org}).
+Two directive operands are written without the hash. One is the address of \texttt{.ORG}, a bare decimal or
+\texttt{0x}-prefixed hexadecimal number; binary is not accepted (Section~\ref{sec:org}). The other is the name of
+\texttt{.EQU}, written \texttt{\$NAME}.
 
 \section{Registers}
 
-The general-purpose registers are \texttt{r1} to \texttt{r7}. The status register is \texttt{sr}. Each address register
-pair is addressed as a whole by a single letter (\texttt{a}, \texttt{s}, \texttt{p} or \texttt{l}) and as two separate
-halves: \texttt{ah} and \texttt{al}, \texttt{sh} and \texttt{sl}, \texttt{ph} and \texttt{pl}, \texttt{lh} and
-\texttt{ll}. The \archmanual{} describes what each register is for, and which are privileged.
+The general-purpose registers are \reg{r1} to \reg{r7}. The status register is \reg{sr}. Each address register pair is
+addressed as a whole by a single letter (\reg{a}, \reg{s}, \reg{p}, or \reg{l}) and as two separate halves: \reg{ah}
+and \reg{al}, \reg{sh} and \reg{sl}, \reg{ph} and \reg{pl}, \reg{lh} and \reg{ll}. The \archmanual{} describes what
+each register is for, and which are privileged.
 
 \section{Named Constants}
 
@@ -79,5 +82,6 @@ halves: \texttt{ah} and \texttt{al}, \texttt{sh} and \texttt{sl}, \texttt{ph} an
     MOVI r1, $ANSWER       ; no '#' at the use
 \end{lstlisting}
 
-A constant stands in for a numeric value in an immediate operand or in a data directive. It cannot be used as the
-address of \texttt{.ORG}.
+A constant must be defined before its first use in the file. Defining the same name again changes its value for the
+lines that follow. A constant stands in for a numeric value in an immediate operand or in a data directive. It cannot
+be used as the address of \texttt{.ORG}.

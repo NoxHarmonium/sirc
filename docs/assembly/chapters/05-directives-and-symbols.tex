@@ -9,6 +9,10 @@ bare decimal or \texttt{0x}-prefixed hexadecimal number, without the hash used f
 even, because instructions and data directives each occupy two words. \texttt{.ORG} may appear any number of times, to
 put code or data at fixed addresses such as the reset and exception vector table.
 
+In a program linked from several objects, \texttt{.ORG} is relative to the start of its own object, and each object
+starts where the previous one ends. The vector table and any other fixed-address code must therefore go in the first
+object.
+
 % qa:assemble
 \begin{lstlisting}
     .ORG 0x0000
@@ -39,17 +43,19 @@ slot:
 		\texttt{.DQ \#0xABCD1234} & Whole slot             & Bytes \texttt{AB CD 12 34} \\
 		\bottomrule
 	\end{tabular}
-	\caption{Data directives}
+	\caption{Data Directives}
 	\label{tab:data-directives}
 \end{table}
 
-\texttt{.DB} does not pack four bytes into a slot, and \texttt{.DW} does not pack two words. Choose the directive that
-best documents the intended width of the value. Each may also take a label reference or a named constant instead of a
-number.
+\texttt{.DB} does not pack four bytes into a slot, and \texttt{.DW} does not pack two words. The directive should be chosen
+to document the intended width of the value. Each may also take a named constant, which is placed and truncated like a
+number, or a label reference. A label reference with no suffix always fills the whole slot with the label's address,
+whichever of the three directives is used. With \texttt{.l}, \texttt{.u} or \texttt{.r}, the 16-bit value goes in the
+low word.
 
 \section{Named Constants}
 
-\texttt{.EQU \$NAME \#value} defines a constant. Write \texttt{\$NAME}, without a hash, wherever the number would be
+\texttt{.EQU \$NAME \#value} defines a constant. The constant is referred to as \texttt{\$NAME}, without a hash, wherever the number would be
 used. A constant may be used in an immediate operand and in a data directive.
 
 % qa:assemble
@@ -78,7 +84,7 @@ What a reference resolves to depends on where it is written:
 		\texttt{.DB}, \texttt{.DW}, \texttt{.DQ}                                                                                                           & The label's full 24-bit address                                   \\
 		\bottomrule
 	\end{tabular}
-	\caption{Default resolution of a label reference}
+	\caption{Default Resolution of a Label Reference}
 	\label{tab:symbol-resolution}
 \end{table}
 
@@ -95,11 +101,11 @@ A suffix overrides the default:
 		\texttt{@label.u}   & The high word (segment) of the address \\
 		\bottomrule
 	\end{tabular}
-	\caption{Symbol reference suffixes}
+	\caption{Symbol Reference Suffixes}
 	\label{tab:symbol-suffixes}
 \end{table}
 
-To load a full 24-bit address into an address register pair, load each half separately:
+A full 24-bit address is loaded into an address register pair in two halves, as follows:
 
 % qa:assemble
 \begin{lstlisting}

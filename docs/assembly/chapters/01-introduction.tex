@@ -9,14 +9,14 @@ The SIRC-1 documentation is split into three manuals, each with its own scope:
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Manual}                    & \textbf{Scope}                                                                                \\
+		\textbf{Manual} & \textbf{Scope}                                                                                      \\
 		\midrule
-		SIRC Architecture Reference Manual & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state \\
-		SIRC Assembly Programmer's Manual  & Complete assembly syntax, directives, macros, pseudoinstructions (this manual)                \\
-		SIRC Hardware Reference Manual     & Pinout, bus interface, timing, electrical characteristics                                     \\
+		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state       \\
+		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage (this manual) \\
+		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics                                           \\
 		\bottomrule
 	\end{tabular}
-	\caption{The SIRC manual set}
+	\caption{The SIRC Manual Set}
 	\label{tab:manual-set}
 \end{table}
 
@@ -32,7 +32,8 @@ A SIRC program is built in three steps, each with its own tool:
 	      directive, and records every label and every reference to a label.
 	\item The \textbf{linker} reads one or more object files, joins them end to end, resolves every reference to a label, and
 	      writes a flat binary program plus a debug map.
-	\item The \textbf{simulator} loads the binary at address zero, maps whatever memory the program needs, and runs it.
+	\item The \textbf{simulator} loads the binary at address zero, maps its fixed devices and any memory segments given on the
+	      command line, and runs it.
 \end{enumerate}
 
 \begin{table}[H]
@@ -46,7 +47,7 @@ A SIRC program is built in three steps, each with its own tool:
 		\texttt{sirc\_vm}  & Binary                   & Register dump, terminal output                           \\
 		\bottomrule
 	\end{tabular}
-	\caption{The SIRC toolchain}
+	\caption{The SIRC Toolchain}
 	\label{tab:toolchain}
 \end{table}
 
@@ -54,5 +55,5 @@ Chapter~\ref{ch:toolchain} describes how to run each tool.
 
 \section{Conventions}
 
-Source listings are shown in typewriter font. Mnemonics are bold typewriter, as in the architecture manual. File
-extensions are conventions, not requirements: the tools do not look at them.
+Source listings are shown in typewriter font. Mnemonics are bold typewriter, as in the \archmanual{}. File extensions
+are conventions, not requirements: the tools do not look at them.

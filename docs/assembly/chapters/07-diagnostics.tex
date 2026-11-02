@@ -21,29 +21,38 @@ external error:
   immediate value into a register. at line 6, column 10
 \end{lstlisting}
 
-Where the instruction has a correct alternative the message names it. The messages for the commonest mistakes are:
+Where the instruction has a correct alternative, the diagnostic names it. The assembler appends \texttt{at line}
+\emph{n}\texttt{, column} \emph{m} to each message. The diagnostics for the most common mistakes are:
 
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabular}{p{5.2cm}p{8.8cm}}
+	\begin{tabular}{p{3.6cm}p{7.2cm}p{3.2cm}}
 		\toprule
-		\textbf{You wrote}                                             & \textbf{What the assembler says}                                                                  \\
+		\textbf{Source}                    & \textbf{What the Assembler Says}                                                                                                                                    & \textbf{Meaning}                                                     \\
 		\midrule
-		\texttt{LOAD r1, \#5}, \texttt{LOAD r1, r2}                    & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVI} or \mnemonic{MOVR}                         \\
-		\texttt{LOAD r1, (r2, a), LSL \#1}                             & \mnemonic{LOAD} does not support a shift; use \mnemonic{SHFT}                                     \\
-		\texttt{MOVI[S] r1, \#5}                                       & \texttt{[S]} is not supported because there is no shift operand; use \texttt{[A]} or \texttt{[N]} \\
-		\texttt{MOVR r1, r2, LSL \#1}                                  & Cannot shift a register-to-register move; use \mnemonic{SHFT}                                     \\
-		\texttt{ADDR r1, r2, LSL \#16}                                 & Shift definitions can only be in the range of 0--15                                               \\
-		An instruction whose destination overlaps its address register & Aliased register writes are undefined for that instruction                                        \\
+		\texttt{LOAD r1, \#5}              & \texttt{Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVI to load an immediate value into a register.}                                             & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVI}               \\
+		\texttt{LOAD r1, r2}               & \texttt{Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVR to copy one register to another.}                                                        & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVR}               \\
+		\texttt{LOAD r1, (r2, a), LSL \#1} & \texttt{Invalid addressing mode for LOAD: LOAD does not support a shift. Use SHFT on the offset register before the LOAD, or on the destination register after it.} & \mnemonic{LOAD} has no shift; use \mnemonic{SHFT}                    \\
+		\texttt{MOVI[S] r1, \#5}           & \texttt{The [MOVI] opcode does not support the [S] status register update source because it has no shift operand. Use [A] or [N].}                                  & \texttt{[S]} needs a shift operand; use \texttt{[A]} or \texttt{[N]} \\
+		\texttt{MOVR r1, r2, LSL \#1}      & \texttt{Invalid addressing mode for MOVR:. Cannot use a shift with direct register -> direct register moves. Use SHFT instruction instead.}                         & A register-to-register move has no shift; use \mnemonic{SHFT}        \\
+		\texttt{ADDR r1, r2, LSL \#16}     & \texttt{Shift definitions can only be in the range of 0-15, got 16}                                                                                                 & The shift count must be 0--15                                        \\
+		\texttt{LOAD ah, (\#0, a)+}        & \texttt{Aliased register writes are undefined for LOAD: destination register overlaps the post-increment address register}                                          & The destination is half of the updated address register              \\
 		\bottomrule
 	\end{tabular}
-	\caption{Common assembler diagnostics}
+	\caption{Common Assembler Diagnostics}
 	\label{tab:assembler-diagnostics}
 \end{table}
 
-When an instruction is given operands it does not accept, the message lists the operand forms the assembler tried in
-turn.
+The \texttt{ADDR} diagnostic is wrapped in the text \texttt{Parsing Failure: Base \{ location: ..., kind:
+	External("...") \}}; the table shows the inner message. The aliased-write diagnostic ends with a different phrase for
+each form. It is reported for a pre-decrement or post-increment form whose other register is a half of the updated
+address register, and for an \mnemonic{LDEL} or \mnemonic{LJSR} that would write \reg{l} twice. The Memory Access
+Instructions and Control Flow Instructions chapters of the \archmanual{} give the exact list.
+
+When an instruction is given operands it does not accept, the diagnostic names the instruction and either shows the
+operands it parsed or gives an example of an accepted form. When an operand cannot be parsed at all, the diagnostic
+lists the tokens the assembler expected at that point.
 
 \section{Linker Errors}
 

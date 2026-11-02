@@ -2,12 +2,12 @@
 \label{ch:toolchain}
 
 This chapter walks through building and running a program with the three tools. In this repository they are built from
-the \texttt{sirc-vm} Cargo workspace; the commands below show the tool names, and \texttt{cargo run --bin \emph{tool}
-	--} can be used in front of the arguments to build and run a tool in one step.
+the \texttt{sirc-vm} Cargo workspace. The commands below show the tool names. Putting \texttt{cargo run --bin
+	\emph{tool} --} in front of the arguments builds and runs a tool in one step.
 
 \section{A Worked Example}
 
-Save this program as \texttt{count.sasm}. It counts \texttt{r1} up to ten and stops the simulator.
+Save this program as \texttt{count.sasm}. It counts \reg{r1} up to ten and stops the simulator.
 
 % qa:assemble
 \begin{lstlisting}
@@ -24,7 +24,7 @@ Save this program as \texttt{count.sasm}. It counts \texttt{r1} up to ten and st
     COPI #0x14FF                ; stop the simulator (test exit)
 \end{lstlisting}
 
-Assemble it, link it, and run it:
+Assemble, link, and run it:
 
 \begin{lstlisting}[language={}]
 assembler --input-file count.sasm --output-file count.o
@@ -32,7 +32,12 @@ linker --segment-offset 0 --output-file count.bin count.o
 sirc_vm --program-file count.bin --register-dump-file count.register-dump
 \end{lstlisting}
 
-The register dump written at the end shows \texttt{r1} holding \texttt{0xA}.
+The register dump written at the end shows \reg{r1} holding \texttt{0xA}.
+
+The final \mnemonic{COPI} with \texttt{\#0x14FF} is a test hook that only the simulator implements. It stops the
+simulator. On a conforming CPU, the instruction raises an invalid-opcode fault, because exception coprocessor opcode
+\texttt{0x4} is reserved (see the Exception and Interrupt Handling chapter of the \archmanual{}). Programs for real
+hardware must not use it.
 
 \section{The Assembler}
 
@@ -40,8 +45,8 @@ The register dump written at the end shows \texttt{r1} holding \texttt{0xA}.
 assembler --input-file <FILE> --output-file <FILE>
 \end{lstlisting}
 
-The assembler reads one source file and writes one object file; both options are required and have the short forms
-\texttt{-i} and \texttt{-o}. It stops at the first syntax error and prints the offending line
+The assembler reads one source file and writes one object file. Both options are required and have the short forms
+\texttt{-i} and \texttt{-o}. The assembler stops at the first syntax error and prints the offending line
 (Chapter~\ref{ch:diagnostics}).
 
 The object file is a binary file for the linker. It holds the assembled program, the labels the file declares, the
@@ -50,11 +55,11 @@ references it makes, and a copy of the source for the debug map. It is not meant
 \section{The Linker}
 
 \begin{lstlisting}[language={}]
-linker --segment-offset <N> --output-file <FILE> <OBJECT FILES>...
+linker --segment-offset <N> --output-file <FILE> <OBJECT FILE> ...
 \end{lstlisting}
 
-The linker joins its input objects in the order they are given, so the first object starts at the lowest address.
-Labels declared in any object can be referred to from any other. It then patches every reference using the final
+The linker joins its input objects in the order they are given, so the first object starts at the lowest address. A
+label declared in any object can be referred to from any other. The linker then patches every reference using the final
 address of its label, and writes:
 
 \begin{itemize}
@@ -62,9 +67,7 @@ address of its label, and writes:
 	\item a debug map at the output path with \texttt{.dbg} added, which relates program addresses to source lines.
 \end{itemize}
 
-\texttt{--segment-offset} (short form \texttt{-s}) is added to every label's address before it is patched in. A program
-that is mapped into its own memory segment, as every example in the architecture manual is, is linked with an offset of
-0.
+\texttt{--segment-offset} (short form \texttt{-s}) is added to every label's address before it is patched in. The option is required. \texttt{N} is a decimal number of words; a hexadecimal value such as \texttt{0x10} is rejected. This differs from the simulator's \texttt{--segment} offsets, which are hexadecimal. A program that is mapped into its own memory segment, as every example in the \archmanual{} is, is linked with an offset of 0.
 
 A program made of several files is linked in one step:
 
@@ -75,7 +78,7 @@ linker --segment-offset 0 --output-file prog.bin main.o data.o
 \section{The Simulator}
 
 \begin{lstlisting}[language={}]
-sirc_vm --program-file <FILE> [--segment <SEGMENT>]... [--register-dump-file <FILE>]
+sirc_vm --program-file <FILE> {--segment <SEGMENT>} ... {--register-dump-file <FILE>}
 \end{lstlisting}
 
 The simulator loads the binary at the start of its program memory and starts the CPU through the reset vector.
@@ -83,19 +86,38 @@ The simulator loads the binary at the start of its program memory and starts the
 \begin{description}
 	\item[\texttt{--program-file}, \texttt{-p}] The linked binary to load.
 	\item[\texttt{--segment}, \texttt{-s}] Maps additional memory, written \texttt{label:offset:length} or
-	      \texttt{label:offset:length:file}, with the offset and length in hexadecimal. With a file, the segment is
-	      initialised from it. This option may be repeated.
+	      \texttt{label:offset:length:file}, with the offset and length in hexadecimal. With a file, the segment is mapped onto it: the program reads the file's contents, and every store to the segment writes through to the file. The file must exist and be writable. This option may be repeated.
 	\item[\texttt{--register-dump-file}, \texttt{-r}] Writes the final register state to a file when the program stops,
 	      which is how the repository's examples check their results.
+	\item[\texttt{--enable-video}, \texttt{-e}] Maps a video device in the VIDEO segment (Table~\ref{tab:fixed-segments}). The option is available only when the simulator is built with the \texttt{video} feature.
 	\item[\texttt{-v}, \texttt{-q}] Raise or lower the amount of logging. \texttt{-vv} is common while developing.
 	\item[\texttt{--debug}, \texttt{-d}] Starts a debug adapter for an editor to attach to, using the debug map written
 	      by the linker.
 \end{description}
 
+The simulator always maps the segments in Table~\ref{tab:fixed-segments}. Offsets and lengths are word addresses in
+hexadecimal. A \texttt{--segment} must not overlap them.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		Segment  & Offset            & Length          & Notes                                    \\
+		\midrule
+		PROGRAM  & \texttt{0x000000} & \texttt{0xFFFF} & Holds the linked binary; read-only       \\
+		TERMINAL & \texttt{0x0A0000} & \texttt{0xF}    & Terminal device                          \\
+		DEBUG    & \texttt{0x0B0000} & \texttt{0xF}    & Debug device                             \\
+		VIDEO    & \texttt{0x0C0000} & \texttt{0xFFFF} & Mapped only with \texttt{--enable-video} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Segments Mapped by the Simulator}
+	\label{tab:fixed-segments}
+\end{table}
+
 For example, a program that needs 64\,K words of scratch memory away from the program binary is run with:
 
 \begin{lstlisting}[language={}]
-sirc_vm --program-file prog.bin --segment SCRATCH:00010000:FFFF
+sirc_vm --program-file prog.bin --segment SCRATCH:00010000:10000
 \end{lstlisting}
 
 \section{Building with Make}
