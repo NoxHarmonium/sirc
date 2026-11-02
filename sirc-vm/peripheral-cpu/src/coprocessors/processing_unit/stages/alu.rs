@@ -419,7 +419,7 @@ fn perform_arithmetic_left_shift(
     b: u16,
     intermediate_registers: &mut IntermediateRegisters,
 ) {
-    // Same as LSL but will set the overflow bit if the sign changes
+    // V records any sign change during the shift, including intermediate ones.
 
     let extended_a = u32::from(a);
     let clamped_b = b.clamp(0, u16::BITS as u16);
@@ -436,9 +436,20 @@ fn perform_arithmetic_left_shift(
         &mut intermediate_registers.alu_status_register,
         result,
         carry,
-        Some((a, a, result)),
+        None,
     );
 
+    let overflow = match b {
+        0 => false,
+        16.. => a != 0,
+        _ => {
+            let sign_history = a >> (15 - b);
+            sign_history != 0 && sign_history != (u16::MAX >> (15 - b))
+        }
+    };
+    if overflow {
+        intermediate_registers.alu_status_register |= StatusRegisterFields::Overflow as u16;
+    }
     intermediate_registers.alu_output = result;
 }
 
@@ -597,4 +608,58 @@ pub fn set_alu_bits(
     }
 
     *sr = registers.sr;
+}
+
+#[cfg(test)]
+mod shift_regressions {
+    use super::*;
+
+    #[test]
+    fn asl_overflow_records_every_sign_change() {
+        for original in [0_u16, 0xffff, 0x4000, 0x8000, 0x6000, 0xaaaa] {
+            for count in [0, 1, 2, 15, 16, 17] {
+                // Independent bit-by-bit model includes intermediate sign changes.
+                let mut expected = original;
+                let mut overflow = false;
+                let mut carry = false;
+                for _ in 0..count.min(16) {
+                    carry = expected & 0x8000 != 0;
+                    let next = expected << 1;
+                    overflow |= (expected ^ next) & 0x8000 != 0;
+                    expected = next;
+                }
+                let mut actual = IntermediateRegisters {
+                    alu_status_register: StatusRegisterFields::Overflow as u16,
+                    ..Default::default()
+                };
+                perform_arithmetic_left_shift(original, count, &mut actual);
+                assert_eq!(actual.alu_output, expected, "{original:04x} << {count}");
+                assert_eq!(
+                    sr_bit_is_set_value(StatusRegisterFields::Overflow, actual.alu_status_register),
+                    overflow,
+                    "{original:04x} << {count}"
+                );
+                assert_eq!(
+                    sr_bit_is_set_value(StatusRegisterFields::Carry, actual.alu_status_register),
+                    carry
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn saturated_asr_keeps_original_sign_as_carry() {
+        for original in [0_u16, 1, 0x7fff, 0x8000, 0xffff] {
+            for count in [16, 17, u16::MAX] {
+                let mut actual = IntermediateRegisters::default();
+                perform_arithmetic_right_shift(original, count, &mut actual);
+                let negative = original & 0x8000 != 0;
+                assert_eq!(actual.alu_output, if negative { 0xffff } else { 0 });
+                assert_eq!(
+                    sr_bit_is_set_value(StatusRegisterFields::Carry, actual.alu_status_register),
+                    negative
+                );
+            }
+        }
+    }
 }

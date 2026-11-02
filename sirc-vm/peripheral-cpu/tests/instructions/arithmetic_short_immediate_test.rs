@@ -913,3 +913,34 @@ fn test_arithmetic_shift_right_immediate() {
 // - Test conditionals
 // - Test COPI
 // - Test CMPI/TSAI/TSXI etc.
+
+#[test]
+fn asl_overflow_uses_the_selected_status_source() {
+    for source in [
+        StatusRegisterUpdateSource::Shift,
+        StatusRegisterUpdateSource::Alu,
+        StatusRegisterUpdateSource::None,
+    ] {
+        test_short_immediate_arithmetic_instruction(
+            Instruction::AddShortImmediate,
+            0,
+            0x4000,
+            0,
+            ShiftOperand::Immediate,
+            ShiftType::ArithmeticLeftShift,
+            2,
+            0,
+            &vec![],
+            &match source {
+                StatusRegisterUpdateSource::Shift => vec![
+                    StatusRegisterFields::Zero,
+                    StatusRegisterFields::Carry,
+                    StatusRegisterFields::Overflow,
+                ],
+                StatusRegisterUpdateSource::Alu => vec![StatusRegisterFields::Zero],
+                StatusRegisterUpdateSource::None | StatusRegisterUpdateSource::Reserved => vec![],
+            },
+            source,
+        );
+    }
+}
