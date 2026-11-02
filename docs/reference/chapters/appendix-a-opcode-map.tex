@@ -106,6 +106,9 @@ This appendix provides a complete map of all 64 possible opcodes in the SIRCIS i
 
 \section{Opcode Patterns}
 
+This section summarizes the opcode decoding rules for quick reference. Chapter~\ref{ch:instruction-formats} defines
+them, and Section~\ref{sec:decode-trees} shows them as decode trees, one figure per opcode group.
+
 \subsection{Format Identification}
 
 Bit numbers in this section refer to the 6-bit opcode value (instruction bits 31--26), not to the instruction word.
@@ -144,8 +147,9 @@ For opcodes \opcode{10}--\opcode{1F}, bits encode memory operation type:
 		      \item 11 = Load EA with Link (jump to subroutine)
 	      \end{itemize}
 	\item Bit 1: Auto-update of the source address register (0 = no update, 1 = pre-decrement for STOR/LDEA, post-increment for
-	      LOAD/LDEL). Only the low word of the pair is adjusted, and always by one word regardless of the displacement.
-	\item Bit 0: Immediate (0) or Register (1) offset
+	      LOAD/LDEL). Only the low word of the pair is adjusted, and always by one word regardless of the displacement
+	      (Chapter~\ref{ch:addressing-modes}).
+	\item Bit 0: immediate displacement (0) or register offset (1)
 \end{itemize}
 
 \section{Undocumented Instructions}
