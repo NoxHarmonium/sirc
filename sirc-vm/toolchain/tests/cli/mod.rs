@@ -259,3 +259,23 @@ fn bad_constants_report_original_source_locations() {
     );
     assert_assembly_error(".EQU $N #2\n.ORG $N\n", "parsing", "2:");
 }
+
+#[test]
+fn ldel_link_source_is_an_intentional_aliased_write_error() {
+    use toolchain::parsers::opcodes::ldel::ldel;
+    for offset in ["#1, ", "@target, ", "$N, ", "r2, ", ""] {
+        let instruction = format!("LDEL a, ({offset}l)+\n");
+        let error = ldel(&instruction).unwrap_err().to_string();
+        assert!(error.contains("Aliased register writes"), "{error}");
+        assert_assembly_error(
+            &format!(".EQU $N #1\n{instruction}:target\nNOOP\n"),
+            "Aliased register writes",
+            "2:",
+        );
+        let legal = format!(".EQU $N #1\nLDEL a, ({offset}s)+\n:target\nNOOP\n");
+        let _ = assembled_program(&legal);
+    }
+    for instruction in ["LDEL l, (#1, s)", "LDEL a, (#1, a)+", "LDEL a, (#1, p)+"] {
+        assert_assembly_error(instruction, "Aliased register writes", "1:");
+    }
+}
