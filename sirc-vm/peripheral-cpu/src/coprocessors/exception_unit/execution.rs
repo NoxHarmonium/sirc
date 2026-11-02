@@ -372,9 +372,11 @@ impl Executor for ExceptionUnitExecutor {
                         registers.sr = return_status_register;
                         eu_registers.current_exception_level = saved_exception_level;
 
-                        // Clear ExceptionActive bit if we're returning to exception level 0
+                        // EA follows the restored level, even if ETTR edited the saved SR.
                         if saved_exception_level == 0 {
                             clear_sr_bit(StatusRegisterFields::ExceptionActive, registers);
+                        } else {
+                            set_sr_bit(StatusRegisterFields::ExceptionActive, registers);
                         }
                     }
                     ExceptionUnitOpCodes::Reset => {
@@ -486,6 +488,56 @@ impl Executor for ExceptionUnitExecutor {
 mod tests {
     use super::*;
     use crate::registers::set_hardware_interrupt_enable;
+
+    #[test]
+    fn rete_derives_ea_from_restored_level_after_ettr() {
+        for saved_level in [0, 2] {
+            for saved_ea in [false, true] {
+                let mut registers = Registers::default();
+                let mut eu = ExceptionUnitRegisters {
+                    current_exception_level: 3,
+                    ..Default::default()
+                };
+                eu.link_registers[2].saved_exception_level = saved_level;
+                let saved_sr = 0x0055
+                    | if saved_ea {
+                        StatusRegisterFields::ExceptionActive as u16
+                    } else {
+                        0
+                    };
+                registers.r7 = saved_sr;
+                let mut executor = ExceptionUnitExecutor {
+                    vector_address: 0,
+                    vector_value: 0,
+                };
+                // ETTR #2, r7 edits the saved status without changing its level.
+                executor.step(
+                    &ExecutionPhase::ExecutionEffectiveAddressExecutor,
+                    0x1d22,
+                    &mut registers,
+                    &mut eu,
+                    BusAssertions::default(),
+                );
+                assert_eq!(eu.link_registers[2].return_status_register, saved_sr);
+                executor.step(
+                    &ExecutionPhase::ExecutionEffectiveAddressExecutor,
+                    0x1a00,
+                    &mut registers,
+                    &mut eu,
+                    BusAssertions::default(),
+                );
+                assert_eq!(eu.current_exception_level, saved_level);
+                assert_eq!(
+                    registers.sr & !(StatusRegisterFields::ExceptionActive as u16),
+                    0x0055
+                );
+                assert_eq!(
+                    sr_bit_is_set(StatusRegisterFields::ExceptionActive, &registers),
+                    saved_level != 0
+                );
+            }
+        }
+    }
 
     // IB-3 (docs/reference/review/implementation-bugs.md): dispatch used to only ever look at
     // the single highest-priority *pending* interrupt line. If that one line's enable bit had

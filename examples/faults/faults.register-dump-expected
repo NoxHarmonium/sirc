@@ -1,6 +1,6 @@
 ===REGISTERS===
 Registers {
-    sr: 0x0,
+    sr: 0x2000,
     r1: 0x2,
     r2: 0x2,
     r3: 0xf01,
