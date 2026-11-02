@@ -56,59 +56,60 @@ are not legal for this instruction family.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                      \\
+		\textbf{Instruction} & \textbf{Syntax}                                             & \textbf{Encoding} & \textbf{Notes}                      \\
 		\midrule
-		ADD                  & \texttt{ADDI rD, \#imm16}           & \opcode{00}       & Writes result                       \\
-		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & \opcode{20}       & Writes result                       \\
-		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & \opcode{30}       & Writes result                       \\
-		ADD                  & \texttt{ADDR rD, rS2[, shift]}      & \opcode{30}       & Writes result (shorthand: rS1 = rD) \\
-		ADC                  & \texttt{ADCI rD, \#imm16}           & \opcode{01}       & Writes result                       \\
-		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & \opcode{21}       & Writes result                       \\
-		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & \opcode{31}       & Writes result                       \\
-		ADC                  & \texttt{ADCR rD, rS2[, shift]}      & \opcode{31}       & Writes result (shorthand: rS1 = rD) \\
-		SUB                  & \texttt{SUBI rD, \#imm16}           & \opcode{02}       & Writes result                       \\
-		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & \opcode{22}       & Writes result                       \\
-		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & \opcode{32}       & Writes result                       \\
-		SUB                  & \texttt{SUBR rD, rS2[, shift]}      & \opcode{32}       & Writes result (shorthand: rS1 = rD) \\
-		SBC                  & \texttt{SBCI rD, \#imm16}           & \opcode{03}       & Writes result                       \\
-		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & \opcode{23}       & Writes result                       \\
-		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & \opcode{33}       & Writes result                       \\
-		SBC                  & \texttt{SBCR rD, rS2[, shift]}      & \opcode{33}       & Writes result (shorthand: rS1 = rD) \\
-		AND                  & \texttt{ANDI rD, \#imm16}           & \opcode{04}       & Writes result                       \\
-		AND                  & \texttt{ANDI rD, \#imm8, shift}     & \opcode{24}       & Writes result                       \\
-		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & \opcode{34}       & Writes result                       \\
-		AND                  & \texttt{ANDR rD, rS2[, shift]}      & \opcode{34}       & Writes result (shorthand: rS1 = rD) \\
-		ORR                  & \texttt{ORRI rD, \#imm16}           & \opcode{05}       & Writes result                       \\
-		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & \opcode{25}       & Writes result                       \\
-		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & \opcode{35}       & Writes result                       \\
-		ORR                  & \texttt{ORRR rD, rS2[, shift]}      & \opcode{35}       & Writes result (shorthand: rS1 = rD) \\
-		XOR                  & \texttt{XORI rD, \#imm16}           & \opcode{06}       & Writes result                       \\
-		XOR                  & \texttt{XORI rD, \#imm8, shift}     & \opcode{26}       & Writes result                       \\
-		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & \opcode{36}       & Writes result                       \\
-		XOR                  & \texttt{XORR rD, rS2[, shift]}      & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
-		MOV                  & \texttt{MOVI rD, \#imm16}           & \opcode{07}       & Writes result                       \\
-		MOV                  & \texttt{MOVR rD, rS}                & \opcode{37}       & Writes result                       \\
-		CMN                  & \texttt{CMNI rS, \#imm16}           & \opcode{08}       & Updates flags only                  \\
-		CMN                  & \texttt{CMNI rS, \#imm8, shift}     & \opcode{28}       & Updates flags only                  \\
-		CMN                  & \texttt{CMNR rS1, rS2[, shift]}     & \opcode{38}       & Updates flags only                  \\
-		CNC                  & \texttt{CNCI rS, \#imm16}           & \opcode{09}       & Updates flags only                  \\
-		CNC                  & \texttt{CNCI rS, \#imm8, shift}     & \opcode{29}       & Updates flags only                  \\
-		CNC                  & \texttt{CNCR rS1, rS2[, shift]}     & \opcode{39}       & Updates flags only                  \\
-		CMP                  & \texttt{CMPI rS, \#imm16}           & \opcode{0A}       & Updates flags only                  \\
-		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & \opcode{2A}       & Updates flags only                  \\
-		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & \opcode{3A}       & Updates flags only                  \\
-		CPC                  & \texttt{CPCI rS, \#imm16}           & \opcode{0B}       & Updates flags only                  \\
-		CPC                  & \texttt{CPCI rS, \#imm8, shift}     & \opcode{2B}       & Updates flags only                  \\
-		CPC                  & \texttt{CPCR rS1, rS2[, shift]}     & \opcode{3B}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAI rS, \#imm16}           & \opcode{0C}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & \opcode{2C}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & \opcode{3C}       & Updates flags only                  \\
-		TSO                  & \texttt{TSOI rS, \#imm16}           & \opcode{0D}       & Updates flags only                  \\
-		TSO                  & \texttt{TSOI rS, \#imm8, shift}     & \opcode{2D}       & Updates flags only                  \\
-		TSO                  & \texttt{TSOR rS1, rS2[, shift]}     & \opcode{3D}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXI rS, \#imm16}           & \opcode{0E}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & \opcode{2E}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & \opcode{3E}       & Updates flags only                  \\
+		ADD                  & \texttt{ADDI rD, \#imm16}                                   & \opcode{00}       & Writes result                       \\
+		ADD                  & \texttt{ADDI rD, \#imm8, shift}                             & \opcode{20}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]}                         & \opcode{30}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS2[, shift]}                              & \opcode{30}       & Writes result (shorthand: rS1 = rD) \\
+		ADC                  & \texttt{ADCI rD, \#imm16}                                   & \opcode{01}       & Writes result                       \\
+		ADC                  & \texttt{ADCI rD, \#imm8, shift}                             & \opcode{21}       & Writes result                       \\
+		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]}                         & \opcode{31}       & Writes result                       \\
+		ADC                  & \texttt{ADCR rD, rS2[, shift]}                              & \opcode{31}       & Writes result (shorthand: rS1 = rD) \\
+		SUB                  & \texttt{SUBI rD, \#imm16}                                   & \opcode{02}       & Writes result                       \\
+		SUB                  & \texttt{SUBI rD, \#imm8, shift}                             & \opcode{22}       & Writes result                       \\
+		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]}                         & \opcode{32}       & Writes result                       \\
+		SUB                  & \texttt{SUBR rD, rS2[, shift]}                              & \opcode{32}       & Writes result (shorthand: rS1 = rD) \\
+		SBC                  & \texttt{SBCI rD, \#imm16}                                   & \opcode{03}       & Writes result                       \\
+		SBC                  & \texttt{SBCI rD, \#imm8, shift}                             & \opcode{23}       & Writes result                       \\
+		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]}                         & \opcode{33}       & Writes result                       \\
+		SBC                  & \texttt{SBCR rD, rS2[, shift]}                              & \opcode{33}       & Writes result (shorthand: rS1 = rD) \\
+		AND                  & \texttt{ANDI rD, \#imm16}                                   & \opcode{04}       & Writes result                       \\
+		AND                  & \texttt{ANDI rD, \#imm8, shift}                             & \opcode{24}       & Writes result                       \\
+		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]}                         & \opcode{34}       & Writes result                       \\
+		AND                  & \texttt{ANDR rD, rS2[, shift]}                              & \opcode{34}       & Writes result (shorthand: rS1 = rD) \\
+		ORR                  & \texttt{ORRI rD, \#imm16}                                   & \opcode{05}       & Writes result                       \\
+		ORR                  & \texttt{ORRI rD, \#imm8, shift}                             & \opcode{25}       & Writes result                       \\
+		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]}                         & \opcode{35}       & Writes result                       \\
+		ORR                  & \texttt{ORRR rD, rS2[, shift]}                              & \opcode{35}       & Writes result (shorthand: rS1 = rD) \\
+		XOR                  & \texttt{XORI rD, \#imm16}                                   & \opcode{06}       & Writes result                       \\
+		XOR                  & \texttt{XORI rD, \#imm8, shift}                             & \opcode{26}       & Writes result                       \\
+		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]}                         & \opcode{36}       & Writes result                       \\
+		XOR                  & \texttt{XORR rD, rS2[, shift]}                              & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
+		MOV                  & \texttt{MOVI rD, \#imm16 \textbar{} @sym \textbar{} \$name} & \opcode{07}       & Writes result                       \\
+		MOV                  & \texttt{MOVR rD, rS}                                        & \opcode{37}       & Writes result                       \\
+		SHFT                 & \texttt{SHFT rD, shift}                                     & \opcode{25}       & Writes result; default \texttt{[S]} \\
+		CMN                  & \texttt{CMNI rS, \#imm16}                                   & \opcode{08}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNI rS, \#imm8, shift}                             & \opcode{28}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNR rS1, rS2[, shift]}                             & \opcode{38}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm16}                                   & \opcode{09}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm8, shift}                             & \opcode{29}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCR rS1, rS2[, shift]}                             & \opcode{39}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPI rS, \#imm16}                                   & \opcode{0A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPI rS, \#imm8, shift}                             & \opcode{2A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPR rS1, rS2[, shift]}                             & \opcode{3A}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm16}                                   & \opcode{0B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm8, shift}                             & \opcode{2B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCR rS1, rS2[, shift]}                             & \opcode{3B}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm16}                                   & \opcode{0C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm8, shift}                             & \opcode{2C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAR rS1, rS2[, shift]}                             & \opcode{3C}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm16}                                   & \opcode{0D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm8, shift}                             & \opcode{2D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOR rS1, rS2[, shift]}                             & \opcode{3D}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm16}                                   & \opcode{0E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm8, shift}                             & \opcode{2E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXR rS1, rS2[, shift]}                             & \opcode{3E}       & Updates flags only                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}
@@ -120,7 +121,7 @@ are not legal for this instruction family.
 \texttt{ADDR r1, r1, r2}. A shift definition may be combined with the shorthand; because the shift always applies to
 the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}, not \texttt{r1 + (r2 << 2)}.
 
-\noindent\textbf{Short-immediate move:} Opcode \opcode{27} has no public assembly syntax and is undocumented.
+\noindent\textbf{Opcode \opcode{27}:} Opcode \opcode{27} is undocumented and has no public assembly syntax; its behavior is architecturally undefined (see Appendix~\ref{appendix:undocumented}).
 
 \section{Common ALU Semantics}
 
@@ -130,7 +131,7 @@ the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}
 		\toprule
 		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                   \\
 		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                         \\
+		Condition false        & The instruction writes no register and no status flag. The program counter still advances, so the segment-overflow check on the program counter and trace still apply.                \\
 		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                            \\
 		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
 		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
@@ -150,9 +151,10 @@ last instruction slot of a segment still raises a segment-overflow fault when \t
 advances the program counter, unless it writes \reg{pl} (Section~\ref{sec:segment-overflow-fault}). In protected mode, an ALU instruction that
 writes \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} through its register field raises a privilege-violation fault at
 decode and has no other effect; compare and test instructions only read that field and never fault. An ALU instruction whose register field names \reg{sr} is permitted in protected mode, but only
-bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
+bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). With the \texttt{[A]} or \texttt{[S]} status source, the instruction's own flag update then overwrites bits 7--0, so the written value survives only in bits 15--8 (supervisor mode) or not at all (protected mode). Use \texttt{[N]} to write the low byte (Section~\ref{sec:sr-manual-updates}).
+Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
 If trace mode was enabled when the instruction began, an instruction-trace fault is raised after the instruction
-commits. Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
+commits, except at exception level 7 (Section~\ref{sec:instruction-trace-fault}). Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
 documented ALU forms execute with architecturally undefined results (see Appendix~\ref{appendix:undocumented}).
 
 \section{Status Flag Updates}
@@ -196,19 +198,22 @@ instruction uses its default status update source. If \texttt{[N]} is encoded, a
 \texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
 encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
 the shifter flag rules. The immediate format has no shift fields, so \texttt{[S]} on an immediate-format instruction
-clears N, Z, C and V; reserved bits 7--4 follow the rule in Chapter~\ref{ch:status-register}. Use \texttt{[S]} only
-with short-immediate and register forms. An immediate written without a shift suffix always assembles to the immediate
-format, even when it fits in 8 bits, so \texttt{ADDI[S] r1, \#10} clears the flags; write \texttt{ADDI[S] r1, \#10, NUL
-	\#0} to get the short-immediate format and flags from the shifter. \mnemonic{MOVI} and \mnemonic{MOVR} have no shifted
-operand and do not accept \texttt{[S]}; an encoding of those opcodes with AF \texttt{10}, which is not reachable from
-public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
+clears N, Z, C and V; reserved bits 7--4 follow the rule in Chapter~\ref{ch:status-register}. \texttt{[S]} should be
+used only with short-immediate and register forms. An immediate written without a shift suffix always assembles to the
+immediate format, even when it fits in 8 bits, so \texttt{ADDI[S] r1, \#10} clears the flags; write \texttt{ADDI[S] r1,
+	\#10, NUL \#0} to get the short-immediate format and flags from the shifter. \mnemonic{MOVI} and \mnemonic{MOVR} have
+no shifted operand and do not accept \texttt{[S]}; an encoding of those opcodes with AF \texttt{10}, which is not
+reachable from public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}). An
+ALU encoding with AF \texttt{11} completes the operation and writes its result, but leaves N, Z, C and V
+architecturally undefined (\texttt{U U U U}); assemblers never emit it.
 
 \subsection{Flag Computation Formulas}
 
 Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how, as a
-Boolean formula in terms of the sign bit (bit 15) of the destination operand (\texttt{Dm}), the source operand
-(\texttt{Sm}), and the result (\texttt{Rm}). $\cdot$ is Boolean AND, $+$ is Boolean OR, and $\overline{X}$ is the
-complement of $X$.
+Boolean formula in terms of the sign bit (bit 15) of the left operand after any shift (\texttt{Dm}), the right operand
+(\texttt{Sm}: \texttt{rS2}, imm16, or the zero-extended imm8), and the 16-bit result (\texttt{Rm}). For \mnemonic{ADC}
+and \mnemonic{SBC}, \texttt{Rm} includes the incoming carry. $\cdot$ is Boolean AND, $+$ is Boolean OR, and
+$\overline{X}$ is the complement of $X$.
 
 \begin{table}[H]
 	\centering
@@ -244,7 +249,8 @@ Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for compl
 	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
 	\item \texttt{INSTR[N]} -- Do not update status flags
 	\item \mnemonic{MOVI} and \mnemonic{MOVR} do not accept \texttt{[S]}.
-	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax.
+	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax; the operation completes and writes its result,
+	      and N, Z, C and V are architecturally undefined (\texttt{U U U U}).
 \end{itemize}
 
 \begin{example}
@@ -274,7 +280,7 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 			\bitbox{1}{SO} &
 			\bitbox{3}{ST} &
 			\bitbox{4}{SA} &
-			\bitbox{2}{10} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
@@ -288,7 +294,7 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}; a register count is used in
 		      full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is
 		      taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} fixed at \texttt{10} (Shift) by the meta-instruction.
+		\item \textbf{AF (bits 5--4):} \texttt{10} (Shift) by default; an explicit \texttt{[A]} or \texttt{[N]} suffix encodes \texttt{01} or \texttt{00}.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -404,7 +410,7 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -471,7 +477,8 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 	\textbf{Notes:}
 	\begin{itemize}
 		\item For multi-precision arithmetic, use \mnemonic{ADC} to propagate carry
-		\item Adding zero (\texttt{ADDI r1, \#0}) can be used to move values or test flags
+		\item Adding zero (\texttt{ADDI r1, \#0}) sets N and Z from \texttt{r1} and clears C and V without changing it; use
+		      \mnemonic{MOVR} to copy a register
 		\item Shift operations allow efficient constant multiplication
 	\end{itemize}
 \end{instructionbox}
@@ -531,7 +538,7 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -651,7 +658,7 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -773,7 +780,7 @@ BRAN|!= @loop              ; Branch if not zero
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -891,7 +898,7 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -954,8 +961,8 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item ANDing with 0xFFFF leaves value unchanged
-		\item ANDing with 0x0000 clears the register
+		\item ANDing with \texttt{0xFFFF} leaves value unchanged
+		\item ANDing with \texttt{0x0000} clears the register
 		\item Use \mnemonic{TSA} to test bits without modifying the register
 	\end{itemize}
 \end{instructionbox}
@@ -1015,7 +1022,7 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1081,8 +1088,8 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item ORing with 0x0000 leaves value unchanged
-		\item ORing with 0xFFFF sets all bits
+		\item ORing with \texttt{0x0000} leaves value unchanged
+		\item ORing with \texttt{0xFFFF} sets all bits
 		\item Use for enabling flag bits or combining bit fields
 	\end{itemize}
 \end{instructionbox}
@@ -1142,7 +1149,7 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1209,8 +1216,8 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item XORing with 0x0000 leaves value unchanged
-		\item XORing with 0xFFFF inverts all bits (bitwise NOT)
+		\item XORing with \texttt{0x0000} leaves value unchanged
+		\item XORing with \texttt{0xFFFF} inverts all bits (bitwise NOT)
 		\item XORing a value with itself always gives 0
 		\item Use \mnemonic{TSX} to check for differences without modifying register
 	\end{itemize}
@@ -1255,7 +1262,7 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 		\item \textbf{imm16 (Immediate Value, bits 21--6), immediate form only:} 16-bit value. The register form has no
 		      immediate field.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved. \texttt{[S]} is not accepted by these instructions, which have no shifted operand; an encoding with
+		      Reserved; N, Z, C and V are architecturally undefined. \texttt{[S]} is not accepted by these instructions, which have no shifted operand; an encoding with
 		      AF \texttt{10}, not reachable from assembly syntax, leaves all four status flags architecturally undefined
 		      (\texttt{U U U U}).
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
@@ -1392,7 +1399,7 @@ ORRI r5, #0x34             ; r5 = 0x1234
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1527,7 +1534,7 @@ BRAN|OS @would_overflow
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1659,7 +1666,7 @@ BRAN|CS @carried
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1799,7 +1806,7 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -1931,7 +1938,7 @@ BRAN|>= @first_is_gte      ; N = V for the 32-bit result
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -2067,7 +2074,7 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
@@ -2195,7 +2202,7 @@ BRAN|NS @flag_set
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
 		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}

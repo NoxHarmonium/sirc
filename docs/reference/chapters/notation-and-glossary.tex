@@ -5,7 +5,7 @@
 This section collects the typographic conventions, normative vocabulary, and architectural terminology used throughout
 the manual, in one place. Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar
 placeholder names used only inside instruction descriptions) is defined separately in
-Chapter~\ref{ch:reading-instructions}, Table \ref{tab:instruction-description-notation}, alongside the
+Chapter~\ref{ch:reading-instructions}, Table~\ref{tab:instruction-description-notation}, alongside the
 status-flag-effect symbols (Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the
 conventions that apply manual-wide.
 
@@ -20,8 +20,8 @@ conventions that apply manual-wide.
 		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font, whether general-purpose, address-pair,
 		or status.                                                                                                                                 \\
 		\opcode{1A}                  & A literal instruction-opcode byte value, written \texttt{0x} followed by two
-		uppercase hex digits.                                                                                                                      \\
-		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}. Can be decimal or hexadecimal. \\
+		uppercase hexadecimal digits.                                                                                                              \\
+		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}. May be decimal or hexadecimal. \\
 		\addr{0x0002}                & A concrete memory address or vector target.                                                                 \\
 		\mnemonic{ADDI}              & An instruction mnemonic, always bold typewriter and always uppercase.                                       \\
 		\texttt{SR.X}                & A field or bit of the status register, named by its bit label (for example
@@ -38,9 +38,9 @@ conventions that apply manual-wide.
 Other conventions that do not have a dedicated style:
 
 \begin{itemize}
-	\item \textbf{Hex literals} that aren't a register, opcode, immediate, or address value in one of the forms above
+	\item \textbf{Hexadecimal literals} that aren't a register, opcode, immediate, or address value in one of the forms above
 	      (status-word values, encoded field values, bit patterns, coprocessor command words) are written
-	      \texttt{0x} followed by uppercase hex digits, for example \texttt{0x1A} rather than \texttt{0x1a}.
+	      \texttt{0x} followed by uppercase hexadecimal digits, for example \texttt{0x1A} rather than \texttt{0x1a}.
 	\item \textbf{Binary literals} in tables are written as a bare digit group with no prefix, for example
 	      \texttt{00}, \texttt{10}, \texttt{111} rather than \texttt{0b10}.
 	\item \textbf{Bit numbers} are written as plain text: "bit 15", "bits 4--7". Bit 15, or the
@@ -56,7 +56,7 @@ Other conventions that do not have a dedicated style:
 
 Instruction entries in this manual use the canonical SIRC assembly notation. This summary is enough to read and write
 the listings in the manual. The complete language, including every directive and the tools that process it, is
-described in the \textit{SIRC Assembly Programmer's Manual}.
+described in the \asmmanual{}.
 
 \subsection*{Source Format}
 
@@ -104,15 +104,16 @@ An instruction is written as a mnemonic, an optional status update source, an op
 		Shift                      & \texttt{type \#count} or \texttt{type rC}             & \texttt{ADDR r1, r2, LSL \#2} \\
 		\bottomrule
 	\end{tabular}
-	\caption{Operand forms}
+	\caption{Operand Forms}
 	\label{tab:assembly-operand-forms}
 \end{table}
 
 The address register halves are \texttt{ah}, \texttt{al}, \texttt{sh}, \texttt{sl}, \texttt{ph}, \texttt{pl},
-\texttt{lh} and \texttt{ll}. A shift type is one of \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL},
-\texttt{ASR}, \texttt{RTL} or \texttt{RTR} (Table~\ref{tab:shift-types}), and an immediate count is
-\texttt{0}--\texttt{15}. Chapter~\ref{ch:reading-instructions} defines the placeholder names (\texttt{rD},
-\texttt{rS1}, \texttt{\#imm16} and so on) used in instruction entries.
+\texttt{lh} and \texttt{ll}. Only some instructions accept a label reference (\texttt{@label}); see the \texttt{@label}
+entry below. A shift type is one of \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}
+or \texttt{RTR} (Table~\ref{tab:shift-types}), and an immediate count is \texttt{0}--\texttt{15}.
+Chapter~\ref{ch:reading-instructions} defines the placeholder names (\texttt{rD}, \texttt{rS1}, \texttt{\#imm16} and so
+on) used in instruction entries.
 
 \subsection*{Directives and Symbol References}
 
@@ -133,8 +134,9 @@ The address register halves are \texttt{ah}, \texttt{al}, \texttt{sh}, \texttt{s
 	      by writing \texttt{\$NAME} in its place.
 	\item[\texttt{@label}] References a label declared anywhere in the program, before or after the reference; references are
 	      resolved at link time. In \mnemonic{BRAN} or \mnemonic{BRSR} it resolves to a 16-bit signed word displacement from the
-	      instruction to the label. In any other instruction operand (\mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR},
-	      \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}) it resolves to the label's low word only. In a
+	      instruction to the label. In a \mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA}, \mnemonic{LDEL},
+	      \mnemonic{LJMP} or \mnemonic{LJSR} operand it resolves to the label's low word only. Other instructions (ALU
+	      immediates, \mnemonic{COPI} and the coprocessor meta-instructions) do not accept a label. In a
 	      \texttt{.DB}, \texttt{.DW} or \texttt{.DQ} directive it resolves to the label's full 24-bit address. An explicit
 	      suffix overrides this default: \texttt{@label.r} forces the PC-relative displacement form, \texttt{@label.l} the low
 	      word, and \texttt{@label.u} the high word.
@@ -151,10 +153,14 @@ The address register halves are \texttt{ah}, \texttt{al}, \texttt{sh}, \texttt{s
     .DQ @level2_handler            ; vector 0x40: level 2 hardware exception vector
 
 :start
+    MOVI ah, @lookup.u             ; @label.u selects the high word
     MOVI al, @lookup               ; @label defaults to the low word for MOVI
     LOAD r1, (#0, a)               ; r1 = lookup[0]
     CMPI r1, $ANSWER               ; constants defined with .EQU are used without '#'
     BRAN|== @start                 ; @label defaults to a PC-relative offset for BRAN/BRSR
+
+:done
+    BRAN @done                     ; stop here
 
 :level2_handler
     RETE
@@ -201,10 +207,10 @@ This manual describes the architecture, not a particular chip. It uses three ter
 	      manual names a signal only where the architectural behavior is defined by it. Signal names are written in typewriter
 	      font.
 	\item[Request / event] What a signal means architecturally: an \textit{interrupt request}, a \textit{reset request}, a bus
-	      error. A request is raised, recognised and withdrawn; the manual describes what the CPU does when that happens, and
-	      when requests are recognised, but not how the request physically reaches the CPU.
+	      error. A request is raised, recognized and withdrawn; the manual describes what the CPU does when that happens, and
+	      when requests are recognized, but not how the request physically reaches the CPU.
 	\item[Pin] A physical connection on a particular package. Pins, electrical levels and timing are implementation details and
-	      are documented in the \textit{SIRC-1 Hardware Reference Manual}, not here.
+	      are documented in the \hwmanual{}, not here.
 \end{description}
 
 A simulator or other implementation may carry the same signals by other means (a software call, an interrupt
@@ -249,6 +255,8 @@ encoding, and privilege rules.
 	      protected mode; see Chapter~\ref{ch:status-register}. The inverse of supervisor mode.
 	\item[Retryable fault] A fault whose triggering operation does not take effect, so that returning with \mnemonic{RETE} safely
 	      retries it. See Chapter~\ref{ch:exceptions} for the full retryable set.
+	\item[Segment] The 64K-word range of addresses that share one high-word value (bits 7--0 of an address register pair's high
+	      word). Displacement arithmetic wraps within a segment; see Chapter~\ref{ch:data-representation}.
 	\item[Software exception] An exception raised deliberately by executing \mnemonic{EXCP}. Also called a \textit{trap}.
 	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available. The inverse of protected
 	      mode.

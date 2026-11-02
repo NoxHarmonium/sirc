@@ -60,13 +60,13 @@ raises a Level Five Hardware Exception Conflict fault (Section~\ref{sec:level-fi
 
 \subsection{Vector Table}
 
-The exception vectors are stored starting at address \addr{0x0}. Each vector is a 24-bit target address stored as two
-consecutive 16-bit words in the address format described in Section~\ref{sec:exception-vector-storage}. The high word
-is stored first at \texttt{vector * 2}, followed by the low word at \texttt{vector * 2 + 1}. The vector table has 256
-entries. Vectors \texttt{0x00}--\texttt{0x5F} (96 entries) are reserved for the CPU; vectors
-\texttt{0x60}--\texttt{0xFF} (160 entries) are user trap vectors. Supervisor code can still name a CPU vector in
-\mnemonic{EXCP}; it is entered as an ordinary trap (see \mnemonic{EXCP} in Chapter~\ref{ch:coprocessor}). The vector
-table layout is:
+The exception vectors are stored starting at address \addr{0x0}. Each vector is a 32-bit pointer (a 24-bit target
+address and eight bits of metadata) stored as two consecutive 16-bit words in the address format described in
+Section~\ref{sec:exception-vector-storage}. The high word is stored first at \texttt{vector * 2}, followed by the low
+word at \texttt{vector * 2 + 1}. The vector table has 256 entries. Vectors \texttt{0x00}--\texttt{0x5F} (96 entries)
+are reserved for the CPU; vectors \texttt{0x60}--\texttt{0xFF} (160 entries) are user trap vectors. Supervisor code can
+still name a CPU vector in \mnemonic{EXCP}; it is entered as an ordinary trap (see \mnemonic{EXCP} in
+Chapter~\ref{ch:coprocessor}). The vector table layout is:
 
 \begin{itemize}
 	\item \textbf{\texttt{0x00}:} Reset vector
@@ -143,9 +143,9 @@ Examples of how a handler can correct the cause of a fault:
 
 Every fault in this category follows the same pattern: a handler is always free to advance past the faulting
 instruction with \mnemonic{ETFR}/\mnemonic{ETTR} instead of retrying it. For Invalid Opcode Fault this is usually the
-right choice -- simply retrying an unemulated invalid opcode will raise the same fault again.
+right choice -- simply retrying an unemulated invalid opcode raises the same fault again.
 
-Two cases do not follow the pattern of the instruction being cancelled before it commits:
+Two cases do not follow the pattern of the instruction being canceled before it commits:
 
 \begin{itemize}
 	\item An alignment fault is raised at phase 0, before the instruction fetch reaches the bus, so there is no decoded
@@ -167,29 +167,30 @@ The only post-instruction fault is the \textit{Instruction Trace Fault}.
 
 \subsubsection{Exception dispatch faults}
 Raised during the exception handling machinery itself, not during normal instruction execution. The link register
-stores the program counter at the point the fault was detected within the exception handler. The one exception is a
-double fault caused by a failed fault-vector fetch, which keeps the original fault's return address
-(Section~\ref{sec:double-fault-vector-fetch}). For a double fault raised inside a fault handler by a retryable fault,
-the point the fault was detected is the instruction that raised it, so the link register stores that instruction's
-address, as the escalating fault would have done on its own. Recovery may require careful state management; these
-faults often indicate a hardware misconfiguration or a programming error in an exception handler.
+stores the program counter at the point the fault was detected, which may be inside an exception handler or, for an L5
+overrun, in ordinary code. The one exception is a double fault caused by a failed fault-vector fetch, which keeps the
+original fault's return address (Section~\ref{sec:double-fault-vector-fetch}). For a double fault raised inside a fault
+handler by a retryable fault, the point the fault was detected is the instruction that raised it, so the link register
+stores that instruction's address, as the escalating fault would have done on its own. Recovery may require careful
+state management; these faults often indicate a hardware misconfiguration or a programming error in an exception
+handler.
 
 The exception dispatch faults are: \textit{Level Five Hardware Exception Conflict, Double Fault.}
 
 \subsection{Bus Fault}
 
-\textit{(Retryable)} -- Raised when the external memory system reports a bus transaction as failed by signaling a bus error
+\textit{(Retryable)} -- Raised when the external memory system reports a bus cycle as failed by signaling a bus error
 (\texttt{BERR}).
 
-This could happen, for example, if an unmapped address is presented by the CPU and another device detects this and
-raises an error. The instruction is cancelled before it takes effect, and the link register stores the address of the
+This happens, for example, if an unmapped address is presented by the CPU and another device detects this and raises an
+error. The instruction is canceled before it takes effect, and the link register stores the address of the
 \textit{faulting} instruction, so a handler implementing virtual memory can map in the missing page and return with
 \mnemonic{RETE} to retry the same instruction.
 
 Because ALU results and status-register updates are only committed during the write-back phase
 (Chapter~\ref{ch:cpu-architecture}), which runs after the memory-access phase where a bus fault is detected but does
-nothing for a cancelled instruction, a bus fault can never leave a partial status-register or register update behind
-for an ordinary single-access instruction.
+nothing for a canceled instruction, a bus fault can never leave a partial status-register or register update behind for
+an ordinary single-access instruction.
 
 This atomicity does not extend to a DMA burst: \mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT} are each one
 instruction that performs multiple bus accesses in sequence, so a bus fault partway through a burst leaves the words
@@ -200,10 +201,10 @@ case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do abo
 \subsection{Bus Protection Fault}
 
 \textit{(Retryable)} -- Raised when the external memory system reports a bus protection error (\texttt{BPER}) in response to a bus
-transaction.
+cycle.
 
 This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
-writing to ROM or accessing a protected memory region while the CPU is in protected mode. The instruction is cancelled
+writing to ROM or accessing a protected memory region while the CPU is in protected mode. The instruction is canceled
 before it takes effect, and the link register stores the address of the faulting instruction, so a handler can make the
 necessary corrections and retry with \mnemonic{RETE}.
 
@@ -234,26 +235,28 @@ Only raised if \texttt{SR.A} (Trap on Address Overflow) is set, since some progr
 wrap-around. With \texttt{SR.A} set, there are two cases:
 
 \begin{itemize}
-	\item An effective-address calculation wraps the low address word. The instruction is cancelled before it takes effect, and
+	\item An effective-address calculation wraps the low address word. The instruction is canceled before it takes effect, and
 	      the link register stores its address, so a handler can bring the address back into range and retry with
 	      \mnemonic{RETE}. The fault metadata register records the wrapped address and the bus access it was computed for:
-	      \texttt{0x2} (data read) or \texttt{0x3} (data write) for \mnemonic{LOAD} and \mnemonic{STOR}, \texttt{0x1}
-	      (instruction fetch) for the target of a branch, \mnemonic{LDEL}, \mnemonic{BRSR}, or \mnemonic{LJSR}, and \texttt{0x0}
-	      (none) for \mnemonic{LDEA}, which makes no access with it. No bus cycle is performed in any of these cases. An
-	      address-register auto-update that wraps is recorded the same way, with the wrapped register value and the bus access
-	      type of the instruction's own access. If more than one calculation would wrap, only the first is recorded, in the order
-	      effective address, auto-update, program-counter advance.
+	      \texttt{0x2} (data read) or \texttt{0x3} (data write) for \mnemonic{LOAD} and \mnemonic{STOR}; \texttt{0x1}
+	      (instruction fetch) when the effective address is written to \reg{p} (a branch or jump, including
+	      \mnemonic{LDEA}/\mnemonic{LDEL} with destination \reg{p}); and \texttt{0x0} (none) when it is written to another
+	      address register, which makes no access with it. No bus cycle is performed in any of these cases. An address-register
+	      auto-update that wraps is recorded the same way, with the wrapped register value and the bus access type of the
+	      instruction's own access. If more than one calculation would wrap, only the first is recorded, in the order effective
+	      address, auto-update, program-counter advance.
 	\item The instruction in the last slot of the segment would wrap the program counter's low word as it advances. The AU checks
 	      this in phase 3, before any memory access, for every instruction that uses the advanced address: as the next program
 	      counter (any instruction that does not branch, including a coprocessor call, and a branch whose condition is false), or
 	      as the return address saved in \reg{l} (\mnemonic{LDEL}, \mnemonic{BRSR}, \mnemonic{LJSR}). A taken branch or jump that
-	      writes \reg{p} without saving a return address does not use it and does not fault, and neither does an ALU or
-	      \mnemonic{LOAD} instruction that writes \reg{pl} (Section~\ref{sec:address-registers}). The instruction is cancelled
-	      and the link register stores its own address, as for any other retryable fault. No bus access is involved, so the fault
-	      metadata register records bus access type \texttt{0x0} (none). Retrying with \mnemonic{RETE} raises the same fault
-	      again, so a handler must emulate the instruction or redirect the saved return address with
+	      writes \reg{p} without saving a return address does not use it and does not fault, and neither does an executed
+	      (condition true) ALU or \mnemonic{LOAD} instruction that writes \reg{pl} (Section~\ref{sec:address-registers}). The
+	      instruction is canceled and the link register stores its own address, as for any other retryable fault. No bus access
+	      is involved, so the fault metadata register records bus access type \texttt{0x0} (none). Retrying with \mnemonic{RETE}
+	      raises the same fault again, so a handler must emulate the instruction or redirect the saved return address with
 	      \mnemonic{ETFR}/\mnemonic{ETTR}. With \texttt{SR.A} set, the last instruction slot of a segment can therefore only
-	      usefully hold a taken branch or jump, or an ALU or \mnemonic{LOAD} instruction that writes \reg{pl}.
+	      usefully hold a taken branch or jump, or an executed (condition true) ALU or \mnemonic{LOAD} instruction that writes
+	      \reg{pl}.
 \end{itemize}
 
 The same DMA-burst caveat as Bus Fault and Bus Protection Fault applies here: a segment-overflow fault raised partway
@@ -270,10 +273,12 @@ Can be used for forward compatibility: programs written for a future coprocessor
 will trap on older hardware, and the handler can emulate the operation in software. Because this fault is retryable,
 the link register stores the address of the faulting instruction; a handler that has emulated the operation must use
 \mnemonic{ETFR}/\mnemonic{ETTR} to redirect the return address to the instruction following the trapped call before
-returning with \mnemonic{RETE} -- retrying the instruction unmodified will simply raise the same fault again.
+returning with \mnemonic{RETE} -- retrying the instruction unmodified simply raises the same fault again.
 
 Note that this fault is specific to coprocessor instructions. Other instruction encodings outside the documented
-instruction set are reserved or architecturally undefined, and do not raise an invalid-opcode fault.
+instruction set are reserved or architecturally undefined, and do not raise an invalid-opcode fault. They remain bound
+by the privilege rules: in protected mode they cannot change the privileged byte of \reg{sr}, a high address-register
+word, or exception-unit state, and they may write only the registers named in their fields.
 
 \subsection{Privilege Violation Fault}
 
@@ -286,9 +291,11 @@ while not in supervisor mode:
 	\item Triggering a software exception with a vector below \texttt{0x60}
 \end{enumerate}
 
-Figure~\ref{fig:privilege-checks} (Chapter~\ref{ch:registers}) shows where each of these checks is made.
+Figure~\ref{fig:privilege-checks} (Chapter~\ref{ch:registers}) shows where each of these checks is made. The check is
+made at phase 2 for a write to a privileged register field and for a supervisor-only coprocessor operation, and at
+phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}.
 
-The illegal instruction never takes effect: it is cancelled before it writes anything, and the link register stores its
+The illegal instruction never takes effect: it is canceled before it writes anything, and the link register stores its
 own address so \mnemonic{RETE} returns to it directly. This matters because a supervisor-mode handler needs to be able
 to inspect the exact instruction that faulted, decide how to respond (deny it, emulate its effect, or promote the
 caller), and then either retry it or use \mnemonic{ETFR}/\mnemonic{ETTR} to redirect the return address elsewhere. None
@@ -299,7 +306,7 @@ of that is possible if the illegal instruction had already been allowed to run.
 
 \textit{(Post-instruction)} -- Raised after every instruction completes
 when \texttt{SR.T} is set, or when the force-trace request (\texttt{TRCE}) is active at the instruction boundary
-(see the Force Trace Mode Input in the \textit{SIRC-1 Hardware Reference Manual}).
+(see the Force Trace Mode Input in the \hwmanual{}).
 
 Used for single-step debugging. The fault fires after the instruction commits; for a coprocessor call, that includes
 the call's dispatch slot (Section~\ref{sec:interrupt-latency}). \mnemonic{RETE} returns to the instruction
@@ -315,8 +322,10 @@ trace fault is taken first, with the link register storing the address after the
 unit records the trap as a pending software exception instead of entering it. When the trace handler returns with
 \mnemonic{RETE} to exception level 0, the recorded trap is entered at that instruction boundary as if the
 \mnemonic{EXCP} had just executed: link register 0 stores the address after the \mnemonic{EXCP} and the status register
-restored by the trace handler. A debugger single-stepping through a system call therefore stops once before the trap
-handler runs, and again at the instruction after the \mnemonic{EXCP} once the handler has returned.
+restored by the trace handler. The recorded trap is held in the CSR, so it is entered before any pending hardware
+interrupt. A debugger single-stepping through a system call therefore stops once before the trap handler runs (with the
+instruction after the \mnemonic{EXCP} as the return address), and again after that instruction has executed once the
+handler has returned.
 
 Trace faults are not raised while a fault handler runs (exception level 7), whether \texttt{SR.T} is set or
 \texttt{TRCE} is active, because each one would otherwise escalate to a double fault. A handler at a lower level is
@@ -363,7 +372,7 @@ The CPU jumps to vector \texttt{0x08}. This is typically a last-chance handler t
 another fault occurs while the CPU is already at fault level, the CPU attempts to dispatch vector \texttt{0x08} again.
 There is no limit to the number of times vector \texttt{0x08} is dispatched. A double fault handler that causes a fault
 may cause an infinite loop without special handling from the programmer. If the double-fault vector fetch itself fails,
-the CPU will reset. An instruction raises at most one fault: the first one detected cancels it, and the checks in its
+the CPU resets. An instruction raises at most one fault: the first one detected cancels it, and the checks in its
 remaining phases are not made (Section~\ref{sec:exception-and-fault-timing}).
 
 \subsubsection{Link Register Preservation}
@@ -378,17 +387,17 @@ so the original fault's return address and status register can be included in wh
 The values can be stored on the stack but since the stack pointer may be corrupted, a more robust implementation stores
 and loads from hardcoded memory addresses that are known to always be valid, instead of relying on the stack pointer.
 
-\mnemonic{ETFR} only transfers the return address and status register of link registers 6 and 7; the saved exception
-level is not accessible to software through it, nor can \mnemonic{ETTR} write it back. This is not just a missing
-diagnostic field: \mnemonic{RETE} always restores \texttt{current\_exception\_level} directly from whatever value is
-currently latched in the link register, and after a double fault raised inside a fault handler that value is the fault
-level (7), not the level that was active before the original fault. Even a handler that perfectly restores the return
-address and status register and attempts \mnemonic{RETE} anyway would leave the CPU stuck at exception level 7 -- unable
-to service any hardware interrupt or software exception, including Level 5, since nothing outranks the highest priority
-level. New faults still dispatch normally regardless of the stuck level (faults bypass the priority check), so the CPU
-would keep running rather than visibly failing; it would simply be deaf to every interrupt and trap for the rest of the
-program's life. This is the underlying reason reset, not \mnemonic{RETE}, is the only valid response to a double fault
-raised inside a fault handler.
+For link registers 6 and 7, as for every link register, \mnemonic{ETFR} transfers only the return address and status
+register; the saved exception level is not accessible to software through it, nor can \mnemonic{ETTR} write it back.
+This is not just a missing diagnostic field: \mnemonic{RETE} always restores \texttt{current\_exception\_level}
+directly from whatever value is currently latched in the link register, and after a double fault raised inside a fault
+handler that value is the fault level (7), not the level that was active before the original fault. Even a handler that
+perfectly restores the return address and status register and attempts \mnemonic{RETE} anyway would leave the CPU stuck
+at exception level 7 -- unable to service any hardware interrupt or software exception, including Level 5, since
+nothing outranks the highest priority level. New faults still dispatch normally regardless of the stuck level (faults
+bypass the priority check), so the CPU would keep running rather than visibly failing; it would simply be deaf to every
+interrupt and trap for the rest of the program's life. This is the underlying reason reset, not \mnemonic{RETE}, is the
+only valid response to a double fault raised inside a fault handler.
 
 \subsubsection{Fault Vector Fetch Failure}
 \label{sec:double-fault-vector-fetch}
@@ -442,7 +451,7 @@ maskable hardware interrupt line can trigger an exception:
 \end{itemize}
 
 \textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and cannot be disabled.
-It will always trigger an exception when requested, regardless of the enable bit settings. Bit 13 is used for the
+It always triggers an exception when requested, regardless of the enable bit settings. Bit 13 is used for the
 Exception Active flag instead.
 
 When an interrupt line is disabled (bit = 0), interrupts on that line are completely ignored and not queued. When
@@ -494,7 +503,7 @@ pending coprocessor call, plus the time a running coprocessor command takes, plu
 itself. A DMA transfer cannot be interrupted, including by Level 5 (Section~\ref{sec:dma-unit}).
 Appendix~\ref{appendix:timing} gives the cycle counts.
 
-\subsection{Level 5 NMI-like Behavior}
+\subsection{Level 5 NMI-Like Behavior}
 \label{sec:level-5-nmi-behavior}
 
 Level 5 hardware exceptions behave similarly to a Non-Maskable Interrupt (NMI). Unlike interrupt levels 1--4, which are
@@ -523,14 +532,16 @@ conflict fault. The L5 pending bit and the L5 overrun flag are both cleared by r
 
 The L5 pending bit is cleared at the moment L5 is selected for dispatch, and set again only if its vector fetch fails.
 An edge that arrives after selection, even during the dispatch slot, is therefore a new request: it sets the pending
-bit again, and once the L5 handler is running it raises a Level Five Hardware Exception Conflict fault.
+bit again, and once the L5 handler is running it raises a Level Five Hardware Exception Conflict fault. If the L5
+vector fetch fails while a new edge has already set the L5 pending bit again, the exception unit sets the L5 overrun
+flag.
 
 This means Level 5 response latency is not deterministic when a fault is in progress. For timing-critical use of the
 NMI line, fault handlers should be kept as short as possible.
 
 If a second L5 interrupt arrives \textit{while the CPU is already executing an L5 handler} (exception level 6), it is
-not queued. It will raise a Level Five Hardware Exception Conflict fault instead, which consumes the pending request.
-See Section~\ref{sec:level-five-conflict-fault}.
+not dispatched as a second L5. It sets the L5 pending bit, and at the next instruction boundary it raises a Level Five
+Hardware Exception Conflict fault, which consumes that pending bit. See Section~\ref{sec:level-five-conflict-fault}.
 
 These two rules compose in a non-obvious way when a fault is raised \textit{inside} an L5 handler while a second L5
 interrupt is pending. Table~\ref{tab:l5-fault-timeline} walks through the sequence step by step.
@@ -572,7 +583,8 @@ As with hardware exceptions, the return address stored in the link register is t
 
 Software exceptions are only accepted from normal execution. If an \mnemonic{EXCP} instruction is executed while any
 exception or fault handler is already active, the software exception is ignored, is not queued, and does not fetch its
-vector.
+vector. The privilege check is made first: a protected-mode \mnemonic{EXCP} with a vector below \texttt{0x60} raises a
+privilege-violation fault even inside a handler.
 
 \section{Exception Registers}
 
@@ -626,9 +638,9 @@ level is not accessible to software through these instructions.
 When an exception occurs, the appropriate link register (determined by the exception priority level) is populated with
 the current program counter and status register values. For the retryable faults (Section~\ref{sec:fault-categories}),
 the return address is the address of the faulting instruction, so it can be retried. For regular exceptions (hardware
-and software exceptions) and Instruction Trace Fault, the return address is the address after the current instruction;
-see Section~\ref{sec:fault-categories} for the exception-dispatch faults (Level Five Hardware Exception Conflict,
-Double Fault), which instead store the program counter at the point the fault was detected.
+and software exceptions) and Instruction Trace Fault, the return address is the address after the current instruction,
+except as described in Section~\ref{sec:fault-categories} for the exception-dispatch faults (Level Five Hardware
+Exception Conflict, Double Fault), which instead store the program counter at the point the fault was detected.
 
 \begin{table}[H]
 	\centering
@@ -680,11 +692,11 @@ Return Status Register field is used to encode fault-specific metadata in the fo
 		      \item \texttt{0x7}: Reserved
 	      \end{itemize}
 	\item \textbf{Bit 3:} Double fault flag (1 bit) -- set to 1 if this is a double fault
-	\item \textbf{Bits 4--7:} Fault type (4 bits) -- the fault being dispatched; always \texttt{0x08} when the double fault
+	\item \textbf{Bits 4--7:} Fault type (4 bits) -- the fault being dispatched; always \texttt{0x8} when the double fault
 	      flag is set
 	\item \textbf{Bits 8--11:} Original fault type (4 bits) -- for a double fault, the fault that was already being
 	      handled, or whose vector could not be fetched (Section~\ref{sec:double-fault}). If a double-fault handler itself
-	      faults, this is \texttt{0x08}. Reserved and read as zero when the double fault flag is clear
+	      faults, this is \texttt{0x8}. Reserved and read as zero when the double fault flag is clear
 	\item \textbf{Bits 12--15:} Escalating fault type (4 bits) -- for a double fault, the fault that caused the escalation.
 	      Reserved and read as zero when the double fault flag is clear
 \end{itemize}
@@ -695,19 +707,19 @@ fault's bus access type and address are lost.
 Fault types use the following values:
 
 \begin{itemize}
-	\item \textbf{\texttt{0x01}:} Bus fault
-	\item \textbf{\texttt{0x02}:} Alignment fault
-	\item \textbf{\texttt{0x03}:} Segment overflow fault
-	\item \textbf{\texttt{0x04}:} Invalid opcode fault
-	\item \textbf{\texttt{0x05}:} Privilege violation fault
-	\item \textbf{\texttt{0x06}:} Instruction trace fault
-	\item \textbf{\texttt{0x07}:} Level five hardware exception conflict
-	\item \textbf{\texttt{0x08}:} Double fault
-	\item \textbf{\texttt{0x09}:} Bus protection fault
+	\item \textbf{\texttt{0x1}:} Bus fault
+	\item \textbf{\texttt{0x2}:} Alignment fault
+	\item \textbf{\texttt{0x3}:} Segment overflow fault
+	\item \textbf{\texttt{0x4}:} Invalid opcode fault
+	\item \textbf{\texttt{0x5}:} Privilege violation fault
+	\item \textbf{\texttt{0x6}:} Instruction trace fault
+	\item \textbf{\texttt{0x7}:} Level five hardware exception conflict
+	\item \textbf{\texttt{0x8}:} Double fault
+	\item \textbf{\texttt{0x9}:} Bus protection fault
 \end{itemize}
 
 The Return Address field of register 7 stores the bus address that was being accessed when the fault occurred. For a
-fault that does not access the bus, this field is architecturally undefined, with three exceptions:
+fault that does not access the bus, this field is architecturally undefined, with four exceptions:
 
 \begin{itemize}
 	\item An invalid-opcode fault raised during coprocessor dispatch, before any bus access, stores the 16-bit coprocessor
@@ -715,6 +727,8 @@ fault that does not access the bus, this field is architecturally undefined, wit
 	      emulate missing optional coprocessor operations.
 	\item An alignment fault stores the odd instruction address.
 	\item An effective-address segment overflow stores the wrapped address (Section~\ref{sec:segment-overflow-fault}).
+	\item An address-register auto-update segment overflow stores the wrapped register value
+	      (Section~\ref{sec:segment-overflow-fault}).
 \end{itemize}
 
 Exception handlers can use the \mnemonic{ETFR} instruction to read the fault metadata register and decode this
@@ -740,12 +754,15 @@ Section~\ref{sec:return-from-exception} describes the return.
 \paragraph{Acceptance.} Acceptance is decided before the exception-vector fetch, so an exception that is not accepted has no side effects.
 
 \begin{itemize}
-	\item A hardware interrupt is accepted only if its line is enabled in the status register and its priority is higher than the
-	      current exception level. Otherwise it does not fetch its vector. A disabled interrupt is ignored and not queued; one
-	      that is only outranked remains pending, according to the rules in Section~\ref{sec:pending-hardware-interrupts}.
+	\item A hardware interrupt is accepted only if its line is enabled in the status register (Level 5 is always enabled) and its
+	      priority is higher than the current exception level. Otherwise it does not fetch its vector. A disabled interrupt is
+	      ignored and not queued; one that is only outranked remains pending, according to the rules in
+	      Section~\ref{sec:pending-hardware-interrupts}.
 	\item A Level 5 hardware exception that collides with another one raises a Level Five Hardware Exception Conflict fault
 	      instead (Section~\ref{sec:level-five-conflict-fault}).
-	\item A software exception is accepted only when no exception handler is active.
+	\item A software exception is accepted only when no exception handler is active. The privilege check is made first: a
+	      protected-mode \mnemonic{EXCP} with a vector below \texttt{0x60} raises a privilege-violation fault even inside a
+	      handler.
 \end{itemize}
 
 \paragraph{Selection and commit.} A hardware interrupt, software exception or instruction trace fault is selected only when the CSR is empty and no
@@ -762,11 +779,12 @@ fault handlers, so software tracing does not continue into a handler; if it was 
 resumes after \mnemonic{RETE}. A handler that sets \texttt{SR.T} itself, or runs while \texttt{TRCE} is active, is
 traced, except that no trace fault is raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
 
-\paragraph{Vector fetch failure.} If a bus or protection fault occurs during an exception-vector fetch, the original exception does not enter and the
-remaining phases of its dispatch slot run as no-ops (Section~\ref{sec:exception-and-fault-timing}). The CPU raises the
-corresponding fault with the bus access type set to exception vector fetch. If a fault-vector fetch itself fails, the
-CPU escalates to a double fault, which keeps the original fault's saved state so it can be recovered
-(Section~\ref{sec:double-fault-vector-fetch}). If the double-fault vector fetch fails, the CPU resets.
+\paragraph{Vector fetch failure.} Except for the reset vector (Section~\ref{sec:reset-vector-fetch}), if a bus or protection fault occurs during an
+exception-vector fetch, the original exception does not enter and the remaining phases of its dispatch slot run as
+no-ops (Section~\ref{sec:exception-and-fault-timing}). The CPU raises the corresponding fault with the bus access type
+set to exception vector fetch. If a fault-vector fetch itself fails, the CPU escalates to a double fault, which keeps
+the original fault's saved state so it can be recovered (Section~\ref{sec:double-fault-vector-fetch}). If the
+double-fault vector fetch fails, the CPU resets.
 
 When the failed fetch belongs to a hardware interrupt, a Level 5 request or a software exception, that exception is not
 lost. Link register 6 stores the state the exception would have saved: its return address, and the status register and
@@ -800,7 +818,7 @@ code resumes with, for example to leave an interrupt line disabled, a handler ed
 and \mnemonic{ETTR} before \mnemonic{RETE}.
 
 After \mnemonic{RETE}, any pending interrupts that are now eligible to run (higher priority than the restored exception
-level and enabled) will be serviced before the next instruction executes.
+level and enabled) are serviced before the next instruction executes.
 
 Executing \mnemonic{RETE} while the current exception level is 0 is architecturally undefined.
 
@@ -833,16 +851,17 @@ features like system calls, context switching, and debuggers.
 \label{sec:halt-request}
 
 The halt request (\texttt{HALT}) lets external hardware stop the CPU, for example so that a debugger can examine the
-system. It is sampled at every instruction boundary. If it is active there, the CPU stops before the next instruction
-fetch; an instruction in progress, including its coprocessor dispatch slot, always completes first. While halted it
-issues no bus cycles and executes nothing. When the request is withdrawn, the CPU resumes at the next instruction
-boundary as if it had never stopped. The halt is the state of this request and nothing else: no instruction enters or
-leaves it, and it is not saved by exception entry.
+system. It is sampled at every phase 0. If it is active there, the CPU stops at that phase 0 with the bus idle. This
+can pause the CPU between an instruction and its coprocessor dispatch slot, between DMA slots, or before a fault,
+interrupt, or reset dispatch. Halt latency is at most 6 cycles. While halted the CPU issues no bus cycles and executes
+nothing. When the request is withdrawn, the CPU resumes exactly where it stopped. The halt is the state of this request
+and nothing else: no instruction enters or leaves it, and it is not saved by exception entry.
 
 While halted, interrupt lines are still sampled under the normal rules, and a Level 5 edge is latched
 (Section~\ref{sec:level-5-nmi-behavior}). Nothing is dispatched until the CPU resumes: requests latched during the halt
-are taken at the first instruction boundary after the halt request is withdrawn. A reset ends a halt at once. The
-\textit{SIRC-1 Hardware Reference Manual} describes the pin that carries the request.
+are taken under the normal rules once the CPU resumes. A reset ends a halt at once; if \texttt{HALT} is still active
+after the reset, the CPU halts again at the first phase 0, before the reset-vector fetch. The \hwmanual{} describes the
+pin that carries the request.
 
 \section{Reset and Startup}
 
@@ -857,21 +876,22 @@ program counter.
 	\centering
 	\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X}
 		\toprule
-		\textbf{State}                         & \textbf{Reset Behavior}                                                                                             \\
+		\textbf{State}                         & \textbf{Reset Behavior}                                                                                                                                                                                                                                                                 \\
 		\midrule
-		Instruction phase                      & Set to phase 0.                                                                                                     \\
-		Pending bus request                    & Cleared; an in-progress stalled bus request is abandoned.                                                           \\
-		Halt state                             & Not stored. If the halt request is still active, the CPU halts again at the first instruction boundary after reset. \\
-		Wait-for-exception state               & Cleared.                                                                                                            \\
-		Current exception level                & Cleared to 0. The CPU leaves reset outside any exception handler.                                                   \\
-		Status register                        & Cleared to \texttt{0x0000} when reset is requested.                                                                 \\
-		Program counter                        & Loaded from reset vector \texttt{0x00}.                                                                             \\
-		General registers                      & Not architecturally cleared by reset. Software should treat their contents as undefined after reset.                \\
-		Address register pairs                 & Not architecturally cleared by reset.                                                                               \\
-		Exception link registers               & Not architecturally cleared by reset.                                                                               \\
+		Instruction phase                      & Set to phase 0.                                                                                                                                                                                                                                                                         \\
+		Pending bus request                    & Cleared; an in-progress stalled bus request is abandoned.                                                                                                                                                                                                                               \\
+		Halt state                             & Not stored. If the halt request is still active, the CPU halts again at the first phase 0 after reset, before the reset-vector fetch.                                                                                                                                                   \\
+		Wait-for-exception state               & Cleared.                                                                                                                                                                                                                                                                                \\
+		Current exception level                & Cleared to 0. The CPU leaves reset outside any exception handler.                                                                                                                                                                                                                       \\
+		Status register                        & Cleared to \texttt{0x0000} when reset is requested.                                                                                                                                                                                                                                     \\
+		Program counter                        & Loaded from reset vector \texttt{0x00}.                                                                                                                                                                                                                                                 \\
+		General registers                      & Not cleared by reset. Software must treat their contents as architecturally undefined.                                                                                                                                                                                                  \\
+		Address register pairs                 & Not cleared by reset. Software must treat their contents as architecturally undefined.                                                                                                                                                                                                  \\
+		Exception link registers               & Not cleared by reset. Software must treat their contents as architecturally undefined.                                                                                                                                                                                                  \\
 		Pending hardware exceptions and faults & Cleared when reset is requested. Interrupt lines, including Level 5, are not sampled until the
-		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules.                                       \\
-		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                                    \\
+		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules. A Level 5 line held asserted across reset does not fire afterwards: reset does not clear the edge detector's last sampled level, so there is no transition, and the line must be released and reasserted. \\
+		Pending software exception             & Cleared when reset is requested. This includes the trap recorded by a traced \mnemonic{EXCP}, which is held in the CSR.                                                                                                                                                                 \\
+		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                                                                                                                                                                                                        \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Reset State}
@@ -900,7 +920,8 @@ cycles occur before the exception unit starts the reset-vector fetch.
 
 For software reset, \mnemonic{RSET} completes as a normal coprocessor meta-instruction. When its write-back phase
 commits the reset command, the CPU requests reset and \texttt{RSTO} is asserted for six cycles before the reset-vector
-fetch begins.
+fetch begins. A reset caused by a failed double-fault vector fetch behaves as a software reset: a six-cycle
+\texttt{RSTO} hold, then the reset-vector fetch.
 
 \subsection{Reset Vector Fetch}
 \label{sec:reset-vector-fetch}
@@ -985,8 +1006,8 @@ exception or trace fault it waits until the CSR is empty and no coprocessor is a
 replaces a command written by \mnemonic{COPI} or \mnemonic{COPR} (Section~\ref{sec:interrupt-latency}). A fault raised
 by the call or its command replaces the command, which ends. For the commands the exception unit builds itself to
 dispatch a fault or a hardware exception, the priority is determined by the high nibble of the vector ID, calculated as
-7 minus the value of that nibble (for example, \texttt{0x00} is priority 7 and \texttt{0x40} is priority 3). A software
-exception (\mnemonic{EXCP}) is always priority 1, whatever its vector.
+7 minus the value of that nibble (for example, fault vector \texttt{0x05} is priority 7 and \texttt{0x40} is priority
+3). A software exception (\mnemonic{EXCP}) is always priority 1, whatever its vector.
 
 A CSR value of \texttt{0x0000} -- the value left in place once the reset sequence has completed, and whenever no
 exception is pending -- selects coprocessor ID \texttt{0x0}, the processing unit, so the CPU simply continues executing
@@ -999,28 +1020,31 @@ the program normally in the absence of any exception activity.
 	\scriptsize
 	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.1cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.3cm}}
 		\toprule
-		\textbf{Vector}              & \textbf{Address}             & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address} & \textbf{Link Register} \\
+		\textbf{Vector}              & \textbf{Address}             & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address}            & \textbf{Link Register} \\
 		\midrule
-		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                     & None                   \\
-		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction        & 6 (metadata in 7)      \\
-		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point          & 6 (metadata in 7)      \\
-		\texttt{0x08}                & \addr{0x0010}--\addr{0x0011} & 7                 & Double fault     & Not maskable         & Dispatch point          & 6 (metadata in 7)      \\
-		\texttt{0x09}                & \addr{0x0012}--\addr{0x0013} & 7                 & Bus protection   & Not maskable         & Faulting instruction    & 6 (metadata in 7)      \\
-		\texttt{0x0A}--\texttt{0x0F} & \addr{0x0014}--\addr{0x001F} & 7                 & Reserved faults  & Reserved             & Reserved                & Reserved               \\
-		\texttt{0x10}                & \addr{0x0020}--\addr{0x0021} & 6                 & Level 5 hardware & Not maskable         & Next instruction        & 5                      \\
-		\texttt{0x20}                & \addr{0x0040}--\addr{0x0041} & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction        & 4                      \\
-		\texttt{0x30}                & \addr{0x0060}--\addr{0x0061} & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction        & 3                      \\
-		\texttt{0x40}                & \addr{0x0080}--\addr{0x0081} & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction        & 2                      \\
-		\texttt{0x50}                & \addr{0x00A0}--\addr{0x00A1} & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction        & 1                      \\
-		\texttt{0x11}--\texttt{0x5F} & \addr{0x0022}--\addr{0x00BF} & n/a               & Reserved         & Reserved             & Reserved                & Reserved               \\
-		\texttt{0x60}--\texttt{0xFF} & \addr{0x00C0}--\addr{0x01FF} & 1                 & Software trap    & Priority gated       & Next instruction        & 0                      \\
+		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                                & None                   \\
+		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction                   & 6 (metadata in 7)      \\
+		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point                     & 6 (metadata in 7)      \\
+		\texttt{0x08}                & \addr{0x0010}--\addr{0x0011} & 7                 & Double fault     & Not maskable         & See Section~\ref{sec:double-fault} & 6 (metadata in 7)      \\
+		\texttt{0x09}                & \addr{0x0012}--\addr{0x0013} & 7                 & Bus protection   & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
+		\texttt{0x0A}--\texttt{0x0F} & \addr{0x0014}--\addr{0x001F} & 7                 & Reserved faults  & Reserved             & Reserved                           & Reserved               \\
+		\texttt{0x10}                & \addr{0x0020}--\addr{0x0021} & 6                 & Level 5 hardware & Not maskable         & Next instruction                   & 5                      \\
+		\texttt{0x20}                & \addr{0x0040}--\addr{0x0041} & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction                   & 4                      \\
+		\texttt{0x30}                & \addr{0x0060}--\addr{0x0061} & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction                   & 3                      \\
+		\texttt{0x40}                & \addr{0x0080}--\addr{0x0081} & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction                   & 2                      \\
+		\texttt{0x50}                & \addr{0x00A0}--\addr{0x00A1} & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction                   & 1                      \\
+		\texttt{0x11}--\texttt{0x5F} & \addr{0x0022}--\addr{0x00BF} & n/a               & Reserved         & Reserved             & Reserved                           & Reserved               \\
+		\texttt{0x60}--\texttt{0xFF} & \addr{0x00C0}--\addr{0x01FF} & 1                 & Software trap    & Priority gated       & Next instruction                   & 0                      \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Exception Quick Reference}
 	\label{tab:exception-quick-reference}
 \end{table}
+
+The Reserved row for vectors \texttt{0x11}--\texttt{0x5F} excludes vectors \texttt{0x20}, \texttt{0x30}, \texttt{0x40},
+and \texttt{0x50}, which are the hardware exception vectors listed above it.

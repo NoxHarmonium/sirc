@@ -4,8 +4,9 @@
 \section{Overview}
 
 The SIRC-1 CPU includes a coprocessor interface that allows delegation of certain operations to specialized
-coprocessors. The primary coprocessor is the Exception Unit (Coprocessor 1), which handles exceptions, interrupts, and
-privileged operations.
+coprocessors. The processing unit (coprocessor 0) executes ordinary instructions. The principal coprocessor reached
+through coprocessor calls is the Exception Unit (coprocessor 1), which handles exceptions, interrupts, and privileged
+operations.
 
 Coprocessor calls are ordinary conditional instructions. If the instruction's condition is true, the processing unit
 computes a command operand and writes it to the 16-bit coprocessor select register (CSR,
@@ -35,8 +36,8 @@ Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 \noindent The CPU encoding reserves the register field of the immediate format (opcode \opcode{0F}) and the R1, R2, and shift
 fields of the register format (opcode \opcode{3F}); the immediate format has no shift fields. The programmer-facing
 \mnemonic{COPI} and \mnemonic{COPR} syntax hides those fields; assemblers emit canonical values and coprocessors must
-not interpret them as destination-register writes. Opcode \opcode{2F} is listed as Undocumented because it has no
-public assembly syntax (see Appendix~\ref{appendix:undocumented}).
+not interpret them as destination-register writes. Opcode \opcode{2F} is undocumented (see
+Appendix~\ref{appendix:undocumented}); it is not a coprocessor call.
 
 \section{Common Semantics}
 
@@ -44,27 +45,28 @@ public assembly syntax (see Appendix~\ref{appendix:undocumented}).
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                         \\
+		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \\
 		\midrule
-		Condition false    & The instruction is skipped and has no side effects. The CSR, registers, memory, address registers, and status flags are preserved. The program counter still advances to the following instruction.                                                                                                                                                                                                         \\
-		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                                                                                                                                                                                                     \\
-		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                                                                                                                                                                                  \\
-		Write-back         & The processing unit writes the command operand to the CSR. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.                                                                                                                                                                                                          \\
-		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                                                                                                                                                                                \\
-		Privilege          & In protected mode, coprocessor-operation nibbles 0x0--0x7 are user-callable and 0x8--0xF are supervisor-only. Privilege checks only apply when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents. \\
-		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to coprocessor 1 then occupies one further complete 6-cycle slot beginning at the next phase 0, so a coprocessor-1 operation completes 12 cycles after the call's own fetch began.                                                                                              \\
-		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present also raise invalid-opcode faults. See the notes below.                                                                                                                                                                     \\
-		Fault side effects & A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed (Section~\ref{sec:interrupt-latency}).               \\
+		Condition false    & The instruction is skipped and has no side effects. The CSR, registers, memory, address registers, and status flags are preserved. The program counter still advances to the following instruction.                                                                                                                                                                                                                                                                                                                                                                                           \\
+		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \\
+		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                                                                                                                                                                                                                                                                                                                                                                    \\
+		Write-back         & The processing unit writes the command operand to the CSR. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.                                                                                                                                                                                                                                                                                                                                                                                            \\
+		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                                                                                                                                                                                                                                                                                                                                                                  \\
+		Privilege          & In protected mode, coprocessor-operation nibbles \texttt{0x0}--\texttt{0x7} are user-callable and \texttt{0x8}--\texttt{0xF} are supervisor-only. Privilege checks apply only when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the runtime value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents.                                                                                                                                                \\
+		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to a coprocessor with a non-zero ID then occupies one further complete 6-cycle slot beginning at the next phase 0, so most coprocessor-1 operations complete 12 cycles after the call's own fetch began. A command naming coprocessor 0 has no dispatch slot and takes 6 cycles. \mnemonic{RSET} instead goes straight from its write-back into the 6-cycle reset-output hold (18 cycles to the reset handler), and \mnemonic{WAIT} then idles until it is woken. \\
+		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present also raise invalid-opcode faults. See the notes below.                                                                                                                                                                                                                                                                                                                                                       \\
+		Fault side effects & A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed (Section~\ref{sec:interrupt-latency}).                                                                                                                                                                                                 \\
 		\bottomrule
 	\end{tabular}
 	\caption{Common Coprocessor Instruction Semantics}
 	\label{tab:coprocessor-common-semantics}
 \end{table}
 
-\noindent Coprocessor-call instructions do not perform data-memory access and do not raise data bus, data
-bus-protection, data alignment, or effective-address segment-overflow faults. A coprocessor call in the last
+\noindent The processing-unit part of a coprocessor call performs no data-memory access and raises no data bus, data
+bus-protection, data alignment, or effective-address segment-overflow fault. A DMA command that the call starts can raise
+bus, bus-protection, and segment-overflow faults (Section~\ref{sec:dma-unit}). A coprocessor call in the last
 instruction slot of a segment still raises a segment-overflow fault when \texttt{SR.A} is set, because it advances the
-program counter; the call is cancelled before its command is dispatched (Section~\ref{sec:segment-overflow-fault}). Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
+program counter; the call is canceled before its command is dispatched (Section~\ref{sec:segment-overflow-fault}). Instruction fetch can still raise the normal fetch faults before the call executes. If trace mode was
 enabled when the instruction began, an instruction-trace fault is raised after the processing-unit call commits and
 its command has been dispatched and has completed, unless an earlier fault prevents the instruction from completing.
 A traced \mnemonic{EXCP} is the exception: its trace fault is taken first and the trap is entered when the trace
@@ -77,7 +79,7 @@ Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 \begin{instructionbox}{COPI/COPR}{Coprocessor Call}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0F} (Immediate), \opcode{3F} (Register). Opcode \opcode{2F} is Undocumented. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
+	\textbf{Opcodes:} \opcode{0F} (Immediate), \opcode{3F} (Register). Opcode \opcode{2F} is undocumented (Appendix~\ref{appendix:undocumented}); it is not a coprocessor call. See Table~\ref{tab:coprocessor-legal-forms} for the full family of legal forms.
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
@@ -135,7 +137,7 @@ COPR rS                       ; Call coprocessor with command in rS
 	\textbf{Operation:}
 	\begin{verbatim}
 if condition_true then
-    pending_coprocessor_command = command_operand
+    CSR = command_operand
 endif
 \end{verbatim}
 
@@ -157,11 +159,13 @@ endif
 	no coprocessor privilege or opcode checks are performed, and status flags are preserved.
 
 	\textbf{Timing:} 6 cycles for the processing-unit call, plus a further 6-cycle coprocessor dispatch slot (12
-	cycles in total), plus any bus wait states. A DMA or maths-unit command can take longer; see its own entry.
+	cycles in total), plus any bus wait states. A command naming coprocessor 0 has no dispatch slot and takes 6 cycles, as
+	does a call whose condition is false. \mnemonic{RSET}, \mnemonic{WAIT}, DMA commands, and maths-unit commands differ;
+	see their own entries.
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode. In protected mode, coprocessor-operation nibbles
-	0x8--0xF are supervisor-only and raise privilege-violation faults when executed. For \mnemonic{COPR} the privilege
-	decision is made on the run-time value of \reg{rS} sampled during decode, not on any encoded field, so whether a
+	\texttt{0x8}--\texttt{0xF} are supervisor-only and raise privilege-violation faults when executed. For \mnemonic{COPR} the privilege
+	decision is made on the runtime value of \reg{rS} sampled during decode, not on any encoded field, so whether a
 	given \mnemonic{COPR} instruction faults depends on register contents.
 
 	\begin{example}
@@ -195,26 +199,27 @@ raises the same fault; see the Model and Revision Policy below.
 	\small
 	\begin{tabularx}{\textwidth}{llcXX}
 		\toprule
-		\textbf{ID} & \textbf{Name}        & \textbf{Required} & \textbf{Operations}                                & \textbf{Compatibility rule}                          \\
+		\textbf{ID}                & \textbf{Name}        & \textbf{Required} & \textbf{Operations}                                                                                              & \textbf{Compatibility rule}                          \\
 		\midrule
-		0x0         & Processing Unit      & Yes               & Internal                                           & Executes SIRCIS processing-unit instructions         \\
-		0x1         & Exception Unit       & Yes               & 0x1, 0x9--0xD (software); 0x0, 0xE--0xF (internal) & Handles reset, faults, interrupts, traps, and links  \\
-		0x2         & DMA Unit             & No                & 0x8--0xA                                           & Optional standard DMA transfer unit                  \\
-		0x3         & Integer Maths Unit   & No                & 0x0--0x3                                           & Optional standard integer multiply/divide unit       \\
-		0x4--0xF    & Reserved/model space & No                & Model-defined                                      & Reserved unless a CPU model documents the assignment \\
+		\texttt{0x0}               & Processing Unit      & Yes               & Internal                                                                                                         & Executes SIRCIS processing-unit instructions         \\
+		\texttt{0x1}               & Exception Unit       & Yes               & \texttt{0x1}, \texttt{0x9}--\texttt{0xD} (software); \texttt{0x0} (no-op); \texttt{0xE}--\texttt{0xF} (internal) & Handles reset, faults, interrupts, traps, and links  \\
+		\texttt{0x2}               & DMA Unit             & No                & \texttt{0x8}--\texttt{0xA}                                                                                       & Optional standard DMA transfer unit                  \\
+		\texttt{0x3}               & Integer Maths Unit   & No                & \texttt{0x0}--\texttt{0x3}                                                                                       & Optional standard integer multiply/divide unit       \\
+		\texttt{0x4}--\texttt{0xF} & Reserved/model space & No                & Model-defined                                                                                                    & Reserved unless a CPU model documents the assignment \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Standard Coprocessor IDs}
 	\label{tab:standard-coprocessor-ids}
 \end{table}
 
-\noindent A command with coprocessor ID 0x0 selects the processing unit, which is already running, so it is a no-op for
+\noindent A command with coprocessor ID \texttt{0x0} selects the processing unit, which is already running, so it is a no-op for
 every operation nibble and operand. The supervisor-only check still applies: in protected mode, operation nibbles
-0x8--0xF raise a privilege-violation fault as for any other coprocessor. The CSR is \texttt{0x0000} again by the next
+\texttt{0x8}--\texttt{0xF} raise a privilege-violation fault as for any other coprocessor. The CSR is \texttt{0x0000} again by the next
 instruction boundary, so the call never delays exception selection.
 
-\noindent Exception-unit operation nibble 0x0 is the internal no-operation encoding, and is also a no-op when software
-issues it. Operation nibbles 0x2--0x8 are reserved and raise an invalid-opcode fault. Operations 0xE and 0xF are internal encodings the exception unit uses to dispatch a fault or
+\noindent Exception-unit operation nibble \texttt{0x0} is the internal no-operation encoding, and is also a no-op when
+software issues it. Operation nibbles \texttt{0x2}--\texttt{0x8} are reserved and raise an invalid-opcode fault.
+Operations \texttt{0xE} and \texttt{0xF} are internal encodings the exception unit uses to dispatch a fault or
 a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instruction mechanism.
 
 \subsection{Model and Revision Policy}
@@ -224,9 +229,9 @@ a hardware exception; see Chapter~\ref{ch:exceptions} for the internal-instructi
 	\item Required coprocessors and documented operations must remain backward compatible within the SIRC-1 family.
 	\item Optional standard coprocessors keep their assigned IDs even on models that omit them.
 	\item Reserved coprocessor IDs must raise invalid-opcode faults when they are not implemented by the selected CPU model.
-	      Reserved operation nibbles within an implemented coprocessor raise invalid-opcode faults, so a later model can add an
-	      operation and older models can emulate it. Reserved operand values within an implemented operation are architecturally
-	      undefined.
+	      Reserved operation nibbles within an implemented coprocessor other than the processing unit (ID \texttt{0x0}) raise
+	      invalid-opcode faults, so a later model can add an operation and older models can emulate it. Exception-unit operation
+	      \texttt{0x0} is a defined no-op. Reserved operand values within an implemented operation are architecturally undefined.
 	\item Software may probe optional coprocessors by executing the documented operation and handling an invalid-opcode fault, or
 	      by using a model-specific capability table if one is provided by system firmware. The invalid-opcode fault records the
 	      offending 16-bit coprocessor command word in the \texttt{return\_address} field of the fault-metadata link register
@@ -252,20 +257,21 @@ The Exception Unit handles:
 	\centering
 	\begin{tabular}{llp{8cm}}
 		\toprule
-		\textbf{Opcode} & \textbf{Mnemonic} & \textbf{Operation}                      \\
+		\textbf{Opcode}                  & \textbf{Mnemonic} & \textbf{Operation}                      \\
 		\midrule
-		0x1100-0x11FF   & EXCP              & Software exception (trap) at the vector \\
-		0x1900          & WAIT              & Wait for interrupt                      \\
-		0x1A00          & RETE              & Return from exception                   \\
-		0x1B00          & RSET              & System reset                            \\
-		0x1C00-0x1C37   & ETFR              & Transfer from exception link register   \\
-		0x1D00-0x1D37   & ETTR              & Transfer to exception link register     \\
+		\texttt{0x1100}--\texttt{0x11FF} & EXCP              & Software exception (trap) at the vector \\
+		\texttt{0x1900}                  & WAIT              & Wait for interrupt                      \\
+		\texttt{0x1A00}                  & RETE              & Return from exception                   \\
+		\texttt{0x1B00}                  & RSET              & System reset                            \\
+		\texttt{0x1C00 | sel<<4 | n}     & ETFR              & Transfer from exception link register   \\
+		\texttt{0x1D00 | sel<<4 | n}     & ETTR              & Transfer to exception link register     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Exception Unit Operations}
 \end{table}
 
-\noindent For \mnemonic{ETFR} and \mnemonic{ETTR}, command bits 7--6 are not decoded, bits 5--4 select the register
+\noindent For \mnemonic{ETFR} and \mnemonic{ETTR}, \texttt{sel} is the register selector and \texttt{n} is the link-register
+index \texttt{0}--\texttt{7}. Command bits 7--6 are not decoded, bits 5--4 select the register
 (\texttt{00} none, \texttt{01} saved address, \texttt{10} saved status, \texttt{11} both), and bits 3--0 hold the
 link-register index, \texttt{0}--\texttt{7}; values with bit 6 or bit 7 set are not distinct operations. Coprocessor-1
 operations \texttt{0xE} and \texttt{0xF} are the exception unit's internal encodings for dispatching a fault or a
@@ -311,9 +317,12 @@ if condition_true then
     if protected_mode and vector < 0x60 then
         raise privilege_violation_fault
     else if current_exception_level != 0 then
-        discard pending_coprocessor_command
+        CSR = 0x0000                ; discard the trap
     else
-        link[0] = { pc, sr, current_exception_level }
+        link[0] = { address of next instruction, sr, current_exception_level }
+        sr.P = 0
+        sr.T = 0
+        sr.EA = 1
         current_exception_level = 1
         pc = vector_table[vector]
     endif
@@ -321,12 +330,12 @@ endif
 \end{verbatim}
 
 	\textbf{Description:} Triggers a software exception at the specified vector. Used by programs running in protected
-	mode to invoke system calls or request supervisor-mode services through the user trap vectors, 0x60--0xFF; a vector
-	below 0x60 raises a privilege-violation fault in protected mode.
+	mode to invoke system calls or request supervisor-mode services through the user trap vectors, \texttt{0x60}--\texttt{0xFF}; a vector
+	below \texttt{0x60} raises a privilege-violation fault in protected mode.
 
-	In supervisor mode, a vector below 0x60 is accepted and runs the handler that vector points at, but as an ordinary
-	trap: priority 1, state saved in link register 0, exception level 1. Nothing else about the exception that normally
-	uses that vector happens. \textbf{Warning:} a handler entered this way that reads its own link register with
+	In supervisor mode, a vector below \texttt{0x60} is accepted and runs the handler that vector points at, but as an
+	ordinary trap: priority 1, state saved in link register 0, exception level 1. Nothing else about the exception that
+	normally uses that vector happens. \textbf{Warning:} a handler entered this way that reads its own link register with
 	\mnemonic{ETFR} sees stale contents. A fault handler, for example, reads link register 7 and gets the metadata and
 	return address of whichever fault last ran, not this call. A plain \mnemonic{RETE} still returns correctly, because it
 	uses link register 0 at exception level 1.
@@ -337,15 +346,16 @@ endif
 	unit.
 
 	\textbf{Exceptions:} Dispatches a software exception through the exception unit. Raises a privilege-violation fault
-	in protected mode if the selected vector is below 0x60. Software exceptions are accepted only at exception level 0;
+	in protected mode if the selected vector is below \texttt{0x60}. Software exceptions are accepted only at exception level 0;
 	an otherwise legal \mnemonic{EXCP} executed inside any exception or fault handler is discarded -- the CSR
 	is cleared, no vector is fetched, and no fault is raised. The privilege check comes first, so a protected-mode
-	\mnemonic{EXCP} with a vector below 0x60 inside a handler still raises a privilege-violation fault. Nested system calls from a handler are therefore not
-	possible.
+	\mnemonic{EXCP} with a vector below \texttt{0x60} inside a handler still raises a privilege-violation fault. Nested
+	system calls from a handler are therefore not possible.
 
 	\textbf{Condition field:} If the condition is false, no trap is dispatched and status flags are preserved.
 
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot. A discarded \mnemonic{EXCP}
+	(inside a handler) also takes 12 cycles: its dispatch slot runs with no-op phases.
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
@@ -416,7 +426,8 @@ endif
 
 	\textbf{Condition field:} If the condition is false, the CPU does not enter wait state and status flags are preserved.
 
-	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot.
+	\textbf{Timing:} 6 cycles for the call plus a 6-cycle exception-unit dispatch slot, then idle until an interrupt that
+	can be taken arrives or the CPU is reset.
 
 	\textbf{Privilege:} Supervisor mode only.
 
@@ -424,7 +435,7 @@ endif
 		\begin{lstlisting}
 :idle_loop
     WAIT                       ; Wait until an interrupt or reset occurs
-    BRAN @idle_loop            ; Resume waiting if woken spuriously
+    BRAN @idle_loop            ; After the interrupt handler returns, wait again
 		\end{lstlisting}
 		\caption{Idling Until an Interrupt}
 	\end{example}
@@ -541,6 +552,8 @@ if condition_true then
         raise privilege_violation_fault
     else
         sr = 0x0000
+        current_exception_level = 0
+        clear pending hardware exceptions (and the L5 overrun flag)
         assert reset output for 6 cycles
         pc = vector_table[reset_vector]
     endif
@@ -551,9 +564,10 @@ endif
 	hardware exceptions are cleared when reset is requested. The reset output is then asserted and held for 6 cycles,
 	after which the exception unit fetches the reset vector and loads the program counter from it
 	(Section~\ref{sec:reset-output-hold}). General-purpose registers, the \reg{a}, \reg{l}, and \reg{s} pairs, and the exception link
-	registers are not affected by reset and hold undefined values after power-on.
+	registers are not cleared by reset; software must treat their contents as architecturally undefined.
 
-	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit.
+	\textbf{Write-back:} Inherits \mnemonic{COPI} command dispatch to the exception unit, except that the reset request
+	replaces the 6-cycle dispatch slot.
 
 	\textbf{Flags:} Reset by the exception unit as part of reset processing.
 
@@ -562,7 +576,8 @@ endif
 	\textbf{Condition field:} If the condition is false, no reset occurs and current status flags are preserved.
 
 	\textbf{Timing:} 6 cycles for the call, plus a 6-cycle \texttt{RSTO} hold, plus 6 cycles for the exception unit to
-	fetch the reset vector -- 18 cycles from the \mnemonic{RSET} fetch to the first instruction of the reset handler.
+	fetch the reset vector -- 18 cycles from the \mnemonic{RSET} fetch to the first instruction of the reset handler (no
+	dispatch slot).
 
 	\textbf{Privilege:} Supervisor mode only.
 
@@ -606,9 +621,9 @@ RSET                           ; Reboots through the reset vector
 		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
 		\item \textbf{Immediate (bits 21--6):} \texttt{0x1Cxy} (\mnemonic{ETFR}) or \texttt{0x1Dxy} (\mnemonic{ETTR});
 		      bits 15--12 select coprocessor 1, bits 11--8 select operation \texttt{0xC} or \texttt{0xD}. Within the
-		      low operand byte \texttt{xy}: bits 7--6 are not decoded, bits 5--4 (\texttt{x}) select the register
-		      (\texttt{00} none, \texttt{01} saved address only, \texttt{10} saved status only, \texttt{11} both), and
-		      bits 3--0 (\texttt{y}) hold \texttt{\#n}, the link-register index \texttt{0}--\texttt{7}.
+		      low operand byte \texttt{xy}, the high hex digit \texttt{x} holds bits 7--4: bits 7--6 are not decoded and
+		      are written as zero, and bits 5--4 select the register (\texttt{00} none, \texttt{01} saved address only,
+		      \texttt{10} saved status only, \texttt{11} both). The low hex digit \texttt{y} holds bits 3--0, which hold \texttt{\#n}, the link-register index \texttt{0}--\texttt{7}.
 		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -626,8 +641,7 @@ ETTR #n, r7                   ; Transfer r7 to saved status only
 
 	\textbf{Operands:} \texttt{\#n} selects one of the eight exception link registers and must be in the range
 	\imm{0}--\imm{7}. Link register \imm{7} holds fault metadata; link register $L-1$ holds the state saved on entry to
-	an exception at level $L$. Values above \imm{7} are architecturally undefined; the assembler currently masks
-	\texttt{\#n} to four bits without diagnosing the error. Optional operands select whether to transfer the saved
+	an exception at level $L$. Values above \imm{7} are architecturally undefined. Optional operands select whether to transfer the saved
 	return address, saved status register, or both.
 
 	\textbf{Operation:}
@@ -701,11 +715,11 @@ protected mode, they raise a privilege-violation fault before dispatch.
 	\small
 	\begin{tabularx}{\textwidth}{llllX}
 		\toprule
-		\textbf{Mnemonic} & \textbf{Command} & \textbf{Count}              & \textbf{Registers}                          & \textbf{Operation}                          \\
+		\textbf{Mnemonic} & \textbf{Command}          & \textbf{Count}              & \textbf{Registers}                          & \textbf{Operation}                          \\
 		\midrule
-		\mnemonic{DMAR}   & 0x2800 | operand & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Read memory into registers                  \\
-		\mnemonic{DMAW}   & 0x2900 | operand & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Write registers to memory                   \\
-		\mnemonic{DMAT}   & 0x2A00 | n       & 0--255                      & \reg{a}, \reg{l}, \reg{r1}--\reg{r7}        & Copy memory at \reg{a} to memory at \reg{l} \\
+		\mnemonic{DMAR}   & \texttt{0x2800 | operand} & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Read memory into registers                  \\
+		\mnemonic{DMAW}   & \texttt{0x2900 | operand} & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Write registers to memory                   \\
+		\mnemonic{DMAT}   & \texttt{0x2A00 | n}       & 0--255                      & \reg{a}, \reg{l}, \reg{r1}--\reg{r7}        & Copy memory at \reg{a} to memory at \reg{l} \\
 		\bottomrule
 	\end{tabularx}
 	\caption{DMA Unit Operations}
@@ -716,7 +730,8 @@ protected mode, they raise a privilege-violation fault before dispatch.
 address register (\texttt{00} = \reg{a}, \texttt{01} = \reg{l}, \texttt{10} = \reg{s}, \texttt{11} reserved), bit 5
 selects direction (\texttt{0} = forward, \texttt{1} = backward), bits 2--0 hold the count magnitude, and bits 4--3 are
 reserved and written as zero. Negative counts are encoded as the backward direction bit plus the positive magnitude, not
-as a two's-complement count field. A zero count is encoded with the direction bit clear (forward). Note: this DMA
+as a two's-complement count field. A zero count is encoded with the direction bit clear (forward). A backward count of zero (direction bit set, magnitude
+zero) is a no-op, identical to a forward count of zero. Note: this DMA
 operand field is not the AF address-register field; its \texttt{00}/\texttt{01} assignment differs from
 Table~\ref{tab:addr-reg-encoding} in Chapter~\ref{ch:addressing-modes}.
 
@@ -769,7 +784,10 @@ segment-overflow check is made at access time, one access at a time. It is never
 	      after each completed \mnemonic{DMAT} chunk, is checked the same way. If it carries out of the low word with
 	      \texttt{SR.A} set, the fault is raised at that point, after the words have been transferred and with the
 	      register unchanged. A transfer that ends exactly at the top of the segment therefore faults on the advance even
-	      though every access was in range, as a post-increment \mnemonic{LOAD} does.
+	      though every access was in range, as a post-increment \mnemonic{LOAD} does. For \mnemonic{DMAT}, both chunk advances
+	      are checked before either is applied: if either would carry out of the low word with \texttt{SR.A} set, neither
+	      \reg{a} nor \reg{l} changes, and the fault records the \reg{a} advance (DMA read type) if it wraps, otherwise
+	      the \reg{l} advance (DMA write type).
 	\item \textbf{\mnemonic{DMAT}.} Reads use \reg{a} and writes use \reg{l}; an overflowing read access faults at the read
 	      and an overflowing write access faults at the write.
 \end{itemize}
@@ -923,7 +941,7 @@ address (\mnemonic{ETFR} \reg{a}, \imm{6}) against the expected range before tre
 	\label{ex:dma-copy-safe}
 \end{example}
 
-\begin{instructionbox}{DMAR}{DMA Read To Registers Meta-Instruction}
+\begin{instructionbox}{DMAR}{DMA Read to Registers Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
 	on models that do not implement it.
 
@@ -964,7 +982,7 @@ count = abs(n)
 if n < 0:
     addr.low = addr.low - count
 transfer = addr
-for i in 1..count:
+for i in 1 to count (inclusive):
     r[i] = memory[transfer]
     transfer.low = transfer.low + 1
 if n > 0:
@@ -984,8 +1002,8 @@ if n > 0:
 
 	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. The count field is 3 bits wide and
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
-	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check exists only to keep source syntax honest,
-	not to guard against an otherwise-representable illegal value. Unsupported DMA
+	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check applies to source syntax only and does not
+	guard against an illegal encoding. Unsupported DMA
 	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
 	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA reads can raise
@@ -1021,7 +1039,7 @@ DMAR a, #3                    ; r1, r2, r3 = memory[a], memory[a+1], memory[a+2]
 	\end{example}
 \end{instructionbox}
 
-\begin{instructionbox}{DMAW}{DMA Write From Registers Meta-Instruction}
+\begin{instructionbox}{DMAW}{DMA Write from Registers Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 2 (DMA Unit), an optional coprocessor absent
 	on models that do not implement it.
 
@@ -1062,7 +1080,7 @@ count = abs(n)
 if n < 0:
     addr.low = addr.low - count
 transfer = addr
-for i in 1..count:
+for i in 1 to count (inclusive):
     memory[transfer] = r[i]
     transfer.low = transfer.low + 1
 if n > 0:
@@ -1084,8 +1102,8 @@ if n > 0:
 
 	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. The count field is 3 bits wide and
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
-	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check exists only to keep source syntax honest,
-	not to guard against an otherwise-representable illegal value. Unsupported DMA
+	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check applies to source syntax only and does not
+	guard against an illegal encoding. Unsupported DMA
 	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
 	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA writes can raise
@@ -1154,6 +1172,7 @@ DMAW a, #3                    ; memory[a], memory[a+1], memory[a+2] = r1, r2, r3
 
 	\textbf{Operation:}
 	\begin{verbatim}
+remaining = n
 while remaining > 0:
     chunk = min(remaining, 7)
     read chunk words from memory[a] into r1..r[chunk]
@@ -1167,8 +1186,10 @@ while remaining > 0:
 	\reg{r1}--\reg{r7} as an internal transfer window in chunks of up to seven words.
 
 	\textbf{Write-back:} A successful non-zero \mnemonic{DMAT} advances \reg{a} and \reg{l} by the number of words
-	transferred. Address-register high words are not changed by the transfer increments. \reg{r1}--\reg{r7} are
-	clobbered; after completion they contain the final transfer window. Because \reg{l} is also the subroutine link
+	transferred. Address-register high words are not changed by the transfer increments. Each chunk writes
+	\reg{r1}--\reg{r$c$}, where $c$ is the chunk size. After completion, \reg{r1}--\reg{r$c$} hold the last chunk and the
+	higher registers hold the words of the previous chunk, or their original values if there was none. Software should
+	treat \reg{r1}--\reg{r7} as clobbered. Because \reg{l} is also the subroutine link
 	register (Chapter~\ref{ch:registers}), a subroutine that issues \mnemonic{DMAT} must save and restore its return
 	address around the transfer.
 
@@ -1205,20 +1226,21 @@ while remaining > 0:
 	\textbf{Notes:}
 	\begin{itemize}
 		\item \mnemonic{DMAT}'s \texttt{\#n} is fixed at assembly time; it has no register-operand form. SIRC-1
-		      meta-instructions are always aliases for exactly one real instruction, so a runtime-variable count
+		      meta-instructions always assemble to exactly one real instruction, so a runtime-variable count
 		      cannot be a \mnemonic{DMAT} form without turning it into a multi-instruction expansion, which would
 		      make its instruction count vary with its operand, unlike every other meta-instruction.
 		\item A transfer whose length is only known at runtime is still possible, just not as a single mnemonic: build the command
 		      word in a register and dispatch it directly with the general \mnemonic{COPR} instruction instead of \mnemonic{DMAT},
 		      for example:
 		      \begin{lstlisting}
-ANDI[N] rS, #0x00FF           ; keep only the low byte (the count)
-ORRI[N] rS, #0x2A00           ; combine with DMAT's own fixed header
-COPR rS                       ; dispatch -- identical to DMAT from here
+ANDI[N] r1, #0x00FF           ; keep only the low byte (the count)
+ORRI[N] r1, #0x2A00           ; combine with DMAT's own fixed header
+COPR r1                       ; dispatch -- identical to DMAT from here
 		      \end{lstlisting}
-		      The \texttt{[N]} suffix keeps these two setup steps from disturbing the status flags, matching \mnemonic{DMAT}'s own
-		      "Flags: Preserved" above. This is ordinary use of the already-documented \mnemonic{COPR} instruction (see the
-		      \mnemonic{COPI}/\mnemonic{COPR} entry above), not a distinct form of \mnemonic{DMAT}. Once dispatched, it behaves
+		      Any register may hold the command; \mnemonic{COPR} reads it at decode, before \mnemonic{DMAT} overwrites \reg{r1}. The
+		      \texttt{[N]} suffix keeps these two setup steps from disturbing the status flags, matching \mnemonic{DMAT}'s own
+		      \textbf{Flags:} Preserved entry above. This is ordinary use of the already-documented \mnemonic{COPR} instruction (see
+		      the \mnemonic{COPI}/\mnemonic{COPR} entry above), not a distinct form of \mnemonic{DMAT}. Once dispatched, it behaves
 		      exactly like \mnemonic{DMAT} -- including this entry's Fault side effects above -- since the DMA unit cannot tell
 		      whether a command arrived via \mnemonic{COPI} or \mnemonic{COPR}.
 	\end{itemize}
@@ -1240,7 +1262,9 @@ DMAT a, l, #16                ; Copy 16 words from memory[a] to memory[l]
 
 The optional integer maths unit provides a stable multiply/divide convention. CPU models without the hardware raise an
 invalid-opcode fault for these commands, allowing supervisor software to emulate the operation and return as if the
-coprocessor call had completed.
+coprocessor call had completed. Because the fault is retryable, the handler must advance the saved return address in
+link register 6 by 2 with \mnemonic{ETFR}/\mnemonic{ETTR} before \mnemonic{RETE} (see the Invalid Opcode Fault section
+of Chapter~\ref{ch:exceptions}).
 
 Reference source listings for software emulation routines are supplied with the SIRC-1 distribution media. Those
 listings are examples of a supervisor compatibility handler, not additional instruction encodings.
@@ -1254,10 +1278,10 @@ listings are examples of a supervisor compatibility handler, not additional inst
 		\toprule
 		\textbf{Mnemonic} & \textbf{Command} & \textbf{Inputs}             & \textbf{Outputs}             & \textbf{Operation}              \\
 		\midrule
-		\mnemonic{MULU}   & 0x3000           & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Unsigned 16 x 16 -> 32 multiply \\
-		\mnemonic{MULS}   & 0x3100           & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Signed 16 x 16 -> 32 multiply   \\
-		\mnemonic{DIVU}   & 0x3200           & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Unsigned divide                 \\
-		\mnemonic{DIVS}   & 0x3300           & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Signed divide                   \\
+		\mnemonic{MULU}   & \texttt{0x3000}  & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Unsigned 16 x 16 -> 32 multiply \\
+		\mnemonic{MULS}   & \texttt{0x3100}  & \reg{r1}, \reg{r2}          & \reg{r1}:\reg{r2}, \reg{r3}  & Signed 16 x 16 -> 32 multiply   \\
+		\mnemonic{DIVU}   & \texttt{0x3200}  & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Unsigned divide                 \\
+		\mnemonic{DIVS}   & \texttt{0x3300}  & \reg{r1}:\reg{r2}, \reg{r3} & \reg{r1}, \reg{r2}, \reg{r3} & Signed divide                   \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Integer Maths Unit Operations}
@@ -1427,7 +1451,7 @@ DIVS                          ; Signed divide
 	\begin{verbatim}
 if divisor is zero:
     r3 = E | DZ
-else if quotient does not fit in 16 bits:
+else if quotient is outside 0..0xFFFF (DIVU) or -32768..32767 (DIVS):
     r3 = E | OV
 else:
     r1 = remainder
@@ -1460,7 +1484,9 @@ else:
 
 	\textbf{Signed division:} \mnemonic{DIVS} treats \reg{r1}:\reg{r2} as a 32-bit two's-complement dividend and
 	\reg{r3} as a 16-bit two's-complement divisor. The quotient is truncated toward zero and the remainder has the sign
-	of the dividend. The case \texttt{-2147483648 / -1} is quotient overflow.
+	of the dividend. The quotient must lie in \texttt{-32768}--\texttt{32767}; any other quotient, including
+	\texttt{-2147483648 / -1}, is quotient overflow. The remainder lies in \texttt{-32768}--\texttt{32767} and is written to
+	\reg{r1} as a 16-bit two's-complement value.
 
 	\begin{example}
 		\begin{lstlisting}

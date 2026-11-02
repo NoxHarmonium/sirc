@@ -151,8 +151,8 @@ For opcodes \opcode{10}--\opcode{1F}, bits encode memory operation type:
 \section{Undocumented Instructions}
 
 Two opcodes are undocumented and have no public assembly syntax: \opcode{27} and \opcode{2F}, both in the Short
-Immediate group. Do not use them in production code. Their behavior is architecturally undefined and reserved for
-future revisions (see Appendix~\ref{appendix:undocumented}).
+Immediate group. Software must not use them. Their behavior is architecturally undefined and reserved for future
+revisions (see Appendix~\ref{appendix:undocumented}).
 
 \section{Quick Lookup Table}
 
@@ -161,28 +161,30 @@ future revisions (see Appendix~\ref{appendix:undocumented}).
 	\small
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Operation} & \textbf{Immediate} & \textbf{Short+Shift}           & \textbf{Register} \\
+		\textbf{Operation} & \textbf{Immediate} & \textbf{Short+Shift}     & \textbf{Register} \\
 		\midrule
-		ADD                & \opcode{00}        & \opcode{20}                    & \opcode{30}       \\
-		ADC                & \opcode{01}        & \opcode{21}                    & \opcode{31}       \\
-		SUB                & \opcode{02}        & \opcode{22}                    & \opcode{32}       \\
-		SBC                & \opcode{03}        & \opcode{23}                    & \opcode{33}       \\
-		AND                & \opcode{04}        & \opcode{24}                    & \opcode{34}       \\
-		ORR                & \opcode{05}        & \opcode{25}                    & \opcode{35}       \\
-		XOR                & \opcode{06}        & \opcode{26}                    & \opcode{36}       \\
-		MOV                & \opcode{07}        & \opcode{27}\textsuperscript{*} & \opcode{37}       \\
-		CMN                & \opcode{08}        & \opcode{28}                    & \opcode{38}       \\
-		CNC                & \opcode{09}        & \opcode{29}                    & \opcode{39}       \\
-		CMP                & \opcode{0A}        & \opcode{2A}                    & \opcode{3A}       \\
-		CPC                & \opcode{0B}        & \opcode{2B}                    & \opcode{3B}       \\
-		TSA                & \opcode{0C}        & \opcode{2C}                    & \opcode{3C}       \\
-		TSO                & \opcode{0D}        & \opcode{2D}                    & \opcode{3D}       \\
-		TSX                & \opcode{0E}        & \opcode{2E}                    & \opcode{3E}       \\
-		COP                & \opcode{0F}        & \opcode{2F}\textsuperscript{*} & \opcode{3F}       \\
+		ADD                & \opcode{00}        & \opcode{20}              & \opcode{30}       \\
+		ADC                & \opcode{01}        & \opcode{21}              & \opcode{31}       \\
+		SUB                & \opcode{02}        & \opcode{22}              & \opcode{32}       \\
+		SBC                & \opcode{03}        & \opcode{23}              & \opcode{33}       \\
+		AND                & \opcode{04}        & \opcode{24}              & \opcode{34}       \\
+		ORR                & \opcode{05}        & \opcode{25}              & \opcode{35}       \\
+		XOR                & \opcode{06}        & \opcode{26}              & \opcode{36}       \\
+		MOV                & \opcode{07}        & --                       & \opcode{37}       \\
+		CMN                & \opcode{08}        & \opcode{28}              & \opcode{38}       \\
+		CNC                & \opcode{09}        & \opcode{29}              & \opcode{39}       \\
+		CMP                & \opcode{0A}        & \opcode{2A}              & \opcode{3A}       \\
+		CPC                & \opcode{0B}        & \opcode{2B}              & \opcode{3B}       \\
+		TSA                & \opcode{0C}        & \opcode{2C}              & \opcode{3C}       \\
+		TSO                & \opcode{0D}        & \opcode{2D}              & \opcode{3D}       \\
+		TSX                & \opcode{0E}        & \opcode{2E}              & \opcode{3E}       \\
+		COP                & \opcode{0F}        & --                       & \opcode{3F}       \\
+		Undocumented       & --                 & \opcode{27}, \opcode{2F} & --                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Variant Quick Reference}
 	\label{tab:instruction-variant-quick-reference}
 \end{table}
 
-\textsuperscript{*} These opcodes have no public assembly syntax and are undocumented.
+Opcodes \opcode{27} and \opcode{2F} are undocumented (Appendix~\ref{appendix:undocumented}). They are not
+short-immediate \mnemonic{MOVI} or \mnemonic{COPI} forms.

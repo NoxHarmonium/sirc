@@ -8,18 +8,29 @@ public assembly syntax and are reserved for expansion in future CPU revisions. T
 undefined: an implementation decodes them without raising an invalid-opcode fault, but what they do is not part of the
 architectural contract and may change in any later revision. Software must not use them.
 
-\textbf{Warning:} Use of undocumented instructions is not recommended for production code.
+Undefined and undocumented encodings remain bound by the privilege rules. In protected mode they cannot change the
+privileged byte of the status register, a high word of an address register, or the state of the exception unit, and
+they may write only the registers named in their fields.
+
+\textbf{Warning:} Undocumented instructions must not be used in production code.
 
 \section{Undefined Operand Combinations}
 
-Undefined operand combinations are different from undocumented opcodes: the opcode is documented, but a particular
-choice of operands creates multiple architectural writes to the same address-register pair during the same instruction.
+Undefined operand combinations differ from undocumented opcodes: the opcode is documented, but a particular choice of
+operands writes the same address-register pair more than once during one instruction. The privilege rules in the
+Overview apply to these combinations.
 
 \subsection{Aliased Address-Register Writes}
 
 The auto-update effective-address forms can write both a destination address-register pair and an updated source
-address-register pair. \mnemonic{LDEL} also writes the link-register pair. If two of those write-back targets are the
-same address-register pair, the final value is architecturally undefined.
+address-register pair. \mnemonic{LDEL} also writes the link-register pair. Any of the following is architecturally
+undefined:
+
+\begin{itemize}
+	\item two write-back targets in the same address-register pair, including the link write and the program-counter advance
+	\item a \mnemonic{LOAD} post-increment whose destination is a half of the updated pair
+	\item a \mnemonic{STOR} pre-decrement whose source is a half of the updated pair
+\end{itemize}
 
 \begin{lstlisting}
 ; Undefined: a is both destination and auto-updated source
@@ -35,7 +46,7 @@ LDEL l, (#0, a)
 LOAD r1, (#0, p)+
 \end{lstlisting}
 
-Programs should avoid aliased register writes. The assembler rejects the known hazardous forms so that programs do not
+Programs must not use aliased register writes. The assembler rejects the known hazardous forms so that programs do not
 accidentally depend on undefined write-back ordering.
 
 \section{Undocumented Opcode List}
@@ -66,15 +77,15 @@ contract. It is not required to be preserved in future CPU revisions.
 These instructions were left undocumented for two reasons:
 
 \begin{enumerate}
-	\item \textbf{Opcode space reservation}: May be used for future features.
-	\item \textbf{Implementation flexibility}: Allows hardware optimizations.
+	\item \textbf{Opcode space reservation}: the opcodes may be used for future features.
+	\item \textbf{Implementation flexibility}: the opcodes allow hardware optimizations.
 \end{enumerate}
 
 \section{Recommendations}
 
 \subsection{For Application Developers}
 
-\textbf{Do not use undocumented instructions in production code.}
+\textbf{Applications must not use undocumented instructions in production code.}
 
 \begin{itemize}
 	\item Behavior may change between CPU revisions.
@@ -86,7 +97,7 @@ These instructions were left undocumented for two reasons:
 \subsection{For Compiler Writers}
 
 \begin{itemize}
-	\item Do not generate undocumented instructions.
+	\item Compilers must not generate undocumented instructions.
 	\item Use only documented instructions for all operations.
 	\item If optimization requires new operations, request formal documentation.
 \end{itemize}
@@ -108,9 +119,11 @@ must not depend on either.
 The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
-	\item 2 undocumented opcodes, \opcode{27} and \opcode{2F}, reserved for future revisions
-	\item Reserved shift type (111) could enable additional shift modes.
-	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source.
+	\item Two undocumented opcodes, \opcode{27} and \opcode{2F}, reserved for future revisions
+	\item The reserved shift type (111) could enable additional shift modes.
+	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source. Until then, an ALU
+	      instruction with AF = 11 completes and writes its result, but N, Z, C, and V are architecturally undefined (see
+	      Chapter~\ref{ch:instruction-formats}), and assemblers never emit it.
 	\item Standard optional coprocessors and model-specific coprocessors can provide extended functionality through the
 	      documented coprocessor compatibility rules.
 \end{itemize}

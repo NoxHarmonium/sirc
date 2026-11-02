@@ -3,9 +3,9 @@
 
 \section{Overview}
 
-The SIRC-1 is a 16-bit RISC processor ideal for general-purpose computing.
+The SIRC-1 is a 16-bit RISC processor intended for general-purpose computing.
 
-\noindent It implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a powerful set of operations while still ensuring simplicity of CPU implementation.
+\noindent It implements the SIRCIS (SIRC Instruction Set) instruction set architecture, which provides a powerful set of operations while keeping the CPU implementation simple.
 
 \section{Design Philosophy}
 
@@ -62,7 +62,7 @@ The SIRC-1 is designed for general-purpose computing, such as the core of a micr
 		Addressing                  & Word Addressing                                                 \\
 		Address Bus                 & 24-bit word address                                             \\
 		Instruction Size            & 32-bit fixed                                                    \\
-		General-Purpose Registers   & 7 (r1--r7)                                                      \\
+		General-Purpose Registers   & 7 (\reg{r1}--\reg{r7})                                          \\
 		Address Register Pairs      & 4 (l, a, s, p -- link, address, stack pointer, program counter) \\
 		Total Addressable Registers & 16                                                              \\
 		Instruction Formats         & 3                                                               \\
@@ -80,12 +80,14 @@ The SIRC-1 executes every instruction through six sequential execution phases (n
 a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 This fixed six-stage model means that ordinary processing-unit instructions take 6 clock cycles to complete when bus
-operations do not require wait states, regardless of their complexity. Every coprocessor call (\mnemonic{COPI},
-\mnemonic{COPR}, and every meta-instruction that assembles to one) takes a second complete 6-cycle dispatch slot, for
-12 cycles in total, before the next instruction is fetched. DMA and maths-unit commands can take longer: the DMA unit
-holds instruction fetch after dispatch until its transfer has completed, so a transfer of more than a few words costs
-more as it grows, and a maths operation may take implementation-defined extra cycles. A bus device may hold the current
-phase by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6-cycle
+operations do not require wait states, regardless of their complexity. Every executed coprocessor call
+(\mnemonic{COPI}, \mnemonic{COPR}, and every meta-instruction that assembles to one) normally takes a second complete
+6-cycle dispatch slot, for 12 cycles in total; a call whose condition is false takes only the 6 cycles of the call
+itself. A call that names coprocessor \texttt{0x0} takes 6 cycles and has no dispatch slot, and \mnemonic{RSET} has no
+dispatch slot because its reset request replaces it. DMA and maths-unit commands can take longer: the DMA unit holds
+instruction fetch after dispatch until its transfer has completed, so a transfer of more than a few words costs more as
+it grows, and a maths operation may take implementation-defined extra cycles. A bus device may hold the current phase
+by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6-cycle
 instruction execution model may seem wasteful for simple register operations that do not require memory access, it
 dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or
 microcode.
@@ -95,22 +97,22 @@ microcode.
 The SIRC-1 is made up of multiple coprocessors (also known as modules) that all share the same address/data bus and
 register file. Only one coprocessor can be active at a time.
 
-The primary coprocessor is the "processing unit" (coprocessor \texttt{0x0}) which is active the majority of the time
-and executes SIRCIS instructions. The CPU will revert to this coprocessor at power on, after a reset and when another
-coprocessor is done and returns control to it.
+The primary coprocessor is the ``processing unit'' (coprocessor \texttt{0x0}) which is active the majority of the time
+and executes SIRCIS instructions. At power on and after a reset, the exception unit first fetches the reset vector;
+control then passes to the processing unit, which also regains control whenever another coprocessor finishes.
 
 Other coprocessors are usually activated using the \mnemonic{COPI} or \mnemonic{COPR} coprocessor-call instructions
-(see Chapter~\ref{ch:coprocessor}), except for the "exception unit," which can also be activated when external
+(see Chapter~\ref{ch:coprocessor}), except for the ``exception unit,'' which can also be activated when external
 interrupt requests are raised. Activating a coprocessor using the coprocessor-call instructions is also known as
-"dispatching" to a coprocessor.
+``dispatching'' to a coprocessor.
 
-All implementations of the SIRC-1 will have the "processing unit" (coprocessor \texttt{0x0}) and the "exception unit"
+All implementations of the SIRC-1 have the ``processing unit'' (coprocessor \texttt{0x0}) and the ``exception unit''
 (coprocessor \texttt{0x1}). Every other coprocessor, including the DMA unit (coprocessor \texttt{0x2}), is optional and
 may not be present in some SIRC-1 models. The instruction set supports up to 16 coprocessors. The coprocessor IDs are
-stable between models, so that programs are cross-compatible. For example, coprocessor \texttt{0x3} will always be the
+stable between models, so that programs are cross-compatible. For example, coprocessor \texttt{0x3} is always the
 Integer Maths Unit, whether or not a given CPU model implements it. This means that if a CPU model is missing an
-optional coprocessor and a program requires it, the CPU can raise an invalid-opcode fault so that the behavior can be
-emulated in software where practical.
+optional coprocessor and a program requires it, the CPU may raise an invalid-opcode fault so that the behavior can be
+implemented in software where practical.
 
 \begin{table}[H]
 	\centering
@@ -125,18 +127,20 @@ emulated in software where practical.
 		\texttt{0x4}--\texttt{0xF} & Reserved/model use & Yes               & Defined by future or model-specific manuals \\
 		\bottomrule
 	\end{tabular}
-	\caption{List of coprocessors}
+	\caption{List of Coprocessors}
 	\label{tab:coprocessor-list}
 \end{table}
 
 Each coprocessor can execute 16 opcodes: the first 8 (\texttt{0x0}--\texttt{0x7}) can be called in any mode, and the
-last 8 (\texttt{0x8}--\texttt{0xF}) can be called only in supervisor mode.
+last 8 (\texttt{0x8}--\texttt{0xF}) can be called only in supervisor mode. A coprocessor may add further protected-mode
+restrictions on individual operations; for example, the exception unit's \mnemonic{EXCP} (operation \texttt{0x1})
+faults in protected mode when its vector is below \texttt{0x60}.
 
 Note: Software does not normally dispatch to the ``processing unit'' (coprocessor \texttt{0x0}) as it does to the other
-coprocessors, as it is the default coprocessor, and will automatically regain control when the other coprocessors are
-finished. Using \mnemonic{COPI} or \mnemonic{COPR} with coprocessor 0x0 is technically valid, but any operand passed
-into \mnemonic{COPI} or \mnemonic{COPR} will be ignored. It is effectively a no-op, although the supervisor-only check
-on operations 0x8--0xF still applies (see Chapter~\ref{ch:coprocessor}).
+coprocessors, because it is the default coprocessor and automatically regains control when the other coprocessors are
+finished. Using \mnemonic{COPI} or \mnemonic{COPR} with coprocessor \texttt{0x0} is valid, but the CPU ignores any
+operand passed into \mnemonic{COPI} or \mnemonic{COPR}. The call is effectively a no-op, although the supervisor-only
+check on operations \texttt{0x8}--\texttt{0xF} still applies (see Chapter~\ref{ch:coprocessor}).
 
 \subsection{Privilege Levels}
 
@@ -181,12 +185,12 @@ two consecutive 16-bit words: the target address high word followed by the targe
 	\small
 	\begin{tabularx}{\textwidth}{lllX}
 		\toprule
-		\textbf{Region} & \textbf{Vector IDs}                                                       & \textbf{Word addresses}          & \textbf{Purpose}                                \\
+		\textbf{Region} & \textbf{Vector IDs}          & \textbf{Word addresses}          & \textbf{Purpose}                                                                                                                    \\
 		\midrule
-		Reset           & \texttt{0x00}                                                             & \addr{0x000000}--\addr{0x000001} & Initial program counter after reset             \\
-		Faults          & \texttt{0x01}--\texttt{0x0F}                                              & \addr{0x000002}--\addr{0x00001F} & Fault and reserved privileged exception vectors \\
-		Hardware        & \texttt{0x10}, \texttt{0x20}, \texttt{0x30}, \texttt{0x40}, \texttt{0x50} & \addr{0x000020}--\addr{0x0000A1} & Hardware exception vectors, spaced by vector ID \\
-		User traps      & \texttt{0x60}--\texttt{0xFF}                                              & \addr{0x0000C0}--\addr{0x0001FF} & User software exception vectors                 \\
+		Reset           & \texttt{0x00}                & \addr{0x000000}--\addr{0x000001} & Initial program counter after reset                                                                                                 \\
+		Faults          & \texttt{0x01}--\texttt{0x0F} & \addr{0x000002}--\addr{0x00001F} & Fault and reserved privileged exception vectors                                                                                     \\
+		Hardware        & \texttt{0x10}--\texttt{0x5F} & \addr{0x000020}--\addr{0x0000BF} & Hardware exception vectors at \texttt{0x10}, \texttt{0x20}, \texttt{0x30}, \texttt{0x40}, \texttt{0x50}; all other entries reserved \\
+		User traps      & \texttt{0x60}--\texttt{0xFF} & \addr{0x0000C0}--\addr{0x0001FF} & User software exception vectors                                                                                                     \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Exception Vector Table Regions}

@@ -16,7 +16,7 @@ follow, in this order, for every entry:
 	      listed together when they perform the same operation.
 	\item[Opcodes] The 6-bit opcode values for each supported instruction format. Meta-instructions that assemble to another
 	      instruction's encoding use \textbf{Assembles to} instead of \textbf{Opcodes}.
-	\item[Encoding diagrams] A bit-field diagram for each encoding listed under Opcodes. A box labelled with an operand name
+	\item[Encoding diagrams] A bit-field diagram for each encoding listed under Opcodes. A box labeled with an operand name
 	      (\texttt{rD}, \texttt{rS1}, \texttt{rO}, \texttt{imm16}, \texttt{offset}, \texttt{dest}, \texttt{src}, \texttt{addr}
 	      and so on) carries that operand; Table~\ref{tab:instruction-description-notation} defines the names. The shift fields
 	      \texttt{SO}, \texttt{ST} and \texttt{SA}, the condition field \texttt{Cond}, and the status update source \texttt{SUS}
@@ -79,7 +79,7 @@ follow, in this order, for every entry:
 		register field                                                                                                                            \\
 		\texttt{\#offset / \#disp} & Displacement added to the low word of an address-register pair                                               \\
 		\texttt{@label}            & Symbol reference resolved by the linker; PC-relative for \mnemonic{BRAN} and
-		\mnemonic{BRSR}, a low-word address in other instruction operands (see the Assembly Language Summary in the Notation and
+		\mnemonic{BRSR}, a low-word address in the memory, effective-address and \mnemonic{MOVI} operands that accept one (see the Assembly Language Summary in the Notation and
 		Glossary chapter for the full resolution rules, including data directives)                                                                \\
 		\texttt{|cond}             & Condition-field suffix selecting the predicate for conditional execution                                     \\
 		\bottomrule
@@ -128,12 +128,12 @@ ALU instructions can select the source of status flag updates with the status up
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Syntax} & \textbf{Encoded AF} & \textbf{Effect}                      \\
+		\textbf{Syntax} & \textbf{Encoded AF} & \textbf{Effect}                                   \\
 		\midrule
-		\texttt{[N]}    & \texttt{00}         & Preserve status flags                \\
-		\texttt{[A]}    & \texttt{01}         & Update flags from the ALU result     \\
-		\texttt{[S]}    & \texttt{10}         & Update flags from the shifter result \\
-		Reserved        & \texttt{11}         & Reserved for future use              \\
+		\texttt{[N]}    & \texttt{00}         & Preserve status flags                             \\
+		\texttt{[A]}    & \texttt{01}         & Update flags from the ALU result                  \\
+		\texttt{[S]}    & \texttt{10}         & Update flags from the shifter result              \\
+		Reserved        & \texttt{11}         & Reserved; N, Z, C and V architecturally undefined \\
 		\bottomrule
 	\end{tabular}
 	\caption{Status Update Source Encoding}

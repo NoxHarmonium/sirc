@@ -92,7 +92,8 @@ destination operands for all ALU instructions.
 
 The CPU does not enforce any register-usage convention among \reg{r1}--\reg{r7}; all seven registers are equally
 general purpose. Calling conventions and register-preservation rules are outside the scope of this document and are
-addressed in the SIRC-1 ABI and Toolchain documentation.
+addressed in the forthcoming SIRC-1 ABI documentation. Toolchain and object-file topics are covered in the \emph{SIRC-1
+	Assembly Programmer's Manual}.
 
 \section{Address Register Pairs}
 \label{sec:address-registers}
@@ -107,8 +108,8 @@ register.
 	\centering
 	\begin{bytefield}[bitwidth=0.8em]{32}
 		\bitheader{0-31} \\
-		\bitbox{8}{\color{sircgray}Unused} &
-		\bitbox{8}{High Register} &
+		\bitbox{8}{\color{sircgray}High register [15:8] (not used for addressing)} &
+		\bitbox{8}{High register [7:0]} &
 		\bitbox{16}{Low Register} \\
 		\bitbox{8}{\color{sircgray}\tiny bits 31--24} &
 		\bitbox{8}{\tiny bits 23--16} &
@@ -118,8 +119,8 @@ register.
 	\label{fig:addr-pair}
 \end{figure}
 
-The high 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
-enabling techniques such as tagged pointers.
+The high 8 bits of the high register (bits 15--8, shown as pair bits 31--24 in the figure) are not used for addressing
+but remain available for storage, enabling techniques such as tagged pointers.
 
 The exact address composition and stored-address layout are specified in Chapter~\ref{ch:data-representation}.
 
@@ -134,7 +135,8 @@ value raises an alignment fault at the next instruction fetch. A write to \reg{p
 the segment but not \reg{pl}, so it still uses the advanced address and is still checked.
 
 The link register pair updates automatically when \mnemonic{LDEL}, \mnemonic{LJSR}, or \mnemonic{BRSR} executes. The
-program counter pair increments after every instruction.
+low word of the program counter, \reg{pl}, advances by 2 during the decode phase of every instruction; \reg{ph} is
+never incremented.
 
 \subsection{Link Register (l)}
 
@@ -233,7 +235,7 @@ The status register (\reg{sr}) is a special 16-bit register that contains CPU st
 divided into two bytes:
 
 \begin{itemize}
-	\item \textbf{Low Byte (bits 7--0):} Condition flags, readable and writable in both modes; optionally updated as a
+	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4), readable and writable in both modes; optionally updated as a
 	      side effect of ALU instructions in both modes.
 	\item \textbf{High Byte (bits 15--8):} Control and privileged state
 \end{itemize}
@@ -256,17 +258,20 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 	\item In \textbf{protected mode}:
 	      \begin{itemize}
 		      \item Reading is allowed.
-		      \item Direct writes trigger a privilege exception.
+		      \item Direct writes trigger a privilege violation fault.
 		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a
-		            privilege exception. The comparison covers all 16 bits, including tag bits 15--8.
+		            privilege violation fault. The comparison covers all 16 bits, including tag bits 15--8.
 	      \end{itemize}
+	\item A privilege check is made only when the instruction's condition is true; a skipped instruction never faults on
+	      privilege (Chapter~\ref{ch:condition-codes}).
 \end{itemize}
 
-This restriction provides a form of memory segmentation and protection. User programs running in protected mode cannot
+This restriction provides a form of memory segmentation and protection. Programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
 Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP},
-\mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If
-their address-register-pair write-back would alter a high word, the CPU raises a privilege violation fault.
+\mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode provided every high word they write is bit-for-bit
+equal to its current value, tag bits included. This applies to the destination pair's high word and, for the linking
+forms, to \reg{lh}, which receives \reg{ph}. Otherwise the CPU raises a privilege violation fault.
 
 The status register differs slightly from the high address registers:
 \begin{itemize}

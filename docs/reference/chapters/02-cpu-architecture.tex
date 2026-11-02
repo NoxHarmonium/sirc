@@ -168,7 +168,7 @@ phase. All registers are 16 bits wide, though address register pairs can be comb
 
 A barrel shifter sits between the Register File and the ALU, enabling efficient bit manipulation operations.
 
-The barrel shifters support logical shift left (\mnemonic{LSL}), logical shift right (\mnemonic{LSR}), arithmetic shift
+The barrel shifter supports logical shift left (\mnemonic{LSL}), logical shift right (\mnemonic{LSR}), arithmetic shift
 left (\mnemonic{ASL}), arithmetic shift right (\mnemonic{ASR}), rotate left (\mnemonic{RTL}), and rotate right
 (\mnemonic{RTR}). Shift amounts can be specified as immediate values or dynamically from register contents.
 
@@ -184,7 +184,7 @@ vector. It is responsible for:
 \begin{itemize}
 	\item Receiving faults, interrupt requests and reset
 	\item Comparing each exception's priority with the current exception level
-	\item Cancelling an instruction that raises a retryable fault, so its remaining phases run as no-ops
+	\item Canceling an instruction that raises a retryable fault, so its remaining phases run as no-ops
 	\item Holding the link registers that save the return address, status register and exception level
 	\item Writing the exception to service into the coprocessor select register (CSR)
 \end{itemize}
@@ -224,8 +224,9 @@ and its dispatch begins at that same phase 0 (Section~\ref{sec:alignment-fault})
 exceptions and the instruction trace fault let the current instruction finish before they are dispatched.
 
 Coprocessor calls are the exception: the processing-unit instruction takes six cycles and the coprocessor dispatch
-usually takes a further six. Some coprocessors like the DMA coprocessor can additionally hold instruction fetch until
-the operation completes.
+normally takes a further six. A call whose condition is false, or that names coprocessor \texttt{0x0}, has no dispatch
+slot and takes only six cycles. Some coprocessors, such as the DMA coprocessor, can additionally hold instruction fetch
+until the operation completes.
 
 \subsection{Parallel Functional Units}
 
@@ -237,6 +238,6 @@ instructions without additional clock cycles.
 
 The SIRC-1 CPU communicates with memory and peripherals over an external bus, and receives interrupt and reset requests
 from external hardware. How those signals are carried (the package, pinout, electrical characteristics and bus timing)
-is implementation-specific and is described in the \textit{SIRC-1 Hardware Reference Manual}. One architectural fact
-the rest of this chapter relies on: when the reset request (\texttt{RSTI}) is raised the CPU aborts the current
-instruction or bus wait and restarts at phase 0, as described in the six execution phases above.
+is implementation-specific and is described in the \hwmanual{}. When the reset request (\texttt{RSTI}) is raised, the
+CPU abandons the current instruction or bus wait and restarts the phase sequence at phase 0 with the reset-vector fetch
+(Section~\ref{sec:reset-vector-fetch}).

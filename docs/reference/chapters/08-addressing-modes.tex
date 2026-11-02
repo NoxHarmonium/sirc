@@ -88,7 +88,7 @@ question being asked.
 		\toprule
 		\textbf{Instruction family}    & \textbf{Legal operand forms}                                                                                                                                                                       & \textbf{Explicit exclusions and notes}                                                                                               \\
 		\midrule
-		ALU result instructions        & \texttt{OPI rD, \#imm16}; \texttt{OPI rD, \#imm8, shift}; \texttt{OPR rD, rS1, rS2[, shift]}; register shorthand \texttt{OPR rD, rS2}.                                                             & No memory operands. Full 16-bit immediate forms do not encode shifts.                                                                \\
+		ALU result instructions        & \texttt{OPI rD, \#imm16}; \texttt{OPI rD, \#imm8, shift}; \texttt{OPR rD, rS1, rS2[, shift]}; register shorthand \texttt{OPR rD, rS2[, shift]} (encoded with R2 = rD, so the shift applies to rD). & No memory operands. Full 16-bit immediate forms do not encode shifts.                                                                \\
 		ALU test instructions          & \texttt{CMNI/CNCI/CMPI/CPCI/TSAI/TSOI/TSXI rS, \#imm16}; \texttt{CMNI/CNCI/CMPI/CPCI/TSAI/TSOI/TSXI rS, \#imm8, shift}; \texttt{CMNR/CNCR/CMPR/CPCR/TSAR/TSOR/TSXR rS1, rS2[, shift]}.             & No destination write-back. No memory operands.                                                                                       \\
 		ALU move instructions          & \texttt{MOVI rD, \#imm16}; \texttt{MOVR rD, rS}.                                                                                                                                                   & No public short-immediate \mnemonic{MOVI} syntax. Direct register-copy forms do not accept shift suffixes.                           \\
 		LOAD memory                    & \texttt{LOAD rD, (\#offset, addr)}; \texttt{LOAD rD, (rO, addr)}; \texttt{LOAD rD, (\#offset, addr)+}; \texttt{LOAD rD, (rO, addr)+}.                                                              & No pre-decrement LOAD form. No shift suffix on any \mnemonic{LOAD} form.                                                             \\
@@ -221,8 +221,8 @@ LJMP a                ; p = a (source named directly)
 	\textbf{Field Encoding:} For \mnemonic{LDEA}/\mnemonic{LDEL} (opcodes \opcode{18}--\opcode{1F}), a 2-bit
 	address-register-pair index in bits 23--22 of the Register (Immediate format) or R1 (Register format) field
 	(00 = l, 01 = a, 10 = s, 11 = p). Bits 25--24 are reserved and always written as zero.
-	\mnemonic{LJMP}/\mnemonic{LJSR} are meta-instructions that lower to this same encoding with \reg{p} as the named
-	pair.
+	\mnemonic{LJMP}/\mnemonic{LJSR} are meta-instructions that lower to this same encoding with \reg{p} in bits 23--22; their source pair, also named directly, is encoded in AF,
+	bits 5--4.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
@@ -261,7 +261,7 @@ LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 	\begin{equation*}
 		\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{IndexRegister})
 	\end{equation*}
-	Identical to Indirect Immediate Addressing except the offset is taken from a register at run time instead of
+	Identical to Indirect Immediate Addressing except the offset is taken from a register at runtime instead of
 	being encoded as an immediate value.
 
 	\textbf{Assembler Syntax:}
@@ -341,7 +341,8 @@ SUBI r2, #1, LSL #8   ; r2 = (r2 << 8) - 1
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
-	\textbf{Usage:} Loading constant values; arithmetic with known values; bit manipulation with masks.
+	\textbf{Usage:} Shift-and-add or shift-and-mask in one instruction, for example scaling a register and adding a small
+	constant.
 \end{addrmodebox}
 
 \section{Address Register Selection}
@@ -425,7 +426,7 @@ Protected mode restricts writes to the high word of an address register:
 \begin{itemize}
 	\item \textbf{Direct high-register writes}: Trigger a privilege violation fault
 	\item \textbf{Address-register-pair write-back}: Allowed only when the high word would remain unchanged; otherwise triggers a privilege violation fault
-	\item \textbf{Post-increment/Pre-decrement}: Always allowed in protected mode; the auto-update writes only the low word of the pair and never carries into the high word
+	\item \textbf{Post-increment/pre-decrement}: Always allowed in protected mode; the auto-update writes only the low word of the pair and never carries into the high word
 \end{itemize}
 
 In every mode, the auto-update forms must not name \reg{p} as the address-register pair, because the update would

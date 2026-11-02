@@ -3,8 +3,8 @@
 
 \section{Overview}
 
-The SIRC-1 CPU supports powerful shift operations that can be applied to operands in many instructions. Shifts can
-multiply or divide values by powers of 2, extract bit fields, or perform bit rotations.
+The SIRC-1 CPU supports shift operations that can be applied to operands in many instructions. Shifts can multiply or
+divide values by powers of 2, extract bit fields, or perform bit rotations.
 
 Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
 before being used in an ALU operation—all within a single instruction.
@@ -68,7 +68,7 @@ See this table for some examples of which operand is shifted:
 		ADDI r1, \#2, LSL \#1    & ADDI r1, r1, \#2, LSL \#1          & r1                            \\
 		\bottomrule
 	\end{tabular}
-	\caption{Examples of first source operands}
+	\caption{Examples of First Source Operands}
 	\label{tab:source-operand-examples}
 \end{table}
 
@@ -97,10 +97,10 @@ See this table for some examples of which operand is shifted:
 
 \begin{example}
 	\begin{lstlisting}
-; Multiply r1 by 4
+; multiply r1 by 4
 ADDI r1, #0, LSL #2  ; r1 = (r1 << 2) = r1 * 4
 
-; Set bit 10 (16-bit immediate form)
+; set bit 10 (16-bit immediate form)
 ORRI r3, #0x0400         ; r3 |= 0x0400
 	\end{lstlisting}
 	\caption{Constant Multiply and Bit Set (LSL)}
@@ -125,15 +125,15 @@ ORRI r3, #0x0400         ; r3 |= 0x0400
 	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
 	\item Bit 15 receives 0
 	\item Equivalent to unsigned division by $2^n$
-	\item Use for unsigned values only
+	\item Should be used for unsigned values only
 \end{itemize}
 
 \begin{example}
 	\begin{lstlisting}
-; Divide unsigned value by 8
+; divide unsigned value by 8
 ADDI r1, #0, LSR #3  ; r1 = (r1 >> 3) = r1 / 8 (unsigned)
 
-; Extract high byte
+; extract high byte
 ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 	\end{lstlisting}
 	\caption{Unsigned Divide and Byte Extraction (LSR)}
@@ -162,7 +162,7 @@ ADDI r3, #0, LSR #8  ; r3 = (r3 >> 8)
 
 \begin{example}
 	\begin{lstlisting}
-; Multiply signed value by 2
+; multiply signed value by 2
 ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
 	\end{lstlisting}
 	\caption{Signed Multiply by 2 (ASL)}
@@ -187,25 +187,25 @@ ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
 	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
 	\item Bit 15 (sign bit) is replicated into all bits vacated by the shift
 	\item Equivalent to signed division by $2^n$ (rounds toward negative infinity)
-	\item Use for signed values only
+	\item Should be used for signed values only
 \end{itemize}
 
 \begin{example}
 	\begin{lstlisting}
-; Divide signed value by 4
+; divide signed value by 4
 ADDI r1, #0, ASR #2  ; r1 = (r1 >> 2) = r1 / 4 (signed)
 
-; Average two signed values
+; average two signed values
 ADDR r3, r4, r5
-ADDI r3, #0, ASR #1  ; r3 = (r3 >> 1) = (r4 + r5) / 2
+ADDI r3, #0, ASR #1  ; r3 = (r4 + r5) / 2, if r4 + r5 does not overflow
 	\end{lstlisting}
 	\caption{Signed Divide and Averaging (ASR)}
 \end{example}
 
 \subsection{Rotate Left (RTL)}
 
-\textbf{Operation:} Rotate bits to the left within the 16-bit operand. The bit that wraps from bit 15 to bit 0 is also
-copied into the carry flag. The incoming carry flag is not used as an input.
+\textbf{Operation:} Rotate bits to the left within the 16-bit operand. The last bit to wrap from bit 15 to bit 0 (original
+bit 16-n for a count of n) is copied into the carry flag. The incoming carry flag is not used as an input.
 
 \begin{figure}[H]
 	\centering
@@ -219,7 +219,8 @@ copied into the carry flag. The incoming carry flag is not used as an input.
 \end{figure}
 
 \begin{itemize}
-	\item Bit 15 wraps into bit 0 and is copied into the carry flag
+	\item Bit 15 wraps into bit 0. The last bit to wrap from bit 15 to bit 0 (original bit 16-n for a count of n) is copied into
+	      the carry flag
 	\item The previous carry flag value is ignored
 	\item No data is lost
 	\item Useful for bit manipulation, circular buffers, and cyclic bit patterns
@@ -227,10 +228,10 @@ copied into the carry flag. The incoming carry flag is not used as an input.
 
 \begin{example}
 	\begin{lstlisting}
-; Rotate r1 left by 1
+; rotate r1 left by 1
 SHFT r1, RTL #1
 
-; Circular rotate of one word
+; circular rotate of one word
 SHFT r3, RTL #4
 	\end{lstlisting}
 	\caption{Rotating a Value Left (RTL)}
@@ -238,8 +239,8 @@ SHFT r3, RTL #4
 
 \subsection{Rotate Right (RTR)}
 
-\textbf{Operation:} Rotate bits to the right within the 16-bit operand. The bit that wraps from bit 0 to bit 15 is also
-copied into the carry flag. The incoming carry flag is not used as an input.
+\textbf{Operation:} Rotate bits to the right within the 16-bit operand. The last bit to wrap from bit 0 to bit 15 (original
+bit n-1 for a count of n) is copied into the carry flag. The incoming carry flag is not used as an input.
 
 \begin{figure}[H]
 	\centering
@@ -253,19 +254,20 @@ copied into the carry flag. The incoming carry flag is not used as an input.
 \end{figure}
 
 \begin{itemize}
-	\item Bit 0 wraps into bit 15 and is copied into the carry flag
+	\item Bit 0 wraps into bit 15. The last bit to wrap from bit 0 to bit 15 (original bit n-1 for a count of n) is copied into
+	      the carry flag
 	\item The previous carry flag value is ignored
 	\item No data is lost
 \end{itemize}
 
 \begin{example}
 	\begin{lstlisting}
-; Rotate r1 right by 1
+; rotate r1 right by 1
 SHFT r1, RTR #1
 
-; Check if bit 0 is set
-SHFT r2, RTR #1      ; Bit 0 -> carry
-; Now branch on carry to test the old bit 0
+; check if bit 0 is set
+SHFT r2, RTR #1      ; bit 0 -> carry
+; now branch on carry to test the old bit 0
 	\end{lstlisting}
 	\caption{Rotating a Value Right and Testing a Bit (RTR)}
 \end{example}
@@ -293,7 +295,7 @@ The Shift Operand (SO) bit determines what value is shifted:
 The first source operand (R2) is shifted by a literal amount before the ALU operation.
 
 \begin{lstlisting}
-; Multiply r1 by 4 and add 1
+; multiply r1 by 4 and add 1
 ADDI r1, #1, LSL #2  ; r1 = (r1 << 2) + 1
                           ; SO=0: r1 is shifted by literal 2
 
@@ -305,12 +307,12 @@ The shift count is taken from the shift amount field (interpreted as a register)
 (first source) is still what gets shifted.
 
 \begin{lstlisting}
-; Variable shift
-; Shift amount register contains shift count
+; variable shift
+; shift amount register contains shift count
 ADDR r1, r2, r3, LSL r4  ; r1 = (r2 << r4) + r3
                           ; SO=1: shift r2 by value in r4
 
-; Barrel shifter emulation
+; barrel shifter emulation
 ADDR r4, r5, r6, ASR r7  ; r4 = (r5 >> r7) + r6 (arithmetic)
 \end{lstlisting}
 
@@ -329,7 +331,7 @@ than 15 is well defined:
 	      last bit shifted out at count 16, as for any other count.
 	\item For \mnemonic{ASR}, a register-supplied count of 16 or more sign-extends fully: \texttt{0xFFFF} if the original value
 	      was negative, \texttt{0x0000} if it was positive or zero. This is the same rule as any other count, just carried to its
-	      limit -- every vacated bit is the sign bit. The carry flag is the original bit 15, since every bit shifted out at that
+	      limit: every vacated bit is the sign bit. The carry flag is the original bit 15, since every bit shifted out at that
 	      point is a copy of the sign.
 	\item \mnemonic{RTL} and \mnemonic{RTR} have no vacated bits to define, since a rotate never discards data; a
 	      register-supplied count is used modulo 16, so a count of 16 behaves as a count of 0, a count of 17 behaves
@@ -357,7 +359,7 @@ For all shifts and rotates:
 	\item A shift count of 0 leaves the operand unchanged and clears the carry flag. \texttt{NUL} ignores its count, immediate or
 	      register, and always behaves as a count of 0. When the status register is updated from the shifter, all four condition
 	      flags are written, so no flag survives a shift-sourced update; to preserve flags across a shift, use the \texttt{[N]}
-	      status override
+	      status override.
 \end{itemize}
 
 \subsection{Zero Flag}
@@ -381,13 +383,13 @@ Set if bit 15 of the result is 1 (result is negative when interpreted as signed)
 
 \begin{example}
 	\begin{lstlisting}
-; Multiply by 2
+; multiply by 2
 ADDI r1, #0, LSL #1   ; r1 = (r1 << 1) = r1 * 2
 
-; Multiply by 3
+; multiply by 3
 ADDR r1, r2, r2, LSL #1   ; r1 = (r2 << 1) + r2 = r2 * 3
 
-; Multiply by 5
+; multiply by 5
 ADDR r1, r2, r2, LSL #2   ; r1 = (r2 << 2) + r2 = r2 * 5
 	\end{lstlisting}
 	\caption{Multiplication by Constants}
@@ -395,11 +397,11 @@ ADDR r1, r2, r2, LSL #2   ; r1 = (r2 << 2) + r2 = r2 * 5
 
 \begin{example}
 	\begin{lstlisting}
-; Unsigned divide by 4
+; unsigned divide by 4
 MOVR r1, r2        ; r1 = r2
 ADDI r1, #0, LSR #2   ; r1 = (r1 >> 2) = r1 / 4 (unsigned)
 
-; Signed divide by 8
+; signed divide by 8
 MOVR r1, r2        ; r1 = r2
 ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 	\end{lstlisting}
@@ -408,38 +410,38 @@ ADDI r1, #0, ASR #3   ; r1 = (r1 >> 3) = r1 / 8 (signed)
 
 \begin{example}
 	\begin{lstlisting}
-; Extract bits 8-11 from r1
+; extract bits 8-11 from r1
 MOVR r2, r1        ; r2 = r1
-ADDI r2, #0, LSR #8   ; Shift down
-ANDI r2, #0x0F            ; Mask to 4 bits
+ADDI r2, #0, LSR #8   ; shift down
+ANDI r2, #0x0F            ; mask to 4 bits
 
-; Extract and sign-extend bit 7
+; extract and sign-extend bit 7
 MOVR r2, r1        ; r2 = r1
-ADDI r2, #0, LSL #8   ; Shift bit 7 to bit 15
-ADDI r2, #0, ASR #8   ; Arithmetic shift to sign-extend
+ADDI r2, #0, LSL #8   ; shift bit 7 to bit 15
+ADDI r2, #0, ASR #8   ; arithmetic shift to sign-extend
 	\end{lstlisting}
 	\caption{Bit Field Extraction}
 \end{example}
 
 \begin{example}
 	\begin{lstlisting}
-; Set bit N (where N is in r2)
+; set bit N (where N is in r2)
 MOVI r3, #1               ; r3 = 1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 ORRR r1, r3               ; r1 |= (1 << N)
 
-; Clear bit N
+; clear bit N
 MOVI r3, #1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
 MOVI r4, #0xFFFF
 XORR r3, r4, r3           ; r3 = 0xFFFF ^ (1 << N) = ~(1 << N)
 ANDR r1, r1, r3           ; r1 = r1 & ~(1 << N)
 
-; Test bit N
+; test bit N
 MOVI r3, #1
 ADDI r3, #0, LSL r2       ; r3 = (r3 << r2) = 1 << N
-TSAR r1, r3               ; Test r1 & (1 << N)
-BRAN|!= @bit_was_set      ; Branch if bit set
+TSAR r1, r3               ; test r1 & (1 << N)
+BRAN|!= @bit_was_set      ; branch if bit set
 	\end{lstlisting}
 	\caption{Bit Manipulation}
 \end{example}
@@ -450,30 +452,30 @@ For operations on values larger than 16 bits, shifts and rotates can be combined
 
 \begin{example}
 	\begin{lstlisting}
-; Shift 32-bit value in r1:r2 left by 1
+; shift 32-bit value in r1:r2 left by 1
 ; r1 = high word, r2 = low word
-SHFT r2, LSL #1       ; Shift low, MSB -> carry
-ADCI r1, #0, LSL #1   ; Shift high and add carry into bit 0
+SHFT r2, LSL #1       ; shift low, MSB -> carry
+ADCI r1, #0, LSL #1   ; shift high and add carry into bit 0
 	\end{lstlisting}
 	\caption{32-bit Left Shift}
 \end{example}
 
 \begin{example}
 	\begin{lstlisting}
-; Shift 32-bit value in r1:r2 right by 1 (unsigned)
-SHFT r1, LSR #1       ; Shift high, LSB -> carry
-ORRI[N] r2, #0, LSR #1    ; Shift low while preserving carry from high word
-ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
+; shift 32-bit value in r1:r2 right by 1 (unsigned)
+SHFT r1, LSR #1       ; shift high, LSB -> carry
+ORRI[N] r2, #0, LSR #1    ; shift low while preserving carry from high word
+ORRI|CS r2, #0x8000   ; if old high bit 0 was set, insert it into low bit 15
 	\end{lstlisting}
 	\caption{32-bit Right Shift (Unsigned)}
 \end{example}
 
 \begin{example}
 	\begin{lstlisting}
-; Shift 32-bit value in r1:r2 right by 1 (signed)
-SHFT r1, ASR #1       ; Arithmetic shift high, LSB -> carry
-ORRI[N] r2, #0, LSR #1    ; Shift low while preserving carry from high word
-ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
+; shift 32-bit value in r1:r2 right by 1 (signed)
+SHFT r1, ASR #1       ; arithmetic shift high, LSB -> carry
+ORRI[N] r2, #0, LSR #1    ; shift low while preserving carry from high word
+ORRI|CS r2, #0x8000   ; if old high bit 0 was set, insert it into low bit 15
 	\end{lstlisting}
 	\caption{32-bit Right Shift (Signed)}
 \end{example}
@@ -483,8 +485,8 @@ ORRI|CS r2, #0x8000   ; If old high bit 0 was set, insert it into low bit 15
 \begin{itemize}
 	\item All shift operations complete in the same number of cycles regardless of shift count
 	\item Shifts can be performed "for free" as part of another instruction (no extra cycles)
-	\item Using shifts for multiplication/division by powers of 2 is much faster than using a multiply/divide instruction (if one
-	      existed)
+	\item Using shifts for multiplication or division by powers of 2 avoids a call to the optional maths coprocessor
+	      (\mnemonic{MULU}, \mnemonic{DIVU}, Chapter~\ref{ch:coprocessor})
 	\item Barrel shifter implementation in hardware allows any shift count in constant time
 \end{itemize}
 
@@ -526,36 +528,36 @@ A status override modifier can be added immediately after an instruction mnemoni
 
 \begin{example}
 	\begin{lstlisting}
-; Without override, flags reflect the ALU addition result
+; without override, flags reflect the ALU addition result
 ADDI r2, #1, LSL #2           ; r2 = (r2 << 2) + 1
-                              ; Flags: based on addition result
+                              ; flags: based on addition result
 	\end{lstlisting}
-	\caption{Default Behavior (ALU flags)}
+	\caption{Default Behavior (ALU Flags)}
 \end{example}
 
 \begin{example}
 	\begin{lstlisting}
-; Update flags based on shift result instead of ALU
+; update flags based on shift result instead of ALU
 ADDI[S] r2, #1, LSL #2        ; r2 = (r2 << 2) + 1
-                              ; Flags: based on (r2 << 2), not the +1
+                              ; flags: based on (r2 << 2), not the +1
 
-; Check if shifted value is zero
-CMPI[S] r3, #0, LSR #4        ; Compare (r3 >> 4) with 0
-                              ; Flags: based on shift, not comparison
+; check if shifted value is zero
+CMPI[S] r3, #0, LSR #4        ; compare (r3 >> 4) with 0
+                              ; flags: based on shift, not comparison
 	\end{lstlisting}
 	\caption{Shift Flag Override}
 \end{example}
 
 \begin{example}
 	\begin{lstlisting}
-; Perform operation without affecting status flags
+; perform operation without affecting status flags
 ADDI[N] r1, #5, LSL #1        ; r1 = (r1 << 1) + 5
-                              ; Flags: unchanged
+                              ; flags: unchanged
 
-; Useful when preserving flags from previous operation
-CMPR r4, r5                   ; Set flags based on comparison
-ADDI[N] r6, #1                ; Increment r6 without changing flags
-BRAN|== @equal_branch         ; Branch using flags from CMPR
+; useful when preserving flags from previous operation
+CMPR r4, r5                   ; set flags based on comparison
+ADDI[N] r6, #1                ; increment r6 without changing flags
+BRAN|== @equal_branch         ; branch using flags from CMPR
 	\end{lstlisting}
 	\caption{No Flag Update}
 \end{example}
@@ -567,9 +569,9 @@ BRAN|== @equal_branch         ; Branch using flags from CMPR
 To determine properties of a shifted value without performing a subsequent comparison:
 
 \begin{lstlisting}
-; Check if r1 << 3 would be negative
-ADDI[S] r1, #0, LSL #3        ; r1 = r1 << 3, flags from shift
-BRAN|NS @overflow_detected    ; Branch if sign bit set
+; check if r1 << 3 would be negative
+TSOI[S] r1, #0, LSL #3        ; flags from r1 << 3, r1 unchanged
+BRAN|NS @shifted_negative     ; branch if sign bit set
 \end{lstlisting}
 
 \subsubsection{Preserving Flags}
@@ -577,15 +579,15 @@ BRAN|NS @overflow_detected    ; Branch if sign bit set
 When performing operations that should not affect condition codes:
 
 \begin{lstlisting}
-; Test condition
-CMPR r1, r2                   ; Compare r1 and r2
+; test condition
+CMPR r1, r2                   ; compare r1 and r2
 
-; Do some work without affecting flags
-ADDI[N] r3, #1                ; Increment counter (flags unchanged)
-LOAD r4, (#0, a)+             ; Load next value (LOAD never updates flags)
+; do some work without affecting flags
+ADDI[N] r3, #1                ; increment counter (flags unchanged)
+LOAD r4, (#0, a)+             ; load next value (LOAD never updates flags)
 
-; Branch using original comparison flags
-BRAN|>= @r1_was_greater
+; branch using original comparison flags
+BRAN|>= @r1_was_greater_or_equal
 \end{lstlisting}
 
 \subsubsection{SHFT Meta-Instruction}
@@ -603,6 +605,8 @@ See Chapter~\ref{ch:alu-instructions} for the full \mnemonic{SHFT} instruction e
 \begin{itemize}
 	\item The status override modifier must appear immediately after the instruction mnemonic with no spaces: \texttt{ADDI[S]}
 	\item The modifier is optional; omitting it defaults to {[}A{]} (ALU flag updates)
-	\item The override applies to the entire instruction, including any conditional execution
+	\item The override selects the flag source for the whole instruction. If the condition is false, the instruction has no
+	      effect and no flags change, whatever the override
+	\item \texttt{AF = 10} is still encodable on the 16-bit immediate format, but with no shift fields the shifter result is treated as zero flags, so \texttt{[S]} clears N, Z, C and V (Chapter~\ref{ch:alu-instructions})
 	\item Explicit {[}A{]} is rarely needed but can improve code readability
 \end{itemize}

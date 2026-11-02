@@ -4,7 +4,7 @@
 \section{Overview}
 
 This chapter defines the representation rules used by registers, memory, program images, exception vectors, and
-multi-word values. These rules are architectural: assemblers, loaders, emulators, hardware implementations, and
+multi-word values. These rules are architectural: assemblers, loaders, simulators, hardware implementations, and
 debuggers must agree on them.
 
 \section{Word and Byte Ordering}
@@ -44,11 +44,12 @@ Architectural addresses are 24-bit word addresses. The four address-register pai
 \end{equation}
 
 Bits 15--8 of the high register are not driven on the address bus. They are ignored by address calculation and are
-carried unchanged when an address pair is copied, loaded or stored. They will be preserved unless a direct write to the
-high register of an address register pair overwrites them. They can be used to store metadata with addresses and allow
-techniques like tagged pointers. In protected mode, though, an address-register-pair write-back that would change any
-of the 16 bits of a high register raises a privilege-violation fault (Section~\ref{sec:privilege-restrictions}), so a
-protected-mode program can only load pointers whose tag bits match the high register they replace.
+carried unchanged when an address pair is copied, loaded or stored. They are preserved unless a direct write to the
+high register of an address register pair overwrites them. They may be used to store metadata with addresses, which
+allows techniques such as tagged pointers. In protected mode, however, an address-register-pair write-back that would
+change any of the 16 bits of a high register raises a privilege-violation fault
+(Section~\ref{sec:privilege-restrictions}), so a protected-mode program can only load pointers whose tag bits match the
+high register they replace.
 
 \begin{table}[H]
 	\centering
@@ -84,7 +85,7 @@ even word addresses. Fetching from an odd word address raises an alignment fault
 \section{Exception Vector Storage}
 \label{sec:exception-vector-storage}
 
-Each exception vector table entry is a stored 32-bit pointer with contains a 24-bit address and eight bits of metadata
+Each exception vector table entry is a stored 32-bit pointer that contains a 24-bit address and eight bits of metadata
 as described in Section~\ref{sec:address-values}.
 
 The vector table begins at word address \addr{0x000000}, so vector entry \texttt{V} starts at word address \texttt{V *
@@ -96,7 +97,7 @@ The vector table begins at word address \addr{0x000000}, so vector entry \texttt
 \end{itemize}
 
 For example, vector \texttt{0x06} occupies word addresses \addr{0x00000C} and \addr{0x00000D}. To jump to
-\addr{0x123456}, those two words should contain \texttt{0x0012} and \texttt{0x3456}.
+\addr{0x123456}, those two words must contain \texttt{0x0012} and \texttt{0x3456}.
 
 \section{Immediate Values}
 
@@ -124,14 +125,15 @@ Short immediates occupy an 8-bit field and are zero-extended before use by ALU a
 for compact non-negative constants and bit masks, not for encoding negative arithmetic operands.
 
 Short immediates are not used for memory, effective-address, branch, jump, or subroutine-call displacements. Those
-forms use 16-bit immediate displacements, register displacements, or assembler-resolved full-width branch offsets.
+forms use 16-bit signed immediate displacements (including assembler-resolved PC-relative branch offsets) or register
+displacements.
 
 \section{Software Layout Conventions}
 
-The architectural storage order for multi-word quantities is high word first. The SIRC-1 reference manual does not
-otherwise define a complete ABI, stack-frame layout, argument-passing convention, or software integer library format.
-Where examples show structures, arrays, saved registers, or stack use, offsets are word offsets and each push or pop
-moves the stack pointer by one 16-bit word.
+The architectural storage order for multi-word quantities is high word first. The \archmanual{} does not otherwise
+define a complete ABI, stack-frame layout, argument-passing convention, or software integer library format. Where
+examples show structures, arrays, saved registers, or stack use, offsets are word offsets and each push or pop moves
+the stack pointer by one 16-bit word.
 
 Software standards may build on the architectural high-word-first rule for wider integers and stored addresses, but
 those conventions are non-normative unless a separate ABI or toolchain document says otherwise.

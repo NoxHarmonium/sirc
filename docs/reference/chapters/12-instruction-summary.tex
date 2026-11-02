@@ -98,7 +98,8 @@ into logical groups:
 	\label{tab:complete-instruction-set}
 \end{table}
 
-See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
+The Flags column lists the condition flags each instruction updates. Table~\ref{tab:alu-status-flag-effects} gives the
+exact effect, using the symbols of Table~\ref{tab:flag-effect-symbols}.
 
 \section{Instruction Grouping Patterns}
 
@@ -124,7 +125,8 @@ Many ALU instructions have two variants:
 	\item \textbf{+\opcode{0F}}: Coprocessor call (neither result nor flags are written)
 \end{itemize}
 
-Examples:
+The following pairs show a save instruction and its test-only counterpart:
+
 \begin{itemize}
 	\item \opcode{00} = \mnemonic{ADDI} (save result), \opcode{08} = \mnemonic{CMNI} (test only)
 	\item \opcode{04} = \mnemonic{ANDI} (save result), \opcode{0C} = \mnemonic{TSAI} (test only)
@@ -133,7 +135,7 @@ Examples:
 
 \section{Meta-Instructions}
 
-Several commonly-used operations are implemented as assembler meta-instructions that assemble to specific opcodes:
+Several commonly used operations are implemented as assembler meta-instructions that assemble to specific opcodes:
 
 \begin{table}[H]
 	\centering
@@ -182,14 +184,23 @@ states are required:
 	\item Write Back
 \end{enumerate}
 
-Coprocessor calls (\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles to one) take a second
-6-cycle slot for the coprocessor dispatch that begins at the next phase 0, for 12 cycles in total before the next
-instruction is fetched. DMA transfers and maths-unit operations can take longer; Appendix~\ref{appendix:timing} and
-Chapter~\ref{ch:coprocessor} give their timing.
+A coprocessor call whose condition is true (\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles
+to one) takes a second 6-cycle slot for the coprocessor dispatch that begins at the next phase 0, so most calls take 12
+cycles before the next instruction is fetched. Four cases differ:
+
+\begin{itemize}
+	\item A call whose condition is false skips its dispatch slot and takes 6 cycles.
+	\item A call naming coprocessor \texttt{0x0} has no dispatch slot and takes 6 cycles.
+	\item \mnemonic{RSET} has no dispatch slot, because its reset request replaces the slot, and takes 18 cycles.
+	\item \mnemonic{WAIT}, DMA transfers and maths-unit operations take longer than 12 cycles.
+\end{itemize}
+
+Appendix~\ref{appendix:timing} gives every case, and Chapter~\ref{ch:coprocessor} gives the coprocessor timing.
 
 This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles. DMA
-meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path; a transfer of more than a few words then
-runs on into further 6-cycle slots.
+meta-instructions dispatch through the normal \mnemonic{COPI} path. A transfer of more than five bus accesses (more
+than five words for \mnemonic{DMAR} and \mnemonic{DMAW}, more than two for \mnemonic{DMAT}) runs on into further
+6-cycle slots.
 
 \section{Next Chapters}
 

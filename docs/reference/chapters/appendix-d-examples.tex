@@ -5,8 +5,8 @@ This appendix contains sample programs that demonstrate several features of the 
 
 \section{Program Conventions}
 
-The assembly syntax used in these programs is summarised in the Assembly Language Summary in the Notation and Glossary
-chapter, and described in full in the \textit{SIRC Assembly Programmer's Manual}.
+The assembly syntax used in these programs is summarized in the Assembly Language Summary in the Notation and Glossary
+chapter, and described in full in the \asmmanual{}.
 
 Every program in this appendix that is loaded at segment zero begins with a \texttt{.ORG 0x0000} / \texttt{.DQ @label}
 pair, which places the reset vector (Chapter~\ref{ch:exceptions}): the CPU begins execution by reading a stored pointer
@@ -35,12 +35,13 @@ core of the sieve: the outer loop advances the candidate, and the inner loop mar
 This pair of programs exercises every fault type the CPU can raise and the vector table that routes them to handlers.
 \texttt{faults.sasm} deliberately triggers, in sequence, a bus fault, an alignment fault, two segment-overflow faults
 (one from an effective-address calculation, one from program-counter overflow), an instruction-trace fault, a
-bus-protection fault, an invalid-opcode fault (which itself triggers a nested double fault), a privilege violation, and
-a level-five interrupt. Each handler, defined from line 158 onward, increments a distinct register so a reader can
-confirm which faults fired and in what order. The segment-overflow handler (lines 197--242) is worth particular
-attention: it reads exception metadata with \mnemonic{ETFR} to distinguish a program-counter overflow, which records no
-bus access, from a \mnemonic{LOAD} or \mnemonic{STOR} effective-address overflow, which records a data read or write,
-before deciding how to fix up the return address.
+bus-protection fault, a privilege violation, a level-five interrupt whose handler raises a second level-five request
+and so a level-five conflict fault, and finally an invalid-opcode fault (which itself triggers a nested double fault).
+Each handler, defined from line 158 onward, adds a handler-specific amount to one of \reg{r1}--\reg{r6}, so the final
+register dump shows which faults fired. The segment-overflow handler (lines 197--242) is worth particular attention: it
+reads exception metadata with \mnemonic{ETFR} to distinguish a program-counter overflow, which records no bus access,
+from a \mnemonic{LOAD} or \mnemonic{STOR} effective-address overflow, which records a data read or write, before
+deciding how to fix up the return address.
 
 \refstepcounter{example}
 \label{ex:faults}
@@ -95,13 +96,13 @@ runs, the final value of \reg{r1} shows whether the nested exception was correct
 
 \section{Store Load}
 
-This program is a self-checking test of indexed and immediate-offset memory access, followed by an exhaustive exercise
-of every \mnemonic{LJMP}/\mnemonic{LJSR} addressing form. The store and load block (lines 8--19) round-trips values
-through memory using an immediate offset and a register offset from an address-register pair. The remainder of the
-listing chains together register-offset, immediate-offset, and plain register forms of \mnemonic{LJMP} and
-\mnemonic{LJSR}; every path not on the intended route lands on an \texttt{LJMP s}/\texttt{LJSR s} instruction commented
-\texttt{FAIL!}, so a working implementation reaches the \texttt{:pass} label at the end while a faulty one jumps into
-the "forbidden zone" and fails at \texttt{:fail}.
+This program is a self-checking test of indexed and immediate-offset memory access, followed by an exercise of the
+register-offset and immediate-offset forms of \mnemonic{LJMP} and \mnemonic{LJSR}. The store and load block (lines
+8--19) round-trips values through memory using an immediate offset and a register offset from an address-register pair.
+The remainder of the listing chains together register-offset, immediate-offset, and plain register forms of
+\mnemonic{LJMP} and \mnemonic{LJSR}; every path not on the intended route lands on an \texttt{LJMP s}/\texttt{LJSR s}
+instruction commented \texttt{FAIL!}, so a working implementation reaches the \texttt{:pass} label at the end while a
+faulty one jumps into the "forbidden zone" and fails at \texttt{:fail}.
 
 \refstepcounter{example}
 \label{ex:store-load}
