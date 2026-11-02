@@ -81,7 +81,8 @@
     ]
   },
   "scripts": {
-    "test": "vscode-tmgrammar-test -g syntaxes/sirc.tmLanguage.json test/*.test.sasm",
+    "test": "vscode-tmgrammar-test -g syntaxes/sirc.tmLanguage.json test/*.test.sasm && npm run test:snapshot",
+    "test:snapshot": "vscode-tmgrammar-snap -s source.sirc-asm -g syntaxes/sirc.tmLanguage.json test/*.test.sasm",
     "update-snapshot": "vscode-tmgrammar-snap -s source.sirc-asm -u -g syntaxes/sirc.tmLanguage.json test/*.test.sasm"
   },
   "devDependencies": {

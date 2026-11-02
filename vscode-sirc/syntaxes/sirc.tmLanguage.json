@@ -83,7 +83,7 @@
         },
         {
           "name": "variable.parameter.symbol-reference.sirc",
-          "match": "(?<!\\w)(@[a-zA-Z0-9_]+)(\\.r|u|l)?\\b"
+          "match": "(?<!\\w)(@[a-zA-Z0-9_]+)(\\.(r|u|l))?\\b"
         }
       ]
     },
