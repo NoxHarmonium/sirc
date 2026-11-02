@@ -111,8 +111,13 @@ pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
         // TODO: Make sure that cast in parser is not going to cause issues
         // category=Toolchain
         // Check this cast down to u16
-        map(parse_number, |NumberToken { value, .. }| {
-            ImmediateType::Value(value as u16)
+        map_res(parse_number, |NumberToken { value, number_type }| {
+            let signed = matches!(number_type, crate::types::shared::NumberType::SignedDecimal);
+            if value <= 0xffff || (signed && value >= 0xffff_8000) {
+                Ok(ImmediateType::Value(value as u16))
+            } else {
+                Err("Number does not fit in a 16-bit immediate")
+            }
         })
         .context("number"),
         map(parse_symbol_reference, |ref_token| {

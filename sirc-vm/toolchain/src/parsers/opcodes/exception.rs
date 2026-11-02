@@ -63,6 +63,13 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
     match (tag.as_str(), operands.as_slice()) {
         ("EXCP", [AddressingMode::Immediate(immediate_type)]) => {
             if let ImmediateType::Value(value) = immediate_type {
+                if *value > 0xff {
+                    return Err(nom::Err::Failure(ErrorTree::from_external_error(
+                        i_after_instruction,
+                        ErrorKind::Verify,
+                        "EXCP vector must fit in 8 bits",
+                    )));
+                }
                 Ok((
                     i,
                     InstructionToken {

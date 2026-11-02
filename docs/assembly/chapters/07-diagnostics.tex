@@ -64,8 +64,9 @@ The assembler rejects any auto-update of \reg{p} (\texttt{(p)+} or \texttt{-(p)}
 update would compete with the program-counter advance. This includes immediate, register-offset, symbol, constant, and
 omitted-zero forms in every instruction family.
 
-The \mnemonic{DMAR} and \mnemonic{DMAW} count operand must be a literal in the range \texttt{\#-7} to \texttt{\#7}. The
-assembler rejects a literal outside that range with a message that names the permitted range and the value given.
+The \mnemonic{DMAR} and \mnemonic{DMAW} count operand must be a number in the range \texttt{\#-7} to \texttt{\#7}. The
+assembler accepts a named constant wherever a numeric operand is accepted and applies the same range checks as for a
+literal.
 
 The Memory Access Instructions, Control Flow Instructions and Coprocessor Instructions chapters of the \archmanual{}
 explain why each form is undefined.

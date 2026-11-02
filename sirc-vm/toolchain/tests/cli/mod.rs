@@ -211,3 +211,51 @@ fn duplicate_labels_fail_in_assembler_and_linker_even_when_unused() {
         .unwrap();
     assert_success(&output);
 }
+
+fn assembled_program(source: &str) -> Vec<u8> {
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(directory.path(), "constants", source);
+    assert_success(&output);
+    let object: toolchain::types::object::ObjectDefinition =
+        postcard::from_bytes(&fs::read(object).unwrap()).unwrap();
+    object.program
+}
+
+#[test]
+fn named_constants_use_literal_numeric_semantics_in_every_field() {
+    let named = ".EQU $N #-1\n.EQU $S #3\n.EQU $X #0x70\n.EQU $I #7\n\
+        ADDI r1, $N\nADDI[S] r2, $I, ASR $S\nADDR r1, r2, RTL $S\nSHFT r1, LSL $S\n\
+        EXCP $X\nCOPI $X\nETTR $S, r7\nLOAD r1, ($N, a)\n\
+        .DB $N\n.DW $N\n.DQ $N\n.EQU $I #9\nADDI r1, $I\n.EQU $ALIAS $I\nADDI r2, $ALIAS\n";
+    let literal = "ADDI r1, #-1\nADDI[S] r2, #7, ASR #3\nADDR r1, r2, RTL #3\nSHFT r1, LSL #3\n\
+        EXCP #0x70\nCOPI #0x70\nETTR #3, r7\nLOAD r1, (#-1, a)\n\
+        .DB #-1\n.DW #-1\n.DQ #-1\nADDI r1, #9\nADDI r2, #9\n";
+    assert_eq!(assembled_program(named), assembled_program(literal));
+    // Definitions and later rebindings must not shift the debug source positions.
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(
+        directory.path(),
+        "debug",
+        ".EQU $N #123\nADDI r1, $N\n.EQU $N #4\nADDI r2, $N\n",
+    );
+    assert_success(&output);
+    let object: toolchain::types::object::ObjectDefinition =
+        postcard::from_bytes(&fs::read(object).unwrap()).unwrap();
+    let info = object.debug_info.unwrap();
+    assert_eq!(info.program_to_input_offset_mapping[&0], 13);
+    assert_eq!(info.program_to_input_offset_mapping[&2], 36);
+}
+
+#[test]
+fn bad_constants_report_original_source_locations() {
+    assert_assembly_error(".EQU $N #16\nSHFT r1, LSL $N\n", "range of 0-15", "2:");
+    assert_assembly_error(".EQU $N #-1\nADDI r1, $N, LSL #1\n", "8 bits", "2:");
+    assert_assembly_error(".EQU $N #256\nEXCP $N\n", "EXCP vector", "2:");
+    assert_assembly_error(".EQU $N #65536\nADDI r1, $N\n", "16-bit immediate", "2:");
+    assert_assembly_error(
+        "ADDI r1, $LATER\n.EQU $LATER #1\n",
+        "Undefined constant $LATER",
+        "1:10",
+    );
+    assert_assembly_error(".EQU $N #2\n.ORG $N\n", "parsing", "2:");
+}

@@ -44,6 +44,9 @@ pub fn print_number_token(number_token: &NumberToken) -> String {
             };
             format!("#0x{}", add_underscores(&hex_str))
         }
+        NumberType::SignedDecimal => {
+            format!("#{}", i32::from_ne_bytes(number_token.value.to_ne_bytes()))
+        }
         NumberType::Decimal => {
             let dec_str = format!("{}", number_token.value);
             format!("#{}", add_underscores(&dec_str))
