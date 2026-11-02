@@ -275,7 +275,7 @@ SHFT rD, shift                ; rD = shifted rD; flags from shift
 	\textbf{Operation:}
 	\begin{verbatim}
 shifted = shift(rD)
-rD = shifted OR 0
+rD = shifted | 0
 SR = flags updated per the status-update suffix:
      [S] shifter result (default for SHFT),
      [A] ALU result, [N] no update
@@ -374,7 +374,7 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -498,7 +498,7 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -615,7 +615,7 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -735,7 +735,7 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -847,7 +847,7 @@ ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 AND operand2
+result = operand1 & operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
@@ -969,7 +969,7 @@ ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 OR operand2
+result = operand1 | operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
@@ -1094,7 +1094,7 @@ XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 XOR operand2
+result = operand1 ^ operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
@@ -1344,7 +1344,7 @@ result = operand1 + operand2
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -1477,7 +1477,7 @@ result = operand1 + operand2 + SR.C
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -1607,7 +1607,7 @@ result = operand1 - operand2
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -1745,7 +1745,7 @@ result = operand1 - operand2 - SR.C
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
 
 	\textbf{Flags:} N Z C V
@@ -1869,7 +1869,7 @@ TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 AND operand2
+result = operand1 & operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
@@ -2003,7 +2003,7 @@ TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 OR operand2
+result = operand1 | operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
@@ -2129,7 +2129,7 @@ TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
 
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 XOR operand2
+result = operand1 ^ operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
