@@ -319,7 +319,8 @@ if condition_true then
     else if current_exception_level != 0 then
         CSR = 0x0000                ; discard the trap
     else
-        link[0] = { address of next instruction, sr, current_exception_level }
+        link[0] = { address of next instruction, sr,
+                    current_exception_level }
         sr.P = 0
         sr.T = 0
         sr.EA = 1

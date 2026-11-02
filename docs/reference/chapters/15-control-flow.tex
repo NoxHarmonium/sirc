@@ -27,7 +27,7 @@ Section~\ref{sec:segment-overflow-fault}), as described in Chapter~\ref{ch:readi
 \begin{table}[H]
 	\centering
 	\scriptsize
-	\begin{tabular}{llll}
+	\begin{tabularx}{\linewidth}{lllX}
 		\toprule
 		\textbf{Instruction} & \textbf{Syntax}                    & \textbf{Encoding}  & \textbf{Notes}                                                                    \\
 		\midrule
@@ -55,7 +55,7 @@ Section~\ref{sec:segment-overflow-fault}), as described in Chapter~\ref{ch:readi
 		LJSR                 & \texttt{LJSR (\#disp, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, src)+}                                      \\
 		LJSR                 & \texttt{LJSR (rO, src)+}           & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)+}                                          \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Legal Control-Flow and Effective-Address Forms}
 	\label{tab:control-flow-legal-forms}
 \end{table}

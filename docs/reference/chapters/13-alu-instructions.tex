@@ -312,7 +312,8 @@ SHFT rD, shift                ; rD = shifted rD; flags from shift
 shifted = shift(rD)
 rD = shifted OR 0
 SR = flags updated per the status-update suffix:
-     [S] shifter result (default for SHFT), [A] ALU result, [N] no update
+     [S] shifter result (default for SHFT),
+     [A] ALU result, [N] no update
 \end{verbatim}
 
 	\textbf{Description:}

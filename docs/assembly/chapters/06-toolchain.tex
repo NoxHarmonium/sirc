@@ -85,8 +85,8 @@ The simulator loads the binary at the start of its program memory and starts the
 
 \begin{description}
 	\item[\texttt{--program-file}, \texttt{-p}] The linked binary to load.
-	\item[\texttt{--segment}, \texttt{-s}] Maps additional memory, written \texttt{label:offset:length} or
-	      \texttt{label:offset:length:file}, with the offset and length in hexadecimal. With a file, the segment is mapped onto it: the program reads the file's contents, and every store to the segment writes through to the file. The file must exist and be writable. This option may be repeated.
+	\item[\texttt{--segment}, \texttt{-s}] Maps additional memory, written \texttt{label:\allowbreak offset:\allowbreak length} or
+	      \texttt{label:\allowbreak offset:\allowbreak length:\allowbreak file}, with the offset and length in hexadecimal. With a file, the segment is mapped onto it: the program reads the file's contents, and every store to the segment writes through to the file. The file must exist and be writable. This option may be repeated.
 	\item[\texttt{--register-dump-file}, \texttt{-r}] Writes the final register state to a file when the program stops,
 	      which is how the repository's examples check their results.
 	\item[\texttt{--enable-video}, \texttt{-e}] Maps a video device in the VIDEO segment (Table~\ref{tab:fixed-segments}). The option is available only when the simulator is built with the \texttt{video} feature.

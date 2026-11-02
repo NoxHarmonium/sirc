@@ -75,7 +75,7 @@ What a reference resolves to depends on where it is written:
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lp{7cm}}
+	\begin{tabularx}{\textwidth}{p{0.45\textwidth}X}
 		\toprule
 		\textbf{Where}                                                                                                                                     & \textbf{Default resolution}                                       \\
 		\midrule
@@ -83,7 +83,7 @@ What a reference resolves to depends on where it is written:
 		Other instruction operands (\mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}) & The label's low word only                                         \\
 		\texttt{.DB}, \texttt{.DW}, \texttt{.DQ}                                                                                                           & The label's full 24-bit address                                   \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Default Resolution of a Label Reference}
 	\label{tab:symbol-resolution}
 \end{table}

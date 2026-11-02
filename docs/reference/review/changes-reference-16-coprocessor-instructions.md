@@ -30,3 +30,7 @@ Copy edit: hex literals wrapped in `\texttt{}` and en dashes in prose and tables
 - F-con2-21: "hex digit" changed to "hexadecimal digit" (two places).
 - No decisions in phase3-decisions.md concern this chapter; no typewriter-font signal-name sentences found.
 - Open question: none.
+
+## Layout
+
+EXCP pseudocode: broke "link[0] = { address of next instruction, sr, current_exception_level }" after "sr," with a continuation line aligned under the opening brace content. No words changed; 43pt overfull box gone.

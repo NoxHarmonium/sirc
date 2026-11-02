@@ -6,7 +6,7 @@ on any of them will not assemble.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{ll}
+	\begin{tabularx}{\textwidth}{p{0.38\textwidth}X}
 		\toprule
 		\textbf{Feature}                                   & \textbf{Instead}                                                   \\
 		\midrule
@@ -20,7 +20,7 @@ on any of them will not assemble.
 		Multi-instruction pseudoinstructions               & Write the instructions explicitly                                  \\
 		Label references in ALU and coprocessor immediates & Load the address with \mnemonic{MOVI} first                        \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Features the Assembler Does Not Have}
 	\label{tab:unsupported}
 \end{table}

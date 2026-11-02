@@ -41,16 +41,16 @@ conditional. The sixteen conditions are:
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Written as}                                & \textbf{Meaning}                                  \\
+		\textbf{Written as}                                    & \textbf{Meaning}                                  \\
 		\midrule
-		\texttt{AL}                                        & Always (the default when no condition is written) \\
-		\texttt{==}, \texttt{!=}                           & Equal, not equal                                  \\
-		\texttt{CS}, \texttt{CC}                           & Carry set, carry clear                            \\
-		\texttt{NS}, \texttt{NC}                           & Negative set, negative clear                      \\
-		\texttt{OS}, \texttt{OC}                           & Overflow set, overflow clear                      \\
-		\texttt{HI}, \texttt{LO}                           & Unsigned higher, unsigned lower or same           \\
-		\texttt{>=}, \texttt{<<}, \texttt{>>}, \texttt{<=} & Signed comparisons                                \\
-		\texttt{NV}                                        & Never                                             \\
+		\texttt{AL}                                            & Always (the default when no condition is written) \\
+		\texttt{==}, \texttt{!=}                               & Equal, not equal                                  \\
+		\texttt{CS}, \texttt{CC}                               & Carry set, carry clear                            \\
+		\texttt{NS}, \texttt{NC}                               & Negative set, negative clear                      \\
+		\texttt{OS}, \texttt{OC}                               & Overflow set, overflow clear                      \\
+		\texttt{HI}, \texttt{LO}                               & Unsigned higher, unsigned lower or same           \\
+		\texttt{>=}, \texttt{<{}<}, \texttt{>{}>}, \texttt{<=} & Signed comparisons                                \\
+		\texttt{NV}                                            & Never                                             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Condition Codes in Source}
@@ -81,7 +81,7 @@ The assembler recognizes the mnemonics in Table~\ref{tab:mnemonic-families}. Eac
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabular}{lp{6.2cm}l}
+	\begin{tabularx}{\textwidth}{lXp{3.3cm}}
 		\toprule
 		\textbf{Family}      & \textbf{Mnemonics}                                                                                                                                                                                                                                                     & \textbf{\archmanual{} Chapter}      \\
 		\midrule
@@ -94,7 +94,7 @@ The assembler recognizes the mnemonics in Table~\ref{tab:mnemonic-families}. Eac
 		Maths and DMA        & \mnemonic{MULU}, \mnemonic{MULS}, \mnemonic{DIVU}, \mnemonic{DIVS}, \mnemonic{DMAR}, \mnemonic{DMAW}, \mnemonic{DMAT}                                                                                                                                                  & Coprocessor Instructions            \\
 		Other meta           & \mnemonic{NOOP}, \mnemonic{SHFT}                                                                                                                                                                                                                                       & Meta-Instructions, ALU Instructions \\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 	\caption{Mnemonics Recognized by the Assembler}
 	\label{tab:mnemonic-families}
 \end{table}

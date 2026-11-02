@@ -18,3 +18,7 @@
 
 ## Open questions
 - None.
+
+## Layout
+
+Legal Forms table (Table 15.1): changed tabular{llll} to tabularx{\linewidth}{lllX} so the Notes column wraps. No text changed; the 17.5pt overfull box is gone (checked PDF p.184).

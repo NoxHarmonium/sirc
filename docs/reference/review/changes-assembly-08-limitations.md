@@ -15,3 +15,7 @@ None. Pass two: caption changed to Title Case.
 - Table 8.1, ".ORG" row: added a pointer to Section~\ref{sec:org} (orchestrator fix).
 - COPI #0x14FF bullet: now points to Chapter~\ref{ch:toolchain}, where the hook is documented.
 - No consistency-2 findings concern this chapter. Open questions: none.
+
+## Layout
+
+Table 8.1 converted to tabularx (full width; 0.38 textwidth first column, wrapping second column). No words changed. Overfull boxes of 62, 115, 59 and 109pt in this chapter are gone (manual total 6 -> 2, remaining 7.3pt and 5.4pt are in other files).

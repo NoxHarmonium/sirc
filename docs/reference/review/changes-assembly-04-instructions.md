@@ -8,3 +8,7 @@ F-asm-16: status `simulator`, left alone. The table header became `\archmanual{}
 
 ## Open questions
 None.
+
+## Layout
+
+Tables 4.1 and 4.2: Table 4.2 converted to tabularx (full width, wrapping Mnemonics column, 3.3cm chapter column); the shift conditions are written <{}< and >{}> so they print as two signs rather than T1 guillemets. Overfull boxes of 62, 115, 59 and 109pt in this chapter are gone (manual total 6 -> 2, remaining 7.3pt and 5.4pt are in other files).

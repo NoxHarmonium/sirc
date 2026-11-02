@@ -16,3 +16,7 @@ F-con-1, F-asm-12, F-asm-20, F-asm-26, F-asm-27, F-con-28.
 ## Open questions
 - The 64 K scratch example now uses length 10000 (hexadecimal) per F-asm-26.
 - The table states PROGRAM as read-only, from `writeable: false` in main.rs. Please confirm the intent.
+
+## Layout
+
+--segment item: added \allowbreak after each colon in the label:offset:length[:file] forms so they wrap. No words changed. Overfull boxes of 62, 115, 59 and 109pt in this chapter are gone (manual total 6 -> 2, remaining 7.3pt and 5.4pt are in other files).

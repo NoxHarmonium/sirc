@@ -11,3 +11,7 @@ Captions to Title Case; imperatives ("Write", "Choose", "load each half") recast
 
 ## Open questions
 None.
+
+## Layout
+
+Table 5.2 converted to tabularx (full width; 0.45 textwidth first column, wrapping second column). No words changed. Overfull boxes of 62, 115, 59 and 109pt in this chapter are gone (manual total 6 -> 2, remaining 7.3pt and 5.4pt are in other files).

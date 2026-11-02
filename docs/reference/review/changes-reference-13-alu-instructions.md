@@ -29,3 +29,7 @@
 - F-con2-23: `\texttt{r1}` in the ADDI notes and CMNI description changed to `\reg{r1}`.
 - Orchestrator fix: SHFT Operation block now says flags are updated per the status-update suffix ([S] shifter result, default for SHFT; [A] ALU result; [N] no update). This resolves the earlier open question.
 - Open question: none.
+
+## Layout
+
+SHFT Operation verbatim block: broke the over-long status-update line after "(default for SHFT)," onto a continuation line with the same indent. No words changed; overfull box (10.1pt) gone.
