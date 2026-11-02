@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="900" viewBox="0 0 760 900">
+  <defs>
+    <style>
+      .ink { fill: #24333c; font-family: 'Liberation Sans', Arial, sans-serif; }
+      .heading { font-size: 19px; font-weight: 700; letter-spacing: .6px; }
+      .subhead { font-size: 16px; font-weight: 700; }
+      .label { font-size: 13.5px; }
+      .detail { font-size: 12px; fill: #53616a; }
+      .branch { font-size: 12px; fill: #485962; font-style: italic; }
+      .faulttext { font-size: 13.5px; fill: #7a2f2d; font-family: 'Liberation Sans', Arial, sans-serif; }
+      .bustext { font-size: 13.5px; fill: #5b4a1f; font-family: 'Liberation Sans', Arial, sans-serif; }
+      .panel { fill: #f8fafb; stroke: #6b7e88; stroke-width: 1.6; rx: 8; }
+      .terminal { fill: #e9eff2; stroke: #405863; stroke-width: 1.8; rx: 16; }
+      .check { fill: #fff; stroke: #405863; stroke-width: 1.6; rx: 4; }
+      .external { fill: #fff; stroke: #738793; stroke-width: 1.6; stroke-dasharray: 6 5; rx: 4; }
+      .outcome { fill: #fff; stroke: #bcc9d0; stroke-width: 1.4; rx: 4; }
+      .fault { fill: #f6e8e7; stroke: #9b4b49; stroke-width: 1.8; rx: 4; }
+      .busfault { fill: #f7f0df; stroke: #9a7a2e; stroke-width: 1.8; rx: 4; }
+      .wire { fill: none; stroke: #405863; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .faultwire { fill: none; stroke: #9b4b49; stroke-width: 2; stroke-linecap: round; }
+      .buswire { fill: none; stroke: #9a7a2e; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 6 5; }
+      .quiet { fill: none; stroke: #8a9aa3; stroke-width: 1.8; stroke-linecap: round; }
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#405863" stroke-width="1.3"/>
+    </marker>
+    <marker id="faultArrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#9b4b49" stroke-width="1.5"/>
+    </marker>
+    <marker id="busArrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#9a7a2e" stroke-width="1.5"/>
+    </marker>
+    <marker id="quietArrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#8a9aa3" stroke-width="1.3"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="900" fill="#fff"/>
+  <text class="ink heading" x="16" y="30">PRIVILEGE CHECKS</text>
+
+  <!-- Key, top right. -->
+  <rect x="236" y="8" width="508" height="34" rx="5" fill="#fff" stroke="#bcc9d0" stroke-width="1.3"/>
+  <rect class="check" x="248" y="17" width="22" height="16"/>
+  <text class="ink detail" x="278" y="29">CPU check</text>
+  <rect class="external" x="352" y="17" width="22" height="16"/>
+  <text class="ink detail" x="382" y="29">External bus check</text>
+  <rect class="fault" x="504" y="17" width="22" height="16"/>
+  <text class="ink detail" x="534" y="29">Fault 0x05</text>
+  <rect class="busfault" x="614" y="17" width="22" height="16"/>
+  <text class="ink detail" x="644" y="29">Fault 0x09</text>
+
+  <!-- Start. -->
+  <rect class="terminal" x="200" y="56" width="200" height="32"/>
+  <text class="ink label" x="300" y="77" text-anchor="middle">Instruction begins</text>
+  <path class="wire" d="M300 88 V120" marker-end="url(#arrow)"/>
+
+  <!-- Phases 0-1: fetch. -->
+  <rect class="panel" x="16" y="104" width="728" height="84"/>
+  <text class="ink subhead" x="30" y="130">0–1</text>
+  <text class="ink detail" x="30" y="148">Fetch</text>
+  <rect class="external" x="150" y="122" width="300" height="44"/>
+  <text class="ink label" x="300" y="140" text-anchor="middle">Instruction fetch: memory</text>
+  <text class="ink label" x="300" y="158" text-anchor="middle">controller asserts <tspan text-decoration="overline">BPER</tspan>?</text>
+  <path class="buswire" d="M450 144 H516" marker-end="url(#busArrow)"/>
+  <text class="ink branch" x="483" y="138" text-anchor="middle">yes</text>
+  <rect class="busfault" x="520" y="122" width="208" height="44"/>
+  <text class="bustext" x="624" y="140" text-anchor="middle">Bus protection fault</text>
+  <text class="bustext" x="624" y="158" text-anchor="middle">vector 0x09</text>
+  <path class="wire" d="M300 166 V228" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="204">no</text>
+
+  <!-- Phase 2: decode. -->
+  <rect class="panel" x="16" y="212" width="728" height="274"/>
+  <text class="ink subhead" x="30" y="238">2</text>
+  <text class="ink detail" x="30" y="256">Decode</text>
+
+  <rect class="check" x="150" y="230" width="300" height="44"/>
+  <text class="ink label" x="300" y="248" text-anchor="middle">Protected mode?</text>
+  <text class="ink label" x="300" y="266" text-anchor="middle">(SR.P = 1)</text>
+  <path class="quiet" d="M450 252 H516" marker-end="url(#quietArrow)"/>
+  <text class="ink branch" x="483" y="246" text-anchor="middle">no</text>
+  <rect class="outcome" x="520" y="230" width="208" height="44"/>
+  <text class="ink label" x="624" y="248" text-anchor="middle">Supervisor mode:</text>
+  <text class="ink label" x="624" y="266" text-anchor="middle">no CPU checks</text>
+  <path class="wire" d="M300 274 V294" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="288">yes</text>
+
+  <rect class="check" x="150" y="296" width="300" height="44"/>
+  <text class="ink label" x="300" y="323" text-anchor="middle">Condition true?</text>
+  <path class="quiet" d="M450 318 H516" marker-end="url(#quietArrow)"/>
+  <text class="ink branch" x="483" y="312" text-anchor="middle">no</text>
+  <rect class="outcome" x="520" y="296" width="208" height="44"/>
+  <text class="ink label" x="624" y="314" text-anchor="middle">Condition false: no</text>
+  <text class="ink label" x="624" y="332" text-anchor="middle">effect, cannot fault</text>
+  <path class="wire" d="M300 340 V360" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="354">yes</text>
+
+  <rect class="check" x="150" y="362" width="300" height="44"/>
+  <text class="ink label" x="300" y="380" text-anchor="middle">Coprocessor operation nibble</text>
+  <text class="ink label" x="300" y="398" text-anchor="middle">(bits 11–8) ≥ 0x8?</text>
+  <path class="faultwire" d="M450 384 H516" marker-end="url(#faultArrow)"/>
+  <text class="ink branch" x="483" y="378" text-anchor="middle">yes</text>
+  <rect class="fault" x="520" y="362" width="208" height="44"/>
+  <text class="faulttext" x="624" y="380" text-anchor="middle">Privilege violation</text>
+  <text class="faulttext" x="624" y="398" text-anchor="middle">vector 0x05</text>
+  <path class="wire" d="M300 406 V426" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="420">no</text>
+
+  <rect class="check" x="150" y="428" width="300" height="44"/>
+  <text class="ink label" x="300" y="446" text-anchor="middle">Writes ah, lh, ph or sh</text>
+  <text class="ink label" x="300" y="464" text-anchor="middle">through its register field?</text>
+  <path class="faultwire" d="M450 450 H516" marker-end="url(#faultArrow)"/>
+  <text class="ink branch" x="483" y="444" text-anchor="middle">yes</text>
+  <rect class="fault" x="520" y="428" width="208" height="44"/>
+  <text class="faulttext" x="624" y="446" text-anchor="middle">Privilege violation</text>
+  <text class="faulttext" x="624" y="464" text-anchor="middle">vector 0x05</text>
+  <path class="wire" d="M300 472 V528" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="503">no</text>
+
+  <!-- Phase 3: execute. -->
+  <rect class="panel" x="16" y="512" width="728" height="84"/>
+  <text class="ink subhead" x="30" y="538">3</text>
+  <text class="ink detail" x="30" y="556">Execute</text>
+  <rect class="check" x="150" y="530" width="300" height="44"/>
+  <text class="ink label" x="300" y="548" text-anchor="middle">Software exception (EXCP)</text>
+  <text class="ink label" x="300" y="566" text-anchor="middle">with vector &lt; 0x60?</text>
+  <path class="faultwire" d="M450 552 H516" marker-end="url(#faultArrow)"/>
+  <text class="ink branch" x="483" y="546" text-anchor="middle">yes</text>
+  <rect class="fault" x="520" y="530" width="208" height="44"/>
+  <text class="faulttext" x="624" y="548" text-anchor="middle">Privilege violation</text>
+  <text class="faulttext" x="624" y="566" text-anchor="middle">vector 0x05</text>
+  <path class="wire" d="M300 574 V638" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="613">no</text>
+
+  <!-- Phase 4: memory. -->
+  <rect class="panel" x="16" y="622" width="728" height="84"/>
+  <text class="ink subhead" x="30" y="648">4</text>
+  <text class="ink detail" x="30" y="666">Memory</text>
+  <rect class="external" x="150" y="640" width="300" height="44"/>
+  <text class="ink label" x="300" y="658" text-anchor="middle">LOAD / STOR access: memory</text>
+  <text class="ink label" x="300" y="676" text-anchor="middle">controller asserts <tspan text-decoration="overline">BPER</tspan>?</text>
+  <path class="buswire" d="M450 662 H516" marker-end="url(#busArrow)"/>
+  <text class="ink branch" x="483" y="656" text-anchor="middle">yes</text>
+  <rect class="busfault" x="520" y="640" width="208" height="44"/>
+  <text class="bustext" x="624" y="658" text-anchor="middle">Bus protection fault</text>
+  <text class="bustext" x="624" y="676" text-anchor="middle">vector 0x09</text>
+  <path class="wire" d="M300 684 V748" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="723">no</text>
+
+  <!-- Phase 5: write back. -->
+  <rect class="panel" x="16" y="732" width="728" height="84"/>
+  <text class="ink subhead" x="30" y="758">5</text>
+  <text class="ink detail" x="30" y="776">Write back</text>
+  <rect class="check" x="150" y="750" width="300" height="44"/>
+  <text class="ink label" x="300" y="768" text-anchor="middle">Address-pair write would</text>
+  <text class="ink label" x="300" y="786" text-anchor="middle">change a high word?</text>
+  <path class="faultwire" d="M450 772 H516" marker-end="url(#faultArrow)"/>
+  <text class="ink branch" x="483" y="766" text-anchor="middle">yes</text>
+  <rect class="fault" x="520" y="750" width="208" height="44"/>
+  <text class="faulttext" x="624" y="768" text-anchor="middle">Privilege violation</text>
+  <text class="faulttext" x="624" y="786" text-anchor="middle">vector 0x05</text>
+  <path class="wire" d="M300 794 V836" marker-end="url(#arrow)"/>
+  <text class="ink branch" x="308" y="831">no</text>
+
+  <!-- End. -->
+  <rect class="terminal" x="200" y="838" width="200" height="32"/>
+  <text class="ink label" x="300" y="859" text-anchor="middle">Instruction completes</text>
+
+  <text class="ink detail" x="16" y="892">External bus checks apply in both modes: the controller sees PROT, which follows SR.P. All faults are retryable.</text>
+</svg>

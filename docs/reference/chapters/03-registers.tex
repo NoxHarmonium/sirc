@@ -288,11 +288,15 @@ The status register differs slightly from the high address registers:
 Figure~\ref{fig:privilege-checks} shows where the CPU applies each privilege check as an instruction moves through
 decode, execute, and write-back. The checks apply to different kinds of instruction, so an instruction is only affected
 by the check for its own kind. Every violation raises the same Privilege Violation Fault (vector \texttt{0x05}), which
-is retryable (Chapter~\ref{ch:exceptions}).
+is retryable (Chapter~\ref{ch:exceptions}). The figure also shows the external check: on any bus access, in the
+instruction fetch (phases 0 and 1) or a \mnemonic{LOAD} or \mnemonic{STOR} (phase 4), the memory system can refuse the
+access by asserting \activelow{BPER}, which raises a Bus Protection Fault (vector \texttt{0x09},
+Section~\ref{sec:bus-protection-fault}). That check is made by external hardware, which sees the \texttt{PROT} output,
+so it can apply in supervisor mode too.
 
 \begin{figure}[H]
 	\centering
-	\includegraphics{diagrams/privilege-checks.pdf}
+	\includegraphics[width=0.95\textwidth]{diagrams/privilege-checks.pdf}
 	\caption{Privilege Checks in Protected Mode}
 	\label{fig:privilege-checks}
 \end{figure}
