@@ -123,3 +123,34 @@ fn assembler_reports_located_errors_without_panicking() {
     assert_success(&output);
     assert!(object.exists());
 }
+
+#[test]
+fn assembler_rejects_every_program_counter_auto_update_form() {
+    for offset in ["#0, ", "r2, ", "@target, ", "$N, ", ""] {
+        for source in [
+            format!("LOAD|!= r1, ({offset}p)+"),
+            format!("STOR|== -({offset}p), r1"),
+            format!("LDEA a, -({offset}p)"),
+            format!("LDEL a, ({offset}p)+"),
+            format!("LJSR ({offset}p)+"),
+        ] {
+            assert_assembly_error(
+                &format!(".EQU $N #0\n{source}\n:target\nNOOP\n"),
+                "Aliased register writes",
+                "2:",
+            );
+        }
+    }
+    let directory = tempdir().unwrap();
+    for source in [
+        "LOAD r1, (#0, p)",
+        "STOR (#0, p), r1",
+        "LDEA a, (#0, p)",
+        "LDEL a, (#0, p)",
+        "LOAD r1, (#0, s)+",
+        "STOR -(#0, s), r1",
+    ] {
+        let (output, _) = assemble(directory.path(), "legal", source);
+        assert_success(&output);
+    }
+}

@@ -293,7 +293,27 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
         .context("shift definition (e.g. ASR #4)"),
     ));
 
-    lexeme(addressing_mode_parser)(i)
+    let (remaining, mode) = lexeme(addressing_mode_parser)(i)?;
+    if matches!(
+        mode,
+        AddressingMode::IndirectRegisterDisplacementPostIncrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectImmediateDisplacementPostIncrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectRegisterDisplacementPreDecrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectImmediateDisplacementPreDecrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        )
+    ) {
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(i, ErrorKind::Verify,
+            "Aliased register writes are undefined: auto-update of p overlaps program-counter advance")));
+    }
+    Ok((remaining, mode))
 }
 
 pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
