@@ -59,6 +59,11 @@ All instruction formats share some common fields:
 
 The immediate format encodes a full 16-bit immediate value within the instruction.
 
+The format has a single register field. For ALU operations that save a result it is both the first source operand and
+the destination, so \texttt{ADDI r1, \#5} computes \reg{r1} = \reg{r1} + 5; there is no separate destination field.
+Test operations read it as a source only, \mnemonic{MOVI} writes it without reading it, \mnemonic{LOAD} writes it, and
+\mnemonic{STOR} reads it.
+
 \textbf{Note:} Due to the large 16-bit operand, shift is not supported in this format. AF = 10 is still encodable; with no shift fields the shifter result is treated as zero flags, so it clears N, Z, C and V (Chapter~\ref{ch:alu-instructions}).
 
 \begin{figure}[H]
@@ -77,11 +82,11 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
-	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
-	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is architecturally
-	      undefined.
+	\item[Register (bits 25--22)] 4-bit register identifier; its role depends on the instruction (see above). For \mnemonic{LDEA}
+	      and \mnemonic{LDEL} (opcodes \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair
+	      index in bits 23--22 (00 = \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the
+	      same encoding as the AF field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is
+	      architecturally undefined.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
@@ -122,6 +127,11 @@ single-instruction operations.
 
 This format is supported only for ALU instructions; it cannot be used with branching or load/store instructions.
 
+As in the immediate format, the single register field is both the first source operand and the destination for ALU
+operations that save a result, so \texttt{ADDI r1, \#5, LSL \#2} computes \reg{r1} = (\reg{r1} shifted left by 2) + 5:
+the shift applies to the register, not the immediate (Chapter~\ref{ch:shift-operations}). Test operations read it as a
+source only.
+
 \begin{figure}[H]
 	\centering
 	\begin{bytefield}[bitwidth=1.3em]{32}
@@ -141,7 +151,8 @@ This format is supported only for ALU instructions; it cannot be used with branc
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register identifier
+	\item[Register (bits 25--22)] 4-bit register identifier; for ALU operations that save a result it is both the first source
+	      and the destination (see above)
 	\item[Immediate (bits 21--14)] 8-bit unsigned immediate value, zero-extended to 16 bits before use
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
 	      \begin{itemize}
