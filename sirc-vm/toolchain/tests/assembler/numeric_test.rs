@@ -150,3 +150,18 @@ fn malformed_ast_cannot_apply_a_numeric_field_to_the_wrong_format() {
         );
     }
 }
+
+#[test]
+fn equ_requires_a_valid_numeric_operand() {
+    for source in [".EQU $N\n", ".EQU $N @label\n", ".EQU $N #oops\n"] {
+        assert!(parse_tokens(source).is_err(), "{source}");
+    }
+}
+
+#[test]
+fn auto_update_cannot_alias_either_half_of_the_link_pair() {
+    for register in ["lh", "ll"] {
+        let source = format!("LOAD {register}, (#0, l)+\n");
+        assert!(parse_tokens(&source).is_err(), "{source}");
+    }
+}

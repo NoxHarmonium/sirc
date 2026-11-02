@@ -232,3 +232,49 @@ pub fn try_build_object(
         debug_info: Some(debug_info),
     })
 }
+
+#[cfg(test)]
+mod invalid_data_tests {
+    use super::*;
+    use crate::types::numeric::ConstantReference;
+    use crate::types::shared::{NumberToken, NumberType};
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    #[test]
+    fn malformed_data_tokens_cannot_bypass_injection_invariants() {
+        let number = NumberToken {
+            value: 1,
+            number_type: NumberType::Decimal,
+        };
+        let constants = HashMap::from([("N".into(), number.clone())]);
+        for (size_bytes, value) in [
+            (3, DataType::Value(number)),
+            (
+                3,
+                DataType::PlaceHolder(ConstantReference {
+                    name: "N".into(),
+                    input_length: 0,
+                }),
+            ),
+            (
+                1,
+                DataType::PlaceHolder(ConstantReference {
+                    name: "UNDEFINED".into(),
+                    input_length: 0,
+                }),
+            ),
+        ] {
+            let mut program = [[0; 4]; 1];
+            let mut references = Vec::new();
+            assert!(catch_unwind(AssertUnwindSafe(|| inject_data_value(
+                DataToken { size_bytes, value },
+                &mut program,
+                0,
+                &mut references,
+                0,
+                &constants,
+            )))
+            .is_err());
+        }
+    }
+}

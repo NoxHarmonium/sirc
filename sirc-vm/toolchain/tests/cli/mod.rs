@@ -184,3 +184,23 @@ fn linker_cli_writes_the_relocated_binary() {
         assemble_object("MOVI r1, #102\nNOOP\n").program
     );
 }
+
+#[test]
+fn unsupported_relocation_cli_does_not_write_output() {
+    let directory = tempdir().unwrap();
+    let mut object = assemble_object("MOVI r1, @target.l\n:target\nNOOP\n");
+    object.program = assemble_object("ADDR r1, r2\nNOOP\n").program;
+    let input = directory.path().join("invalid.o");
+    fs::write(&input, postcard::to_allocvec(&object).unwrap()).unwrap();
+    let binary = directory.path().join("program.bin");
+    let output = Command::new(env!("CARGO_BIN_EXE_linker"))
+        .arg(input)
+        .arg("-o")
+        .arg(&binary)
+        .args(["-s", "0"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Unsupported relocation"));
+    assert!(!binary.exists());
+}

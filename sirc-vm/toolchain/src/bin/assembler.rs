@@ -75,8 +75,10 @@ fn main() -> io::Result<()> {
         );
         exit(1);
     });
-    let bytes_to_write = postcard::to_allocvec(&object_definition)
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    let bytes_to_write = match postcard::to_allocvec(&object_definition) {
+        Ok(bytes_to_write) => bytes_to_write,
+        Err(error) => panic!("Error encoding file: {error}"),
+    };
 
     write(args.output_file, bytes_to_write)?;
     Ok(())
