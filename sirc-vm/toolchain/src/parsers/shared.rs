@@ -219,6 +219,7 @@ pub fn split_shift_definition_data(
         ShiftDefinitionData::Immediate(shift_type, shift_count) => {
             (ShiftOperand::Immediate, *shift_type, *shift_count)
         }
+        ShiftDefinitionData::Constant(shift_type, _) => (ShiftOperand::Immediate, *shift_type, 0),
         ShiftDefinitionData::Register(shift_type, shift_count) => (
             ShiftOperand::Register,
             *shift_type,
@@ -265,105 +266,41 @@ fn parse_comment(i: &str) -> AsmResult<Token> {
     lexeme(parse_comment_)(i)
 }
 
-// Expand numeric tokens before parsing their fields. This lets every numeric
-// operand use exactly the same width/sign checks as a literal, including multiple
-// fields in one instruction. The byte map retains original diagnostic/debug spans.
-fn expand_constants<'a>(
-    input: &'a str,
-    constants: &std::collections::HashMap<String, NumberToken>,
-) -> Result<(String, Vec<usize>), Err<ErrorTree<&'a str>>> {
-    let mut expanded = Vec::new();
-    let mut positions = Vec::new();
-    let mut offset = 0;
-    let mut defining_name = input.starts_with(".EQU");
-    let mut in_comment = false;
-    let mut in_first_line = true;
-    while offset < input.len() {
-        let byte = input.as_bytes()[offset];
-        if byte == b';' {
-            in_comment = true;
-        }
-        if byte == b'\n' {
-            in_first_line = false;
-        }
-        if byte == b'$' && in_first_line && !in_comment {
-            let end = input[offset + 1..]
-                .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
-                .map_or(input.len(), |end| offset + 1 + end);
-            if defining_name {
-                defining_name = false;
-            } else {
-                let name = &input[offset + 1..end];
-                let value = constants.get(name).ok_or_else(|| {
-                    Err::Failure(ErrorTree::from_external_error(
-                        &input[offset..],
-                        ErrorKind::Verify,
-                        format!("Undefined constant ${name}; define it with .EQU before use"),
-                    ))
-                })?;
-                let literal = crate::printers::shared::print_number_token(value);
-                positions.extend(std::iter::repeat_n(offset, literal.len()));
-                expanded.extend_from_slice(literal.as_bytes());
-                offset = end;
-                continue;
-            }
-        }
-        positions.push(offset);
-        expanded.push(byte);
-        offset += 1;
-    }
-    positions.push(input.len());
+// Syntax is independent of constant definitions. The object builder resolves
+// numeric fixups in source order, using their original AST use-site locations.
+pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
+    use nom::combinator::eof;
+    use nom::Parser;
+    use nom_supreme::multi::collect_separated_terminated;
+    let mut parser = collect_separated_terminated(
+        alt((
+            parse_comment.context("comment"),
+            parse_instruction_token.context("instruction"),
+            parse_label_token.context("label"),
+            parse_origin_token.context("origin"),
+            parse_data_token.context("data directive"),
+            parse_equ_token.context("equ directive"),
+        )),
+        multispace0,
+        eof,
+    );
+    let (i, _) = multispace0(i)?;
+    parser.parse(i)
+}
+
+pub fn parse_constant_reference(i: &str) -> AsmResult<crate::types::numeric::ConstantReference> {
+    let input_length = i.len();
+    let (i, name) = parse_placeholder(i)?;
     Ok((
-        String::from_utf8(expanded).expect("Numeric expansion preserves UTF-8"),
-        positions,
+        i,
+        crate::types::numeric::ConstantReference { name, input_length },
     ))
 }
 
-fn parse_token(i: &str) -> AsmResult<Token> {
+pub fn parse_numeric_operand(i: &str) -> AsmResult<crate::types::numeric::NumericOperand> {
+    use crate::types::numeric::NumericOperand;
     alt((
-        parse_comment.context("comment"),
-        parse_instruction_token.context("instruction"),
-        parse_label_token.context("label"),
-        parse_origin_token.context("origin"),
-        parse_data_token.context("data directive"),
-        parse_equ_token.context("equ directive"),
+        map(parse_number, NumericOperand::Literal),
+        map(parse_constant_reference, NumericOperand::Constant),
     ))(i)
-}
-
-// Constants are resolved in source order, so rebinding affects only later uses.
-pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
-    let mut constants = std::collections::HashMap::new();
-    let mut tokens = Vec::new();
-    let (mut i, _) = multispace0(i)?;
-    if i.is_empty() {
-        return parse_token(i).map(|(remaining, token)| (remaining, vec![token]));
-    }
-    while !i.is_empty() {
-        let (remaining, mut token) = if i.starts_with([';', ':'])
-            || i.starts_with(".ORG")
-            || !i.lines().next().unwrap_or("").contains('$')
-        {
-            parse_token(i)?
-        } else {
-            let (expanded, positions) = expand_constants(i, &constants)?;
-            let (remaining, token) = parse_token(&expanded).map_err(|error| {
-                error.map(|tree| {
-                    tree.map_locations(|location| &i[positions[expanded.len() - location.len()]..])
-                })
-            })?;
-            (&i[positions[expanded.len() - remaining.len()]..], token)
-        };
-        match &mut token {
-            Token::Instruction(instruction) => instruction.input_length = i.len(),
-            Token::Label(label) => label.input_length = i.len(),
-            Token::Equ(equ) => {
-                constants.insert(equ.placeholder_name.clone(), equ.number_token.clone());
-            }
-            _ => {}
-        }
-        tokens.push(token);
-        let (remaining, _) = multispace0(remaining)?;
-        i = remaining;
-    }
-    Ok((i, tokens))
 }

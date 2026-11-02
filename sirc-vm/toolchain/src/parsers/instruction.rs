@@ -16,9 +16,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use super::opcodes;
-use super::shared::{
-    lexeme, parse_comma_sep, parse_number, parse_placeholder, parse_symbol_reference, AsmResult,
-};
+use super::shared::{lexeme, parse_comma_sep, parse_number, parse_symbol_reference, AsmResult};
 use crate::types::data::RefToken;
 use crate::types::instruction::InstructionToken;
 use crate::types::object::SymbolDefinition;
@@ -36,7 +34,7 @@ impl Default for InstructionToken {
                 additional_flags: 0x0,
             }),
             symbol_ref: None,
-            placeholder_name: None,
+            numeric_fixups: Vec::new(),
         }
     }
 }
@@ -67,7 +65,7 @@ pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinit
 pub enum ImmediateType {
     Value(u16),
     SymbolRef(RefToken),
-    PlaceHolder(String),
+    PlaceHolder(crate::types::numeric::ConstantReference),
 }
 
 pub enum OffsetType {
@@ -79,6 +77,20 @@ pub enum OffsetType {
 pub enum ShiftDefinitionData {
     Immediate(ShiftType, u8),
     Register(ShiftType, RegisterName),
+    Constant(ShiftType, crate::types::numeric::ConstantReference),
+}
+
+impl ShiftDefinitionData {
+    pub fn numeric_fixups(&self) -> Vec<crate::types::numeric::NumericFixup> {
+        use crate::types::numeric::{NumericField, NumericFixup};
+        match self {
+            Self::Constant(_, reference) => vec![NumericFixup::new(
+                reference.clone(),
+                NumericField::ShiftCount,
+            )],
+            _ => Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -105,28 +117,22 @@ pub enum AddressingMode {
     ShiftDefinition(ShiftDefinitionData),
 }
 
-#[allow(clippy::cast_possible_truncation)]
 pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
     alt((
-        // TODO: Make sure that cast in parser is not going to cause issues
-        // category=Toolchain
-        // Check this cast down to u16
-        map_res(parse_number, |NumberToken { value, number_type }| {
-            let signed = matches!(number_type, crate::types::shared::NumberType::SignedDecimal);
-            if value <= 0xffff || (signed && value >= 0xffff_8000) {
-                Ok(ImmediateType::Value(value as u16))
-            } else {
-                Err("Number does not fit in a 16-bit immediate")
-            }
+        map_res(parse_number, |number| {
+            crate::types::numeric::NumericField::Immediate16
+                .encode(&number)
+                .map(ImmediateType::Value)
         })
         .context("number"),
         map(parse_symbol_reference, |ref_token| {
             ImmediateType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
-        map(parse_placeholder, |placeholder_name| {
-            ImmediateType::PlaceHolder(placeholder_name)
-        })
+        map(
+            super::shared::parse_constant_reference,
+            ImmediateType::PlaceHolder,
+        )
         .context("placeholder"),
     ))(i)
 }
@@ -251,6 +257,9 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
     let result = alt((
         parse_immediate_shift_definition,
         parse_register_shift_definition,
+        map(super::shared::parse_constant_reference, |reference| {
+            ShiftDefinitionData::Constant(shift_type, reference)
+        }),
     ))(i);
     result
 }

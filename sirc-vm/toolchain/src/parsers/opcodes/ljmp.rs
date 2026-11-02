@@ -4,6 +4,7 @@ use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::{NumericField, NumericFixup};
 use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -111,7 +112,10 @@ pub fn ljmp(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(0x0, source_register),
-                        placeholder_name: Some(placeholder_name.clone()),
+                        numeric_fixups: vec![NumericFixup::new(
+                            placeholder_name.clone(),
+                            NumericField::Immediate16,
+                        )],
                         ..Default::default()
                     },
                 )),

@@ -95,10 +95,10 @@ pub fn print_ref_token(ref_token: &RefToken) -> String {
 /// let printed = print_token(&Token::Equ(
 ///    EquToken {
 ///        placeholder_name: String::from("BAR"),
-///        number_token: NumberToken {
+///        value: NumberToken {
 ///            number_type: NumberType::Decimal,
 ///            value: 1234
-///        }
+///        }.into()
 ///    }
 /// ));
 /// assert_eq!(String::from(".EQU $BAR #1234"), printed);
@@ -125,19 +125,19 @@ pub fn print_token(token: &Token) -> String {
 ///    Token::Equ(
 ///        EquToken {
 ///            placeholder_name: String::from("FOO"),
-///            number_token: NumberToken {
+///            value: NumberToken {
 ///                number_type: NumberType::Decimal,
 ///                value: 1234
-///            }
+///            }.into()
 ///        }
 ///    ),
 ///    Token::Equ(
 ///        EquToken {
 ///            placeholder_name: String::from("BAR"),
-///            number_token: NumberToken {
+///            value: NumberToken {
 ///                number_type: NumberType::Hex,
 ///                value: 0xCAFE
-///            }
+///            }.into()
 ///        }
 ///    ),
 /// ]);

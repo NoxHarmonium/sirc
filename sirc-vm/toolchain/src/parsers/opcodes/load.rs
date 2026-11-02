@@ -1,6 +1,7 @@
 use super::super::shared::AsmResult;
 use super::{direct_register_aliases_address_register, reject_aliased_address_register_write};
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::{NumericField, NumericFixup};
 use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
@@ -100,7 +101,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             dest_register,
                             address_register,
                         ),
-                        placeholder_name: Some(placeholder_name.clone()),
+                        numeric_fixups: vec![NumericFixup::new(placeholder_name.clone(), NumericField::Immediate16)],
                         ..Default::default()
                     },
                 )),
@@ -186,7 +187,7 @@ pub fn load(i: &str) -> AsmResult<InstructionToken> {
                             dest_register,
                             address_register,
                         ),
-                        placeholder_name: Some(placeholder_name.clone()),
+                        numeric_fixups: vec![NumericFixup::new(placeholder_name.clone(), NumericField::Immediate16)],
                         ..Default::default()
                     },
                 )),

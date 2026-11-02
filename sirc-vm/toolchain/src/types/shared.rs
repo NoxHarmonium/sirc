@@ -41,3 +41,14 @@ pub enum Token {
     Data(DataToken),
     Equ(EquToken),
 }
+
+impl Token {
+    /// Original source position is captured by tokens that contribute debug locations.
+    pub fn input_length(&self) -> Option<usize> {
+        match self {
+            Self::Instruction(token) => Some(token.input_length),
+            Self::Label(token) => Some(token.input_length),
+            _ => None,
+        }
+    }
+}

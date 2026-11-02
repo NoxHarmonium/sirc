@@ -3,7 +3,6 @@ use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 use crate::types::shared::Token;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
     INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
@@ -14,47 +13,6 @@ use sha2::{Digest, Sha256};
 use crate::types::shared::NumberToken;
 use std::collections::HashMap;
 
-fn resolve_placeholder(
-    placeholders: &HashMap<String, u32>,
-    placeholder_name: &String,
-    instruction_data: &InstructionData,
-) -> Result<InstructionData, String> {
-    let resolved_value = placeholders.get(placeholder_name).ok_or_else(|| {
-        format!("Undefined constant ${placeholder_name}; define it with .EQU before use")
-    })?;
-    Ok(match instruction_data {
-        InstructionData::Immediate(immediate_instruction) => {
-            if *resolved_value > 0xFFFF {
-                return Err(format!(
-                    "Constant ${placeholder_name} does not fit in a 16-bit immediate"
-                ));
-            }
-            InstructionData::Immediate(ImmediateInstructionData {
-                value: resolved_value
-                    .to_owned()
-                    .try_into()
-                    .expect("Value should fit into a u8 as it is checked above"),
-                ..immediate_instruction.clone()
-            })
-        }
-        InstructionData::ShortImmediate(short_immediate_instruction) => {
-            if *resolved_value > 0xFF {
-                return Err(format!(
-                    "Constant ${placeholder_name} does not fit in an 8-bit immediate"
-                ));
-            }
-            InstructionData::ShortImmediate(ShortImmediateInstructionData {
-                value: resolved_value
-                    .to_owned()
-                    .try_into()
-                    .expect("Value should fit into a u8 as it is checked above"),
-                ..short_immediate_instruction.clone()
-            })
-        }
-        InstructionData::Register(_) => instruction_data.clone(),
-    })
-}
-
 #[allow(clippy::cast_possible_truncation)]
 fn inject_data_value(
     data: DataToken,
@@ -62,7 +20,7 @@ fn inject_data_value(
     program_offset: usize,
     symbol_refs: &mut Vec<SymbolRef>,
     offset: u32,
-    placeholders: &HashMap<String, u32>,
+    placeholders: &crate::types::numeric::Constants,
 ) {
     match data.value {
         DataType::Value(NumberToken { value, .. }) => {
@@ -93,8 +51,10 @@ fn inject_data_value(
             });
         }
         DataType::PlaceHolder(placeholder_name) => {
-            let resolved_value = placeholders.get(&placeholder_name)
-                .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
+            let resolved_value = placeholders
+                .get(&placeholder_name.name)
+                .unwrap_or_else(|| panic!("Constant was validated before data injection"));
+            let resolved_value = &resolved_value.value;
             // Truncate per data.size_bytes, same as the DataType::Value arm above -- the
             // placeholder's resolved value is an arbitrary u32 regardless of which directive
             // size uses it, so DB/DW must mask down rather than writing the full 4 bytes.
@@ -142,7 +102,7 @@ pub fn try_build_object(
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut label_positions = HashMap::new();
     let mut symbol_refs: Vec<SymbolRef> = vec![];
-    let mut placeholders: HashMap<String, u32> = HashMap::new();
+    let mut placeholders = crate::types::numeric::Constants::new();
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
     let mut debug_info = ObjectDebugInfo {
@@ -152,32 +112,27 @@ pub fn try_build_object(
     };
 
     for token in tokens {
+        let file_position = token
+            .input_length()
+            .map_or(0, |length| original_input_length - length);
         let program_offset: usize = offset as usize / 4;
 
         ensure_program_size(&mut program, program_offset + 1);
 
         match token {
             Token::Instruction(data) => {
-                if let Some(symbol_ref) = data.symbol_ref {
+                if let Some(symbol_ref) = &data.symbol_ref {
                     symbol_refs.push(SymbolRef {
-                        name: symbol_ref.name,
+                        name: symbol_ref.name.clone(),
                         offset,
                         ref_type: symbol_ref.ref_type,
                         data_only: false,
                     });
                 }
 
-                let instruction = if let Some(placeholder_name) = data.placeholder_name {
-                    resolve_placeholder(&placeholders, &placeholder_name, &data.instruction)
-                        .map_err(|message| AssemblyError {
-                            input_offset: original_input_length - data.input_length,
-                            message,
-                        })?
-                } else {
-                    data.instruction
-                };
+                let instruction =
+                    data.resolve_numeric_operands(&placeholders, original_input_length)?;
 
-                let file_position = original_input_length - data.input_length;
                 debug_info.program_to_input_offset_mapping.insert(
                     // TODO: Improve error handling in assembler
                     // category=Refactoring
@@ -191,13 +146,10 @@ pub fn try_build_object(
                 offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Label(data) => {
-                let input_offset = original_input_length - data.input_length;
+                let input_offset = file_position;
                 if let Some(previous) = label_positions.insert(data.name.clone(), input_offset) {
-                    let line = debug_info.original_input[..previous]
-                        .bytes()
-                        .filter(|byte| *byte == b'\n')
-                        .count()
-                        + 1;
+                    let (line, _) =
+                        crate::utils::source::line_column(&debug_info.original_input, previous);
                     return Err(AssemblyError {
                         input_offset,
                         message: format!(
@@ -225,18 +177,13 @@ pub fn try_build_object(
                 offset = data.offset * 2;
             }
             Token::Data(data) => {
-                if let DataType::PlaceHolder(name) = &data.value {
-                    if !placeholders.contains_key(name) {
-                        return Err(AssemblyError {
-                            input_offset: debug_info
-                                .original_input
-                                .find(&format!("${name}"))
-                                .unwrap_or(0),
-                            message: format!(
-                                "Undefined constant ${name}; define it with .EQU before use"
-                            ),
-                        });
-                    }
+                if let DataType::PlaceHolder(reference) = &data.value {
+                    crate::types::numeric::NumericOperand::Constant(reference.clone())
+                        .resolve(&placeholders)
+                        .map_err(|message| AssemblyError {
+                            input_offset: original_input_length - reference.input_length,
+                            message,
+                        })?;
                 }
                 inject_data_value(
                     data,
@@ -249,7 +196,19 @@ pub fn try_build_object(
                 offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Equ(data) => {
-                placeholders.insert(data.placeholder_name, data.number_token.value);
+                let number =
+                    data.value
+                        .resolve(&placeholders)
+                        .map_err(|message| AssemblyError {
+                            input_offset: match &data.value {
+                                crate::types::numeric::NumericOperand::Constant(reference) => {
+                                    original_input_length - reference.input_length
+                                }
+                                crate::types::numeric::NumericOperand::Literal(_) => 0,
+                            },
+                            message,
+                        })?;
+                placeholders.insert(data.placeholder_name, number);
             }
         }
     }

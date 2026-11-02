@@ -51,7 +51,7 @@ pub fn print_data_token(data_token: &DataToken) -> String {
     let value_string = match &data_token.value {
         DataType::Value(value) => print_number_token(value),
         DataType::SymbolRef(ref_token) => print_ref_token(ref_token),
-        DataType::PlaceHolder(placeholder_name) => format!("${placeholder_name}"),
+        DataType::PlaceHolder(placeholder_name) => format!("${}", placeholder_name.name),
     };
 
     format!("{token_string} {value_string}")
@@ -65,10 +65,10 @@ pub fn print_data_token(data_token: &DataToken) -> String {
 /// use toolchain::types::shared::{NumberToken, NumberType};
 /// let printed = print_equ_token(&EquToken {
 ///    placeholder_name: String::from("FOO"),
-///    number_token: NumberToken {
+///    value: NumberToken {
 ///        number_type: NumberType::Hex,
 ///        value: 0xCAFE
-///    }
+///    }.into()
 /// });
 /// assert_eq!(String::from(".EQU $FOO #0xCAFE"), printed);
 /// ```
@@ -76,6 +76,10 @@ pub fn print_equ_token(equ_token: &EquToken) -> String {
     format!(
         "{EQU_TOKEN} ${} {}",
         equ_token.placeholder_name,
-        print_number_token(&equ_token.number_token)
+        match &equ_token.value {
+            crate::types::numeric::NumericOperand::Literal(number) => print_number_token(number),
+            crate::types::numeric::NumericOperand::Constant(reference) =>
+                format!("${}", reference.name),
+        }
     )
 }

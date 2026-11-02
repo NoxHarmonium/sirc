@@ -64,9 +64,8 @@ fn main() -> io::Result<()> {
         file_contents_with_new_line.clone(),
     )
     .unwrap_or_else(|error| {
-        let prefix = &file_contents_with_new_line[..error.input_offset];
-        let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
-        let column = prefix.rsplit('\n').next().unwrap_or("").chars().count() + 1;
+        let (line, column) =
+            toolchain::utils::source::line_column(&file_contents_with_new_line, error.input_offset);
         eprintln!(
             "error: {}\n  --> {}:{line}:{column}",
             error.message,

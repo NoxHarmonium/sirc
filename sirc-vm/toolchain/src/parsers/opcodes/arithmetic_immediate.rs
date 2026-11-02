@@ -3,6 +3,7 @@ use crate::parsers::instruction::{
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::{NumericField, NumericFixup};
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -155,6 +156,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 Ok((
                     i,
                     InstructionToken {
+                        numeric_fixups: shift_definition_data.numeric_fixups(),
                         input_length,
                         instruction: construct_short_immediate_instruction(
                             0x0,
@@ -166,7 +168,6 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 .unwrap_or(StatusRegisterUpdateSource::Shift),
                         ),
                         symbol_ref: None,
-                        ..Default::default()
                     },
                 ))
             } else {
@@ -199,7 +200,10 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         InstructionToken {
                             input_length,
                             instruction: construct_immediate_instruction(0x0, dest_register),
-                            placeholder_name: Some(placeholder_name.clone()),
+                            numeric_fixups: vec![NumericFixup::new(
+                                placeholder_name.clone(),
+                                NumericField::Immediate16,
+                            )],
                             ..Default::default()
                         },
                     )),
@@ -236,6 +240,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         Ok((
                             i,
                             InstructionToken {
+                        numeric_fixups: shift_definition_data.numeric_fixups(),
                                 input_length,
                                 instruction: construct_short_immediate_instruction(
                                     short_value,
@@ -246,7 +251,6 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                      default_status_register_update_source,
                                 ),
                                 symbol_ref: None,
-                                ..Default::default()
                             },
                         ))
                     })
@@ -263,7 +267,14 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 shift_count,
                                 default_status_register_update_source,
                             ),
-                            placeholder_name: Some(placeholder_name.clone()),
+                            numeric_fixups: {
+                                let mut fixups = vec![NumericFixup::new(
+                                    placeholder_name.clone(),
+                                    NumericField::Immediate8,
+                                )];
+                                fixups.extend(shift_definition_data.numeric_fixups());
+                                fixups
+                            },
                             ..Default::default()
                         },
                     )),

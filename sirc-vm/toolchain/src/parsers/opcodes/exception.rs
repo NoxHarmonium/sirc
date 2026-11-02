@@ -1,8 +1,9 @@
 use super::super::shared::AsmResult;
 use crate::parsers::instruction::{
-    parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
+    parse_instruction_operands0, parse_instruction_tag, AddressingMode,
 };
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::NumericField;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -59,327 +60,61 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
-    // Operandless meta-instructions
-    match (tag.as_str(), operands.as_slice()) {
-        ("EXCP", [AddressingMode::Immediate(immediate_type)]) => {
-            if let ImmediateType::Value(value) = immediate_type {
-                if *value > 0xff {
-                    return Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i_after_instruction,
-                        ErrorKind::Verify,
-                        "EXCP vector must fit in 8 bits",
-                    )));
-                }
-                Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::CoprocessorCallImmediate,
-                            register: 0x0,
-                            value: 0x01100 | (value & 0x00FF), // TODO:  Throw error if value doesn't fit?
-                            additional_flags: 0x0,
-                            condition_flag,
-                        }),
-                        ..Default::default()
-                    },
-                ))
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
+    let (base, numeric) = match (tag.as_str(), operands.as_slice()) {
+        ("EXCP", [AddressingMode::Immediate(value)]) => {
+            (0x1100, Some((value, NumericField::ExceptionVector)))
         }
-        // Tell the exception module to halt the CPU until an event comes through
-        ("WAIT", []) => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::CoprocessorCallImmediate,
-                    register: 0x0,
-                    value: 0x01900,
-                    additional_flags: 0x0,
-                    condition_flag,
-                }),
-                ..Default::default()
-            },
-        )),
-        // Tell the exception module to return from the current exception
-        ("RETE", []) => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::CoprocessorCallImmediate,
-                    register: 0x0,
-                    value: 0x1A00,
-                    additional_flags: 0x0,
-                    condition_flag,
-                }),
-                ..Default::default()
-            },
-        )),
-        // Tell the exception module to reset the CPU
-        ("RSET", []) => Ok((
-            i,
-            InstructionToken {
-                input_length,
-                instruction: InstructionData::Immediate(ImmediateInstructionData {
-                    op_code: Instruction::CoprocessorCallImmediate,
-                    register: 0x0,
-                    value: 0x01B00,
-                    additional_flags: 0x0,
-                    condition_flag,
-                }),
-                ..Default::default()
-            },
-        )),
-        ("ETFR", [AddressingMode::Immediate(immediate_type)]) => {
-            // If just an immediate value is defined, it specifies the link register offset
-            // and will transfer to both the address register _and_ r7 (the destination is implied)
-            if let ImmediateType::Value(value) = immediate_type {
-                Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::CoprocessorCallImmediate,
-                            register: 0x0,
-                            // 3 => transfer both registers
-                            value: 0x01C30 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                            additional_flags: 0x0,
-                            condition_flag,
-                        }),
-                        ..Default::default()
-                    },
-                ))
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
+        ("WAIT", []) => (0x1900, None),
+        ("RETE", []) => (0x1a00, None),
+        ("RSET", []) => (0x1b00, None),
+        ("ETFR", [AddressingMode::Immediate(value)]) => {
+            (0x1c30, Some((value, NumericField::ExceptionLinkIndex)))
+        }
+        ("ETTR", [AddressingMode::Immediate(value)]) => {
+            (0x1d30, Some((value, NumericField::ExceptionLinkIndex)))
         }
         (
             "ETFR",
-            [AddressingMode::DirectRegister(register), AddressingMode::Immediate(immediate_type)],
-        ) => {
-            // If the destination is r7, only transfer the return status register, and not the return address
-            if let ImmediateType::Value(value) = immediate_type {
-                if register == &RegisterName::R7 {
-                    Ok((
-                        i,
-                        InstructionToken {
-                            input_length,
-                            instruction: InstructionData::Immediate(ImmediateInstructionData {
-                                op_code: Instruction::CoprocessorCallImmediate,
-                                register: 0x0,
-                                // 2 => transfer only to r7
-                                value: 0x01C20 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                                additional_flags: 0x0,
-                                condition_flag,
-                            }),
-                            ..Default::default()
-                        },
-                    ))
-                } else {
-                    let error_string = format!(
-                        "The return_status_register can only be transferred to r7. Try ETFR r7, #{value} instead"
-                    );
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        }
+            [AddressingMode::DirectRegister(RegisterName::R7), AddressingMode::Immediate(value)],
+        ) => (0x1c20, Some((value, NumericField::ExceptionLinkIndex))),
+        (
+            "ETTR",
+            [AddressingMode::Immediate(value), AddressingMode::DirectRegister(RegisterName::R7)],
+        ) => (0x1d20, Some((value, NumericField::ExceptionLinkIndex))),
         (
             "ETFR",
-            [AddressingMode::DirectAddressRegister(address_register), AddressingMode::Immediate(immediate_type)],
-        ) => {
-            // If the destination is a, only transfer the return address, and not the return status register
-            if let ImmediateType::Value(value) = immediate_type {
-                if address_register == &AddressRegisterName::Address {
-                    Ok((
-                        i,
-                        InstructionToken {
-                            input_length,
-                            instruction: InstructionData::Immediate(ImmediateInstructionData {
-                                op_code: Instruction::CoprocessorCallImmediate,
-                                register: 0x0,
-                                // 1 => transfer only to a
-                                value: 0x01C10 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                                additional_flags: 0x0,
-                                condition_flag,
-                            }),
-                            ..Default::default()
-                        },
-                    ))
-                } else {
-                    let error_string = format!(
-                        "The return_address can only be transferred to a. Try ETFR a, #{value} instead"
-                    );
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i_after_instruction,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        }
-        ("ETTR", [AddressingMode::Immediate(immediate_type)]) => {
-            // If just an immediate value is defined, it specifies the link register offset
-            // and will transfer to both the address register _and_ r7 (the destination is implied)
-            if let ImmediateType::Value(value) = immediate_type {
-                Ok((
-                    i,
-                    InstructionToken {
-                        input_length,
-                        instruction: InstructionData::Immediate(ImmediateInstructionData {
-                            op_code: Instruction::CoprocessorCallImmediate,
-                            register: 0x0,
-                            // 3 => transfer both registers
-                            value: 0x01D30 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                            additional_flags: 0x0,
-                            condition_flag,
-                        }),
-                        ..Default::default()
-                    },
-                ))
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        }
+            [AddressingMode::DirectAddressRegister(AddressRegisterName::Address), AddressingMode::Immediate(value)],
+        ) => (0x1c10, Some((value, NumericField::ExceptionLinkIndex))),
         (
             "ETTR",
-            [AddressingMode::Immediate(immediate_type), AddressingMode::DirectRegister(register)],
-        ) => {
-            // If the destination is r7, only transfer the return status register, and not the return address
-            if let ImmediateType::Value(value) = immediate_type {
-                if *register == RegisterName::R7 {
-                    Ok((
-                        i,
-                        InstructionToken {
-                            input_length,
-                            instruction: InstructionData::Immediate(ImmediateInstructionData {
-                                op_code: Instruction::CoprocessorCallImmediate,
-                                register: 0x0,
-                                // 2 => transfer only to r7
-                                value: 0x01D20 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                                additional_flags: 0x0,
-                                condition_flag,
-                            }),
-                            ..Default::default()
-                        },
-                    ))
-                } else {
-                    let error_string = format!(
-                        "The return_status_register can only be transferred to r7. Try ETTR r7, #{value} instead"
-                    );
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i_after_instruction,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        }
-        (
-            "ETTR",
-            [AddressingMode::Immediate(immediate_type), AddressingMode::DirectAddressRegister(address_register)],
-        ) => {
-            // If the destination is a, only transfer the return address, and not the return status register
-            if let ImmediateType::Value(value) = immediate_type {
-                if *address_register == AddressRegisterName::Address {
-                    Ok((
-                        i,
-                        InstructionToken {
-                            input_length,
-                            instruction: InstructionData::Immediate(ImmediateInstructionData {
-                                op_code: Instruction::CoprocessorCallImmediate,
-                                register: 0x0,
-                                // 1 => transfer only to a
-                                value: 0x01D10 | (value & 0x000F), // TODO:  Throw error if value doesn't fit?
-                                additional_flags: 0x0,
-                                condition_flag,
-                            }),
-                            ..Default::default()
-                        },
-                    ))
-                } else {
-                    let error_string = format!(
-                        "The return_address can only be transferred to a. Try ETTR a, #{value} instead"
-                    );
-                    Err(nom::Err::Failure(ErrorTree::from_external_error(
-                        i_after_instruction,
-                        ErrorKind::Fail,
-                        error_string.as_str(),
-                    )))
-                }
-            } else {
-                let error_string = format!(
-                    "The [{tag}] opcode does not support symbol refs or placeholders at this time"
-                );
-                Err(nom::Err::Failure(ErrorTree::from_external_error(
-                    i_after_instruction,
-                    ErrorKind::Fail,
-                    error_string.as_str(),
-                )))
-            }
-        }
-
+            [AddressingMode::Immediate(value), AddressingMode::DirectAddressRegister(AddressRegisterName::Address)],
+        ) => (0x1d10, Some((value, NumericField::ExceptionLinkIndex))),
         modes => {
             let error_string = format!("Invalid addressing mode for {tag}: ({modes:?})");
-            Err(nom::Err::Failure(ErrorTree::from_external_error(
+            return Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i_after_instruction,
                 ErrorKind::Fail,
-                error_string.as_str(),
-            )))
+                error_string,
+            )));
         }
-    }
+    };
+    let (value, numeric_fixups) = numeric.map_or_else(
+        || Ok((0, Vec::new())),
+        |(operand, field)| super::numeric_field(i_after_instruction, operand, field),
+    )?;
+    Ok((
+        i,
+        InstructionToken {
+            input_length,
+            instruction: InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::CoprocessorCallImmediate,
+                register: 0,
+                value: base | value,
+                additional_flags: 0,
+                condition_flag,
+            }),
+            numeric_fixups,
+            ..Default::default()
+        },
+    ))
 }

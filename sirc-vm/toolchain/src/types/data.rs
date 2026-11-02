@@ -22,7 +22,7 @@ pub struct RefToken {
 pub enum DataType {
     Value(NumberToken),
     SymbolRef(RefToken),
-    PlaceHolder(String),
+    PlaceHolder(super::numeric::ConstantReference),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -34,5 +34,5 @@ pub struct DataToken {
 #[derive(Debug, Clone, Serialize)]
 pub struct EquToken {
     pub placeholder_name: String,
-    pub number_token: NumberToken,
+    pub value: super::numeric::NumericOperand,
 }
