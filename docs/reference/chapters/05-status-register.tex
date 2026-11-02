@@ -110,7 +110,7 @@ write to \reg{sr} leaves these bits unchanged: the write is silently ignored for
 	      \end{itemize}
 	\item[Note:] This bit provides basic memory protection by preventing protected-mode code from changing memory segments.
 	      Performing a restricted operation raises a privilege violation fault, with the exception of writes to the high byte of
-	      the status register, which are silently ignored.
+	      the status register, which are silently ignored. Figure~\ref{fig:privilege-checks} shows where each check is made.
 \end{description}
 
 \subsection{Hardware Interrupt Enable Bits (E1--E4) -- Bits 9--12}

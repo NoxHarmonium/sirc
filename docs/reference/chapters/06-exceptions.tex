@@ -324,6 +324,7 @@ by the privilege rules: in protected mode they cannot change the privileged byte
 word, or exception-unit state, and they may write only the registers named in their fields.
 
 \subsection{Privilege Violation Fault}
+\label{sec:privilege-violation-fault}
 
 \textit{(Retryable)} -- Raised when a privileged operation is attempted
 while not in supervisor mode:
@@ -334,10 +335,22 @@ while not in supervisor mode:
 	\item Triggering a software exception with a vector below \texttt{0x60}
 \end{enumerate}
 
-Figure~\ref{fig:privilege-checks} (Chapter~\ref{ch:registers}) shows where each of these checks is made. The check is
-made at phase 2 for a write to a privileged register field and for a supervisor-only coprocessor operation, and at
-phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}, and at phase 5 for an address-register-pair write-back that
-would change a high address-register word.
+Figure~\ref{fig:privilege-checks} shows where each of these checks is made as an instruction moves through the
+execution phases: at phase 2 for a write to a privileged register field and for a supervisor-only coprocessor
+operation, at phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}, and at phase 5 for an address-register-pair
+write-back that would change a high address-register word. The checks apply to different kinds of instruction, so an
+instruction is only affected by the check for its own kind. The figure also shows the external check: on any bus
+access, in the instruction fetch (phases 0 and 1) or a \mnemonic{LOAD} or \mnemonic{STOR} (phase 4), the memory system
+can refuse the access by asserting \activelow{BPER}, which raises a Bus Protection Fault (vector \texttt{0x09},
+Section~\ref{sec:bus-protection-fault}) instead. That check is made by external hardware, which sees the \texttt{PROT}
+output, so it can apply in supervisor mode too.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.95\textwidth]{diagrams/privilege-checks.pdf}
+	\caption{Privilege Checks in Protected Mode}
+	\label{fig:privilege-checks}
+\end{figure}
 
 The illegal instruction never takes effect: it is canceled before it writes anything, and the link register stores its
 own address so \mnemonic{RETE} returns to it directly. This matters because a supervisor-mode handler needs to be able
