@@ -36,6 +36,7 @@ register writeback.
 	\end{tabular}
 	\caption{Shift Type Encoding}
 	\label{tab:shift-encoding}
+	\label{tab:shift-types}
 \end{table}
 
 \mnemonic{NUL} is the no-shift form: it leaves the operand unchanged but still routes it through the shifter, so \texttt{SHFT rD, NUL \#0} is a legal way to drive the status flags from the unshifted value of \texttt{rD}.

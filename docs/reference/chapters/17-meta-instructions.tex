@@ -11,32 +11,35 @@ which secretly expand to more than one. An operation that cannot be expressed as
 runtime-variable operand where the underlying encoding only has room for a compile-time immediate) is documented as an
 explicit multi-instruction technique where it comes up, not given its own meta-instruction mnemonic.
 
+This table is the canonical list of meta-instructions; Section~\ref{sec:instruction-summary-meta} summarizes it.
+
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lll}
+	\small
+	\begin{tabular}{llll}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Primary Documentation}     & \textbf{Lowers To}          \\
+		\textbf{Meta-Instruction} & \textbf{Primary Documentation}     & \textbf{Lowers To}                & \textbf{Purpose}         \\
 		\midrule
-		\mnemonic{NOOP}           & Chapter~\ref{ch:meta-instructions} & \mnemonic{ADDI[N] r1, \#0}  \\
-		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions}  & \mnemonic{ORRI[S]}          \\
-		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, (\#0, l)} \\
-		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI}             \\
-		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1900}    \\
-		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1A00}    \\
-		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1B00}    \\
-		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Cxy}    \\
-		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Dxy}    \\
-		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x28xx}    \\
-		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x29xx}    \\
-		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x2Ann}    \\
-		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3000}    \\
-		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3100}    \\
-		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3200}    \\
-		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3300}    \\
+		\mnemonic{NOOP}           & Chapter~\ref{ch:meta-instructions} & \mnemonic{ADDI[N] r1, \#0}        & No operation             \\
+		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions}  & \mnemonic{ORRI[S] rD, \#0, shift} & Shift with status update \\
+		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}            & PC-relative branch       \\
+		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}            & PC-relative call         \\
+		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}            & Long jump                \\
+		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}            & Long call                \\
+		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, (\#0, l)}       & Return from subroutine   \\
+		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x11vv}          & Software exception       \\
+		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1900}          & Wait for interrupt       \\
+		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1A00}          & Return from exception    \\
+		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1B00}          & System reset             \\
+		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Cxy}          & Read exception state     \\
+		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Dxy}          & Write exception state    \\
+		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x28xx}          & DMA read to registers    \\
+		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x29xx}          & DMA write from registers \\
+		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x2Ann}          & DMA memory transfer      \\
+		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3000}          & Unsigned multiply        \\
+		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3100}          & Signed multiply          \\
+		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3200}          & Unsigned divide          \\
+		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3300}          & Signed divide            \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instruction Cross-Reference}

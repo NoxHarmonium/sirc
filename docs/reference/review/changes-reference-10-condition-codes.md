@@ -10,3 +10,7 @@ F-con-12 and F-data-14 (merged into the Performance Considerations bullets), F-d
 
 ## Open questions
 - The Loop Construction example uses BRAN|HI after SUBI, where HI tests C = 0 AND Z = 0 (a borrow-based test). Whether this is the intended i > 0 test is a technical point, left unchanged.
+
+## Improvements
+
+- F-CR-12: Table 10.1 is now the canonical condition-code table; added the legacy label tab:condition-code-encoding to it (no content change).

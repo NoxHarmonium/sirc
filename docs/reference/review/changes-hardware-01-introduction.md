@@ -8,3 +8,7 @@ F-con-4 gives "symbols, and the toolchain"; the caller's wording "symbols, meta-
 
 ## Open questions
 None. Also changed without a finding: captions to Title Case, and "the architecture manual" to `\archmanual{}`.
+
+## Improvements
+
+- F-CRH-1: added Section "Execution Phases and Slots" (sec:execution-phases) with a six-phase table (bus access per phase) and brief definitions of phase 0, slot, dispatch slot and continuation slot, pointing to the CPU Architecture chapter of the Architecture Manual.

@@ -16,6 +16,10 @@ use "asserted" and "deasserted" to refer to the logical state of a signal accord
 
 Connected to the address bus.
 
+A0--A23 carry a 24-bit word address, not a byte address: each address selects one 16-bit data word on D0--D15, so the
+address space is 16M words. There are no byte strobes, and A0 is the least significant bit of the word address. For
+example, the two halves of an instruction are fetched from word addresses PC and PC+1.
+
 These 24 pins declare the address on the bus that the CPU reads from or writes to when \activelow{BAS} (bus access
 strobe) is asserted.
 
@@ -49,9 +53,10 @@ when the CPU is reading from the bus.
 
 Progresses the CPU to the next cycle when the input transitions from low to high (rising edge).
 
-Each rising edge of CLKI advances the CPU by one execution phase, except while a bus wait state holds the phase, while
-the CPU is halted or waiting (\mnemonic{WAIT}), or while it is held in reset. With no wait states, an ordinary
-instruction takes six cycles. Coprocessor calls take longer; see the Instruction Timing appendix of the \archmanual{}.
+Each rising edge of CLKI advances the CPU by one execution phase (see Section~\ref{sec:execution-phases}), except while
+a bus wait state holds the phase, while the CPU is halted or waiting (\mnemonic{WAIT}), or while it is held in reset.
+With no wait states, an ordinary instruction takes six cycles. Coprocessor calls take longer; see the Instruction
+Timing appendix of the \archmanual{}.
 
 \section{Instruction Sync Output (SYNC)}
 

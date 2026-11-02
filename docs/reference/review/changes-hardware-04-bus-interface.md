@@ -24,3 +24,9 @@
 - Applied decision 3: "not yet specified" for idle A0--A23 replaced by "architecturally undefined".
 - No `\texttt` signal names remain; no prose claimed typewriter font.
 - Open question: the earlier open question about the idle A0--A23 value is now resolved by decision 3.
+
+## Improvements
+
+- F-CRH-7 (decision 10): added subsection "Clock Edges" (sec:clock-edges) with the five rules as a numbered list, folding in the rising-edge and no-wait-state sentences.
+- fig:dma-read-timing: added a "Sample" row of pulses at the rising edges ending phases Read 1-3 (BACK and read data sampled); caption explains. Re-based the CLKI row to one period per phase so edges align with phase boundaries.
+- Note: rule 4 (all control inputs sampled every rising edge) differs from the HALT row of tab:external-input-sampling-rules ("at every phase 0") and TRCE ("at instruction boundaries"); left for the author.

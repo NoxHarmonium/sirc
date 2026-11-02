@@ -12,3 +12,8 @@ Serial commas (heading, Case, Registers), "Number Forms" caption, `\reg{}` for r
 
 ## Open questions
 None.
+
+## Improvements
+
+- F-cra-3, F-cra-5, F-cra-6, F-cra-7: added Table "Notation Key" at the start of Chapter 2 (sigils #, @, $, :, braces, angle brackets, rO, immediate vs short immediate) with pointers to defining sections, plus a note that [ ] and | are literal. Added labels sec:names, sec:numbers, sec:named-constants. Pointers into Chapters 3 and 4 use chapter refs plus section titles because those files have no section labels and are not owned here.
+- No TODO(author) needed.

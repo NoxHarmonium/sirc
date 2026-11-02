@@ -32,6 +32,42 @@ visible in both places, for example the reset sequence and the bus fault retry r
 \archmanual{} is authoritative for what happens inside the CPU and this manual is authoritative for what is driven or
 sampled on each signal.
 
+\section{Execution Phases and Slots}
+\label{sec:execution-phases}
+
+The CPU executes in clock-sized steps called \emph{phases}. Each rising edge of CLKI advances it by one phase, and an
+ordinary instruction passes through six phases, numbered 0 to 5, so it takes six cycles when no bus wait state holds a
+phase. Table~\ref{tab:execution-phases} lists them and shows which can use the bus. A phase that does use the bus is
+held until the bus responds; see Chapter~\ref{ch:signal-descriptions}.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clp{7.5cm}}
+		\toprule
+		\textbf{Phase} & \textbf{Name}                   & \textbf{Bus access}                          \\
+		\midrule
+		0              & Instruction fetch, high word    & Yes, instruction fetch (high word)           \\
+		1              & Instruction fetch, low word     & Yes, instruction fetch (low word)            \\
+		2              & Decode and register fetch       & None                                         \\
+		3              & Execute and address calculation & None                                         \\
+		4              & Memory access                   & Data read or write, only for a load or store \\
+		5              & Write back                      & None                                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{SIRC-1 Execution Phases}
+	\label{tab:execution-phases}
+\end{table}
+
+Phase 0 is the point at which one instruction ends and the next begins. It is where the CPU samples \activelow{HALT}
+and where SYNC marks the start of a new instruction (Chapter~\ref{ch:signal-descriptions}).
+
+A \emph{slot} is a further run of six phases that follows an instruction. A coprocessor call is dispatched in its own
+slot, called the \emph{dispatch slot}, in which the selected coprocessor (the exception unit, DMA unit or maths unit)
+carries out the command, and the exception unit uses a dispatch slot to enter an exception. A call whose condition is
+false, or that names coprocessor \texttt{0x0}, has no slot. The DMA unit can also run further slots, called
+continuation slots, while it holds instruction fetch. The \archmanual{} defines the phases and slots; see the CPU
+Architecture chapter there. This manual relies only on the summary above.
+
 \section{Signal Groups}
 
 The 64 pins fall into the groups below. Chapter~\ref{ch:package-and-pinout} gives the pin numbers and

@@ -12,3 +12,10 @@
 Orchestrator fixes from the same review: Ch.8 Indirect Immediate box gets the auto-update wrap clause; hardware Ch.5 defines its value-band abbreviations; assembly Table 8.1's .ORG row points to Section 5.1; Ch.9 prose names the shifted operand as the table does; Ch.13 SHFT Operation reads the flags from the [S]/[A]/[N] suffix (default [S]). Backlog: Ch.12 flags column in Chapter 11 symbols.
 
 9. F-con2-1: a traced EXCP's recorded trap is held in the exception unit's own pending-software-exception record, not in the CSR. It is entered before any pending hardware interrupt when the trace handler returns to level 0 (same visible behavior as the F-exc-2 decision; replaces its "held in the CSR" wording).
+
+10. Clock edges (author confirmed 2026-11-02, hardware manual): (1) the CPU changes all its outputs (A0-A23, BRW, BAT,
+    BAS, PROT, D0-D15 on writes, SYNC, RSTO) just after the CLKI rising edge that starts a phase; (2) BAS is asserted for
+    the whole of a phase that makes a bus access and not in phases that do not; (3) the CPU samples BACK, BERR, BPER and
+    read data on the next rising edge, ending that phase, and if none of the three is asserted it repeats the phase (a
+    wait state); (4) IRQ1-IRQ4, NMI, HALT and TRCE are sampled on every rising edge except during reset; (5) the falling
+    edge of CLKI is not used. Timing figures mark the sample points on the rising edges.

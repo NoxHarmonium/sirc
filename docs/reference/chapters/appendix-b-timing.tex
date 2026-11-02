@@ -6,10 +6,9 @@
 Most SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
 adding execution phases. Coprocessor calls are the exception: the dispatched coprocessor occupies at least one further
-slot after the six-phase call. Two cases have no dispatch slot: \mnemonic{RSET}, whose reset request replaces the slot,
-and a \mnemonic{COPI} or \mnemonic{COPR} naming coprocessor \texttt{0x0}, which takes 6 cycles. This fixed execution
-sequence greatly simplifies software development and hardware design. See the \hwmanual{} for the bus signal timing,
-wait-state, and response-priority rules.
+slot after the six-phase call (Section~\ref{sec:coprocessor-call-timing}). This fixed execution sequence greatly
+simplifies software development and hardware design. See the \hwmanual{} for the bus signal timing, wait-state, and
+response-priority rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -59,6 +58,24 @@ The cycle counts in this appendix assume that every bus operation is acknowledge
 the DMA unit then performs one bus access per cycle from phase 1, running on into further whole 6-cycle slots as needed
 (Section~\ref{sec:dma-unit}). Any coprocessor call or meta-instruction whose condition is false writes nothing to the
 CSR, dispatches nothing, and takes 6 cycles; the coprocessor rows give the condition-true figure.
+
+\subsection{Coprocessor Call Timing}
+\label{sec:coprocessor-call-timing}
+
+This subsection is the canonical statement of the coprocessor-call timing rule; Chapters~\ref{ch:introduction},
+\ref{ch:instruction-summary} and~\ref{ch:coprocessor} refer here. A coprocessor call whose condition is true
+(\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles to one) takes its own 6 cycles and then a
+second 6-cycle slot for the coprocessor dispatch, which begins at the next phase 0, so most calls take 12 cycles before
+the next instruction is fetched. The exceptions are:
+
+\begin{itemize}
+	\item A call whose condition is false skips its dispatch slot and takes 6 cycles.
+	\item A call naming coprocessor \texttt{0x0} has no dispatch slot and takes 6 cycles.
+	\item \mnemonic{RSET} has no dispatch slot, because its reset request replaces the slot, and takes 18 cycles.
+	\item \mnemonic{WAIT}, DMA transfers and maths-unit operations can take longer than 12 cycles: a \mnemonic{WAIT} idles
+	      until woken, a DMA transfer of more than five accesses runs into further slots, and a maths operation may add
+	      implementation-defined cycles.
+\end{itemize}
 
 \subsection{Exception and Fault Timing}
 \label{sec:exception-and-fault-timing}

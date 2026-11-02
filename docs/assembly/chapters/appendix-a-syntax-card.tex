@@ -1,0 +1,148 @@
+\chapter{Syntax Card}
+\label{appendix:syntax-card}
+
+This card lists every mnemonic the assembler accepts with each operand form it accepts, the status update sources
+allowed, and whether a condition may be written. It follows the grouping of the Instruction Summary chapter of the
+\archmanual{}. Meta-instructions are marked \textsuperscript{M}; the \archmanual{} gives the instruction each one
+assembles to. Forms the \archmanual{} lists as illegal are omitted.
+
+\section{Notation}
+
+Notation follows Chapter~\ref{ch:instructions}. Text in angle brackets, such as \texttt{<rD>}, is replaced by an
+operand of that kind; text in braces, such as \texttt{\{, <shift>\}}, may be left out; anything else is written exactly
+as shown. \texttt{\{[A]\}} and \texttt{\{|<COND>\}} are written directly after the mnemonic, in that order, as
+described there.
+
+\begin{table}[H]
+	\centering
+	\small
+	\setlength{\tabcolsep}{4pt}
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Placeholder}                                         & \textbf{Meaning}                                                                                                    \\
+		\midrule
+		\texttt{<rD>}, \texttt{<rS>}, \texttt{<rS1>}, \texttt{<rS2>} & Register \texttt{r1}--\texttt{r7}, \texttt{sr} or a register half; destination or source                            \\
+		\texttt{<rO>}                                                & Register holding an address offset                                                                                  \\
+		\texttt{<addr>}, \texttt{<src>}, \texttt{<dest>}             & Address register pair \texttt{a}, \texttt{s}, \texttt{p} or \texttt{l}; restrictions are listed below the card      \\
+		\texttt{<imm16>}, \texttt{<imm8>}                            & \texttt{\#n} (number) or \texttt{\$NAME} (named constant), 16 or 8 bits wide                                        \\
+		\texttt{<disp>}                                              & \texttt{\#n}, \texttt{\$NAME} or \texttt{@label}                                                                    \\
+		\texttt{<ref>}                                               & \texttt{@label}                                                                                                     \\
+		\texttt{<shift>}                                             & \texttt{<type> \#<count>} or \texttt{<type> <rC>}, with \texttt{<type>} one of \texttt{NUL LSL LSR ASL ASR RTL RTR} \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Syntax Card Placeholders}
+	\label{tab:syntax-card-placeholders}
+\end{table}
+
+\section{Syntax Card}
+
+ {\small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{longtable}{@{}p{1.5cm}>{\raggedright\arraybackslash}p{7.4cm}>{\raggedright\arraybackslash}p{3.1cm}p{0.9cm}@{}}
+	  \toprule
+	  \textbf{Mnemonic}                  & \textbf{Operand Forms}                                                                                                                               & \textbf{Status Update}                                        & \textbf{Cond.} \\
+	  \midrule
+	  \endfirsthead
+	  \toprule
+	  \textbf{Mnemonic}                  & \textbf{Operand Forms}                                                                                                                               & \textbf{Status Update}                                        & \textbf{Cond.} \\
+	  \midrule
+	  \endhead
+	  \midrule
+	  \multicolumn{4}{r}{\textit{Continued on next page}}                                                                                                                                                                                                                        \\
+	  \endfoot
+	  \bottomrule
+	  \endlastfoot
+	  \multicolumn{4}{l}{\textbf{ALU Instructions}}                                                                                                                                                                                                                              \\
+	  \midrule
+	  \mnemonic{ADDI}                    & \texttt{ADDI <rD>, <imm16>} \newline \texttt{ADDI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ADDR}                    & \texttt{ADDR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{ADDR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ADCI}                    & \texttt{ADCI <rD>, <imm16>} \newline \texttt{ADCI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ADCR}                    & \texttt{ADCR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{ADCR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{SUBI}                    & \texttt{SUBI <rD>, <imm16>} \newline \texttt{SUBI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{SUBR}                    & \texttt{SUBR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{SUBR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{SBCI}                    & \texttt{SBCI <rD>, <imm16>} \newline \texttt{SBCI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{SBCR}                    & \texttt{SBCR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{SBCR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ANDI}                    & \texttt{ANDI <rD>, <imm16>} \newline \texttt{ANDI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ANDR}                    & \texttt{ANDR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{ANDR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ORRI}                    & \texttt{ORRI <rD>, <imm16>} \newline \texttt{ORRI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{ORRR}                    & \texttt{ORRR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{ORRR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{XORI}                    & \texttt{XORI <rD>, <imm16>} \newline \texttt{XORI <rD>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{XORR}                    & \texttt{XORR <rD>, <rS1>, <rS2>\{, <shift>\}} \newline \texttt{XORR <rD>, <rS2>\{, <shift>\}}                                                        & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{MOVI}                    & \texttt{MOVI <rD>, <imm16>} \newline \texttt{MOVI <rD>, <ref>}                                                                                       & \texttt{[A]} \texttt{[N]}                                     & Yes            \\
+	  \mnemonic{MOVR}                    & \texttt{MOVR <rD>, <rS>}                                                                                                                             & \texttt{[A]} \texttt{[N]}                                     & Yes            \\
+	  \mnemonic{CMNI}                    & \texttt{CMNI <rS>, <imm16>} \newline \texttt{CMNI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CMNR}                    & \texttt{CMNR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CNCI}                    & \texttt{CNCI <rS>, <imm16>} \newline \texttt{CNCI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CNCR}                    & \texttt{CNCR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CMPI}                    & \texttt{CMPI <rS>, <imm16>} \newline \texttt{CMPI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CMPR}                    & \texttt{CMPR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CPCI}                    & \texttt{CPCI <rS>, <imm16>} \newline \texttt{CPCI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{CPCR}                    & \texttt{CPCR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSAI}                    & \texttt{TSAI <rS>, <imm16>} \newline \texttt{TSAI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSAR}                    & \texttt{TSAR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSOI}                    & \texttt{TSOI <rS>, <imm16>} \newline \texttt{TSOI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSOR}                    & \texttt{TSOR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSXI}                    & \texttt{TSXI <rS>, <imm16>} \newline \texttt{TSXI <rS>, <imm8>, <shift>}                                                                             & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{TSXR}                    & \texttt{TSXR <rS1>, <rS2>\{, <shift>\}}                                                                                                              & \texttt{[A]} \texttt{[N]} \texttt{[S]}                        & Yes            \\
+	  \mnemonic{SHFT}\textsuperscript{M} & \texttt{SHFT <rD>, <shift>}                                                                                                                          & \texttt{[A]} \texttt{[N]} \texttt{[S]} (default \texttt{[S]}) & Yes            \\
+	  \mnemonic{NOOP}\textsuperscript{M} & \texttt{NOOP}                                                                                                                                        & None                                                          & Yes            \\
+	  \midrule
+	  \multicolumn{4}{l}{\textbf{Memory Instructions}}                                                                                                                                                                                                                           \\
+	  \midrule
+	  \mnemonic{LOAD}                    & \texttt{LOAD <rD>, (\{<disp>,\} <addr>)\{+\}} \newline \texttt{LOAD <rD>, (<rO>, <addr>)\{+\}}                                                       & None                                                          & Yes            \\
+	  \mnemonic{STOR}                    & \texttt{STOR \{-\}(\{<disp>,\} <addr>), <rS>} \newline \texttt{STOR \{-\}(<rO>, <addr>), <rS>\{, <shift>\}}                                          & None                                                          & Yes            \\
+	  \midrule
+	  \multicolumn{4}{l}{\textbf{Address and Control Flow}}                                                                                                                                                                                                                      \\
+	  \midrule
+	  \mnemonic{LDEA}                    & \texttt{LDEA <dest>, \{-\}(\{<disp>,\} <src>)} \newline \texttt{LDEA <dest>, \{-\}(<rO>, <src>)}                                                     & None                                                          & Yes            \\
+	  \mnemonic{LDEL}                    & \texttt{LDEL <dest>, (\{<disp>,\} <src>)\{+\}} \newline \texttt{LDEL <dest>, (<rO>, <src>)\{+\}}                                                     & None                                                          & Yes            \\
+	  \mnemonic{BRAN}\textsuperscript{M} & \texttt{BRAN <disp>}                                                                                                                                 & None                                                          & Yes            \\
+	  \mnemonic{BRSR}\textsuperscript{M} & \texttt{BRSR <disp>}                                                                                                                                 & None                                                          & Yes            \\
+	  \mnemonic{RETS}\textsuperscript{M} & \texttt{RETS}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{LJMP}\textsuperscript{M} & \texttt{LJMP <src>\{, <disp>\}} \newline \texttt{LJMP <src>, <rO>}                                                                                   & None                                                          & Yes            \\
+	  \mnemonic{LJSR}\textsuperscript{M} & \texttt{LJSR <src>\{, <disp>\}} \newline \texttt{LJSR <src>, <rO>} \newline \texttt{LJSR (\{<disp>,\} <src>)+} \newline \texttt{LJSR (<rO>, <src>)+} & None                                                          & Yes            \\
+	  \midrule
+	  \multicolumn{4}{l}{\textbf{Coprocessor Instructions}}                                                                                                                                                                                                                      \\
+	  \midrule
+	  \mnemonic{COPI}                    & \texttt{COPI <imm16>}                                                                                                                                & None                                                          & Yes            \\
+	  \mnemonic{COPR}                    & \texttt{COPR <rS>}                                                                                                                                   & None                                                          & Yes            \\
+	  \mnemonic{EXCP}\textsuperscript{M} & \texttt{EXCP <imm8>}                                                                                                                                 & None                                                          & Yes            \\
+	  \mnemonic{WAIT}\textsuperscript{M} & \texttt{WAIT}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{RETE}\textsuperscript{M} & \texttt{RETE}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{RSET}\textsuperscript{M} & \texttt{RSET}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{ETFR}\textsuperscript{M} & \texttt{ETFR \#n} \newline \texttt{ETFR a, \#n} \newline \texttt{ETFR r7, \#n}                                                                       & None                                                          & Yes            \\
+	  \mnemonic{ETTR}\textsuperscript{M} & \texttt{ETTR \#n} \newline \texttt{ETTR \#n, a} \newline \texttt{ETTR \#n, r7}                                                                       & None                                                          & Yes            \\
+	  \mnemonic{DMAR}\textsuperscript{M} & \texttt{DMAR <addr>, \#n}                                                                                                                            & None                                                          & Yes            \\
+	  \mnemonic{DMAW}\textsuperscript{M} & \texttt{DMAW <addr>, \#n}                                                                                                                            & None                                                          & Yes            \\
+	  \mnemonic{DMAT}\textsuperscript{M} & \texttt{DMAT a, l, \#n}                                                                                                                              & None                                                          & Yes            \\
+	  \mnemonic{MULU}\textsuperscript{M} & \texttt{MULU}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{MULS}\textsuperscript{M} & \texttt{MULS}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{DIVU}\textsuperscript{M} & \texttt{DIVU}                                                                                                                                        & None                                                          & Yes            \\
+	  \mnemonic{DIVS}\textsuperscript{M} & \texttt{DIVS}                                                                                                                                        & None                                                          & Yes            \\
+	  \caption{Syntax Card}
+	  \label{tab:syntax-card}
+  \end{longtable}
+ }
+
+Every instruction in the card accepts a condition, written as \texttt{|<COND>} (Table~\ref{tab:conditions-in-source}).
+A status update source is written as \texttt{[A]}, \texttt{[N]} or \texttt{[S]} directly after the mnemonic; ``None''
+means the instruction must not be written with one. Without a source the instruction uses its default.
+
+\section{Operand Restrictions}
+
+\begin{itemize}
+	\item \texttt{<shift>}: the count is 0 to 15. A shift applies to the first source operand, which is the destination
+	      register when the two-register shorthand is used. \mnemonic{STOR} accepts a shift only with a register offset.
+	      \mnemonic{LOAD} accepts none.
+	\item \texttt{<disp>} and \texttt{<rO>} in an indirect form: a zero displacement may be omitted, so
+	      \texttt{(<addr>)} is \texttt{(\#0, <addr>)}. Register offsets have no shorthand.
+	\item \texttt{<ref>}, and \texttt{@label} in \texttt{<disp>}, are accepted only where the card shows them. Other
+	      immediates take \texttt{<imm16>} or \texttt{<imm8>}.
+	\item \mnemonic{LDEL} always writes the return address to \texttt{l}, so its \texttt{<dest>} is \texttt{a},
+	      \texttt{s} or \texttt{p}. \mnemonic{LDEA} may name any of the four.
+	\item \mnemonic{LJMP} and \mnemonic{LJSR} take \texttt{<src>} without parentheses, except in the post-increment
+	      forms of \mnemonic{LJSR}.
+	\item \mnemonic{ETFR} and \mnemonic{ETTR}: \texttt{\#n} is 0 to 7.
+	\item \mnemonic{DMAR} and \mnemonic{DMAW}: \texttt{<addr>} is \texttt{a}, \texttt{l} or \texttt{s}, and \texttt{\#n} is
+	      \texttt{\#-7} to \texttt{\#7}. \mnemonic{DMAT}: \texttt{\#n} is 0 to 255.
+\end{itemize}

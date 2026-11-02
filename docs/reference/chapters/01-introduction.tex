@@ -80,13 +80,9 @@ The SIRC-1 executes every instruction through six sequential execution phases (n
 a full description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 
 This fixed six-stage model means that ordinary processing-unit instructions take 6 clock cycles to complete when bus
-operations do not require wait states, regardless of their complexity. Every executed coprocessor call
-(\mnemonic{COPI}, \mnemonic{COPR}, and every meta-instruction that assembles to one) normally takes a second complete
-6-cycle dispatch slot, for 12 cycles in total; a call whose condition is false takes only the 6 cycles of the call
-itself. A call that names coprocessor \texttt{0x0} takes 6 cycles and has no dispatch slot, and \mnemonic{RSET} has no
-dispatch slot because its reset request replaces it. DMA and maths-unit commands can take longer: the DMA unit holds
-instruction fetch after dispatch until its transfer has completed, so a transfer of more than a few words costs more as
-it grows, and a maths operation may take implementation-defined extra cycles. A bus device may hold the current phase
+operations do not require wait states, regardless of their complexity. An executed coprocessor call normally takes 12
+cycles, because it adds a second 6-cycle dispatch slot; Appendix~\ref{appendix:timing}
+(Section~\ref{sec:coprocessor-call-timing}) gives the rule and its exceptions. A bus device may hold the current phase
 by delaying bus acknowledgement, adding wait cycles without adding execution phases. While having a fixed 6-cycle
 instruction execution model may seem wasteful for simple register operations that do not require memory access, it
 dramatically simplifies the hardware design by eliminating the need for variable-length execution sequences or

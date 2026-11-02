@@ -19,3 +19,7 @@ F-tim-1, F-tim-2, F-tim-3, F-tim-5, F-tim-6, F-tim-7, F-tim-8, F-tim-9, F-tim-11
 - F-con2-6: added the three exceptions to the exception-vector fetch fault rule (double fault, reset, repeated RSTO hold).
 - No decision in phase3-decisions.md concerns this chapter; no typewriter-font signal names found.
 - Open questions: none.
+
+## Improvements
+
+- F-CR-15: added Section coprocessor-call-timing (label sec:coprocessor-call-timing) as the one full statement of the 12-cycle rule and its exceptions (false condition, coprocessor 0, RSET 18 cycles, WAIT/DMA/maths longer); the Overview now points to it.

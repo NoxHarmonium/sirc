@@ -15,3 +15,7 @@ F-arch-4, F-arch-5, F-arch-6, F-arch-7 (with its decision), F-arch-9, F-tim-2 (C
 ## Open questions
 - Line 49 says the CPU "should not be used in memory-constrained environments"; a design-intent statement, left as advice.
 - "32 megabytes of external byte storage" depends on a 2-byte word; left unchanged.
+
+## Improvements
+
+- F-CR-15: the 12-cycle coprocessor-call rule and its exceptions in 1.3.2 are reduced to one sentence pointing to Section~\ref{sec:coprocessor-call-timing} in Appendix B.

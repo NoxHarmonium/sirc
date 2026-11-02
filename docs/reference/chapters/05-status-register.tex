@@ -208,7 +208,7 @@ The condition flags (Z, N, C, V) are automatically updated by most ALU instructi
 	\item \textbf{Test Instructions} (\mnemonic{TSAI}, \mnemonic{TSAR}, \mnemonic{TSOI}, \mnemonic{TSOR},
 	      \mnemonic{TSXI}, \mnemonic{TSXR}): Same as Logical Instructions but does not update destination
 	\item \textbf{Move Instructions} (\mnemonic{MOVI}, \mnemonic{MOVR}): Same as Logical Instructions. They do not accept
-	      \texttt{[S]}, since they have no shifted operand; an encoding of the opcode with the status-update field (AF,
+	      \texttt{[S]} (the shifter-result status suffix; \texttt{[N]} and \texttt{[A]} select no update and the ALU result, Chapter~\ref{ch:notation-glossary}), since they have no shifted operand; an encoding of the opcode with the status-update field (AF,
 	      Chapter~\ref{ch:instruction-formats}) set to \texttt{10}, not reachable from public assembly syntax, leaves all four flags architecturally undefined (\texttt{U U U U}).
 	\item \textbf{Memory and Address Instructions} (\mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA}, \mnemonic{LDEL} and
 	      their aliases): Never update the condition flags as a side effect; AF selects the address register for these opcodes.

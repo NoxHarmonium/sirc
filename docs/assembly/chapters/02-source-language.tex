@@ -1,6 +1,32 @@
 \chapter{Source Language}
 \label{ch:source-language}
 
+Several marks and notations recur from here on. Table~\ref{tab:notation-key} lists the ones met first, with the section
+that defines each in full.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}p{2.6cm} X p{4.2cm}@{}}
+		\toprule
+		\textbf{Mark}                 & \textbf{Meaning}                                                                                                  & \textbf{Defined in}                                          \\
+		\midrule
+		\texttt{\#n}                  & Immediate number, as in \texttt{\#42}                                                                             & Section~\ref{sec:numbers}                                    \\
+		\texttt{@label}               & Reference to a label                                                                                              & Section~\ref{sec:names}                                      \\
+		\texttt{\$NAME}               & Named constant, defined by \texttt{.EQU}                                                                          & Section~\ref{sec:named-constants}                            \\
+		\texttt{:label}               & Declaration of a label                                                                                            & Section~\ref{sec:names}                                      \\
+		\texttt{\{ \}}                & Braces in a syntax line mark an optional part; they are not written                                               & Chapter~\ref{ch:instructions}, Anatomy of an Instruction     \\
+		\texttt{<\,>}                 & Angle brackets name a placeholder, such as \texttt{<SUS>} or \texttt{<COND>}, to be replaced by its value         & Chapter~\ref{ch:instructions}, Anatomy of an Instruction     \\
+		\texttt{rO}                   & Placeholder for a general-purpose register that supplies an offset in an indirect operand                         & Chapter~\ref{ch:operands}, Operand Forms                     \\
+		Immediate and short immediate & Two instruction formats, with a 16-bit and an 8-bit value field; the assembler chooses by whether a shift follows & Chapter~\ref{ch:instructions}, Choosing the Immediate Format \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Notation Key}
+	\label{tab:notation-key}
+\end{table}
+
+In a syntax line the square brackets and the vertical bar are written literally, as in \texttt{ADDI[N]|== r1, \#1};
+only the braces and angle brackets are notation.
+
 \section{Lines, Whitespace, and Comments}
 
 A source file is a sequence of instructions, directives and labels separated by whitespace. By convention each is
@@ -22,6 +48,7 @@ lowercase. The status update letters inside square brackets (Section~\ref{sec:st
 case. Label and constant names are case-sensitive.
 
 \section{Names}
+\label{sec:names}
 
 Label names and constant names are made of letters, digits and underscores. A label is declared by writing a colon
 before its name, and referred to by writing an at sign before it:
@@ -36,6 +63,7 @@ The colon is written before the name, not after it. A label may be referred to b
 from any object file linked into the same program. A label name may be declared only once in a program.
 
 \section{Numbers}
+\label{sec:numbers}
 
 A number used as an operand value is prefixed with a hash sign. Three bases are accepted, and an underscore may be used
 anywhere inside the digits to make them easier to read.
@@ -72,6 +100,7 @@ and \reg{al}, \reg{sh} and \reg{sl}, \reg{ph} and \reg{pl}, \reg{lh} and \reg{ll
 each register is for, and which are privileged.
 
 \section{Named Constants}
+\label{sec:named-constants}
 
 \texttt{.EQU} defines a named constant. The name starts with a dollar sign at the definition and at every use:
 

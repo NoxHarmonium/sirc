@@ -17,3 +17,6 @@ F-data-7, F-data-8, F-data-9, F-data-10, F-data-11, F-data-12, F-data-13, F-con-
 ## Round 2
 - Decision 5: E1--E4 list relabeled "Line n (exception level n+1)"; NMI line 5 labeled exception level 6; the now-redundant "line 5 runs at level 6" clause removed from the following sentence. "Priority level" in the interrupt-preemption bullet changed to "exception level".
 - No consistency-2 findings or other decisions apply. Open question from round 1 (list relabeling) is resolved.
+
+## Improvements
+- F-CR-9: gloss for [N]/[A]/[S] suffixes at first use, ref ch:notation-glossary (AF already referenced ch:instruction-formats).

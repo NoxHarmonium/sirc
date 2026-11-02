@@ -89,6 +89,48 @@ Chapter~\ref{ch:coprocessor}). The vector table layout is:
 	\item \textbf{\texttt{0x60}--\texttt{0xFF}:} Software exception vectors (160 user-accessible trap vectors)
 \end{itemize}
 
+\subsection{Exception Summary}
+\label{sec:exception-summary}
+
+Table~\ref{tab:exception-quick-reference} gathers, for every exception source, the vector, the priority (the exception
+level its handler runs at, Section~\ref{sec:exception-levels-and-priority}), the enable or masking rule, the link
+register used (Section~\ref{sec:link-registers}), the return address saved, and whether the handler has to redirect the
+saved address with \mnemonic{ETFR} and \mnemonic{ETTR} before \mnemonic{RETE}. Retryable faults re-execute the faulting
+instruction on \mnemonic{RETE} (Section~\ref{sec:fault-categories}); a handler redirects only to skip it. The sources
+are described in the sections on faults (Section~\ref{sec:fault-categories}), hardware exceptions
+(Section~\ref{sec:level-5-nmi-behavior}) and software exceptions (Section~\ref{sec:user-exceptions}).
+
+\begin{table}[H]
+	\centering
+	\scriptsize
+	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.0cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}X}
+		\toprule
+		\textbf{Source}                             & \textbf{Vector}              & \textbf{Priority} & \textbf{Maskability} & \textbf{Link Register} & \textbf{Return Address}                                                  & \textbf{Redirect Before \mnemonic{RETE}?}                                                              \\
+		\midrule
+		Reset                                       & \texttt{0x00}                & n/a               & Not maskable         & None                   & n/a                                                                      & n/a: no \mnemonic{RETE}; execution restarts at the reset vector (Section~\ref{sec:reset-vector-fetch}) \\
+		Bus fault                                   & \texttt{0x01}                & 7                 & Not maskable         & 6 (metadata in 7)      & Faulting instruction                                                     & No: \mnemonic{RETE} retries; redirect only to skip it                                                  \\
+		Alignment fault                             & \texttt{0x02}                & 7                 & Not maskable         & 6 (metadata in 7)      & Faulting instruction                                                     & No: \mnemonic{RETE} retries; redirect only to skip it                                                  \\
+		Segment overflow                            & \texttt{0x03}                & 7                 & \mbox{SR.A gated}    & 6 (metadata in 7)      & Faulting instruction                                                     & No: \mnemonic{RETE} retries; redirect only to skip it                                                  \\
+		Invalid opcode                              & \texttt{0x04}                & 7                 & Not maskable         & 6 (metadata in 7)      & Faulting instruction                                                     & Usually yes: a retry raises the fault again unless the opcode was emulated                             \\
+		Privilege violation                         & \texttt{0x05}                & 7                 & Not maskable         & 6 (metadata in 7)      & Faulting instruction                                                     & No: \mnemonic{RETE} retries; redirect only to skip it                                                  \\
+		Instruction trace                           & \texttt{0x06}                & 7                 & SR.T or TRCE gated   & 6 (metadata in 7)      & Next instruction                                                         & No: \mnemonic{RETE} continues past the traced instruction                                              \\
+		L5 conflict                                 & \texttt{0x07}                & 7                 & Not maskable         & 6 (metadata in 7)      & Dispatch point (PC when detected)                                        & No: not retryable; a lone \mnemonic{RETE} resumes the running code                                     \\
+		Double fault, raised inside a fault handler & \texttt{0x08}                & 7                 & Not maskable         & 6 (metadata in 7)      & PC when detected (for a retryable fault, the instruction that raised it) & Do not \mnemonic{RETE}: the CPU would stay at level 7; reset instead                                   \\
+		Double fault, failed fault-vector fetch     & \texttt{0x08}                & 7                 & Not maskable         & 6 (metadata in 7)      & Original fault's return address                                          & No: repair the vector, then \mnemonic{RETE} returns to the original fault's return address             \\
+		Bus protection fault                        & \texttt{0x09}                & 7                 & Not maskable         & 6 (metadata in 7)      & Faulting instruction                                                     & No: \mnemonic{RETE} retries; redirect only to skip it                                                  \\
+		Reserved faults                             & \texttt{0x0A}--\texttt{0x0F} & 7                 & Reserved             & Reserved               & Reserved                                                                 & Reserved                                                                                               \\
+		Level 5 hardware                            & \texttt{0x10}                & 6                 & Not maskable         & 5                      & Next instruction                                                         & No                                                                                                     \\
+		Level 4 hardware                            & \texttt{0x20}                & 5                 & \mbox{SR.E4}         & 4                      & Next instruction                                                         & No                                                                                                     \\
+		Level 3 hardware                            & \texttt{0x30}                & 4                 & \mbox{SR.E3}         & 3                      & Next instruction                                                         & No                                                                                                     \\
+		Level 2 hardware                            & \texttt{0x40}                & 3                 & \mbox{SR.E2}         & 2                      & Next instruction                                                         & No                                                                                                     \\
+		Level 1 hardware                            & \texttt{0x50}                & 2                 & \mbox{SR.E1}         & 1                      & Next instruction                                                         & No                                                                                                     \\
+		Software trap                               & \texttt{0x60}--\texttt{0xFF} & 1                 & Priority gated       & 0                      & Instruction after \mnemonic{EXCP}                                        & No                                                                                                     \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Exception Quick Reference}
+	\label{tab:exception-quick-reference}
+\end{table}
+
 \subsection{Instructions Used in This Chapter}
 
 This chapter refers to several exception-coprocessor instructions before their full reference entries appear. Briefly:
@@ -592,6 +634,7 @@ privilege-violation fault even inside a handler.
 The SIRC-1 exception coprocessor maintains several special-purpose registers for exception handling.
 
 \subsection{Link Registers}
+\label{sec:link-registers}
 
 The exception unit uses banked link registers to store the processor state when an exception occurs. There are eight
 link registers in total, indexed 0--7:
@@ -1013,39 +1056,3 @@ dispatch a fault or a hardware exception, the priority is determined by the high
 A CSR value of \texttt{0x0000} -- the value left in place once the reset sequence has completed, and whenever no
 exception is pending -- selects coprocessor ID \texttt{0x0}, the processing unit, so the CPU simply continues executing
 the program normally in the absence of any exception activity.
-
-\section{Exception Quick Reference}
-
-\begin{table}[H]
-	\centering
-	\scriptsize
-	\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{1.2cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{1.1cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.3cm}}
-		\toprule
-		\textbf{Vector}              & \textbf{Address}             & \textbf{Priority} & \textbf{Source}  & \textbf{Maskability} & \textbf{Return Address}            & \textbf{Link Register} \\
-		\midrule
-		\texttt{0x00}                & \addr{0x0000}--\addr{0x0001} & n/a               & Reset            & Not maskable         & n/a                                & None                   \\
-		\texttt{0x01}                & \addr{0x0002}--\addr{0x0003} & 7                 & Bus fault        & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x02}                & \addr{0x0004}--\addr{0x0005} & 7                 & Alignment fault  & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x03}                & \addr{0x0006}--\addr{0x0007} & 7                 & Segment overflow & \mbox{SR.A gated}    & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x04}                & \addr{0x0008}--\addr{0x0009} & 7                 & Invalid opcode   & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x05}                & \addr{0x000A}--\addr{0x000B} & 7                 & Privilege fault  & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x06}                & \addr{0x000C}--\addr{0x000D} & 7                 & Trace fault      & SR.T or TRCE gated   & Next instruction                   & 6 (metadata in 7)      \\
-		\texttt{0x07}                & \addr{0x000E}--\addr{0x000F} & 7                 & L5 conflict      & Not maskable         & Dispatch point                     & 6 (metadata in 7)      \\
-		\texttt{0x08}                & \addr{0x0010}--\addr{0x0011} & 7                 & Double fault     & Not maskable         & See Section~\ref{sec:double-fault} & 6 (metadata in 7)      \\
-		\texttt{0x09}                & \addr{0x0012}--\addr{0x0013} & 7                 & Bus protection   & Not maskable         & Faulting instruction               & 6 (metadata in 7)      \\
-		\texttt{0x0A}--\texttt{0x0F} & \addr{0x0014}--\addr{0x001F} & 7                 & Reserved faults  & Reserved             & Reserved                           & Reserved               \\
-		\texttt{0x10}                & \addr{0x0020}--\addr{0x0021} & 6                 & Level 5 hardware & Not maskable         & Next instruction                   & 5                      \\
-		\texttt{0x20}                & \addr{0x0040}--\addr{0x0041} & 5                 & Level 4 hardware & \mbox{SR.E4}         & Next instruction                   & 4                      \\
-		\texttt{0x30}                & \addr{0x0060}--\addr{0x0061} & 4                 & Level 3 hardware & \mbox{SR.E3}         & Next instruction                   & 3                      \\
-		\texttt{0x40}                & \addr{0x0080}--\addr{0x0081} & 3                 & Level 2 hardware & \mbox{SR.E2}         & Next instruction                   & 2                      \\
-		\texttt{0x50}                & \addr{0x00A0}--\addr{0x00A1} & 2                 & Level 1 hardware & \mbox{SR.E1}         & Next instruction                   & 1                      \\
-		\texttt{0x11}--\texttt{0x5F} & \addr{0x0022}--\addr{0x00BF} & n/a               & Reserved         & Reserved             & Reserved                           & Reserved               \\
-		\texttt{0x60}--\texttt{0xFF} & \addr{0x00C0}--\addr{0x01FF} & 1                 & Software trap    & Priority gated       & Next instruction                   & 0                      \\
-		\bottomrule
-	\end{tabularx}
-	\caption{Exception Quick Reference}
-	\label{tab:exception-quick-reference}
-\end{table}
-
-The Reserved row for vectors \texttt{0x11}--\texttt{0x5F} excludes vectors \texttt{0x20}, \texttt{0x30}, \texttt{0x40},
-and \texttt{0x50}, which are the hardware exception vectors listed above it.

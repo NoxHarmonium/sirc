@@ -18,3 +18,9 @@ F-hw-1 (F-con-3 merged), F-hw-2, F-hw-4 (SYNC decision), F-hw-6, F-hw-7 (decisio
 Applied: F-con2-15 (BERR and BPER: only fault-, double-fault- and reset-vector fetch failures differ; interrupt and trap vector fetches raise the bus or protection fault), F-con2-16 (RSTO hold wording, "six for a one-cycle assertion"), F-con2-17 (NMI heading singular), decision 2 (HALT after reset: RSTO hold runs first, then halt at first phase 0). Decision 1 overbars already present; no typewriter-font claims found.
 
 Open questions: none.
+
+## Improvements
+
+- F-CRH-19: address-bus description now says A0-A23 carry a 24-bit word address, one 16-bit word per address, 16M words, no byte strobes.
+- F-CRH-1: CLKI text links to Section sec:execution-phases.
+- F-CRH-15: no statement about unconnected or unused pins exists in the manual (only that BACK may be held asserted). Left unaddressed; the topic belongs in Chapter 6, which is not in my scope. TODO(author): state pull-up/unconnected behavior of IRQ, NMI, HALT, TRCE, BAS-related inputs, and power-up pin states.

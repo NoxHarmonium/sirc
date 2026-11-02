@@ -21,3 +21,7 @@ Removed "powerful"; "Use for unsigned/signed values only" became "Should be used
 - Orchestrator fix: "Shift Syntax" now says the shifted operand is the first source operand (three-operand form), and that in the two-operand form the first source operand is inferred to be the destination. This matches Table 3.2 and the Register/Short Immediate descriptions earlier in the section. This resolves the earlier open question about "second operand".
 - No consistency-2 findings or other phase 3 decisions target this chapter. The chapter has no addressing-mode "offset" wording, so the displacement rename needs no change.
 - Open questions: none new.
+
+## Improvements
+
+- F-CR-12: Table 9.1 is now the canonical shift-type table; added the legacy label tab:shift-types to it (no content change).

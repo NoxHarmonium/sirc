@@ -15,3 +15,6 @@ Copy edit: "privilege exception" changed to "privilege violation fault" (two pla
 ## Layout
 
 Figure 3.2 (bytefield): the gray "High register [15:8] (not used for addressing)" label overflowed its 8-bit cell. Set the label as a three-line \shortstack in \footnotesize (words unchanged), widened the figure from bitwidth=0.8em to 1.1em (as in Figure 3.1) and set bitheight=3.2\baselineskip so the cell holds the label. Label no longer overlaps the ruler or captions (checked PDF p.39).
+
+## Improvements
+- F-CR-18: gloss for protected mode at first use, ref ch:status-register.

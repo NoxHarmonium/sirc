@@ -21,11 +21,12 @@ all other registers are architecturally undefined. See Chapter~\ref{ch:exception
 
 Figure~\ref{fig:register-programming-model} shows the complete sixteen-register programming model: the seven
 general-purpose registers, both words of each of the four address register pairs, and \reg{sr}. The high word of each
-address register pair, marked \textsuperscript{*}, is read-only in protected mode: a protected-mode program can read
-its real value but a direct write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter still: in
-protected mode it is hidden even from reads, which are redacted to zero, and writes to it are silently ignored rather
-than faulting. Its low byte, shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully
-accessible in both modes. See Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
+address register pair, marked \textsuperscript{*}, is read-only in protected mode (the restricted mode selected by the
+P bit of \reg{sr}, Chapter~\ref{ch:status-register}): a protected-mode program can read its real value but a direct
+write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter still: in protected mode it is hidden
+even from reads, which are redacted to zero, and writes to it are silently ignored rather than faulting. Its low byte,
+shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully accessible in both modes. See
+Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
 
 \begin{figure}[H]
 	\centering

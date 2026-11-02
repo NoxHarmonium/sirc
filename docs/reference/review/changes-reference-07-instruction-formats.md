@@ -27,3 +27,7 @@ Applied:
 - No consistency-2 findings target this chapter; no typewriter-font signal-name sentences found.
 
 Open questions: none.
+
+## Improvements
+
+- F-CR-12: removed the duplicate Condition Code Encoding and Shift Type Encoding tables; 7.x now points to Table 10.1 (tab:condition-codes) and Table 9.1 (tab:shift-encoding). The old labels tab:condition-code-encoding and tab:shift-types were kept as second labels on the canonical tables so existing references still resolve. The inline ST code list under the Register format examples became a pointer. No fact was unique to the removed copies.

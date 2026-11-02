@@ -95,7 +95,7 @@ Key responsibilities include:
 	\item Control signal generation for all functional units
 	\item Condition code evaluation for conditional execution
 	\item Fetching exception vectors on behalf of the exception coprocessor
-	\item Dispatching coprocessor commands through the coprocessor select register (CSR)
+	\item Dispatching coprocessor commands through the coprocessor select register (CSR, Section~\ref{sec:coprocessors-and-csr})
 \end{itemize}
 
 \subsection{Coprocessors and the Coprocessor Select Register}
@@ -185,7 +185,8 @@ vector. It is responsible for:
 	\item Receiving faults, interrupt requests and reset
 	\item Comparing each exception's priority with the current exception level
 	\item Canceling an instruction that raises a retryable fault, so its remaining phases run as no-ops
-	\item Holding the link registers that save the return address, status register and exception level
+	\item Holding the link registers (Chapter~\ref{ch:exceptions}) that save the return address, status register and exception
+	      level
 	\item Writing the exception to service into the coprocessor select register (CSR)
 \end{itemize}
 

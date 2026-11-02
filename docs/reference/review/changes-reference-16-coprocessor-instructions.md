@@ -34,3 +34,7 @@ Copy edit: hex literals wrapped in `\texttt{}` and en dashes in prose and tables
 ## Layout
 
 EXCP pseudocode: broke "link[0] = { address of next instruction, sr, current_exception_level }" after "sr," with a continuation line aligned under the opening brace content. No words changed; 43pt overfull box gone.
+
+## Improvements
+
+- F-CR-15: the Timing row of the coprocessor-call table keeps the 12-cycle sentence and points to Appendix B for the rule and exceptions (RSET 18 cycles and WAIT detail remain in the RSET/WAIT entries).

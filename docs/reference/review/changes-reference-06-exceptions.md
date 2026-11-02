@@ -36,3 +36,14 @@ Violation states phases 2 and 3).
 Applied: F-con2-1 and decision 9 (trap "held by the exception unit, not in the CSR", in the traced-EXCP paragraph and the Reset State table); F-con2-3 (phase 5 for the address-register-pair write-back appended to the privilege-check phase sentence); decision 2 (Halt Request section now says the six-cycle RSTO hold completes before the CPU halts at the first phase 0, before the reset-vector fetch). No typewriter-font signal names remained.
 
 Open questions: none.
+
+## Improvements
+
+- F-CR-5 / F-CR-7: added subsection "Exception Summary" (`sec:exception-summary`) after the vector table, holding a single
+  table (label `tab:exception-quick-reference`, now referenced by Appendix E) with, per source: vector, priority, maskability,
+  link register, return address, and whether a handler must redirect with ETFR/ETTR before RETE. Double fault is split into the
+  two cases (raised inside a fault handler; failed fault-vector fetch).
+- Removed the old "Exception Quick Reference" section at the end of the chapter; the new table replaces it. Its address
+  column was dropped (address = vector x 2, stated in the Vector Table subsection).
+- Added `\label{sec:link-registers}` on the Link Registers subsection.
+- No TODO(author) items; all values taken from the chapter text.

@@ -20,3 +20,8 @@ Also copy edited: "commonly-used" to "commonly used"; example list now has a ful
 - F-con2-4: the "longer than 12 cycles" item now says "can take longer" and gives the reason for each of WAIT, DMA and maths operations.
 - No decisions in phase3-decisions.md concern this chapter, and it has no typewriter-font claims about signal names.
 - Open questions: none.
+
+## Improvements
+
+- F-CR-24: Section 12.4 meta-instruction table marked as a summary (caption now 'Meta-Instructions (Summary)'), pointing to Chapter 17 as canonical; added label sec:instruction-summary-meta.
+- F-CR-15: the 12-cycle rule and four exceptions in Instruction Timing replaced by a pointer to Appendix B Section coprocessor-call-timing.

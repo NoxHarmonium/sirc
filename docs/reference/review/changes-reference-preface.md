@@ -12,3 +12,6 @@
 
 ## Open questions
 - None.
+
+## Improvements
+- F-CR-1: pointed readers to Chapter ref ch:notation-glossary and its Assembly Language Summary.

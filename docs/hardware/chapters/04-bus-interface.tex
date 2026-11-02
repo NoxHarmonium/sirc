@@ -13,6 +13,29 @@ valid data during the same CLKI interval in which \activelow{BAS} is asserted, s
 next rising edge. A device that samples the request on one clock edge and cannot return \activelow{BACK} or read data
 until a later edge adds wait states; this is the normal way to attach slower synchronous memory or peripherals.
 
+\subsection{Clock Edges}
+\label{sec:clock-edges}
+
+The logical relationship between the CPU and CLKI is fixed by five rules. Electrical delays are not specified (see
+Chapter~\ref{ch:electrical-characteristics}).
+
+\begin{enumerate}
+	\item The CPU changes all of its outputs (A0--A23, BRW, BAT0--BAT2, \activelow{BAS}, PROT, D0--D15 on writes, SYNC, and
+	      \activelow{RSTO}) just after the CLKI rising edge that starts a phase.
+	\item \activelow{BAS} is asserted for the whole of a phase that makes a bus access, and is not asserted in phases that do
+	      not.
+	\item The CPU samples \activelow{BACK}, \activelow{BERR}, \activelow{BPER}, and read data on the next rising edge, which ends
+	      the phase. If none of the three responses is asserted, the CPU repeats the phase; this is a wait state.
+	\item \activelow{IRQ1}--\activelow{IRQ4}, \activelow{NMI}, \activelow{HALT}, and \activelow{TRCE} are sampled on every rising edge except during
+	      reset. Sampling is not the same as acting on the input: \activelow{HALT} takes effect at the next phase~0, and
+	      \activelow{TRCE} at the next instruction boundary (Table~\ref{tab:external-input-sampling-rules}).
+	\item The falling edge of CLKI is not used.
+\end{enumerate}
+
+A device must therefore have \activelow{BACK} asserted, and valid read data driven, before the rising edge that ends
+the phase; in the figures \activelow{BACK} is already low across the whole cycle. Timing figures mark the sample points
+with arrows on the rising edges.
+
 \begin{table}[H]
 	\centering
 	\small
@@ -119,7 +142,7 @@ order.
 	\centering
 	\small
 	\begin{tikztimingtable}[sirc timing diagram]
-		CLKI                         & 6{C}                                            \\
+		CLKI                         & L 5{0.5H 0.5L}                                 \\
 		Phase                        & D{Setup} D{Read 1} D{Read 2} D{Read 3} D{} D{}  \\
 		SYNC                         & L L L L L L                                     \\
 		\activelow{BAS}              & H L L L H H                                     \\
@@ -129,8 +152,9 @@ order.
 		D0--D15                      & Z D{d0} D{d1} D{d2} Z Z                         \\
 		\activelow{BACK}             & H L L L H H                                     \\
 		\activelow{BERR}/\activelow{BPER} & H H H H H H                                \\
+		Sample                       & 1.95L 0.1H 0.9L 0.1H 0.9L 0.1H 1.95L           \\
 	\end{tikztimingtable}
-	\caption{Three-Word DMA Read with No Wait States}
+	\caption{Three-Word DMA Read with No Wait States (Pulses in the Sample Row Mark the Rising Edges at Which \activelow{BACK} and Read Data Are Sampled)}
 	\label{fig:dma-read-timing}
 \end{figure}
 
