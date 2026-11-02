@@ -199,30 +199,30 @@ architecturally undefined (\texttt{U U U U}); assemblers never emit it.
 \subsection{Flag Computation Formulas}
 
 Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how, as a
-Boolean formula in terms of the sign bit (bit 15) of the left operand after any shift (\texttt{Dm}), the right operand
-(\texttt{Sm}: \texttt{rS2}, imm16, or the zero-extended imm8), and the 16-bit result (\texttt{Rm}). For \mnemonic{ADC}
-and \mnemonic{SBC}, \texttt{Rm} includes the incoming carry. $\cdot$ is Boolean AND, $+$ is Boolean OR, and
-$\overline{X}$ is the complement of $X$.
+Boolean formula in terms of three sign bits (bit 15): $S1_m$ is that of the first source operand after any shift
+(\texttt{rS1}, or the named register in the immediate formats), $S2_m$ is that of the second source operand
+(\texttt{rS2}, imm16, or the zero-extended imm8), and $R_m$ is that of the 16-bit result. For \mnemonic{ADC} and
+\mnemonic{SBC}, $R_m$ includes the incoming carry. For subtraction the result is $S1 - S2$.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lp{4.2cm}p{4.2cm}}
+	\begin{tabular}{lp{5.2cm}p{5.2cm}}
 		\toprule
-		\textbf{Family}              & \textbf{C}                                                      & \textbf{V}                                                                     \\
+		\textbf{Family}              & \textbf{C}                                                                & \textbf{V}                                                                               \\
 		\midrule
-		ADD, ADC, CMN, CNC           & Carry out of bit 15 of the full addition                        & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
-		SUB, SBC, CMP, CPC           & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$ & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
-		AND, ORR, XOR, TSA, TSO, TSX & $0$ (always cleared)                                            & $0$ (always cleared)                                                           \\
+		ADD, ADC, CMN, CNC           & Carry out of bit 15 of the full addition                                  & $S1_m \cdot S2_m \cdot \overline{R_m} + \overline{S1_m} \cdot \overline{S2_m} \cdot R_m$ \\
+		SUB, SBC, CMP, CPC           & $\overline{S1_m} \cdot S2_m + S2_m \cdot R_m + R_m \cdot \overline{S1_m}$ & $S1_m \cdot \overline{S2_m} \cdot \overline{R_m} + \overline{S1_m} \cdot S2_m \cdot R_m$ \\
+		AND, ORR, XOR, TSA, TSO, TSX & $0$ (always cleared)                                                      & $0$ (always cleared)                                                                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Carry and Overflow Flag Formulas}
 	\label{tab:alu-flag-formulas}
 \end{table}
 
-$N$ and $Z$ are the same for every family: $N = Rm$ (the result's own sign bit), and $Z$ is set when the full
+$N$ and $Z$ are the same for every family: $N = R_m$ (the result's own sign bit), and $Z$ is set when the full
 16-bit result is zero. \mnemonic{ADC} and \mnemonic{SBC} use the same formulas as \mnemonic{ADD} and
 \mnemonic{SUB} respectively -- the incoming carry/borrow is folded into the addition or subtraction before
-\texttt{Rm} (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
+$R_m$ (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
 \mnemonic{CMN}/\mnemonic{CNC}/\mnemonic{CMP}/\mnemonic{CPC}/\mnemonic{TSA}/\mnemonic{TSO}/\mnemonic{TSX} compute
 the same flags as the corresponding
 \mnemonic{ADD}/\mnemonic{ADC}/\mnemonic{SUB}/\mnemonic{SBC}/\mnemonic{AND}/\mnemonic{ORR}/\mnemonic{XOR} family
