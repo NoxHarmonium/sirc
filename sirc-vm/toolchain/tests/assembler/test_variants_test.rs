@@ -182,3 +182,20 @@ fn test_variants_accept_status_update_overrides() {
         );
     }
 }
+
+#[test]
+fn compare_and_test_reject_three_registers() {
+    for (family, ..) in TEST_VARIANTS {
+        for suffix in ["", "[N]|!=", "[S]|=="] {
+            for shift in ["", ", ASR #2"] {
+                let input = format!("{family}R{suffix} r1, r2, r3{shift}\n");
+                let error = parse_tokens(&input).unwrap_err().to_string();
+                assert!(error.contains("exactly two registers"), "{input}: {error}");
+            }
+            let _ = register_data(&format!("{family}R{suffix} r1, r2\n"));
+            let _ = register_data(&format!("{family}R{suffix} r1, r2, ASR #2\n"));
+        }
+    }
+    let data = register_data("ADDR r1, r2, r3\n");
+    assert_eq!((data.r1, data.r2, data.r3), (0, 1, 2));
+}

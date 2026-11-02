@@ -31,9 +31,9 @@ SBCR r4, sl, al
 ANDR r5, ah, sh
 ORRR r6, al, sl
 XORR r7, lh, ph
-CMPR ll, r7, r1
-TSAR ah, r6, r2
-TSXR al, r5, r3
+CMPR r7, r1
+TSAR r6, r2
+TSXR r5, r3
 ADDR sl, r3, r5
 ADCR ph, r2, r6
 SUBR pl, r1, r7

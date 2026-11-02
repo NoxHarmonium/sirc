@@ -93,6 +93,27 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
+    let is_compare_or_test = matches!(
+        tag.as_str(),
+        "CMNR" | "CNCR" | "CMPR" | "CPCR" | "TSAR" | "TSOR" | "TSXR"
+    );
+    if is_compare_or_test
+        && matches!(
+            operands.as_slice(),
+            [
+                AddressingMode::DirectRegister(_),
+                AddressingMode::DirectRegister(_),
+                AddressingMode::DirectRegister(_),
+                ..
+            ]
+        )
+    {
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i_after_instruction, ErrorKind::Fail,
+            "Compare and test instructions require exactly two registers, optionally followed by a shift",
+        )));
+    }
+
     let default_status_register_update_source =
         status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
 
