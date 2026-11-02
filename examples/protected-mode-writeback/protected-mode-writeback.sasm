@@ -38,8 +38,6 @@ MOVI sh, $PROGRAM_SEGMENT
 MOVI sl, #0x0800
 
 MOVI r3, #0xCAFE
-; The read-only PROGRAM sample is initialized by the loader below.
-NOOP
 MOVI r3, #0
 
 ; Enable protected mode

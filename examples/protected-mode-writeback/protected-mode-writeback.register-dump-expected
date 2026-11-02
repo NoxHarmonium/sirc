@@ -15,7 +15,7 @@ Registers {
     sh: 0x1,
     sl: 0x1001,
     ph: 0x0,
-    pl: 0x288,
+    pl: 0x286,
     pending_coprocessor_command: 0x0,
 }
 ===EXCEPTION UNIT REGISTERS===
@@ -54,7 +54,7 @@ ExceptionUnitRegisters {
             saved_exception_level: 0x0,
         },
         ExceptionLinkRegister {
-            return_address: 0x27a,
+            return_address: 0x278,
             return_status_register: 0x0,
             saved_exception_level: 0x0,
         },
