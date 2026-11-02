@@ -1786,3 +1786,89 @@ fn test_instruction_trace_fault() {
 // Is it allowed in privileged mode or should it be ignored?
 // TODO: Clarify how double faults work
 // category=Hardware
+
+#[test]
+fn cpu_store_to_readonly_segment_dispatches_bper_with_write_metadata() {
+    use peripheral_bus::{memory_mapped_device::new_stub_memory_mapped_device, new_bus_peripheral};
+    for protected in [false, true] {
+        for writable in [false, true] {
+            let instruction = InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::StoreRegisterToIndirectImmediate,
+                register: 0,
+                value: 0x20,
+                condition_flag: ConditionFlags::Always,
+                additional_flags: 1,
+            });
+            let mut cpu = new_cpu_peripheral();
+            cpu.registers.ph = 1;
+            cpu.registers.ah = 1;
+            cpu.registers.r1 = 0xdead;
+            if protected {
+                set_sr_bit(StatusRegisterFields::ProtectedMode, &mut cpu.registers);
+            }
+            let mut bus = new_bus_peripheral(Box::new(cpu));
+            bus.map_segment(
+                "PROGRAM",
+                0x10000,
+                0x100,
+                writable,
+                Box::new(new_stub_memory_mapped_device()),
+            );
+            bus.map_segment(
+                "VECTORS",
+                0,
+                0x100,
+                true,
+                Box::new(new_stub_memory_mapped_device()),
+            );
+            bus.map_segment(
+                "HANDLER",
+                0x20000,
+                0x100,
+                false,
+                Box::new(new_stub_memory_mapped_device()),
+            );
+            let mut program = vec![0; 0x42];
+            program[..4].copy_from_slice(&encode_instruction(&instruction));
+            program[0x40..0x42].copy_from_slice(&0xcafe_u16.to_be_bytes());
+            bus.load_binary_data_into_segment("PROGRAM", &program);
+            bus.write_address(u32::from(BUS_PROTECTION_FAULT) * 2, 2);
+            bus.write_address(u32::from(BUS_PROTECTION_FAULT) * 2 + 1, 0);
+            let mut assertions = BusAssertions::default();
+            let mut saw_protection = false;
+            for _ in 0..12 {
+                assertions = bus.poll_all(assertions);
+                saw_protection |= assertions.bus_protection_error;
+            }
+            assert_eq!(saw_protection, !writable);
+            assert_eq!(
+                bus.read_address(0x10020),
+                if writable { 0xdead } else { 0xcafe }
+            );
+            let cpu = bus
+                .bus_master
+                .as_any()
+                .downcast_mut::<peripheral_cpu::CpuPeripheral>()
+                .unwrap();
+            if writable {
+                assert_eq!(cpu.eu_registers.current_exception_level, 0);
+            } else {
+                assert_eq!(cpu.eu_registers.current_exception_level, 7);
+                assert_eq!(cpu.eu_registers.link_registers[6].return_address, 0x10000);
+                assert_eq!(
+                    sr_bit_is_set_value(
+                        StatusRegisterFields::ProtectedMode,
+                        cpu.eu_registers.link_registers[6].return_status_register
+                    ),
+                    protected
+                );
+                let metadata = &cpu.eu_registers.link_registers[7];
+                assert_eq!(metadata.return_address, 0x10020);
+                let fault = decode_fault_metadata_register(metadata.return_status_register);
+                assert_eq!(fault.fault, Faults::BusProtection);
+                assert_eq!(fault.bus_access_type, BusAccessType::DataWrite);
+                assert!(!fault.double_fault);
+            }
+        }
+    }
+}

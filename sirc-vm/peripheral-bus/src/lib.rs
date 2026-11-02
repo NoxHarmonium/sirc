@@ -28,7 +28,7 @@ use std::path::Path;
 
 use std::ops::BitOr;
 
-use device::{BusAssertions, Device};
+use device::{BusAssertions, BusOperation, Device};
 use log::{debug, warn};
 use memory_mapped_device::MemoryMappedDevice;
 use reset_unit::ResetUnit;
@@ -242,7 +242,28 @@ impl BusPeripheral {
             .iter_mut()
             .map(|segment| {
                 let selected = segment.address_is_in_segment_range(master_assertions.address);
-                segment.device.poll(master_assertions, selected)
+                if selected
+                    && master_assertions.bus_access_strobe
+                    && matches!(master_assertions.op, BusOperation::Write)
+                    && !segment.writable
+                {
+                    // A mapped, disallowed write signals BPER in both privilege modes.
+                    // Keep clocking the device for unrelated signals, but with no request
+                    // or chip select, so even side-effectful MMIO cannot observe the write.
+                    let idle = BusAssertions {
+                        bus_access_strobe: false,
+                        ..master_assertions
+                    };
+                    let response = segment.device.poll(idle, false);
+                    response
+                        | BusAssertions {
+                            bus_protection_error: true,
+                            device_was_activated: true,
+                            ..BusAssertions::default()
+                        }
+                } else {
+                    segment.device.poll(master_assertions, selected)
+                }
             })
             .fold(master_assertions, BitOr::bitor);
         if out.bus_access_strobe && !out.device_was_activated {

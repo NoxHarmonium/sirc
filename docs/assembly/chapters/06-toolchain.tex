@@ -114,6 +114,9 @@ hexadecimal. A \texttt{--segment} must not overlap them.
 	\label{tab:fixed-segments}
 \end{table}
 
+A CPU write to a read-only mapped segment, including PROGRAM, signals \texttt{BPER} in either privilege mode. The write
+does not reach the device or change memory. Program loading initializes the segment directly before execution.
+
 For example, a program that needs 64\,K words of scratch memory away from the program binary is run with:
 
 \begin{lstlisting}[language={}]
