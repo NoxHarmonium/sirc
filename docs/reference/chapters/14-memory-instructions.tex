@@ -169,18 +169,15 @@ LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
 
 	\textbf{Description:}
 
-	Loads a 16-bit value from memory into the destination register. Post-increment forms update the address register after
-	the load, which is useful for array traversal.
+	Loads a 16-bit value from memory into the destination register. Post-increment forms increment the address register
+	after the load in a single atomic operation.
 
 	\textbf{Operation:}
 	\begin{verbatim}
+effective_address = addr + disp
+destination = memory[effective_address]
 if post_increment then
-    effective_address = addr + disp
-    destination = memory[effective_address]
     addr.low = addr.low + 1
-else
-    effective_address = addr + disp
-    destination = memory[effective_address]
 endif
 ; Flags are preserved
 \end{verbatim}
