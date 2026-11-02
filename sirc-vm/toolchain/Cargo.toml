@@ -22,3 +22,4 @@ hex = "0.4.3"
 [dev-dependencies]
 insta = { version = "1.43.1", features = ["yaml"] }
 pretty-hex = "0.4.1"
+tempfile = "3"

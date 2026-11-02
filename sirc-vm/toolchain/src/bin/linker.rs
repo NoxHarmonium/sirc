@@ -174,6 +174,8 @@ fn main() -> io::Result<()> {
                     | Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
                     | Instruction::MoveRegisterFromImmediate
                     | Instruction::LoadRegisterFromIndirectImmediate
+                    | Instruction::LoadRegisterFromIndirectImmediatePostIncrement
+                    | Instruction::StoreRegisterToIndirectImmediatePreDecrement
                     | Instruction::StoreRegisterToIndirectImmediate => {
                         InstructionData::Immediate(ImmediateInstructionData {
                             op_code: data.op_code,
@@ -200,12 +202,19 @@ fn main() -> io::Result<()> {
                     //         },
                     //     )
                     // }
-                    _ => panic!(
-                        "Can't patch address/offset for instruction: {:?}",
-                        data.op_code
-                    ),
+                    _ => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!("Unsupported relocation for {:?}", data.op_code),
+                        ))
+                    }
                 },
-                _ => panic!("Can't patch address/offset for instruction: {instruction:?}"),
+                _ => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("Unsupported relocation for {instruction:?}"),
+                    ))
+                }
             };
 
             let raw_patched_instruction = encode_instruction(&patched_instruction);
