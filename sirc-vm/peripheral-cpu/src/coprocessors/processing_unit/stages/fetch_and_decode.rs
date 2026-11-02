@@ -198,6 +198,8 @@ pub fn decode_and_register_fetch(
     // TODO: Extract to function
     let ad_l = 0x9 | immediate_representation.additional_flags << 1;
     let ad_h = 0x8 | immediate_representation.additional_flags << 1;
+    // Address-pair destinations use only two bits. Ignore reserved bits 25–24
+    // so an undefined encoding cannot produce an index outside the register file.
     let des_ad_l = 0x9 | (immediate_representation.register & 0x3) << 1;
     let des_ad_h = 0x8 | (immediate_representation.register & 0x3) << 1;
     let condition_flag = immediate_representation.condition_flag;

@@ -431,6 +431,21 @@ pub fn set_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
     registers.sr |= bit_mask;
 }
 
+/// Assigns a status flag from a condition: `true` sets it and `false` clears it.
+/// This assigns the bit rather than inverting its previous state.
+pub fn toggle_sr_bit(field: StatusRegisterFields, enabled: bool, registers: &mut Registers) {
+    toggle_sr_bit_value(field, enabled, &mut registers.sr);
+}
+
+/// Assigns a status flag in a raw status-register value.
+pub fn toggle_sr_bit_value(field: StatusRegisterFields, enabled: bool, value: &mut u16) {
+    if enabled {
+        set_sr_bit_value(field, value);
+    } else {
+        *value &= !(field as u16);
+    }
+}
+
 ///
 /// Clears a register field (flag) in the status register.
 ///

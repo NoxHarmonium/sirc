@@ -581,13 +581,13 @@ impl CpuPeripheral {
 
         // Latch a level-sensitive line only below its handler's exception level.
         // Do not discard requests that were already pending before entering a handler.
-        let eligible_lines = (0_u8..4).fold(0, |mask, pin| {
-            if self.eu_registers.current_exception_level < pin + 2 {
-                mask | (1 << pin)
-            } else {
-                mask
-            }
-        });
+        let first_handler_level = ExceptionPriorities::LevelOneHardware as u8;
+        let first_eligible_pin = self
+            .eu_registers
+            .current_exception_level
+            .saturating_sub(first_handler_level - 1);
+        let eligible_lines =
+            util::mask_bits_below_index(LEVEL_FIVE_INTERRUPT_PIN_BIT - 1, first_eligible_pin);
         let level_sensitive_interrupts = enabled_interrupts & eligible_lines;
         if level_sensitive_interrupts > 0 {
             trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");

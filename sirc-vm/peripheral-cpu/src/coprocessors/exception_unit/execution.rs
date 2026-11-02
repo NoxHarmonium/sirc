@@ -27,7 +27,7 @@ use crate::{
         shared::ExecutionPhase,
     },
     registers::{
-        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set,
+        clear_sr_bit, get_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, toggle_sr_bit,
         ExceptionLinkRegister, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
@@ -373,11 +373,11 @@ impl Executor for ExceptionUnitExecutor {
                         eu_registers.current_exception_level = saved_exception_level;
 
                         // EA follows the restored level, even if ETTR edited the saved SR.
-                        if saved_exception_level == 0 {
-                            clear_sr_bit(StatusRegisterFields::ExceptionActive, registers);
-                        } else {
-                            set_sr_bit(StatusRegisterFields::ExceptionActive, registers);
-                        }
+                        toggle_sr_bit(
+                            StatusRegisterFields::ExceptionActive,
+                            saved_exception_level != 0,
+                            registers,
+                        );
                     }
                     ExceptionUnitOpCodes::Reset => {
                         registers.sr = 0x0;

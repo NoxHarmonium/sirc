@@ -3,7 +3,7 @@ use std::ops::Shl;
 use super::shared::IntermediateRegisters;
 use crate::{
     coprocessors::processing_unit::definitions::ShiftType,
-    registers::{clear_sr_bit, set_sr_bit, sr_bit_is_set_value, Registers, StatusRegisterFields},
+    registers::{sr_bit_is_set_value, toggle_sr_bit_value, StatusRegisterFields},
 };
 
 const MSB_MASK: u32 = 0x8000_0000;
@@ -413,6 +413,19 @@ fn perform_logical_right_shift(a: u16, b: u16, intermediate_registers: &mut Inte
     intermediate_registers.alu_output = result;
 }
 
+// Addition's final-sign comparison cannot detect a sign that changes twice
+// during ASL (e.g. 0x4000 << 2). Inspect the complete shifted-out sign history.
+fn arithmetic_left_shift_overflows(value: u16, count: u16) -> bool {
+    match count {
+        0 => false,
+        16.. => value != 0,
+        _ => {
+            let sign_history = value >> (15 - count);
+            sign_history != 0 && sign_history != (u16::MAX >> (15 - count))
+        }
+    }
+}
+
 #[allow(clippy::cast_possible_truncation)]
 fn perform_arithmetic_left_shift(
     a: u16,
@@ -439,17 +452,11 @@ fn perform_arithmetic_left_shift(
         None,
     );
 
-    let overflow = match b {
-        0 => false,
-        16.. => a != 0,
-        _ => {
-            let sign_history = a >> (15 - b);
-            sign_history != 0 && sign_history != (u16::MAX >> (15 - b))
-        }
-    };
-    if overflow {
-        intermediate_registers.alu_status_register |= StatusRegisterFields::Overflow as u16;
-    }
+    toggle_sr_bit_value(
+        StatusRegisterFields::Overflow,
+        arithmetic_left_shift_overflows(a, b),
+        &mut intermediate_registers.alu_status_register,
+    );
     intermediate_registers.alu_output = result;
 }
 
@@ -560,48 +567,12 @@ pub fn set_alu_bits(
     carry: bool,
     inputs_and_result: Option<(u16, u16, u16)>,
 ) {
-    // TODO: Clean up ALU `set_alu_bits` function
-    // category=Refactoring
-    // I just hacked in a temporary register to avoid refactoring and get
-    // the tests done faster. Once the tests are done, refactoring will be easier.
-
-    let mut registers = Registers {
-        sr: *sr,
-        ..Registers::default()
-    };
-
-    if value == 0 {
-        set_sr_bit(StatusRegisterFields::Zero, &mut registers);
-    } else {
-        clear_sr_bit(StatusRegisterFields::Zero, &mut registers);
-    }
-    if (value as i16) < 0 {
-        set_sr_bit(StatusRegisterFields::Negative, &mut registers);
-    } else {
-        clear_sr_bit(StatusRegisterFields::Negative, &mut registers);
-    }
-    if carry {
-        set_sr_bit(StatusRegisterFields::Carry, &mut registers);
-    } else {
-        clear_sr_bit(StatusRegisterFields::Carry, &mut registers);
-    }
-
-    // See http://www.csc.villanova.edu/~mdamian/Past/csc2400fa16/labs/ALU.html
-    // The logic is follows: when adding, if the sign of the two inputs is the same, but the result sign is different, then we have an overflow.
-    if let Some((i1, i2, result)) = inputs_and_result {
-        if sign(i1) == sign(i2) && sign(result) != sign(i1) {
-            set_sr_bit(StatusRegisterFields::Overflow, &mut registers);
-        } else {
-            // TODO: Can potentially remove double call to `clear_sr_bit` in ALU `set_alu_bits`
-            // category=Refactoring
-            // Can we collapse this if statement so we only have one else? The double clear seems redundant
-            clear_sr_bit(StatusRegisterFields::Overflow, &mut registers);
-        }
-    } else {
-        clear_sr_bit(StatusRegisterFields::Overflow, &mut registers);
-    }
-
-    *sr = registers.sr;
+    toggle_sr_bit_value(StatusRegisterFields::Zero, value == 0, sr);
+    toggle_sr_bit_value(StatusRegisterFields::Negative, (value as i16) < 0, sr);
+    toggle_sr_bit_value(StatusRegisterFields::Carry, carry, sr);
+    let overflow = inputs_and_result
+        .is_some_and(|(i1, i2, result)| sign(i1) == sign(i2) && sign(result) != sign(i1));
+    toggle_sr_bit_value(StatusRegisterFields::Overflow, overflow, sr);
 }
 
 #[cfg(test)]
