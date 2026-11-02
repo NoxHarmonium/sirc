@@ -36,9 +36,9 @@ follow, in this order, for every entry:
 	\item[Encoding diagrams] A bit-field diagram for each encoding listed under Opcodes. A box labeled with an operand name
 	      (\texttt{rD}, \texttt{rS1}, \texttt{rO}, \texttt{imm16}, \texttt{disp}, \texttt{dest}, \texttt{src}, \texttt{addr} and
 	      so on) carries that operand; Table~\ref{tab:instruction-description-notation} defines the names. The shift fields
-	      \texttt{SO}, \texttt{ST} and \texttt{SA}, the condition field \texttt{Cond}, and the status update source \texttt{SUS}
-	      (the AF field of ALU instructions) keep their field names. A box showing a literal value (for example \texttt{0x0},
-	      \texttt{00} or \texttt{p}) is a field the instruction fixes to that value.
+	      (\texttt{SO}, \texttt{ST} and \texttt{SA}) appear as one box labeled \texttt{Shift}, the condition field \texttt{Cond},
+	      and the status update source \texttt{SUS} (the AF field of ALU instructions) keep their field names. A box showing a
+	      literal value (for example \texttt{0x0}, \texttt{00} or \texttt{p}) is a field the instruction fixes to that value.
 	\item[Instruction Fields] One line per encoding field the instruction uses: register fields, the condition field, the status
 	      update source field and which of its encodings are legal for this instruction, shift type and count, and immediate
 	      width. Values come from Chapter~\ref{ch:instruction-formats}; an entry does not introduce a value that is not defined

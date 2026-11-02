@@ -269,7 +269,7 @@ endif
 		      assembler does not accept a shift suffix on any \mnemonic{LOAD} form: \mnemonic{LOAD} has no field that
 		      shifts the offset register or the loaded value. Use \mnemonic{SHFT} on \texttt{rO} before the
 		      \mnemonic{LOAD} if a scaled offset is needed.
-		\item \textbf{SO, ST, SA (bits 13--6, Register format, \opcode{15}/\opcode{17}):} Reserved, fixed at \texttt{0}. A
+		\item \textbf{Shift (bits 13--6, Register format, \opcode{15}/\opcode{17}):} Reserved, fixed at \texttt{0}. A
 		      non-zero value is architecturally undefined; implementations are expected to ignore it, since a shift would apply
 		      to the unused R2 field and \mnemonic{LOAD} takes its offset from R3, so portable software must not rely on that.
 		\item \textbf{rO (R3, bits 17--14, Register format, \opcode{15}/\opcode{17}):} Offset register, used unshifted.
@@ -385,9 +385,7 @@ endif
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rS} &
 			\bitbox{4}{rO} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -411,9 +409,7 @@ endif
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rS} &
 			\bitbox{4}{rO} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}

@@ -302,9 +302,7 @@ SR = flags updated per the status-update suffix:
 			\bitbox{6}{\opcode{25}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{0x00} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -315,7 +313,7 @@ SR = flags updated per the status-update suffix:
 		\item \textbf{Register (bits 25--22):} \texttt{rD}, the destination and shifted source register; any of the 16
 		      registers, \texttt{0x0}--\texttt{0xF}.
 		\item \textbf{Immediate (bits 21--14):} fixed at \texttt{0x00} by the meta-instruction.
-		\item \textbf{SO, ST, SA (bits 13--6):} shift operand, type and count. Types: \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
+		\item \textbf{Shift (bits 13--6):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types: \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
 		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}; a register count is used in
 		      full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is
 		      taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -411,9 +409,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{20}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -426,9 +422,7 @@ SR.V = signed_overflow
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -440,7 +434,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -539,9 +533,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{21}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -554,9 +546,7 @@ SR.V = signed_overflow
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -568,7 +558,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -660,9 +650,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{22}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -675,9 +663,7 @@ SR.V = signed_overflow
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -689,7 +675,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -784,9 +770,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{23}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -799,9 +783,7 @@ SR.V = signed_overflow
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -813,7 +795,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -905,9 +887,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{24}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -920,9 +900,7 @@ SR.V = 0
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -934,7 +912,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1031,9 +1009,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{25}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1046,9 +1022,7 @@ SR.V = 0
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1060,7 +1034,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1160,9 +1134,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{26}} &
 			\bitbox{4}{rD} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1175,9 +1147,7 @@ SR.V = 0
 			\bitbox{4}{rD} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1189,7 +1159,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1292,9 +1262,7 @@ SR.V = 0
 			\bitbox{4}{rD} &
 			\bitbox{4}{0x0} &
 			\bitbox{4}{rS} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1413,9 +1381,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{28}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1428,9 +1394,7 @@ SR.V = signed_overflow
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1445,7 +1409,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1550,9 +1514,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{29}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1565,9 +1527,7 @@ SR.V = signed_overflow
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1582,7 +1542,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1684,9 +1644,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{2A}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1699,9 +1657,7 @@ SR.V = signed_overflow
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1716,7 +1672,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1826,9 +1782,7 @@ SR.V = signed_overflow
 			\bitbox{6}{\opcode{2B}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1841,9 +1795,7 @@ SR.V = signed_overflow
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1858,7 +1810,7 @@ SR.V = signed_overflow
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -1959,9 +1911,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{2C}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1974,9 +1924,7 @@ SR.V = 0
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -1991,7 +1939,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -2097,9 +2045,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{2D}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -2112,9 +2058,7 @@ SR.V = 0
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -2129,7 +2073,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
@@ -2227,9 +2171,7 @@ SR.V = 0
 			\bitbox{6}{\opcode{2E}} &
 			\bitbox{4}{rS} &
 			\bitbox{8}{imm8} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -2242,9 +2184,7 @@ SR.V = 0
 			\bitbox{4}{ignored} &
 			\bitbox{4}{rS1} &
 			\bitbox{4}{rS2} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
+			\bitbox{8}{Shift} &
 			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -2259,7 +2199,7 @@ SR.V = 0
 		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
 		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
 		      value zero-extended to 16 bits (short-immediate form).
-		\item \textbf{SO, ST, SA (bits 13--6, short-immediate and register forms only):} shift operand, type and count. Types:
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
 		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
 		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
