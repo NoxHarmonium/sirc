@@ -3,8 +3,8 @@
 
 \section{Overview}
 
-Control flow in SIRC-1 is built from effective-address instructions. The real CPU opcodes compute an address into an
-address-register pair; jumps and calls are produced by targeting the program-counter pair \reg{p}.
+Control flow in SIRC-1 is built from effective-address instructions. The instructions compute an address and write them
+to an address-register pair. Jumps and calls are produced by targeting the program-counter pair \reg{p}.
 
 SIRC-1 provides these control-flow and address-calculation operations:
 
