@@ -9,3 +9,9 @@ The AF = 11 pointer refers to Chapter~\ref{ch:instruction-formats}, where the ot
 
 ## Open questions
 None.
+
+## Round 2
+
+Applied F-con2-19 (line 7 and the "Opcode Space for Expansion" bullet now say "may be assigned in a future revision"; "reserving them" in Hardware Implementers reworded to "leaving them unassigned"), F-con2-20, F-con2-22 (emulator -> simulator). No phase 3 decisions concern this chapter. Reworded the "Opcode space reservation" item in Why Undocumented to "Opcode space for expansion". Retained the reserved shift type / AF = 11 bullets, which refer to reserved encodings, not undocumented opcodes.
+
+Open question: none.

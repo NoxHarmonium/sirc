@@ -24,3 +24,8 @@
 ## Open questions
 - The new SHFT table row widens the Syntax column; check the rendered table for overflow (the MOVI row is also longer).
 - The SHFT Operation block still reads `SR = flags_from_shift_result`, which no longer holds for an explicit `[A]` or `[N]` suffix.
+
+## Round 2
+- F-con2-23: `\texttt{r1}` in the ADDI notes and CMNI description changed to `\reg{r1}`.
+- Orchestrator fix: SHFT Operation block now says flags are updated per the status-update suffix ([S] shifter result, default for SHFT; [A] ALU result; [N] no update). This resolves the earlier open question.
+- Open question: none.

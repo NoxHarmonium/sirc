@@ -46,7 +46,7 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 		\mnemonic{MULU}/\mnemonic{MULS}/\mnemonic{DIVU}/\mnemonic{DIVS}                                       & At least 12; implementation-defined                                                                               \\
 		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch); 6 for coprocessor \texttt{0x0}, which has no dispatch slot                       \\
 		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch); a discarded \mnemonic{EXCP} also takes 12, as its dispatch slot runs with no-op phases       \\
-		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch; no dispatch slot)                                       \\
+		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \activelow{RSTO} hold + 6 reset-vector fetch; no dispatch slot)                                    \\
 		\mnemonic{WAIT}                                                                                       & 12 + idle (0 if an interrupt that can be taken is already pending) + 6 for the interrupt dispatch, or until reset \\
 		\bottomrule
 	\end{tabular}
@@ -81,9 +81,9 @@ Table~\ref{tab:instruction-timing} allows:
 \end{itemize}
 
 These figures assume no bus wait states. The \mnemonic{DMAT} figure is the worst case only for parts without a maths
-unit, or whose maths operations finish in fewer cycles. Reset holds \texttt{RSTO} for the cycles \texttt{RSTI} is
-asserted plus five more (6 cycles for a one-cycle \texttt{RSTI} or for \mnemonic{RSET}) before the reset-vector fetch;
-a failed reset-vector fetch repeats the hold.
+unit, or whose maths operations finish in fewer cycles. Reset holds \activelow{RSTO} for the cycles \activelow{RSTI} is
+asserted plus five more (6 cycles for a one-cycle \activelow{RSTI} or for \mnemonic{RSET}) before the reset-vector
+fetch; a failed reset-vector fetch repeats the hold.
 
 A retryable fault cancels the faulting instruction at the phase that detects it. Once an instruction has started, its
 six-phase sequence is never cut short: the remaining phases still run, but as no-ops that perform no bus access and
@@ -102,9 +102,11 @@ Violation, and Segment Overflow all save the address of the faulting instruction
 trace fault is raised after its instruction has completed, so nothing is canceled.
 
 A bus or protection fault during an exception-vector fetch is handled the same way as one during an instruction fetch.
-The dispatch slot in progress is canceled and its remaining phases run as no-ops, and the dispatch for the new fault
-begins at the next phase 0. Only reset restarts the phase sequence immediately: it discards all state and returns to
-phase 0.
+The exceptions are a failed fault-vector fetch, which raises a double fault; a failed double-fault vector fetch, which
+resets the CPU; and a failed reset-vector fetch, which raises no fault and repeats the reset-output hold
+(Chapter~\ref{ch:exceptions}). The dispatch slot in progress is canceled and its remaining phases run as no-ops, and
+the dispatch for the new fault begins at the next phase 0. Only reset restarts the phase sequence immediately: it
+discards all state and returns to phase 0.
 
 \section{Conditional Execution}
 
@@ -177,8 +179,9 @@ simultaneously. Instead:
 \begin{itemize}
 	\item Instruction fetch, data memory access, and exception vector fetch each occupy one execution phase per 16-bit word
 	      transferred.
-	\item If the external memory system has not acknowledged the transfer (\texttt{BACK}) and has not aborted it with a bus error
-	      (\texttt{BERR}) or bus protection error (\texttt{BPER}), the CPU holds that phase until the transfer is acknowledged.
+	\item If the external memory system has not acknowledged the transfer (\activelow{BACK}) and has not aborted it with a bus
+	      error (\activelow{BERR}) or bus protection error (\activelow{BPER}), the CPU holds that phase until the transfer is
+	      acknowledged.
 	\item Each wait state adds one clock cycle to the instruction, including a wait on a DMA access: the held phase delays the
 	      rest of the transfer and the slot boundaries after it, so the DMA total is not rounded up again
 	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception-unit
@@ -187,7 +190,7 @@ simultaneously. Instead:
 	      \mnemonic{WAIT}, or a maths command) performs no bus access of its own, although a DMA command then adds one access per
 	      word read or written. A system that inserts $w$ wait states per access therefore adds $2w$ cycles to an ALU
 	      instruction, $3w$ cycles to a load or store, $(k + 2)w$ cycles to a DMA command with $k$ accesses, $4w$ cycles to an
-	      accepted \mnemonic{EXCP}, and $2w$ cycles to the other exception-unit meta-instructions.
+	      accepted \mnemonic{EXCP} or to \mnemonic{RSET}, and $2w$ cycles to the other exception-unit meta-instructions.
 \end{itemize}
 
 \subsection{Optimization Guidelines}

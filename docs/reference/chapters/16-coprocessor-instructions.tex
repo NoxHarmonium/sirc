@@ -575,7 +575,7 @@ endif
 
 	\textbf{Condition field:} If the condition is false, no reset occurs and current status flags are preserved.
 
-	\textbf{Timing:} 6 cycles for the call, plus a 6-cycle \texttt{RSTO} hold, plus 6 cycles for the exception unit to
+	\textbf{Timing:} 6 cycles for the call, plus a 6-cycle \activelow{RSTO} hold, plus 6 cycles for the exception unit to
 	fetch the reset vector -- 18 cycles from the \mnemonic{RSET} fetch to the first instruction of the reset handler (no
 	dispatch slot).
 
@@ -621,9 +621,9 @@ RSET                           ; Reboots through the reset vector
 		\item \textbf{Register (bits 25--22):} reserved; the assembler emits \texttt{0x0}.
 		\item \textbf{Immediate (bits 21--6):} \texttt{0x1Cxy} (\mnemonic{ETFR}) or \texttt{0x1Dxy} (\mnemonic{ETTR});
 		      bits 15--12 select coprocessor 1, bits 11--8 select operation \texttt{0xC} or \texttt{0xD}. Within the
-		      low operand byte \texttt{xy}, the high hex digit \texttt{x} holds bits 7--4: bits 7--6 are not decoded and
+		      low operand byte \texttt{xy}, the high hexadecimal digit \texttt{x} holds bits 7--4: bits 7--6 are not decoded and
 		      are written as zero, and bits 5--4 select the register (\texttt{00} none, \texttt{01} saved address only,
-		      \texttt{10} saved status only, \texttt{11} both). The low hex digit \texttt{y} holds bits 3--0, which hold \texttt{\#n}, the link-register index \texttt{0}--\texttt{7}.
+		      \texttt{10} saved status only, \texttt{11} both). The low hexadecimal digit \texttt{y} holds bits 3--0, which hold \texttt{\#n}, the link-register index \texttt{0}--\texttt{7}.
 		\item \textbf{AF (bits 5--4):} fixed at \texttt{00}.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
@@ -793,7 +793,8 @@ segment-overflow check is made at access time, one access at a time. It is never
 \end{itemize}
 
 The fault metadata is captured as for any other segment-overflow fault, with the bus access type of the DMA access
-whose address overflowed (or, for the advance, of the last access performed).
+whose address overflowed. For a forward \mnemonic{DMAR} or \mnemonic{DMAW} advance it is the type of that command's
+accesses; for a \mnemonic{DMAT} advance it is the type given in the list above.
 
 \subsection{Retrying After a Fault}
 \label{sec:dma-fault-retry}

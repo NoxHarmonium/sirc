@@ -16,3 +16,8 @@ Removed "powerful"; "Use for unsigned/signed values only" became "Should be used
 - Lines 55-56 say the shifted operand is "the second operand" of the three-operand form, while the table calls it the first source operand. Presumably it counts the destination as the first written operand; the wording needs the author's choice.
 - Bare listings (Mode 0, Mode 1, Testing Shift Results, Preserving Flags, SHFT) have no `% qa:assemble` marker. I did not add one because the Testing Shift Results and Preserving Flags listings reference undefined labels and would fail.
 - Examples in this chapter are not numbered `Example N-M`; that rule is stated for instruction entries only.
+
+## Round 2
+- Orchestrator fix: "Shift Syntax" now says the shifted operand is the first source operand (three-operand form), and that in the two-operand form the first source operand is inferred to be the destination. This matches Table 3.2 and the Register/Short Immediate descriptions earlier in the section. This resolves the earlier open question about "second operand".
+- No consistency-2 findings or other phase 3 decisions target this chapter. The chapter has no addressing-mode "offset" wording, so the displacement rename needs no change.
+- Open questions: none new.

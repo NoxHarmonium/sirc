@@ -14,13 +14,13 @@ The SIRC-1 provides two primary memory operations:
 \end{itemize}
 
 \mnemonic{LOAD} and \mnemonic{STOR} each support four memory addressing forms. Both support indirect addressing with
-an immediate offset and indirect addressing with a register offset; \mnemonic{LOAD} additionally supports
+an immediate displacement and indirect addressing with a register offset; \mnemonic{LOAD} additionally supports
 post-increment and \mnemonic{STOR} additionally supports pre-decrement:
 \begin{itemize}
-	\item Indirect with immediate offset: \texttt{(\#offset, addr)}
+	\item Indirect with immediate displacement: \texttt{(\#disp, addr)}
 	\item Indirect with register offset: \texttt{(rO, addr)}
-	\item Post-increment (\mnemonic{LOAD} only): \texttt{(\#offset, addr)+} or \texttt{(rO, addr)+}
-	\item Pre-decrement (\mnemonic{STOR} only): \texttt{-(\#offset, addr)} or \texttt{-(rO, addr)}
+	\item Post-increment (\mnemonic{LOAD} only): \texttt{(\#disp, addr)+} or \texttt{(rO, addr)+}
+	\item Pre-decrement (\mnemonic{STOR} only): \texttt{-(\#disp, addr)} or \texttt{-(rO, addr)}
 \end{itemize}
 
 \textbf{Important:} \mnemonic{STOR}'s register-offset forms support an optional shift suffix, applied to the source
@@ -55,13 +55,13 @@ addition, modulo $2^{16}$.
 		\toprule
 		\textbf{Instruction} & \textbf{Syntax}                        & \textbf{Encoding} & \textbf{Notes}                                   \\
 		\midrule
-		LOAD                 & \texttt{LOAD rD, (\#offset, addr)}     & \opcode{14}       & Immediate offset                                 \\
+		LOAD                 & \texttt{LOAD rD, (\#disp, addr)}       & \opcode{14}       & Immediate displacement                           \\
 		LOAD                 & \texttt{LOAD rD, (rO, addr)}           & \opcode{15}       & Register offset; no shift suffix                 \\
-		LOAD                 & \texttt{LOAD rD, (\#offset, addr)+}    & \opcode{16}       & Immediate offset; post-increment                 \\
+		LOAD                 & \texttt{LOAD rD, (\#disp, addr)+}      & \opcode{16}       & Immediate displacement; post-increment           \\
 		LOAD                 & \texttt{LOAD rD, (rO, addr)+}          & \opcode{17}       & Register offset; no shift suffix; post-increment \\
-		STOR                 & \texttt{STOR (\#offset, addr), rS}     & \opcode{10}       & Immediate offset                                 \\
+		STOR                 & \texttt{STOR (\#disp, addr), rS}       & \opcode{10}       & Immediate displacement                           \\
 		STOR                 & \texttt{STOR (rO, addr), rS[, shift]}  & \opcode{11}       & Register offset; optional source shift           \\
-		STOR                 & \texttt{STOR -(\#offset, addr), rS}    & \opcode{12}       & Immediate offset; pre-decrement                  \\
+		STOR                 & \texttt{STOR -(\#disp, addr), rS}      & \opcode{12}       & Immediate displacement; pre-decrement            \\
 		STOR                 & \texttt{STOR -(rO, addr), rS[, shift]} & \opcode{13}       & Register offset; optional shift; pre-decrement   \\
 		\bottomrule
 	\end{tabularx}
@@ -89,7 +89,7 @@ and the assembler rejects it (Appendix~\ref{appendix:undocumented}).
 		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \\
 		\midrule
 		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved (the program-counter advance is still checked for segment overflow; see Section~\ref{sec:segment-overflow-fault}).                                                                                                                                                                                                                                                                                               \\
-		Address calculation & Immediate-offset forms add the 16-bit signed displacement to the selected address register low word. Register-offset forms add the unshifted \texttt{rO} to the selected address register low word; \texttt{rO} is never shifted, even on \mnemonic{STOR}'s register-offset forms, which shift the value being stored instead. The selected address register high word supplies the segment and is unchanged.                                                                                                                             \\
+		Address calculation & Immediate-displacement forms add the 16-bit signed displacement to the selected address register low word. Register-offset forms add the unshifted \texttt{rO} to the selected address register low word; \texttt{rO} is never shifted, even on \mnemonic{STOR}'s register-offset forms, which shift the value being stored instead. The selected address register high word supplies the segment and is unchanged.                                                                                                                       \\
 		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                                                                                                                                \\
 		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the offset. The address register low word is decremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                                                                                                  \\
 		Status flags        & Memory instructions do not update status flags as a side effect. A \mnemonic{LOAD} whose destination is \reg{sr} writes the loaded value to the status register, which replaces the flags (see Section~\ref{sec:memory-status-flags}). Shifts used by memory instructions cannot update the status register.                                                                                                                                                                                                                              \\
@@ -159,7 +159,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{14}} &
 			\bitbox{4}{rD} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -183,7 +183,7 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{16}} &
 			\bitbox{4}{rD} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -225,10 +225,10 @@ See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions.
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LOAD rD, (#offset, addr)      ; rD = memory[addr + offset]
+LOAD rD, (#disp, addr)      ; rD = memory[addr + disp]
 LOAD rD, (addr)               ; equivalent to LOAD rD, (#0, addr)
 LOAD rD, (rO, addr)           ; rD = memory[addr + rO]
-LOAD rD, (#offset, addr)+     ; rD = memory[addr + offset]; addr += 1
+LOAD rD, (#disp, addr)+     ; rD = memory[addr + disp]; addr += 1
 LOAD rD, (addr)+              ; equivalent to LOAD rD, (#0, addr)+
 LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
 \end{lstlisting}
@@ -237,18 +237,18 @@ LOAD rD, (rO, addr)+          ; rD = memory[addr + rO]; addr += 1
 	(\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) raises a privilege-violation fault in protected mode. A \mnemonic{LOAD}
 	into \reg{pl} is a jump within the current segment: the loaded value replaces the advanced program counter, and an odd
 	value raises an alignment fault at the next fetch. A supervisor-mode \mnemonic{LOAD} into \reg{ph} changes the segment of
-	the next fetch. \texttt{addr} is the address-register pair that supplies the segment and base low word. Immediate-offset forms use a 16-bit signed
+	the next fetch. \texttt{addr} is the address-register pair that supplies the segment and base low word. Immediate-displacement forms use a 16-bit signed
 	displacement. Register-offset forms use \texttt{rO} as the displacement register, always unshifted; \mnemonic{LOAD}
 	does not accept a shift suffix.
 
 	\textbf{Operation:}
 	\begin{verbatim}
 if post_increment then
-    effective_address = addr + offset
+    effective_address = addr + disp
     destination = memory[effective_address]
     addr.low = addr.low + 1
 else
-    effective_address = addr + offset
+    effective_address = addr + disp
     destination = memory[effective_address]
 endif
 ; Flags are preserved
@@ -314,7 +314,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{10}} &
 			\bitbox{4}{rS} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -338,7 +338,7 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 			\bitheader{0-31} \\
 			\bitbox{6}{\opcode{12}} &
 			\bitbox{4}{rS} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{addr} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -382,10 +382,10 @@ LOAD r3, (r2, a)               ; r3 = memory[a + r2]
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-STOR (#offset, addr), rS      ; memory[addr + offset] = rS
+STOR (#disp, addr), rS      ; memory[addr + disp] = rS
 STOR (addr), rS               ; equivalent to STOR (#0, addr), rS
 STOR (rO, addr), rS           ; memory[addr + rO] = rS
-STOR -(#offset, addr), rS     ; addr -= 1; memory[addr + offset] = rS
+STOR -(#disp, addr), rS     ; addr -= 1; memory[addr + disp] = rS
 STOR -(addr), rS              ; equivalent to STOR -(#0, addr), rS
 STOR -(rO, addr), rS          ; addr -= 1; memory[addr + rO] = rS
 
@@ -397,7 +397,7 @@ STOR -(rO, addr), rS, shift          ; Decrement, shift rS, then store
 	\textbf{Operands:} \texttt{rS} is the source register. \mnemonic{STOR} only reads it, so it may name a privileged high
 	address register (\reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh}) in either mode without a fault. \texttt{addr} is the
 	address-register pair that supplies the segment and base low word.
-	Immediate-offset forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
+	Immediate-displacement forms use a 16-bit signed displacement. Register-offset forms use \texttt{rO} as the displacement
 	register and may apply a shift to the source value before storing it.
 
 	\textbf{Operation:}
@@ -408,7 +408,7 @@ if pre_decrement then
     memory[effective_address] = shift_if_encoded(source)
     addr.low = decremented_low
 else
-    effective_address = addr + offset
+    effective_address = addr + disp
     memory[effective_address] = shift_if_encoded(source)
 endif
 ; Source register and flags are preserved
@@ -534,8 +534,8 @@ following do \textbf{not} support a shift suffix:
 	\item Any \mnemonic{LOAD} form, register-offset included -- \texttt{LOAD r1, (r2, a)} -- No shift suffix exists
 	\item Loading immediate values: \texttt{MOVI r1, \#0x1234} -- No shift allowed
 	\item Copying registers: \texttt{MOVR r1, r2} -- No shift allowed
-	\item Immediate-offset memory load: \texttt{LOAD r1, (\#0, a)} -- No shift allowed
-	\item Immediate-offset memory store: \texttt{STOR (\#0, a), r1} -- No shift allowed
+	\item Immediate-displacement memory load: \texttt{LOAD r1, (\#0, a)} -- No shift allowed
+	\item Immediate-displacement memory store: \texttt{STOR (\#0, a), r1} -- No shift allowed
 \end{itemize}
 
 For any of these, load or store the unshifted value and use an ALU instruction or \mnemonic{SHFT} for the shift

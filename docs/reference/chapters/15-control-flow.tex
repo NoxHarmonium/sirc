@@ -29,31 +29,31 @@ Section~\ref{sec:segment-overflow-fault}), as described in Chapter~\ref{ch:readi
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                      & \textbf{Encoding}  & \textbf{Notes}                                                              \\
+		\textbf{Instruction} & \textbf{Syntax}                    & \textbf{Encoding}  & \textbf{Notes}                                                                    \\
 		\midrule
-		LDEA                 & \texttt{LDEA dest, (\#offset, src)}  & \opcode{18}        & Immediate-offset effective address                                          \\
-		LDEA                 & \texttt{LDEA dest, (rO, src)}        & \opcode{19}        & Register-offset effective address                                           \\
-		LDEA                 & \texttt{LDEA dest, -(\#offset, src)} & \opcode{1A}        & Pre-decrement source, immediate offset                                      \\
-		LDEA                 & \texttt{LDEA dest, -(rO, src)}       & \opcode{1B}        & Pre-decrement source, register offset                                       \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)}  & \opcode{1C}        & Immediate-offset effective address and link; \texttt{dest} excludes \reg{l} \\
-		LDEL                 & \texttt{LDEL dest, (rO, src)}        & \opcode{1D}        & Register-offset effective address and link; \texttt{dest} excludes \reg{l}  \\
-		LDEL                 & \texttt{LDEL dest, (\#offset, src)+} & \opcode{1E}        & Post-increment source, immediate offset; \texttt{dest} excludes \reg{l}     \\
-		LDEL                 & \texttt{LDEL dest, (rO, src)+}       & \opcode{1F}        & Post-increment source, register offset; \texttt{dest} excludes \reg{l}      \\
-		BRAN                 & \texttt{BRAN \#disp}                 & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}                                   \\
-		BRAN                 & \texttt{BRAN @label}                 & \texttt{LDEA} meta & PC-relative linker-computed displacement                                    \\
-		BRAN                 & \texttt{BRAN \$name}                 & \texttt{LDEA} meta & Displacement from an \texttt{.EQU} placeholder                              \\
-		BRSR                 & \texttt{BRSR \#disp}                 & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}                                   \\
-		BRSR                 & \texttt{BRSR @label}                 & \texttt{LDEL} meta & PC-relative linker-computed call                                            \\
-		BRSR                 & \texttt{BRSR \$name}                 & \texttt{LDEL} meta & Displacement from an \texttt{.EQU} placeholder                              \\
-		RETS                 & \texttt{RETS}                        & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, l)}                                      \\
-		LJMP                 & \texttt{LJMP src}                    & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}                                    \\
-		LJMP                 & \texttt{LJMP src, \#offset}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#offset, src)}                               \\
-		LJMP                 & \texttt{LJMP src, rO}                & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rO, src)}                                     \\
-		LJSR                 & \texttt{LJSR src}                    & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#0, src)}                                    \\
-		LJSR                 & \texttt{LJSR src, \#offset}          & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)}                               \\
-		LJSR                 & \texttt{LJSR src, rO}                & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)}                                     \\
-		LJSR                 & \texttt{LJSR (\#offset, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#offset, src)+}                              \\
-		LJSR                 & \texttt{LJSR (rO, src)+}             & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)+}                                    \\
+		LDEA                 & \texttt{LDEA dest, (\#disp, src)}  & \opcode{18}        & Immediate-displacement effective address                                          \\
+		LDEA                 & \texttt{LDEA dest, (rO, src)}      & \opcode{19}        & Register-offset effective address                                                 \\
+		LDEA                 & \texttt{LDEA dest, -(\#disp, src)} & \opcode{1A}        & Pre-decrement source, immediate displacement                                      \\
+		LDEA                 & \texttt{LDEA dest, -(rO, src)}     & \opcode{1B}        & Pre-decrement source, register offset                                             \\
+		LDEL                 & \texttt{LDEL dest, (\#disp, src)}  & \opcode{1C}        & Immediate-displacement effective address and link; \texttt{dest} excludes \reg{l} \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)}      & \opcode{1D}        & Register-offset effective address and link; \texttt{dest} excludes \reg{l}        \\
+		LDEL                 & \texttt{LDEL dest, (\#disp, src)+} & \opcode{1E}        & Post-increment source, immediate displacement; \texttt{dest} excludes \reg{l}     \\
+		LDEL                 & \texttt{LDEL dest, (rO, src)+}     & \opcode{1F}        & Post-increment source, register offset; \texttt{dest} excludes \reg{l}            \\
+		BRAN                 & \texttt{BRAN \#disp}               & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, p)}                                         \\
+		BRAN                 & \texttt{BRAN @label}               & \texttt{LDEA} meta & PC-relative linker-computed displacement                                          \\
+		BRAN                 & \texttt{BRAN \$name}               & \texttt{LDEA} meta & Displacement from an \texttt{.EQU} placeholder                                    \\
+		BRSR                 & \texttt{BRSR \#disp}               & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, p)}                                         \\
+		BRSR                 & \texttt{BRSR @label}               & \texttt{LDEL} meta & PC-relative linker-computed call                                                  \\
+		BRSR                 & \texttt{BRSR \$name}               & \texttt{LDEL} meta & Displacement from an \texttt{.EQU} placeholder                                    \\
+		RETS                 & \texttt{RETS}                      & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, l)}                                            \\
+		LJMP                 & \texttt{LJMP src}                  & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#0, src)}                                          \\
+		LJMP                 & \texttt{LJMP src, \#disp}          & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (\#disp, src)}                                       \\
+		LJMP                 & \texttt{LJMP src, rO}              & \texttt{LDEA} meta & Assembles to \texttt{LDEA p, (rO, src)}                                           \\
+		LJSR                 & \texttt{LJSR src}                  & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#0, src)}                                          \\
+		LJSR                 & \texttt{LJSR src, \#disp}          & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, src)}                                       \\
+		LJSR                 & \texttt{LJSR src, rO}              & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)}                                           \\
+		LJSR                 & \texttt{LJSR (\#disp, src)+}       & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (\#disp, src)+}                                      \\
+		LJSR                 & \texttt{LJSR (rO, src)+}           & \texttt{LDEL} meta & Assembles to \texttt{LDEL p, (rO, src)+}                                          \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal Control-Flow and Effective-Address Forms}
@@ -194,8 +194,8 @@ if condition:
 
 	Branches relative to the current program counter. \mnemonic{BRAN} is an assembler meta-instruction, not a distinct CPU
 	opcode. The displacement base is the branching instruction's own address, so \texttt{BRAN \#0} branches to itself and
-	\texttt{BRAN \#2} falls through to the next instruction. Non-PC-relative computed jumps use \mnemonic{LDEA p,
-		(\#offset, src)} or \mnemonic{LDEA p, (rO, src)}.
+	\texttt{BRAN \#2} falls through to the next instruction. Non-PC-relative computed jumps use \mnemonic{LDEA p, (\#disp,
+		src)} or \mnemonic{LDEA p, (rO, src)}.
 
 	\textbf{Flags:} Preserved.
 
@@ -387,7 +387,7 @@ if condition:
 			\bitbox{6}{\opcode{18}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{dest} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -413,7 +413,7 @@ if condition:
 			\bitbox{6}{\opcode{1A}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{dest} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -451,13 +451,13 @@ if condition:
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LDEA dest, (#offset, src)     ; dest = src + offset
+LDEA dest, (#disp, src)     ; dest = src + offset
 LDEA dest, (src)              ; equivalent to LDEA dest, (#0, src)
 LDEA dest, (rO, src)          ; dest = src + rO
-LDEA dest, -(#offset, src)    ; src -= 1; dest = src + offset
+LDEA dest, -(#disp, src)    ; src -= 1; dest = src + offset
 LDEA dest, -(src)             ; equivalent to LDEA dest, -(#0, src)
 LDEA dest, -(rO, src)         ; src -= 1; dest = src + rO
-LDEA|cond dest, (#offset, src)
+LDEA|cond dest, (#disp, src)
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{dest} and \texttt{src} are address-register pairs. Immediate forms use a 16-bit
@@ -520,7 +520,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 			\bitbox{6}{\opcode{1C}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{dest} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -546,7 +546,7 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 			\bitbox{6}{\opcode{1E}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{dest} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -584,13 +584,13 @@ LDEA a, -(#0, s)              ; s -= 1; a = s
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LDEL dest, (#offset, src)     ; dest = src + offset; l = next PC
+LDEL dest, (#disp, src)     ; dest = src + offset; l = next PC
 LDEL dest, (src)              ; equivalent to LDEL dest, (#0, src)
 LDEL dest, (rO, src)          ; dest = src + rO; l = next PC
-LDEL dest, (#offset, src)+    ; dest = src + offset; l = next PC; src += 1
+LDEL dest, (#disp, src)+    ; dest = src + offset; l = next PC; src += 1
 LDEL dest, (src)+             ; equivalent to LDEL dest, (#0, src)+
 LDEL dest, (rO, src)+         ; dest = src + rO; l = next PC; src += 1
-LDEL|cond dest, (#offset, src)
+LDEL|cond dest, (#disp, src)
 \end{lstlisting}
 
 	\textbf{Operands:} \texttt{dest} and \texttt{src} are address-register pairs. Immediate forms use a 16-bit
@@ -657,7 +657,7 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 			\bitbox{6}{\opcode{18}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{p} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -684,7 +684,7 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 		      meta-instruction. Bits 25--24 are reserved for future use and always written as zero.
 		\item \textbf{src (AF, bits 5--4):} source address-register pair; \texttt{0x0} = \reg{l}, \texttt{0x1} =
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p}.
-		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#offset} form only):} 16-bit signed displacement; fixed at
+		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#disp} form only):} 16-bit signed displacement; fixed at
 		      \texttt{0x0000} for plain \texttt{LJMP src}.
 		\item \textbf{rO (R3, bits 17--14, register form only):} a general-purpose register supplying the displacement.
 		\item \textbf{R2 and shift fields (bits 21--18 and 13--6, register form only):} reserved and written as zero; a
@@ -696,12 +696,12 @@ LDEL p, (#0, a)+              ; l = next PC; p = old a; a += 1
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LJMP src                      ; p = src
-LJMP src, #offset             ; p = src + offset
+LJMP src, #disp               ; p = src + disp
 LJMP src, rO                  ; p = src + rO
 LJMP|cond src                 ; Conditional long jump
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rO} operands select
+	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#disp} or \texttt{rO} operands select
 	immediate or register displacement forms.
 
 	\textbf{Operation:}
@@ -755,7 +755,7 @@ LJMP a, r1                     ; p = a + r1
 			\bitbox{6}{\opcode{1C}} &
 			\bitbox{2}{00} &
 			\bitbox{2}{p} &
-			\bitbox{16}{offset} &
+			\bitbox{16}{disp} &
 			\bitbox{2}{src} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
@@ -784,7 +784,7 @@ LJMP a, r1                     ; p = a + r1
 		      \reg{a}, \texttt{0x2} = \reg{s}, \texttt{0x3} = \reg{p} for non-post-increment forms. Post-increment forms
 		      accept only \texttt{0x1} = \reg{a} or \texttt{0x2} = \reg{s}; \reg{l} and \reg{p} are aliased
 		      address-register writes with architecturally undefined behavior and are rejected by the assembler.
-		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#offset} forms only):} 16-bit signed displacement; fixed at
+		\item \textbf{offset (Immediate Value, bits 21--6, \texttt{\#disp} forms only):} 16-bit signed displacement; fixed at
 		      \texttt{0x0000} for plain \texttt{LJSR src}.
 		\item \textbf{rO (R3, bits 17--14, register forms only):} a general-purpose register supplying the displacement.
 		\item \textbf{R2 and shift fields (bits 21--18 and 13--6, register forms only):} reserved and written as zero; a
@@ -796,15 +796,15 @@ LJMP a, r1                     ; p = a + r1
 	\textbf{Syntax:}
 	\begin{lstlisting}
 LJSR src                      ; p = src; l = next PC
-LJSR src, #offset             ; p = src + offset; l = next PC
+LJSR src, #disp               ; p = src + disp; l = next PC
 LJSR src, rO                  ; p = src + rO; l = next PC
-LJSR (#offset, src)+          ; p = src + offset; l = next PC; src += 1
+LJSR (#disp, src)+          ; p = src + offset; l = next PC; src += 1
 LJSR (src)+                   ; equivalent to LJSR (#0, src)+
 LJSR (rO, src)+               ; p = src + rO; l = next PC; src += 1
 LJSR|cond src                 ; Conditional long call
 \end{lstlisting}
 
-	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#offset} or \texttt{rO} operands select
+	\textbf{Operands:} \texttt{src} is an address-register pair. Optional \texttt{\#disp} or \texttt{rO} operands select
 	immediate or register displacement forms. Post-increment forms also update \texttt{src}.
 
 	\textbf{Operation:}

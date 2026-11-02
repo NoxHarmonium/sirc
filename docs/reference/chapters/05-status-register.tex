@@ -118,15 +118,15 @@ write to \reg{sr} leaves these bits unchanged: the write is silently ignored for
 These four bits individually control whether each of the four maskable hardware interrupt lines is enabled:
 
 \begin{itemize}
-	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (Level 1, lowest maskable priority)
-	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (Level 2)
-	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (Level 3)
-	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (Level 4, highest maskable priority)
+	\item \textbf{E1 (Bit 9):} Enable Hardware Interrupt Line 1 (exception level 2, lowest maskable priority)
+	\item \textbf{E2 (Bit 10):} Enable Hardware Interrupt Line 2 (exception level 3)
+	\item \textbf{E3 (Bit 11):} Enable Hardware Interrupt Line 3 (exception level 4)
+	\item \textbf{E4 (Bit 12):} Enable Hardware Interrupt Line 4 (exception level 5, highest maskable priority)
 \end{itemize}
 
-Hardware interrupt line n is dispatched at exception level n+1 (Chapter~\ref{ch:exceptions}); line 5 runs at level 6.
+Hardware interrupt line n is dispatched at exception level n+1 (Chapter~\ref{ch:exceptions}).
 
-\textbf{Note:} Hardware Interrupt Line 5 (Level 5) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
+\textbf{Note:} Hardware Interrupt Line 5 (exception level 6) is a Non-Maskable Interrupt (NMI) and is always enabled. It cannot
 be disabled via the status register.
 
 When a bit is set to 1, the corresponding hardware interrupt is enabled and can trigger an exception when requested.
@@ -140,7 +140,7 @@ When cleared to 0, interrupts on that line are disabled and are not serviced.
 	      (Section~\ref{sec:pending-hardware-interrupts}).
 	\item Hardware interrupt lines 1--4 are level-sensitive, not edge-triggered. If an interrupt request remains active, it is
 	      serviced again as soon as the current handler is finished.
-	\item Hardware interrupts can only interrupt execution if their priority level is higher than the currently executing
+	\item Hardware interrupts can only interrupt execution if their exception level is higher than the currently executing
 	      exception level
 	\item This prevents the same interrupt from re-triggering while its handler is executing
 	\item A device requests service by holding its line until its handler services it. A lower-priority request held during a

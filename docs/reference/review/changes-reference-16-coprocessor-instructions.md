@@ -23,3 +23,10 @@ Copy edit: hex literals wrapped in `\texttt{}` and en dashes in prose and tables
 - Should the DMA Operands sentences "the assembler rejects a literal outside that range" move to the assembly manual
   (STYLE.md Scope)?
 - `RSTO` stays `\texttt{}` pending the ruling on overbars for ARCH (F-con-32).
+
+## Round 2
+
+- F-con2-2: replaced the "last access performed" clause with the finding's wording (DMAR/DMAW advance takes the command's access type; DMAT advance takes the type in the list above).
+- F-con2-21: "hex digit" changed to "hexadecimal digit" (two places).
+- No decisions in phase3-decisions.md concern this chapter; no typewriter-font signal-name sentences found.
+- Open question: none.

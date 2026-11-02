@@ -6,9 +6,26 @@
 The timing diagrams below show cycle-level logical timing. Each labeled interval represents one CLKI cycle as observed
 between rising edges. Waveform rows show physical logic levels; for active-low signals, \texttt{L} means asserted and
 \texttt{H} means deasserted. Address, data, \texttt{BAT}, and phase rows are value bands rather than electrical
-setup/hold specifications. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data read, \texttt{DW}
-for data write, \texttt{EV} for exception vector fetch of vector $n$ at word addresses $2n$ and $2n+1$, \texttt{EA} for
-effective address, and \texttt{RV} for reset vector.
+setup/hold specifications. An empty band means that the row carries no defined value in that cycle.
+
+Phase bands name the activity of the cycle. \texttt{IF high} and \texttt{IF low} are the high-word and low-word
+instruction-fetch cycles, and \texttt{Decode}, \texttt{Execute}, \texttt{Memory}, and \texttt{Writeback} are the
+pipeline phases of the same names, and \texttt{EA} is the effective-address calculation cycle. \texttt{EV high} and
+\texttt{EV low} are the high-word and low-word cycles of an exception-vector fetch, and \texttt{RV high} and \texttt{RV
+	low} are those of the reset-vector fetch. \texttt{Mem} is the data-access cycle of a load or store, and \texttt{next}
+is the cycle that follows a bus transfer, in which the bus is idle. In a wait-state figure, \texttt{req} is the cycle
+in which the request is first presented, \texttt{wait} is a cycle in which no response is yet asserted, and
+\texttt{done} is the cycle in which the response completes the transfer. \texttt{Prev WB} is the writeback phase of the
+preceding instruction, and \texttt{Enter} is the first cycle of exception entry after the vector is fetched.
+\texttt{reset} is the cycle in which \activelow{RSTI} is first sampled asserted, and \texttt{hold} is a cycle of the
+reset-output hold. \texttt{BERR} and \texttt{BPER} label the abort cases.
+
+\texttt{BAT} bands name the bus-access type. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data
+read, \texttt{DW} for data write, \texttt{EV} for exception vector fetch of vector $n$ at word addresses $2n$ and
+$2n+1$, and \texttt{None} for no bus access. \texttt{active} is the type of the access in progress when the abort is
+signalled. Address bands show \texttt{PC} and \texttt{PC+1} for the fetch addresses, \texttt{EA} for the effective
+address, and \texttt{addr} for the address of the access in progress. Data bands show the \texttt{high} or \texttt{low}
+word of a two-word transfer, or \texttt{data} for a single-word transfer.
 
 \begin{figure}[H]
 	\centering

@@ -13,3 +13,7 @@ F-data-7, F-data-8, F-data-9, F-data-10, F-data-11, F-data-12, F-data-13, F-con-
 ## Open questions
 - The accepted F-data-10 text writes "bits 7-0" with a hyphen inside a listing comment (comment, so allowed by STYLE).
 - The line 5 NMI "Level 5" wording in the E1--E4 list uses interrupt-line levels, while the new sentence says line 5 runs at exception level 6. Author may want the list relabeled.
+
+## Round 2
+- Decision 5: E1--E4 list relabeled "Line n (exception level n+1)"; NMI line 5 labeled exception level 6; the now-redundant "line 5 runs at level 6" clause removed from the following sentence. "Priority level" in the interrupt-preemption bullet changed to "exception level".
+- No consistency-2 findings or other decisions apply. Open question from round 1 (list relabeling) is resolved.

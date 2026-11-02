@@ -13,3 +13,10 @@ F-sum-1, F-sum-2 (merged into F-arch-7; coprocessor 0 decision: 6 cycles, no dis
 - The 18-cycle RSET figure and "WAIT takes longer than 12" are taken from Appendix B; confirm they match after its edit.
 
 Also copy edited: "commonly-used" to "commonly used"; example list now has a full introducing sentence.
+
+## Round 2
+
+- F-con2-8: the +0F line now says coprocessor call is 0F and 3F only, and that 2F is undocumented.
+- F-con2-4: the "longer than 12 cycles" item now says "can take longer" and gives the reason for each of WAIT, DMA and maths operations.
+- No decisions in phase3-decisions.md concern this chapter, and it has no typewriter-font claims about signal names.
+- Open questions: none.

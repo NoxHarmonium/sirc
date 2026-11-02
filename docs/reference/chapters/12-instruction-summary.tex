@@ -122,7 +122,7 @@ Many ALU instructions have two variants:
 	\item \textbf{+\opcode{00} to +\opcode{06}}: Save result to destination register
 	\item \textbf{+\opcode{07}}: \mnemonic{MOVI}/\mnemonic{MOVR} (\opcode{27} is undocumented)
 	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only (update flags, discard result)
-	\item \textbf{+\opcode{0F}}: Coprocessor call (neither result nor flags are written)
+	\item \textbf{+\opcode{0F}}: Coprocessor call, \opcode{0F} and \opcode{3F} only (neither result nor flags are written; \opcode{2F} is undocumented)
 \end{itemize}
 
 The following pairs show a save instruction and its test-only counterpart:
@@ -192,7 +192,7 @@ cycles before the next instruction is fetched. Four cases differ:
 	\item A call whose condition is false skips its dispatch slot and takes 6 cycles.
 	\item A call naming coprocessor \texttt{0x0} has no dispatch slot and takes 6 cycles.
 	\item \mnemonic{RSET} has no dispatch slot, because its reset request replaces the slot, and takes 18 cycles.
-	\item \mnemonic{WAIT}, DMA transfers and maths-unit operations take longer than 12 cycles.
+	\item \mnemonic{WAIT}, DMA transfers and maths-unit operations can take longer than 12 cycles: a \mnemonic{WAIT} idles until woken, a DMA transfer of more than five accesses runs into further slots, and a maths operation may add implementation-defined cycles.
 \end{itemize}
 
 Appendix~\ref{appendix:timing} gives every case, and Chapter~\ref{ch:coprocessor} gives the coprocessor timing.

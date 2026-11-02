@@ -9,3 +9,9 @@ F-con-8, F-hw-20 (IRQ row held `L L L L L`; sentence added saying why), F-hw-21 
 
 ## Open questions
 - Value-band abbreviations used in figures (Mem, next, req, wait, done, Enter, Prev WB, active, addr, data) are not all defined in the opening paragraph, as STYLE.md section 6 requires. Defining them is a decision on wording, so left alone.
+
+## Round 2
+
+- Orchestrator fix: the opening paragraph now defines every value-band abbreviation used in the figures (phase, BAT, address, data and case bands, including Mem, next, req, wait, done, Enter, Prev WB, active, addr, data, reset, hold, EA, RV, EV).
+- F-con2 reset-hold finding: the chapter text already gives "six CLKI cycles in this case" and n + 5; no change.
+- Open question: the definitions of Enter, active, Mem and next are inferred from the figures; the author should confirm them.

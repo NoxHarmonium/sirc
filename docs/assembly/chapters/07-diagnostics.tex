@@ -45,10 +45,31 @@ Where the instruction has a correct alternative, the diagnostic names it. The as
 \end{table}
 
 The \texttt{ADDR} diagnostic is wrapped in the text \texttt{Parsing Failure: Base \{ location: ..., kind:
-	External("...") \}}; the table shows the inner message. The aliased-write diagnostic ends with a different phrase for
-each form. It is reported for a pre-decrement or post-increment form whose other register is a half of the updated
-address register, and for an \mnemonic{LDEL} or \mnemonic{LJSR} that would write \reg{l} twice. The Memory Access
-Instructions and Control Flow Instructions chapters of the \archmanual{} give the exact list.
+	External("...") \}}; the table shows the inner message.
+
+\subsection*{Aliased-write diagnostics}
+
+The aliased-write diagnostic ends with a different phrase for each form. The assembler rejects these forms:
+
+\begin{itemize}
+	\item \mnemonic{LDEA} pre-decrement with the destination equal to the source.
+	\item \mnemonic{LDEL} with destination \reg{l}, in any form.
+	\item \mnemonic{LDEL} post-increment with source \reg{l}, or with the destination equal to the source.
+	\item \mnemonic{LJSR} post-increment from \reg{l} or \reg{p}.
+	\item \mnemonic{LOAD} post-increment whose destination is a half of the auto-updated address-register pair.
+	\item \mnemonic{STOR} pre-decrement whose source is a half of the auto-updated address-register pair.
+\end{itemize}
+
+The assembler is to reject any auto-update of \reg{p} (\texttt{(p)+} or \texttt{-(p)} in any instruction), because the
+update would compete with the program-counter advance. It does not yet do so, except where the form is also listed
+above: for example, \texttt{LOAD r1, (\#0, p)+} assembles today. Do not write such a form. Its result is
+architecturally undefined.
+
+The \mnemonic{DMAR} and \mnemonic{DMAW} count operand must be a literal in the range \texttt{\#-7} to \texttt{\#7}. The
+assembler rejects a literal outside that range with a message that names the permitted range and the value given.
+
+The Memory Access Instructions, Control Flow Instructions and Coprocessor Instructions chapters of the \archmanual{}
+explain why each form is undefined.
 
 When an instruction is given operands it does not accept, the diagnostic names the instruction and either shows the
 operands it parsed or gives an example of an accepted form. When an operand cannot be parsed at all, the diagnostic

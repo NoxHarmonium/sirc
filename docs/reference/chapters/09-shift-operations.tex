@@ -52,8 +52,8 @@ register named by the Reg field (first source, since the short-immediate format 
 register-displacement \mnemonic{STOR} forms it is applied to the source register before its value is written to memory.
 \mnemonic{LOAD} has no shift: its shift fields are reserved (see Chapter~\ref{ch:memory-instructions}).
 
-If using the three-operand form of an instruction, the shifted operand is the second operand. If using the two-operand
-form, the second operand is inferred to be the same as the destination.
+In the three-operand form of an instruction, the shifted operand is the first source operand. In the two-operand form,
+the first source operand is inferred to be the same as the destination.
 
 See this table for some examples of which operand is shifted:
 

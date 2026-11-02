@@ -18,3 +18,9 @@
 - The value of A0--A23 while the bus is idle is written as "not yet specified". The author's decision fixed only BRW and BAT.
 - The DMA section states that the DMA coprocessor is optional and that BAT 101 and 110 then never appear. This comes from the Coprocessor Instructions chapter; F-hw-18(f) left it as a question.
 - F-hw-18 asked whether "burst" is the right name, since each access is a single-word request. The BAT table in Ch.3 keeps "Read Burst" and "Write Burst", and the new section follows it.
+
+## Round 2
+- Applied F-con2-14: the HALT row of the input sampling table now says HALT is sampled at every phase 0, with the fix text from the finding.
+- Applied decision 3: "not yet specified" for idle A0--A23 replaced by "architecturally undefined".
+- No `\texttt` signal names remain; no prose claimed typewriter font.
+- Open question: the earlier open question about the idle A0--A23 value is now resolved by decision 3.

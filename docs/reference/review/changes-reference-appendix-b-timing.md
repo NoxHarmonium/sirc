@@ -13,3 +13,9 @@ F-tim-1, F-tim-2, F-tim-3, F-tim-5, F-tim-6, F-tim-7, F-tim-8, F-tim-9, F-tim-11
 ## Open questions
 - `\hwmanual{}` is not defined in `docs/reference/main.tex` (F-con-38 asks for it). The build fails until that macro is added.
 - The table cells for COPI/COPR, EXCP, RSET and WAIT are now long and wrap in the 6.5 cm column. Consider widening the second column.
+
+## Round 2
+- F-con2-5: the $4w$ wait-state cost now covers an accepted EXCP or RSET.
+- F-con2-6: added the three exceptions to the exception-vector fetch fault rule (double fault, reset, repeated RSTO hold).
+- No decision in phase3-decisions.md concerns this chapter; no typewriter-font signal names found.
+- Open questions: none.

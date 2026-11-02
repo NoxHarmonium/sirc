@@ -30,3 +30,9 @@ Violation states phases 2 and 3).
 - HALT latency "at most 6 cycles" and "bus idle" come from the author's decision text; the Reset State halt row now says
   the CPU halts "at the first phase 0 after reset, before the reset-vector fetch", which is in tension with the
   Reset Output Hold section's statement that RSTO is held for a fixed countdown first. Confirm the intended order.
+
+## Round 2
+
+Applied: F-con2-1 and decision 9 (trap "held by the exception unit, not in the CSR", in the traced-EXCP paragraph and the Reset State table); F-con2-3 (phase 5 for the address-register-pair write-back appended to the privilege-check phase sentence); decision 2 (Halt Request section now says the six-cycle RSTO hold completes before the CPU halts at the first phase 0, before the reset-vector fetch). No typewriter-font signal names remained.
+
+Open questions: none.

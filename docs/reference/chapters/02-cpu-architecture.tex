@@ -238,6 +238,6 @@ instructions without additional clock cycles.
 
 The SIRC-1 CPU communicates with memory and peripherals over an external bus, and receives interrupt and reset requests
 from external hardware. How those signals are carried (the package, pinout, electrical characteristics and bus timing)
-is implementation-specific and is described in the \hwmanual{}. When the reset request (\texttt{RSTI}) is raised, the
-CPU abandons the current instruction or bus wait and restarts the phase sequence at phase 0 with the reset-vector fetch
-(Section~\ref{sec:reset-vector-fetch}).
+is implementation-specific and is described in the \hwmanual{}. When the reset request (\activelow{RSTI}) is raised,
+the CPU abandons the current instruction or bus wait, holds the reset output (Section~\ref{sec:reset-output-hold}), and
+then restarts the phase sequence at phase 0 with the reset-vector fetch (Section~\ref{sec:reset-vector-fetch}).

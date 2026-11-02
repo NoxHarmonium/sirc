@@ -118,7 +118,7 @@ once a fault condition is raised, the fault is dispatched at the next instructio
 exception level. The one wait is for an instruction trace fault, which is taken after a coprocessor call's dispatch
 slot and command complete (Section~\ref{sec:interrupt-latency}). Two faults are conditional on whether they are raised
 at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires \texttt{SR.T} or the force-trace
-request (\texttt{TRCE}) and is never raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
+request (\activelow{TRCE}) and is never raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
 
 \subsection{Fault Categories}
 \label{sec:fault-categories}
@@ -180,7 +180,7 @@ The exception dispatch faults are: \textit{Level Five Hardware Exception Conflic
 \subsection{Bus Fault}
 
 \textit{(Retryable)} -- Raised when the external memory system reports a bus cycle as failed by signaling a bus error
-(\texttt{BERR}).
+(\activelow{BERR}).
 
 This happens, for example, if an unmapped address is presented by the CPU and another device detects this and raises an
 error. The instruction is canceled before it takes effect, and the link register stores the address of the
@@ -200,7 +200,7 @@ case. See Section~\ref{sec:dma-fault-retry} for what a handler can safely do abo
 
 \subsection{Bus Protection Fault}
 
-\textit{(Retryable)} -- Raised when the external memory system reports a bus protection error (\texttt{BPER}) in response to a bus
+\textit{(Retryable)} -- Raised when the external memory system reports a bus protection error (\activelow{BPER}) in response to a bus
 cycle.
 
 This indicates that the requested address and device are valid, but the operation is disallowed. Examples include
@@ -293,7 +293,8 @@ while not in supervisor mode:
 
 Figure~\ref{fig:privilege-checks} (Chapter~\ref{ch:registers}) shows where each of these checks is made. The check is
 made at phase 2 for a write to a privileged register field and for a supervisor-only coprocessor operation, and at
-phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}.
+phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}, and at phase 5 for an address-register-pair write-back that
+would change a high address-register word.
 
 The illegal instruction never takes effect: it is canceled before it writes anything, and the link register stores its
 own address so \mnemonic{RETE} returns to it directly. This matters because a supervisor-mode handler needs to be able
@@ -305,31 +306,31 @@ of that is possible if the illegal instruction had already been allowed to run.
 \label{sec:instruction-trace-fault}
 
 \textit{(Post-instruction)} -- Raised after every instruction completes
-when \texttt{SR.T} is set, or when the force-trace request (\texttt{TRCE}) is active at the instruction boundary
+when \texttt{SR.T} is set, or when the force-trace request (\activelow{TRCE}) is active at the instruction boundary
 (see the Force Trace Mode Input in the \hwmanual{}).
 
 Used for single-step debugging. The fault fires after the instruction commits; for a coprocessor call, that includes
 the call's dispatch slot (Section~\ref{sec:interrupt-latency}). \mnemonic{RETE} returns to the instruction
 \textit{following} the traced one. The T bit is cleared on entry to the fault handler (as with all exceptions), and no
-trace fault is raised at exception level 7, so the handler itself is not traced even while \texttt{TRCE} is asserted.
-\mnemonic{RETE} restores the saved SR, which re-enables tracing unless the handler explicitly clears T from the saved
-status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each instruction,
-before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next instruction
-boundary; exception-unit dispatches are never traced.
+trace fault is raised at exception level 7, so the handler itself is not traced even while \activelow{TRCE} is
+asserted. \mnemonic{RETE} restores the saved SR, which re-enables tracing unless the handler explicitly clears T from
+the saved status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is sampled once at the start of each
+instruction, before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next
+instruction boundary; exception-unit dispatches are never traced.
 
 A traced \mnemonic{EXCP} is the one exception to the rule that a call's command completes before its trace fault. The
 trace fault is taken first, with the link register storing the address after the \mnemonic{EXCP}, and the exception
 unit records the trap as a pending software exception instead of entering it. When the trace handler returns with
 \mnemonic{RETE} to exception level 0, the recorded trap is entered at that instruction boundary as if the
 \mnemonic{EXCP} had just executed: link register 0 stores the address after the \mnemonic{EXCP} and the status register
-restored by the trace handler. The recorded trap is held in the CSR, so it is entered before any pending hardware
-interrupt. A debugger single-stepping through a system call therefore stops once before the trap handler runs (with the
-instruction after the \mnemonic{EXCP} as the return address), and again after that instruction has executed once the
-handler has returned.
+restored by the trace handler. The recorded trap is held by the exception unit, not in the CSR, so it is entered before
+any pending hardware interrupt. A debugger single-stepping through a system call therefore stops once before the trap
+handler runs (with the instruction after the \mnemonic{EXCP} as the return address), and again after that instruction
+has executed once the handler has returned.
 
 Trace faults are not raised while a fault handler runs (exception level 7), whether \texttt{SR.T} is set or
-\texttt{TRCE} is active, because each one would otherwise escalate to a double fault. A handler at a lower level is
-traced if it sets \texttt{SR.T} itself or if \texttt{TRCE} is active.
+\activelow{TRCE} is active, because each one would otherwise escalate to a double fault. A handler at a lower level is
+traced if it sets \texttt{SR.T} itself or if \activelow{TRCE} is active.
 
 \subsection{Level Five Hardware Exception Conflict}
 \label{sec:level-five-conflict-fault}
@@ -776,7 +777,7 @@ The status register saved in the link register is the value from before entry, w
 \texttt{SR.EA} unmodified. \mnemonic{RETE} restores it, so a handler can inspect or edit the saved value with
 \mnemonic{ETFR} and \mnemonic{ETTR} before returning. \texttt{SR.T} is cleared on entry to every handler, including
 fault handlers, so software tracing does not continue into a handler; if it was set before the exception, tracing
-resumes after \mnemonic{RETE}. A handler that sets \texttt{SR.T} itself, or runs while \texttt{TRCE} is active, is
+resumes after \mnemonic{RETE}. A handler that sets \texttt{SR.T} itself, or runs while \activelow{TRCE} is active, is
 traced, except that no trace fault is raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
 
 \paragraph{Vector fetch failure.} Except for the reset vector (Section~\ref{sec:reset-vector-fetch}), if a bus or protection fault occurs during an
@@ -850,7 +851,7 @@ features like system calls, context switching, and debuggers.
 \section{Halt Request}
 \label{sec:halt-request}
 
-The halt request (\texttt{HALT}) lets external hardware stop the CPU, for example so that a debugger can examine the
+The halt request (\activelow{HALT}) lets external hardware stop the CPU, for example so that a debugger can examine the
 system. It is sampled at every phase 0. If it is active there, the CPU stops at that phase 0 with the bus idle. This
 can pause the CPU between an instruction and its coprocessor dispatch slot, between DMA slots, or before a fault,
 interrupt, or reset dispatch. Halt latency is at most 6 cycles. While halted the CPU issues no bus cycles and executes
@@ -859,13 +860,13 @@ and nothing else: no instruction enters or leaves it, and it is not saved by exc
 
 While halted, interrupt lines are still sampled under the normal rules, and a Level 5 edge is latched
 (Section~\ref{sec:level-5-nmi-behavior}). Nothing is dispatched until the CPU resumes: requests latched during the halt
-are taken under the normal rules once the CPU resumes. A reset ends a halt at once; if \texttt{HALT} is still active
-after the reset, the CPU halts again at the first phase 0, before the reset-vector fetch. The \hwmanual{} describes the
-pin that carries the request.
+are taken under the normal rules once the CPU resumes. A reset ends a halt at once; if \activelow{HALT} is still active
+after the reset, the CPU completes the six-cycle \activelow{RSTO} hold and then halts at the first phase 0, before the
+reset-vector fetch. The \hwmanual{} describes the pin that carries the request.
 
 \section{Reset and Startup}
 
-Reset can be initiated externally by raising the reset request (\texttt{RSTI}), or in software by executing the
+Reset can be initiated externally by raising the reset request (\activelow{RSTI}), or in software by executing the
 privileged \mnemonic{RSET} meta-instruction. Both paths converge on the same reset-vector sequence: the CPU holds reset
 output active, then the exception unit fetches vector \texttt{0x00} and loads the fetched target address into the
 program counter.
@@ -890,7 +891,7 @@ program counter.
 		Exception link registers               & Not cleared by reset. Software must treat their contents as architecturally undefined.                                                                                                                                                                                                  \\
 		Pending hardware exceptions and faults & Cleared when reset is requested. Interrupt lines, including Level 5, are not sampled until the
 		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules. A Level 5 line held asserted across reset does not fire afterwards: reset does not clear the edge detector's last sampled level, so there is no transition, and the line must be released and reasserted. \\
-		Pending software exception             & Cleared when reset is requested. This includes the trap recorded by a traced \mnemonic{EXCP}, which is held in the CSR.                                                                                                                                                                 \\
+		Pending software exception             & Cleared when reset is requested. This includes the trap recorded by a traced \mnemonic{EXCP}, which is held by the exception unit.                                                                                                                                                      \\
 		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                                                                                                                                                                                                        \\
 		\bottomrule
 	\end{tabularx}
@@ -909,19 +910,19 @@ admit a request during the hold.
 \subsection{Reset Output Hold}
 \label{sec:reset-output-hold}
 
-While reset is active, the CPU asserts the reset output (\texttt{RSTO}) and performs no bus cycles. This gives external
-devices that share the reset signal time to complete their own reset sequence before the CPU resumes.
+While reset is active, the CPU asserts the reset output (\activelow{RSTO}) and performs no bus cycles. This gives
+external devices that share the reset signal time to complete their own reset sequence before the CPU resumes.
 
-For hardware reset, raising \texttt{RSTI} immediately aborts any current instruction, exception handler, exception
-dispatch, or pending bus wait, then asserts \texttt{RSTO}. If \texttt{RSTI} remains active, \texttt{RSTO} remains
-asserted and the CPU does not advance. After \texttt{RSTI} is withdrawn, the reset hold completes before the CPU
-resumes. The reset assertion cycle counts as the first reset-output cycle; after release, five additional countdown
+For hardware reset, raising \activelow{RSTI} immediately aborts any current instruction, exception handler, exception
+dispatch, or pending bus wait, then asserts \activelow{RSTO}. If \activelow{RSTI} remains active, \activelow{RSTO}
+remains asserted and the CPU does not advance. After \activelow{RSTI} is withdrawn, the reset hold completes before the
+CPU resumes. The reset assertion cycle counts as the first reset-output cycle; after release, five additional countdown
 cycles occur before the exception unit starts the reset-vector fetch.
 
 For software reset, \mnemonic{RSET} completes as a normal coprocessor meta-instruction. When its write-back phase
-commits the reset command, the CPU requests reset and \texttt{RSTO} is asserted for six cycles before the reset-vector
-fetch begins. A reset caused by a failed double-fault vector fetch behaves as a software reset: a six-cycle
-\texttt{RSTO} hold, then the reset-vector fetch.
+commits the reset command, the CPU requests reset and \activelow{RSTO} is asserted for six cycles before the
+reset-vector fetch begins. A reset caused by a failed double-fault vector fetch behaves as a software reset: a
+six-cycle \activelow{RSTO} hold, then the reset-vector fetch.
 
 \subsection{Reset Vector Fetch}
 \label{sec:reset-vector-fetch}
@@ -941,8 +942,8 @@ Section~\ref{sec:reset-output-hold}.
 
 If a bus or protection fault occurs during the reset-vector fetch, the reset target is not loaded and no fault is
 raised: there is no valid state to save and no handler can be assumed to be reachable. The CPU re-enters reset instead,
-asserting \texttt{RSTO} for a further six-cycle hold before it tries the reset-vector fetch again, and keeps doing so
-until the fetch succeeds.
+asserting \activelow{RSTO} for a further six-cycle hold before it tries the reset-vector fetch again, and keeps doing
+so until the fetch succeeds.
 
 \section{Exception Coprocessor Instructions}
 \label{sec:exception-coprocessor-instructions}

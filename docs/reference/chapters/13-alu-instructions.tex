@@ -311,7 +311,8 @@ SHFT rD, shift                ; rD = shifted rD; flags from shift
 	\begin{verbatim}
 shifted = shift(rD)
 rD = shifted OR 0
-SR = flags_from_shift_result
+SR = flags updated per the status-update suffix:
+     [S] shifter result (default for SHFT), [A] ALU result, [N] no update
 \end{verbatim}
 
 	\textbf{Description:}
@@ -477,7 +478,7 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 	\textbf{Notes:}
 	\begin{itemize}
 		\item For multi-precision arithmetic, use \mnemonic{ADC} to propagate carry
-		\item Adding zero (\texttt{ADDI r1, \#0}) sets N and Z from \texttt{r1} and clears C and V without changing it; use
+		\item Adding zero (\texttt{ADDI r1, \#0}) sets N and Z from \reg{r1} and clears C and V without changing it; use
 		      \mnemonic{MOVR} to copy a register
 		\item Shift operations allow efficient constant multiplication
 	\end{itemize}
@@ -1429,7 +1430,7 @@ SR.V = signed_overflow
 
 	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
 	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
-	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \texttt{r1} holds $-5$. In short
+	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \reg{r1} holds $-5$. In short
 	immediate format with shift, the source register is shifted before the immediate is added.
 
 	\textbf{Flags:} N Z C V

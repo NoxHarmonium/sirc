@@ -14,7 +14,7 @@ on any of them will not assemble.
 		File inclusion                                     & Assemble each file separately and link the objects together        \\
 		Expressions and arithmetic on labels               & Compute the value by hand and write a number, or use \texttt{.EQU} \\
 		Conditional assembly                               & Maintain separate source files                                     \\
-		Named sections or segments                         & Place code and data with \texttt{.ORG}                             \\
+		Named sections or segments                         & Place code and data with \texttt{.ORG} (Section~\ref{sec:org})     \\
 		Local labels                                       & Give every label a unique name                                     \\
 		Listing and map files                              & Use the debug map written by the linker                            \\
 		Multi-instruction pseudoinstructions               & Write the instructions explicitly                                  \\
@@ -36,8 +36,8 @@ Four behaviors are worth knowing about:
 	\item The assembler masks the link-register index of \mnemonic{ETFR} and \mnemonic{ETTR} to four bits without a diagnostic.
 	      The architecture leaves values above \imm{7} architecturally undefined (see the Coprocessor Instructions chapter of the
 	      \archmanual{}).
-	\item The \mnemonic{COPI} instruction with \texttt{\#0x14FF} is a simulator-only test hook. On a conforming CPU it raises an
-	      invalid-opcode fault.
+	\item The \mnemonic{COPI} instruction with \texttt{\#0x14FF} is a simulator-only test hook, described in
+	      Chapter~\ref{ch:toolchain}. On a conforming CPU it raises an invalid-opcode fault.
 \end{itemize}
 
 This chapter will shrink as the toolchain grows. A feature listed here is not an oversight in the manual.

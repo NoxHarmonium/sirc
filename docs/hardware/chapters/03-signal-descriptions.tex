@@ -111,9 +111,9 @@ If all bus devices are fast and can complete reads/writes in a single cycle, thi
 
 When asserted, the bus is reporting that the requested read/write was unsuccessful.
 
-This causes the CPU to abort the I/O operation and raise a bus fault exception, except during an exception-vector
-fetch. The response to a failed vector fetch is described in the Exception and Interrupt Handling chapter of the
-\archmanual{}: a failed fault-vector fetch raises a double fault, and a failed reset-vector fetch re-enters reset.
+This causes the CPU to abort the I/O operation and raise a bus fault exception. A failed fault-vector fetch raises a
+double fault instead, a failed double-fault vector fetch resets the CPU, and a failed reset-vector fetch re-enters
+reset (see the Exception and Interrupt Handling chapter of the \archmanual{}).
 
 For example, a bus error might be raised by I/O to an address that is not connected to any device.
 
@@ -127,10 +127,9 @@ For example, a bus error might be raised by I/O to an address that is not connec
 When asserted, the bus is reporting that the requested read/write was to a valid address/device, but that the I/O is
 disallowed given the current state of the CPU or bus.
 
-This causes the CPU to abort the I/O operation and raise a bus protection fault exception, except during an
-exception-vector fetch. The response to a failed vector fetch is described in the Exception and Interrupt Handling
-chapter of the \archmanual{}: a failed fault-vector fetch raises a double fault, and a failed reset-vector fetch
-re-enters reset.
+This causes the CPU to abort the I/O operation and raise a bus protection fault exception. A failed fault-vector fetch
+raises a double fault instead, a failed double-fault vector fetch resets the CPU, and a failed reset-vector fetch
+re-enters reset (see the Exception and Interrupt Handling chapter of the \archmanual{}).
 
 It behaves much like the \activelow{BERR} pin but raises a different fault so that programs can handle it differently.
 
@@ -205,8 +204,8 @@ When asserted, the CPU stops executing instructions.
 can occur between an instruction and its coprocessor dispatch slot, between DMA slots, or before a fault, interrupt, or
 reset dispatch. Halt latency is at most six cycles. The CPU performs no bus cycles while halted. The interrupt lines
 are still sampled and a Level 5 edge is still latched, but nothing is dispatched until the CPU resumes. The CPU resumes
-exactly where it stopped when the input is deasserted. A reset ends the halt, but if \activelow{HALT} is still asserted after
-reset, the CPU halts at the first phase 0, before the reset-vector fetch.
+exactly where it stopped when the input is deasserted. A reset ends the halt. The six-cycle \activelow{RSTO} hold runs first, and if \activelow{HALT} is
+still asserted after it, the CPU halts at the first phase 0, before the reset-vector fetch.
 
 This pin is useful for hardware-driven debugging, as the CPU can be halted and the state of the system examined.
 
@@ -244,7 +243,7 @@ through the normal interrupt rules.
 
 See the Exception and Interrupt Handling chapter of the \archmanual{} for more details.
 
-\section{Non-Maskable Interrupt Inputs (NMI)}
+\section{Non-Maskable Interrupt Input (NMI)}
 
 \begin{itemize}
 	\item \textbf{Direction:} Input
@@ -281,10 +280,11 @@ When asserted, the CPU immediately aborts the current instruction or bus wait, s
 
 The \activelow{RSTO} pin is also asserted.
 
-The reset-output hold is six CLKI cycles. The cycle in which \activelow{RSTI} is first sampled asserted counts as the
-first, and \activelow{RSTO} stays asserted for five further cycles after \activelow{RSTI} is sampled deasserted, so an
-\activelow{RSTI} assertion of $n$ cycles gives $n + 5$ cycles of \activelow{RSTO}. A software reset and a reset-vector
-fetch retry each give a six-cycle hold.
+The reset-output hold lasts for as long as \activelow{RSTI} is asserted plus five cycles. The cycle in which
+\activelow{RSTI} is first sampled asserted counts as the first, and \activelow{RSTO} stays asserted for five further
+cycles after \activelow{RSTI} is sampled deasserted, so an \activelow{RSTI} assertion of $n$ cycles gives $n + 5$
+cycles of \activelow{RSTO} (six for a one-cycle assertion). A software reset and a reset-vector fetch retry each give a
+six-cycle hold.
 
 When this pin is deasserted, the CPU completes the reset-output hold, stops asserting the \activelow{RSTO} pin, and the
 exception unit fetches the reset vector.

@@ -80,8 +80,8 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
 	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
 	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field. Bits 25--24 are reserved for these opcodes: always write them as zero. The CPU's behavior with a non-zero value
-	      is architecturally undefined, and a future revision may give them a meaning.
+	      field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is architecturally
+	      undefined.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
@@ -109,7 +109,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 	\item Condition code examples: \texttt{0x0} (0000) = Always, \texttt{0x1} (0001) = Equal (==), \texttt{0xB} (1011) = Signed
 	      >=
 	\item AF field for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
-	      10=update from shift
+	      10=update from shift, 11=reserved (N, Z, C and V architecturally undefined; the result is still written)
 	\item Negative immediates use two's complement (\imm{-2} = \texttt{0xFFFE})
 \end{itemize}
 
@@ -168,7 +168,8 @@ This format is supported only for ALU instructions; it cannot be used with branc
 \begin{itemize}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
-	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7)
+	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7), 11=reserved (N, Z, C and V
+	      architecturally undefined; the result is still written)
 	\item Condition code examples: \texttt{0x0} = Always, \texttt{0x2} = Not Equal (!=), \texttt{0x5} = Negative Set (NS, N = 1)
 	\item SHFT is a meta-instruction using ORRI opcode \opcode{25} with AF=10
 \end{itemize}
@@ -202,8 +203,8 @@ The register format allows operations on up to three registers with optional shi
 	\item[Register 1 (bits 25--22)] 4-bit destination register. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
 	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
 	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field. Bits 25--24 are reserved for these opcodes: always write them as zero. The CPU's behavior with a non-zero value
-	      is architecturally undefined, and a future revision may give them a meaning.
+	      field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is architecturally
+	      undefined.
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
@@ -259,7 +260,7 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 	      \texttt{ANDR|CS} rows)
 	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
 	\item AF for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
-	      10=update from shift
+	      10=update from shift, 11=reserved (N, Z, C and V architecturally undefined; the result is still written)
 	\item Condition code examples: \texttt{0x0} = Always, \texttt{0xD} = Signed > (>>), \texttt{0x3} = Carry Set (CS)
 \end{itemize}
 

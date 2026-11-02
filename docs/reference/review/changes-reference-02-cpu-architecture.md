@@ -14,3 +14,9 @@
 
 ## Open questions
 - Should the active-low overbar rule extend to ARCH (`\texttt{RSTI}` remains as is)?
+
+## Round 2
+
+- Applied F-con2-7: the reset sentence now says the CPU holds the reset output (Section~\ref{sec:reset-output-hold}) before restarting at phase 0 with the reset-vector fetch.
+- Decision 9 and the typewriter-font check: no matching text in this chapter (signal names already use `\activelow{}`).
+- Open questions: none.

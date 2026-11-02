@@ -5,7 +5,7 @@ The SIRC manual set has three parts:
 | Manual | Scope | Location |
 | --- | --- | --- |
 | SIRC Architecture Reference Manual | ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state | `../reference` |
-| SIRC Assembly Programmer's Manual | Complete assembly syntax, directives, macros, pseudoinstructions | this directory |
+| SIRC Assembly Programmer's Manual | Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage | this directory |
 | SIRC Hardware Reference Manual | Pinout, bus interface, timing, electrical characteristics | `../hardware` |
 
 This manual describes the assembly language and the toolchain (`assembler`, `linker`, `sirc_vm`) as they exist in this

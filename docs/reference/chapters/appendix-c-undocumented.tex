@@ -4,9 +4,9 @@
 \section{Overview}
 
 The SIRCIS instruction set includes two undocumented instruction opcodes, \opcode{27} and \opcode{2F}. They have no
-public assembly syntax and are reserved for expansion in future CPU revisions. Their behavior is architecturally
-undefined: an implementation decodes them without raising an invalid-opcode fault, but what they do is not part of the
-architectural contract and may change in any later revision. Software must not use them.
+public assembly syntax and may be assigned in a future CPU revision. Their behavior is architecturally undefined: an
+implementation decodes them without raising an invalid-opcode fault, but what they do is not part of the architectural
+contract and may change in any later revision. Software must not use them.
 
 Undefined and undocumented encodings remain bound by the privilege rules. In protected mode they cannot change the
 privileged byte of the status register, a high word of an address register, or the state of the exception unit, and
@@ -68,7 +68,7 @@ accidentally depend on undefined write-back ordering.
 
 \subsection{Implementation Behavior}
 
-An implementation -- whether an emulator or a hardware implementation -- decodes undocumented instructions normally
+An implementation -- whether a simulator or a hardware implementation -- decodes undocumented instructions normally
 rather than rejecting them. Their exact behavior depends on implementation details and is not part of the architectural
 contract. It is not required to be preserved in future CPU revisions.
 
@@ -77,7 +77,7 @@ contract. It is not required to be preserved in future CPU revisions.
 These instructions were left undocumented for two reasons:
 
 \begin{enumerate}
-	\item \textbf{Opcode space reservation}: the opcodes may be used for future features.
+	\item \textbf{Opcode space for expansion}: the opcodes may be used for future features.
 	\item \textbf{Implementation flexibility}: the opcodes allow hardware optimizations.
 \end{enumerate}
 
@@ -105,8 +105,8 @@ These instructions were left undocumented for two reasons:
 \subsection{For Hardware Implementers}
 
 \begin{itemize}
-	\item Document any implementation-specific behavior.
-	\item Consider reserving them for future standardization.
+	\item Do not promise any behavior for these opcodes; it is architecturally undefined.
+	\item Consider leaving them unassigned for future standardization.
 \end{itemize}
 
 \section{Future Standardization}
@@ -119,7 +119,7 @@ must not depend on either.
 The SIRCIS instruction set has limited expansion space:
 
 \begin{itemize}
-	\item Two undocumented opcodes, \opcode{27} and \opcode{2F}, reserved for future revisions
+	\item Two undocumented opcodes, \opcode{27} and \opcode{2F}, which may be assigned in a future revision
 	\item The reserved shift type (111) could enable additional shift modes.
 	\item The reserved status-update source encoding (AF = 11) could select a new flag-update source. Until then, an ALU
 	      instruction with AF = 11 completes and writes its result, but N, Z, C, and V are architecturally undefined (see

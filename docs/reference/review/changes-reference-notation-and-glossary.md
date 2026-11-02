@@ -15,3 +15,7 @@ F-sum-5, F-sum-6, F-sum-7, F-con-27, F-con-18, F-con-38, F-asm-5 (reference side
 ## Open questions
 - Should `\activelow{}` extend to the ARCH signal names (Signals, Requests and Pins, and other ARCH chapters)? The chapter currently says they are in typewriter font.
 - The `.EQU` entry says a constant is "usable anywhere a immediate operand is accepted". The toolchain rejects constants in shift counts, EXCP and ETFR/ETTR (F-asm-9, simulator status). Left unchanged.
+
+## Round 2
+
+Applied F-con2-9, F-con2-10 (entry shortened, per-object rule and pointer to the Assembly manual added), F-con2-11, and the signal-name sentence (now overbar, not typewriter). No open questions.

@@ -12,3 +12,9 @@ F-hw-1 (F-con-3 merged), F-hw-2, F-hw-4 (SYNC decision), F-hw-6, F-hw-7 (decisio
 ## Open questions
 - Does "reset is requested until the reset-vector fetch completes" (F-hw-9) need a matching statement of what HALT does in that window?
 - Should the BAS section state the F-hw-19 idle-bus values (A0--A23 driven, BRW high, BAT 000)? Left to Ch.4.
+
+## Round 2
+
+Applied: F-con2-15 (BERR and BPER: only fault-, double-fault- and reset-vector fetch failures differ; interrupt and trap vector fetches raise the bus or protection fault), F-con2-16 (RSTO hold wording, "six for a one-cycle assertion"), F-con2-17 (NMI heading singular), decision 2 (HALT after reset: RSTO hold runs first, then halt at first phase 0). Decision 1 overbars already present; no typewriter-font claims found.
+
+Open questions: none.

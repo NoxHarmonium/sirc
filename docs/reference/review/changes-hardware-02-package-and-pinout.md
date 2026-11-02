@@ -11,3 +11,9 @@
 
 ## Open questions
 - Should the pinout figure's pin labels also take overbars? STYLE.md lists prose, tables and timing diagrams only.
+
+## Round 2
+
+- Applied decision 1 (STYLE.md active-low rule): the TikZ pinout figure labels for the 13 active-low pins (BAS, BACK, BERR, BPER, HALT, TRCE, IRQ1--IRQ4, NMI, RSTI, RSTO) now use `\activelow{}`, matching the pin table. No other round-2 findings or decisions concern this chapter.
+- Built with `make all` and checked the rendered figure (page 13 at 80 dpi): overbars render and labels fit.
+- Open questions: none.

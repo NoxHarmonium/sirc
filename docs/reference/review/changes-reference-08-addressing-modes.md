@@ -14,3 +14,8 @@
 ## Open questions
 - STYLE.md reserves "displacement" for addressing-mode values, but this chapter uses "offset" throughout (tables, generation formulas). Not changed; a manual-wide decision is needed.
 - F-mem-4 adds the auto-update wrap check to the Ch. 14 and 15 fault text; the Indirect Immediate box here says the fault fires "only if the low-word addition wraps". It may need the same clause for post-increment and pre-decrement.
+
+## Round 2
+- F-con2-18 / decision 6: "offset" replaced by "displacement" in Tables 8.1, 8.2 and 8.3 (including the `#offset` placeholder, now `#disp`), the generation formulas (Displacement), field-encoding text, and prose. "Offset" remains only in "fixed offset from base" (structure offset).
+- Orchestrator fix: the Indirect Immediate box now states that for post-increment and pre-decrement forms the auto-update and the effective address are checked separately, and a wrap of either raises the Segment Overflow Fault.
+- Open question: the register-displacement placeholder `rO` (from "offset register") is unchanged; rename it manual-wide if wanted.

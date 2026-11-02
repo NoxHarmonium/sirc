@@ -18,8 +18,8 @@ accepts onto one of the seven modes.
 		Immediate               & Operand is a constant value encoded in the instruction               \\
 		Register Direct         & Operand is the contents of a specified register                      \\
 		Address Register Direct & Operand names an address-register pair directly, with no indirection \\
-		Indirect Immediate      & Memory address = address register + immediate offset                 \\
-		Indirect Register       & Memory address = address register + register offset                  \\
+		Indirect Immediate      & Memory address = address register + immediate displacement           \\
+		Indirect Register       & Memory address = address register + register displacement            \\
 		Post-Increment          & Indirect register, then increment address register                   \\
 		Pre-Decrement           & Decrement address register, then use as indirect                     \\
 		\bottomrule
@@ -62,12 +62,12 @@ accepts onto one of the seven modes.
 		\textbf{Mode}           & \textbf{Syntax}                                                             & \textbf{Effective value or address}                                                                                  & \textbf{Memory access}                  & \textbf{Legal families}                         \\
 		\midrule
 		Immediate               & \texttt{\#imm16}, or \texttt{\#imm8, shift} (short-immediate width variant) & 16-bit encoded value; the 8-bit short-immediate form is zero-extended, and its shift applies to the register operand & None                                    & ALU, MOVI, COPI, branch meta-instructions       \\
-		Register Direct         & \texttt{rN}                                                                 & 16-bit register value                                                                                                & None                                    & ALU, MOVR, COPR, register-offset forms          \\
+		Register Direct         & \texttt{rN}                                                                 & 16-bit register value                                                                                                & None                                    & ALU, MOVR, COPR, register-displacement forms    \\
 		Address Register Direct & \texttt{addr}                                                               & \texttt{addr.high : addr.low}, used directly                                                                         & None                                    & LJMP/LJSR src, LDEA/LDEL dest                   \\
-		Indirect Immediate      & \texttt{(\#offset, addr)}, \texttt{(addr)}                                  & \texttt{addr.high : (addr.low + offset)}                                                                             & LOAD reads; STOR writes; LDEA/LDEL none & Memory, LDEA, LDEL                              \\
+		Indirect Immediate      & \texttt{(\#disp, addr)}, \texttt{(addr)}                                    & \texttt{addr.high : (addr.low + disp)}                                                                               & LOAD reads; STOR writes; LDEA/LDEL none & Memory, LDEA, LDEL                              \\
 		Indirect Register       & \texttt{(rO, addr)}                                                         & \texttt{addr.high : (addr.low + rO)}                                                                                 & LOAD reads; STOR writes; LDEA/LDEL none & Memory, LDEA, LDEL                              \\
-		Post-Increment          & \texttt{(\#offset, addr)+}, \texttt{(addr)+}, \texttt{(rO, addr)+}          & Address is calculated from original \texttt{addr}; \texttt{addr.low += 1} after access                               & LOAD reads; LDEL none                   & LOAD, LDEL, LJSR (assembles to LDEL)            \\
-		Pre-Decrement           & \texttt{-(\#offset, addr)}, \texttt{-(addr)}, \texttt{-(rO, addr)}          & \texttt{addr.low -= 1}; address then uses decremented \texttt{addr.low + offset}                                     & STOR writes; LDEA none                  & STOR, LDEA (and LDEA-derived meta-instructions) \\
+		Post-Increment          & \texttt{(\#disp, addr)+}, \texttt{(addr)+}, \texttt{(rO, addr)+}            & Address is calculated from original \texttt{addr}; \texttt{addr.low += 1} after access                               & LOAD reads; LDEL none                   & LOAD, LDEL, LJSR (assembles to LDEL)            \\
+		Pre-Decrement           & \texttt{-(\#disp, addr)}, \texttt{-(addr)}, \texttt{-(rO, addr)}            & \texttt{addr.low -= 1}; address then uses decremented \texttt{addr.low + disp}                                       & STOR writes; LDEA none                  & STOR, LDEA (and LDEA-derived meta-instructions) \\
 		\bottomrule
 	\end{tabularx}
 	\caption{Addressing Mode Side Effects and Legal Instruction Families}
@@ -91,11 +91,11 @@ question being asked.
 		ALU result instructions        & \texttt{OPI rD, \#imm16}; \texttt{OPI rD, \#imm8, shift}; \texttt{OPR rD, rS1, rS2[, shift]}; register shorthand \texttt{OPR rD, rS2[, shift]} (encoded with R2 = rD, so the shift applies to rD). & No memory operands. Full 16-bit immediate forms do not encode shifts.                                                                \\
 		ALU test instructions          & \texttt{CMNI/CNCI/CMPI/CPCI/TSAI/TSOI/TSXI rS, \#imm16}; \texttt{CMNI/CNCI/CMPI/CPCI/TSAI/TSOI/TSXI rS, \#imm8, shift}; \texttt{CMNR/CNCR/CMPR/CPCR/TSAR/TSOR/TSXR rS1, rS2[, shift]}.             & No destination write-back. No memory operands.                                                                                       \\
 		ALU move instructions          & \texttt{MOVI rD, \#imm16}; \texttt{MOVR rD, rS}.                                                                                                                                                   & No public short-immediate \mnemonic{MOVI} syntax. Direct register-copy forms do not accept shift suffixes.                           \\
-		LOAD memory                    & \texttt{LOAD rD, (\#offset, addr)}; \texttt{LOAD rD, (rO, addr)}; \texttt{LOAD rD, (\#offset, addr)+}; \texttt{LOAD rD, (rO, addr)+}.                                                              & No pre-decrement LOAD form. No shift suffix on any \mnemonic{LOAD} form.                                                             \\
-		STOR memory                    & \texttt{STOR (\#offset, addr), rS}; \texttt{STOR (rO, addr), rS[, shift]}; \texttt{STOR -(\#offset, addr), rS}; \texttt{STOR -(rO, addr), rS[, shift]}.                                            & No post-increment STOR form. Shift suffix is only available on register-displacement \mnemonic{STOR} forms.                          \\
-		LDEA                           & \texttt{LDEA dest, (\#offset, src)}; \texttt{LDEA dest, (rO, src)}; \texttt{LDEA dest, -(\#offset, src)}; \texttt{LDEA dest, -(rO, src)}.                                                          & No post-increment LDEA form. No shift suffixes.                                                                                      \\
-		LDEL                           & \texttt{LDEL dest, (\#offset, src)}; \texttt{LDEL dest, (rO, src)}; \texttt{LDEL dest, (\#offset, src)+}; \texttt{LDEL dest, (rO, src)+}.                                                          & No pre-decrement LDEL form. No shift suffixes.                                                                                       \\
-		Control-flow meta-instructions & \texttt{BRAN/BRSR \#disp}; \texttt{BRAN/BRSR @label}; \texttt{RETS}; \texttt{LJMP src[, \#offset|rO]}; \texttt{LJSR src[, \#offset|rO]}; \texttt{LJSR (\#offset, src)+}; \texttt{LJSR (rO, src)+}. & \texttt{LJMP (src)} and \texttt{LJSR (src)} are not public syntax; use \texttt{LJMP src} or \texttt{LJSR src} for zero displacement. \\
+		LOAD memory                    & \texttt{LOAD rD, (\#disp, addr)}; \texttt{LOAD rD, (rO, addr)}; \texttt{LOAD rD, (\#disp, addr)+}; \texttt{LOAD rD, (rO, addr)+}.                                                                  & No pre-decrement LOAD form. No shift suffix on any \mnemonic{LOAD} form.                                                             \\
+		STOR memory                    & \texttt{STOR (\#disp, addr), rS}; \texttt{STOR (rO, addr), rS[, shift]}; \texttt{STOR -(\#disp, addr), rS}; \texttt{STOR -(rO, addr), rS[, shift]}.                                                & No post-increment STOR form. Shift suffix is only available on register-displacement \mnemonic{STOR} forms.                          \\
+		LDEA                           & \texttt{LDEA dest, (\#disp, src)}; \texttt{LDEA dest, (rO, src)}; \texttt{LDEA dest, -(\#disp, src)}; \texttt{LDEA dest, -(rO, src)}.                                                              & No post-increment LDEA form. No shift suffixes.                                                                                      \\
+		LDEL                           & \texttt{LDEL dest, (\#disp, src)}; \texttt{LDEL dest, (rO, src)}; \texttt{LDEL dest, (\#disp, src)+}; \texttt{LDEL dest, (rO, src)+}.                                                              & No pre-decrement LDEL form. No shift suffixes.                                                                                       \\
+		Control-flow meta-instructions & \texttt{BRAN/BRSR \#disp}; \texttt{BRAN/BRSR @label}; \texttt{RETS}; \texttt{LJMP src[, \#disp|rO]}; \texttt{LJSR src[, \#disp|rO]}; \texttt{LJSR (\#disp, src)+}; \texttt{LJSR (rO, src)+}.       & \texttt{LJMP (src)} and \texttt{LJSR (src)} are not public syntax; use \texttt{LJMP src} or \texttt{LJSR src} for zero displacement. \\
 		Coprocessor                    & \texttt{COPI \#imm16}; \texttt{COPR rS}; standard coprocessor meta-instructions as documented in Chapter~\ref{ch:coprocessor}.                                                                     & No hidden destination register syntax, no memory operands, no shifts, and no status-update override suffixes.                        \\
 		\bottomrule
 	\end{tabularx}
@@ -233,12 +233,12 @@ LJMP a                ; p = a (source named directly)
 \begin{addrmodebox}{Indirect Immediate Addressing}
 	\textbf{Generation:}
 	\begin{equation*}
-		\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{Offset})
+		\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{Displacement})
 	\end{equation*}
 	The address register can be \reg{l} (link), \reg{a} (address), \reg{s} (stack), or \reg{p} (program counter).
-	Offset is a signed two's-complement value. When \texttt{SR.A} (Trap on Address Overflow) is set, the Segment
-	Overflow Fault (Chapter~\ref{ch:exceptions}) fires only if the low-word addition wraps; a negative offset that
-	keeps the sum within the low word's range does not fault.
+	Displacement is a signed two's-complement value. When \texttt{SR.A} (Trap on Address Overflow) is set, the Segment
+	Overflow Fault (Chapter~\ref{ch:exceptions}) fires only if the low-word addition wraps; a negative displacement that
+	keeps the sum within the low word's range does not fault. For the post-increment and pre-decrement forms, the address-register auto-update and the effective address are checked separately, and a wrap of either raises the Segment Overflow Fault.
 
 	\textbf{Assembler Syntax:}
 	\begin{lstlisting}
@@ -248,7 +248,7 @@ LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 	\end{lstlisting}
 
 	\textbf{Field Encoding:} Immediate format, an even opcode in \opcode{10}--\opcode{1F}; base address-register pair in
-	AF, bits 5--4; 16-bit signed immediate offset in bits 21--6.
+	AF, bits 5--4; 16-bit signed immediate displacement in bits 21--6.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
@@ -261,7 +261,7 @@ LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 	\begin{equation*}
 		\text{EA} = \text{AddressRegister.high} : (\text{AddressRegister.low} + \text{IndexRegister})
 	\end{equation*}
-	Identical to Indirect Immediate Addressing except the offset is taken from a register at runtime instead of
+	Identical to Indirect Immediate Addressing except the displacement is taken from a register at runtime instead of
 	being encoded as an immediate value.
 
 	\textbf{Assembler Syntax:}
@@ -276,13 +276,13 @@ STOR (r4, s), r3      ; Store to address (s + r4)
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
-	\textbf{Usage:} Array indexing with a variable index; table lookups; dynamic offset calculations.
+	\textbf{Usage:} Array indexing with a variable index; table lookups; dynamic address calculations.
 \end{addrmodebox}
 
 \begin{addrmodebox}{Post-Increment Addressing}
 	\textbf{Generation:}
 	\begin{enumerate}
-		\item Compute EA = AddressRegister.high : (AddressRegister.low + Offset)
+		\item Compute EA = AddressRegister.high : (AddressRegister.low + Displacement)
 		\item Perform the memory operation (load)
 		\item AddressRegister.low = AddressRegister.low + 1
 	\end{enumerate}
@@ -295,7 +295,7 @@ LOAD r1, (#2, s)+     ; Load from (s + 2), then s = s + 1
 	\end{lstlisting}
 
 	\textbf{Field Encoding:} Selected by the opcode itself, not a separate operand field: opcode bit 1 = 1
-	selects auto-update, and bit 0 selects an immediate (\opcode{16}) or register (\opcode{17}) offset.
+	selects auto-update, and bit 0 selects an immediate (\opcode{16}) or register (\opcode{17}) displacement.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 
@@ -306,7 +306,7 @@ LOAD r1, (#2, s)+     ; Load from (s + 2), then s = s + 1
 	\textbf{Generation:}
 	\begin{enumerate}
 		\item AddressRegister.low = AddressRegister.low - 1
-		\item Compute EA = AddressRegister.high : (AddressRegister.low + Offset)
+		\item Compute EA = AddressRegister.high : (AddressRegister.low + Displacement)
 		\item Perform the memory operation (store)
 	\end{enumerate}
 	The complement of post-increment; useful for stack push operations.
@@ -318,7 +318,7 @@ STOR -(#2, s), r3     ; s = s - 1, then store to (s + 2)
 	\end{lstlisting}
 
 	\textbf{Field Encoding:} Selected by the opcode itself, not a separate operand field: opcode bit 1 = 1
-	selects auto-update, and bit 0 selects an immediate (\opcode{12}) or register (\opcode{13}) offset.
+	selects auto-update, and bit 0 selects an immediate (\opcode{12}) or register (\opcode{13}) displacement.
 
 	\textbf{Instruction Word Count:} 2 words (fixed).
 

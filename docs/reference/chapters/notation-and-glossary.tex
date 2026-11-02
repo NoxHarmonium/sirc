@@ -118,11 +118,10 @@ on) used in instruction entries.
 \subsection*{Directives and Symbol References}
 
 \begin{description}
-	\item[\texttt{.ORG addr}] Sets the word address at which subsequent instructions and data are assembled. The address is
-	      a bare hexadecimal (\texttt{0x}-prefixed) or decimal number, without the \texttt{\#} used elsewhere for immediate
-	      operands. It must be even (2-word aligned), since instructions and data directives each occupy a 2-word slot.
-	      \texttt{.ORG} can appear more than once in a file, to place code or data at specific fixed addresses such as the
-	      reset and exception vector table described in Chapter~\ref{ch:exceptions}.
+	\item[\texttt{.ORG addr}] Sets the word address at which subsequent instructions and data are assembled. The operand syntax
+	      and alignment rules are defined in the Directives and Symbols chapter of the \asmmanual{}. In a program linked from
+	      several objects the address is relative to the start of its own object, so the reset and exception vector table
+	      (Chapter~\ref{ch:exceptions}) must be in the first object.
 	\item[\texttt{.DB \#value}, \texttt{.DW \#value}, \texttt{.DQ \#value}] Reserve one program slot and initialize it with a
 	      numeric value, or, written as \texttt{.DB @label}, \texttt{.DW @label} or \texttt{.DQ @label}, with a label's full
 	      24-bit address. \emph{Despite their names, all three directives occupy exactly one 4-byte (2-word) program slot,
@@ -131,7 +130,8 @@ on) used in instruction entries.
 	      \texttt{AB CD 12 34} (value fills the slot). A label reference always fills the whole slot, so any of the three
 	      directives can hold an address anywhere in the 24-bit address space.
 	\item[\texttt{.EQU \$NAME \#value}] Defines a named constant, usable anywhere a \texttt{\#immediate} operand is accepted
-	      by writing \texttt{\$NAME} in its place.
+	      by writing \texttt{\$NAME} in its place. Unlike a label, a constant must be defined before its first use in the file; it
+	      cannot be the address of \texttt{.ORG}.
 	\item[\texttt{@label}] References a label declared anywhere in the program, before or after the reference; references are
 	      resolved at link time. In \mnemonic{BRAN} or \mnemonic{BRSR} it resolves to a 16-bit signed word displacement from the
 	      instruction to the label. In a \mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA}, \mnemonic{LDEL},
@@ -203,9 +203,9 @@ everyday English sense:
 This manual describes the architecture, not a particular chip. It uses three terms for the CPU's external interface:
 
 \begin{description}
-	\item[Signal] A logical input or output of the CPU, such as \texttt{BERR}, \texttt{RSTI}, \texttt{HALT} or \texttt{TRCE}. The
-	      manual names a signal only where the architectural behavior is defined by it. Signal names are written in typewriter
-	      font.
+	\item[Signal] A logical input or output of the CPU, such as \activelow{BERR}, \activelow{RSTI}, \activelow{HALT} or
+	      \activelow{TRCE}. The manual names a signal only where the architectural behavior is defined by it. Active-low signal
+	      names are written with an overbar.
 	\item[Request / event] What a signal means architecturally: an \textit{interrupt request}, a \textit{reset request}, a bus
 	      error. A request is raised, recognized and withdrawn; the manual describes what the CPU does when that happens, and
 	      when requests are recognized, but not how the request physically reaches the CPU.
@@ -244,7 +244,7 @@ encoding, and privilege rules.
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
 	      privilege violation) or a debug event (instruction trace). Faults cannot be masked, though two of them are conditional
 	      on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
-	      \texttt{SR.T} or the force-trace request (\texttt{TRCE}) and is never raised at exception level 7.
+	      \texttt{SR.T} or the force-trace request (\activelow{TRCE}) and is never raised at exception level 7.
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
 	\item[Hardware exception] An exception signaled by an external interrupt. Also informally called an \textit{interrupt} at the
 	      hardware level (interrupt requests, interrupt priority, interrupt enable) -- the two terms are synonymous.
@@ -254,7 +254,8 @@ encoding, and privilege rules.
 	\item[Protected mode] The non-privileged CPU mode (\texttt{SR.P} set). Most privileged operations fault if attempted in
 	      protected mode; see Chapter~\ref{ch:status-register}. The inverse of supervisor mode.
 	\item[Retryable fault] A fault whose triggering operation does not take effect, so that returning with \mnemonic{RETE} safely
-	      retries it. See Chapter~\ref{ch:exceptions} for the full retryable set.
+	      retries it, except after a DMA burst (Section~\ref{sec:dma-fault-retry}). See Chapter~\ref{ch:exceptions} for the full
+	      retryable set.
 	\item[Segment] The 64K-word range of addresses that share one high-word value (bits 7--0 of an address register pair's high
 	      word). Displacement arithmetic wraps within a segment; see Chapter~\ref{ch:data-representation}.
 	\item[Software exception] An exception raised deliberately by executing \mnemonic{EXCP}. Also called a \textit{trap}.
