@@ -260,7 +260,7 @@ fn resolve_tile_line(
 
 #[must_use]
 pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
-    let mut window: Box<dyn Renderer> = if cfg!(test) {
+    let window: Box<dyn Renderer> = if cfg!(test) {
         Box::new(MockWindow {})
     } else {
         Box::new(MiniFbWindow {
@@ -274,6 +274,16 @@ pub fn new_video_device(master_clock_freq: usize) -> VideoDevice {
         })
     };
 
+    new_video_device_with_renderer(master_clock_freq, window)
+}
+
+/// Construct the complete video device with an injected renderer, allowing
+/// cycle-accurate VM integration tests to run without opening an OS window.
+#[must_use]
+pub fn new_video_device_with_renderer(
+    master_clock_freq: usize,
+    mut window: Box<dyn Renderer>,
+) -> VideoDevice {
     // For reference - the SNES NTSC scanline timing is:
     // 12090 ns of preamble
     // 47616 ns of visible

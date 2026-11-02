@@ -9,3 +9,4 @@ mod numeric_test;
 mod relocation_test;
 pub mod support;
 pub mod test_variants_test;
+mod video_example_test;
