@@ -362,10 +362,10 @@ ADDR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2
 
 	\textbf{Description:}
 
-	Adds two values and stores the result in the destination register. In short immediate format with shift, the
-	destination register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
-	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
-	the operation).
+	Adds two values and stores the result in the destination register. In short immediate format with shift, the first
+	source register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs (carry out
+	of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for the
+	operation).
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -487,7 +487,7 @@ ADCR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2 + C
 
 	\textbf{Description:}
 
-	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
+	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the first source
 	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
 	arithmetic to propagate the carry from lower-order additions to higher-order additions.
 
@@ -604,8 +604,8 @@ SUBR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2
 
 	\textbf{Description:}
 
-	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
+	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the first
+	source register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
 	operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Operation:}
@@ -724,7 +724,7 @@ SBCR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2 - C
 
 	\textbf{Description:}
 
-	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
+	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the first source
 	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
 	lower-order to higher-order subtractions.
 
@@ -842,7 +842,7 @@ ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
 	\textbf{Description:}
 
 	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
-	short immediate format with shift, the destination register is shifted before ANDing with the immediate. Commonly used
+	short immediate format with shift, the first source register is shifted before ANDing with the immediate. Commonly used
 	for bit masking and clearing specific bits.
 
 	\textbf{Operation:}
@@ -964,7 +964,7 @@ ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
 	\textbf{Description:}
 
 	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
-	immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly used for
+	immediate format with shift, the first source register is shifted before ORing with the immediate. Commonly used for
 	setting specific bits.
 
 	\textbf{Operation:}
@@ -1089,7 +1089,7 @@ XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
 	\textbf{Description:}
 
 	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
-	are different. In short immediate format with shift, the destination register is shifted before XORing with the
+	are different. In short immediate format with shift, the first source register is shifted before XORing with the
 	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
 
 	\textbf{Operation:}
@@ -1335,7 +1335,7 @@ CMNR rS1, rS2, shift           ; Flags from shift(rS1) + rS2
 	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
 	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
 	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \reg{r1} holds $-5$. In short
-	immediate format with shift, the source register is shifted before the immediate is added.
+	immediate format with shift, the first source register is shifted before the immediate is added.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1468,7 +1468,7 @@ CNCR rS1, rS2, shift           ; Flags from shift(rS1) + rS2 + C
 	Adds two values plus the carry flag but discards the result, only updating the status flags. It is the flag-only
 	counterpart of \mnemonic{ADC} and continues a \mnemonic{CMN} across multiple words: \mnemonic{CMN} on the low words
 	followed by \mnemonic{CNC} on the high words leaves C, V and N describing the whole multi-word sum. In short immediate
-	format with shift, the source register is shifted before the immediate is added.
+	format with shift, the first source register is shifted before the immediate is added.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1596,7 +1596,7 @@ CMPR rS1, rS2, shift           ; Compare shift(rS1) with rS2
 	\textbf{Description:}
 
 	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
-	source register is shifted before comparing with the immediate. This is the primary instruction for implementing
+	first source register is shifted before comparing with the immediate. This is the primary instruction for implementing
 	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
 	the operands.
 
@@ -1736,7 +1736,7 @@ CPCR rS1, rS2, shift           ; Flags from shift(rS1) - rS2 - C
 	Subtracts the second operand and the borrow from the first operand but discards the result, only updating the status
 	flags. It is the flag-only counterpart of \mnemonic{SBC} and continues a \mnemonic{CMP} across multiple words:
 	\mnemonic{CMP} on the low words followed by \mnemonic{CPC} on the high words compares the whole multi-word values. In
-	short immediate format with shift, the source register is shifted before the immediate is subtracted.
+	short immediate format with shift, the first source register is shifted before the immediate is subtracted.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1863,9 +1863,9 @@ TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
 
 	\textbf{Description:}
 
-	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying the
-	register. The zero flag indicates whether any tested bits were set.
+	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying
+	the register. The zero flag indicates whether any tested bits were set.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -1997,9 +1997,9 @@ TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
 
 	\textbf{Description:}
 
-	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands is zero,
-	so a single \mnemonic{TSOR} tests whether two registers are both zero.
+	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands
+	is zero, so a single \mnemonic{TSOR} tests whether two registers are both zero.
 
 	\textbf{Operation:}
 	\begin{verbatim}
@@ -2123,9 +2123,9 @@ TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
 
 	\textbf{Description:}
 
-	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to compare
-	values for equality. Z=1 indicates the values are identical.
+	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to
+	compare values for equality. Z=1 indicates the values are identical.
 
 	\textbf{Operation:}
 	\begin{verbatim}
