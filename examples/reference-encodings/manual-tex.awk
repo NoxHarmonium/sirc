@@ -95,12 +95,14 @@ function open_table(section, title) {
 		emit("\\toprule")
 		emit("\\textbf{Instruction} & \\textbf{Opcode} & \\textbf{Reg} & \\textbf{Immediate} & \\textbf{AF} & \\textbf{Cond} & \\textbf{Hex} \\\\")
 	} else if (section == "short-immediate") {
-		emit("\\tiny")
+		emit("\\footnotesize")
+		emit("\\setlength{\\tabcolsep}{2.5pt}")
 		emit("\\begin{tabular}{lccccccccc}")
 		emit("\\toprule")
 		emit("\\textbf{Instruction} & \\textbf{Op} & \\textbf{Reg} & \\textbf{Imm} & \\textbf{SO} & \\textbf{ST} & \\textbf{SA} & \\textbf{AF} & \\textbf{Cond} & \\textbf{Hex} \\\\")
 	} else if (section == "register") {
-		emit("\\tiny")
+		emit("\\footnotesize")
+		emit("\\setlength{\\tabcolsep}{2.5pt}")
 		emit("\\begin{tabular}{lcccccccccc}")
 		emit("\\toprule")
 		emit("\\textbf{Instruction} & \\textbf{Op} & \\textbf{R1} & \\textbf{R2} & \\textbf{R3} & \\textbf{SO} & \\textbf{ST} & \\textbf{SA} & \\textbf{AF} & \\textbf{Cond} & \\textbf{Hex} \\\\")

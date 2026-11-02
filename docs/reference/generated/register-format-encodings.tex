@@ -1,6 +1,7 @@
 \begin{table}[H]
 	\centering
-	\tiny
+	\footnotesize
+	\setlength{\tabcolsep}{2.5pt}
 	\begin{tabular}{lcccccccccc}
 		\toprule
 		\textbf{Instruction}                & \textbf{Op} & \textbf{R1} & \textbf{R2} & \textbf{R3} & \textbf{SO} & \textbf{ST} & \textbf{SA} & \textbf{AF} & \textbf{Cond} & \textbf{Hex}        \\
@@ -46,6 +47,12 @@
 		\midrule
 		\texttt{ANDR|CS r5, r6, r7, LSL r1} & 0x34        & 0x4         & 0x5         & 0x6         & 1           & 001         & 0x0         & 01          & 0x3           & \texttt{0xD115A413} \\
 		                                    & (110100)    & (0100)      & (0101)      & (0110)      & (1)         & (001)       & (0000)      & (01)        & (0011)        &                     \\
+		\midrule
+		\texttt{ADDR[N] r1, r2, r3}         & 0x30        & 0x0         & 0x1         & 0x2         & 0           & 000         & 0x0         & 00          & 0x0           & \texttt{0xC0048000} \\
+		                                    & (110000)    & (0000)      & (0001)      & (0010)      & (0)         & (000)       & (0000)      & (00)        & (0000)        &                     \\
+		\midrule
+		\texttt{SUBR[S] r1, r2, r3, ASR r4} & 0x32        & 0x0         & 0x1         & 0x2         & 1           & 100         & 0x3         & 10          & 0x0           & \texttt{0xC804B0E0} \\
+		                                    & (110010)    & (0000)      & (0001)      & (0010)      & (1)         & (100)       & (0011)      & (10)        & (0000)        &                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Register Format Encoding Examples}

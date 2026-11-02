@@ -39,6 +39,12 @@ ADDI|== r5, #42
 ; @manual-example SUBI|>= r6, #10
 SUBI|>= r6, #10
 
+; @manual-example ADDI[N] r1, #100
+ADDI[N] r1, #100
+
+; @manual-example CMPI[A] r2, #0x8000
+CMPI[A] r2, #0x8000
+
 ; @manual-section short-immediate Short Immediate Format Encoding Examples
 ; @manual-example ADDI r1, #2, LSL #3
 ADDI r1, #2, LSL #3
@@ -60,6 +66,12 @@ CMPI|NS r1, #8, RTL r3
 
 ; @manual-example SHFT r3, RTR #5
 SHFT r3, RTR #5
+
+; @manual-example ADDI[N] r1, #2, LSL #3
+ADDI[N] r1, #2, LSL #3
+
+; @manual-example ORRI[S] r2, #1, LSL #10
+ORRI[S] r2, #1, LSL #10
 
 ; @manual-section register Register Format Encoding Examples
 ; @manual-example ADDR r1, r2, r3
@@ -103,3 +115,9 @@ SUBR|>> r1, r2, r3, ASR r4
 
 ; @manual-example ANDR|CS r5, r6, r7, LSL r1
 ANDR|CS r5, r6, r7, LSL r1
+
+; @manual-example ADDR[N] r1, r2, r3
+ADDR[N] r1, r2, r3
+
+; @manual-example SUBR[S] r1, r2, r3, ASR r4
+SUBR[S] r1, r2, r3, ASR r4
