@@ -495,11 +495,8 @@ fn perform_arithmetic_right_shift(
 
 fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
     let result: u16 = a.rotate_left(u32::from(b));
-    // Bit shifted out goes into carry (that's what the 68k does :shrug:)
-    // TODO: Check the purpose of bit shifted of ROL out going to carry
-    // category=Hardware
-    // See also `perform_rotate_right`
-    let carry = result & 1 == 1;
+    // Counts are modulo the word width; an effective zero clears carry.
+    let carry = b & 15 != 0 && result & 1 == 1;
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
         result,
@@ -511,11 +508,8 @@ fn perform_rotate_left(a: u16, b: u16, intermediate_registers: &mut Intermediate
 
 fn perform_rotate_right(a: u16, b: u16, intermediate_registers: &mut IntermediateRegisters) {
     let result: u16 = a.rotate_right(u32::from(b));
-    // Bit shifted out goes into carry (that's what the 68k does :shrug:)
-    // TODO: Extract bit checking in ALU shifting to function
-    // category=Refactoring
-    // See also `perform_rotate_left`
-    let carry = (result >> 15) & 1 == 1;
+    // Counts are modulo the word width; an effective zero clears carry.
+    let carry = b & 15 != 0 && (result >> 15) & 1 == 1;
     set_alu_bits(
         &mut intermediate_registers.alu_status_register,
         result,

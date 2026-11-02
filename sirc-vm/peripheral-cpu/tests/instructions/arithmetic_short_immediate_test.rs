@@ -944,3 +944,65 @@ fn asl_overflow_uses_the_selected_status_source() {
         );
     }
 }
+
+#[test]
+fn rotate_carry_respects_effective_count_and_status_source() {
+    for shift_type in [ShiftType::RotateLeft, ShiftType::RotateRight] {
+        for (shift_operand, count) in [
+            (ShiftOperand::Immediate, 0),
+            (ShiftOperand::Register, 16),
+            (ShiftOperand::Register, 17),
+            (ShiftOperand::Register, 1),
+        ] {
+            for initial_carry in [false, true] {
+                for source in [
+                    StatusRegisterUpdateSource::Shift,
+                    StatusRegisterUpdateSource::None,
+                ] {
+                    let instruction =
+                        InstructionData::ShortImmediate(ShortImmediateInstructionData {
+                            op_code: Instruction::AddShortImmediate,
+                            register: 0,
+                            value: 0,
+                            shift_operand,
+                            shift_type,
+                            shift_count: u8::from(shift_operand == ShiftOperand::Register),
+                            condition_flag: ConditionFlags::Always,
+                            additional_flags: source.to_flags(),
+                        });
+                    let (_, current) = common::run_instruction(
+                        &instruction,
+                        |registers, _| {
+                            registers.r1 = 1;
+                            registers.r2 = count;
+                            if initial_carry {
+                                set_sr_bit(StatusRegisterFields::Carry, registers);
+                            }
+                        },
+                        0xFACE_0000,
+                    );
+                    let expected = if shift_type == ShiftType::RotateLeft {
+                        1_u16.rotate_left(u32::from(count))
+                    } else {
+                        1_u16.rotate_right(u32::from(count))
+                    };
+                    assert_eq!(current.registers.r1, expected);
+                    let carry = if source == StatusRegisterUpdateSource::None {
+                        initial_carry
+                    } else {
+                        count & 15 != 0
+                            && if shift_type == ShiftType::RotateLeft {
+                                expected & 1 != 0
+                            } else {
+                                expected & 0x8000 != 0
+                            }
+                    };
+                    assert_eq!(
+                        sr_bit_is_set(StatusRegisterFields::Carry, &current.registers),
+                        carry
+                    );
+                }
+            }
+        }
+    }
+}
