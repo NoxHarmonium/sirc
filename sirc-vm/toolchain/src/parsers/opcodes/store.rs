@@ -1,6 +1,7 @@
 use super::super::shared::AsmResult;
 use super::{direct_register_aliases_address_register, reject_aliased_address_register_write};
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
@@ -102,7 +103,10 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                             src_register,
                             address_register,
                         ),
-                        placeholder_name: Some(placeholder_name.clone()),
+                        numeric_placeholders: vec![NumericPlaceholder::new(
+                            placeholder_name.clone(),
+                            NumericField::Immediate16,
+                        )],
                         ..Default::default()
                     },
                 )),
@@ -138,6 +142,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    numeric_placeholders: shift_definition_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegister,
@@ -203,7 +208,10 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                             src_register,
                             address_register,
                         ),
-                        placeholder_name: Some(placeholder_name.clone()),
+                        numeric_placeholders: vec![NumericPlaceholder::new(
+                            placeholder_name.clone(),
+                            NumericField::Immediate16,
+                        )],
                         ..Default::default()
                     },
                 )),
@@ -258,6 +266,7 @@ pub fn stor(i: &str) -> AsmResult<InstructionToken> {
                 split_shift_definition_data(shift_definition_data);
             Ok((i, {
                 InstructionToken {
+                    numeric_placeholders: shift_definition_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: Instruction::StoreRegisterToIndirectRegisterPreDecrement,

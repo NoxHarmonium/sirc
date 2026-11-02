@@ -1,3 +1,5 @@
+use super::shared::{parse_constant_reference, parse_numeric_operand};
+use crate::types::numeric::NumericOperand;
 use nom::{
     branch::alt,
     combinator::map,
@@ -11,7 +13,7 @@ use super::shared::{lexeme, parse_number, parse_placeholder, parse_symbol_refere
 use crate::types::data::{
     RefToken, DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE, EQU_TOKEN,
 };
-use crate::types::shared::{NumberToken, Token};
+use crate::types::shared::Token;
 use crate::types::{
     data::{DataToken, DataType, EquToken},
     object::RefType,
@@ -43,7 +45,7 @@ fn parse_data_type(i: &str) -> AsmResult<DataType> {
             DataType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
-        map(parse_placeholder, DataType::PlaceHolder).context("placeholder"),
+        map(parse_constant_reference, DataType::PlaceHolder).context("placeholder"),
     ))(i)
 }
 
@@ -74,15 +76,15 @@ fn parse_data(i: &str) -> AsmResult<(u8, DataType)> {
     lexeme(parse_data_)(i)
 }
 
-fn parse_equ_(i: &str) -> AsmResult<(String, NumberToken)> {
+fn parse_equ_(i: &str) -> AsmResult<(String, NumericOperand)> {
     let (i, _) = lexeme(tag(EQU_TOKEN))(i)?;
     let (i, placeholder_name) = parse_placeholder(i)?;
-    let (i, value) = parse_number(i)?;
+    let (i, value) = parse_numeric_operand(i)?;
 
     Ok((i, (placeholder_name, value)))
 }
 
-fn parse_equ(i: &str) -> AsmResult<(String, NumberToken)> {
+fn parse_equ(i: &str) -> AsmResult<(String, NumericOperand)> {
     lexeme(parse_equ_)(i)
 }
 
@@ -118,7 +120,7 @@ pub fn parse_equ_token_(i: &str) -> AsmResult<Token> {
         i,
         Token::Equ(EquToken {
             placeholder_name,
-            number_token: value,
+            value,
         }),
     ))
 }

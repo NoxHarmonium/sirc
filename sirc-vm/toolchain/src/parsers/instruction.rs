@@ -1,3 +1,5 @@
+use super::shared::parse_constant_reference;
+use crate::types::numeric::{ConstantReference, NumericField, NumericPlaceholder};
 use nom::branch::alt;
 use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
@@ -16,9 +18,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 use peripheral_cpu::registers::{AddressRegisterName, RegisterName};
 
 use super::opcodes;
-use super::shared::{
-    lexeme, parse_comma_sep, parse_number, parse_placeholder, parse_symbol_reference, AsmResult,
-};
+use super::shared::{lexeme, parse_comma_sep, parse_number, parse_symbol_reference, AsmResult};
 use crate::types::data::RefToken;
 use crate::types::instruction::InstructionToken;
 use crate::types::object::SymbolDefinition;
@@ -36,7 +36,7 @@ impl Default for InstructionToken {
                 additional_flags: 0x0,
             }),
             symbol_ref: None,
-            placeholder_name: None,
+            numeric_placeholders: Vec::new(),
         }
     }
 }
@@ -67,7 +67,7 @@ pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinit
 pub enum ImmediateType {
     Value(u16),
     SymbolRef(RefToken),
-    PlaceHolder(String),
+    PlaceHolder(ConstantReference),
 }
 
 pub enum OffsetType {
@@ -79,6 +79,19 @@ pub enum OffsetType {
 pub enum ShiftDefinitionData {
     Immediate(ShiftType, u8),
     Register(ShiftType, RegisterName),
+    Constant(ShiftType, ConstantReference),
+}
+
+impl ShiftDefinitionData {
+    pub fn numeric_placeholders(&self) -> Vec<NumericPlaceholder> {
+        match self {
+            Self::Constant(_, reference) => vec![NumericPlaceholder::new(
+                reference.clone(),
+                NumericField::ShiftCount,
+            )],
+            _ => Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -105,24 +118,19 @@ pub enum AddressingMode {
     ShiftDefinition(ShiftDefinitionData),
 }
 
-#[allow(clippy::cast_possible_truncation)]
 pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
     alt((
-        // TODO: Make sure that cast in parser is not going to cause issues
-        // category=Toolchain
-        // Check this cast down to u16
-        map(parse_number, |NumberToken { value, .. }| {
-            ImmediateType::Value(value as u16)
+        map_res(parse_number, |number| {
+            NumericField::Immediate16
+                .encode(&number)
+                .map(ImmediateType::Value)
         })
         .context("number"),
         map(parse_symbol_reference, |ref_token| {
             ImmediateType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
-        map(parse_placeholder, |placeholder_name| {
-            ImmediateType::PlaceHolder(placeholder_name)
-        })
-        .context("placeholder"),
+        map(parse_constant_reference, ImmediateType::PlaceHolder).context("placeholder"),
     ))(i)
 }
 
@@ -246,6 +254,9 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
     let result = alt((
         parse_immediate_shift_definition,
         parse_register_shift_definition,
+        map(parse_constant_reference, |reference| {
+            ShiftDefinitionData::Constant(shift_type, reference)
+        }),
     ))(i);
     result
 }
@@ -293,7 +304,27 @@ fn parse_addressing_mode(i: &str) -> AsmResult<AddressingMode> {
         .context("shift definition (e.g. ASR #4)"),
     ));
 
-    lexeme(addressing_mode_parser)(i)
+    let (remaining, mode) = lexeme(addressing_mode_parser)(i)?;
+    if matches!(
+        mode,
+        AddressingMode::IndirectRegisterDisplacementPostIncrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectImmediateDisplacementPostIncrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectRegisterDisplacementPreDecrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        ) | AddressingMode::IndirectImmediateDisplacementPreDecrement(
+            _,
+            AddressRegisterName::ProgramCounter
+        )
+    ) {
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(i, ErrorKind::Verify,
+            "Aliased register writes are undefined: auto-update of p overlaps program-counter advance")));
+    }
+    Ok((remaining, mode))
 }
 
 pub fn parse_instruction_operands0(i: &str) -> AsmResult<Vec<AddressingMode>> {
@@ -395,9 +426,15 @@ pub fn parse_instruction_tag(
             (i, ConditionFlags::Always)
         };
 
-        // TODO: Fix case in parser where lexeme doesn't work
-        // category=Toolchain
-        // Get lexeme working with this function to avoid this
+        // A mnemonic/suffix must end before an operand begins. Operandless
+        // instructions may end at EOF or an inline comment.
+        if !i.is_empty() && !i.starts_with(char::is_whitespace) && !i.starts_with(';') {
+            return Err(nom::Err::Error(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Space,
+                "Expected whitespace between mnemonic and operands",
+            )));
+        }
         let (i, _) = space0(i)?;
 
         Ok((

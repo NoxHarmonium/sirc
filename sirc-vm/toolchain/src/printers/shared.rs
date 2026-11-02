@@ -44,6 +44,9 @@ pub fn print_number_token(number_token: &NumberToken) -> String {
             };
             format!("#0x{}", add_underscores(&hex_str))
         }
+        NumberType::SignedDecimal => {
+            format!("#{}", i32::from_ne_bytes(number_token.value.to_ne_bytes()))
+        }
         NumberType::Decimal => {
             let dec_str = format!("{}", number_token.value);
             format!("#{}", add_underscores(&dec_str))
@@ -92,10 +95,10 @@ pub fn print_ref_token(ref_token: &RefToken) -> String {
 /// let printed = print_token(&Token::Equ(
 ///    EquToken {
 ///        placeholder_name: String::from("BAR"),
-///        number_token: NumberToken {
+///        value: NumberToken {
 ///            number_type: NumberType::Decimal,
 ///            value: 1234
-///        }
+///        }.into()
 ///    }
 /// ));
 /// assert_eq!(String::from(".EQU $BAR #1234"), printed);
@@ -103,7 +106,7 @@ pub fn print_ref_token(ref_token: &RefToken) -> String {
 pub fn print_token(token: &Token) -> String {
     match token {
         Token::Comment(text) => format!(";{text}"),
-        Token::Label(LabelToken { name }) => format!(":{name}"),
+        Token::Label(LabelToken { name, .. }) => format!(":{name}"),
         Token::Instruction(_) => todo!(),
         Token::Origin(_) => todo!(),
         Token::Data(data_token) => print_data_token(data_token),
@@ -122,19 +125,19 @@ pub fn print_token(token: &Token) -> String {
 ///    Token::Equ(
 ///        EquToken {
 ///            placeholder_name: String::from("FOO"),
-///            number_token: NumberToken {
+///            value: NumberToken {
 ///                number_type: NumberType::Decimal,
 ///                value: 1234
-///            }
+///            }.into()
 ///        }
 ///    ),
 ///    Token::Equ(
 ///        EquToken {
 ///            placeholder_name: String::from("BAR"),
-///            number_token: NumberToken {
+///            value: NumberToken {
 ///                number_type: NumberType::Hex,
 ///                value: 0xCAFE
-///            }
+///            }.into()
 ///        }
 ///    ),
 /// ]);

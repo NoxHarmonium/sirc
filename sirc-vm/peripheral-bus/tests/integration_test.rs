@@ -22,7 +22,7 @@ use std::{fs::OpenOptions, io::Write, path::Path};
 use peripheral_bus::{
     conversion::{bytes_to_words, words_to_bytes},
     device::new_stub_device,
-    memory_mapped_device::new_stub_memory_mapped_device,
+    memory_mapped_device::{new_stub_memory_mapped_device, MemoryMappedDevice},
     new_bus_peripheral,
 };
 use quickcheck::TestResult;
@@ -258,4 +258,100 @@ fn setup_file_to_load_into_segment(file_to_memory_map: &Path, segment_data: &[u1
         .open(file_to_memory_map)
         .unwrap();
     file.write_all(&words_to_bytes(segment_data)).unwrap();
+}
+
+struct RequestMaster(peripheral_bus::device::BusAssertions);
+impl peripheral_bus::device::Device for RequestMaster {
+    fn poll(
+        &mut self,
+        _: peripheral_bus::device::BusAssertions,
+        _: bool,
+    ) -> peripheral_bus::device::BusAssertions {
+        self.0
+    }
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+struct WriteObserver(std::rc::Rc<std::cell::Cell<usize>>);
+impl peripheral_bus::device::Device for WriteObserver {
+    fn poll(
+        &mut self,
+        request: peripheral_bus::device::BusAssertions,
+        selected: bool,
+    ) -> peripheral_bus::device::BusAssertions {
+        if request.bus_access_strobe
+            && matches!(request.op, peripheral_bus::device::BusOperation::Write)
+        {
+            self.0.set(self.0.get() + 1);
+        }
+        self.perform_bus_io(request, selected)
+    }
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+impl peripheral_bus::memory_mapped_device::MemoryMapped for WriteObserver {
+    fn read_address(&self, _: u32) -> u16 {
+        0xcafe
+    }
+    fn write_address(&mut self, _: u32, _: u16) {
+        self.0.set(self.0.get() + 1);
+    }
+}
+impl peripheral_bus::memory_mapped_device::MemoryMappedDevice for WriteObserver {}
+
+#[test]
+fn readonly_bus_writes_signal_bper_without_reaching_the_device() {
+    use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
+    for protected_mode_active in [false, true] {
+        for access_type in [BusAccessType::DataWrite, BusAccessType::DmaWriteBurst] {
+            let writes = std::rc::Rc::new(std::cell::Cell::new(0));
+            let request = BusAssertions {
+                address: 0x10000,
+                data: 0xdead,
+                op: BusOperation::Write,
+                bus_access_strobe: true,
+                bus_access_type: access_type,
+                protected_mode_active,
+                ..Default::default()
+            };
+            let mut bus = new_bus_peripheral(Box::new(RequestMaster(request)));
+            bus.map_segment(
+                "ROM",
+                0x10000,
+                0x100,
+                false,
+                Box::new(WriteObserver(writes.clone())),
+            );
+            let response = bus.poll_all(BusAssertions::default());
+            assert!(response.bus_protection_error);
+            assert!(!response.bus_error);
+            assert!(!response.bus_acknowledge);
+            assert_eq!(writes.get(), 0);
+            assert_eq!(bus.read_address(0x10000), 0xcafe);
+        }
+    }
+    // Loader bypass remains explicit, and reads/fetches work normally.
+    for bus_access_type in [BusAccessType::DataRead, BusAccessType::InstructionFetch] {
+        let mut bus = new_bus_peripheral(Box::new(RequestMaster(BusAssertions {
+            address: 0x10000,
+            bus_access_strobe: true,
+            bus_access_type,
+            ..Default::default()
+        })));
+        bus.map_segment(
+            "ROM",
+            0x10000,
+            0x100,
+            false,
+            Box::new(new_stub_memory_mapped_device()),
+        );
+        bus.load_binary_data_into_segment("ROM", &[0x12, 0x34]);
+        let response = bus.poll_all(BusAssertions::default());
+        assert_eq!(response.data, 0x1234);
+        assert!(response.bus_acknowledge);
+        assert!(!response.bus_protection_error);
+    }
 }

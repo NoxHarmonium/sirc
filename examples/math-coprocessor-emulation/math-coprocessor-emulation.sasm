@@ -16,6 +16,7 @@
 ;; r7 = 0x7773 (caller value preserved across the final emulated MULU)
 
 .EQU $PROGRAM_SEGMENT #0x0000
+.EQU $SCRATCH_SEGMENT #0x0001
 .EQU $FRAME_CALLER_AH #0
 .EQU $FRAME_CALLER_AL #1
 .EQU $FRAME_CALLER_R4 #2
@@ -48,7 +49,8 @@ MOVI ah, $PROGRAM_SEGMENT
 MOVI al, #0
 MOVI lh, $PROGRAM_SEGMENT
 MOVI ll, #0
-MOVI sh, $PROGRAM_SEGMENT
+; The emulation frame is writable; PROGRAM is read-only.
+MOVI sh, $SCRATCH_SEGMENT
 MOVI sl, #0x0800
 
 MOVI r4, #0x600D

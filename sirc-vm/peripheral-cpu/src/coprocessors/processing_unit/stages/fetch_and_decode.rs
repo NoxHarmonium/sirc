@@ -198,8 +198,10 @@ pub fn decode_and_register_fetch(
     // TODO: Extract to function
     let ad_l = 0x9 | immediate_representation.additional_flags << 1;
     let ad_h = 0x8 | immediate_representation.additional_flags << 1;
-    let des_ad_l = 0x9 | immediate_representation.register << 1;
-    let des_ad_h = 0x8 | immediate_representation.register << 1;
+    // Address-pair destinations use only two bits. Ignore reserved bits 25–24
+    // so an undefined encoding cannot produce an index outside the register file.
+    let des_ad_l = 0x9 | (immediate_representation.register & 0x3) << 1;
+    let des_ad_h = 0x8 | (immediate_representation.register & 0x3) << 1;
     let condition_flag = immediate_representation.condition_flag;
     let (npc_l_, npc_overflowed) = registers.pl.overflowing_add(INSTRUCTION_SIZE_WORDS as u16);
 
@@ -240,4 +242,25 @@ pub fn decode_and_register_fetch(
         },
         npc_overflowed,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn address_pair_destinations_stay_within_register_file() {
+        // Include both reserved destination bits in every LDEA/LDEL form.
+        for opcode in 0x18_u32..=0x1f {
+            for destination in 0_u8..16 {
+                let raw = ((opcode << 26) | (u32::from(destination) << 22)).to_be_bytes();
+                let (decoded, _) = decode_and_register_fetch(raw, &Registers::default());
+                assert_eq!(decoded.des_ad_h, 8 | ((destination & 3) << 1));
+                assert_eq!(decoded.des_ad_l, decoded.des_ad_h + 1);
+                let registers = Registers::default();
+                let _ = registers[decoded.des_ad_h];
+                let _ = registers[decoded.des_ad_l];
+            }
+        }
+    }
 }

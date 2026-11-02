@@ -462,10 +462,10 @@ fn test_xor_immediate() {
 //
 
 #[test]
-fn test_load_immediate() {
+fn test_movi() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromShortImmediate,
+            Instruction::MoveRegisterFromShortImmediate,
             register_index,
             0xCAFE,
             0xFA,
@@ -484,7 +484,7 @@ fn test_load_immediate() {
             StatusRegisterUpdateSource::Alu,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromShortImmediate,
+            Instruction::MoveRegisterFromShortImmediate,
             register_index,
             0xF0F0,
             0x0,
@@ -913,3 +913,96 @@ fn test_arithmetic_shift_right_immediate() {
 // - Test conditionals
 // - Test COPI
 // - Test CMPI/TSAI/TSXI etc.
+
+#[test]
+fn asl_overflow_uses_the_selected_status_source() {
+    for source in [
+        StatusRegisterUpdateSource::Shift,
+        StatusRegisterUpdateSource::Alu,
+        StatusRegisterUpdateSource::None,
+    ] {
+        test_short_immediate_arithmetic_instruction(
+            Instruction::AddShortImmediate,
+            0,
+            0x4000,
+            0,
+            ShiftOperand::Immediate,
+            ShiftType::ArithmeticLeftShift,
+            2,
+            0,
+            &vec![],
+            &match source {
+                StatusRegisterUpdateSource::Shift => vec![
+                    StatusRegisterFields::Zero,
+                    StatusRegisterFields::Carry,
+                    StatusRegisterFields::Overflow,
+                ],
+                StatusRegisterUpdateSource::Alu => vec![StatusRegisterFields::Zero],
+                StatusRegisterUpdateSource::None | StatusRegisterUpdateSource::Reserved => vec![],
+            },
+            source,
+        );
+    }
+}
+
+#[test]
+fn rotate_carry_respects_effective_count_and_status_source() {
+    for shift_type in [ShiftType::RotateLeft, ShiftType::RotateRight] {
+        for (shift_operand, count) in [
+            (ShiftOperand::Immediate, 0),
+            (ShiftOperand::Register, 16),
+            (ShiftOperand::Register, 17),
+            (ShiftOperand::Register, 1),
+        ] {
+            for initial_carry in [false, true] {
+                for source in [
+                    StatusRegisterUpdateSource::Shift,
+                    StatusRegisterUpdateSource::None,
+                ] {
+                    let instruction =
+                        InstructionData::ShortImmediate(ShortImmediateInstructionData {
+                            op_code: Instruction::AddShortImmediate,
+                            register: 0,
+                            value: 0,
+                            shift_operand,
+                            shift_type,
+                            shift_count: u8::from(shift_operand == ShiftOperand::Register),
+                            condition_flag: ConditionFlags::Always,
+                            additional_flags: source.to_flags(),
+                        });
+                    let (_, current) = common::run_instruction(
+                        &instruction,
+                        |registers, _| {
+                            registers.r1 = 1;
+                            registers.r2 = count;
+                            if initial_carry {
+                                set_sr_bit(StatusRegisterFields::Carry, registers);
+                            }
+                        },
+                        0xFACE_0000,
+                    );
+                    let expected = if shift_type == ShiftType::RotateLeft {
+                        1_u16.rotate_left(u32::from(count))
+                    } else {
+                        1_u16.rotate_right(u32::from(count))
+                    };
+                    assert_eq!(current.registers.r1, expected);
+                    let carry = if source == StatusRegisterUpdateSource::None {
+                        initial_carry
+                    } else {
+                        count & 15 != 0
+                            && if shift_type == ShiftType::RotateLeft {
+                                expected & 1 != 0
+                            } else {
+                                expected & 0x8000 != 0
+                            }
+                    };
+                    assert_eq!(
+                        sr_bit_is_set(StatusRegisterFields::Carry, &current.registers),
+                        carry
+                    );
+                }
+            }
+        }
+    }
+}

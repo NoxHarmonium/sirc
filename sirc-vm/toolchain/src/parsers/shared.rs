@@ -1,11 +1,14 @@
+use crate::types::numeric::{ConstantReference, NumericOperand};
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, take_till};
 use nom::character::complete::{char, multispace0, one_of, space0};
-use nom::combinator::{cut, eof, map, map_res, opt, recognize};
-use nom::error::{ErrorKind, ParseError};
+use nom::combinator::eof;
+use nom::combinator::{cut, map, map_res, opt, recognize};
+use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::sequence::{pair, preceded, terminated, tuple};
+use nom::Parser;
 use nom::{AsChar, IResult};
-use nom::{Err, InputTakeAtPosition, Parser};
+use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
 use nom_supreme::multi::collect_separated_terminated;
@@ -164,9 +167,14 @@ pub fn parse_hex(i: &str) -> AsmResult<NumberToken> {
 }
 
 pub fn parse_dec(i: &str) -> AsmResult<NumberToken> {
-    map(lexeme(parse_dec_), |value| NumberToken {
+    let negative = i.starts_with('-');
+    map(lexeme(parse_dec_), move |value| NumberToken {
         value,
-        number_type: NumberType::Decimal,
+        number_type: if negative {
+            NumberType::SignedDecimal
+        } else {
+            NumberType::Decimal
+        },
     })(i)
 }
 
@@ -215,6 +223,7 @@ pub fn split_shift_definition_data(
         ShiftDefinitionData::Immediate(shift_type, shift_count) => {
             (ShiftOperand::Immediate, *shift_type, *shift_count)
         }
+        ShiftDefinitionData::Constant(shift_type, _) => (ShiftOperand::Immediate, *shift_type, 0),
         ShiftDefinitionData::Register(shift_type, shift_count) => (
             ShiftOperand::Register,
             *shift_type,
@@ -224,17 +233,27 @@ pub fn split_shift_definition_data(
 }
 
 fn parse_label_token(i: &str) -> AsmResult<Token> {
+    let input_length = i.len();
     let (i, name) = parse_label(i)?;
     Ok((
         i,
         Token::Label(LabelToken {
+            input_length,
             name: String::from(name),
         }),
     ))
 }
 
 fn parse_origin_token(i: &str) -> AsmResult<Token> {
+    let start = i;
     let (i, offset) = parse_origin(i)?;
+    if offset & 1 != 0 {
+        return Err(Err::Failure(ErrorTree::from_external_error(
+            start,
+            ErrorKind::Verify,
+            ".ORG requires an even word address",
+        )));
+    }
     Ok((i, Token::Origin(OriginToken { offset })))
 }
 
@@ -251,7 +270,8 @@ fn parse_comment(i: &str) -> AsmResult<Token> {
     lexeme(parse_comment_)(i)
 }
 
-// Addresses are replaced with indexes to object table and resolved by linker
+// Syntax is independent of constant definitions. The object builder resolves
+// numeric placeholders in source order, using their original AST use-site locations.
 pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
     let mut parser = collect_separated_terminated(
         alt((
@@ -265,8 +285,19 @@ pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
         multispace0,
         eof,
     );
-
-    // Consume any extra space at the start
     let (i, _) = multispace0(i)?;
     parser.parse(i)
+}
+
+pub fn parse_constant_reference(i: &str) -> AsmResult<ConstantReference> {
+    let input_length = i.len();
+    let (i, name) = parse_placeholder(i)?;
+    Ok((i, ConstantReference { name, input_length }))
+}
+
+pub fn parse_numeric_operand(i: &str) -> AsmResult<NumericOperand> {
+    alt((
+        map(parse_number, NumericOperand::Literal),
+        map(parse_constant_reference, NumericOperand::Constant),
+    ))(i)
 }

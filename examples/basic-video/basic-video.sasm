@@ -134,8 +134,9 @@ RETE
 ;;;;;;; Subroutines
 
 :setup_video
-; Save link register
-LDEA s, (l)
+; Save the link on the RAM stack; s must stay in SCRATCH for interrupts.
+STOR -(s), lh
+STOR -(s), ll
 
 ; 1. Copy Tileset (10224 words)
 MOVI r1, @tileset_0.l
@@ -247,8 +248,9 @@ MOVI al, $PPU_BASE_CONFIG
 MOVI r1, #0x0078
 STOR (a), r1
 
-; Restore link register
-LDEA l, (s)
+; Restore the link without changing the RAM stack segment.
+LOAD ll, (s)+
+LOAD lh, (s)+
 RETS
 
 ; r1 = source address (offset)

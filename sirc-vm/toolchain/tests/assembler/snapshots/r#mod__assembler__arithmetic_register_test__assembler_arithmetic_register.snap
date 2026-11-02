@@ -1,6 +1,5 @@
 ---
 source: toolchain/tests/assembler/arithmetic_register_test.rs
-assertion_line: 58
 expression: "config_hex(&object.program.as_slice(), hex_config)"
 ---
 Length: 104 (0x68) bytes
@@ -24,9 +23,9 @@ Length: 104 (0x68) bytes
 0044:   d1 2b 00 10   .+..
 0048:   d5 6f 40 10   .o@.
 004c:   d9 a3 80 10   ....
-0050:   ea 58 00 10   .X..
-0054:   f2 94 40 10   ..@.
-0058:   fa d0 80 10   ....
+0050:   e9 98 00 10   ....
+0054:   f1 54 40 10   .T@.
+0058:   f9 10 80 10   ....
 005c:   c3 49 00 10   .I..
 0060:   c7 85 40 10   ..@.
 0064:   cb c1 80 10   ....

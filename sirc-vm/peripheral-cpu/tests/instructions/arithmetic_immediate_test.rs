@@ -31,7 +31,7 @@ fn test_immediate_arithmetic_instruction(
         expected_status_flags,
         // [S] on an immediate-format instruction writes a constant zero into the flags, which
         // the MOVI tests below rely on to check flag clearing
-        if instruction == Instruction::LoadRegisterFromImmediate {
+        if instruction == Instruction::MoveRegisterFromImmediate {
             StatusRegisterUpdateSource::Shift
         } else {
             StatusRegisterUpdateSource::Alu
@@ -548,7 +548,7 @@ fn test_movi_updates_flags_from_the_moved_value() {
     for register_index in get_register_index_range() {
         // N and Z follow the moved value; C and V are cleared
         test_immediate_arithmetic_instruction_with_update_source(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0x1234,
             0x8000,
@@ -562,7 +562,7 @@ fn test_movi_updates_flags_from_the_moved_value() {
             StatusRegisterUpdateSource::Alu,
         );
         test_immediate_arithmetic_instruction_with_update_source(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0x1234,
             0x0000,
@@ -582,7 +582,7 @@ fn test_movi_updates_flags_from_the_moved_value() {
 fn test_movi_with_no_update_source_preserves_flags() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction_with_update_source(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0x1234,
             0x0000,
@@ -599,10 +599,10 @@ fn test_movi_with_no_update_source_preserves_flags() {
 //
 
 #[test]
-fn test_load_immediate() {
+fn test_movi() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0xFFFF,
             0x0000,
@@ -617,7 +617,7 @@ fn test_load_immediate() {
             &vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0x0000,
             0xFFFF,
@@ -632,7 +632,7 @@ fn test_load_immediate() {
             &vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0xF0F0,
             0xFF00,
@@ -641,7 +641,7 @@ fn test_load_immediate() {
             &vec![],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromImmediate,
+            Instruction::MoveRegisterFromImmediate,
             register_index,
             0xF0F0,
             0xFFFF,

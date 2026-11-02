@@ -65,7 +65,11 @@ RETS
 :some_label
 @some_label
 @label.u
+; <------- variable.parameter.symbol-reference.sirc
 @label.l
+; <------- variable.parameter.symbol-reference.sirc
+@label.r
+; <------- variable.parameter.symbol-reference.sirc
 
 ; Directives
 .DB #0xFF
@@ -81,7 +85,8 @@ ADDI r1, #5  ; inline comment
 ; Registers
 r1 r2 r3 r4 r5 r6 r7
 lh ll ah al ph pl sh sl sr
-a p s
+a p s l
+;     ^ constant.language.register.sirc
 
 ; Variables/placeholders
 $my_variable

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_WORDS;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,29 @@ pub struct ObjectDefinition {
 pub fn merge_object_definitions(
     object_definitions: &[ObjectDefinition],
 ) -> (ObjectDefinition, ProgramDebugInfo) {
+    try_merge_object_definitions(object_definitions)
+        .expect("Invalid objects; use try_merge_object_definitions for diagnostics")
+}
+
+pub fn try_merge_object_definitions(
+    object_definitions: &[ObjectDefinition],
+) -> Result<(ObjectDefinition, ProgramDebugInfo), String> {
+    let mut definitions = HashMap::new();
+    for (index, object) in object_definitions.iter().enumerate() {
+        for symbol in &object.symbols {
+            let filename = object.debug_info.as_ref().map_or_else(
+                || format!("object {}", index + 1),
+                |info| info.original_filename.clone(),
+            );
+            let location = format!("{filename} (byte offset {})", symbol.offset);
+            if let Some(previous) = definitions.insert(&symbol.name, location.clone()) {
+                return Err(format!(
+                    "Duplicate label [{}] in {location}; first defined in {previous}",
+                    symbol.name
+                ));
+            }
+        }
+    }
     let mut output: ObjectDefinition = ObjectDefinition::default();
 
     let mut debug_info_map: ObjectDebugInfoMap = BTreeMap::new();
@@ -99,5 +123,5 @@ pub fn merge_object_definitions(
             debug_info_map.insert(prev_offset_words, offset_debug_info);
         }
     }
-    (output, ProgramDebugInfo { debug_info_map })
+    Ok((output, ProgramDebugInfo { debug_info_map }))
 }

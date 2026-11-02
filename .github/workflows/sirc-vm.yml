@@ -112,7 +112,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      # Match the test job: different compiler versions produce incompatible
+      # region maps for the same lines when Codecov merges these reports.
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2.9.3

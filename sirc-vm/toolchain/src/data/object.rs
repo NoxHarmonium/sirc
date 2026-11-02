@@ -1,9 +1,10 @@
 use crate::types::data::{DataToken, DataType, DB_VALUE, DQ_VALUE, DW_VALUE};
+use crate::types::numeric::{Constants, NumericOperand};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 use crate::types::shared::Token;
+use crate::utils::source::line_column;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
-    ImmediateInstructionData, InstructionData, ShortImmediateInstructionData,
     INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
@@ -14,44 +15,6 @@ use sha2::{Digest, Sha256};
 use crate::types::shared::NumberToken;
 use std::collections::HashMap;
 
-fn resolve_placeholder(
-    placeholders: &HashMap<String, u32>,
-    placeholder_name: &String,
-    instruction_data: &InstructionData,
-) -> InstructionData {
-    let resolved_value = placeholders.get(placeholder_name)
-        .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
-    match instruction_data {
-        InstructionData::Immediate(immediate_instruction) => {
-            assert!(
-                *resolved_value <= 0xFFFF,
-                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)"
-            );
-            InstructionData::Immediate(ImmediateInstructionData {
-                value: resolved_value
-                    .to_owned()
-                    .try_into()
-                    .expect("Value should fit into a u8 as it is checked above"),
-                ..immediate_instruction.clone()
-            })
-        }
-        InstructionData::ShortImmediate(short_immediate_instruction) => {
-            assert!(
-                *resolved_value <= 0xFF,
-                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)"
-            );
-            InstructionData::ShortImmediate(ShortImmediateInstructionData {
-                value: resolved_value
-                    .to_owned()
-                    .try_into()
-                    .expect("Value should fit into a u8 as it is checked above"),
-                ..short_immediate_instruction.clone()
-            })
-        }
-        InstructionData::Register(_) => instruction_data.clone(),
-    }
-}
-
 #[allow(clippy::cast_possible_truncation)]
 fn inject_data_value(
     data: DataToken,
@@ -59,7 +22,7 @@ fn inject_data_value(
     program_offset: usize,
     symbol_refs: &mut Vec<SymbolRef>,
     offset: u32,
-    placeholders: &HashMap<String, u32>,
+    placeholders: &Constants,
 ) {
     match data.value {
         DataType::Value(NumberToken { value, .. }) => {
@@ -90,8 +53,10 @@ fn inject_data_value(
             });
         }
         DataType::PlaceHolder(placeholder_name) => {
-            let resolved_value = placeholders.get(&placeholder_name)
-                .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
+            let resolved_value = placeholders
+                .get(&placeholder_name.name)
+                .unwrap_or_else(|| panic!("Constant was validated before data injection"));
+            let resolved_value = &resolved_value.value;
             // Truncate per data.size_bytes, same as the DataType::Value arm above -- the
             // placeholder's resolved value is an arbitrary u32 regardless of which directive
             // size uses it, so DB/DW must mask down rather than writing the full 4 bytes.
@@ -115,15 +80,31 @@ fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AssemblyError {
+    pub input_offset: usize,
+    pub message: String,
+}
+
 pub fn build_object(
     tokens: Vec<Token>,
     original_filename: String,
     original_input: String,
 ) -> ObjectDefinition {
+    try_build_object(tokens, original_filename, original_input)
+        .expect("Invalid source passed to build_object; use try_build_object for diagnostics")
+}
+
+pub fn try_build_object(
+    tokens: Vec<Token>,
+    original_filename: String,
+    original_input: String,
+) -> Result<ObjectDefinition, AssemblyError> {
     let original_input_length = original_input.len();
     let mut symbols: Vec<SymbolDefinition> = vec![];
+    let mut label_positions = HashMap::new();
     let mut symbol_refs: Vec<SymbolRef> = vec![];
-    let mut placeholders: HashMap<String, u32> = HashMap::new();
+    let mut placeholders = Constants::new();
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
     let mut debug_info = ObjectDebugInfo {
@@ -133,28 +114,27 @@ pub fn build_object(
     };
 
     for token in tokens {
+        let file_position = token
+            .input_length()
+            .map_or(0, |length| original_input_length - length);
         let program_offset: usize = offset as usize / 4;
 
         ensure_program_size(&mut program, program_offset + 1);
 
         match token {
             Token::Instruction(data) => {
-                if let Some(symbol_ref) = data.symbol_ref {
+                if let Some(symbol_ref) = &data.symbol_ref {
                     symbol_refs.push(SymbolRef {
-                        name: symbol_ref.name,
+                        name: symbol_ref.name.clone(),
                         offset,
                         ref_type: symbol_ref.ref_type,
                         data_only: false,
                     });
                 }
 
-                let instruction = if let Some(placeholder_name) = data.placeholder_name {
-                    resolve_placeholder(&placeholders, &placeholder_name, &data.instruction)
-                } else {
-                    data.instruction
-                };
+                let instruction =
+                    data.resolve_numeric_operands(&placeholders, original_input_length)?;
 
-                let file_position = original_input_length - data.input_length;
                 debug_info.program_to_input_offset_mapping.insert(
                     // TODO: Improve error handling in assembler
                     // category=Refactoring
@@ -167,18 +147,45 @@ pub fn build_object(
 
                 offset += INSTRUCTION_SIZE_BYTES;
             }
-            Token::Label(data) => symbols.push(SymbolDefinition {
-                name: data.name,
-                offset,
-            }),
+            Token::Label(data) => {
+                let input_offset = file_position;
+                if let Some(previous) = label_positions.insert(data.name.clone(), input_offset) {
+                    let (line, _) = line_column(&debug_info.original_input, previous);
+                    return Err(AssemblyError {
+                        input_offset,
+                        message: format!(
+                            "Duplicate label [{}]; first defined in {}:{line}",
+                            data.name, debug_info.original_filename
+                        ),
+                    });
+                }
+                symbols.push(SymbolDefinition {
+                    name: data.name,
+                    offset,
+                });
+            }
             Token::Comment(_) => {
                 // Do nothing.
             }
             Token::Origin(data) => {
+                if data.offset & 1 != 0 {
+                    return Err(AssemblyError {
+                        input_offset: 0,
+                        message: ".ORG requires an even word address".into(),
+                    });
+                }
                 // Word based addressing to match CPU
                 offset = data.offset * 2;
             }
             Token::Data(data) => {
+                if let DataType::PlaceHolder(reference) = &data.value {
+                    NumericOperand::Constant(reference.clone())
+                        .resolve(&placeholders)
+                        .map_err(|message| AssemblyError {
+                            input_offset: original_input_length - reference.input_length,
+                            message,
+                        })?;
+                }
                 inject_data_value(
                     data,
                     &mut program,
@@ -190,7 +197,20 @@ pub fn build_object(
                 offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Equ(data) => {
-                placeholders.insert(data.placeholder_name, data.number_token.value);
+                let input_offset = match &data.value {
+                    NumericOperand::Constant(reference) => {
+                        original_input_length - reference.input_length
+                    }
+                    NumericOperand::Literal(_) => 0,
+                };
+                let number =
+                    data.value
+                        .resolve(&placeholders)
+                        .map_err(|message| AssemblyError {
+                            input_offset,
+                            message,
+                        })?;
+                placeholders.insert(data.placeholder_name, number);
             }
         }
     }
@@ -205,10 +225,56 @@ pub fn build_object(
     hasher.update(&bytes);
     debug_info.checksum = hex::encode(hasher.finalize());
 
-    ObjectDefinition {
+    Ok(ObjectDefinition {
         symbols,
         symbol_refs,
         program: bytes,
         debug_info: Some(debug_info),
+    })
+}
+
+#[cfg(test)]
+mod invalid_data_tests {
+    use super::*;
+    use crate::types::numeric::ConstantReference;
+    use crate::types::shared::{NumberToken, NumberType};
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    #[test]
+    fn malformed_data_tokens_cannot_bypass_injection_invariants() {
+        let number = NumberToken {
+            value: 1,
+            number_type: NumberType::Decimal,
+        };
+        let constants = HashMap::from([("N".into(), number.clone())]);
+        for (size_bytes, value) in [
+            (3, DataType::Value(number)),
+            (
+                3,
+                DataType::PlaceHolder(ConstantReference {
+                    name: "N".into(),
+                    input_length: 0,
+                }),
+            ),
+            (
+                1,
+                DataType::PlaceHolder(ConstantReference {
+                    name: "UNDEFINED".into(),
+                    input_length: 0,
+                }),
+            ),
+        ] {
+            let mut program = [[0; 4]; 1];
+            let mut references = Vec::new();
+            assert!(catch_unwind(AssertUnwindSafe(|| inject_data_value(
+                DataToken { size_bytes, value },
+                &mut program,
+                0,
+                &mut references,
+                0,
+                &constants,
+            )))
+            .is_err());
+        }
     }
 }

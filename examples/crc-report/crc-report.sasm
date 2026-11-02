@@ -15,7 +15,7 @@
 ; be able to write the destination segment's address-register high word
 ; itself." The only direct write to `ah` anywhere in this file happens
 ; before protected mode is entered (for the CRC/itoa scratch buffers, which
-; live in this program's own segment 0); every later address-register
+; live in writable scratch segment 1); every later address-register
 ; adjustment uses only `al` (unprivileged) or goes through the monitor trap.
 ; ============================================================================
 
@@ -34,7 +34,7 @@
     .DW @monitor_halt              ; vector 0x81 ("halt")       -> 0x102/0x103
 
 :main
-    MOVI ah, #0x0000               ; still supervisor mode here: a direct
+    MOVI ah, #0x0001               ; still supervisor mode here: a direct
                                     ; write to ah is allowed. This is the
                                     ; only direct ah write in the whole main
                                     ; program; from here on `a` only ever
@@ -180,8 +180,8 @@
 
 ; 16 words of filler reserve exactly the buffer range crc_buffer..crc_buffer+15
 ; (8 .DW directives x 2 words each, per the .DW tooling discovery in NOTES.md)
-; so segment 0 is backed out to the buffer's own addresses even though the
-; buffer is filled at runtime, not from this initial data.
+; to keep label offsets stable. At runtime a points to scratch segment 1,
+; where the same low-word offsets hold the mutable buffers.
 :crc_buffer
     .DW #0x0000
     .DW #0x0000

@@ -55,6 +55,7 @@ use num::ToPrimitive;
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
+use util::mask_bits_below_index;
 
 use crate::registers::{
     get_hardware_interrupt_enable, sr_bit_is_set, ExceptionLinkRegister, FullAddressRegisterAccess,
@@ -579,9 +580,16 @@ impl CpuPeripheral {
         let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
         let enabled_interrupts = level & hw_interrupt_enable;
 
-        // Levels 1-4 are level-sensitive: latch whenever the (enabled) pin is observed
-        // asserted. Unaffected by Level 5's edge-tracking below.
-        let level_sensitive_interrupts = enabled_interrupts & !LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        // Latch a level-sensitive line only below its handler's exception level.
+        // Do not discard requests that were already pending before entering a handler.
+        let first_handler_level = ExceptionPriorities::LevelOneHardware as u8;
+        let first_eligible_pin = self
+            .eu_registers
+            .current_exception_level
+            .saturating_sub(first_handler_level - 1);
+        let eligible_lines =
+            mask_bits_below_index(LEVEL_FIVE_INTERRUPT_PIN_BIT - 1, first_eligible_pin);
+        let level_sensitive_interrupts = enabled_interrupts & eligible_lines;
         if level_sensitive_interrupts > 0 {
             trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
             // TODO: Clarify what happens when software exception is triggered in interrupt handler

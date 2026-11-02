@@ -31,3 +31,16 @@ pub fn find_highest_active_bit(bit_field: u8) -> u8 {
 
     last_value
 }
+
+/// Clears bits below `index`; indices at or above the word width clear all bits.
+///
+/// ```
+/// use peripheral_cpu::util::mask_bits_below_index;
+/// assert_eq!(mask_bits_below_index(0b1111, 2), 0b1100);
+/// assert_eq!(mask_bits_below_index(0xff, 0), 0xff);
+/// assert_eq!(mask_bits_below_index(0xff, 8), 0);
+/// ```
+#[must_use]
+pub fn mask_bits_below_index(value: u8, index: u8) -> u8 {
+    value & u8::MAX.checked_shl(u32::from(index)).unwrap_or(0)
+}

@@ -10,6 +10,7 @@ pub const REF_TOKEN_UPPER_WORD_SUFFIX: &str = ".u";
 pub enum NumberType {
     Hex,
     Decimal,
+    SignedDecimal,
     Binary,
 }
 
@@ -21,6 +22,8 @@ pub struct NumberToken {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct LabelToken {
+    #[serde(skip)]
+    pub input_length: usize,
     pub name: String,
 }
 
@@ -37,4 +40,15 @@ pub enum Token {
     Origin(OriginToken),
     Data(DataToken),
     Equ(EquToken),
+}
+
+impl Token {
+    /// Original source position is captured by tokens that contribute debug locations.
+    pub fn input_length(&self) -> Option<usize> {
+        match self {
+            Self::Instruction(token) => Some(token.input_length),
+            Self::Label(token) => Some(token.input_length),
+            _ => None,
+        }
+    }
 }

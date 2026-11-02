@@ -308,11 +308,17 @@
 >@some_label
 #^^^^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
 >@label.u
-#^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
-#      ^^^ source.sirc-asm
+#^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>; <------- variable.parameter.symbol-reference.sirc
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
 >@label.l
-#^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
-#      ^^^ source.sirc-asm
+#^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>; <------- variable.parameter.symbol-reference.sirc
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>@label.r
+#^^^^^^^^ source.sirc-asm variable.parameter.symbol-reference.sirc
+>; <------- variable.parameter.symbol-reference.sirc
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
 >
 >; Directives
 #^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
@@ -381,12 +387,16 @@
 #                     ^^ source.sirc-asm constant.language.register.sirc
 #                       ^ source.sirc-asm
 #                        ^^ source.sirc-asm constant.language.register.sirc
->a p s
+>a p s l
 #^ source.sirc-asm constant.language.register.sirc
 # ^ source.sirc-asm
 #  ^ source.sirc-asm constant.language.register.sirc
 #   ^ source.sirc-asm
 #    ^ source.sirc-asm constant.language.register.sirc
+#     ^ source.sirc-asm
+#      ^ source.sirc-asm constant.language.register.sirc
+>;     ^ constant.language.register.sirc
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
 >
 >; Variables/placeholders
 #^^^^^^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc

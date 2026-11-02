@@ -153,12 +153,9 @@ fn maths_meta_instructions_lower_to_user_copi_commands() {
 
 #[test]
 fn dma_meta_instructions_reject_invalid_counts() {
-    assert_rejected("DMAR a, #8\n", "only supports counts in the range -7..7");
-    assert_rejected("DMAW l, #-8\n", "only supports counts in the range -7..7");
-    assert_rejected(
-        "DMAT a, l, #256\n",
-        "only supports counts in the range 0-255",
-    );
+    assert_rejected("DMAR a, #8\n", "DMA register count (range -7..7)");
+    assert_rejected("DMAW l, #-8\n", "DMA register count (range -7..7)");
+    assert_rejected("DMAT a, l, #256\n", "DMA transfer count (8 bits)");
 }
 
 #[test]

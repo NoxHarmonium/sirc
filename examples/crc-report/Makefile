@@ -8,7 +8,7 @@
 
 # --no-default-features disables the video device
 CARGO_ARGS=--manifest-path=../../sirc-vm/Cargo.toml
-RUN_ARGS=-vv --program-file ./crc-report.bin --segment report_file:00E00000:FFFF:./report_file.bin --register-dump-file ./crc-report.register-dump
+RUN_ARGS=-vv --program-file ./crc-report.bin --segment SCRATCH:00010000:10000 --segment report_file:00E00000:FFFF:./report_file.bin --register-dump-file ./crc-report.register-dump
 
 all: crc-report.bin
 

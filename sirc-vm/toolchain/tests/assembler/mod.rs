@@ -5,4 +5,7 @@ pub mod comment_test;
 pub mod control_flow_test;
 pub mod coprocessor_test;
 pub mod mov_test;
+mod numeric_test;
+mod relocation_test;
+pub mod support;
 pub mod test_variants_test;

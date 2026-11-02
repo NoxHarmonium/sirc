@@ -61,7 +61,7 @@ fn assert_privilege_fault(result: &ProtectedModeResult) {
 #[test]
 fn direct_high_address_register_writes_fault_in_protected_mode() {
     let load_ph = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadRegisterFromImmediate,
+        op_code: Instruction::MoveRegisterFromImmediate,
         register: RegisterName::Ph.to_register_index(),
         value: 0x1234,
         condition_flag: ConditionFlags::Always,
@@ -75,7 +75,7 @@ fn direct_high_address_register_writes_fault_in_protected_mode() {
     assert_eq!(0x00CC, result.registers.ph);
 
     let register_load_ph = InstructionData::Register(RegisterInstructionData {
-        op_code: Instruction::LoadRegisterFromRegister,
+        op_code: Instruction::MoveRegisterFromRegister,
         r1: RegisterName::Ph.to_register_index(),
         r2: RegisterName::R1.to_register_index(),
         r3: RegisterName::R1.to_register_index(),
@@ -104,7 +104,7 @@ fn assert_privileged_byte_untouched(result: &ProtectedModeResult) {
 #[test]
 fn direct_status_register_writes_ignore_privileged_byte_in_protected_mode() {
     let load_sr = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadRegisterFromImmediate,
+        op_code: Instruction::MoveRegisterFromImmediate,
         register: RegisterName::Sr.to_register_index(),
         value: 0x000A,
         condition_flag: ConditionFlags::Always,
@@ -120,7 +120,7 @@ fn direct_status_register_writes_ignore_privileged_byte_in_protected_mode() {
 
     // Attempting to clear the privileged byte (including P itself) is silently ignored
     let load_sr_clearing_privileged = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadRegisterFromImmediate,
+        op_code: Instruction::MoveRegisterFromImmediate,
         register: RegisterName::Sr.to_register_index(),
         value: 0xFF05,
         condition_flag: ConditionFlags::Always,
@@ -135,7 +135,7 @@ fn direct_status_register_writes_ignore_privileged_byte_in_protected_mode() {
     assert_eq!(0x0005, result.registers.sr & 0x00FF);
 
     let register_load_sr = InstructionData::Register(RegisterInstructionData {
-        op_code: Instruction::LoadRegisterFromRegister,
+        op_code: Instruction::MoveRegisterFromRegister,
         r1: RegisterName::Sr.to_register_index(),
         r2: RegisterName::R1.to_register_index(),
         r3: RegisterName::R1.to_register_index(),
@@ -261,7 +261,7 @@ fn all_zero_instruction_word_does_not_fault_in_protected_mode() {
 #[test]
 fn conditional_false_privileged_writes_do_not_fault() {
     let load_ph = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadRegisterFromImmediate,
+        op_code: Instruction::MoveRegisterFromImmediate,
         register: RegisterName::Ph.to_register_index(),
         value: 0x1234,
         condition_flag: ConditionFlags::CarryClear,

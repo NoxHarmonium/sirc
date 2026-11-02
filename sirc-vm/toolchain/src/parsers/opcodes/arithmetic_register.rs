@@ -31,6 +31,13 @@ fn tag_to_instruction(tag: &str) -> Instruction {
     }
 }
 
+// ALU encodings with bit 3 set suppress the destination write. The all-ones
+// low nibble is a coprocessor call, and the 0x1x group is memory/addressing.
+fn is_test_instruction(instruction: Instruction) -> bool {
+    let opcode = instruction as u8;
+    opcode & 0x30 != 0x10 && (0x8..=0xe).contains(&(opcode & 0xf))
+}
+
 use super::super::shared::AsmResult;
 
 ///
@@ -93,6 +100,24 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
 
     let (i, operands) = parse_instruction_operands0(i_after_instruction)?;
 
+    let instruction = tag_to_instruction(tag.as_str());
+    if is_test_instruction(instruction)
+        && matches!(
+            operands.as_slice(),
+            [
+                AddressingMode::DirectRegister(_),
+                AddressingMode::DirectRegister(_),
+                AddressingMode::DirectRegister(_),
+                ..
+            ]
+        )
+    {
+        return Err(nom::Err::Failure(ErrorTree::from_external_error(
+            i_after_instruction, ErrorKind::Fail,
+            "Compare and test instructions require exactly two registers, optionally followed by a shift",
+        )));
+    }
+
     let default_status_register_update_source =
         status_register_update_source.unwrap_or(StatusRegisterUpdateSource::Alu);
 
@@ -105,7 +130,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag.as_str()),
+                        op_code: instruction,
                         r1: dest_register.to_register_index(),
                         r2: dest_register.to_register_index(),
                         r3: src_register.to_register_index(),
@@ -125,7 +150,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag.as_str()),
+                        op_code: instruction,
                         r1: dest_register.to_register_index(),
                         r2: src_register1.to_register_index(),
                         r3: src_register2.to_register_index(),
@@ -148,9 +173,10 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    numeric_placeholders: shift_defintion_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag.as_str()),
+                        op_code: instruction,
                         r1: dest_register.to_register_index(),
                         r2: dest_register.to_register_index(),
                         r3: src_register.to_register_index(),
@@ -172,9 +198,10 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
+                    numeric_placeholders: shift_definition_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: tag_to_instruction(tag.as_str()),
+                        op_code: instruction,
                         r1: dest_register.to_register_index(),
                         r2: src_register1.to_register_index(),
                         r3: src_register2.to_register_index(),
