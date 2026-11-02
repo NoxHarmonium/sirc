@@ -9,14 +9,14 @@ The SIRC-1 documentation is split into three manuals, each with its own scope:
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Manual}                    & \textbf{Scope}                                                                                \\
+		\textbf{Manual} & \textbf{Scope}                                                                                \\
 		\midrule
-		SIRC Architecture Reference Manual & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state \\
-		SIRC Assembly Programmer's Manual  & Complete assembly syntax, directives, macros, pseudoinstructions                              \\
-		SIRC Hardware Reference Manual     & Pinout, bus interface, timing, electrical characteristics (this manual)                       \\
+		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state \\
+		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage         \\
+		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics (this manual)                       \\
 		\bottomrule
 	\end{tabular}
-	\caption{The SIRC manual set}
+	\caption{The SIRC Manual Set}
 	\label{tab:manual-set}
 \end{table}
 
@@ -27,10 +27,10 @@ programmer's point of view.
 \section{Relationship to the Architecture Manual}
 
 The \archmanual{} defines what the CPU does: which instructions exist, how exceptions are raised and returned from, and
-what the programmer can observe. This manual defines how that behaviour appears at the pins. Several behaviours are
+what the programmer can observe. This manual defines how that behavior appears at the pins. Several behaviors are
 visible in both places, for example the reset sequence and the bus fault retry rules. Where they overlap, the
-architecture manual is authoritative for what happens inside the CPU and this manual is authoritative for what is
-driven or sampled on each signal.
+\archmanual{} is authoritative for what happens inside the CPU and this manual is authoritative for what is driven or
+sampled on each signal.
 
 \section{Signal Groups}
 
@@ -42,17 +42,17 @@ Chapter~\ref{ch:signal-descriptions} describes every signal.
 	\small
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Group}                   & \textbf{Signals}                                   & \textbf{Pins} \\
+		\textbf{Group}                   & \textbf{Signals}                                                                                   & \textbf{Pins} \\
 		\midrule
-		Address bus                      & A0--A23                                            & 24            \\
-		Data bus                         & D0--D15                                            & 16            \\
-		Bus control                      & BAS, BRW, BAT0--BAT2, BACK, BERR, BPER, PROT, SYNC & 10            \\
-		Interrupts and execution control & IRQ1--IRQ4, NMI, HALT, TRCE                        & 7             \\
-		Reset                            & RSTI, RSTO                                         & 2             \\
-		Clock                            & CLKI                                               & 1             \\
-		Power                            & VCC1--VCC2, GND1--GND2                             & 4             \\
+		Address bus                      & A0--A23                                                                                            & 24            \\
+		Data bus                         & D0--D15                                                                                            & 16            \\
+		Bus control                      & \activelow{BAS}, BRW, BAT0--BAT2, \activelow{BACK}, \activelow{BERR}, \activelow{BPER}, PROT, SYNC & 10            \\
+		Interrupts and execution control & \activelow{IRQ1}--\activelow{IRQ4}, \activelow{NMI}, \activelow{HALT}, \activelow{TRCE}            & 7             \\
+		Reset                            & \activelow{RSTI}, \activelow{RSTO}                                                                 & 2             \\
+		Clock                            & CLKI                                                                                               & 1             \\
+		Power                            & VCC1--VCC2, GND1--GND2                                                                             & 4             \\
 		\bottomrule
 	\end{tabular}
-	\caption{SIRC-1 signal groups}
+	\caption{SIRC-1 Signal Groups}
 	\label{tab:signal-groups}
 \end{table}
