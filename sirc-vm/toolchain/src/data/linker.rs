@@ -229,3 +229,26 @@ mod tests {
         resolve_16_bit_ref_value(RefType::Offset, 0, 0, i32::from(i16::MAX) + 1);
     }
 }
+
+#[cfg(test)]
+mod invalid_reference_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "try the DQ directive")]
+    fn full_address_cannot_fit_in_instruction_immediate() {
+        resolve_16_bit_ref_value(RefType::FullAddress, 0, 0, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "resolved in the assembler")]
+    fn instruction_reference_must_have_an_explicit_type() {
+        resolve_16_bit_ref_value(RefType::Implied, 0, 0, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "resolved in the assembler")]
+    fn data_reference_must_have_an_explicit_type() {
+        resolve_data_symbol_ref_bytes(RefType::Implied, 0, 0, 0);
+    }
+}

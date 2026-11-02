@@ -3,7 +3,7 @@ use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::types::instruction::InstructionToken;
-use crate::types::numeric::{NumericField, NumericFixup};
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -87,7 +87,7 @@ pub fn coprocessor(i: &str) -> AsmResult<InstructionToken> {
                         condition_flag,
                         additional_flags: 0x0,
                     }),
-                    numeric_fixups: vec![NumericFixup::new(
+                    numeric_placeholders: vec![NumericPlaceholder::new(
                         placeholder_name.clone(),
                         NumericField::Immediate16,
                     )],

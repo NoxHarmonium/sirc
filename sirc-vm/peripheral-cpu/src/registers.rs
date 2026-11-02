@@ -442,8 +442,13 @@ pub fn toggle_sr_bit_value(field: StatusRegisterFields, enabled: bool, value: &m
     if enabled {
         set_sr_bit_value(field, value);
     } else {
-        *value &= !(field as u16);
+        clear_sr_bit_value(field, value);
     }
+}
+
+/// Clears a status flag in a raw status-register value.
+pub fn clear_sr_bit_value(field: StatusRegisterFields, value: &mut u16) {
+    *value &= !(field as u16);
 }
 
 ///
@@ -463,8 +468,7 @@ pub fn toggle_sr_bit_value(field: StatusRegisterFields, enabled: bool, value: &m
 /// assert_eq!(false, sr_bit_is_set(StatusRegisterFields::Overflow, &registers));
 /// ```
 pub fn clear_sr_bit(field: StatusRegisterFields, registers: &mut Registers) {
-    let bit_mask = field as u16;
-    registers.sr &= !bit_mask;
+    clear_sr_bit_value(field, &mut registers.sr);
 }
 
 ///

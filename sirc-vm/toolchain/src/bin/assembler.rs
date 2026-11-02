@@ -13,6 +13,9 @@
 )]
 #![deny(warnings)]
 
+use std::process::exit;
+use toolchain::utils::source::line_column;
+
 use clap::Parser;
 
 use nom_supreme::error::ErrorTree;
@@ -55,7 +58,7 @@ fn main() -> io::Result<()> {
                 &error,
             );
             eprintln!("{error_message}\n{error}");
-            std::process::exit(1);
+            exit(1);
         }
     };
     let object_definition = try_build_object(
@@ -64,19 +67,16 @@ fn main() -> io::Result<()> {
         file_contents_with_new_line.clone(),
     )
     .unwrap_or_else(|error| {
-        let (line, column) =
-            toolchain::utils::source::line_column(&file_contents_with_new_line, error.input_offset);
+        let (line, column) = line_column(&file_contents_with_new_line, error.input_offset);
         eprintln!(
             "error: {}\n  --> {}:{line}:{column}",
             error.message,
             args.input_file.display()
         );
-        std::process::exit(1);
+        exit(1);
     });
-    let bytes_to_write = match postcard::to_allocvec(&object_definition) {
-        Ok(bytes_to_write) => bytes_to_write,
-        Err(error) => return Err(io::Error::new(io::ErrorKind::InvalidData, error)),
-    };
+    let bytes_to_write = postcard::to_allocvec(&object_definition)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
 
     write(args.output_file, bytes_to_write)?;
     Ok(())

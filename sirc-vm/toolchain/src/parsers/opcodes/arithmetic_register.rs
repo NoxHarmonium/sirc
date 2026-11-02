@@ -173,7 +173,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
-                    numeric_fixups: shift_defintion_data.numeric_fixups(),
+                    numeric_placeholders: shift_defintion_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: instruction,
@@ -198,7 +198,7 @@ pub fn arithmetic_register(i: &str) -> AsmResult<InstructionToken> {
             Ok((
                 i,
                 InstructionToken {
-                    numeric_fixups: shift_definition_data.numeric_fixups(),
+                    numeric_placeholders: shift_definition_data.numeric_placeholders(),
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
                         op_code: instruction,

@@ -1,13 +1,17 @@
+use crate::types::numeric::{ConstantReference, NumericOperand};
 use nom::branch::alt;
 use nom::bytes::complete::{is_a, take_till};
 use nom::character::complete::{char, multispace0, one_of, space0};
+use nom::combinator::eof;
 use nom::combinator::{cut, map, map_res, opt, recognize};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::sequence::{pair, preceded, terminated, tuple};
+use nom::Parser;
 use nom::{AsChar, IResult};
 use nom::{Err, InputTakeAtPosition};
 use nom_supreme::error::ErrorTree;
 use nom_supreme::error::{BaseErrorKind, Expectation};
+use nom_supreme::multi::collect_separated_terminated;
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
@@ -267,11 +271,8 @@ fn parse_comment(i: &str) -> AsmResult<Token> {
 }
 
 // Syntax is independent of constant definitions. The object builder resolves
-// numeric fixups in source order, using their original AST use-site locations.
+// numeric placeholders in source order, using their original AST use-site locations.
 pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
-    use nom::combinator::eof;
-    use nom::Parser;
-    use nom_supreme::multi::collect_separated_terminated;
     let mut parser = collect_separated_terminated(
         alt((
             parse_comment.context("comment"),
@@ -288,17 +289,13 @@ pub fn parse_tokens(i: &str) -> AsmResult<Vec<Token>> {
     parser.parse(i)
 }
 
-pub fn parse_constant_reference(i: &str) -> AsmResult<crate::types::numeric::ConstantReference> {
+pub fn parse_constant_reference(i: &str) -> AsmResult<ConstantReference> {
     let input_length = i.len();
     let (i, name) = parse_placeholder(i)?;
-    Ok((
-        i,
-        crate::types::numeric::ConstantReference { name, input_length },
-    ))
+    Ok((i, ConstantReference { name, input_length }))
 }
 
-pub fn parse_numeric_operand(i: &str) -> AsmResult<crate::types::numeric::NumericOperand> {
-    use crate::types::numeric::NumericOperand;
+pub fn parse_numeric_operand(i: &str) -> AsmResult<NumericOperand> {
     alt((
         map(parse_number, NumericOperand::Literal),
         map(parse_constant_reference, NumericOperand::Constant),

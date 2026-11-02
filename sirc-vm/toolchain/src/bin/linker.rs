@@ -15,6 +15,8 @@
 )]
 #![deny(warnings)]
 
+use toolchain::data::linker::link_object;
+
 use clap::Parser;
 use sirc_vm::debug_adapter::debug_map::write_debug_map;
 
@@ -58,7 +60,7 @@ fn main() -> io::Result<()> {
     let (object_file, debug_info_map) = try_merge_object_definitions(&object_files)
         .map_err(|message| io::Error::new(io::ErrorKind::InvalidData, message))?;
 
-    let linked_program = toolchain::data::linker::link_object(&object_file, args.segment_offset)?;
+    let linked_program = link_object(&object_file, args.segment_offset)?;
 
     write(args.output_file.clone(), linked_program)?;
 

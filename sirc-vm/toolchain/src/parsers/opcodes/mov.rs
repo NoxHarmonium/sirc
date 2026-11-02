@@ -6,7 +6,7 @@ use crate::parsers::{
     },
 };
 use crate::types::instruction::InstructionToken;
-use crate::types::numeric::{NumericField, NumericFixup};
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use crate::types::object::RefType;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
@@ -126,7 +126,7 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
                     InstructionToken {
                         input_length,
                         instruction: construct_immediate_instruction(0x0, dest_register_index),
-                        numeric_fixups: vec![NumericFixup::new(
+                        numeric_placeholders: vec![NumericPlaceholder::new(
                             placeholder_name.clone(),
                             NumericField::Immediate16,
                         )],

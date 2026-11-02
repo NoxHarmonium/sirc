@@ -1,3 +1,5 @@
+use super::numeric::{Constants, NumericField, NumericOperand, NumericPlaceholder};
+use crate::data::object::AssemblyError;
 use crate::types::data::RefToken;
 use peripheral_cpu::coprocessors::processing_unit::definitions::InstructionData;
 
@@ -7,26 +9,25 @@ pub struct InstructionToken {
     pub input_length: usize,
     pub instruction: InstructionData,
     pub symbol_ref: Option<RefToken>,
-    pub numeric_fixups: Vec<super::numeric::NumericFixup>,
+    pub numeric_placeholders: Vec<NumericPlaceholder>,
 }
 
 impl InstructionToken {
     pub fn resolve_numeric_operands(
         &self,
-        constants: &super::numeric::Constants,
+        constants: &Constants,
         source_length: usize,
-    ) -> Result<InstructionData, crate::data::object::AssemblyError> {
-        use super::numeric::{NumericField, NumericOperand};
+    ) -> Result<InstructionData, AssemblyError> {
         let mut instruction = self.instruction.clone();
-        for fixup in &self.numeric_fixups {
-            let value = NumericOperand::Constant(fixup.reference.clone())
+        for placeholder in &self.numeric_placeholders {
+            let value = NumericOperand::Constant(placeholder.reference.clone())
                 .resolve(constants)
-                .and_then(|number| fixup.field.encode(&number))
-                .map_err(|message| crate::data::object::AssemblyError {
-                    input_offset: source_length - fixup.reference.input_length,
+                .and_then(|number| placeholder.field.encode(&number))
+                .map_err(|message| AssemblyError {
+                    input_offset: source_length - placeholder.reference.input_length,
                     message,
                 })?;
-            match (&mut instruction, fixup.field) {
+            match (&mut instruction, placeholder.field) {
                 (InstructionData::Immediate(data), NumericField::Immediate16) => data.value = value,
                 (InstructionData::ShortImmediate(data), NumericField::Immediate8) => {
                     data.value = u8::try_from(value).expect("validated short immediate");
@@ -46,7 +47,7 @@ impl InstructionToken {
                     };
                     data.value = (data.value & !mask) | value;
                 }
-                _ => unreachable!("numeric fixup does not match instruction format"),
+                _ => unreachable!("numeric placeholder does not match instruction format"),
             }
         }
         Ok(instruction)

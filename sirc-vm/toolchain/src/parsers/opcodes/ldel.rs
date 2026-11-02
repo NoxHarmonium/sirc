@@ -5,7 +5,7 @@ use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::types::instruction::InstructionToken;
-use crate::types::numeric::{NumericField, NumericFixup};
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use crate::types::object::RefType;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -98,7 +98,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                             dest_register,
                             address_register,
                         ),
-                        numeric_fixups: vec![NumericFixup::new(
+                        numeric_placeholders: vec![NumericPlaceholder::new(
                             placeholder_name.clone(),
                             NumericField::Immediate16,
                         )],
@@ -201,7 +201,7 @@ pub fn ldel(i: &str) -> AsmResult<InstructionToken> {
                             dest_register,
                             address_register,
                         ),
-                        numeric_fixups: vec![NumericFixup::new(placeholder_name.clone(), NumericField::Immediate16)],
+                        numeric_placeholders: vec![NumericPlaceholder::new(placeholder_name.clone(), NumericField::Immediate16)],
                         ..Default::default()
                     },
                 )),

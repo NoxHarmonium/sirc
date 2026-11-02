@@ -1,3 +1,5 @@
+use super::shared::parse_constant_reference;
+use crate::types::numeric::{ConstantReference, NumericField, NumericPlaceholder};
 use nom::branch::alt;
 use nom::character::complete::{char, one_of, space0, space1};
 use nom::combinator::{cut, map, map_res, opt};
@@ -34,7 +36,7 @@ impl Default for InstructionToken {
                 additional_flags: 0x0,
             }),
             symbol_ref: None,
-            numeric_fixups: Vec::new(),
+            numeric_placeholders: Vec::new(),
         }
     }
 }
@@ -65,7 +67,7 @@ pub fn extract_address_arguments(address: Address) -> (u32, Option<SymbolDefinit
 pub enum ImmediateType {
     Value(u16),
     SymbolRef(RefToken),
-    PlaceHolder(crate::types::numeric::ConstantReference),
+    PlaceHolder(ConstantReference),
 }
 
 pub enum OffsetType {
@@ -77,14 +79,13 @@ pub enum OffsetType {
 pub enum ShiftDefinitionData {
     Immediate(ShiftType, u8),
     Register(ShiftType, RegisterName),
-    Constant(ShiftType, crate::types::numeric::ConstantReference),
+    Constant(ShiftType, ConstantReference),
 }
 
 impl ShiftDefinitionData {
-    pub fn numeric_fixups(&self) -> Vec<crate::types::numeric::NumericFixup> {
-        use crate::types::numeric::{NumericField, NumericFixup};
+    pub fn numeric_placeholders(&self) -> Vec<NumericPlaceholder> {
         match self {
-            Self::Constant(_, reference) => vec![NumericFixup::new(
+            Self::Constant(_, reference) => vec![NumericPlaceholder::new(
                 reference.clone(),
                 NumericField::ShiftCount,
             )],
@@ -120,7 +121,7 @@ pub enum AddressingMode {
 pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
     alt((
         map_res(parse_number, |number| {
-            crate::types::numeric::NumericField::Immediate16
+            NumericField::Immediate16
                 .encode(&number)
                 .map(ImmediateType::Value)
         })
@@ -129,11 +130,7 @@ pub fn parse_value(i: &str) -> AsmResult<ImmediateType> {
             ImmediateType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
-        map(
-            super::shared::parse_constant_reference,
-            ImmediateType::PlaceHolder,
-        )
-        .context("placeholder"),
+        map(parse_constant_reference, ImmediateType::PlaceHolder).context("placeholder"),
     ))(i)
 }
 
@@ -257,7 +254,7 @@ fn parse_shift_definition(i: &str) -> AsmResult<ShiftDefinitionData> {
     let result = alt((
         parse_immediate_shift_definition,
         parse_register_shift_definition,
-        map(super::shared::parse_constant_reference, |reference| {
+        map(parse_constant_reference, |reference| {
             ShiftDefinitionData::Constant(shift_type, reference)
         }),
     ))(i);

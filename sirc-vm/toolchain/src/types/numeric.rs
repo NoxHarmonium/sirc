@@ -85,12 +85,12 @@ impl NumericField {
 }
 
 #[derive(Debug, Clone)]
-pub struct NumericFixup {
+pub struct NumericPlaceholder {
     pub reference: ConstantReference,
     pub field: NumericField,
 }
 
-impl NumericFixup {
+impl NumericPlaceholder {
     #[must_use]
     pub fn new(reference: ConstantReference, field: NumericField) -> Self {
         Self { reference, field }

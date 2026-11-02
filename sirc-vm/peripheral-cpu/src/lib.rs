@@ -55,6 +55,7 @@ use num::ToPrimitive;
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
+use util::mask_bits_below_index;
 
 use crate::registers::{
     get_hardware_interrupt_enable, sr_bit_is_set, ExceptionLinkRegister, FullAddressRegisterAccess,
@@ -587,7 +588,7 @@ impl CpuPeripheral {
             .current_exception_level
             .saturating_sub(first_handler_level - 1);
         let eligible_lines =
-            util::mask_bits_below_index(LEVEL_FIVE_INTERRUPT_PIN_BIT - 1, first_eligible_pin);
+            mask_bits_below_index(LEVEL_FIVE_INTERRUPT_PIN_BIT - 1, first_eligible_pin);
         let level_sensitive_interrupts = enabled_interrupts & eligible_lines;
         if level_sensitive_interrupts > 0 {
             trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");

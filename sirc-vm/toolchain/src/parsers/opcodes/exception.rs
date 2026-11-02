@@ -1,4 +1,5 @@
 use super::super::shared::AsmResult;
+use super::numeric_field;
 use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode,
 };
@@ -98,9 +99,9 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
             )));
         }
     };
-    let (value, numeric_fixups) = numeric.map_or_else(
+    let (value, numeric_placeholders) = numeric.map_or_else(
         || Ok((0, Vec::new())),
-        |(operand, field)| super::numeric_field(i_after_instruction, operand, field),
+        |(operand, field)| numeric_field(i_after_instruction, operand, field),
     )?;
     Ok((
         i,
@@ -113,7 +114,7 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
                 additional_flags: 0,
                 condition_flag,
             }),
-            numeric_fixups,
+            numeric_placeholders,
             ..Default::default()
         },
     ))

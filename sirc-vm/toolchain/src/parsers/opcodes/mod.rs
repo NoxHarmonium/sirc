@@ -1,3 +1,10 @@
+use crate::{
+    parsers::instruction::ImmediateType,
+    types::{
+        numeric::{NumericField, NumericPlaceholder},
+        shared::{NumberToken, NumberType},
+    },
+};
 pub mod arithmetic_immediate;
 pub mod arithmetic_register;
 pub mod branching;
@@ -52,19 +59,12 @@ fn reject_aliased_address_register_write<'a>(
 /// validation and original source context in the AST until object generation.
 fn numeric_field<'a>(
     input: &'a str,
-    operand: &crate::parsers::instruction::ImmediateType,
-    field: crate::types::numeric::NumericField,
-) -> Result<(u16, Vec<crate::types::numeric::NumericFixup>), nom::Err<ErrorTree<&'a str>>> {
-    use crate::{
-        parsers::instruction::ImmediateType,
-        types::{
-            numeric::{NumericField, NumericFixup},
-            shared::{NumberToken, NumberType},
-        },
-    };
+    operand: &ImmediateType,
+    field: NumericField,
+) -> Result<(u16, Vec<NumericPlaceholder>), nom::Err<ErrorTree<&'a str>>> {
     match operand {
         ImmediateType::PlaceHolder(reference) => {
-            Ok((0, vec![NumericFixup::new(reference.clone(), field)]))
+            Ok((0, vec![NumericPlaceholder::new(reference.clone(), field)]))
         }
         ImmediateType::Value(value) => {
             let number = if matches!(field, NumericField::DmaRegisterCount) {

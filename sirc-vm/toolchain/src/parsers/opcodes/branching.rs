@@ -1,5 +1,5 @@
 use crate::types::instruction::InstructionToken;
-use crate::types::numeric::{NumericField, NumericFixup};
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use crate::{
     parsers::{
         data::override_ref_token_type_if_implied,
@@ -111,7 +111,7 @@ pub fn branching(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: construct_branch_immediate_instruction(0x0), // 0x0 will be replaced by linker
-                    numeric_fixups: vec![NumericFixup::new(
+                    numeric_placeholders: vec![NumericPlaceholder::new(
                         placeholder_name.clone(),
                         NumericField::Immediate16,
                     )],

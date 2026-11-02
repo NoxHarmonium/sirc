@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::INSTRUCTION_SIZE_WORDS;
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ pub fn merge_object_definitions(
 pub fn try_merge_object_definitions(
     object_definitions: &[ObjectDefinition],
 ) -> Result<(ObjectDefinition, ProgramDebugInfo), String> {
-    let mut definitions = std::collections::HashMap::new();
+    let mut definitions = HashMap::new();
     for (index, object) in object_definitions.iter().enumerate() {
         for symbol in &object.symbols {
             let filename = object.debug_info.as_ref().map_or_else(

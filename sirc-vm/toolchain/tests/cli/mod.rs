@@ -1,11 +1,13 @@
+use super::assembler::support::assemble_object;
 use std::{
     fs,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Output},
 };
 use tempfile::tempdir;
+use toolchain::parsers::opcodes::ldel::ldel;
 
-fn assemble(directory: &Path, name: &str, source: &str) -> (Output, std::path::PathBuf) {
+fn assemble(directory: &Path, name: &str, source: &str) -> (Output, PathBuf) {
     let input = directory.join(format!("{name}.sasm"));
     let object = directory.join(format!("{name}.o"));
     fs::write(&input, source).unwrap();
@@ -137,7 +139,6 @@ fn bad_constants_report_original_source_locations() {
 
 #[test]
 fn ldel_link_source_is_an_intentional_aliased_write_error() {
-    use toolchain::parsers::opcodes::ldel::ldel;
     for offset in ["#1, ", "@target, ", "$N, ", "r2, ", ""] {
         let instruction = format!("LDEL a, ({offset}l)+\n");
         let error = ldel(&instruction).unwrap_err().to_string();
@@ -148,9 +149,38 @@ fn ldel_link_source_is_an_intentional_aliased_write_error() {
             "2:",
         );
         let legal = format!(".EQU $N #1\nLDEL a, ({offset}s)+\n:target\nNOOP\n");
-        let _ = super::assembler::support::assemble_object(&legal);
+        let _ = assemble_object(&legal);
     }
     for instruction in ["LDEL l, (#1, s)", "LDEL a, (#1, a)+", "LDEL a, (#1, p)+"] {
         assert_assembly_error(instruction, "Aliased register writes", "1:");
     }
+}
+
+#[test]
+fn undefined_data_constant_does_not_write_an_object() {
+    assert_assembly_error(".DB $MISSING\n", "Undefined constant", "1:5");
+}
+
+#[test]
+fn linker_cli_writes_the_relocated_binary() {
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(
+        directory.path(),
+        "input",
+        "MOVI r1, @target.l\n:target\nNOOP\n",
+    );
+    assert_success(&output);
+    let binary = directory.path().join("program.bin");
+    let output = Command::new(env!("CARGO_BIN_EXE_linker"))
+        .arg(object)
+        .arg("-o")
+        .arg(&binary)
+        .args(["-s", "100"])
+        .output()
+        .unwrap();
+    assert_success(&output);
+    assert_eq!(
+        fs::read(binary).unwrap(),
+        assemble_object("MOVI r1, #102\nNOOP\n").program
+    );
 }

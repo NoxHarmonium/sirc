@@ -1,6 +1,8 @@
 use crate::types::data::{DataToken, DataType, DB_VALUE, DQ_VALUE, DW_VALUE};
+use crate::types::numeric::{Constants, NumericOperand};
 use crate::types::object::{ObjectDefinition, SymbolDefinition, SymbolRef};
 use crate::types::shared::Token;
+use crate::utils::source::line_column;
 
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     INSTRUCTION_SIZE_BYTES, INSTRUCTION_SIZE_WORDS,
@@ -20,7 +22,7 @@ fn inject_data_value(
     program_offset: usize,
     symbol_refs: &mut Vec<SymbolRef>,
     offset: u32,
-    placeholders: &crate::types::numeric::Constants,
+    placeholders: &Constants,
 ) {
     match data.value {
         DataType::Value(NumberToken { value, .. }) => {
@@ -102,7 +104,7 @@ pub fn try_build_object(
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut label_positions = HashMap::new();
     let mut symbol_refs: Vec<SymbolRef> = vec![];
-    let mut placeholders = crate::types::numeric::Constants::new();
+    let mut placeholders = Constants::new();
     let mut offset: u32 = 0x0;
     let mut program: Vec<[u8; 4]> = vec![];
     let mut debug_info = ObjectDebugInfo {
@@ -148,8 +150,7 @@ pub fn try_build_object(
             Token::Label(data) => {
                 let input_offset = file_position;
                 if let Some(previous) = label_positions.insert(data.name.clone(), input_offset) {
-                    let (line, _) =
-                        crate::utils::source::line_column(&debug_info.original_input, previous);
+                    let (line, _) = line_column(&debug_info.original_input, previous);
                     return Err(AssemblyError {
                         input_offset,
                         message: format!(
@@ -178,7 +179,7 @@ pub fn try_build_object(
             }
             Token::Data(data) => {
                 if let DataType::PlaceHolder(reference) = &data.value {
-                    crate::types::numeric::NumericOperand::Constant(reference.clone())
+                    NumericOperand::Constant(reference.clone())
                         .resolve(&placeholders)
                         .map_err(|message| AssemblyError {
                             input_offset: original_input_length - reference.input_length,
@@ -196,16 +197,17 @@ pub fn try_build_object(
                 offset += INSTRUCTION_SIZE_BYTES;
             }
             Token::Equ(data) => {
+                let input_offset = match &data.value {
+                    NumericOperand::Constant(reference) => {
+                        original_input_length - reference.input_length
+                    }
+                    NumericOperand::Literal(_) => 0,
+                };
                 let number =
                     data.value
                         .resolve(&placeholders)
                         .map_err(|message| AssemblyError {
-                            input_offset: match &data.value {
-                                crate::types::numeric::NumericOperand::Constant(reference) => {
-                                    original_input_length - reference.input_length
-                                }
-                                crate::types::numeric::NumericOperand::Literal(_) => 0,
-                            },
+                            input_offset,
                             message,
                         })?;
                 placeholders.insert(data.placeholder_name, number);

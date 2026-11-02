@@ -23,6 +23,3 @@ hex = "0.4.3"
 insta = { version = "1.43.1", features = ["yaml"] }
 pretty-hex = "0.4.1"
 tempfile = "3"
-peripheral_bus = { path = "../peripheral-bus" }
-device_video = { path = "../device-video" }
-device_terminal = { path = "../device-terminal" }

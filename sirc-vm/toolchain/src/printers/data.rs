@@ -3,6 +3,7 @@ use crate::types::data::{
     DataToken, DataType, EquToken, DB_TOKEN, DB_VALUE, DQ_TOKEN, DQ_VALUE, DW_TOKEN, DW_VALUE,
     EQU_TOKEN,
 };
+use crate::types::numeric::NumericOperand;
 
 /// Prints the AST representation of a `DataToken` to a string
 ///
@@ -77,9 +78,8 @@ pub fn print_equ_token(equ_token: &EquToken) -> String {
         "{EQU_TOKEN} ${} {}",
         equ_token.placeholder_name,
         match &equ_token.value {
-            crate::types::numeric::NumericOperand::Literal(number) => print_number_token(number),
-            crate::types::numeric::NumericOperand::Constant(reference) =>
-                format!("${}", reference.name),
+            NumericOperand::Literal(number) => print_number_token(number),
+            NumericOperand::Constant(reference) => format!("${}", reference.name),
         }
     )
 }

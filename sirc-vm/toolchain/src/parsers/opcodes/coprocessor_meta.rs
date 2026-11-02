@@ -1,8 +1,10 @@
 use super::super::shared::AsmResult;
+use super::numeric_field;
 use crate::parsers::instruction::{
     parse_instruction_operands0, parse_instruction_tag, AddressingMode, ImmediateType,
 };
 use crate::types::instruction::InstructionToken;
+use crate::types::numeric::NumericField;
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -121,11 +123,11 @@ pub fn coprocessor_meta(i: &str) -> AsmResult<InstructionToken> {
                     address_register,
                 );
             };
-            let (count_operand, numeric_fixups) = super::numeric_field(i_after_instruction, immediate_type, crate::types::numeric::NumericField::DmaRegisterCount)?;
+            let (count_operand, numeric_placeholders) = numeric_field(i_after_instruction, immediate_type, NumericField::DmaRegisterCount)?;
 
             let operation = if tag == "DMAR" { 0x8 } else { 0x9 };
             let mut instruction = construct_instruction(command(DMA_COPROCESSOR_ID, operation, address_operand | count_operand));
-            instruction.numeric_fixups = numeric_fixups;
+            instruction.numeric_placeholders = numeric_placeholders;
             Ok((i, instruction))
         }
         ("DMAR" | "DMAW", [AddressingMode::Immediate(_)]) => {
@@ -152,9 +154,9 @@ pub fn coprocessor_meta(i: &str) -> AsmResult<InstructionToken> {
                 return reject_dmat_register_pair(i_after_instruction);
             }
 
-            let (count, numeric_fixups) = super::numeric_field(i_after_instruction, immediate_type, crate::types::numeric::NumericField::DmaTransferCount)?;
+            let (count, numeric_placeholders) = numeric_field(i_after_instruction, immediate_type, NumericField::DmaTransferCount)?;
             let mut instruction = construct_instruction(command(DMA_COPROCESSOR_ID, 0xA, count));
-            instruction.numeric_fixups = numeric_fixups;
+            instruction.numeric_placeholders = numeric_placeholders;
             Ok((i, instruction))
         }
         ("DMAT", [AddressingMode::DirectAddressRegister(_), AddressingMode::DirectAddressRegister(_), _]) => {

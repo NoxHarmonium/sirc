@@ -1,3 +1,5 @@
+use super::shared::{parse_constant_reference, parse_numeric_operand};
+use crate::types::numeric::NumericOperand;
 use nom::{
     branch::alt,
     combinator::map,
@@ -43,11 +45,7 @@ fn parse_data_type(i: &str) -> AsmResult<DataType> {
             DataType::SymbolRef(ref_token)
         })
         .context("symbol reference"),
-        map(
-            super::shared::parse_constant_reference,
-            DataType::PlaceHolder,
-        )
-        .context("placeholder"),
+        map(parse_constant_reference, DataType::PlaceHolder).context("placeholder"),
     ))(i)
 }
 
@@ -78,15 +76,15 @@ fn parse_data(i: &str) -> AsmResult<(u8, DataType)> {
     lexeme(parse_data_)(i)
 }
 
-fn parse_equ_(i: &str) -> AsmResult<(String, crate::types::numeric::NumericOperand)> {
+fn parse_equ_(i: &str) -> AsmResult<(String, NumericOperand)> {
     let (i, _) = lexeme(tag(EQU_TOKEN))(i)?;
     let (i, placeholder_name) = parse_placeholder(i)?;
-    let (i, value) = super::shared::parse_numeric_operand(i)?;
+    let (i, value) = parse_numeric_operand(i)?;
 
     Ok((i, (placeholder_name, value)))
 }
 
-fn parse_equ(i: &str) -> AsmResult<(String, crate::types::numeric::NumericOperand)> {
+fn parse_equ(i: &str) -> AsmResult<(String, NumericOperand)> {
     lexeme(parse_equ_)(i)
 }
 

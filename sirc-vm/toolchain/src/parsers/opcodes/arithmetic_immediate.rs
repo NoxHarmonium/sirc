@@ -3,7 +3,7 @@ use crate::parsers::instruction::{
 };
 use crate::parsers::shared::split_shift_definition_data;
 use crate::types::instruction::InstructionToken;
-use crate::types::numeric::{NumericField, NumericFixup};
+use crate::types::numeric::{NumericField, NumericPlaceholder};
 use nom::branch::alt;
 use nom::error::{ErrorKind, FromExternalError};
 use nom_supreme::error::ErrorTree;
@@ -156,7 +156,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                 Ok((
                     i,
                     InstructionToken {
-                        numeric_fixups: shift_definition_data.numeric_fixups(),
+                        numeric_placeholders: shift_definition_data.numeric_placeholders(),
                         input_length,
                         instruction: construct_short_immediate_instruction(
                             0x0,
@@ -200,7 +200,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         InstructionToken {
                             input_length,
                             instruction: construct_immediate_instruction(0x0, dest_register),
-                            numeric_fixups: vec![NumericFixup::new(
+                            numeric_placeholders: vec![NumericPlaceholder::new(
                                 placeholder_name.clone(),
                                 NumericField::Immediate16,
                             )],
@@ -240,7 +240,7 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                         Ok((
                             i,
                             InstructionToken {
-                        numeric_fixups: shift_definition_data.numeric_fixups(),
+                        numeric_placeholders: shift_definition_data.numeric_placeholders(),
                                 input_length,
                                 instruction: construct_short_immediate_instruction(
                                     short_value,
@@ -267,13 +267,13 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
                                 shift_count,
                                 default_status_register_update_source,
                             ),
-                            numeric_fixups: {
-                                let mut fixups = vec![NumericFixup::new(
+                            numeric_placeholders: {
+                                let mut placeholders = vec![NumericPlaceholder::new(
                                     placeholder_name.clone(),
                                     NumericField::Immediate8,
                                 )];
-                                fixups.extend(shift_definition_data.numeric_fixups());
-                                fixups
+                                placeholders.extend(shift_definition_data.numeric_placeholders());
+                                placeholders
                             },
                             ..Default::default()
                         },
