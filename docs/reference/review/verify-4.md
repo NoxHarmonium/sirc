@@ -1,0 +1,21 @@
+F-exc-1: confirmed
+F-exc-2: confirmed
+F-exc-3: confirmed
+F-exc-14: confirmed
+F-exc-21: confirmed
+F-exc-22: confirmed
+F-exc-23: confirmed
+F-exc-24: confirmed
+F-exc-25: confirmed
+F-exc-26: confirmed
+F-exc-27: confirmed
+F-exc-28: confirmed
+F-exc-29: confirmed
+F-exc-30: confirmed
+F-exc-31: confirmed
+F-exc-32: confirmed
+F-exc-33: confirmed
+F-exc-34: confirmed
+F-exc-35: confirmed
+F-exc-38: confirmed
+Counts: 20 confirmed, 0 refuted, 0 reclassified
