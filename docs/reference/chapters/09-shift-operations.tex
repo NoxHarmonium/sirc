@@ -3,8 +3,8 @@
 
 \section{Overview}
 
-The SIRC-1 CPU supports shift operations that can be applied to operands in many instructions. Shifts can multiply or
-divide values by powers of 2, extract bit fields, or perform bit rotations.
+The SIRC-1 CPU supports shift operations that can be applied to the first source operand in many instructions. Shifts
+can multiply or divide values by powers of 2, extract bit fields, or perform bit rotations.
 
 Shift operations are encoded within Short Immediate and Register format instructions, allowing a value to be shifted
 before being used in an ALU operation—all within a single instruction.
@@ -39,7 +39,7 @@ register writeback.
 	\label{tab:shift-types}
 \end{table}
 
-\mnemonic{NUL} is the no-shift form: it leaves the operand unchanged but still routes it through the shifter, so \texttt{SHFT rD, NUL \#0} is a legal way to drive the status flags from the unshifted value of \texttt{rD}.
+\mnemonic{NUL} is the no-shift form: it leaves the operand unchanged and is the default when no shift is specified.
 
 \section{Shift Syntax}
 
@@ -125,7 +125,7 @@ ORRI r3, #0x0400         ; r3 |= 0x0400
 \begin{itemize}
 	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
 	\item Bit 15 receives 0
-	\item Equivalent to unsigned division by $2^n$
+	\item Equivalent to unsigned division by $2^n$ where $n$ is the shift count
 	\item Should be used for unsigned values only
 \end{itemize}
 
@@ -187,7 +187,8 @@ ADDI r1, #0, ASL #1  ; r1 = (r1 << 1) = r1 * 2 (signed)
 \begin{itemize}
 	\item The last bit shifted out of bit 0 (bit n-1 for a count of n) is placed in the carry flag
 	\item Bit 15 (sign bit) is replicated into all bits vacated by the shift
-	\item Equivalent to signed division by $2^n$ (rounds toward negative infinity)
+	\item Equivalent to signed division by $2^n$, except that the result is rounded down, not toward zero: \texttt{-3} shifted
+	      right by 1 gives \texttt{-2}, whereas \mnemonic{DIVS} gives \texttt{-1} for $-3 / 2$
 	\item Should be used for signed values only
 \end{itemize}
 
@@ -514,11 +515,11 @@ A status override modifier can be added immediately after an instruction mnemoni
 	\centering
 	\begin{tabular}{clp{8cm}}
 		\toprule
-		\textbf{Modifier} & \textbf{Meaning} & \textbf{Description}                    \\
+		\textbf{Modifier} & \textbf{Meaning} & \textbf{Description}                                                                       \\
 		\midrule
-		{[}A{]}           & ALU              & Update flags from ALU result (default)  \\
-		{[}S{]}           & Shift            & Update flags from shift result, not ALU \\
-		{[}N{]}           & None             & Do not update status flags at all       \\
+		{[}A{]}           & ALU              & Update flags from ALU result (default except for the \mnemonic{SHFT} meta-instruction)     \\
+		{[}S{]}           & Shift            & Update flags from shift result, not ALU (default for the \mnemonic{SHFT} meta-instruction) \\
+		{[}N{]}           & None             & Do not update status flags at all                                                          \\
 		\bottomrule
 	\end{tabular}
 	\caption{Status Flag Override Modifiers}
@@ -605,7 +606,8 @@ See Chapter~\ref{ch:alu-instructions} for the full \mnemonic{SHFT} instruction e
 
 \begin{itemize}
 	\item The status override modifier must appear immediately after the instruction mnemonic with no spaces: \texttt{ADDI[S]}
-	\item The modifier is optional; omitting it defaults to {[}A{]} (ALU flag updates)
+	\item The modifier is optional; omitting it defaults to {[}A{]} (ALU flag updates) for most instructions except
+	      \mnemonic{SHFT}.
 	\item The override selects the flag source for the whole instruction. If the condition is false, the instruction has no
 	      effect and no flags change, whatever the override
 	\item \texttt{AF = 10} is still encodable on the 16-bit immediate format, but with no shift fields the shifter result is treated as zero flags, so \texttt{[S]} clears N, Z, C and V (Chapter~\ref{ch:alu-instructions})
