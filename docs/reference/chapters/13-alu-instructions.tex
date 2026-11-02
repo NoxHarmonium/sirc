@@ -118,32 +118,21 @@ are not legal for this instruction family.
 
 \noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
-\texttt{ADDR r1, r1, r2}. A shift definition may be combined with the shorthand; because the shift always applies to
-the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}, not \texttt{r1 + (r2 << 2)}.
+\texttt{ADDR r1, r1, r2}.
 
 \noindent\textbf{Opcode \opcode{27}:} Opcode \opcode{27} is undocumented and has no public assembly syntax; its behavior is architecturally undefined (see Appendix~\ref{appendix:undocumented}).
 
 \section{Common ALU Semantics}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lp{9cm}}
-		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                   \\
-		\midrule
-		Condition false        & The instruction writes no register and no status flag. The program counter still advances, so the segment-overflow check on the program counter and trace still apply.                \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                            \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
-		Test variants          & \mnemonic{CMN}, \mnemonic{CNC}, \mnemonic{CMP}, \mnemonic{CPC}, \mnemonic{TSA}, \mnemonic{TSO}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.        \\
-		MOV                    & \mnemonic{MOVI} and \mnemonic{MOVR} write the selected operand to \texttt{rD}.                                                                                                        \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                        \\
-		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction that writes a privileged high address register raises a privilege-violation fault at decode; see the notes below. \\
-		\bottomrule
-	\end{tabular}
-	\caption{Common ALU Semantics}
-	\label{tab:alu-common-semantics}
-\end{table}
+Conditional execution, the status update source, and timing follow the rules in Chapter~\ref{ch:reading-instructions}
+and Appendix~\ref{appendix:timing}. In the immediate format the left operand is the named register and the right
+operand is the encoded 16-bit immediate. In the short immediate format the left operand is the named register after the
+encoded shift is applied, and the right operand is the encoded 8-bit immediate. In the register format the left operand
+is \texttt{rS1} after the encoded shift is applied, and the right operand is \texttt{rS2}.
+
+The test variants (\mnemonic{CMN}, \mnemonic{CNC}, \mnemonic{CMP}, \mnemonic{CPC}, \mnemonic{TSA}, \mnemonic{TSO}, and
+\mnemonic{TSX}) compute a result for flag updates but do not write it back. \mnemonic{MOVI} and \mnemonic{MOVR} write
+the selected operand to \texttt{rD}.
 
 \noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
 bus-protection, data alignment, effective-address segment-overflow, or invalid-opcode faults. An ALU instruction in the

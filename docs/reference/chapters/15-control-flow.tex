@@ -85,27 +85,21 @@ forms do not accept shift suffixes in the assembler.
 
 \section{Common Semantics}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lp{9cm}}
-		\toprule
-		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                                                                                                          \\
-		\midrule
-		Condition false     & The instruction is skipped and has no side effects. The program counter advances to the next instruction normally (the advance is still checked for segment overflow; see Section~\ref{sec:segment-overflow-fault}).                                                                                                         \\
-		Address calculation & The selected source address-register high word supplies the segment. The target low word is the selected source low word plus the immediate or register displacement.                                                                                                                                                        \\
-		Pre-decrement LDEA  & The source low word is decremented by one word before the displacement is applied. The decremented source low word is written back.                                                                                                                                                                                          \\
-		Post-increment LDEL & The target address is calculated from the original source value. The source low word is incremented by one word in write-back.                                                                                                                                                                                               \\
-		Subroutine link     & \mnemonic{LDEL}, \mnemonic{BRSR}, and \mnemonic{LJSR} save the normal next-instruction address in \reg{l}.                                                                                                                                                                                                                   \\
-		Status flags        & Preserved. Control-flow instructions do not support status update override syntax.                                                                                                                                                                                                                                           \\
-		Timing              & 6 cycles, plus any instruction-fetch wait states. These instructions do not perform a data-memory bus access.                                                                                                                                                                                                                \\
-		Exceptions          & Effective-address calculation and address-register auto-update can raise segment-overflow faults when \texttt{SR.A} is set; see the notes below.                                                                                                                                                                             \\
-		Privilege           & In protected mode, address-register-pair write-back is allowed only when every written high word would remain unchanged. If any high word would change, the instruction raises a privilege-violation fault instead of completing write-back. Direct writes to high address registers also raise a privilege-violation fault. \\
-		Fault side effects  & Program-counter, destination address-register, source auto-update, and link-register updates occur after condition evaluation. If a fault cancels the instruction before write-back, those effects do not complete (write-back still runs, but as a no-op).                                                                  \\
-		\bottomrule
-	\end{tabular}
-	\caption{Common Control-Flow Instruction Semantics}
-	\label{tab:control-flow-common-semantics}
-\end{table}
+Conditional execution and timing follow the rules in Chapter~\ref{ch:reading-instructions} and
+Appendix~\ref{appendix:timing}. The high word of the selected source address register supplies the segment. The target
+low word is the selected source low word plus the immediate or register displacement. A pre-decrement \mnemonic{LDEA}
+decrements the source low word by one word before the displacement is applied and writes the decremented value back. A
+post-increment \mnemonic{LDEL} calculates the target address from the original source value and increments the source
+low word by one word in write-back. \mnemonic{LDEL}, \mnemonic{BRSR}, and \mnemonic{LJSR} save the normal
+next-instruction address in \reg{l}.
+
+In protected mode, address-register-pair write-back is allowed only when every written high word would remain
+unchanged. If any high word would change, the instruction raises a privilege-violation fault instead of completing
+write-back. Direct writes to high address registers also raise a privilege-violation fault.
+
+Program-counter, destination address-register, source auto-update, and link-register updates occur after condition
+evaluation. If a fault cancels the instruction before write-back, those effects do not complete (write-back still runs,
+but as a no-op).
 
 \noindent Control-flow and effective-address instructions do not perform data-memory access and do not raise data bus,
 data bus-protection, or invalid-opcode faults in documented forms. Effective-address calculation can raise a

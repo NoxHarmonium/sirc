@@ -41,26 +41,26 @@ Appendix~\ref{appendix:undocumented}); it is not a coprocessor call.
 
 \section{Common Semantics}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lp{9cm}}
-		\toprule
-		\textbf{Topic}     & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                                                            \\
-		\midrule
-		Condition false    & The instruction is skipped and has no side effects. The CSR, registers, memory, address registers, and status flags are preserved. The program counter still advances to the following instruction.                                                                                                                                                                                                                                            \\
-		Command operand    & \mnemonic{COPI} uses the 16-bit immediate value. \mnemonic{COPR} uses its source register value as the command operand.                                                                                                                                                                                                                                                                                                                        \\
-		Command format     & For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor operation, and bits 7--0 are coprocessor-defined operand bits.                                                                                                                                                                                                                                                                     \\
-		Write-back         & The processing unit writes the command operand to the CSR. It does not write general-purpose registers, address registers, or data memory as part of the call. Hidden encoding fields are ignored.                                                                                                                                                                                                                                             \\
-		Status flags       & Preserved by the processing-unit coprocessor-call write-back path. A coprocessor operation may define its own later CPU-state effects; exception-unit effects are documented in Chapter~\ref{ch:exceptions}.                                                                                                                                                                                                                                   \\
-		Privilege          & In protected mode, coprocessor-operation nibbles \texttt{0x0}--\texttt{0x7} are user-callable and \texttt{0x8}--\texttt{0xF} are supervisor-only. Privilege checks apply only when the instruction condition is true. For \mnemonic{COPR} the privilege decision is made on the runtime value of \reg{rS} sampled during decode, not on any encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents. \\
-		Timing             & The coprocessor-call instruction itself uses the normal 6 execution phases and performs no data-memory bus access. Dispatch to a coprocessor with a non-zero ID then occupies one further complete 6-cycle slot, so most calls take 12 cycles; Section~\ref{sec:coprocessor-call-timing} of Appendix~\ref{appendix:timing} gives the rule and its exceptions.                                                                                  \\
-		Exceptions         & Supervisor-only operations can raise privilege-violation faults; missing coprocessors can raise invalid-opcode faults. Unimplemented operations on a coprocessor that is present also raise invalid-opcode faults. See the notes below.                                                                                                                                                                                                        \\
-		Fault side effects & A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed (Section~\ref{sec:interrupt-latency}).                                                  \\
-		\bottomrule
-	\end{tabular}
-	\caption{Common Coprocessor Instruction Semantics}
-	\label{tab:coprocessor-common-semantics}
-\end{table}
+Conditional execution follows the rules in Chapter~\ref{ch:reading-instructions}; a call whose condition is false does
+not write the CSR. The call's timing is given in Section~\ref{sec:coprocessor-call-timing} of
+Appendix~\ref{appendix:timing}.
+
+\mnemonic{COPI} uses its 16-bit immediate value as the command operand; \mnemonic{COPR} uses the value of its source
+register. For standard coprocessor commands, bits 15--12 select the coprocessor ID, bits 11--8 select the coprocessor
+operation, and bits 7--0 are coprocessor-defined operand bits. The processing unit writes the command operand to the CSR.
+It does not write general-purpose registers, address registers, data memory, or status flags as part of the call, and
+hidden encoding fields are ignored. A coprocessor operation may define its own later CPU-state effects; exception-unit
+effects are documented in Chapter~\ref{ch:exceptions}.
+
+In protected mode, coprocessor-operation nibbles \texttt{0x0}--\texttt{0x7} are user-callable and
+\texttt{0x8}--\texttt{0xF} are supervisor-only. Privilege checks apply only when the instruction condition is true. For
+\mnemonic{COPR} the privilege decision is made on the runtime value of \reg{rS} sampled during decode, not on any
+encoded field, so whether a given \mnemonic{COPR} instruction faults depends on register contents.
+
+A fault raised by the call itself, such as a privilege violation or an invalid opcode, cancels the command, and
+software must not depend on the contents of the CSR after the fault. A command waiting in the CSR is never discarded by
+an interrupt or an instruction trace fault: those wait until the command has been dispatched and has completed
+(Section~\ref{sec:interrupt-latency}).
 
 \noindent The processing-unit part of a coprocessor call performs no data-memory access and raises no data bus, data
 bus-protection, data alignment, or effective-address segment-overflow fault. A DMA command that the call starts can raise
@@ -744,7 +744,7 @@ instruction.
 
 \noindent DMA timing assumes the command condition is true and every bus access is acknowledged without wait states. The
 \mnemonic{COPI} dispatch takes the normal 6 cycles; dispatch to the DMA unit then occupies one further complete 6-cycle
-slot beginning at the next phase 0, matching the coprocessor-1 dispatch model (see Table~\ref{tab:coprocessor-common-semantics}).
+slot beginning at the next phase 0, matching the coprocessor-1 dispatch model (see Section~\ref{sec:coprocessor-call-timing} of Appendix~\ref{appendix:timing}).
 Phase 0 of that slot is a setup cycle with no bus access: the DMA unit accepts the command, decodes the count, and
 latches the address registers. From phase 1, the DMA unit performs one bus access per cycle in the no-wait case.
 \mnemonic{DMAT} reads a chunk of up to seven words from \reg{a} and then writes it to \reg{l}, so each word takes

@@ -82,25 +82,22 @@ and the assembler rejects it (Appendix~\ref{appendix:undocumented}).
 
 \section{Common Memory Semantics}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lp{9cm}}
-		\toprule
-		\textbf{Topic}      & \textbf{Definition}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \\
-		\midrule
-		Condition false     & The instruction is skipped and has no side effects. Registers, memory, address registers, and status flags are preserved (the program-counter advance is still checked for segment overflow; see Section~\ref{sec:segment-overflow-fault}).                                                                                                                                                                                                                                                                                               \\
-		Address calculation & Immediate-displacement forms add the 16-bit signed displacement to the selected address register low word. Register-offset forms add the unshifted \texttt{rO} to the selected address register low word; \texttt{rO} is never shifted, even on \mnemonic{STOR}'s register-offset forms, which shift the value being stored instead. The selected address register high word supplies the segment and is unchanged.                                                                                                                       \\
-		Post-increment LOAD & The memory address is calculated from the original address register value. The address register low word is incremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                                                                                                                                \\
-		Pre-decrement STOR  & The memory address uses the selected address register low word decremented by one word, plus the displacement. The address register low word is decremented by one word in write-back after the memory access.                                                                                                                                                                                                                                                                                                                            \\
-		Status flags        & Memory instructions do not update status flags as a side effect. A \mnemonic{LOAD} whose destination is \reg{sr} writes the loaded value to the status register, which replaces the flags (see Section~\ref{sec:memory-status-flags}). Shifts used by memory instructions cannot update the status register.                                                                                                                                                                                                                              \\
-		Timing              & Memory instructions complete in 6 cycles with no wait states. Each wait state on either an instruction fetch or the data access adds one cycle (3w cycles for w wait states per access).                                                                                                                                                                                                                                                                                                                                                  \\
-		Exceptions          & Memory instructions can raise data bus, data bus-protection, segment-overflow, and privilege-violation faults; see the notes below.                                                                                                                                                                                                                                                                                                                                                                                                       \\
-		Fault side effects  & Destination register writes and address-register auto-updates occur in write-back after the memory-access phase, so a fault that cancels the instruction before write-back leaves them undone (write-back still runs, but as a no-op). Data bus, data bus-protection, segment-overflow, and privilege-violation faults are all retryable: the saved return address is the address of the faulting instruction, so returning from the fault handler with \mnemonic{RETE} retries the same memory access (see Chapter~\ref{ch:exceptions}). \\
-		\bottomrule
-	\end{tabular}
-	\caption{Common Memory Instruction Semantics}
-	\label{tab:memory-common-semantics}
-\end{table}
+Conditional execution and timing follow the rules in Chapter~\ref{ch:reading-instructions} and
+Appendix~\ref{appendix:timing}. Immediate-displacement forms add the 16-bit signed displacement to the low word of the
+selected address register. Register-offset forms add the unshifted \texttt{rO} to that low word; \texttt{rO} is never
+shifted, even on the register-offset forms of \mnemonic{STOR}, which shift the value being stored instead. The high
+word of the selected address register supplies the segment and is unchanged.
+
+A post-increment \mnemonic{LOAD} calculates its memory address from the original address register value, then
+increments the address register low word by one word in write-back, after the memory access. A pre-decrement
+\mnemonic{STOR} uses the address register low word decremented by one word, plus the displacement, as its memory
+address, and the low word is decremented in write-back, after the memory access.
+
+Destination register writes and address-register auto-updates occur in write-back after the memory-access phase, so a
+fault that cancels the instruction before write-back leaves them undone (write-back still runs, but as a no-op). Data
+bus, data bus-protection, segment-overflow, and privilege-violation faults are all retryable: the saved return address
+is the address of the faulting instruction, so returning from the fault handler with \mnemonic{RETE} retries the same
+memory access (see Chapter~\ref{ch:exceptions}).
 
 \noindent Memory instructions can raise data bus and data bus-protection faults during the memory-access phase. The
 16-bit displacement is signed two's-complement; effective-address calculation can raise a segment-overflow fault when
