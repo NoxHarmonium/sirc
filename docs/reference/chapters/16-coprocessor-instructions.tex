@@ -394,7 +394,8 @@ if condition_true then
         raise privilege_violation_fault
     else
         stop instruction fetch
-        wait until a hardware interrupt can be taken or the CPU is reset
+        wait until a hardware interrupt can be taken
+			or the CPU is reset
     endif
 endif
 \end{verbatim}
@@ -721,13 +722,13 @@ protected mode, they raise a privilege-violation fault before dispatch.
 \begin{table}[H]
 	\centering
 	\small
-	\begin{tabularx}{\textwidth}{llllX}
+	\begin{tabularx}{\textwidth}{lllp{5.4cm}X}
 		\toprule
-		\textbf{Mnemonic} & \textbf{Command}          & \textbf{Count}              & \textbf{Registers}                          & \textbf{Operation}                          \\
+		\textbf{Mnemonic} & \textbf{Command}          & \textbf{Count}              & \textbf{Registers Used}                                                                            & \textbf{Operation}                          \\
 		\midrule
-		\mnemonic{DMAR}   & \texttt{0x2800 | operand} & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Read memory into registers                  \\
-		\mnemonic{DMAW}   & \texttt{0x2900 | operand} & \texttt{\#-7}--\texttt{\#7} & \reg{a}/\reg{l}/\reg{s}, \reg{r1}--\reg{r7} & Write registers to memory                   \\
-		\mnemonic{DMAT}   & \texttt{0x2A00 | n}       & 0--255                      & \reg{a}, \reg{l}, \reg{r1}--\reg{r7}        & Copy memory at \reg{a} to memory at \reg{l} \\
+		\mnemonic{DMAR}   & \texttt{0x2800 | operand} & \texttt{\#-7}--\texttt{\#7} & address \reg{a}, \reg{l} or \reg{s}; writes \reg{r1} to \reg{rn}, where $n$ is the count magnitude & Read memory into registers                  \\
+		\mnemonic{DMAW}   & \texttt{0x2900 | operand} & \texttt{\#-7}--\texttt{\#7} & address \reg{a}, \reg{l} or \reg{s}; reads \reg{r1} to \reg{rn}, where $n$ is the count magnitude  & Write registers to memory                   \\
+		\mnemonic{DMAT}   & \texttt{0x2A00 | n}       & 0--255                      & source \reg{a}, destination \reg{l}; clobbers \reg{r1}--\reg{r7} as its transfer window            & Copy memory at \reg{a} to memory at \reg{l} \\
 		\bottomrule
 	\end{tabularx}
 	\caption{DMA Unit Operations}
@@ -854,10 +855,10 @@ faulted \mnemonic{DMAT}, from architectural state alone. In practice:
 	\item For a negative-count \mnemonic{DMAR}/\mnemonic{DMAW}, or for \mnemonic{DMAT}, do not return directly into the faulted
 	      instruction without first repairing its inputs. The instruction word itself is unchanged, so the simplest safe strategy
 	      is to restore the address register(s) to the values they held before the original attempt -- values software must have
-	      saved independently, since the CPU will not hand them back -- and only then return with \mnemonic{RETE}. This reruns
-	      the identical instruction from a clean state instead of resuming mid-transfer. Use \mnemonic{ETFR}/\mnemonic{ETTR}
-	      instead, to redirect the return address elsewhere, only once a retry budget is exhausted and the caller needs to be
-	      told the transfer failed.
+	      saved independently, since the CPU will not retain them -- and only then return with \mnemonic{RETE}. This reruns the
+	      identical instruction from a clean state instead of resuming mid-transfer. Use \mnemonic{ETFR}/\mnemonic{ETTR} instead,
+	      to redirect the return address elsewhere, only once a retry budget is exhausted and the caller needs to be told the
+	      transfer failed.
 	\item Treat a mid-transfer fault on a backward \mnemonic{DMAR}/\mnemonic{DMAW} as destructive to the original operand values:
 	      software that needs to recover precisely should keep its own record of the transfer's starting address and count before
 	      issuing the instruction, rather than relying on reconstructing it afterward.
