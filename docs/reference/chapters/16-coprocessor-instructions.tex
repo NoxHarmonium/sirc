@@ -72,8 +72,7 @@ its command has been dispatched and has completed, unless an earlier fault preve
 A traced \mnemonic{EXCP} is the exception: its trace fault is taken first and the trap is entered when the trace
 handler returns (Section~\ref{sec:instruction-trace-fault}). In protected mode, supervisor-only coprocessor
 operation nibbles are rejected before the command is dispatched. A missing coprocessor is detected after the command
-has been latched for dispatch and raises an invalid-opcode fault through the exception unit. An unimplemented
-operation on a coprocessor that is present is detected at the same point and raises the same fault (see the Model and
+has been latched for dispatch and raises an invalid-opcode fault through the exception unit. A reserved operation on a coprocessor that is present is detected at the same point and raises the same fault (see the Model and
 Revision Policy, Section~\ref{sec:coprocessor-model-revision-policy}).
 
 \begin{instructionbox}{COPI/COPR}{Coprocessor Call}
@@ -767,7 +766,7 @@ command entirely and takes only the normal 6-cycle \mnemonic{COPI} instruction t
 The rest of the transfer, and the slot boundaries after it, move one cycle later for each wait state, so each wait
 state adds exactly one cycle to the totals above.
 
-\noindent Missing DMA hardware and unsupported DMA operations raise an invalid-opcode fault. Reserved operand
+\noindent Missing DMA hardware and reserved DMA operations raise an invalid-opcode fault. Reserved operand
 encodings are architecturally undefined (see the Model and Revision Policy above). DMA memory reads and writes can
 raise data bus and bus-protection faults using DMA read/write bus access
 types. They can also raise segment-overflow faults, as described in Section~\ref{sec:dma-segment-overflow}. Partial side effects are possible if a fault
@@ -987,8 +986,7 @@ if n > 0:
 	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. The count field is 3 bits wide and
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
 	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check applies to source syntax only and does not
-	guard against an illegal encoding. Unsupported DMA
-	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
+	guard against an illegal encoding. Reserved operand encodings are architecturally undefined (see the
 	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA reads can raise
 	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
@@ -1088,8 +1086,7 @@ if n > 0:
 	\textbf{Exceptions:} Missing DMA hardware raises an invalid-opcode fault. The count field is 3 bits wide and
 	every bit pattern (\texttt{0}--\texttt{7}) is a legal magnitude, so there is no invalid encoding for it to
 	reject; the assembler's own \texttt{\#-7}--\texttt{\#7} range check applies to source syntax only and does not
-	guard against an illegal encoding. Unsupported DMA
-	operations raise an invalid-opcode fault, and reserved operand encodings are architecturally undefined (see the
+	guard against an illegal encoding. Reserved operand encodings are architecturally undefined (see the
 	Model and Revision Policy in
 	Section~\ref{sec:coprocessor-model-revision-policy}). In protected mode, raises a privilege-violation fault. DMA writes can raise
 	data bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
@@ -1185,7 +1182,7 @@ while remaining > 0:
 
 	\textbf{Flags:} Preserved.
 
-	\textbf{Exceptions:} Missing DMA hardware and unsupported DMA operations raise an invalid-opcode fault. Reserved
+	\textbf{Exceptions:} Missing DMA hardware and reserved DMA operations raise an invalid-opcode fault. Reserved
 	operand encodings are architecturally undefined (see the Model and Revision Policy in Section~\ref{sec:coprocessor-model-revision-policy}).
 	In protected mode, raises a privilege-violation fault. DMA reads and writes can raise data
 	bus, bus-protection, and segment-overflow faults (see Section~\ref{sec:dma-segment-overflow}).
@@ -1318,7 +1315,7 @@ listings are examples of a supervisor compatibility handler, not additional inst
 \end{table}
 
 \noindent Integer maths operations preserve CPU status flags. Missing maths hardware raises an invalid-opcode fault.
-Unsupported maths operations raise an invalid-opcode fault (see the Model and Revision Policy,
+Reserved maths operations raise an invalid-opcode fault (see the Model and Revision Policy,
 Section~\ref{sec:coprocessor-model-revision-policy}). Divide by zero and quotient overflow are reported in \reg{r3}, not as arithmetic
 exceptions. If the condition is false, no maths command is dispatched, no coprocessor opcode check is performed, and
 registers and status flags are preserved.
@@ -1358,8 +1355,7 @@ MULS:
 
 	\textbf{Flags:} CPU status flags are preserved. \reg{r3} is written as zero.
 
-	\textbf{Exceptions:} Missing maths hardware, or an unsupported multiply operation on a maths coprocessor that is
-	present, raises an invalid-opcode fault (see the Model and Revision Policy,
+	\textbf{Exceptions:} Missing maths hardware raises an invalid-opcode fault (see the Model and Revision Policy,
 	Section~\ref{sec:coprocessor-model-revision-policy}). These operations perform no data-memory bus access.
 
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
@@ -1449,8 +1445,7 @@ else:
 
 	\textbf{Flags:} CPU status flags are preserved. Maths errors are reported through \reg{r3}, not through \reg{sr}.
 
-	\textbf{Exceptions:} Missing maths hardware, or an unsupported divide operation on a maths coprocessor that is
-	present, raises an invalid-opcode fault (see the Model and Revision Policy,
+	\textbf{Exceptions:} Missing maths hardware raises an invalid-opcode fault (see the Model and Revision Policy,
 	Section~\ref{sec:coprocessor-model-revision-policy}). Divide by
 	zero and quotient overflow do not raise arithmetic exceptions. These operations perform no data-memory bus access.
 
@@ -1511,7 +1506,9 @@ MOVI r1, #0                   ; High word of dividend
 MOVI r2, #100                 ; Low word of dividend
 MOVI r3, #7                   ; Divisor
 DIVU                          ; r1 = remainder, r2 = quotient, r3 = 0 on success
+CMPI r3, #0                   ; r3 is the maths status word, zero on success
+BRAN|!= @divide_error         ; DZ or OV is set; r1:r2 still hold the dividend
 		\end{lstlisting}
-		\caption{Unsigned Divide}
+		\caption{Unsigned Divide with Error Check}
 	\end{example}
 \end{instructionbox}
