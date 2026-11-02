@@ -579,9 +579,16 @@ impl CpuPeripheral {
         let hw_interrupt_enable = get_hardware_interrupt_enable(&self.registers);
         let enabled_interrupts = level & hw_interrupt_enable;
 
-        // Levels 1-4 are level-sensitive: latch whenever the (enabled) pin is observed
-        // asserted. Unaffected by Level 5's edge-tracking below.
-        let level_sensitive_interrupts = enabled_interrupts & !LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        // Latch a level-sensitive line only below its handler's exception level.
+        // Do not discard requests that were already pending before entering a handler.
+        let eligible_lines = (0_u8..4).fold(0, |mask, pin| {
+            if self.eu_registers.current_exception_level < pin + 2 {
+                mask | (1 << pin)
+            } else {
+                mask
+            }
+        });
+        let level_sensitive_interrupts = enabled_interrupts & eligible_lines;
         if level_sensitive_interrupts > 0 {
             trace!("Interrupt level [b{level_sensitive_interrupts:b}] raised (masked from [b{level:b}] by enable mask [b{hw_interrupt_enable:b}])");
             // TODO: Clarify what happens when software exception is triggered in interrupt handler

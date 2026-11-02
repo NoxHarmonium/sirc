@@ -257,3 +257,51 @@ fn test_level_one_to_four_interrupts_remain_level_sensitive() {
     cpu_peripheral.raise_hardware_interrupt(0xF);
     assert_eq_hex!(0xF, cpu_peripheral.eu_registers.pending_hardware_exceptions);
 }
+
+#[test]
+fn level_sensitive_interrupts_only_latch_below_their_handler_level() {
+    for current_level in 0..=7 {
+        let mut cpu = new_cpu_peripheral();
+        set_hardware_interrupt_enable(&mut cpu.registers, 0b1111);
+        cpu.eu_registers.current_exception_level = current_level;
+        cpu.raise_hardware_interrupt(0b1111);
+        for pin in 0..4 {
+            assert_eq!(
+                cpu.eu_registers.pending_hardware_exceptions & (1 << pin) != 0,
+                current_level < pin + 2
+            );
+        }
+        // Changing priority must not erase an older pending request.
+        cpu.eu_registers.pending_hardware_exceptions = 0b1111;
+        cpu.raise_hardware_interrupt(0);
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0b1111);
+    }
+}
+
+#[test]
+fn held_irq_does_not_queue_itself_inside_its_handler() {
+    let mut cpu = new_cpu_peripheral();
+    let mut clocks = 0;
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    let handler = (0, 0x100);
+    run_expectations(
+        &mut cpu,
+        &expect_exception_handler(1, 0x50, handler),
+        &mut clocks,
+    );
+    for address in [0x102, 0x104, 0x106] {
+        cpu.raise_hardware_interrupt(1);
+        run_expectations(&mut cpu, &expect_main_program_cycle(address), &mut clocks);
+    }
+    cpu.raise_hardware_interrupt(0);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+    run_expectations(
+        &mut cpu,
+        &run_return_from_exception(0, (0, 0x106)),
+        &mut clocks,
+    );
+    run_expectations(&mut cpu, &expect_main_program_cycle(0), &mut clocks);
+    // A held line becomes eligible again upon return to the main program.
+    cpu.raise_hardware_interrupt(1);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+}
