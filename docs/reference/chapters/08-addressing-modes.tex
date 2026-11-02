@@ -164,25 +164,23 @@ address + 2.
 
 \section{Per-Mode Encoding Reference}
 
-Every SIRC-1 instruction is a fixed 32-bit (2-word) quantity regardless of addressing mode -- unlike architectures with
-variable-length extension words per mode, there is no mode whose word count differs from any other's. Each box below
-states this explicitly for completeness against that comparison point, alongside the generation formula, assembler
-syntax, and field encoding for that mode.
+An addressing mode describes a single operand, not a whole instruction: \texttt{ADDR r1, r2, r3} has three Register
+Direct operands, and \texttt{ADDI r1, \#100} has a Register Direct operand and an Immediate operand. Each box below
+gives the generation formula, assembler syntax, and field encoding for one operand of that mode, with examples shown in
+the context of a whole instruction. Which fields an instruction uses, and the role each operand plays (source,
+destination, or both), belong to the instruction format (Chapter~\ref{ch:instruction-formats}) and to the instruction
+descriptions. Every SIRC-1 instruction is a fixed 32-bit (2-word) quantity regardless of the modes of its operands.
 
 \begin{addrmodebox}{Immediate Addressing}
 	\textbf{Generation:} Operand = the 16-bit value encoded directly in the instruction.
 
 	\textbf{Assembler Syntax:}
 	\begin{lstlisting}
-ADDI r1, #100         ; 16-bit immediate
-ADDI r2, #-50         ; Signed 16-bit immediate
+ADDI r1, #100         ; #100 is the immediate operand (16-bit)
+ADDI r2, #-50         ; #-50 is the immediate operand (signed 16-bit)
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Immediate format; Immediate field, bits 21--6 (16 bits, arithmetic instructions
-	interpret this field according to Chapter~\ref{ch:data-representation}); Register field, bits 25--22
-	(destination).
-
-	\textbf{Instruction Word Count:} 2 words (fixed).
+	\textbf{Field Encoding:} The Immediate field, bits 21--6 (16 bits), in the Immediate format; arithmetic instructions interpret this field according to Chapter~\ref{ch:data-representation}. This mode uses only that field; the register named alongside it is a separate Register Direct operand.
 
 	\textbf{Usage:} Loading constant values; arithmetic with known values; bit manipulation with masks.
 \end{addrmodebox}
@@ -193,14 +191,11 @@ ADDI r2, #-50         ; Signed 16-bit immediate
 
 	\textbf{Assembler Syntax:}
 	\begin{lstlisting}
-ADDR r1, r2, r3   ; r1 = r2 + r3
-ADDR r4, r5       ; r4 = r4 + r5
+ADDR r1, r2, r3   ; three Register Direct operands: r1 = r2 + r3
+ADDR r4, r5       ; two Register Direct operands: r4 = r4 + r5
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Register format; Register 1, bits 25--22 (destination); Register 2, bits 21--18
-	(source A); Register 3, bits 17--14 (source B).
-
-	\textbf{Instruction Word Count:} 2 words (fixed).
+	\textbf{Field Encoding:} A 4-bit register number. In the Immediate and Short Immediate formats the single register operand is the Register field, bits 25--22. In the Register format the operands are Register 1, bits 25--22, Register 2, bits 21--18, and Register 3, bits 17--14. The role of each (source, destination, or both) is set by the instruction, not by the mode.
 
 	\textbf{Usage:} All ALU operations between registers; register-to-register data movement; testing register
 	values.
@@ -224,8 +219,6 @@ LJMP a                ; p = a (source named directly)
 	\mnemonic{LJMP}/\mnemonic{LJSR} are meta-instructions that lower to this same encoding with \reg{p} in bits 23--22; their source pair, also named directly, is encoded in AF,
 	bits 5--4.
 
-	\textbf{Instruction Word Count:} 2 words (fixed).
-
 	\textbf{Usage:} Selecting which address-register pair an effective-address instruction writes; jumping or
 	calling through an address already held in a register pair.
 \end{addrmodebox}
@@ -247,10 +240,7 @@ STOR (#-4, s), r2     ; Store to address (s - 4)
 LDEA p, (#100, p)     ; Jump relative (pc = pc + 100)
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Immediate format, an even opcode in \opcode{10}--\opcode{1F}; base address-register pair in
-	AF, bits 5--4; 16-bit signed immediate displacement in bits 21--6.
-
-	\textbf{Instruction Word Count:} 2 words (fixed).
+	\textbf{Field Encoding:} The base address-register pair is a 2-bit index in AF, bits 5--4. The displacement is a 16-bit signed value in the Immediate field, bits 21--6, so this mode is carried in the Immediate format (even opcodes \opcode{10}--\opcode{1F}).
 
 	\textbf{Usage:} Accessing structure fields (fixed offset from base); array element access (constant index);
 	stack frame access (local variables); position-independent code (PC-relative addressing).
@@ -270,11 +260,7 @@ LOAD r1, (r2, a)      ; Load from address (a + r2)
 STOR (r4, s), r3      ; Store to address (s + r4)
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Register format, an odd opcode in \opcode{10}--\opcode{1F}; base address-register pair in AF,
-	bits 5--4; index register in R3, bits 17--14. R2, bits 21--18, is unused for \mnemonic{LOAD} and holds the
-	(shifted) source register for \mnemonic{STOR}.
-
-	\textbf{Instruction Word Count:} 2 words (fixed).
+	\textbf{Field Encoding:} The base address-register pair is a 2-bit index in AF, bits 5--4. The index register is a 4-bit register number in R3, bits 17--14, so this mode is carried in the Register format (odd opcodes \opcode{10}--\opcode{1F}).
 
 	\textbf{Usage:} Array indexing with a variable index; table lookups; dynamic address calculations.
 \end{addrmodebox}
@@ -297,8 +283,6 @@ LOAD r1, (#2, s)+     ; Load from (s + 2), then s = s + 1
 	\textbf{Field Encoding:} Selected by the opcode itself, not a separate operand field: opcode bit 1 = 1
 	selects auto-update, and bit 0 selects an immediate (\opcode{16}) or register (\opcode{17}) displacement.
 
-	\textbf{Instruction Word Count:} 2 words (fixed).
-
 	\textbf{Usage:} Stack pop operations; forward array traversal; buffer reading.
 \end{addrmodebox}
 
@@ -320,8 +304,6 @@ STOR -(#2, s), r3     ; s = s - 1, then store to (s + 2)
 	\textbf{Field Encoding:} Selected by the opcode itself, not a separate operand field: opcode bit 1 = 1
 	selects auto-update, and bit 0 selects an immediate (\opcode{12}) or register (\opcode{13}) displacement.
 
-	\textbf{Instruction Word Count:} 2 words (fixed).
-
 	\textbf{Usage:} Stack push operations; backward array traversal; buffer writing.
 \end{addrmodebox}
 
@@ -332,14 +314,11 @@ STOR -(#2, s), r3     ; s = s - 1, then store to (s + 2)
 
 	\textbf{Assembler Syntax:}
 	\begin{lstlisting}
-ADDI r1, #10, LSL #2  ; r1 = (r1 << 2) + 10
-SUBI r2, #1, LSL #8   ; r2 = (r2 << 8) - 1
+ADDI r1, #10, LSL #2  ; #10 is the short immediate: r1 = (r1 << 2) + 10
+SUBI r2, #1, LSL #8   ; #1 is the short immediate: r2 = (r2 << 8) - 1
 	\end{lstlisting}
 
-	\textbf{Field Encoding:} Short-Immediate-with-Shift format; Immediate field, bits 21--14 (8 bits); Register
-	field, bits 25--22 (destination).
-
-	\textbf{Instruction Word Count:} 2 words (fixed).
+	\textbf{Field Encoding:} The Immediate field, bits 21--14 (8 bits), in the Short Immediate with Shift format. The shift fields belong to the shift definition that qualifies the register operand, not to this operand.
 
 	\textbf{Usage:} Shift-and-add or shift-and-mask in one instruction, for example scaling a register and adding a small
 	constant.
