@@ -154,3 +154,60 @@ fn assembler_rejects_every_program_counter_auto_update_form() {
         assert_success(&output);
     }
 }
+
+#[test]
+fn duplicate_labels_fail_in_assembler_and_linker_even_when_unused() {
+    for usage in ["", "MOVI r1, @same.l\n"] {
+        assert_assembly_error(
+            &format!(":same\nNOOP\n:same\n{usage}"),
+            "Duplicate label [same]",
+            "3:1",
+        );
+        let directory = tempdir().unwrap();
+        let mut objects = Vec::new();
+        for name in ["first", "second"] {
+            let (output, object) =
+                assemble(directory.path(), name, &format!(":same\nNOOP\n{usage}"));
+            assert_success(&output);
+            objects.push(object);
+        }
+        for reverse in [false, true] {
+            if reverse {
+                objects.reverse();
+            }
+            let binary = directory.path().join("duplicate.bin");
+            let output = Command::new(env!("CARGO_BIN_EXE_linker"))
+                .args(&objects)
+                .arg("-o")
+                .arg(&binary)
+                .args(["-s", "100"])
+                .output()
+                .unwrap();
+            let message = String::from_utf8_lossy(&output.stderr);
+            assert!(!output.status.success());
+            assert!(message.contains("Duplicate label [same]"), "{message}");
+            assert!(
+                message.contains("first.sasm") && message.contains("second.sasm"),
+                "{message}"
+            );
+            assert!(!message.contains("panicked"));
+            assert!(!binary.exists());
+        }
+    }
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(
+        directory.path(),
+        "case",
+        ":Name\nNOOP\n:name\nNOOP\n.EQU $N #1\n.EQU $N #2\n",
+    );
+    assert_success(&output);
+    let binary = directory.path().join("case.bin");
+    let output = Command::new(env!("CARGO_BIN_EXE_linker"))
+        .arg(object)
+        .arg("-o")
+        .arg(&binary)
+        .args(["-s", "100"])
+        .output()
+        .unwrap();
+    assert_success(&output);
+}

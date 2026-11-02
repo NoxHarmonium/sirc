@@ -21,6 +21,8 @@ pub struct NumberToken {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct LabelToken {
+    #[serde(skip)]
+    pub input_length: usize,
     pub name: String,
 }
 

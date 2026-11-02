@@ -103,7 +103,7 @@ pub fn print_ref_token(ref_token: &RefToken) -> String {
 pub fn print_token(token: &Token) -> String {
     match token {
         Token::Comment(text) => format!(";{text}"),
-        Token::Label(LabelToken { name }) => format!(":{name}"),
+        Token::Label(LabelToken { name, .. }) => format!(":{name}"),
         Token::Instruction(_) => todo!(),
         Token::Origin(_) => todo!(),
         Token::Data(data_token) => print_data_token(data_token),

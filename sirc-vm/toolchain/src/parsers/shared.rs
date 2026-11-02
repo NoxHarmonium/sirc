@@ -224,10 +224,12 @@ pub fn split_shift_definition_data(
 }
 
 fn parse_label_token(i: &str) -> AsmResult<Token> {
+    let input_length = i.len();
     let (i, name) = parse_label(i)?;
     Ok((
         i,
         Token::Label(LabelToken {
+            input_length,
             name: String::from(name),
         }),
     ))

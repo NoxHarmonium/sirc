@@ -29,7 +29,7 @@ use std::fs::{read, write};
 use std::io;
 use std::path::PathBuf;
 
-use toolchain::types::object::{merge_object_definitions, ObjectDefinition, RefType};
+use toolchain::types::object::{try_merge_object_definitions, ObjectDefinition, RefType};
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -116,7 +116,8 @@ fn main() -> io::Result<()> {
         .map(|file_contents| postcard::from_bytes(&file_contents).unwrap())
         .collect();
 
-    let (object_file, debug_info_map) = merge_object_definitions(&object_files);
+    let (object_file, debug_info_map) = try_merge_object_definitions(&object_files)
+        .map_err(|message| io::Error::new(io::ErrorKind::InvalidData, message))?;
 
     let mut linked_program = object_file.program.clone();
 

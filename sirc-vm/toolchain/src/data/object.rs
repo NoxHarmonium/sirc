@@ -140,6 +140,7 @@ pub fn try_build_object(
 ) -> Result<ObjectDefinition, AssemblyError> {
     let original_input_length = original_input.len();
     let mut symbols: Vec<SymbolDefinition> = vec![];
+    let mut label_positions = HashMap::new();
     let mut symbol_refs: Vec<SymbolRef> = vec![];
     let mut placeholders: HashMap<String, u32> = HashMap::new();
     let mut offset: u32 = 0x0;
@@ -189,10 +190,27 @@ pub fn try_build_object(
 
                 offset += INSTRUCTION_SIZE_BYTES;
             }
-            Token::Label(data) => symbols.push(SymbolDefinition {
-                name: data.name,
-                offset,
-            }),
+            Token::Label(data) => {
+                let input_offset = original_input_length - data.input_length;
+                if let Some(previous) = label_positions.insert(data.name.clone(), input_offset) {
+                    let line = debug_info.original_input[..previous]
+                        .bytes()
+                        .filter(|byte| *byte == b'\n')
+                        .count()
+                        + 1;
+                    return Err(AssemblyError {
+                        input_offset,
+                        message: format!(
+                            "Duplicate label [{}]; first defined in {}:{line}",
+                            data.name, debug_info.original_filename
+                        ),
+                    });
+                }
+                symbols.push(SymbolDefinition {
+                    name: data.name,
+                    offset,
+                });
+            }
             Token::Comment(_) => {
                 // Do nothing.
             }

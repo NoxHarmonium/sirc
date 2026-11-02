@@ -147,6 +147,7 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
             [
                 vec![c_str_to_comment_token(tileset.comment)],
                 vec![Token::Label(LabelToken {
+                    input_length: 0,
                     name: owned_tileset_label,
                 })],
                 slice_to_data_tokens(tileset_entries),
@@ -168,6 +169,7 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
             [
                 vec![c_str_to_comment_token(tilemap.comment)],
                 vec![Token::Label(LabelToken {
+                    input_length: 0,
                     name: owned_tilemap_label,
                 })],
                 slice_to_data_tokens(&tilemap.data),
@@ -194,6 +196,7 @@ pub unsafe extern "C" fn tilemap_to_str(tilemap_export: CTilemapExport) -> *mut 
             [
                 vec![c_str_to_comment_token(palette.comment)],
                 vec![Token::Label(LabelToken {
+                    input_length: 0,
                     name: owned_palette_label,
                 })],
                 slice_to_data_tokens(palette_data),
