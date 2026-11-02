@@ -85,3 +85,41 @@ fn auto_update_symbol_offsets_link_like_literals() {
         assert_eq!(data.value, expected);
     }
 }
+
+fn assert_assembly_error(source: &str, expected: &str, location: &str) {
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(directory.path(), "invalid", source);
+    assert!(!output.status.success());
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(message.contains(expected), "{source}: {message}");
+    assert!(
+        message.contains(&format!("invalid.sasm:{location}")),
+        "{message}"
+    );
+    assert!(!message.contains("panicked"), "{message}");
+    assert!(!object.exists());
+}
+
+#[test]
+fn assembler_reports_located_errors_without_panicking() {
+    assert_assembly_error("; heading\n.ORG 0x0001\nNOOP\n", "even word address", "2:1");
+    assert_assembly_error("; heading\nADDIr1, #1\n", "whitespace", "2:");
+    assert_assembly_error(
+        "; heading\nADDI r1, $MISSING\n",
+        "Undefined constant",
+        "2:1",
+    );
+    assert_assembly_error(
+        "; heading\n.EQU $BIG #0x10000\nADDI r1, $BIG\n",
+        "16-bit immediate",
+        "3:1",
+    );
+    let directory = tempdir().unwrap();
+    let (output, object) = assemble(
+        directory.path(),
+        "valid",
+        ".ORG 0x0002\nADDI[N]|!=\tr1, #1\nNOOP; comment\nWAIT\nRETS\n",
+    );
+    assert_success(&output);
+    assert!(object.exists());
+}

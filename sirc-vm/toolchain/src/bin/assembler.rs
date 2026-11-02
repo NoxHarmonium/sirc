@@ -18,10 +18,9 @@ use clap::Parser;
 use nom_supreme::error::ErrorTree;
 use nom_supreme::final_parser::{final_parser, Location};
 
-use toolchain::data::object::build_object;
+use toolchain::data::object::try_build_object;
 use toolchain::utils::error_formatter::format_line_with_error;
 
-use core::panic;
 use std::fs::{read_to_string, write};
 use std::io;
 use std::path::PathBuf;
@@ -55,17 +54,29 @@ fn main() -> io::Result<()> {
                 &file_contents_with_new_line,
                 &error,
             );
-            panic!("Error parsing file:\n{error_message}\n{error}")
+            eprintln!("{error_message}\n{error}");
+            std::process::exit(1);
         }
     };
-    let object_definition = build_object(
+    let object_definition = try_build_object(
         tokens,
         args.input_file.display().to_string(),
-        file_contents_with_new_line,
-    );
+        file_contents_with_new_line.clone(),
+    )
+    .unwrap_or_else(|error| {
+        let prefix = &file_contents_with_new_line[..error.input_offset];
+        let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
+        let column = prefix.rsplit('\n').next().unwrap_or("").chars().count() + 1;
+        eprintln!(
+            "error: {}\n  --> {}:{line}:{column}",
+            error.message,
+            args.input_file.display()
+        );
+        std::process::exit(1);
+    });
     let bytes_to_write = match postcard::to_allocvec(&object_definition) {
         Ok(bytes_to_write) => bytes_to_write,
-        Err(error) => panic!("Error encoding file: {error}"),
+        Err(error) => return Err(io::Error::new(io::ErrorKind::InvalidData, error)),
     };
 
     write(args.output_file, bytes_to_write)?;

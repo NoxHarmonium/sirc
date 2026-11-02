@@ -395,9 +395,15 @@ pub fn parse_instruction_tag(
             (i, ConditionFlags::Always)
         };
 
-        // TODO: Fix case in parser where lexeme doesn't work
-        // category=Toolchain
-        // Get lexeme working with this function to avoid this
+        // A mnemonic/suffix must end before an operand begins. Operandless
+        // instructions may end at EOF or an inline comment.
+        if !i.is_empty() && !i.starts_with(char::is_whitespace) && !i.starts_with(';') {
+            return Err(nom::Err::Error(ErrorTree::from_external_error(
+                i,
+                ErrorKind::Space,
+                "Expected whitespace between mnemonic and operands",
+            )));
+        }
         let (i, _) = space0(i)?;
 
         Ok((

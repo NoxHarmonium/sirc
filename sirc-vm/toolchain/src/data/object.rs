@@ -18,15 +18,17 @@ fn resolve_placeholder(
     placeholders: &HashMap<String, u32>,
     placeholder_name: &String,
     instruction_data: &InstructionData,
-) -> InstructionData {
-    let resolved_value = placeholders.get(placeholder_name)
-        .unwrap_or_else(|| panic!("Could not find a value for placeholder name [{placeholder_name}]. Make sure it is defined with the .EQU directive."));
-    match instruction_data {
+) -> Result<InstructionData, String> {
+    let resolved_value = placeholders.get(placeholder_name).ok_or_else(|| {
+        format!("Undefined constant ${placeholder_name}; define it with .EQU before use")
+    })?;
+    Ok(match instruction_data {
         InstructionData::Immediate(immediate_instruction) => {
-            assert!(
-                *resolved_value <= 0xFFFF,
-                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 16 bits ({resolved_value} > 0xFFFF)"
-            );
+            if *resolved_value > 0xFFFF {
+                return Err(format!(
+                    "Constant ${placeholder_name} does not fit in a 16-bit immediate"
+                ));
+            }
             InstructionData::Immediate(ImmediateInstructionData {
                 value: resolved_value
                     .to_owned()
@@ -36,10 +38,11 @@ fn resolve_placeholder(
             })
         }
         InstructionData::ShortImmediate(short_immediate_instruction) => {
-            assert!(
-                *resolved_value <= 0xFF,
-                "Immediate value (resolved from [{placeholder_name}] placeholder) can only be up to 8 bits when using a shift definition ({resolved_value} > 0xFF)"
-            );
+            if *resolved_value > 0xFF {
+                return Err(format!(
+                    "Constant ${placeholder_name} does not fit in an 8-bit immediate"
+                ));
+            }
             InstructionData::ShortImmediate(ShortImmediateInstructionData {
                 value: resolved_value
                     .to_owned()
@@ -49,7 +52,7 @@ fn resolve_placeholder(
             })
         }
         InstructionData::Register(_) => instruction_data.clone(),
-    }
+    })
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -115,11 +118,26 @@ fn ensure_program_size(program: &mut Vec<[u8; 4]>, min_size: usize) {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AssemblyError {
+    pub input_offset: usize,
+    pub message: String,
+}
+
 pub fn build_object(
     tokens: Vec<Token>,
     original_filename: String,
     original_input: String,
 ) -> ObjectDefinition {
+    try_build_object(tokens, original_filename, original_input)
+        .expect("Invalid source passed to build_object; use try_build_object for diagnostics")
+}
+
+pub fn try_build_object(
+    tokens: Vec<Token>,
+    original_filename: String,
+    original_input: String,
+) -> Result<ObjectDefinition, AssemblyError> {
     let original_input_length = original_input.len();
     let mut symbols: Vec<SymbolDefinition> = vec![];
     let mut symbol_refs: Vec<SymbolRef> = vec![];
@@ -150,6 +168,10 @@ pub fn build_object(
 
                 let instruction = if let Some(placeholder_name) = data.placeholder_name {
                     resolve_placeholder(&placeholders, &placeholder_name, &data.instruction)
+                        .map_err(|message| AssemblyError {
+                            input_offset: original_input_length - data.input_length,
+                            message,
+                        })?
                 } else {
                     data.instruction
                 };
@@ -175,10 +197,29 @@ pub fn build_object(
                 // Do nothing.
             }
             Token::Origin(data) => {
+                if data.offset & 1 != 0 {
+                    return Err(AssemblyError {
+                        input_offset: 0,
+                        message: ".ORG requires an even word address".into(),
+                    });
+                }
                 // Word based addressing to match CPU
                 offset = data.offset * 2;
             }
             Token::Data(data) => {
+                if let DataType::PlaceHolder(name) = &data.value {
+                    if !placeholders.contains_key(name) {
+                        return Err(AssemblyError {
+                            input_offset: debug_info
+                                .original_input
+                                .find(&format!("${name}"))
+                                .unwrap_or(0),
+                            message: format!(
+                                "Undefined constant ${name}; define it with .EQU before use"
+                            ),
+                        });
+                    }
+                }
                 inject_data_value(
                     data,
                     &mut program,
@@ -205,10 +246,10 @@ pub fn build_object(
     hasher.update(&bytes);
     debug_info.checksum = hex::encode(hasher.finalize());
 
-    ObjectDefinition {
+    Ok(ObjectDefinition {
         symbols,
         symbol_refs,
         program: bytes,
         debug_info: Some(debug_info),
-    }
+    })
 }

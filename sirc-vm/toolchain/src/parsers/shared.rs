@@ -2,7 +2,7 @@ use nom::branch::alt;
 use nom::bytes::complete::{is_a, take_till};
 use nom::character::complete::{char, multispace0, one_of, space0};
 use nom::combinator::{cut, eof, map, map_res, opt, recognize};
-use nom::error::{ErrorKind, ParseError};
+use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::sequence::{pair, preceded, terminated, tuple};
 use nom::{AsChar, IResult};
 use nom::{Err, InputTakeAtPosition, Parser};
@@ -234,7 +234,15 @@ fn parse_label_token(i: &str) -> AsmResult<Token> {
 }
 
 fn parse_origin_token(i: &str) -> AsmResult<Token> {
+    let start = i;
     let (i, offset) = parse_origin(i)?;
+    if offset & 1 != 0 {
+        return Err(Err::Failure(ErrorTree::from_external_error(
+            start,
+            ErrorKind::Verify,
+            ".ORG requires an even word address",
+        )));
+    }
     Ok((i, Token::Origin(OriginToken { offset })))
 }
 
