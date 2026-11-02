@@ -462,10 +462,10 @@ fn test_xor_immediate() {
 //
 
 #[test]
-fn test_load_immediate() {
+fn test_movi() {
     for register_index in get_register_index_range() {
         test_short_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromShortImmediate,
+            Instruction::MoveRegisterFromShortImmediate,
             register_index,
             0xCAFE,
             0xFA,
@@ -484,7 +484,7 @@ fn test_load_immediate() {
             StatusRegisterUpdateSource::Alu,
         );
         test_short_immediate_arithmetic_instruction(
-            Instruction::LoadRegisterFromShortImmediate,
+            Instruction::MoveRegisterFromShortImmediate,
             register_index,
             0xF0F0,
             0x0,

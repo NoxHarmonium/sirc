@@ -172,7 +172,7 @@ fn main() -> io::Result<()> {
                     | Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement
                     | Instruction::LoadEffectiveAddressFromIndirectImmediate
                     | Instruction::LoadEffectiveAddressAndLinkFromIndirectImmediate
-                    | Instruction::LoadRegisterFromImmediate
+                    | Instruction::MoveRegisterFromImmediate
                     | Instruction::LoadRegisterFromIndirectImmediate
                     | Instruction::StoreRegisterToIndirectImmediate => {
                         InstructionData::Immediate(ImmediateInstructionData {

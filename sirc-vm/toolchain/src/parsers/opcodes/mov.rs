@@ -32,7 +32,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// assert_eq!(op_code, Instruction::LoadRegisterFromImmediate);
+/// assert_eq!(op_code, Instruction::MoveRegisterFromImmediate);
 /// assert_eq!(register, 1); // r2
 /// assert_eq!(value, 0x1234);
 /// assert_eq!(condition_flag, ConditionFlags::Equal);
@@ -51,7 +51,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
 ///     _ => panic!("Incorrect instruction was parsed")
 /// };
 ///
-/// assert_eq!(op_code, Instruction::LoadRegisterFromRegister);
+/// assert_eq!(op_code, Instruction::MoveRegisterFromRegister);
 /// assert_eq!(r1, 0); // r1
 /// assert_eq!(r3, 2); // r3
 /// ```
@@ -83,7 +83,7 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
 
     let construct_immediate_instruction = |value: u16, dest_register_index: u8| {
         InstructionData::Immediate(ImmediateInstructionData {
-            op_code: Instruction::LoadRegisterFromImmediate,
+            op_code: Instruction::MoveRegisterFromImmediate,
             register: dest_register_index,
             value,
             condition_flag,
@@ -141,7 +141,7 @@ pub fn mov(i: &str) -> AsmResult<InstructionToken> {
                 InstructionToken {
                     input_length,
                     instruction: InstructionData::Register(RegisterInstructionData {
-                        op_code: Instruction::LoadRegisterFromRegister,
+                        op_code: Instruction::MoveRegisterFromRegister,
                         r1: dest_register.to_register_index(),
                         r2: 0x0, // Unused
                         r3: src_register.to_register_index(),

@@ -1451,7 +1451,7 @@ fn test_fault_metadata_register_bit_layout() {
 
 pub fn build_privilege_violation_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::LoadRegisterFromImmediate,
+        op_code: Instruction::MoveRegisterFromImmediate,
         register: 0xE, // Ph (register 14) - a privileged register
         value: 0xFEFE,
         condition_flag: ConditionFlags::Always,

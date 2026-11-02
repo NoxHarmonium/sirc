@@ -494,10 +494,10 @@ fn test_xor_register() {
 //
 
 #[test]
-fn test_load_register() {
+fn test_movr() {
     for register_index in get_register_index_range() {
         test_register_arithmetic_instruction(
-            Instruction::LoadRegisterFromRegister,
+            Instruction::MoveRegisterFromRegister,
             register_index,
             0xCAFE,
             0xFACE,
@@ -518,7 +518,7 @@ fn test_load_register() {
             StatusRegisterUpdateSource::Alu,
         );
         test_register_arithmetic_instruction(
-            Instruction::LoadRegisterFromRegister,
+            Instruction::MoveRegisterFromRegister,
             register_index,
             0xFFFF,
             0x0000,

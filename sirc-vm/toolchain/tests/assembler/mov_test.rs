@@ -48,7 +48,7 @@ fn register_data(input: &str) -> RegisterInstructionData {
 #[test]
 fn movi_loads_an_immediate_value() {
     let data = immediate_data("MOVI r3, #0x1234\n");
-    assert_eq!(data.op_code, Instruction::LoadRegisterFromImmediate);
+    assert_eq!(data.op_code, Instruction::MoveRegisterFromImmediate);
     assert_eq!(data.register, RegisterName::R3.to_register_index());
     assert_eq!(data.value, 0x1234);
     assert_eq!(data.condition_flag, ConditionFlags::Always);
@@ -66,7 +66,7 @@ fn movi_loads_an_immediate_value() {
 #[test]
 fn movr_copies_a_register() {
     let data = register_data("MOVR r1, sl\n");
-    assert_eq!(data.op_code, Instruction::LoadRegisterFromRegister);
+    assert_eq!(data.op_code, Instruction::MoveRegisterFromRegister);
     assert_eq!(data.r1, RegisterName::R1.to_register_index());
     assert_eq!(data.r2, 0x0);
     assert_eq!(data.r3, RegisterName::Sl.to_register_index());
