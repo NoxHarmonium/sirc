@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="784" viewBox="0 0 760 784">
+  <defs>
+    <style>
+      .ink { fill: #24333c; font-family: 'Liberation Sans', Arial, sans-serif; }
+      .heading { font-size: 19px; font-weight: 700; letter-spacing: .6px; }
+      .subhead { font-size: 16px; font-weight: 700; }
+      .label { font-size: 14px; font-weight: 700; }
+      .detail { font-size: 13px; fill: #53616a; }
+      .badge { font-size: 14px; font-weight: 700; fill: #fff; font-family: 'Liberation Sans', Arial, sans-serif; }
+      .functional { fill: #e9eff2; stroke: #405863; stroke-width: 1.8; rx: 5; }
+      .handler { fill: #f8fafb; stroke: #405863; stroke-width: 1.8; stroke-dasharray: 7 5; rx: 5; }
+      .wire { fill: none; stroke: #405863; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#405863" stroke-width="1.3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="784" fill="#fff"/>
+  <text class="ink heading" x="16" y="30">SIRC-1 EXCEPTION ENTRY AND RETURN</text>
+  <text class="ink subhead" x="16" y="66">ENTRY</text>
+  <text class="ink detail" x="744" y="66" text-anchor="end">Commits only after the vector has been fetched</text>
+  <rect class="functional" x="36" y="78" width="688" height="74"/>
+  <circle cx="62" cy="115.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="120.0" text-anchor="middle">1</text>
+  <text class="ink label" x="84" y="120.0">Select</text>
+  <text class="ink detail" x="214" y="101">At an instruction boundary, take the highest-priority eligible exception.</text>
+  <text class="ink detail" x="214" y="119">For a retryable fault, the instruction was cancelled and its remaining</text>
+  <text class="ink detail" x="214" y="137">phases ran as no-ops.</text>
+  <path class="wire" d="M380 152 V166" marker-end="url(#arrow)"/>
+  <rect class="functional" x="36" y="166" width="688" height="56"/>
+  <circle cx="62" cy="194.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="199.0" text-anchor="middle">2</text>
+  <text class="ink label" x="84" y="199.0">Fetch vector</text>
+  <text class="ink detail" x="214" y="189">Read the high word, then the low word, at vector × 2 in the vector table.</text>
+  <text class="ink detail" x="214" y="207">If the fetch fails, a fault is raised instead and none of the later steps happen.</text>
+  <rect x="16" y="234" width="728" height="266" rx="10" fill="#f8fafb" stroke="#6b7e88" stroke-width="2.4"/>
+  <text class="ink subhead" x="36" y="256">ARCHITECTURAL COMMIT</text>
+  <text class="ink detail" x="724" y="256" text-anchor="end">steps 3–5 take effect together</text>
+  <path class="wire" d="M380 222 V268" marker-end="url(#arrow)"/>
+  <rect class="functional" x="36" y="268" width="688" height="92"/>
+  <circle cx="62" cy="314.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="319.0" text-anchor="middle">3</text>
+  <text class="ink label" x="84" y="319.0">Save state</text>
+  <text class="ink detail" x="214" y="291">Write the return address, SR and current level to the exception's link</text>
+  <text class="ink detail" x="214" y="309">register (index = priority − 1 for registers 0–6). Retryable faults save the</text>
+  <text class="ink detail" x="214" y="327">faulting instruction so RETE retries it; interrupts, traps and trace faults</text>
+  <text class="ink detail" x="214" y="345">save the next instruction.</text>
+  <path class="wire" d="M380 360 V374" marker-end="url(#arrow)"/>
+  <rect class="functional" x="36" y="374" width="688" height="56"/>
+  <circle cx="62" cy="402.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="407.0" text-anchor="middle">4</text>
+  <text class="ink label" x="84" y="407.0">Update state</text>
+  <text class="ink detail" x="214" y="397">SR.P = 0 (supervisor mode), SR.T = 0 (no tracing), SR.EA = 1 (handler active).</text>
+  <text class="ink detail" x="214" y="415">Current exception level = level of this exception.</text>
+  <path class="wire" d="M380 430 V444" marker-end="url(#arrow)"/>
+  <rect class="functional" x="36" y="444" width="688" height="42"/>
+  <circle cx="62" cy="465.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="470.0" text-anchor="middle">5</text>
+  <text class="ink label" x="84" y="470.0">Jump</text>
+  <text class="ink detail" x="214" y="469">Load the program counter with the vector target; the handler starts.</text>
+  <path class="wire" d="M380 486 V522" marker-end="url(#arrow)"/>
+  <rect class="handler" x="36" y="522" width="688" height="74"/>
+  <text class="ink label" x="52" y="564.0">Handler runs</text>
+  <text class="ink detail" x="214" y="545">Runs in supervisor mode at the new exception level.</text>
+  <text class="ink detail" x="214" y="563">ETFR and ETTR can read or edit the saved state before returning.</text>
+  <text class="ink detail" x="214" y="581">A higher-priority exception can interrupt it, using its own link register.</text>
+  <path class="wire" d="M380 596 V640" marker-end="url(#arrow)"/>
+  <text class="ink subhead" x="16" y="630">RETURN (RETE)</text>
+  <rect class="functional" x="36" y="642" width="688" height="56"/>
+  <circle cx="62" cy="670.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="675.0" text-anchor="middle">1</text>
+  <text class="ink label" x="84" y="675.0">Restore state</text>
+  <text class="ink detail" x="214" y="665">RETE restores p, sr and the exception level from the current link register.</text>
+  <text class="ink detail" x="214" y="683">SR.EA is then set if the restored level is non-zero, and cleared if it is 0.</text>
+  <path class="wire" d="M380 698 V712" marker-end="url(#arrow)"/>
+  <rect class="functional" x="36" y="712" width="688" height="56"/>
+  <circle cx="62" cy="740.0" r="13" fill="#405863"/>
+  <text class="badge" x="62" y="745.0" text-anchor="middle">2</text>
+  <text class="ink label" x="84" y="745.0">Resume</text>
+  <text class="ink detail" x="214" y="735">Execution continues at the return address.</text>
+  <text class="ink detail" x="214" y="753">A pending exception that is now eligible is serviced before the next instruction.</text>
+</svg>

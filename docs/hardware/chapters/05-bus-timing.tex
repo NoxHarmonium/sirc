@@ -1,0 +1,268 @@
+\chapter{Bus Timing Diagrams}
+\label{ch:bus-timing}
+
+\section{Bus Cycle Diagrams}
+
+The timing diagrams below show cycle-level logical timing. Each labeled interval represents one CLKI cycle as observed
+between rising edges. Waveform rows show physical logic levels; for active-low signals, \texttt{L} means asserted and
+\texttt{H} means deasserted. Address, data, \texttt{BAT}, and phase rows are value bands rather than electrical
+setup/hold specifications. An empty band means that the row carries no defined value in that cycle. Every cycle begins
+with a CLKI rising edge. The pulses in the \texttt{Sample} row mark the rising edges at which the CPU samples
+\activelow{BACK}, \activelow{BERR}, \activelow{BPER}, and read data, which are the edges that end the cycles in which
+\activelow{BAS} is asserted (Section~\ref{sec:clock-edges}).
+
+Table~\ref{tab:figure-phase-labels} lists the labels used in the phase bands, which name the activity of each cycle.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}p{4.2cm}X@{}}
+		\toprule
+		\textbf{Label}                                                         & \textbf{Meaning}                                                                                                                                  \\
+		\midrule
+		\texttt{IF high}, \texttt{IF low}                                      & The high-word and low-word instruction-fetch cycles (phases 0 and 1).                                                                             \\
+		\texttt{Decode}, \texttt{Execute}, \texttt{Memory}, \texttt{Writeback} & Phases 2, 3, 4 and 5 of an instruction. Section~\ref{sec:execution-phases} defines the phases; no other definition is needed to read the figures. \\
+		\texttt{EA}                                                            & The effective-address calculation cycle.                                                                                                          \\
+		\texttt{EV high}, \texttt{EV low}                                      & The high-word and low-word cycles of an exception-vector fetch.                                                                                   \\
+		\texttt{RV high}, \texttt{RV low}                                      & The high-word and low-word cycles of the reset-vector fetch.                                                                                      \\
+		\texttt{Mem}                                                           & The data-access cycle of a load or store.                                                                                                         \\
+		\texttt{next}                                                          & The cycle that follows a bus transfer, in which the bus is idle.                                                                                  \\
+		\texttt{req}                                                           & In a wait-state figure, the cycle in which the request is first presented.                                                                        \\
+		\texttt{wait}                                                          & A cycle in which no response is yet asserted.                                                                                                     \\
+		\texttt{done}                                                          & The cycle in which the response completes the transfer.                                                                                           \\
+		\texttt{Prev WB}                                                       & The writeback phase of the preceding instruction.                                                                                                 \\
+		\texttt{Enter}                                                         & The first cycle of exception entry after the vector is fetched.                                                                                   \\
+		\texttt{reset}                                                         & The cycle in which \activelow{RSTI} is first sampled asserted.                                                                                    \\
+		\texttt{hold}                                                          & A cycle of the reset-output hold.                                                                                                                 \\
+		\texttt{BERR}, \texttt{BPER}                                           & The abort cases.                                                                                                                                  \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Phase Band Labels in the Timing Diagrams}
+	\label{tab:figure-phase-labels}
+\end{table}
+
+\texttt{BAT} bands name the bus-access type. The diagrams use \texttt{IF} for instruction fetch, \texttt{DR} for data
+read, \texttt{DW} for data write, \texttt{EV} for exception vector fetch of vector $n$ at word addresses $2n$ and
+$2n+1$, and \texttt{None} for no bus access. \texttt{active} is the type of the access in progress when the abort is
+signalled. Address bands show \texttt{PC} and \texttt{PC+1} for the fetch addresses, \texttt{EA} for the effective
+address, and \texttt{addr} for the address of the access in progress. Data bands show the \texttt{high} or \texttt{low}
+word of a two-word transfer, or \texttt{data} for a single-word transfer.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 3{0.5H 0.5L}                         \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{} \\
+		SYNC        & H L L L                       \\
+		\activelow{BAS}         & L L H H                       \\
+		BRW         & H H H H                       \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None}   \\
+		A0--A23     & D{PC} D{PC+1} D{} D{}         \\
+		D0--D15     & D{high} D{low} Z Z            \\
+		\activelow{BACK}        & L L H H                       \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H                       \\
+		Sample      & 0.95L 0.1H 0.9L 0.1H 1.95L \\
+	\end{tikztimingtable}
+	\caption{Instruction-Fetch High-Word and Low-Word Reads with No Wait States}
+	\label{fig:instruction-fetch-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 2{0.5H 0.5L}                      \\
+		Phase       & D{Mem} D{next} D{}        \\
+		SYNC        & L L L                     \\
+		\activelow{BAS}         & L H H                     \\
+		BRW         & H H H                     \\
+		BAT0--BAT2  & D{DR} D{None} D{None}     \\
+		A0--A23     & D{EA} D{} D{}             \\
+		D0--D15     & D{data} Z Z               \\
+		\activelow{BACK}        & L H H                     \\
+		\activelow{BERR}/\activelow{BPER}   & H H H                     \\
+		Sample      & 0.95L 0.1H 1.95L \\
+	\end{tikztimingtable}
+	\caption{Data Read Cycle with No Wait State}
+	\label{fig:data-read-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 2{0.5H 0.5L}                       \\
+		Phase       & D{Mem} D{next} D{}         \\
+		SYNC        & L L L                      \\
+		\activelow{BAS}         & L H H                      \\
+		BRW         & L H H                      \\
+		BAT0--BAT2  & D{DW} D{None} D{None}      \\
+		A0--A23     & D{EA} D{} D{}              \\
+		D0--D15     & D{data} Z Z                \\
+		\activelow{BACK}        & L H H                      \\
+		\activelow{BERR}/\activelow{BPER}   & H H H                      \\
+		Sample      & 0.95L 0.1H 1.95L \\
+	\end{tikztimingtable}
+	\caption{Data Write Cycle with No Wait State}
+	\label{fig:data-write-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 3{0.5H 0.5L}                                 \\
+		Phase       & D{EV high} D{EV low} D{next} D{} \\
+		SYNC        & H L L L                              \\
+		\activelow{BAS}         & L L H H                              \\
+		BRW         & H H H H                              \\
+		BAT0--BAT2  & D{EV} D{EV} D{None} D{None}          \\
+		A0--A23     & D{$2n$} D{$2n+1$} D{} D{}            \\
+		D0--D15     & D{high} D{low} Z Z                   \\
+		\activelow{BACK}        & L L H H                              \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H                              \\
+		Sample      & 0.95L 0.1H 0.9L 0.1H 1.95L \\
+	\end{tikztimingtable}
+	\caption{Exception-Vector Fetch with High-Word Then Low-Word Reads}
+	\label{fig:exception-vector-fetch-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 3{0.5H 0.5L}                              \\
+		Phase       & D{req} D{wait} D{done} D{next}        \\
+		SYNC        & L L L L                           \\
+		\activelow{BAS}         & L L L H                           \\
+		BRW         & H H H H                           \\
+		BAT0--BAT2  & D{DR} D{DR} D{DR} D{None}           \\
+		A0--A23     & D{addr} D{addr} D{addr} D{}         \\
+		D0--D15     & Z Z D{data} Z                       \\
+		\activelow{BACK}        & H H L H                           \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H                           \\
+		Sample      & 0.95L 0.1H 0.9L 0.1H 0.9L 0.1H 0.95L \\
+	\end{tikztimingtable}
+	\caption{Wait-State Insertion when No Bus Response Is Asserted}
+	\label{fig:bus-wait-state-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 3{0.5H 0.5L}                          \\
+		Case        & D{BERR} D{} D{BPER} D{}             \\
+		\activelow{BAS}         & L H L H                       \\
+		BRW         & H H H H                       \\
+		\activelow{BACK}        & H H H H                       \\
+		\activelow{BERR}        & L H H H                       \\
+		\activelow{BPER}        & H H L H                       \\
+		BAT0--BAT2  & D{active} D{None} D{active} D{None} \\
+		A0--A23     & D{addr} D{} D{addr} D{}             \\
+		D0--D15     & Z Z Z Z                       \\
+		Sample      & 0.95L 0.1H 1.9L 0.1H 0.95L \\
+	\end{tikztimingtable}
+	\caption{Bus-Error and Bus-Protection Abort Timing}
+	\label{fig:bus-abort-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 5{0.5H 0.5L}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{Execute} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		\activelow{BAS}         & L L H H H H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{None} D{None} \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{} D{}              \\
+		D0--D15     & D{high} D{low} Z Z Z Z                     \\
+		\activelow{BACK}        & L L H H H H                                \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H H H                                \\
+		Sample      & 0.95L 0.1H 0.9L 0.1H 3.95L \\
+	\end{tikztimingtable}
+	\caption{Complete Register-Only ALU Instruction with No Wait States}
+	\label{fig:alu-instruction-cycle-timing}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 5{0.5H 0.5L}                                      \\
+		Phase       & D{IF high} D{IF low} D{Decode} D{EA} D{Memory} D{Writeback} \\
+		SYNC        & H L L L L L                                \\
+		\activelow{BAS}         & L L H H L H                                \\
+		BRW         & H H H H H H                                \\
+		BAT0--BAT2  & D{IF} D{IF} D{None} D{None} D{DR} D{None}  \\
+		A0--A23     & D{PC} D{PC+1} D{} D{} D{EA} D{}            \\
+		D0--D15     & D{high} D{low} Z Z D{data} Z               \\
+		\activelow{BACK}        & L L H H L H                                \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H H H                                \\
+		Sample      & 0.95L 0.1H 0.9L 0.1H 2.9L 0.1H 0.95L \\
+	\end{tikztimingtable}
+	\caption{Complete LOAD Instruction with No Wait States}
+	\label{fig:load-instruction-cycle-timing}
+\end{figure}
+
+\section{Reset and Interrupt Timing Examples}
+
+Figure~\ref{fig:hardware-reset-cycle-timing} shows a hardware reset in which \activelow{RSTI} is asserted for one
+clock. The reset-output hold is six CLKI cycles in this case. The cycle in which \activelow{RSTI} is first sampled
+asserted counts as the first, and \activelow{RSTO} stays asserted for five further cycles after \activelow{RSTI} is
+sampled deasserted. An \activelow{RSTI} assertion of $n$ cycles therefore gives $n + 5$ cycles of \activelow{RSTO}. A
+software reset and a reset-vector fetch retry each give a six-cycle hold. The reset-vector fetch does not begin until
+\activelow{RSTI} is deasserted and the reset-output hold has completed.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 7{0.5H 0.5L}                                         \\
+		Phase       & D{reset} D{hold} D{hold} D{hold} D{hold} D{hold} D{RV high} D{RV low} \\
+		\activelow{RSTI}        & L H H H H H H H                               \\
+		\activelow{RSTO}        & L L L L L L H H                               \\
+		\activelow{BAS}         & H H H H H H L L                               \\
+		BRW         & H H H H H H H H                               \\
+		BAT0--BAT2  & D{None} D{None} D{None} D{None} D{None} D{None} D{EV} D{EV} \\
+		A0--A23     & D{} D{} D{} D{} D{} D{} D{0} D{1}     \\
+		D0--D15     & Z Z Z Z Z Z D{high} D{low}                    \\
+		\activelow{BACK}        & H H H H H H L L                               \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H H H H H                               \\
+		Sample      & 6.95L 0.1H 0.9L 0.05H \\
+	\end{tikztimingtable}
+	\caption{Hardware Reset with One-Cycle \activelow{RSTI} Assertion and Reset-Vector Fetch}
+	\label{fig:hardware-reset-cycle-timing}
+\end{figure}
+
+Figure~\ref{fig:irq-sampling-cycle-timing} shows an enabled maskable interrupt asserted before an instruction boundary.
+The CPU samples the interrupt lines on every clock cycle, so the request is latched in the cycle it is first seen, but
+it is dispatched only at the next phase 0 at which no coprocessor call or command is pending or active. A request first
+sampled at the rising edge that starts phase 0 is dispatched in that phase 0. The following exception-unit dispatch
+fetches the selected hardware-interrupt vector instead of fetching the next processing-unit instruction. A request
+latched partway through an instruction waits for the next such phase 0. The figure holds
+\activelow{IRQ1}--\activelow{IRQ4} asserted throughout because the requesting device must hold the line asserted until
+its handler acknowledges it.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI        & L 4{0.5H 0.5L}                                  \\
+		Phase       & D{Prev WB} D{EV high} D{EV low} D{Decode} D{Enter} \\
+		\activelow{IRQ1}--\activelow{IRQ4}  & L L L L L                              \\
+		SYNC        & L H L L L                              \\
+		\activelow{BAS}         & H L L H H                              \\
+		BRW         & H H H H H                              \\
+		BAT0--BAT2  & D{None} D{EV} D{EV} D{None} D{None}    \\
+		A0--A23     & D{} D{$2n$} D{$2n+1$} D{} D{}          \\
+		D0--D15     & Z D{high} D{low} Z Z                   \\
+		\activelow{BACK}        & H L L H H                              \\
+		\activelow{BERR}/\activelow{BPER}   & H H H H H                              \\
+		Sample      & 1.95L 0.1H 0.9L 0.1H 1.95L \\
+	\end{tikztimingtable}
+	\caption{Enabled \activelow{IRQ} Latched Before an Instruction Boundary and Dispatched with No Wait States}
+	\label{fig:irq-sampling-cycle-timing}
+\end{figure}

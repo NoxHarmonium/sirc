@@ -3,8 +3,8 @@
 
 \section{Overview}
 
-The SIRCIS instruction set consists of 64 possible opcodes (6-bit opcode field), of which 50 are documented and
-assigned; the remaining 14 are undocumented (see Appendix~\ref{appendix:undocumented}). The instructions are organized
+The SIRCIS instruction set consists of 64 possible opcodes (6-bit opcode field), of which 62 are documented and
+assigned; the remaining 2 are undocumented (see Appendix~\ref{appendix:undocumented}). The instructions are organized
 into logical groups:
 
 \begin{itemize}
@@ -14,7 +14,7 @@ into logical groups:
 	\item \textbf{Coprocessor (\opcode{0F}, \opcode{3F})}: Coprocessor interface
 \end{itemize}
 
-\opcode{2F} is undocumented (see Appendix~\ref{appendix:undocumented}).
+\opcode{27} and \opcode{2F} are undocumented (see Appendix~\ref{appendix:undocumented}).
 
 \section{Complete Instruction List}
 
@@ -32,13 +32,13 @@ into logical groups:
 		\opcode{04}     & ANDI              & Immediate       & NZ (C,V=0)     & AND immediate                                   \\
 		\opcode{05}     & ORRI              & Immediate       & NZ (C,V=0)     & OR immediate                                    \\
 		\opcode{06}     & XORI              & Immediate       & NZ (C,V=0)     & XOR immediate                                   \\
-		\opcode{07}     & LOAD              & Immediate       & --             & Load immediate (move)                           \\
-		\opcode{08}     & --                & Immediate       & --             & Undocumented                                    \\
-		\opcode{09}     & --                & Immediate       & --             & Undocumented                                    \\
+		\opcode{07}     & MOVI              & Immediate       & NZ (C,V=0)     & Move immediate                                  \\
+		\opcode{08}     & CMNI              & Immediate       & NZCV           & Compare negative immediate                      \\
+		\opcode{09}     & CNCI              & Immediate       & NZCV           & Compare negative with carry immediate           \\
 		\opcode{0A}     & CMPI              & Immediate       & NZCV           & Compare immediate                               \\
-		\opcode{0B}     & --                & Immediate       & --             & Undocumented                                    \\
+		\opcode{0B}     & CPCI              & Immediate       & NZCV           & Compare with carry immediate                    \\
 		\opcode{0C}     & TSAI              & Immediate       & NZ (C,V=0)     & Test AND immediate                              \\
-		\opcode{0D}     & --                & Immediate       & --             & Undocumented                                    \\
+		\opcode{0D}     & TSOI              & Immediate       & NZ (C,V=0)     & Test OR immediate                               \\
 		\opcode{0E}     & TSXI              & Immediate       & NZ (C,V=0)     & Test XOR immediate                              \\
 		\opcode{0F}     & COPI              & Immediate       & --             & Coprocessor call immediate                      \\
 		\midrule
@@ -67,12 +67,12 @@ into logical groups:
 		\opcode{25}     & ORRI              & Short Imm+Shift & NZ (C,V=0)     & OR short immediate                              \\
 		\opcode{26}     & XORI              & Short Imm+Shift & NZ (C,V=0)     & XOR short immediate                             \\
 		\opcode{27}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
-		\opcode{28}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
-		\opcode{29}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
+		\opcode{28}     & CMNI              & Short Imm+Shift & NZCV           & Compare negative short immediate                \\
+		\opcode{29}     & CNCI              & Short Imm+Shift & NZCV           & Compare negative with carry short immediate     \\
 		\opcode{2A}     & CMPI              & Short Imm+Shift & NZCV           & Compare short immediate                         \\
-		\opcode{2B}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
+		\opcode{2B}     & CPCI              & Short Imm+Shift & NZCV           & Compare with carry short immediate              \\
 		\opcode{2C}     & TSAI              & Short Imm+Shift & NZ (C,V=0)     & Test AND short immediate                        \\
-		\opcode{2D}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
+		\opcode{2D}     & TSOI              & Short Imm+Shift & NZ (C,V=0)     & Test OR short immediate                         \\
 		\opcode{2E}     & TSXI              & Short Imm+Shift & NZ (C,V=0)     & Test XOR short immediate                        \\
 		\opcode{2F}     & --                & Short Imm+Shift & --             & Undocumented                                    \\
 		\midrule
@@ -83,13 +83,13 @@ into logical groups:
 		\opcode{34}     & ANDR              & Register        & NZ (C,V=0)     & AND register                                    \\
 		\opcode{35}     & ORRR              & Register        & NZ (C,V=0)     & OR register                                     \\
 		\opcode{36}     & XORR              & Register        & NZ (C,V=0)     & XOR register                                    \\
-		\opcode{37}     & LOAD              & Register        & --             & Load from register (move)                       \\
-		\opcode{38}     & --                & Register        & --             & Undocumented                                    \\
-		\opcode{39}     & --                & Register        & --             & Undocumented                                    \\
+		\opcode{37}     & MOVR              & Register        & NZ (C,V=0)     & Move register                                   \\
+		\opcode{38}     & CMNR              & Register        & NZCV           & Compare negative register                       \\
+		\opcode{39}     & CNCR              & Register        & NZCV           & Compare negative with carry register            \\
 		\opcode{3A}     & CMPR              & Register        & NZCV           & Compare register                                \\
-		\opcode{3B}     & --                & Register        & --             & Undocumented                                    \\
+		\opcode{3B}     & CPCR              & Register        & NZCV           & Compare with carry register                     \\
 		\opcode{3C}     & TSAR              & Register        & NZ (C,V=0)     & Test AND register                               \\
-		\opcode{3D}     & --                & Register        & --             & Undocumented                                    \\
+		\opcode{3D}     & TSOR              & Register        & NZ (C,V=0)     & Test OR register                                \\
 		\opcode{3E}     & TSXR              & Register        & NZ (C,V=0)     & Test XOR register                               \\
 		\opcode{3F}     & COPR              & Register        & --             & Coprocessor call register                       \\
 		\bottomrule
@@ -98,10 +98,8 @@ into logical groups:
 	\label{tab:complete-instruction-set}
 \end{table}
 
-See Table~\ref{tab:flag-effect-symbols} for the flag-effect symbol definitions. The Flags column shows \texttt{--} for
-\mnemonic{LOAD} (\opcode{07}, \opcode{37}) only when the default \texttt{[N]} status update source is used; an encoding
-of the \mnemonic{LOAD} opcode with a non-\texttt{[N]} AF field, not reachable from public assembly syntax, leaves all
-four flags architecturally undefined (\texttt{U U U U}). See Chapter~\ref{ch:alu-instructions} for details.
+The Flags column lists the condition flags each instruction updates. Table~\ref{tab:alu-status-flag-effects} gives the
+exact effect, using the symbols of Table~\ref{tab:flag-effect-symbols}.
 
 \section{Instruction Grouping Patterns}
 
@@ -122,21 +120,25 @@ Many ALU instructions have two variants:
 
 \begin{itemize}
 	\item \textbf{+\opcode{00} to +\opcode{06}}: Save result to destination register
-	\item \textbf{+\opcode{07}}: \mnemonic{LOAD} (\opcode{27} is undocumented)
-	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only where a documented mnemonic exists (update flags, discard
-	      result)
-	\item \textbf{+\opcode{0F}}: Coprocessor call (neither result nor flags are written)
+	\item \textbf{+\opcode{07}}: \mnemonic{MOVI}/\mnemonic{MOVR} (\opcode{27} is undocumented)
+	\item \textbf{+\opcode{08} to +\opcode{0E}}: Test only (update flags, discard result)
+	\item \textbf{+\opcode{0F}}: Coprocessor call, \opcode{0F} and \opcode{3F} only (neither result nor flags are written; \opcode{2F} is undocumented)
 \end{itemize}
 
-Examples:
+The following pairs show a save instruction and its test-only counterpart:
+
 \begin{itemize}
+	\item \opcode{00} = \mnemonic{ADDI} (save result), \opcode{08} = \mnemonic{CMNI} (test only)
 	\item \opcode{04} = \mnemonic{ANDI} (save result), \opcode{0C} = \mnemonic{TSAI} (test only)
 	\item \opcode{06} = \mnemonic{XORI} (save result), \opcode{0E} = \mnemonic{TSXI} (test only)
 \end{itemize}
 
 \section{Meta-Instructions}
+\label{sec:instruction-summary-meta}
 
-Several commonly-used operations are implemented as assembler meta-instructions that assemble to specific opcodes:
+Several commonly used operations are implemented as assembler meta-instructions that assemble to specific opcodes. This
+table is a summary; Chapter~\ref{ch:meta-instructions} is the canonical reference, and also gives the primary
+documentation chapter for each mnemonic:
 
 \begin{table}[H]
 	\centering
@@ -152,7 +154,7 @@ Several commonly-used operations are implemented as assembler meta-instructions 
 		\mnemonic{BRSR}           & \texttt{LDEL p, ...}            & PC-relative call         \\
 		\mnemonic{LJMP}           & \texttt{LDEA p, ...}            & Long jump                \\
 		\mnemonic{LJSR}           & \texttt{LDEL p, ...}            & Long call                \\
-		\mnemonic{EXCP}           & \texttt{COPI \#0x11vv}          & User exception           \\
+		\mnemonic{EXCP}           & \texttt{COPI \#0x11vv}          & Software exception       \\
 		\mnemonic{WAIT}           & \texttt{COPI \#0x1900}          & Wait for interrupt       \\
 		\mnemonic{RETE}           & \texttt{COPI \#0x1A00}          & Return from exception    \\
 		\mnemonic{RSET}           & \texttt{COPI \#0x1B00}          & System reset             \\
@@ -167,7 +169,7 @@ Several commonly-used operations are implemented as assembler meta-instructions 
 		\mnemonic{DIVS}           & \texttt{COPI \#0x3300}          & Signed divide            \\
 		\bottomrule
 	\end{tabular}
-	\caption{Meta-Instructions}
+	\caption{Meta-Instructions (Summary)}
 	\label{tab:meta-instructions}
 \end{table}
 
@@ -185,13 +187,14 @@ states are required:
 	\item Write Back
 \end{enumerate}
 
-Coprocessor calls (\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles to one) take a second
-6-cycle slot for the coprocessor dispatch that begins at the next phase 0, for 12 cycles in total before the next
-instruction is fetched.
+A coprocessor call whose condition is true takes a second 6-cycle dispatch slot, so most calls take 12 cycles.
+Section~\ref{sec:coprocessor-call-timing} of Appendix~\ref{appendix:timing} states this rule and its exceptions, and
+Chapter~\ref{ch:coprocessor} gives the coprocessor timing.
 
 This fixed sequence simplifies hardware design. Delayed bus acknowledgement may hold a phase and add wait cycles. DMA
-meta-instructions dispatch through the normal 6-cycle \mnemonic{COPI} path and then add DMA command and transfer
-cycles.
+meta-instructions dispatch through the normal \mnemonic{COPI} path. A transfer of more than five bus accesses (more
+than five words for \mnemonic{DMAR} and \mnemonic{DMAW}, more than two for \mnemonic{DMAT}) runs on into further
+6-cycle slots.
 
 \section{Next Chapters}
 

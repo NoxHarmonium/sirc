@@ -6,12 +6,12 @@
 .ORG 0x0200
 
 :init
-LOAD    r1, #0xCAFE
-LOAD    r3, #0xBEEF
-LOAD    r5, #0x000A
+MOVI    r1, #0xCAFE
+MOVI    r3, #0xBEEF
+MOVI    r5, #0x000A
 
-LOAD    ah, #0x0008
-LOAD    al, #0xAAF0
+MOVI    ah, #0x0008
+MOVI    al, #0xAAF0
 
 STOR    (#0x000F, a), r1
 LOAD    r2, (#0x000F, a)
@@ -29,13 +29,13 @@ LOAD    r4, (r5, a)
 ; Make a maze of jumps so if the jump goes to the wrong place it will land in the forbidden zone where every instruction jumps to the fail label
 
 ; r7 will store the test result
-LOAD r7, #0
+MOVI r7, #0
 ; Use the stack address register pair to store fail address
-LOAD sh, #0x0
-LOAD sl, @fail
+MOVI sh, #0x0
+MOVI sl, @fail
 ; Address register pair used as part of test
-LOAD ah, #0x0
-LOAD al, #0x0
+MOVI ah, #0x0
+MOVI al, #0x0
 
 BRAN #12            ; Step 1
 LJMP s              ; FAIL!
@@ -49,9 +49,9 @@ BRAN @ljmp_register_offset
 
 
 :ljmp_register_offset
-LOAD al, @ljmp_register_offset_anchor
-LOAD r1, #-6
-LOAD r2, #4
+MOVI al, @ljmp_register_offset_anchor
+MOVI r1, #-6
+MOVI r2, #4
 BRAN @ljmp_register_offset_anchor
 LJMP s              ; FAIL!
 LJMP s              ; FAIL!
@@ -70,7 +70,7 @@ LJMP s              ; FAIL!
 
 
 :ljmp_immediate_offset
-LOAD al, @ljmp_immediate_offset_anchor
+MOVI al, @ljmp_immediate_offset_anchor
 BRAN @ljmp_immediate_offset_anchor
 LJMP s              ; FAIL!
 LJMP s              ; FAIL!
@@ -89,9 +89,9 @@ LJMP s              ; FAIL!
 
 
 :ljsr_register_offset
-LOAD al, @ljsr_register_offset_anchor
-LOAD r1, #-6
-LOAD r2, #4
+MOVI al, @ljsr_register_offset_anchor
+MOVI r1, #-6
+MOVI r2, #4
 BRAN @ljsr_register_offset_anchor
 LJSR s              ; FAIL!
 LJSR s              ; FAIL!
@@ -110,7 +110,7 @@ LJSR s              ; FAIL!
 
 
 :ljsr_immediate_offset
-LOAD al, @ljsr_immediate_offset_anchor
+MOVI al, @ljsr_immediate_offset_anchor
 BRAN @ljsr_immediate_offset_anchor
 LJSR s              ; FAIL!
 LJSR s              ; FAIL!
@@ -129,16 +129,16 @@ LJSR s              ; FAIL!
 
 
 :finish
-LOAD r7, #0x0FAB
+MOVI r7, #0x0FAB
 
-LOAD sh, #0x0
-LOAD sl, @pass
+MOVI sh, #0x0
+MOVI sl, @pass
 LJMP s
 
 .ORG 0x0400
 
 :fail
-LOAD r7, #0xFA11
+MOVI r7, #0xFA11
 
 :pass
 

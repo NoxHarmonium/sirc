@@ -1,0 +1,20 @@
+F-hw-1: confirmed
+F-hw-2: confirmed
+F-hw-3: confirmed
+F-hw-4: confirmed
+F-hw-5: confirmed
+F-hw-6: confirmed
+F-hw-7: confirmed
+F-hw-8: confirmed
+F-hw-9: confirmed
+F-hw-10: confirmed
+F-hw-11: confirmed
+F-hw-12: confirmed
+F-hw-13: confirmed
+F-hw-14: confirmed
+F-hw-15: confirmed
+F-hw-16: confirmed
+F-hw-17: confirmed
+F-hw-18: confirmed
+F-hw-19: confirmed
+Counts: 19 confirmed, 0 refuted, 0 reclassified

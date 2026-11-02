@@ -348,6 +348,38 @@ All Workstream 13 and 14 backlog items above are now done. What remains open is 
 build hygiene) and the two smaller, not-currently-a-known-problem Workstream 13 items noted above (`lstlisting`
 restyle, chapter/part opening-page review) -- neither was part of the agreed backlog for this pass.
 
+**Added 2026-11-02** from a second benchmark covering all three manuals (corpus adds `MC68000UM`, the Z80 CPU User
+Manual `Z80`, the VLSI ARM Family Data Manual 1990 `ARM`, and the M68000 Resident Structured Assembler manual
+`MASM`; full matrix in `review/period-gaps.md`). Accepted as backlog by the author, including the template fields,
+which are not applied in the editing pass. H = hardware manual, S = assembly manual, A = architecture manual.
+
+10. **Electrical and AC characteristics** (H). Absolute maximum ratings, DC levels, clock limits, and setup, hold and
+    propagation times per speed grade as a Min/Typ/Max table. `UM:10-10`, `ARM:2-21`.
+11. **Parameter-annotated timing diagrams** (H). Number the Chapter 5 figure parameters and key them to the AC
+    table, with notes under each figure. `UM:10-13`, `ARM:2-22`.
+12. **Directive reference and formal syntax** (S). A directive table by function with Format and Description per
+    directive, the line grammar, reserved words and the character set. `MASM:3-1` to `3-4`.
+13. **Complete diagnostic catalogue** (S). Every assembler and linker message verbatim, grouped by cause, errors
+    distinguished from warnings. `MASM:E-1`.
+14. **Package, mechanical and ordering data** (H). Package outline and dimensions, thermal data, ordering and
+    part-marking table. `UM:Section 11`, `ARM:Section 8`.
+15. **Per-flag definition lines** (template field). One sentence per flag after the flag row. `M68000PRM:4-4`.
+16. **Legal-forms table with opcode and cycles per entry** (template field). Rows of syntax form, opcode, words and
+    cycles. `MCS6500:B-3`. Extends item 2, which only cross-references the chapter tables.
+17. **Encoded form beside each example** (template field). The assembled word next to each example line.
+    `ARM:2-30`, `Z80:265`.
+18. **Signal summary table** (H). Signal, pin, direction, active level and three-state behaviour in one table.
+    `UM:3-10`.
+19. **Bus-mastership and interrupt-acknowledge statement** (H). The CPU always owns the bus and there is no IACK
+    cycle, plus a BACK/BERR/BPER/HALT result table. `UM:5-31`.
+20. **Bus-cycle narrative** (H). A numbered state-by-state description under each cycle figure. `UM:5-8`.
+21. **Data organisation figure** (A). Word and byte layout in registers and in memory. `M68000PRM:1-26` to `1-29`.
+22. **Running mnemonic on continuation pages** (template field). The mnemonic repeated in the page header of
+    multi-page entries. `M68000PRM:4-4`, `4-5`.
+23. **Listing, object and map formats** (S). A sample listing and the layout of the `.o`, `.bin` and `.dbg` files.
+    `MASM:4-5`, `C-1`.
+24. **Minimum-system example** (H). Memory, wait-state and reset circuit with decoupling guidance. `Z80:21` to `25`.
+
 ## Definition of Done
 
 The manual is "up to scratch" when, in addition to everything already met by the completed workstreams:

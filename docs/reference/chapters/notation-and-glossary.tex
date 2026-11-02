@@ -3,11 +3,11 @@
 \label{ch:notation-glossary}
 
 This section collects the typographic conventions, normative vocabulary, and architectural terminology used throughout
-the manual, in one place, so a reader does not have to hunt through individual chapters to look one up.
-Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar placeholder names used only
-inside instruction descriptions) is defined separately in Chapter~\ref{ch:reading-instructions}, Table
-\ref{tab:instruction-description-notation}, alongside the status-flag-effect symbols
-(Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the conventions that apply manual-wide.
+the manual, in one place. Instruction-entry-specific notation (\texttt{rD}, \texttt{rS1}, \texttt{shift}, and similar
+placeholder names used only inside instruction descriptions) is defined separately in
+Chapter~\ref{ch:reading-instructions}, Table~\ref{tab:instruction-description-notation}, alongside the
+status-flag-effect symbols (Table~\ref{tab:flag-effect-symbols}); this section does not repeat those, only the
+conventions that apply manual-wide.
 
 \section*{Typographic Conventions}
 
@@ -15,32 +15,32 @@ inside instruction descriptions) is defined separately in Chapter~\ref{ch:readin
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Convention}          & \textbf{Meaning}                                                                 \\
+		\textbf{Convention}          & \textbf{Meaning}                                                                                            \\
 		\midrule
 		\reg{r1}, \reg{sr}, \reg{ph} & Register names appear in typewriter font, whether general-purpose, address-pair,
-		or status.                                                                                                      \\
+		or status.                                                                                                                                 \\
 		\opcode{1A}                  & A literal instruction-opcode byte value, written \texttt{0x} followed by two
-		uppercase hex digits.                                                                                           \\
-		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}.     \\
-		\addr{0x0002}                & A concrete memory address or vector target.                                      \\
-		\mnemonic{ADDI}              & An instruction mnemonic, always bold typewriter and always uppercase.            \\
+		uppercase hexadecimal digits.                                                                                                              \\
+		\imm{123}                    & A concrete immediate value written as an operand, prefixed with \texttt{\#}. May be decimal or hexadecimal. \\
+		\addr{0x0002}                & A concrete memory address or vector target.                                                                 \\
+		\mnemonic{ADDI}              & An instruction mnemonic, always bold typewriter and always uppercase.                                       \\
 		\texttt{SR.X}                & A field or bit of the status register, named by its bit label (for example
-		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                    \\
+		\texttt{SR.A}, \texttt{SR.T}); see Chapter~\ref{ch:status-register} for the full bit layout.                                               \\
 		\indirectimm{4}{a}           & Parentheses denote indirection through an address-register pair; a leading
 		\texttt{-} denotes pre-decrement and a trailing \texttt{+} denotes post-increment, for example
-		\predec{0}{a} and \postinc{0}{a}.                                                                               \\
+		\predec{0}{a} and \postinc{0}{a}.                                                                                                          \\
 		\bottomrule
 	\end{tabular}
 	\caption{Manual-Wide Typographic Conventions}
 	\label{tab:manual-wide-notation}
 \end{table}
 
-Other conventions that do not have a dedicated macro:
+Other conventions that do not have a dedicated style:
 
 \begin{itemize}
-	\item \textbf{Hex literals} that aren't a register, opcode, immediate, or address value in one of the forms above
+	\item \textbf{Hexadecimal literals} that aren't a register, opcode, immediate, or address value in one of the forms above
 	      (status-word values, encoded field values, bit patterns, coprocessor command words) are written
-	      \texttt{0x} followed by uppercase hex digits, for example \texttt{0x1A} rather than \texttt{0x1a}.
+	      \texttt{0x} followed by uppercase hexadecimal digits, for example \texttt{0x1A} rather than \texttt{0x1a}.
 	\item \textbf{Binary literals} in tables are written as a bare digit group with no prefix, for example
 	      \texttt{00}, \texttt{10}, \texttt{111} rather than \texttt{0b10}.
 	\item \textbf{Bit numbers} are written as plain text: "bit 15", "bits 4--7". Bit 15, or the
@@ -51,6 +51,129 @@ Other conventions that do not have a dedicated macro:
 	\item \textbf{Word size}: "16-bit word" is stated once per chapter or major section on first use, then
 	      shortened to plain "word" for the rest of that section.
 \end{itemize}
+
+\section*{Assembly Language Summary}
+
+Instruction entries in this manual use the canonical SIRC assembly notation. This summary is enough to read and write
+the listings in the manual. The complete language, including every directive and the tools that process it, is
+described in the \asmmanual{}.
+
+\subsection*{Source Format}
+
+\begin{itemize}
+	\item A \textbf{comment} starts with \texttt{;} and runs to the end of the line.
+	\item A \textbf{label} is written \texttt{:name} before the next instruction or directive, and referred to as \texttt{@name}.
+	      Names use letters, digits and underscores. The colon is written before the name, not after it.
+	\item \textbf{Numbers} used as values are prefixed with \texttt{\#}: decimal (\texttt{\#42}, \texttt{\#-3}),
+	      hexadecimal (\texttt{\#0x2A}) or binary (\texttt{\#0b0010\_1010}). Underscores may be used to separate digits.
+	\item \textbf{Mnemonics} and condition codes are uppercase; register names are lowercase.
+	\item A named constant is defined with \texttt{.EQU \$NAME \#value} and used as \texttt{\$NAME}, without a \texttt{\#}.
+\end{itemize}
+
+\subsection*{Instruction Syntax}
+
+An instruction is written as a mnemonic, an optional status update source, an optional condition, and its operands:
+
+\begin{center}
+	\texttt{MNEMONIC[S]|cond operand, operand, \ldots}
+\end{center}
+
+\begin{description}
+	\item[Status update source] \texttt{[N]}, \texttt{[A]} or \texttt{[S]} selects what updates the status flags
+	      (Chapter~\ref{ch:reading-instructions}). It may be omitted.
+	\item[Condition] \texttt{|cond} makes the instruction conditional, with one of \texttt{AL} (always, the default),
+	      \texttt{==}, \texttt{!=}, \texttt{CS}, \texttt{CC}, \texttt{NS}, \texttt{NC}, \texttt{OS}, \texttt{OC}, \texttt{HI},
+	      \texttt{LO}, \texttt{>=}, \texttt{<<}, \texttt{>>}, \texttt{<=} or \texttt{NV}
+	      (Table~\ref{tab:condition-code-encoding}).
+	\item[Destination first] In every operand list the destination is written first, on the left.
+\end{description}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Operand}           & \textbf{Written as}                                   & \textbf{Example}              \\
+		\midrule
+		Immediate value            & \texttt{\#n}, \texttt{@label} or \texttt{\$NAME}      & \texttt{MOVI r1, \#0x20}      \\
+		Register                   & \texttt{r1}--\texttt{r7}, \texttt{sr}, address halves & \texttt{MOVR r2, r1}          \\
+		Address register pair      & \texttt{a}, \texttt{s}, \texttt{p}, \texttt{l}        & \texttt{LJMP a}               \\
+		Indirect, immediate offset & \texttt{(\#n, addr)}                                  & \texttt{LOAD r1, (\#4, a)}    \\
+		Indirect, register offset  & \texttt{(rO, addr)}                                   & \texttt{LOAD r1, (r2, a)}     \\
+		Post-increment             & \texttt{(\#n, addr)+} or \texttt{(rO, addr)+}         & \texttt{LOAD r1, (\#0, a)+}   \\
+		Pre-decrement              & \texttt{-(\#n, addr)} or \texttt{-(rO, addr)}         & \texttt{STOR -(\#0, s), r1}   \\
+		Shift                      & \texttt{type \#count} or \texttt{type rC}             & \texttt{ADDR r1, r2, LSL \#2} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Operand Forms}
+	\label{tab:assembly-operand-forms}
+\end{table}
+
+The address register halves are \texttt{ah}, \texttt{al}, \texttt{sh}, \texttt{sl}, \texttt{ph}, \texttt{pl},
+\texttt{lh} and \texttt{ll}. Only some instructions accept a label reference (\texttt{@label}); see the \texttt{@label}
+entry below. A shift type is one of \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}
+or \texttt{RTR} (Table~\ref{tab:shift-types}), and an immediate count is \texttt{0}--\texttt{15}.
+Chapter~\ref{ch:reading-instructions} defines the placeholder names (\texttt{rD}, \texttt{rS1}, \texttt{\#imm16} and so
+on) used in instruction entries.
+
+\subsection*{Directives and Symbol References}
+
+\begin{description}
+	\item[\texttt{.ORG addr}] Sets the word address at which subsequent instructions and data are assembled. The operand syntax
+	      and alignment rules are defined in the Directives and Symbols chapter of the \asmmanual{}. In a program linked from
+	      several objects the address is relative to the start of its own object, so the reset and exception vector table
+	      (Chapter~\ref{ch:exceptions}) must be in the first object.
+	\item[\texttt{.DB \#value}, \texttt{.DW \#value}, \texttt{.DQ \#value}] Reserve one program slot and initialize it with a
+	      numeric value, or, written as \texttt{.DB @label}, \texttt{.DW @label} or \texttt{.DQ @label}, with a label's full
+	      24-bit address. \emph{Despite their names, all three directives occupy exactly one 4-byte (2-word) program slot,
+		      the same size as an instruction.} \texttt{.DB \#0xAB} assembles to the bytes \texttt{00 00 00 AB} (value in the
+	      low byte), \texttt{.DW \#0xABCD} to \texttt{00 00 AB CD} (value in the low word), and \texttt{.DQ \#0xABCD1234} to
+	      \texttt{AB CD 12 34} (value fills the slot). A label reference always fills the whole slot, so any of the three
+	      directives can hold an address anywhere in the 24-bit address space.
+	\item[\texttt{.EQU \$NAME \#value}] Defines a named constant, usable anywhere a \texttt{\#immediate} operand is accepted
+	      by writing \texttt{\$NAME} in its place. Unlike a label, a constant must be defined before its first use in the file; it
+	      cannot be the address of \texttt{.ORG}.
+	\item[\texttt{@label}] References a label declared anywhere in the program, before or after the reference; references are
+	      resolved at link time. In \mnemonic{BRAN} or \mnemonic{BRSR} it resolves to a 16-bit signed word displacement from the
+	      instruction to the label. In a \mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA}, \mnemonic{LDEL},
+	      \mnemonic{LJMP} or \mnemonic{LJSR} operand it resolves to the label's low word only. Other instructions (ALU
+	      immediates, \mnemonic{COPI} and the coprocessor meta-instructions) do not accept a label. In a
+	      \texttt{.DB}, \texttt{.DW} or \texttt{.DQ} directive it resolves to the label's full 24-bit address. An explicit
+	      suffix overrides this default: \texttt{@label.r} forces the PC-relative displacement form, \texttt{@label.l} the low
+	      word, and \texttt{@label.u} the high word.
+\end{description}
+
+% qa:assemble
+\begin{lstlisting}
+    .EQU $ANSWER #42
+
+    .ORG 0x0000
+    .DQ @start                     ; reset vector: CPU begins by loading this pointer
+
+    .ORG 0x0080
+    .DQ @level2_handler            ; vector 0x40: level 2 hardware exception vector
+
+:start
+    MOVI ah, @lookup.u             ; @label.u selects the high word
+    MOVI al, @lookup               ; @label defaults to the low word for MOVI
+    LOAD r1, (#0, a)               ; r1 = lookup[0]
+    CMPI r1, $ANSWER               ; constants defined with .EQU are used without '#'
+    BRAN|== @start                 ; @label defaults to a PC-relative offset for BRAN/BRSR
+
+:done
+    BRAN @done                     ; stop here
+
+:level2_handler
+    RETE
+
+:lookup
+    .DW #10
+    .DW #20
+    .DW #30
+\end{lstlisting}
+
+The reset vector in the listing is not optional: per Chapter~\ref{ch:exceptions}, the CPU begins execution by reading a
+stored pointer from word addresses \texttt{0x000000}--\texttt{0x000001}, not by executing whatever instruction happens
+to be placed there.
 
 \section*{Normative Vocabulary}
 
@@ -63,8 +186,9 @@ everyday English sense:
 	\item[may] A permitted option. The CPU, the assembler, or the programmer is free to choose either way.
 	\item[should / should not] A recommendation, not a conformance requirement.
 	\item[reserved] A field, opcode, or coprocessor ID that is not currently assigned a meaning. Software must not assume any
-	      particular value when reading a reserved field, and must not rely on any behaviour it may have. A future CPU revision
-	      may assign a reserved field a meaning.
+	      particular value when reading a reserved field, and must not rely on any behavior it may have, except where this manual
+	      defines a fault for it (for example, a reserved coprocessor operation raises an invalid-opcode fault). A future CPU
+	      revision may assign a reserved field a meaning.
 	\item[architecturally undefined] The architecture does not specify the result. It may vary by CPU implementation, by
 	      revision, or even between two executions of the identical instruction on the identical CPU; software must never depend
 	      on any particular outcome.
@@ -73,6 +197,24 @@ everyday English sense:
 	      multiply. This is a stronger guarantee than \textit{architecturally undefined}: a given implementation's behavior is at
 	      least self-consistent, even though the manual does not pin down what that behavior is.
 \end{description}
+
+\section*{Signals, Requests and Pins}
+
+This manual describes the architecture, not a particular chip. It uses three terms for the CPU's external interface:
+
+\begin{description}
+	\item[Signal] A logical input or output of the CPU, such as \activelow{BERR}, \activelow{RSTI}, \activelow{HALT} or
+	      \activelow{TRCE}. The manual names a signal only where the architectural behavior is defined by it. Active-low signal
+	      names are written with an overbar.
+	\item[Request / event] What a signal means architecturally: an \textit{interrupt request}, a \textit{reset request}, a bus
+	      error. A request is raised, recognized and withdrawn; the manual describes what the CPU does when that happens, and
+	      when requests are recognized, but not how the request physically reaches the CPU.
+	\item[Pin] A physical connection on a particular package. Pins, electrical levels and timing are implementation details and
+	      are documented in the \hwmanual{}, not here.
+\end{description}
+
+A simulator or other implementation may carry the same signals by other means (a software call, an interrupt
+controller) and still conform to this manual.
 
 \section*{Register Name Conventions}
 
@@ -89,30 +231,36 @@ encoding, and privilege rules.
 	\item[Coprocessor] One of the specialized execution units a \mnemonic{COPI}/\mnemonic{COPR} call can dispatch to -- the
 	      processing unit itself (coprocessor \texttt{0x0}), the exception unit (\texttt{0x1}), the optional DMA unit
 	      (\texttt{0x2}), and the optional integer maths unit (\texttt{0x3}). See Chapter~\ref{ch:coprocessor}.
+	\item[Coprocessor select register (CSR)] The 16-bit internal register that holds the next coprocessor command: coprocessor
+	      ID, operation and operand. The CU dispatches to the coprocessor it selects. See Section~\ref{sec:coprocessors-and-csr}.
 	\item[Displacement] A signed value added to an address register's low word to compute an effective address, as used by memory
 	      and effective-address instructions. Distinct from \textit{offset}, which this manual reserves for memory/structure
-	      offsets and the \texttt{system\_ram\_offset} register.
+	      offsets.
 	\item[Exception] The general term for any event that diverts program flow to a vector: a \textit{fault}, a \textit{hardware
 		      exception}, or a \textit{software exception}. See Chapter~\ref{ch:exceptions}.
 	\item[Exception level] The priority level of the exception currently being serviced (0 when not handling any exception). A
-	      new exception can only preempt the current one if its priority is strictly higher.
+	      new exception can only preempt the current one if its priority is strictly higher, except that faults are dispatched at
+	      any level and a Level 5 request during a Level 5 handler raises a conflict fault (see Chapter~\ref{ch:exceptions}).
 	\item[Fault] A priority-7 exception raised by the CPU itself in response to an error condition (for example, a bus error or a
-	      privilege violation) or a debug event (instruction trace). Faults cannot be masked or deferred, though two of them are
-	      conditional on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
-	      \texttt{SR.T} or the \texttt{TRCE} input.
+	      privilege violation) or a debug event (instruction trace). Faults cannot be masked, though two of them are conditional
+	      on whether they are raised at all: Segment Overflow requires \texttt{SR.A}, and Instruction Trace requires
+	      \texttt{SR.T} or the force-trace request (\activelow{TRCE}) and is never raised at exception level 7.
 	\item[General-purpose register] Any of \reg{r1}--\reg{r7}. The CPU does not enforce a usage convention among them.
-	\item[Hardware exception] An exception signaled by an external interrupt pin. Also informally called an \textit{interrupt} at
-	      the pin level (interrupt pins, interrupt priority, interrupt enable) -- the two terms are synonyms at different
-	      registers of formality, not competing definitions.
+	\item[Hardware exception] An exception signaled by an external interrupt. Also informally called an \textit{interrupt} at the
+	      hardware level (interrupt requests, interrupt priority, interrupt enable) -- the two terms are synonymous.
 	\item[Meta-instruction] An assembler-level mnemonic (for example \mnemonic{BRAN}, \mnemonic{NOOP}, \mnemonic{LJSR}) that
-	      assembles to a real CPU instruction's encoding rather than having an opcode of its own. See the relevant
+	      assembles to a specific CPU instruction encoding rather than having an opcode of its own. See the relevant
 	      instruction-family chapter for each meta-instruction's lowering.
 	\item[Protected mode] The non-privileged CPU mode (\texttt{SR.P} set). Most privileged operations fault if attempted in
-	      protected mode; see Chapter~\ref{ch:status-register}.
+	      protected mode; see Chapter~\ref{ch:status-register}. The inverse of supervisor mode.
 	\item[Retryable fault] A fault whose triggering operation does not take effect, so that returning with \mnemonic{RETE} safely
-	      retries it. See Chapter~\ref{ch:exceptions} for the full retryable set.
+	      retries it, except after a DMA burst (Section~\ref{sec:dma-fault-retry}). See Chapter~\ref{ch:exceptions} for the full
+	      retryable set.
+	\item[Segment] The 64K-word range of addresses that share one high-word value (bits 7--0 of an address register pair's high
+	      word). Displacement arithmetic wraps within a segment; see Chapter~\ref{ch:data-representation}.
 	\item[Software exception] An exception raised deliberately by executing \mnemonic{EXCP}. Also called a \textit{trap}.
-	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available.
+	\item[Supervisor mode] The privileged CPU mode (\texttt{SR.P} clear). All operations are available. The inverse of protected
+	      mode.
 	\item[Word address] SIRC-1 addresses memory in units of 16-bit words, not 8-bit bytes; incrementing an address register by
 	      one advances by one word. See Chapter~\ref{ch:data-representation} for the boundary between this architectural word
 	      addressing and any external byte-level representation.

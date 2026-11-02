@@ -21,16 +21,41 @@ fn test_immediate_arithmetic_instruction(
     initial_status_flags: &Vec<StatusRegisterFields>,
     expected_status_flags: &Vec<StatusRegisterFields>,
 ) {
+    test_immediate_arithmetic_instruction_with_update_source(
+        instruction,
+        target_register,
+        register_value,
+        immediate_value,
+        expected_value,
+        initial_status_flags,
+        expected_status_flags,
+        // [S] on an immediate-format instruction writes a constant zero into the flags, which
+        // the MOVI tests below rely on to check flag clearing
+        if instruction == Instruction::LoadRegisterFromImmediate {
+            StatusRegisterUpdateSource::Shift
+        } else {
+            StatusRegisterUpdateSource::Alu
+        },
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn test_immediate_arithmetic_instruction_with_update_source(
+    instruction: Instruction,
+    target_register: u8,
+    register_value: u16,
+    immediate_value: u16,
+    expected_value: u16,
+    initial_status_flags: &Vec<StatusRegisterFields>,
+    expected_status_flags: &Vec<StatusRegisterFields>,
+    status_register_update_source: StatusRegisterUpdateSource,
+) {
     let instruction_data = InstructionData::Immediate(ImmediateInstructionData {
         op_code: instruction,
         register: target_register,
         value: immediate_value,
         condition_flag: ConditionFlags::Always,
-        additional_flags: if instruction == Instruction::LoadRegisterFromImmediate {
-            StatusRegisterUpdateSource::Shift as u8
-        } else {
-            StatusRegisterUpdateSource::Alu as u8
-        },
+        additional_flags: status_register_update_source as u8,
     });
     let (previous, current) = common::run_instruction(
         &instruction_data,
@@ -515,6 +540,61 @@ fn test_xor_immediate() {
 }
 
 //
+// #### MOVI ####
+//
+
+#[test]
+fn test_movi_updates_flags_from_the_moved_value() {
+    for register_index in get_register_index_range() {
+        // N and Z follow the moved value; C and V are cleared
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x8000,
+            0x8000,
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Overflow,
+                StatusRegisterFields::Zero,
+            ],
+            &vec![StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::Alu,
+        );
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x0000,
+            0x0000,
+            &vec![
+                StatusRegisterFields::Carry,
+                StatusRegisterFields::Negative,
+                StatusRegisterFields::Overflow,
+            ],
+            &vec![StatusRegisterFields::Zero],
+            StatusRegisterUpdateSource::Alu,
+        );
+    }
+}
+
+#[test]
+fn test_movi_with_no_update_source_preserves_flags() {
+    for register_index in get_register_index_range() {
+        test_immediate_arithmetic_instruction_with_update_source(
+            Instruction::LoadRegisterFromImmediate,
+            register_index,
+            0x1234,
+            0x0000,
+            0x0000,
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
+            StatusRegisterUpdateSource::None,
+        );
+    }
+}
+
+//
 // #### LOAD ####
 //
 
@@ -573,14 +653,14 @@ fn test_load_immediate() {
 }
 
 //
-// #### UNDOCUMENTED 0x08 (ADDI no status) ####
+// #### CMNI 0x08 (ADDI, result not written) ####
 //
 
 #[test]
-fn test_undocumented0x08_immediate_basic() {
+fn test_cmni_immediate_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x08,
+            Instruction::CompareNegativeImmediate,
             register_index,
             0x1100,
             0x1101,
@@ -598,10 +678,10 @@ fn test_undocumented0x08_immediate_basic() {
 }
 
 #[test]
-fn test_undocumented0x08_immediate_unsigned_overflow() {
+fn test_cmni_immediate_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x08,
+            Instruction::CompareNegativeImmediate,
             register_index,
             0xFFFF,
             0x0001,
@@ -613,10 +693,10 @@ fn test_undocumented0x08_immediate_unsigned_overflow() {
 }
 
 #[test]
-fn test_undocumented0x08_immediate_signed_overflow() {
+fn test_cmni_immediate_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x08,
+            Instruction::CompareNegativeImmediate,
             register_index,
             0x7FFF,
             0x2000,
@@ -630,10 +710,10 @@ fn test_undocumented0x08_immediate_signed_overflow() {
     }
 }
 #[test]
-fn test_undocumented0x08_immediate_both_overflow() {
+fn test_cmni_immediate_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x08,
+            Instruction::CompareNegativeImmediate,
             register_index,
             0x9FFF,
             0x9000,
@@ -645,14 +725,14 @@ fn test_undocumented0x08_immediate_both_overflow() {
 }
 
 //
-// #### UNDOCUMENTED 0x09 (ADCI no status) ####
+// #### CNCI 0x09 (ADCI, result not written) ####
 //
 
 #[test]
-fn test_undocumented0x09_immediate_with_carry_basic() {
+fn test_cnci_immediate_with_carry_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0x2212,
             0x1101,
@@ -670,10 +750,10 @@ fn test_undocumented0x09_immediate_with_carry_basic() {
 }
 
 #[test]
-fn test_undocumented0x09_immediate_with_carry_carry_over() {
+fn test_cnci_immediate_with_carry_carry_over() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0xFFFF,
             0xFFFF,
@@ -682,7 +762,7 @@ fn test_undocumented0x09_immediate_with_carry_carry_over() {
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0xFFFE,
             0xFFFF,
@@ -691,7 +771,7 @@ fn test_undocumented0x09_immediate_with_carry_carry_over() {
             &vec![StatusRegisterFields::Carry, StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0xFFFF,
             0xFFFF,
@@ -703,10 +783,10 @@ fn test_undocumented0x09_immediate_with_carry_carry_over() {
 }
 
 #[test]
-fn test_undocumented0x09_immediate_with_carry_unsigned_overflow() {
+fn test_cnci_immediate_with_carry_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0xFFFF,
             0x0001,
@@ -718,10 +798,10 @@ fn test_undocumented0x09_immediate_with_carry_unsigned_overflow() {
 }
 
 #[test]
-fn test_undocumented0x09_immediate_with_carry_signed_overflow() {
+fn test_cnci_immediate_with_carry_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0x7FFF,
             0x2000,
@@ -735,10 +815,10 @@ fn test_undocumented0x09_immediate_with_carry_signed_overflow() {
     }
 }
 #[test]
-fn test_undocumented0x09_immediate_with_carry_both_overflow() {
+fn test_cnci_immediate_with_carry_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x09,
+            Instruction::CompareNegativeImmediateWithCarry,
             register_index,
             0x9FFF,
             0x9000,
@@ -824,14 +904,14 @@ fn test_cmpi_immediate_both_overflow() {
 }
 
 //
-// #### UNDOCUMENTED 0x0B (SBCI no status) ####
+// #### CPCI 0x0B (SBCI, result not written) ####
 //
 
 #[test]
-fn test_undocumented0x0b_immediate_wbth_carry_basic() {
+fn test_cpci_immediate_wbth_carry_basic() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x5245,
             0x2143,
@@ -849,10 +929,10 @@ fn test_undocumented0x0b_immediate_wbth_carry_basic() {
 }
 
 #[test]
-fn test_undocumented0x0b_immediate_with_carry_carry_over() {
+fn test_cpci_immediate_with_carry_carry_over() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x0000,
             0xFFFF,
@@ -861,7 +941,7 @@ fn test_undocumented0x0b_immediate_with_carry_carry_over() {
             &vec![StatusRegisterFields::Carry],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x0001,
             0xFFFF,
@@ -870,7 +950,7 @@ fn test_undocumented0x0b_immediate_with_carry_carry_over() {
             &vec![StatusRegisterFields::Carry],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x0000,
             0xFFFF,
@@ -882,10 +962,10 @@ fn test_undocumented0x0b_immediate_with_carry_carry_over() {
 }
 
 #[test]
-fn test_undocumented0x0b_immediate_with_carry_unsigned_overflow() {
+fn test_cpci_immediate_with_carry_unsigned_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x5FFF,
             0xFFFF,
@@ -897,10 +977,10 @@ fn test_undocumented0x0b_immediate_with_carry_unsigned_overflow() {
 }
 
 #[test]
-fn test_undocumented0x0b_immediate_with_carry_signed_overflow() {
+fn test_cpci_immediate_with_carry_signed_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0xDFFF,
             0x7FFF,
@@ -911,10 +991,10 @@ fn test_undocumented0x0b_immediate_with_carry_signed_overflow() {
     }
 }
 #[test]
-fn test_undocumented0x0b_immediate_with_carry_both_overflow() {
+fn test_cpci_immediate_with_carry_both_overflow() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0B,
+            Instruction::CompareImmediateWithCarry,
             register_index,
             0x5FFF,
             0xBFFF,
@@ -964,14 +1044,14 @@ fn test_tsai_immediate() {
 }
 
 //
-// #### UNDOCUMENTED 0x0D (ORRI no status) ####
+// #### TSOI 0x0D (ORRI, result not written) ####
 //
 
 #[test]
-fn test_undocumented0x0d_immediate() {
+fn test_tsoi_immediate() {
     for register_index in get_register_index_range() {
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0D,
+            Instruction::TestOrImmediate,
             register_index,
             0x0000,
             0xFFFF,
@@ -986,7 +1066,7 @@ fn test_undocumented0x0d_immediate() {
             &vec![StatusRegisterFields::Negative],
         );
         test_immediate_arithmetic_instruction(
-            Instruction::_Undocumented0x0D,
+            Instruction::TestOrImmediate,
             register_index,
             0xC0F0,
             0x0A0E,

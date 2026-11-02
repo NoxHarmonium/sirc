@@ -23,7 +23,7 @@ make sense, not as findings about the manual.
   example in Chapter 10, `while_start:`). Both forms appear in the manual's
   examples inconsistently; only the prefix form actually assembles.
 - A symbol reference used as an operand is written `@label` with **no**
-  leading `#`, even in an immediate-value position (e.g. `LOAD al,
+  leading `#`, even in an immediate-value position (e.g. `MOVI al,
   @crc_buffer`). This is consistent with the notation table in Chapter 11
   ("`@label` ... an absolute low-word address" for non-branch contexts) but
   isn't spelled out with a worked example anywhere.
@@ -199,7 +199,7 @@ predicted would work: a `BRAN` immediately after the leading `NOOP` skips
 over the low word addresses, then `.ORG 0x0100` (word address `0x80 * 2`,
 matching Chapter 6's vector-table layout) followed by a single
 `.DW @monitor_entry` writes the complete 2-word stored-address vector entry
-in one directive. A trivial handler (`LOAD r6, #0x2222` / `RETE`) reached
+in one directive. A trivial handler (`MOVI r6, #0x2222` / `RETE`) reached
 via `EXCP #0x80` from the main program left `r6 == 0x2222` on return exactly
 as expected, with every other register (the CRC/itoa results already in
 r3, r4, r5, r7) undisturbed. This is a second clean conformance
@@ -237,7 +237,7 @@ accepted from protected mode with no privilege fault; exception entry
 automatically cleared `SR.P` (confirmed via the final register dump, which
 shows `sr = 0x2000` -- `EA` set, `P` clear -- because the dump was taken
 mid-handler, inside `monitor_halt`, at the exact instant the simulation-abort
-hook fired); the monitor's direct `LOAD ah, #0x00E0` succeeded because the
+hook fired); the monitor's direct `MOVI ah, #0x00E0` succeeded because the
 handler runs in supervisor mode; and `RETE` correctly restored the
 caller's saved (protected-mode) status register between each of the five
 `EXCP #0x80` calls, since the digit values loaded into `r3`-`r7` before the

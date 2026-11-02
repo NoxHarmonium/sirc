@@ -1,0 +1,19 @@
+F-mem-1: confirmed
+F-mem-2: confirmed
+F-mem-3: confirmed
+F-mem-4: confirmed
+F-mem-5: confirmed
+F-mem-6: confirmed
+F-mem-7: confirmed
+F-sum-1: confirmed
+F-sum-2: confirmed
+F-sum-4: confirmed
+F-sum-10: confirmed
+F-sum-11: confirmed
+F-tim-1: confirmed
+F-tim-2: confirmed
+F-tim-3: confirmed
+F-tim-4: confirmed
+F-tim-5: confirmed
+F-tim-6: confirmed
+Counts: 18 checked; 18 confirmed, 0 refuted, 0 reclassified.

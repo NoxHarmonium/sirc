@@ -12,9 +12,9 @@ static TEST_SOURCE_FILE_CONTENTS: &str = r"; Reserved space for 128x32 bit excep
 .ORG 0x0200
 
 :init
-LOAD    r1, #5
-LOAD    r2, #3
-LOAD    r3, #64
+MOVI    r1, #5
+MOVI    r2, #3
+MOVI    r3, #64
 
 :loop
 ADDR    r2, r1

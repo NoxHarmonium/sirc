@@ -9,7 +9,8 @@ register. This allows for efficient implementation of conditional logic without 
 The 4-bit condition code field in each instruction specifies the conditions under which the instruction executes. If
 the condition is not met, the instruction has no architectural effect beyond the normal two-word advance of \reg{p}: no
 general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
-performed.
+performed. The advance itself is still checked: with \texttt{SR.A} set, a skipped instruction in the last instruction
+slot of a segment raises a segment-overflow fault (Section~\ref{sec:segment-overflow-fault}).
 
 \section{Condition Code Encoding}
 
@@ -40,6 +41,7 @@ performed.
 	\end{tabular}
 	\caption{Condition Code Encoding}
 	\label{tab:condition-codes}
+	\label{tab:condition-code-encoding}
 \end{table}
 
 \section{Condition Code Categories}
@@ -51,16 +53,18 @@ These conditions test a single status flag:
 \begin{description}
 	\item[Always (default)] No condition code specified; instruction always executes.
 
-	\item[== (Equal)] Executes when Z = 1. Typically used after \mnemonic{CMP} to test equality.
+	\item[== (Equal)] Executes when Z = 1. Typically used after \mnemonic{CMPI} or \mnemonic{CMPR} to test equality.
 
 	\item[!= (Not Equal)] Executes when Z = 0. Typical use: test inequality.
 
 	\item[CS (Carry Set)] Executes when C = 1. The Carry flag's meaning depends on which instruction last set it: after an add
-	      (\mnemonic{ADDR}, \mnemonic{ADDI}, and so on), C = 1 means an unsigned overflow occurred. After a subtraction or
-	      \mnemonic{CMP}, C = 1 means a \emph{borrow} occurred -- the first operand was unsigned lower than the second.
+	      (\mnemonic{ADDR}, \mnemonic{ADDI}, and so on), C = 1 means an unsigned overflow occurred. After a subtraction or a
+	      compare (\mnemonic{CMPI}, \mnemonic{CMPR}), C = 1 means a \emph{borrow} occurred -- the first operand was unsigned
+	      lower than the second.
 
 	\item[CC (Carry Clear)] Executes when C = 0. After an add, C = 0 means no unsigned overflow occurred. After a subtraction or
-	      \mnemonic{CMP}, C = 0 means no borrow occurred: the first operand was unsigned higher than or equal to the second.
+	      a compare (\mnemonic{CMPI}, \mnemonic{CMPR}), C = 0 means no borrow occurred: the first operand was unsigned higher
+	      than or equal to the second.
 
 	\item[NS (Negative Set)] Executes when N = 1. Tests if result is negative (signed).
 
@@ -83,13 +87,13 @@ These conditions are used after comparing unsigned integers:
 
 \textbf{Note:} For unsigned comparisons:
 \begin{itemize}
-	\item Use \texttt{HI} and \texttt{LO} after \mnemonic{CMP}.
+	\item Use \texttt{HI} and \texttt{LO} after \mnemonic{CMPI} or \mnemonic{CMPR}.
 	\item \texttt{HI} tests if first $>$ second (unsigned).
 	\item \texttt{LO} tests if first $\leq$ second (unsigned).
 	\item \texttt{CS} is equivalent to unsigned $<$.
 	\item \texttt{CC} is equivalent to unsigned $\geq$.
-	\item Prefer \texttt{HI}/\texttt{LO} over \texttt{CS}/\texttt{CC} for unsigned comparisons if that is easier to remember,
-	      since their names match their meaning directly.
+	\item \texttt{HI}/\texttt{LO} and \texttt{CS}/\texttt{CC} are not interchangeable: use \texttt{HI} for $>$,
+	      \texttt{LO} for $\leq$, \texttt{CS} for $<$ and \texttt{CC} for $\geq$.
 \end{itemize}
 
 \subsection{Signed Comparisons}
@@ -109,8 +113,8 @@ These conditions are used after comparing signed integers:
 \subsection{Special Conditions}
 
 \begin{description}
-	\item[Never (NV)] Never executes: the instruction has no architectural effect beyond the normal two-word advance of \reg{p},
-	      no general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
+	\item[Never (NV)] Never executes: the instruction has no architectural effect beyond the normal two-word advance of \reg{p}.
+	      No general-purpose register, flag, memory, address-register or coprocessor state changes, and no privilege check is
 	      performed. Can be used for instruction padding or to temporarily disable instructions during debugging.
 \end{description}
 
@@ -136,13 +140,13 @@ STOR|NS (#0, s), r6
 
 \section{Usage with Compare Instructions}
 
-The most common use of condition codes is with compare (\mnemonic{CMP}) instructions:
+The most common use of condition codes is with the compare instructions (\mnemonic{CMPI} and \mnemonic{CMPR}):
 
 \begin{example}
 	\begin{lstlisting}
 ; if (r1 > r2) { r3 = r4; } (unsigned)
 CMPR r1, r2          ; Compare r1 and r2
-LOAD|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
+MOVR|HI r3, r4       ; r3 = r4 if r1 > r2 (unsigned)
 
 ; if (r1 <= 100) { branch } (unsigned)
 CMPI r1, #100
@@ -155,7 +159,7 @@ BRAN|LO @target
 	\begin{lstlisting}
 ; if (r1 >= r2) { r3 = r4; } (signed)
 CMPR r1, r2          ; Compare r1 and r2
-LOAD|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
+MOVR|>= r3, r4       ; r3 = r4 if r1 >= r2 (signed)
 
 ; if (r1 < -10) { branch } (signed)
 CMPI r1, #-10
@@ -204,7 +208,7 @@ BRAN|!= @non_zero_case
 	be expressed as one value per column with the other marked \texttt{X}. This is the only row in the table with
 	that shape.
 	\newline
-	\textbf{Note:} after a subtraction or \mnemonic{CMP}, SIRC-1's Carry flag is set on a \emph{borrow}, so
+	\textbf{Note:} after a subtraction or a compare (\mnemonic{CMPI}, \mnemonic{CMPR}), SIRC-1's Carry flag is set on a \emph{borrow}, so
 	\texttt{CS} (C = 1) means unsigned lower and \texttt{CC} (C = 0) means unsigned higher or same. \texttt{HI} and
 	\texttt{LO} mean exactly what their names say.
 \end{table}
@@ -242,8 +246,8 @@ BRAN|!= @non_zero_case
 	\begin{lstlisting}
 ; max = (a > b) ? a : b (unsigned)
 CMPR r1, r2              ; Compare a and b
-LOAD|HI r3, r1           ; r3 = a if a > b
-LOAD|LO r3, r2           ; r3 = b if a <= b
+MOVR|HI r3, r1           ; r3 = a if a > b
+MOVR|LO r3, r2           ; r3 = b if a <= b
 	\end{lstlisting}
 	\caption{Conditional Assignment}
 \end{example}
@@ -269,7 +273,7 @@ LJSR|>> a                ; Call function if r1 > 0 (signed)
 \begin{example}
 	\begin{lstlisting}
 ; for (i = 10; i > 0; i--)
-LOAD r1, #10             ; i = 10
+MOVI r1, #10             ; i = 10
 :loop
     ; ... loop body ...
     SUBI r1, #1          ; i--
@@ -285,22 +289,22 @@ LOAD r1, #10             ; i = 10
 	\small
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Intent}          & \textbf{After \mnemonic{CMP}} & \textbf{Condition Code} \\
+		\textbf{Intent}            & \textbf{After Compare} & \textbf{Condition Code} \\
 		\midrule
-		If equal                 & \texttt{CMPR a, b}            & \texttt{==}             \\
-		If not equal             & \texttt{CMPR a, b}            & \texttt{!=}             \\
-		If a $>$ b (unsigned)    & \texttt{CMPR a, b}            & \texttt{HI}             \\
-		If a $\geq$ b (unsigned) & \texttt{CMPR a, b}            & \texttt{CC}             \\
-		If a $<$ b (unsigned)    & \texttt{CMPR a, b}            & \texttt{CS}             \\
-		If a $\leq$ b (unsigned) & \texttt{CMPR a, b}            & \texttt{LO}             \\
-		If a $>$ b (signed)      & \texttt{CMPR a, b}            & \texttt{>>}             \\
-		If a $\geq$ b (signed)   & \texttt{CMPR a, b}            & \texttt{>=}             \\
-		If a $<$ b (signed)      & \texttt{CMPR a, b}            & \texttt{<<}             \\
-		If a $\leq$ b (signed)   & \texttt{CMPR a, b}            & \texttt{<=}             \\
-		If negative              & \texttt{CMPI a, \#0}          & \texttt{NS}             \\
-		If positive or zero      & \texttt{CMPI a, \#0}          & \texttt{NC}             \\
-		If overflow occurred     & After arithmetic              & \texttt{OS}             \\
-		If no overflow           & After arithmetic              & \texttt{OC}             \\
+		If r1 = r2                 & \texttt{CMPR r1, r2}   & \texttt{==}             \\
+		If r1 $\neq$ r2            & \texttt{CMPR r1, r2}   & \texttt{!=}             \\
+		If r1 $>$ r2 (unsigned)    & \texttt{CMPR r1, r2}   & \texttt{HI}             \\
+		If r1 $\geq$ r2 (unsigned) & \texttt{CMPR r1, r2}   & \texttt{CC}             \\
+		If r1 $<$ r2 (unsigned)    & \texttt{CMPR r1, r2}   & \texttt{CS}             \\
+		If r1 $\leq$ r2 (unsigned) & \texttt{CMPR r1, r2}   & \texttt{LO}             \\
+		If r1 $>$ r2 (signed)      & \texttt{CMPR r1, r2}   & \texttt{>>}             \\
+		If r1 $\geq$ r2 (signed)   & \texttt{CMPR r1, r2}   & \texttt{>=}             \\
+		If r1 $<$ r2 (signed)      & \texttt{CMPR r1, r2}   & \texttt{<<}             \\
+		If r1 $\leq$ r2 (signed)   & \texttt{CMPR r1, r2}   & \texttt{<=}             \\
+		If r1 is negative          & \texttt{CMPI r1, \#0}  & \texttt{NS}             \\
+		If r1 is positive or zero  & \texttt{CMPI r1, \#0}  & \texttt{NC}             \\
+		If overflow occurred       & After arithmetic       & \texttt{OS}             \\
+		If no overflow             & After arithmetic       & \texttt{OC}             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Condition Code Selection Guide}
@@ -310,9 +314,13 @@ LOAD r1, #10             ; i = 10
 \section{Performance Considerations}
 
 \begin{itemize}
-	\item A predicated instruction costs the same six cycles whether or not it executes; the saving over a branch is the branch
-	      instruction itself, not a pipeline penalty, since the SIRC-1 has no overlapped pipeline to flush.
-	\item When a condition is false, the instruction still takes 6 cycles but performs no operation.
+	\item A predicated instruction takes six cycles, plus instruction-fetch wait states, whether or not it executes. A skipped
+	      \mnemonic{LOAD} or \mnemonic{STOR} performs no data access, so it does not incur the data wait states it would incur
+	      when executed.
+	\item An ordinary processing-unit instruction costs the same six cycles whether or not it executes. A coprocessor call whose
+	      condition is false skips its dispatch slot and takes 6 cycles instead of 12 or more (Chapter~\ref{ch:coprocessor}).
+	\item The saving over a branch is the branch instruction itself, not a pipeline penalty, since the SIRC-1 has no overlapped
+	      pipeline to flush.
 	\item For short conditional sequences, conditional execution can be faster than branching.
 	\item For longer conditional blocks, explicit branches may be more efficient.
 \end{itemize}
@@ -322,7 +330,7 @@ LOAD r1, #10             ; i = 10
 \begin{itemize}
 	\item \textbf{Signed vs. Unsigned}: Using unsigned conditions (\texttt{HI}, \texttt{LO}) for signed values or vice versa produces incorrect results.
 
-	\item \textbf{Flag Clobbering}: Flags are modified by most ALU instructions. Ensure the condition flags haven't been modified between the comparison and conditional instruction:
+	\item \textbf{Flag Clobbering}: Flags are modified by most ALU instructions. Ensure that nothing modifies the condition flags between the comparison and the conditional instruction:
 
 	      \begin{lstlisting}
 ; WRONG - flags clobbered
@@ -330,11 +338,11 @@ CMPR r1, r2
 ADDI r3, #100         ; Modifies flags!
 BRAN|HI @target       ; Tests wrong flags
 
-; CORRECT - flags preserved
+; CORRECT - flags untouched
 CMPR r1, r2
+ADDI[N] r3, #100      ; [N]: flags untouched
 BRAN|HI @target
-ADDI r3, #100         ; After the branch
 \end{lstlisting}
 
-	\item \textbf{Inverted Logic}: Remember that \texttt{CMP A, B} computes A - B, so condition codes test A relative to B, not B relative to A.
+	\item \textbf{Inverted Logic}: Remember that \mnemonic{CMPI} and \mnemonic{CMPR} compute the first operand minus the second, so condition codes test the first operand relative to the second, not the reverse.
 \end{itemize}

@@ -1,0 +1,318 @@
+\chapter{Signal Descriptions}
+\label{ch:signal-descriptions}
+
+\section{Signal Conventions}
+
+Each signal lists its own assertion convention. Address, data, and bus-type value pins use positive logic, while bus
+control, handshake, interrupt, halt, trace, and reset pins generally use active-low conventions. The descriptions below
+use "asserted" and "deasserted" to refer to the logical state of a signal according to its signal type.
+
+\section{Address Bus Bits (A0--A23)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Connected to the address bus.
+
+A0--A23 carry a 24-bit word address, not a byte address: each address selects one 16-bit data word on D0--D15, so the
+address space is 16M words. There are no byte strobes, and A0 is the least significant bit of the word address. For
+example, the two halves of an instruction are fetched from word addresses PC and PC+1.
+
+These 24 pins declare the address on the bus that the CPU reads from or writes to when \activelow{BAS} (bus access
+strobe) is asserted.
+
+\section{Power Pins (VCC1--VCC2, GND1--GND2)}
+
+These pins provide the 5~V power that the CPU requires to function.
+
+The VCC pins must be connected to 5~V $\pm$ 5\%, and GND pins must be connected to a 0~V ground rail.
+
+% TODO: Should I recommend some capacitors etc. to be put on the rail or something like that? Maybe should see what other CPU data sheets say
+% category=Manual
+
+\section{Data Bus Bits (D0--D15)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Bidirectional
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Connected to the data bus.
+
+These 16 pins are driven to a 16-bit value when the CPU is outputting to the bus, and are an input for a 16-bit value
+when the CPU is reading from the bus.
+
+\section{Clock Input (CLKI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Rising Edge
+\end{itemize}
+
+Progresses the CPU to the next cycle when the input transitions from low to high (rising edge).
+
+Each rising edge of CLKI advances the CPU by one execution phase (see Section~\ref{sec:execution-phases}), except while
+a bus wait state holds the phase, while the CPU is halted or waiting (\mnemonic{WAIT}), or while it is held in reset.
+With no wait states, an ordinary instruction takes six cycles. Coprocessor calls take longer; see the Instruction
+Timing appendix of the \archmanual{}.
+
+\section{Instruction Sync Output (SYNC)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Asserted only at phase 0 of an instruction fetch or of an exception-unit dispatch slot. It remains asserted if a wait
+state holds that phase. It is deasserted in every other phase, in every other coprocessor slot (DMA and maths), in
+every DMA continuation slot, and while the CPU is halted, waiting, or in reset.
+
+This pin is useful for debugging.
+
+\section{Bus Access Strobe Output (BAS)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When the CPU is ready to perform a bus operation, \activelow{BAS} is asserted after the address pins, BRW, BAT, PROT,
+and any CPU-driven data pins are valid.
+
+\activelow{BAS} remains asserted until the bus responds with \activelow{BACK}, \activelow{BERR}, or \activelow{BPER}. If no response is asserted, the CPU holds the
+current execution phase and repeats the same bus request on the following clock.
+
+\section{Bus Read/Write Output (BRW)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Read High / Write Low
+\end{itemize}
+
+Only relevant when the \activelow{BAS} (Bus access strobe output) is asserted.
+
+When high, the CPU is requesting a read from the bus. When low, the CPU is requesting a write to the bus.
+
+\section{Bus Acknowledge Input (BACK)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the bus is reporting that the requested read/write completed successfully. On reads, the CPU samples
+D0--D15 on the clock edge that accepts \activelow{BACK}.
+
+If all bus devices are fast and can complete reads/writes in a single cycle, this pin can be permanently held asserted.
+
+\section{Bus Error Input (BERR)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the bus is reporting that the requested read/write was unsuccessful.
+
+This causes the CPU to abort the I/O operation and raise a bus fault exception. A failed fault-vector fetch raises a
+double fault instead, a failed double-fault vector fetch resets the CPU, and a failed reset-vector fetch re-enters
+reset (see the Exception and Interrupt Handling chapter of the \archmanual{}).
+
+For example, a bus error might be raised by I/O to an address that is not connected to any device.
+
+\section{Bus Protection Error Input (BPER)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the bus is reporting that the requested read/write was to a valid address/device, but that the I/O is
+disallowed given the current state of the CPU or bus.
+
+This causes the CPU to abort the I/O operation and raise a bus protection fault exception. A failed fault-vector fetch
+raises a double fault instead, a failed double-fault vector fetch resets the CPU, and a failed reset-vector fetch
+re-enters reset (see the Exception and Interrupt Handling chapter of the \archmanual{}).
+
+It behaves much like the \activelow{BERR} pin but raises a different fault so that programs can handle it differently.
+
+For example, a bus protection error might be raised by a write to ROM, or by a write to a privileged section of memory
+when the CPU is not in supervisor mode.
+
+\section{Bus Access Type Bits (BAT0--BAT2)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Output by the CPU to describe what I/O operation it is performing.
+
+These pins can provide hints to external devices during I/O.
+
+For example, if a memory controller knows that the DMA coprocessor will be reading more than one sequential address, it
+can prefetch the next address.
+
+Another example is a memory controller providing memory protection when these pins are used with the PROT
+(Protected-mode output) pin. A memory controller might assert \activelow{BPER} (bus protection error) if BAT is 010
+(data read), PROT is 1 (protected mode) and the address is in a protected memory region.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rrrl}
+		\toprule
+		\textbf{BAT2} & \textbf{BAT1} & \textbf{BAT0} & \textbf{Description}        \\
+		\midrule
+		0             & 0             & 0             & No I/O                      \\
+		0             & 0             & 1             & Instruction Fetch           \\
+		0             & 1             & 0             & Data Read                   \\
+		0             & 1             & 1             & Data Write                  \\
+		1             & 0             & 0             & Exception Vector Fetch      \\
+		1             & 0             & 1             & DMA Coprocessor Read Burst  \\
+		1             & 1             & 0             & DMA Coprocessor Write Burst \\
+		1             & 1             & 1             & Reserved                    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Bus Access Type Bits Meaning}
+\end{table}
+
+\section{Protected-Mode Output (PROT)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active High
+\end{itemize}
+
+Indicates whether the CPU is in protected mode (high) or in supervisor mode (low).
+
+Follows the status register Protected Mode (P) bit, except that it is deasserted for every exception-vector fetch (BAT
+100), which is a supervisor access even when the exception is taken from protected mode.
+
+When the CPU is in protected mode, programs have access to fewer types of instructions, for example they cannot write
+to the high word of the address registers.
+
+Exposing this as an external pin allows other devices such as memory controllers to block access to protected regions
+of memory by raising bus protection errors.
+
+\section{External CPU Halt Input (HALT)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the CPU stops executing instructions.
+
+\activelow{HALT} is sampled at every phase 0. If it is asserted there, the CPU stops at that phase 0 with the bus idle. The halt
+can occur between an instruction and its coprocessor dispatch slot, between DMA slots, or before a fault, interrupt, or
+reset dispatch. Halt latency is at most six cycles. The CPU performs no bus cycles while halted. The interrupt lines
+are still sampled and a Level 5 edge is still latched, but nothing is dispatched until the CPU resumes. The CPU resumes
+exactly where it stopped when the input is deasserted. A reset ends the halt. The six-cycle \activelow{RSTO} hold runs first, and if \activelow{HALT} is
+still asserted after it, the CPU halts at the first phase 0, before the reset-vector fetch.
+
+This pin is useful for hardware-driven debugging, as the CPU can be halted and the state of the system examined.
+
+\section{Force Trace Mode Input (TRCE)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted at an instruction boundary, the instruction being started is traced regardless of whether software has
+cleared the Trace Mode (T) flag in the status register. No trace fault is raised while a fault handler runs (exception
+level 7), since it would escalate to a double fault.
+
+In trace mode, the CPU raises an exception on every instruction to allow software debugging.
+
+\section{Maskable Interrupt Inputs (IRQ1--IRQ4)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the corresponding hardware interrupt line is sampled by the CPU.
+
+The lines can be masked by the Hardware Interrupt Enable Bits (E1--E4) of the status register.
+
+Interrupt inputs are level-sensitive. They are sampled on every clock cycle except during reset: from the cycle in
+which reset is requested until the reset-vector fetch completes, no interrupt line, including \activelow{NMI}, is
+sampled. Enabled interrupt lines are latched in the pending hardware-exceptions register; disabled maskable lines are
+ignored and not queued, and a line is not latched while its own handler or a higher-priority one is running. The
+requesting device must hold the line asserted until its handler acknowledges it; an assertion withdrawn before it is
+latched is not recognized. If an interrupt pin remains asserted after its handler returns, it may be sampled again
+through the normal interrupt rules.
+
+See the Exception and Interrupt Handling chapter of the \archmanual{} for more details.
+
+\section{Non-Maskable Interrupt Input (NMI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+When asserted, the CPU samples the Level 5 hardware exception line. Unlike \activelow{IRQ1}--\activelow{IRQ4}, which
+are level-sensitive, \activelow{NMI} is edge-triggered: it fires once on assertion regardless of how long the pin is
+held, and the pin must be released and reasserted to fire again. An \activelow{NMI} held asserted across a reset does
+not fire afterward, because reset does not clear the edge detector's last sampled level and so no transition occurs;
+the pin must be released and reasserted.
+
+This interrupt cannot be masked. A new assertion of this pin (a fresh edge) while a Level 5 handler is running raises a
+Level Five Hardware Exception Conflict fault; holding the pin asserted from the edge that started the handler does not.
+A further edge while a Level 5 request is still pending (for example, behind a fault handler) is lost and is reported
+by a single conflict fault when Level 5 is next selected.
+
+Because \activelow{NMI} is edge-triggered, holding the pin asserted after its handler returns does not by itself cause
+it to fire again. The pin must be released (driven high) for at least one CLKI cycle and asserted (driven low) again;
+the request fires on the clock edge at which the assertion is first sampled. Level 5 exception handlers must therefore
+execute quickly, and \activelow{NMI} should be asserted only for important, non-interruptible events.
+
+\section{Reset Input (RSTI)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Input
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+External devices can use this pin to force a reset of the CPU.
+
+When asserted, the CPU immediately aborts the current instruction or bus wait, stops normal processing, resets to phase
+0, and begins the reset sequence described in the Exception and Interrupt Handling chapter of the \archmanual{}.
+
+The \activelow{RSTO} pin is also asserted.
+
+The reset-output hold lasts for as long as \activelow{RSTI} is asserted plus five cycles. The cycle in which
+\activelow{RSTI} is first sampled asserted counts as the first, and \activelow{RSTO} stays asserted for five further
+cycles after \activelow{RSTI} is sampled deasserted, so an \activelow{RSTI} assertion of $n$ cycles gives $n + 5$
+cycles of \activelow{RSTO} (six for a one-cycle assertion). A software reset and a reset-vector fetch retry each give a
+six-cycle hold.
+
+When this pin is deasserted, the CPU completes the reset-output hold, stops asserting the \activelow{RSTO} pin, and the
+exception unit fetches the reset vector.
+
+If a system needs external devices to be reset for longer than the CPU reset-output hold, reset timing must be managed
+externally to the CPU, and \activelow{RSTI} must remain asserted for as long as the other devices need to reset.
+
+\section{Reset Output (RSTO)}
+
+\begin{itemize}
+	\item \textbf{Direction:} Output
+	\item \textbf{Signal Type:} Active Low
+\end{itemize}
+
+Asserted while the \activelow{RSTI} pin is asserted and during the reset-output hold before reset-vector fetch.
+
+It is also asserted for the reset-output hold after a software reset, after a reset caused by a failed double-fault
+vector fetch, and for a further hold before the CPU retries a reset-vector fetch that failed. Each of these holds is
+six CLKI cycles. A reset caused by a failed double-fault vector fetch behaves as a software reset: the six-cycle
+\activelow{RSTO} hold is followed by the reset-vector fetch.
+
+A reset can be triggered by asserting the Reset input (\activelow{RSTI}) pin, or in software by the exception
+coprocessor meta-instruction \mnemonic{RSET}.
+
+This pin is useful to reset other devices on the bus whenever the CPU is reset or to trigger more complex reset/boot
+controllers.

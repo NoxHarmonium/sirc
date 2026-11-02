@@ -32,13 +32,17 @@ ALU instructions are available in three format variants:
 
 \subsection{Data Movement}
 \begin{itemize}
-	\item \mnemonic{LOAD} -- Load immediate or copy register
+	\item \mnemonic{MOV} -- Move immediate or copy register
 \end{itemize}
 
 \subsection{Test and Compare}
 \begin{itemize}
+	\item \mnemonic{CMN} -- Compare Negative (add without saving result)
+	\item \mnemonic{CNC} -- Compare Negative with Carry (add with carry without saving result)
 	\item \mnemonic{CMP} -- Compare (subtract without saving result)
+	\item \mnemonic{CPC} -- Compare with Carry (subtract with carry without saving result)
 	\item \mnemonic{TSA} -- Test AND (AND without saving result)
+	\item \mnemonic{TSO} -- Test OR (OR without saving result)
 	\item \mnemonic{TSX} -- Test XOR (XOR without saving result)
 \end{itemize}
 
@@ -52,47 +56,60 @@ are not legal for this instruction family.
 	\scriptsize
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Instruction} & \textbf{Syntax}                     & \textbf{Encoding} & \textbf{Notes}                      \\
+		\textbf{Instruction} & \textbf{Syntax}                                             & \textbf{Encoding} & \textbf{Notes}                      \\
 		\midrule
-		ADD                  & \texttt{ADDI rD, \#imm16}           & \opcode{00}       & Writes result                       \\
-		ADD                  & \texttt{ADDI rD, \#imm8, shift}     & \opcode{20}       & Writes result                       \\
-		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]} & \opcode{30}       & Writes result                       \\
-		ADD                  & \texttt{ADDR rD, rS2[, shift]}      & \opcode{30}       & Writes result (shorthand: rS1 = rD) \\
-		ADC                  & \texttt{ADCI rD, \#imm16}           & \opcode{01}       & Writes result                       \\
-		ADC                  & \texttt{ADCI rD, \#imm8, shift}     & \opcode{21}       & Writes result                       \\
-		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]} & \opcode{31}       & Writes result                       \\
-		ADC                  & \texttt{ADCR rD, rS2[, shift]}      & \opcode{31}       & Writes result (shorthand: rS1 = rD) \\
-		SUB                  & \texttt{SUBI rD, \#imm16}           & \opcode{02}       & Writes result                       \\
-		SUB                  & \texttt{SUBI rD, \#imm8, shift}     & \opcode{22}       & Writes result                       \\
-		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]} & \opcode{32}       & Writes result                       \\
-		SUB                  & \texttt{SUBR rD, rS2[, shift]}      & \opcode{32}       & Writes result (shorthand: rS1 = rD) \\
-		SBC                  & \texttt{SBCI rD, \#imm16}           & \opcode{03}       & Writes result                       \\
-		SBC                  & \texttt{SBCI rD, \#imm8, shift}     & \opcode{23}       & Writes result                       \\
-		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]} & \opcode{33}       & Writes result                       \\
-		SBC                  & \texttt{SBCR rD, rS2[, shift]}      & \opcode{33}       & Writes result (shorthand: rS1 = rD) \\
-		AND                  & \texttt{ANDI rD, \#imm16}           & \opcode{04}       & Writes result                       \\
-		AND                  & \texttt{ANDI rD, \#imm8, shift}     & \opcode{24}       & Writes result                       \\
-		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]} & \opcode{34}       & Writes result                       \\
-		AND                  & \texttt{ANDR rD, rS2[, shift]}      & \opcode{34}       & Writes result (shorthand: rS1 = rD) \\
-		ORR                  & \texttt{ORRI rD, \#imm16}           & \opcode{05}       & Writes result                       \\
-		ORR                  & \texttt{ORRI rD, \#imm8, shift}     & \opcode{25}       & Writes result                       \\
-		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]} & \opcode{35}       & Writes result                       \\
-		ORR                  & \texttt{ORRR rD, rS2[, shift]}      & \opcode{35}       & Writes result (shorthand: rS1 = rD) \\
-		XOR                  & \texttt{XORI rD, \#imm16}           & \opcode{06}       & Writes result                       \\
-		XOR                  & \texttt{XORI rD, \#imm8, shift}     & \opcode{26}       & Writes result                       \\
-		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]} & \opcode{36}       & Writes result                       \\
-		XOR                  & \texttt{XORR rD, rS2[, shift]}      & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
-		LOAD                 & \texttt{LOAD rD, \#imm16}           & \opcode{07}       & Writes result; preserves flags      \\
-		LOAD                 & \texttt{LOAD rD, rS}                & \opcode{37}       & Writes result; preserves flags      \\
-		CMP                  & \texttt{CMPI rS, \#imm16}           & \opcode{0A}       & Updates flags only                  \\
-		CMP                  & \texttt{CMPI rS, \#imm8, shift}     & \opcode{2A}       & Updates flags only                  \\
-		CMP                  & \texttt{CMPR rS1, rS2[, shift]}     & \opcode{3A}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAI rS, \#imm16}           & \opcode{0C}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAI rS, \#imm8, shift}     & \opcode{2C}       & Updates flags only                  \\
-		TSA                  & \texttt{TSAR rS1, rS2[, shift]}     & \opcode{3C}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXI rS, \#imm16}           & \opcode{0E}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXI rS, \#imm8, shift}     & \opcode{2E}       & Updates flags only                  \\
-		TSX                  & \texttt{TSXR rS1, rS2[, shift]}     & \opcode{3E}       & Updates flags only                  \\
+		ADD                  & \texttt{ADDI rD, \#imm16}                                   & \opcode{00}       & Writes result                       \\
+		ADD                  & \texttt{ADDI rD, \#imm8, shift}                             & \opcode{20}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS1, rS2[, shift]}                         & \opcode{30}       & Writes result                       \\
+		ADD                  & \texttt{ADDR rD, rS2[, shift]}                              & \opcode{30}       & Writes result (shorthand: rS1 = rD) \\
+		ADC                  & \texttt{ADCI rD, \#imm16}                                   & \opcode{01}       & Writes result                       \\
+		ADC                  & \texttt{ADCI rD, \#imm8, shift}                             & \opcode{21}       & Writes result                       \\
+		ADC                  & \texttt{ADCR rD, rS1, rS2[, shift]}                         & \opcode{31}       & Writes result                       \\
+		ADC                  & \texttt{ADCR rD, rS2[, shift]}                              & \opcode{31}       & Writes result (shorthand: rS1 = rD) \\
+		SUB                  & \texttt{SUBI rD, \#imm16}                                   & \opcode{02}       & Writes result                       \\
+		SUB                  & \texttt{SUBI rD, \#imm8, shift}                             & \opcode{22}       & Writes result                       \\
+		SUB                  & \texttt{SUBR rD, rS1, rS2[, shift]}                         & \opcode{32}       & Writes result                       \\
+		SUB                  & \texttt{SUBR rD, rS2[, shift]}                              & \opcode{32}       & Writes result (shorthand: rS1 = rD) \\
+		SBC                  & \texttt{SBCI rD, \#imm16}                                   & \opcode{03}       & Writes result                       \\
+		SBC                  & \texttt{SBCI rD, \#imm8, shift}                             & \opcode{23}       & Writes result                       \\
+		SBC                  & \texttt{SBCR rD, rS1, rS2[, shift]}                         & \opcode{33}       & Writes result                       \\
+		SBC                  & \texttt{SBCR rD, rS2[, shift]}                              & \opcode{33}       & Writes result (shorthand: rS1 = rD) \\
+		AND                  & \texttt{ANDI rD, \#imm16}                                   & \opcode{04}       & Writes result                       \\
+		AND                  & \texttt{ANDI rD, \#imm8, shift}                             & \opcode{24}       & Writes result                       \\
+		AND                  & \texttt{ANDR rD, rS1, rS2[, shift]}                         & \opcode{34}       & Writes result                       \\
+		AND                  & \texttt{ANDR rD, rS2[, shift]}                              & \opcode{34}       & Writes result (shorthand: rS1 = rD) \\
+		ORR                  & \texttt{ORRI rD, \#imm16}                                   & \opcode{05}       & Writes result                       \\
+		ORR                  & \texttt{ORRI rD, \#imm8, shift}                             & \opcode{25}       & Writes result                       \\
+		ORR                  & \texttt{ORRR rD, rS1, rS2[, shift]}                         & \opcode{35}       & Writes result                       \\
+		ORR                  & \texttt{ORRR rD, rS2[, shift]}                              & \opcode{35}       & Writes result (shorthand: rS1 = rD) \\
+		XOR                  & \texttt{XORI rD, \#imm16}                                   & \opcode{06}       & Writes result                       \\
+		XOR                  & \texttt{XORI rD, \#imm8, shift}                             & \opcode{26}       & Writes result                       \\
+		XOR                  & \texttt{XORR rD, rS1, rS2[, shift]}                         & \opcode{36}       & Writes result                       \\
+		XOR                  & \texttt{XORR rD, rS2[, shift]}                              & \opcode{36}       & Writes result (shorthand: rS1 = rD) \\
+		MOV                  & \texttt{MOVI rD, \#imm16 \textbar{} @sym \textbar{} \$name} & \opcode{07}       & Writes result                       \\
+		MOV                  & \texttt{MOVR rD, rS}                                        & \opcode{37}       & Writes result                       \\
+		SHFT                 & \texttt{SHFT rD, shift}                                     & \opcode{25}       & Writes result; default \texttt{[S]} \\
+		CMN                  & \texttt{CMNI rS, \#imm16}                                   & \opcode{08}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNI rS, \#imm8, shift}                             & \opcode{28}       & Updates flags only                  \\
+		CMN                  & \texttt{CMNR rS1, rS2[, shift]}                             & \opcode{38}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm16}                                   & \opcode{09}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCI rS, \#imm8, shift}                             & \opcode{29}       & Updates flags only                  \\
+		CNC                  & \texttt{CNCR rS1, rS2[, shift]}                             & \opcode{39}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPI rS, \#imm16}                                   & \opcode{0A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPI rS, \#imm8, shift}                             & \opcode{2A}       & Updates flags only                  \\
+		CMP                  & \texttt{CMPR rS1, rS2[, shift]}                             & \opcode{3A}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm16}                                   & \opcode{0B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCI rS, \#imm8, shift}                             & \opcode{2B}       & Updates flags only                  \\
+		CPC                  & \texttt{CPCR rS1, rS2[, shift]}                             & \opcode{3B}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm16}                                   & \opcode{0C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAI rS, \#imm8, shift}                             & \opcode{2C}       & Updates flags only                  \\
+		TSA                  & \texttt{TSAR rS1, rS2[, shift]}                             & \opcode{3C}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm16}                                   & \opcode{0D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOI rS, \#imm8, shift}                             & \opcode{2D}       & Updates flags only                  \\
+		TSO                  & \texttt{TSOR rS1, rS2[, shift]}                             & \opcode{3D}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm16}                                   & \opcode{0E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXI rS, \#imm8, shift}                             & \opcode{2E}       & Updates flags only                  \\
+		TSX                  & \texttt{TSXR rS1, rS2[, shift]}                             & \opcode{3E}       & Updates flags only                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Legal ALU Instruction Forms}
@@ -101,50 +118,41 @@ are not legal for this instruction family.
 
 \noindent\textbf{Register shorthand:} When a register-form ALU instruction omits \texttt{rS1}, the assembler encodes
 \texttt{rD} as both the destination and first source operand. For example, \texttt{ADDR r1, r2} is encoded as
-\texttt{ADDR r1, r1, r2}. A shift definition may be combined with the shorthand; because the shift always applies to
-the left operand, \texttt{ADDR r1, r2, LSL \#2} computes \texttt{(r1 << 2) + r2}, not \texttt{r1 + (r2 << 2)}.
+\texttt{ADDR r1, r1, r2}.
 
-\noindent\textbf{Short-immediate LOAD:} Opcode \opcode{27} has no public assembly syntax and is undocumented.
+\noindent\textbf{Opcode \opcode{27}:} Opcode \opcode{27} is undocumented and has no public assembly syntax; its behavior is architecturally undefined (see Appendix~\ref{appendix:undocumented}).
 
 \section{Common ALU Semantics}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lp{9cm}}
-		\toprule
-		\textbf{Topic}         & \textbf{Definition}                                                                                                                                                                   \\
-		\midrule
-		Condition false        & The instruction is skipped and has no side effects. Registers and status flags are preserved.                                                                                         \\
-		Immediate format       & The left operand is the named register. The right operand is the encoded 16-bit immediate.                                                                                            \\
-		Short immediate format & The left operand is the named register after the encoded shift is applied. The right operand is the encoded 8-bit immediate.                                                          \\
-		Register format        & The left operand is \texttt{rS1} after the encoded shift is applied. The right operand is \texttt{rS2}.                                                                               \\
-		Test variants          & \mnemonic{CMP}, \mnemonic{TSA}, and \mnemonic{TSX} compute a result for flag updates but do not write it back.                                                                        \\
-		LOAD                   & \mnemonic{LOAD} writes the selected operand to \texttt{rD} and does not update status flags.                                                                                          \\
-		Timing                 & ALU instructions complete in 6 cycles, plus any instruction-fetch wait states.                                                                                                        \\
-		Exceptions             & Raises no data-memory faults. In protected mode, an ALU instruction that writes a privileged high address register raises a privilege-violation fault at decode; see the notes below. \\
-		\bottomrule
-	\end{tabular}
-	\caption{Common ALU Semantics}
-	\label{tab:alu-common-semantics}
-\end{table}
+Conditional execution, the status update source, and timing follow the rules in Chapter~\ref{ch:reading-instructions}
+and Appendix~\ref{appendix:timing}. In the immediate format the left operand is the named register and the right
+operand is the encoded 16-bit immediate. In the short immediate format the left operand is the named register after the
+encoded shift is applied, and the right operand is the encoded 8-bit immediate. In the register format the left operand
+is \texttt{rS1} after the encoded shift is applied, and the right operand is \texttt{rS2}.
+
+The test variants (\mnemonic{CMN}, \mnemonic{CNC}, \mnemonic{CMP}, \mnemonic{CPC}, \mnemonic{TSA}, \mnemonic{TSO}, and
+\mnemonic{TSX}) compute a result for flag updates but do not write it back. \mnemonic{MOVI} and \mnemonic{MOVR} write
+the selected operand to \texttt{rD}.
 
 \noindent ALU instruction execution does not perform data-memory access and does not raise data bus, data
-bus-protection, data alignment, segment-overflow, or invalid-opcode faults. In protected mode, an ALU instruction that
+bus-protection, data alignment, effective-address segment-overflow, or invalid-opcode faults. An ALU instruction in the
+last instruction slot of a segment still raises a segment-overflow fault when \texttt{SR.A} is set, because it
+advances the program counter, unless it writes \reg{pl} (Section~\ref{sec:segment-overflow-fault}). In protected mode, an ALU instruction that
 writes \reg{ah}, \reg{lh}, \reg{ph}, or \reg{sh} through its register field raises a privilege-violation fault at
 decode and has no other effect; compare and test instructions only read that field and never fault. An ALU instruction whose register field names \reg{sr} is permitted in protected mode, but only
-bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
+bits 7--0 of \reg{sr} are written; bits 15--8 are left unchanged (Section~\ref{sec:sr-manual-updates}). With the \texttt{[A]} or \texttt{[S]} status source, the instruction's own flag update then overwrites bits 7--0, so the written value survives only in bits 15--8 (supervisor mode) or not at all (protected mode). Use \texttt{[N]} to write the low byte (Section~\ref{sec:sr-manual-updates}).
+Instruction fetch can still raise the normal fetch faults before an ALU instruction executes.
 If trace mode was enabled when the instruction began, an instruction-trace fault is raised after the instruction
-commits. Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
+commits, except at exception level 7 (Section~\ref{sec:instruction-trace-fault}). Every 6-bit opcode decodes; no processing-unit encoding raises an invalid-opcode fault. Encodings outside the
 documented ALU forms execute with architecturally undefined results (see Appendix~\ref{appendix:undocumented}).
 
 \section{Status Flag Updates}
 
-Most ALU instructions update the status register flags:
+ALU instructions update the status register flags:
 
 \begin{description}
-	\item[Arithmetic (ADD, ADC, SUB, SBC, CMP)] Update all four flags: N, Z, C, V
-	\item[Logical (AND, ORR, XOR, TSA, TSX)] Update N and Z; clear C and V
-	\item[Load (LOAD)] Do not update flags
+	\item[Arithmetic (ADD, ADC, SUB, SBC, CMN, CNC, CMP, CPC)] Update all four flags: N, Z, C, V
+	\item[Logical and move (AND, ORR, XOR, TSA, TSO, TSX, MOVI, MOVR)] Update N and Z; clear C and V
 \end{description}
 
 \begin{table}[H]
@@ -157,13 +165,17 @@ Most ALU instructions update the status register flags:
 		ADC             & *          & *          & *          & *          & \texttt{[A]}        & Adds incoming C; C is carry out.                                   \\
 		SUB             & *          & *          & *          & *          & \texttt{[A]}        & C is set when a borrow occurs.                                     \\
 		SBC             & *          & *          & *          & *          & \texttt{[A]}        & Subtracts incoming C as borrow input; C is set on outgoing borrow. \\
+		CMN             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as ADD; result is discarded.                            \\
+		CNC             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as ADC; result is discarded.                            \\
 		CMP             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SUB; result is discarded.                            \\
+		CPC             & *          & *          & *          & *          & \texttt{[A]}        & Same flags as SBC; result is discarded.                            \\
 		AND             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		ORR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		XOR             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		TSA             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as AND; result is discarded.                            \\
+		TSO             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as ORR; result is discarded.                            \\
 		TSX             & *          & *          & 0          & 0          & \texttt{[A]}        & Same flags as XOR; result is discarded.                            \\
-		LOAD            & -          & -          & -          & -          & \texttt{[N]}        & Status flags are preserved.                                        \\
+		MOV             & *          & *          & 0          & 0          & \texttt{[A]}        & C and V are cleared.                                               \\
 		\bottomrule
 	\end{tabular}
 	\caption{ALU Status Flag Effects}
@@ -175,50 +187,59 @@ instruction uses its default status update source. If \texttt{[N]} is encoded, a
 \texttt{[A]} is encoded, flags are updated from the ALU result according to the instruction family. If \texttt{[S]} is
 encoded, flags are updated from the shifter result instead of the ALU result; see Chapter~\ref{ch:shift-operations} for
 the shifter flag rules. The immediate format has no shift fields, so \texttt{[S]} on an immediate-format instruction
-writes a constant zero into the flag byte: N, Z, C, and V are all cleared. Use \texttt{[S]} only with short-immediate
-and register forms. Public \mnemonic{LOAD} forms do not support status update override syntax and always preserve the
-status flags; an encoding of the \mnemonic{LOAD} opcode with a non-\texttt{None} AF field, which is not reachable from
-public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}).
+clears N, Z, C and V; reserved bits 7--4 follow the rule in Chapter~\ref{ch:status-register}. \texttt{[S]} should be
+used only with short-immediate and register forms. An immediate written without a shift suffix always assembles to the
+immediate format, even when it fits in 8 bits, so \texttt{ADDI[S] r1, \#10} clears the flags; write \texttt{ADDI[S] r1,
+	\#10, NUL \#0} to get the short-immediate format and flags from the shifter. \mnemonic{MOVI} and \mnemonic{MOVR} have
+no shifted operand and do not accept \texttt{[S]}; an encoding of those opcodes with AF \texttt{10}, which is not
+reachable from public assembly syntax, leaves all four status flags architecturally undefined (\texttt{U U U U}). An
+ALU encoding with AF \texttt{11} completes the operation and writes its result, but leaves N, Z, C and V
+architecturally undefined (\texttt{U U U U}); assemblers never emit it.
 
 \subsection{Flag Computation Formulas}
 
 Table~\ref{tab:alu-status-flag-effects} states which flags each family updates; this section states exactly how, as a
-Boolean formula in terms of the sign bit (bit 15) of the destination operand (\texttt{Dm}), the source operand
-(\texttt{Sm}), and the result (\texttt{Rm}). $\cdot$ is Boolean AND, $+$ is Boolean OR, and $\overline{X}$ is the
-complement of $X$.
+Boolean formula in terms of three sign bits (bit 15): $S1_m$ is that of the first source operand after any shift
+(\texttt{rS1}, or the named register in the immediate formats), $S2_m$ is that of the second source operand
+(\texttt{rS2}, imm16, or the zero-extended imm8), and $R_m$ is that of the 16-bit result. For \mnemonic{ADC} and
+\mnemonic{SBC}, $R_m$ includes the incoming carry. For subtraction the result is $S1 - S2$.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lp{4.2cm}p{4.2cm}}
+	\begin{tabular}{lp{5.2cm}p{5.2cm}}
 		\toprule
-		\textbf{Family}         & \textbf{C}                                                      & \textbf{V}                                                                     \\
+		\textbf{Family}              & \textbf{C}                                                                & \textbf{V}                                                                               \\
 		\midrule
-		ADD, ADC                & Carry out of bit 15 of the full addition                        & $Dm \cdot Sm \cdot \overline{Rm} + \overline{Dm} \cdot \overline{Sm} \cdot Rm$ \\
-		SUB, SBC, CMP           & $\overline{Dm} \cdot Sm + Sm \cdot Rm + Rm \cdot \overline{Dm}$ & $Dm \cdot \overline{Sm} \cdot \overline{Rm} + \overline{Dm} \cdot Sm \cdot Rm$ \\
-		AND, ORR, XOR, TSA, TSX & $0$ (always cleared)                                            & $0$ (always cleared)                                                           \\
+		ADD, ADC, CMN, CNC           & Carry out of bit 15 of the full addition                                  & $S1_m \cdot S2_m \cdot \overline{R_m} + \overline{S1_m} \cdot \overline{S2_m} \cdot R_m$ \\
+		SUB, SBC, CMP, CPC           & $\overline{S1_m} \cdot S2_m + S2_m \cdot R_m + R_m \cdot \overline{S1_m}$ & $S1_m \cdot \overline{S2_m} \cdot \overline{R_m} + \overline{S1_m} \cdot S2_m \cdot R_m$ \\
+		AND, ORR, XOR, TSA, TSO, TSX & $0$ (always cleared)                                                      & $0$ (always cleared)                                                                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Carry and Overflow Flag Formulas}
 	\label{tab:alu-flag-formulas}
 \end{table}
 
-$N$ and $Z$ are the same for every family: $N = Rm$ (the result's own sign bit), and $Z$ is set when the full
+$N$ and $Z$ are the same for every family: $N = R_m$ (the result's own sign bit), and $Z$ is set when the full
 16-bit result is zero. \mnemonic{ADC} and \mnemonic{SBC} use the same formulas as \mnemonic{ADD} and
 \mnemonic{SUB} respectively -- the incoming carry/borrow is folded into the addition or subtraction before
-\texttt{Rm} (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
-\mnemonic{CMP}/\mnemonic{TSA}/\mnemonic{TSX} compute the same flags as the corresponding
-\mnemonic{SUB}/\mnemonic{AND}/\mnemonic{XOR} family and simply discard the result.
+$R_m$ (and the carry/borrow out) is evaluated, so no separate formula is needed for them.
+\mnemonic{CMN}/\mnemonic{CNC}/\mnemonic{CMP}/\mnemonic{CPC}/\mnemonic{TSA}/\mnemonic{TSO}/\mnemonic{TSX} compute
+the same flags as the corresponding
+\mnemonic{ADD}/\mnemonic{ADC}/\mnemonic{SUB}/\mnemonic{SBC}/\mnemonic{AND}/\mnemonic{ORR}/\mnemonic{XOR} family
+and simply discard the result.
 
 \subsection{Manual Flag Update Control}
 
-ALU instructions except \mnemonic{LOAD} support manual control over how status flags are updated using the status
-override syntax. See Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
+ALU instructions support manual control over how status flags are updated using the status override syntax. See
+Section~\ref{sec:status-override} in Chapter~\ref{ch:shift-operations} for complete details.
 
 \begin{itemize}
 	\item \texttt{INSTR[A]} -- Update flags from ALU result (default behavior)
 	\item \texttt{INSTR[S]} -- Update flags from shift result instead of ALU
 	\item \texttt{INSTR[N]} -- Do not update status flags
-	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax.
+	\item \mnemonic{MOVI} and \mnemonic{MOVR} do not accept \texttt{[S]}.
+	\item AF encoding \texttt{11} (binary) is reserved and has no assembly syntax; the operation completes and writes its result,
+	      and N, Z, C and V are architecturally undefined (\texttt{U U U U}).
 \end{itemize}
 
 \begin{example}
@@ -237,36 +258,6 @@ BRAN|>= @branch_if_r2_gte_r3  ; Use flags from CMPR
 \begin{instructionbox}{SHFT}{Shift with Status Update Meta-Instruction}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{25}} &
-			\bitbox{4}{rD} &
-			\bitbox{8}{0x00} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{10} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register (bits 25--22):} \texttt{rD}, the destination and shifted source register; any of the 16
-		      registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate (bits 21--14):} fixed at \texttt{0x00} by the meta-instruction.
-		\item \textbf{Shift type and count:} \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
-		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}; a register count is used in
-		      full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is
-		      taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} fixed at \texttt{10} (Shift) by the meta-instruction.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SHFT rD, shift                ; rD = shifted rD; flags from shift
@@ -275,18 +266,20 @@ SHFT rD, shift                ; rD = shifted rD; flags from shift
 	\textbf{Operands:} \texttt{rD} is both the destination and shifted source register. \texttt{shift} may use any
 	standard immediate or register shift count supported by short-immediate ALU instructions.
 
-	\textbf{Operation:}
-	\begin{verbatim}
-shifted = shift(rD)
-rD = shifted OR 0
-SR = flags_from_shift_result
-\end{verbatim}
-
 	\textbf{Description:}
 
 	Provides concise syntax for shifting a register value while taking status flags from the shifter result. It is not a
 	separate CPU operation. The zero OR operation preserves the shifted source value, while \texttt{[S]} makes the status
 	flags reflect the shift result instead of the OR result.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+shifted = shift(rD)
+rD = shifted | 0
+SR = flags updated per the status-update suffix:
+     [S] shifter result (default for SHFT),
+     [A] ALU result, [N] no update
+\end{verbatim}
 
 	\textbf{Flags:} Updated from the shifter result by default.
 
@@ -300,6 +293,34 @@ SR = flags_from_shift_result
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Assembles to:} \texttt{ORRI[S] rD, \#0, shift}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{25}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{0x00} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{Register (bits 25--22):} \texttt{rD}, the destination and shifted source register; any of the 16
+		      registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{Immediate (bits 21--14):} fixed at \texttt{0x00} by the meta-instruction.
+		\item \textbf{Shift (bits 13--6):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types: \texttt{NUL}, \texttt{LSL}, \texttt{LSR}, \texttt{ASL}, \texttt{ASR},
+		      \texttt{RTL}, \texttt{RTR}; an immediate count is \texttt{0}--\texttt{15}; a register count is used in
+		      full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is
+		      taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{AF (bits 5--4):} \texttt{10} (Shift) by default; an explicit \texttt{[A]} or \texttt{[N]} suffix encodes \texttt{01} or \texttt{00}.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -327,61 +348,6 @@ BRAN|== @zero_result          ; Branch if shifted result is zero
 \begin{instructionbox}{ADDI / ADDR}{Add Immediate / Add Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{00}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{20}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{30}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ADDI rD, #imm16                ; rD = rD + imm16
@@ -394,6 +360,13 @@ ADDR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2
 	as the first source and \texttt{rS2} as the second source; assembler shorthand may omit \texttt{rS1}. Short-immediate
 	and register forms may apply a shift to the first source operand.
 
+	\textbf{Description:}
+
+	Adds two values and stores the result in the destination register. In short immediate format with shift, the first
+	source register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs (carry out
+	of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for the
+	operation).
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 + operand2
@@ -401,15 +374,8 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Adds two values and stores the result in the destination register. In short immediate format with shift, the
-	destination register is shifted before adding the immediate. The carry flag is set if an unsigned overflow occurs
-	(carry out of bit 15). The overflow flag is set if a signed overflow occurs (the sign of the result is incorrect for
-	the operation).
 
 	\textbf{Flags:} N Z C V
 
@@ -423,6 +389,60 @@ SR.V = signed_overflow
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{00} (Imm), \opcode{20} (Short Imm), \opcode{30} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{00}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{20}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{30}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -444,7 +464,8 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 	\textbf{Notes:}
 	\begin{itemize}
 		\item For multi-precision arithmetic, use \mnemonic{ADC} to propagate carry
-		\item Adding zero (\texttt{ADDI r1, \#0}) can be used to move values or test flags
+		\item Adding zero (\texttt{ADDI r1, \#0}) sets N and Z from \reg{r1} and clears C and V without changing it; use
+		      \mnemonic{MOVR} to copy a register
 		\item Shift operations allow efficient constant multiplication
 	\end{itemize}
 \end{instructionbox}
@@ -452,61 +473,6 @@ ADDI r1, #1, LSL #12       ; r1 = (r1 << 12) + 1
 % ============================================================================
 \begin{instructionbox}{ADCI / ADCR}{Add with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
-
-	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{01}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{21}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{31}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -519,6 +485,12 @@ ADCR rD, rS1, rS2, shift       ; rD = shift(rS1) + rS2 + C
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The incoming \texttt{C} flag is read as an additional
 	least-significant carry input.
 
+	\textbf{Description:}
+
+	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the first source
+	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
+	arithmetic to propagate the carry from lower-order additions to higher-order additions.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 + operand2 + SR.C
@@ -526,14 +498,8 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = carry_out
-SR.V = signed_overflow
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Adds two values plus the carry flag and stores the result. In short immediate format with shift, the destination
-	register is shifted before adding the immediate. This instruction is used for multi-precision (32-bit, 48-bit, etc.)
-	arithmetic to propagate the carry from lower-order additions to higher-order additions.
 
 	\textbf{Flags:} N Z C V
 
@@ -547,6 +513,60 @@ SR.V = signed_overflow
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{01} (Imm), \opcode{21} (Short Imm), \opcode{31} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{01}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{21}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{31}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -572,61 +592,6 @@ ADCR r1, r3, r5            ; r1 = r3 + r5 + carry
 \begin{instructionbox}{SUBI / SUBR}{Subtract Immediate / Subtract Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{02}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{22}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{32}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SUBI rD, #imm16                ; rD = rD - imm16
@@ -637,6 +602,12 @@ SUBR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2
 
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. The second operand is subtracted from the first operand.
 
+	\textbf{Description:}
+
+	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the first
+	source register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
+	operand1 for unsigned). The overflow flag indicates signed overflow.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2
@@ -644,14 +615,8 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Subtracts the second operand from the first and stores the result. In short immediate format with shift, the
-	destination register is shifted before subtracting the immediate. The carry flag is set if a borrow occurs (operand2 >
-	operand1 for unsigned). The overflow flag indicates signed overflow.
 
 	\textbf{Flags:} N Z C V
 
@@ -665,6 +630,60 @@ SR.V = signed_overflow
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{02} (Imm), \opcode{22} (Short Imm), \opcode{32} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{02}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{22}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{32}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -693,61 +712,6 @@ BRAN|!= @loop              ; Branch if not zero
 \begin{instructionbox}{SBCI / SBCR}{Subtract with Carry}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{03}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{23}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{33}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:}
 	\begin{lstlisting}
 SBCI rD, #imm16                ; rD = rD - imm16 - C
@@ -758,6 +722,12 @@ SBCR rD, rS1, rS2, shift       ; rD = shift(rS1) - rS2 - C
 
 	\textbf{Operands:} Same operand forms as \mnemonic{SUB}. The incoming \texttt{C} flag is read as the borrow input.
 
+	\textbf{Description:}
+
+	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the first source
+	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
+	lower-order to higher-order subtractions.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2 - SR.C
@@ -765,14 +735,8 @@ destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Subtracts the second operand and borrow from the first operand. In short immediate format with shift, the destination
-	register is shifted before subtracting the immediate. Used for multi-precision subtraction to propagate borrows from
-	lower-order to higher-order subtractions.
 
 	\textbf{Flags:} N Z C V
 
@@ -786,6 +750,60 @@ SR.V = signed_overflow
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{03} (Imm), \opcode{23} (Short Imm), \opcode{33} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{03}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{23}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{33}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -810,61 +828,6 @@ SBCR r1, r3, r5            ; r1 = r3 - r5 - borrow
 \begin{instructionbox}{ANDI / ANDR}{AND Immediate / AND Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{04}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{24}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{34}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
-
 	\textbf{Syntax:}
 	\begin{lstlisting}
 ANDI rD, #imm16                ; rD = rD & imm16
@@ -876,21 +839,21 @@ ANDR rD, rS1, rS2, shift       ; rD = shift(rS1) & rS2
 	\textbf{Operands:} Same operand forms as \mnemonic{ADD}. Logical operations interpret operands as 16-bit bit
 	patterns; short immediates are zero-extended.
 
+	\textbf{Description:}
+
+	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
+	short immediate format with shift, the first source register is shifted before ANDing with the immediate. Commonly used
+	for bit masking and clearing specific bits.
+
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 AND operand2
+result = operand1 & operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = 0
 SR.V = 0
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise AND operation. Each bit in the result is 1 only if the corresponding bits in both operands are 1. In
-	short immediate format with shift, the destination register is shifted before ANDing with the immediate. Commonly used
-	for bit masking and clearing specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -904,6 +867,60 @@ SR.V = 0
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{04} (Imm), \opcode{24} (Short Imm), \opcode{34} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{04}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{24}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{34}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -923,8 +940,8 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item ANDing with 0xFFFF leaves value unchanged
-		\item ANDing with 0x0000 clears the register
+		\item ANDing with \texttt{0xFFFF} leaves value unchanged
+		\item ANDing with \texttt{0x0000} clears the register
 		\item Use \mnemonic{TSA} to test bits without modifying the register
 	\end{itemize}
 \end{instructionbox}
@@ -932,61 +949,6 @@ BRAN|!= @common_bits       ; Branch if any bits in common
 % ============================================================================
 \begin{instructionbox}{ORRI / ORRR}{OR Immediate / OR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
-
-	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{05}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{25}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{35}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -999,21 +961,21 @@ ORRR rD, rS1, rS2, shift       ; rD = shift(rS1) | rS2
 	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
 	patterns; short immediates are zero-extended.
 
+	\textbf{Description:}
+
+	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
+	immediate format with shift, the first source register is shifted before ORing with the immediate. Commonly used for
+	setting specific bits.
+
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 OR operand2
+result = operand1 | operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = 0
 SR.V = 0
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise OR operation. Each bit in the result is 1 if either corresponding bit in the operands is 1. In short
-	immediate format with shift, the destination register is shifted before ORing with the immediate. Commonly used for
-	setting specific bits.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -1027,6 +989,60 @@ SR.V = 0
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{05} (Imm), \opcode{25} (Short Imm), \opcode{35} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{05}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{25}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{35}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1040,7 +1056,7 @@ ORRI r2, #0xF000           ; Set high nibble
 ORRR r3, r1, r2            ; r3 = r1 | r2
 
 ; Set bit N (variable)
-LOAD r4, #1                ; r4 = 1
+MOVI r4, #1                ; r4 = 1
 SHFT r4, LSL r5            ; r4 = 1 << r5
 ORRR r1, r4                ; r1 |= (1 << r5)
 		\end{lstlisting}
@@ -1049,8 +1065,8 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item ORing with 0x0000 leaves value unchanged
-		\item ORing with 0xFFFF sets all bits
+		\item ORing with \texttt{0x0000} leaves value unchanged
+		\item ORing with \texttt{0xFFFF} sets all bits
 		\item Use for enabling flag bits or combining bit fields
 	\end{itemize}
 \end{instructionbox}
@@ -1058,61 +1074,6 @@ ORRR r1, r4                ; r1 |= (1 << r5)
 % ============================================================================
 \begin{instructionbox}{XORI / XORR}{XOR Immediate / XOR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
-
-	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{06}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{26}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{36}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate and short-immediate forms) or \texttt{rD, rS1, rS2}
-		      (register form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -1125,21 +1086,21 @@ XORR rD, rS1, rS2, shift       ; rD = shift(rS1) ^ rS2
 	\textbf{Operands:} Same operand forms as \mnemonic{AND}. Logical operations interpret operands as 16-bit bit
 	patterns; short immediates are zero-extended.
 
+	\textbf{Description:}
+
+	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
+	are different. In short immediate format with shift, the first source register is shifted before XORing with the
+	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
+
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 XOR operand2
+result = operand1 ^ operand2
 destination = result
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = 0
 SR.V = 0
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise XOR (exclusive OR) operation. Each bit in the result is 1 if the corresponding bits in the operands
-	are different. In short immediate format with shift, the destination register is shifted before XORing with the
-	immediate. Used for toggling bits, bitwise comparison, and simple encryption.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -1153,6 +1114,60 @@ SR.V = 0
 
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{06} (Imm), \opcode{26} (Short Imm), \opcode{36} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{06}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{26}} &
+			\bitbox{4}{rD} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{36}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1176,80 +1191,45 @@ XORR r1, r1, r2            ; r1 = (r1 ^ r2) ^ r1 = r2
 
 	\textbf{Notes:}
 	\begin{itemize}
-		\item XORing with 0x0000 leaves value unchanged
-		\item XORing with 0xFFFF inverts all bits (bitwise NOT)
+		\item XORing with \texttt{0x0000} leaves value unchanged
+		\item XORing with \texttt{0xFFFF} inverts all bits (bitwise NOT)
 		\item XORing a value with itself always gives 0
 		\item Use \mnemonic{TSX} to check for differences without modifying register
 	\end{itemize}
 \end{instructionbox}
 
 % ============================================================================
-\begin{instructionbox}{LOAD}{Load/Move}
+\begin{instructionbox}{MOVI / MOVR}{Move Immediate / Move Register}
 	\textbf{Applicability:} SIRC-1, all revisions
-
-	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
-
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{07}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{37}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-
-	\textbf{Instruction Fields:}
-	\begin{itemize}
-		\item \textbf{Register:} destination \texttt{rD} (immediate form) or \texttt{rD, rS} (register form); any of the
-		      16 registers, \texttt{0x0}--\texttt{0xF}.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6). The register form has no immediate field.
-		\item \textbf{AF (bits 5--4):} the public assembly syntax always encodes \texttt{00} (None), which preserves the
-		      status flags. An encoding of this opcode with a different AF value, not reachable from assembly syntax,
-		      leaves all four status flags architecturally undefined (\texttt{U U U U}).
-		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
-		      Table~\ref{tab:condition-code-encoding}.
-	\end{itemize}
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
-LOAD rD, #imm16                ; rD = imm16
-LOAD rD, rS                    ; rD = rS
+MOVI rD, #imm16                ; rD = imm16
+MOVR rD, rS                    ; rD = rS
 \end{lstlisting}
 
 	\textbf{Operands:} Immediate form writes a 16-bit immediate value to \texttt{rD}. Register form copies \texttt{rS} to
 	\texttt{rD}. No short-immediate, memory, or shift forms are public assembly syntax; the register-to-register form
-	does not accept a shift definition (use \mnemonic{SHFT}). The indirect memory forms of \mnemonic{LOAD} are
-	documented in Chapter~\ref{ch:memory-instructions}.
-
-	\textbf{Operation:}
-	\begin{verbatim}
-destination = operand
-; Flags NOT updated
-\end{verbatim}
+	does not accept a shift definition (use \mnemonic{SHFT}), and the \texttt{[S]} status update source is not accepted. Neither instruction accesses memory; the memory forms of
+	\mnemonic{LOAD} are documented in Chapter~\ref{ch:memory-instructions}.
 
 	\textbf{Description:}
 
 	The ALU passes the second operand straight through to the destination; the first operand is ignored. This is the
-	primary way to load constants or move data between registers. Opcode \opcode{27} has no public assembly syntax and is
-	undocumented.
+	primary way to load constants into registers or move data between them. Opcode \opcode{27} has no public assembly
+	syntax and is undocumented.
 
-	\textbf{Flags:} Preserved.
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand
+destination = result
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
 
 	\textbf{Write-back:} If the condition is true, writes the loaded or copied value to \texttt{rD}.
 
@@ -1262,97 +1242,337 @@ destination = operand
 	\textbf{Privilege:} Available in protected mode and supervisor mode, except when it writes a
 	privileged register (\reg{ah}, \reg{lh}, \reg{ph}, \reg{sh}); see Chapter~\ref{ch:exceptions}.
 
-	\begin{example}
-		\begin{lstlisting}
-; Load constant
-LOAD r1, #1234             ; r1 = 1234
-
-; Copy register
-LOAD r2, r1                ; r2 = r1
-
-; Load with arithmetic
-LOAD r3, #1
-ADDI r3, #0, LSL #8        ; r3 = (r3 << 8) + 0 = 256
-
-; Zero a register
-LOAD r4, #0                ; r4 = 0
-
-; Load large constant (combine)
-LOAD r5, #0x12
-ADDI r5, #0, LSL #8        ; r5 = (r5 << 8) + 0 = 0x1200
-ORRI r5, #0x34             ; r5 = 0x1234
-		\end{lstlisting}
-		\caption{Loading Constants and Copying Registers}
-	\end{example}
-
-	\textbf{Notes:}
-	\begin{itemize}
-		\item Does not update flags, unlike \mnemonic{ADD}
-		\item Most efficient way to move data between registers
-		\item For 16-bit constants, use immediate form
-		\item To build shifted or composite constants, combine \mnemonic{LOAD} with ALU instructions such as \mnemonic{ADDI} or
-		      \mnemonic{ORRI}
-	\end{itemize}
-\end{instructionbox}
-
-% ============================================================================
-\begin{instructionbox}{CMPI / CMPR}{Compare Immediate / Compare Register}
-	\textbf{Applicability:} SIRC-1, all revisions
-
-	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+	\textbf{Opcodes:} \opcode{07} (Imm), \opcode{37} (Reg). Opcode \opcode{27} is undocumented. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0A}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{07}} &
+			\bitbox{4}{rD} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{2A}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
-			\bitbox{4}{Cond}
-		\end{bytefield}
-	\end{center}
-	\begin{center}
-		\begin{bytefield}[bitwidth=1.1em]{32}
-			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{3A}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{37}} &
+			\bitbox{4}{rD} &
+			\bitbox{4}{0x0} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
-		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		\item \textbf{rD (Reg or R1, bits 25--22):} destination register; any of the 16 registers, \texttt{0x0}--\texttt{0xF}.
+		\item \textbf{R2 (bits 21--18), register form only:} unused, encoded as 0.
+		\item \textbf{rS (R3, bits 17--14), register form only:} source register.
+		\item \textbf{imm16 (Immediate Value, bits 21--6), immediate form only:} 16-bit value. The register form has no
+		      immediate field.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined. \texttt{[S]} is not accepted by these instructions, which have no shifted operand; an encoding with
+		      AF \texttt{10}, not reachable from assembly syntax, leaves all four status flags architecturally undefined
+		      (\texttt{U U U U}).
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
+
+	\begin{example}
+		\begin{lstlisting}
+; Move a constant
+MOVI r1, #1234             ; r1 = 1234
+
+; Copy register
+MOVR r2, r1                ; r2 = r1
+
+; Move, then shift with an ALU instruction
+MOVI r3, #1
+ADDI r3, #0, LSL #8        ; r3 = (r3 << 8) + 0 = 256
+
+; Zero a register
+MOVI r4, #0                ; r4 = 0
+
+; Build a large constant
+MOVI r5, #0x12
+ADDI r5, #0, LSL #8        ; r5 = (r5 << 8) + 0 = 0x1200
+ORRI r5, #0x34             ; r5 = 0x1234
+		\end{lstlisting}
+		\caption{Moving Constants and Copying Registers}
+	\end{example}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{CMNI / CMNR}{Compare Negative Immediate / Compare Negative Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CMNI rS, #imm16                ; Flags from rS + imm16
+CMNI rS, #imm8, shift          ; Flags from shift(rS) + imm8
+CMNR rS1, rS2                  ; Flags from rS1 + rS2
+CMNR rS1, rS2, shift           ; Flags from shift(rS1) + rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADD}. The first operand is added to the second operand;
+	no destination register is written.
+
+	\textbf{Description:}
+
+	Performs addition but discards the result, only updating the status flags. It is the flag-only counterpart of
+	\mnemonic{ADD}, as \mnemonic{CMP} is of \mnemonic{SUB}. Adding two values and testing for zero is the same as comparing
+	the first value with the negation of the second, so \texttt{CMNI r1, \#5} sets Z when \reg{r1} holds $-5$. In short
+	immediate format with shift, the first source register is shifted before the immediate is added.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CMNI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{08} (Imm), \opcode{28} (Short Imm), \opcode{38} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{08}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{28}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{38}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\begin{example}
+		\begin{lstlisting}
+; Test if r1 is -1 (0xFFFF): r1 + 1 == 0
+CMNI r1, #1
+BRAN|== @is_minus_one
+
+; Test if r1 is the negation of r2
+CMNR r1, r2
+BRAN|== @are_negations
+
+; Would r3 + r4 overflow a signed 16-bit result?
+; Neither register is changed
+CMNR r3, r4
+BRAN|OS @would_overflow
+		\end{lstlisting}
+		\caption{Testing Sums Without Writing Them}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means the operands sum to zero, so the first operand equals the negation of the second
+		\item C is the carry out of the addition and V is signed overflow of the addition; the flags describe the sum, not an
+		      ordering, so the unsigned and signed ordering conditions that are meaningful after \mnemonic{CMP} are not meaningful
+		      after \mnemonic{CMN}
+		\item Use \mnemonic{CNC} to continue the test across multiple words
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{CNCI / CNCR}{Compare Negative with Carry Immediate / Register}
+	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CNCI rS, #imm16                ; Flags from rS + imm16 + C
+CNCI rS, #imm8, shift          ; Flags from shift(rS) + imm8 + C
+CNCR rS1, rS2                  ; Flags from rS1 + rS2 + C
+CNCR rS1, rS2, shift           ; Flags from shift(rS1) + rS2 + C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ADC}. The incoming \texttt{C} flag is read as an additional
+	least-significant carry input; no destination register is written.
+
+	\textbf{Description:}
+
+	Adds two values plus the carry flag but discards the result, only updating the status flags. It is the flag-only
+	counterpart of \mnemonic{ADC} and continues a \mnemonic{CMN} across multiple words: \mnemonic{CMN} on the low words
+	followed by \mnemonic{CNC} on the high words leaves C, V and N describing the whole multi-word sum. In short immediate
+	format with shift, the first source register is shifted before the immediate is added.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 + operand2 + SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = carry_out
+SR.V = (operand1[15] == operand2[15]) && (result[15] != operand1[15])
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The sum is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CNCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{09} (Imm), \opcode{29} (Short Imm), \opcode{39} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{09}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{29}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{39}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
+
+	\begin{example}
+		\begin{lstlisting}
+; Would the 32-bit signed sum r1:r2 + r3:r4 overflow?
+; Low words first, then high words with the carry
+CMNR r2, r4
+CNCR r1, r3
+BRAN|OS @overflowed        ; V = signed overflow of the 32-bit sum
+
+; Would the 32-bit unsigned sum carry out?
+CMNR r2, r4
+CNCR r1, r3
+BRAN|CS @carried
+		\end{lstlisting}
+		\caption{Testing 32-bit Sums Without Writing Them}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Use after \mnemonic{CMN} (or \mnemonic{ADD}) for multi-word arithmetic; the carry flag must be in the correct state
+		      before \mnemonic{CNC}
+		\item Z reflects only the result of this instruction, not the whole multi-word sum, so use C, V and N rather than Z to
+		      describe the combined value
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{CMPI / CMPR}{Compare Immediate / Compare Register}
+	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -1365,6 +1585,13 @@ CMPR rS1, rS2, shift           ; Compare shift(rS1) with rS2
 	\textbf{Operands:} Same source operand forms as \mnemonic{SUB}. The first operand is compared with the second operand;
 	no destination register is written.
 
+	\textbf{Description:}
+
+	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
+	first source register is shifted before comparing with the immediate. This is the primary instruction for implementing
+	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
+	the operands.
+
 	\textbf{Operation:}
 	\begin{verbatim}
 result = operand1 - operand2
@@ -1372,15 +1599,8 @@ result = operand1 - operand2
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = borrow
-SR.V = signed_overflow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs subtraction but discards the result, only updating the status flags. In short immediate format with shift, the
-	source register is shifted before comparing with the immediate. This is the primary instruction for implementing
-	conditional execution and branches. The flags can be tested with condition codes to determine the relationship between
-	the operands.
 
 	\textbf{Flags:} N Z C V
 
@@ -1396,6 +1616,63 @@ SR.V = signed_overflow
 	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
 	names a privileged register such as \reg{ah} (for example, \texttt{CMPI ah, \#0}); see
 	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{0A} (Imm), \opcode{2A} (Short Imm), \opcode{3A} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0A}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{2A}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3A}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1432,63 +1709,138 @@ BRAN|>= @out_of_range      ; Branch if r1 >= 20
 \end{instructionbox}
 
 % ============================================================================
-\begin{instructionbox}{TSAI / TSAR}{Test AND Immediate / Test AND Register}
+\begin{instructionbox}{CPCI / CPCR}{Compare with Carry Immediate / Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+	\textbf{Syntax:}
+	\begin{lstlisting}
+CPCI rS, #imm16                ; Flags from rS - imm16 - C
+CPCI rS, #imm8, shift          ; Flags from shift(rS) - imm8 - C
+CPCR rS1, rS2                  ; Flags from rS1 - rS2 - C
+CPCR rS1, rS2, shift           ; Flags from shift(rS1) - rS2 - C
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{SBC}. The incoming \texttt{C} flag is read as the borrow
+	input; no destination register is written.
+
+	\textbf{Description:}
+
+	Subtracts the second operand and the borrow from the first operand but discards the result, only updating the status
+	flags. It is the flag-only counterpart of \mnemonic{SBC} and continues a \mnemonic{CMP} across multiple words:
+	\mnemonic{CMP} on the low words followed by \mnemonic{CPC} on the high words compares the whole multi-word values. In
+	short immediate format with shift, the first source register is shifted before the immediate is subtracted.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 - operand2 - SR.C
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = borrow
+SR.V = (operand1[15] != operand2[15]) && (result[15] != operand1[15])
+\end{verbatim}
+
+	\textbf{Flags:} N Z C V
+
+	\textbf{Write-back:} None. The difference is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{CPCI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{0B} (Imm), \opcode{2B} (Short Imm), \opcode{3B} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0C}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{0B}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{2C}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{2B}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{3C}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{3B}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
+
+	\begin{example}
+		\begin{lstlisting}
+; Unsigned 32-bit compare: is r1:r2 lower than r3:r4?
+CMPR r2, r4                ; Low words
+CPCR r1, r3                ; High words, borrowing from the low compare
+BRAN|CS @first_is_lower    ; C = borrow out of the whole 32-bit subtraction
+
+; Signed 32-bit compare: is r1:r2 >= r3:r4?
+CMPR r2, r4
+CPCR r1, r3
+BRAN|>= @first_is_gte      ; N = V for the 32-bit result
+		\end{lstlisting}
+		\caption{32-bit Comparison with Borrow Propagation}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Always use after \mnemonic{CMP} (or \mnemonic{SUB}) for multi-word comparison; carry is treated as the borrow input
+		\item After the final \mnemonic{CPC}, the \texttt{CS}, \texttt{CC}, \texttt{>=} and \texttt{<<} conditions describe the whole
+		      multi-word comparison
+		\item Z reflects only the result of this instruction, not the whole multi-word difference, so conditions that test Z
+		      (\texttt{==}, \texttt{!=}, \texttt{HI}, \texttt{LO}, \texttt{>>}, \texttt{<=}) do not describe the combined value
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{TSAI / TSAR}{Test AND Immediate / Test AND Register}
+	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -1501,21 +1853,21 @@ TSAR rS1, rS2, shift           ; Test shift(rS1) & rS2
 	\textbf{Operands:} Same source operand forms as \mnemonic{AND}. The result is used only for status flag updates; no
 	destination register is written.
 
+	\textbf{Description:}
+
+	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying
+	the register. The zero flag indicates whether any tested bits were set.
+
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 AND operand2
+result = operand1 & operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = 0
 SR.V = 0
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise AND but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before ANDing with the immediate. Used to test if specific bits are set without modifying the
-	register. The zero flag indicates whether any tested bits were set.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -1531,6 +1883,63 @@ SR.V = 0
 	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
 	names a privileged register such as \reg{ah} (for example, \texttt{TSAI ah, \#0}); see
 	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{0C} (Imm), \opcode{2C} (Short Imm), \opcode{3C} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0C}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{2C}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3C}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1564,63 +1973,134 @@ BRAN|== @upper_clear       ; Branch if all tested bits clear
 \end{instructionbox}
 
 % ============================================================================
-\begin{instructionbox}{TSXI / TSXR}{Test XOR Immediate / Test XOR Register}
+\begin{instructionbox}{TSOI / TSOR}{Test OR Immediate / Test OR Register}
 	\textbf{Applicability:} SIRC-1, all revisions
 
-	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+	\textbf{Syntax:}
+	\begin{lstlisting}
+TSOI rS, #imm16                ; Test rS | imm16
+TSOI rS, #imm8, shift          ; Test shift(rS) | imm8
+TSOR rS1, rS2                  ; Test rS1 | rS2
+TSOR rS1, rS2, shift           ; Test shift(rS1) | rS2
+\end{lstlisting}
+
+	\textbf{Operands:} Same source operand forms as \mnemonic{ORR}. The result is used only for status flag updates; no
+	destination register is written.
+
+	\textbf{Description:}
+
+	Performs bitwise OR but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before ORing with the immediate. The zero flag is set only when every bit of both operands
+	is zero, so a single \mnemonic{TSOR} tests whether two registers are both zero.
+
+	\textbf{Operation:}
+	\begin{verbatim}
+result = operand1 | operand2
+; Result is discarded, only flags updated
+SR.N = result[15]
+SR.Z = (result == 0)
+SR.C = 0
+SR.V = 0
+\end{verbatim}
+
+	\textbf{Flags:} N Z (C and V cleared)
+
+	\textbf{Write-back:} None. The OR result is discarded after status flags are updated.
+
+	\textbf{Exceptions:} Does not access memory and raises no instruction-specific faults.
+
+	\textbf{Condition field:} If the condition is false, no status flags are updated.
+
+	\textbf{Timing:} 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode. This instruction only reads the register named
+	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
+	names a privileged register such as \reg{ah} (for example, \texttt{TSOI ah, \#0}); see
+	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{0D} (Imm), \opcode{2D} (Short Imm), \opcode{3D} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{0E}} &
-			\bitbox{4}{Reg} &
-			\bitbox{16}{Immediate Value} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{0D}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{2E}} &
-			\bitbox{4}{Reg} &
-			\bitbox{8}{Imm} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{2D}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
+
 	\begin{center}
 		\begin{bytefield}[bitwidth=1.1em]{32}
 			\bitheader{0-31} \\
-			\bitbox{6}{\opcode{3E}} &
-			\bitbox{4}{R1} &
-			\bitbox{4}{R2} &
-			\bitbox{4}{R3} &
-			\bitbox{1}{SO} &
-			\bitbox{3}{ST} &
-			\bitbox{4}{SA} &
-			\bitbox{2}{AF} &
+			\bitbox{6}{\opcode{3D}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
 			\bitbox{4}{Cond}
 		\end{bytefield}
 	\end{center}
 
 	\textbf{Instruction Fields:}
 	\begin{itemize}
-		\item \textbf{Register:} source \texttt{rS} (immediate and short-immediate forms) or \texttt{rS1, rS2} (register
-		      form); any of the 16 registers, \texttt{0x0}--\texttt{0xF}. No destination register is written.
-		\item \textbf{Immediate:} 16-bit value (immediate form, bits 21--6) or 8-bit value zero-extended to 16 bits
-		      (short-immediate form, bits 21--14).
-		\item \textbf{Shift type and count (short-immediate and register forms only):} \texttt{NUL}, \texttt{LSL},
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
 		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
-		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}) -- see Chapter~\ref{ch:shift-operations}.
-		\item \textbf{AF (bits 5--4):} \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
-		      Reserved.
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
 		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
+
+	\begin{example}
+		\begin{lstlisting}
+; Test if the 32-bit value in r1:r2 is zero
+TSOR r1, r2
+BRAN|== @is_zero           ; Branch if both words are zero
+
+; Test if either of two flag words has bit 15 set
+TSOR r3, r4
+BRAN|NS @flag_set
+		\end{lstlisting}
+		\caption{Testing Two Values at Once with TSO}
+	\end{example}
+
+	\textbf{Notes:}
+	\begin{itemize}
+		\item Does not modify any register, only flags
+		\item Z=1 means every bit of both operands is 0
+		\item Z=0 means at least one bit is 1 in one of the operands
+		\item N=1 means bit 15 is set in at least one of the operands
+		\item More efficient than ORR into a scratch register for testing whether two values are both zero
+	\end{itemize}
+\end{instructionbox}
+
+% ============================================================================
+\begin{instructionbox}{TSXI / TSXR}{Test XOR Immediate / Test XOR Register}
+	\textbf{Applicability:} SIRC-1, all revisions
 
 	\textbf{Syntax:}
 	\begin{lstlisting}
@@ -1633,21 +2113,21 @@ TSXR rS1, rS2, shift           ; Test shift(rS1) ^ rS2
 	\textbf{Operands:} Same source operand forms as \mnemonic{XOR}. The result is used only for status flag updates; no
 	destination register is written.
 
+	\textbf{Description:}
+
+	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the first
+	source register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to
+	compare values for equality. Z=1 indicates the values are identical.
+
 	\textbf{Operation:}
 	\begin{verbatim}
-result = operand1 XOR operand2
+result = operand1 ^ operand2
 ; Result is discarded, only flags updated
 SR.N = result[15]
 SR.Z = (result == 0)
 SR.C = 0
 SR.V = 0
 \end{verbatim}
-
-	\textbf{Description:}
-
-	Performs bitwise XOR but discards the result, only updating flags. In short immediate format with shift, the source
-	register is shifted before XORing with the immediate. Used to test if bits match a specific pattern or to compare
-	values for equality. Z=1 indicates the values are identical.
 
 	\textbf{Flags:} N Z (C and V cleared)
 
@@ -1663,6 +2143,63 @@ SR.V = 0
 	by its register field and never writes it, so it does not raise a privilege-violation fault even when that field
 	names a privileged register such as \reg{ah} (for example, \texttt{TSXI ah, \#0}); see
 	Chapter~\ref{ch:exceptions}.
+
+	\textbf{Opcodes:} \opcode{0E} (Imm), \opcode{2E} (Short Imm), \opcode{3E} (Reg). See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{0E}} &
+			\bitbox{4}{rS} &
+			\bitbox{16}{imm16} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{2E}} &
+			\bitbox{4}{rS} &
+			\bitbox{8}{imm8} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\begin{center}
+		\begin{bytefield}[bitwidth=1.1em]{32}
+			\bitheader{0-31} \\
+			\bitbox{6}{\opcode{3E}} &
+			\bitbox{4}{ignored} &
+			\bitbox{4}{rS1} &
+			\bitbox{4}{rS2} &
+			\bitbox{8}{Shift} &
+			\bitbox{2}{SUS} &
+			\bitbox{4}{Cond}
+		\end{bytefield}
+	\end{center}
+
+	\textbf{Instruction Fields:}
+	\begin{itemize}
+		\item \textbf{rS (Reg, bits 25--22), immediate and short-immediate forms:} source register; any of the 16 registers,
+		      \texttt{0x0}--\texttt{0xF}. No destination register is written.
+		\item \textbf{ignored (R1, bits 25--22), register form only:} no destination register is written, so the CPU ignores
+		      this field. The assembler encodes a copy of \texttt{rS1}.
+		\item \textbf{rS1 (R2, bits 21--18) and rS2 (R3, bits 17--14), register form only:} first and second source registers.
+		\item \textbf{imm16 (Immediate Value, bits 21--6) or imm8 (Imm, bits 21--14):} 16-bit value (immediate form) or 8-bit
+		      value zero-extended to 16 bits (short-immediate form).
+		\item \textbf{Shift (bits 13--6, short-immediate and register forms only):} the shift operand (SO, bit 13), type (ST, bits 12--10), and count (SA, bits 9--6). Types:
+		      \texttt{NUL}, \texttt{LSL},
+		      \texttt{LSR}, \texttt{ASL}, \texttt{ASR}, \texttt{RTL}, \texttt{RTR}; an immediate count is
+		      \texttt{0}--\texttt{15}; a register count is used in full (16 or more clamps to a full shift for \texttt{LSL}/\texttt{LSR}/\texttt{ASL}/\texttt{ASR}, and is taken modulo 16 for \texttt{RTL}/\texttt{RTR}; \texttt{NUL} ignores it) -- see Chapter~\ref{ch:shift-operations}.
+		\item \textbf{SUS (AF, bits 5--4):} status update source: \texttt{00} = None, \texttt{01} = Alu (default), \texttt{10} = Shift, \texttt{11} =
+		      Reserved; N, Z, C and V are architecturally undefined.
+		\item \textbf{Condition field (bits 3--0):} any of the 16 condition-code encodings in
+		      Table~\ref{tab:condition-code-encoding}.
+	\end{itemize}
 
 	\begin{example}
 		\begin{lstlisting}
@@ -1698,7 +2235,7 @@ The ALU instructions form the computational core of the SIRCIS instruction set. 
 \begin{itemize}
 	\item All ALU operations work only on registers (load/store architecture)
 	\item Three format variants provide flexibility (immediate, short+shift, register)
-	\item Test variants (CMP, TSA, TSX) allow non-destructive testing
+	\item Test variants (CMN, CNC, CMP, CPC, TSA, TSO, TSX) allow non-destructive testing
 	\item Shift operations can be combined with ALU ops for powerful single-instruction operations
 	\item Consistent flag behavior makes conditional execution predictable
 \end{itemize}

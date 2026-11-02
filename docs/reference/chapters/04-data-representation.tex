@@ -4,7 +4,7 @@
 \section{Overview}
 
 This chapter defines the representation rules used by registers, memory, program images, exception vectors, and
-multi-word values. These rules are architectural: assemblers, loaders, emulators, hardware implementations, and
+multi-word values. These rules are architectural: assemblers, loaders, simulators, hardware implementations, and
 debuggers must agree on them.
 
 \section{Word and Byte Ordering}
@@ -34,6 +34,7 @@ instructions, exception vectors, saved addresses, and any software-defined multi
 to use the architectural order.
 
 \section{Address Values}
+\label{sec:address-values}
 
 Architectural addresses are 24-bit word addresses. The four address-register pairs (\reg{l}, \reg{a}, \reg{s}, and
 \reg{p}) represent an address by combining the low byte of the high register with the full low register:
@@ -42,9 +43,13 @@ Architectural addresses are 24-bit word addresses. The four address-register pai
 	\text{Address} = ((\text{HighRegister} \mathbin{\&} \texttt{0x00FF}) \ll 16) \mid \text{LowRegister}
 \end{equation}
 
-Bits 15--8 of the high register are not driven on the address bus and do not participate in address comparisons,
-effective-address calculation, instruction fetch, or exception vector dispatch. They are preserved as ordinary register
-storage unless an instruction explicitly writes the high register.
+Bits 15--8 of the high register are not driven on the address bus. They are ignored by address calculation and are
+carried unchanged when an address pair is copied, loaded or stored. They are preserved unless a direct write to the
+high register of an address register pair overwrites them. They may be used to store metadata with addresses, which
+allows techniques such as tagged pointers. In protected mode, however, an address-register-pair write-back that would
+change any of the 16 bits of a high register raises a privilege-violation fault
+(Section~\ref{sec:privilege-restrictions}), so a protected-mode program can only load pointers whose tag bits match the
+high register they replace.
 
 \begin{table}[H]
 	\centering
@@ -61,22 +66,7 @@ storage unless an instruction explicitly writes the high register.
 	\label{tab:address-pair-interpretation}
 \end{table}
 
-When a 24-bit address is stored in memory as a 32-bit quantity, the high word is stored first and the low word second.
-Only bits 7--0 of the high word are significant when the value is loaded as an address.
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{lll}
-		\toprule
-		\textbf{Stored address} & \textbf{Word at address N} & \textbf{Word at address N+1} \\
-		\midrule
-		\addr{0x123456}         & \texttt{0x0012}            & \texttt{0x3456}              \\
-		\addr{0xFECAFE}         & \texttt{0x00FE}            & \texttt{0xCAFE}              \\
-		\bottomrule
-	\end{tabular}
-	\caption{Stored 24-bit Address Format}
-	\label{tab:stored-address-format}
-\end{table}
+When an address pair is stored in memory as a 32-bit quantity, the high word is stored first and the low word second.
 
 \section{Instruction Storage}
 
@@ -95,9 +85,11 @@ even word addresses. Fetching from an odd word address raises an alignment fault
 \section{Exception Vector Storage}
 \label{sec:exception-vector-storage}
 
-Each exception vector table entry is a stored 24-bit address in the format shown in
-Table~\ref{tab:stored-address-format}. The vector table begins at word address \addr{0x000000}, so vector entry
-\texttt{V} starts at word address \texttt{V * 2}:
+Each exception vector table entry is a stored 32-bit pointer that contains a 24-bit address and eight bits of metadata
+as described in Section~\ref{sec:address-values}.
+
+The vector table begins at word address \addr{0x000000}, so vector entry \texttt{V} starts at word address \texttt{V *
+	2}:
 
 \begin{itemize}
 	\item Word at \texttt{V * 2}: target address high word
@@ -105,7 +97,7 @@ Table~\ref{tab:stored-address-format}. The vector table begins at word address \
 \end{itemize}
 
 For example, vector \texttt{0x06} occupies word addresses \addr{0x00000C} and \addr{0x00000D}. To jump to
-\addr{0x123456}, those two words contain \texttt{0x0012} and \texttt{0x3456}.
+\addr{0x123456}, those two words must contain \texttt{0x0012} and \texttt{0x3456}.
 
 \section{Immediate Values}
 
@@ -130,19 +122,18 @@ is interpreted as signed, unsigned, or bitwise data.
 \end{table}
 
 Short immediates occupy an 8-bit field and are zero-extended before use by ALU arithmetic. They are therefore suitable
-for compact non-negative constants and bit masks, not for encoding negative arithmetic operands. A value that cannot be
-represented in the selected immediate field width is truncated to that width; the reference assembler does not diagnose
-this truncation except for the short-immediate-with-shift form, which is range-checked.
+for compact non-negative constants and bit masks, not for encoding negative arithmetic operands.
 
 Short immediates are not used for memory, effective-address, branch, jump, or subroutine-call displacements. Those
-forms use 16-bit immediate displacements, register displacements, or assembler-resolved full-width branch offsets.
+forms use 16-bit signed immediate displacements (including assembler-resolved PC-relative branch offsets) or register
+displacements.
 
 \section{Software Layout Conventions}
 
-The architectural storage order for multi-word quantities is high word first. The SIRC-1 reference manual does not
-otherwise define a complete ABI, stack-frame layout, argument-passing convention, or software integer library format.
-Where examples show structures, arrays, saved registers, or stack use, offsets are word offsets and each push or pop
-moves the stack pointer by one 16-bit word.
+The architectural storage order for multi-word quantities is high word first. The \archmanual{} does not otherwise
+define a complete ABI, stack-frame layout, argument-passing convention, or software integer library format. Where
+examples show structures, arrays, saved registers, or stack use, offsets are word offsets and each push or pop moves
+the stack pointer by one 16-bit word.
 
 Software standards may build on the architectural high-word-first rule for wider integers and stored addresses, but
 those conventions are non-normative unless a separate ABI or toolchain document says otherwise.
@@ -160,12 +151,16 @@ Address Overflow)\footnote{\texttt{SR.\textit{X}} denotes bit or field \textit{X
 	Chapter~\ref{ch:status-register} for the bit layout and Chapter~\ref{ch:reading-instructions} for the full notation
 	convention.} is set, the instruction raises a segment-overflow fault. If the bit is clear, the low word wraps modulo
 $2^{16}$. Displacements are signed two's-complement, and the trap fires only when the low-word calculation wraps,
-whether the displacement is positive or negative.
+whether the displacement is positive or negative. For pre-decrement and post-increment forms, the address-register
+auto-update and the effective-address calculation are checked separately: either one wrapping raises the fault, even if
+the other brings the result back into range.
 
 The program counter follows the same low-word wrap rule during normal instruction fetch. Since instructions are two
 words long and must begin at even word addresses, a fetch that would begin from an odd \reg{pl} value raises an
-alignment fault. If the program counter wraps the low word while \texttt{SR.A} is set, a segment-overflow fault is
-raised at the next instruction fetch, not on the instruction that caused the wrap.
+alignment fault. If \texttt{SR.A} is set and advancing the program counter past an instruction would wrap the low word,
+that instruction raises a segment-overflow fault before it commits, unless it is a taken branch or jump that does not
+use the advanced address, or an ALU or \mnemonic{LOAD} instruction that writes \reg{pl}
+(Section~\ref{sec:segment-overflow-fault}).
 
 \section{Memory Ordering}
 

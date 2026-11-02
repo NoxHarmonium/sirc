@@ -1,0 +1,13 @@
+F-asm-1: confirmed
+F-asm-2: confirmed
+F-asm-3: confirmed
+F-asm-4: confirmed
+F-asm-5: confirmed
+F-asm-6: confirmed
+F-asm-7: confirmed
+F-asm-8: confirmed
+F-asm-9: confirmed
+F-asm-10: confirmed
+F-asm-11: confirmed
+F-asm-12: confirmed
+F-asm-13: confirmed

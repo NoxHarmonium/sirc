@@ -11,32 +11,35 @@ which secretly expand to more than one. An operation that cannot be expressed as
 runtime-variable operand where the underlying encoding only has room for a compile-time immediate) is documented as an
 explicit multi-instruction technique where it comes up, not given its own meta-instruction mnemonic.
 
+This table is the canonical list of meta-instructions; Section~\ref{sec:instruction-summary-meta} summarizes it.
+
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lll}
+	\small
+	\begin{tabular}{llll}
 		\toprule
-		\textbf{Meta-Instruction} & \textbf{Primary Documentation}     & \textbf{Lowers To}          \\
+		\textbf{Meta-Instruction} & \textbf{Primary Documentation}     & \textbf{Lowers To}                & \textbf{Purpose}         \\
 		\midrule
-		\mnemonic{NOOP}           & Chapter~\ref{ch:meta-instructions} & \mnemonic{ADDI[N] r1, \#0}  \\
-		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions}  & \mnemonic{ORRI[S]}          \\
-		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}      \\
-		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}      \\
-		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, (\#0, l)} \\
-		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI}             \\
-		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1900}    \\
-		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1A00}    \\
-		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1B00}    \\
-		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Cxy}    \\
-		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Dxy}    \\
-		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x28xx}    \\
-		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x29xx}    \\
-		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x2Ann}    \\
-		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3000}    \\
-		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3100}    \\
-		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3200}    \\
-		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3300}    \\
+		\mnemonic{NOOP}           & Chapter~\ref{ch:meta-instructions} & \mnemonic{ADDI[N] r1, \#0}        & No operation             \\
+		\mnemonic{SHFT}           & Chapter~\ref{ch:alu-instructions}  & \mnemonic{ORRI[S] rD, \#0, shift} & Shift with status update \\
+		\mnemonic{BRAN}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}            & PC-relative branch       \\
+		\mnemonic{BRSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}            & PC-relative call         \\
+		\mnemonic{LJMP}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, ...}            & Long jump                \\
+		\mnemonic{LJSR}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEL p, ...}            & Long call                \\
+		\mnemonic{RETS}           & Chapter~\ref{ch:control-flow}      & \mnemonic{LDEA p, (\#0, l)}       & Return from subroutine   \\
+		\mnemonic{EXCP}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x11vv}          & Software exception       \\
+		\mnemonic{WAIT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1900}          & Wait for interrupt       \\
+		\mnemonic{RETE}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1A00}          & Return from exception    \\
+		\mnemonic{RSET}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1B00}          & System reset             \\
+		\mnemonic{ETFR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Cxy}          & Read exception state     \\
+		\mnemonic{ETTR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x1Dxy}          & Write exception state    \\
+		\mnemonic{DMAR}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x28xx}          & DMA read to registers    \\
+		\mnemonic{DMAW}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x29xx}          & DMA write from registers \\
+		\mnemonic{DMAT}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x2Ann}          & DMA memory transfer      \\
+		\mnemonic{MULU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3000}          & Unsigned multiply        \\
+		\mnemonic{MULS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3100}          & Signed multiply          \\
+		\mnemonic{DIVU}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3200}          & Unsigned divide          \\
+		\mnemonic{DIVS}           & Chapter~\ref{ch:coprocessor}       & \mnemonic{COPI \#0x3300}          & Signed divide            \\
 		\bottomrule
 	\end{tabular}
 	\caption{Meta-Instruction Cross-Reference}
@@ -44,8 +47,37 @@ explicit multi-instruction technique where it comes up, not given its own meta-i
 \end{table}
 
 \begin{instructionbox}{NOOP}{No Operation}
-
 	\textbf{Applicability:} SIRC-1, all revisions
+
+	\textbf{Syntax:} \texttt{NOOP}
+
+	\textbf{Operands:} None.
+
+	\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during
+	development.
+
+	\textbf{Operation:} Executes an add-immediate-zero instruction whose destination is \reg{r1}: \reg{r1} is rewritten
+	with its own value plus zero, so no architectural state changes occur. Because the status-register update source is
+	\texttt{None}, no condition flags are written. Register field \texttt{0x0} is deliberately assigned to \reg{r1}, an
+	ordinary unprivileged register (see Chapter~\ref{ch:registers}), so this instruction is unprivileged and an all-zero
+	instruction word (as read from erased or uninitialized memory) always executes safely as a no-op, in both protected
+	and supervisor mode.
+
+	\textbf{Write-back:} No architectural state changes.
+
+	\textbf{Flags:} Preserved.
+
+	\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
+	instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
+	occur after it commits. Like any instruction that does not branch, it raises a segment-overflow fault if it occupies
+	the last instruction slot of a segment while \texttt{SR.A} is set (Section~\ref{sec:segment-overflow-fault}).
+
+	\textbf{Condition field:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
+	normally not useful.
+
+	\textbf{Timing:} Same as \mnemonic{ADDI}: 6 cycles, plus instruction-fetch wait states.
+
+	\textbf{Privilege:} Available in protected mode and supervisor mode.
 
 	\textbf{Assembles to:} \texttt{ADDI[N] r1, \#0}. See Table~\ref{tab:alu-legal-forms} for the full family of legal forms.
 
@@ -69,35 +101,6 @@ explicit multi-instruction technique where it comes up, not given its own meta-i
 		      Table~\ref{tab:condition-code-encoding}.
 	\end{itemize}
 
-	\textbf{Syntax:} \texttt{NOOP}
-
-	\textbf{Operands:} None.
-
-	\textbf{Operation:} Executes an add-immediate-zero instruction whose destination is \reg{r1}: \reg{r1} is rewritten
-	with its own value plus zero, so no architectural state changes occur. Because the status-register update source is
-	\texttt{None}, no condition flags are written. Register field \texttt{0x0} is deliberately assigned to \reg{r1}, an
-	ordinary unprivileged register (see Chapter~\ref{ch:registers}), so this instruction is unprivileged and an all-zero
-	instruction word (as read from erased or uninitialized memory) always executes safely as a no-op, in both protected
-	and supervisor mode.
-
-	\textbf{Description:} Does nothing for 6 cycles. Useful for timing delays, instruction padding, or placeholders during
-	development.
-
-	\textbf{Write-back:} No architectural state changes.
-
-	\textbf{Flags:} Preserved.
-
-	\textbf{Exceptions:} Inherits \mnemonic{ADDI[N]} exception behavior. It does not access data memory and raises no
-	instruction-specific faults; instruction-fetch faults can still occur before it executes, and trace faults can still
-	occur after it commits.
-
-	\textbf{Condition field:} If the condition is false, no state changes occur. Conditional \mnemonic{NOOP} is allowed but
-	normally not useful.
-
-	\textbf{Timing:} Same as \mnemonic{ADDI}: 6 cycles, plus instruction-fetch wait states.
-
-	\textbf{Privilege:} Available in protected mode and supervisor mode.
-
 	\begin{example}
 		\begin{lstlisting}
 ; Wait 18 cycles (6 cycles per NOOP)
@@ -107,5 +110,4 @@ NOOP
 		\end{lstlisting}
 		\caption{Timing Delay with NOOP}
 	\end{example}
-
 \end{instructionbox}

@@ -3,16 +3,23 @@
 
 \section{Overview}
 
-The SIRC-1 CPU implements a combinatorial logic design with no microcode, utilizing six sequential execution phases to
-execute ordinary instructions in 6 clock cycles when no bus wait states are required. The architecture is composed of
-several key functional units that work together to fetch, decode, execute, and complete instructions.
+The SIRC-1 CPU architecture takes advantage of the regularity of the SIRCIS instruction set to execute ordinary
+instructions through a common six-phase execution sequence.
+
+Control signals are generated directly from the decoded instruction and current execution phase, eliminating the need
+for separate microprograms for individual instructions.
+
+This approach is intended to support compact, hardwired control logic, potentially reducing transistor count and die
+area compared with microprogrammed implementations. Eliminating microinstruction fetch delays may also permit higher
+clock frequencies.
 
 \section{Six-Stage Execution Phases}
 
 Most SIRC-1 instructions follow a six-phase execution model and complete in 6 clock cycles when no bus wait states are
-required. A phase that performs a bus operation may be held until the bus acknowledges it. DMA commands dispatch
-through the normal six-phase coprocessor-call path and then hold instruction fetch while the DMA unit completes its
-transfer. This fixed execution sequence greatly simplifies software development and hardware design.
+required.
+
+A phase that performs a bus operation may be held until the bus acknowledges it. DMA commands dispatch through the
+normal six-phase coprocessor-call path and then hold instruction fetch while the DMA unit completes its transfer.
 
 Each address-register pair, including \reg{p}, splits into a high half and a low half, written \reg{Xh} and \reg{Xl}
 (for example \reg{ph} and \reg{pl}); Chapter~\ref{ch:registers} describes this split in detail.
@@ -28,6 +35,7 @@ Each address-register pair, including \reg{p}, splits into a high half and a low
 	      \begin{itemize}
 		      \item Fetch bits 15--0 from memory address in \reg{p} + 1
 		      \item Instruction is now fully available for decode
+		      \item \reg{p} is unchanged
 	      \end{itemize}
 
 	\item[Phase 2: Decode and Register Fetch] -- 1 cycle
@@ -61,18 +69,18 @@ Each address-register pair, including \reg{p}, splits into a high half and a low
 
 \section{Architectural Components}
 
+The architecture is composed of several key functional units that work together to fetch, decode, execute, and complete
+instructions.
+
 Figure~\ref{fig:cpu-block-diagram} illustrates the major functional units within the SIRC-1 CPU and their
 interconnections.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
 	\centering
-	\includegraphics[width=\textwidth]{diagrams/cpu-block-diagram.pdf}
+	\includegraphics[width=0.95\textwidth]{diagrams/sirc-1-cpu-architecture.pdf}
 	\caption{SIRC-1 CPU Execution Phase Architecture}
 	\label{fig:cpu-block-diagram}
 \end{figure}
-
-% TODO: Update the diagram so that the memory component is obviously separate to the other components that live together in the chip
-% category=Manual
 
 \subsection{Control Unit (CU)}
 
@@ -86,7 +94,33 @@ Key responsibilities include:
 	\item Execution phase coordination
 	\item Control signal generation for all functional units
 	\item Condition code evaluation for conditional execution
+	\item Fetching exception vectors on behalf of the exception coprocessor
+	\item Dispatching coprocessor commands through the coprocessor select register (CSR, Section~\ref{sec:coprocessors-and-csr})
 \end{itemize}
+
+\subsection{Coprocessors and the Coprocessor Select Register}
+\label{sec:coprocessors-and-csr}
+
+Operations are carried out by coprocessors. The processing unit (coprocessor \texttt{0x0}) executes ordinary
+instructions using the ALU, AU and barrel shifter described below. Other coprocessors, such as the exception
+coprocessor (\texttt{0x1}), carry out specialized operations on request. Every coprocessor reaches the register file
+and the bus interface through the coprocessor interface, and only one is active at a time.
+
+The coprocessor select register (CSR) holds the pending coprocessor command: it tells the CU which coprocessor runs
+next and what it should do. It is a 16-bit internal register: bits 15--12 hold the coprocessor ID, bits 11--8 the
+coprocessor operation, and bits 7--0 an operand or vector. A \mnemonic{COPI} or \mnemonic{COPR} instruction writes its
+command operand to the CSR during write-back. The CU consumes the CSR by dispatching the command to the selected
+coprocessor in a further six-phase slot, and that coprocessor stays active until the command completes. While nothing
+is pending the CSR is \texttt{0x0000}, which selects the processing unit, so the CPU carries on running the program.
+Chapter~\ref{ch:coprocessor} describes the instructions and Section~\ref{sec:coprocessor-select-register} the
+register's layout.
+
+The exception coprocessor never overwrites a pending command. It keeps its own record of the exception it wants to
+service, and loads the CSR with a hardware interrupt, software exception or trace fault only when the CSR is empty and
+no coprocessor is active. A fault raised by the call or its command is the exception: it ends the command and is
+dispatched at once. A coprocessor call is therefore part of its instruction: its dispatch slot, and the command it
+starts, complete before any pending interrupt or instruction trace fault is taken, except that a traced \mnemonic{EXCP}
+takes its trace fault first (Section~\ref{sec:interrupt-latency}).
 
 \subsection{Arithmetic Logic Unit (ALU)}
 
@@ -99,8 +133,8 @@ The ALU performs all arithmetic and logical operations on register values. It su
 	\item \textbf{Status Flag Generation:} Carry, Overflow, Negative, Zero
 \end{itemize}
 
-The ALU operates exclusively on data from the Register File (after optional shifting) and outputs results either back
-to the Register File or to memory via the data bus.
+The ALU operates on data from the Register File (after optional shifting), along with immediate constants decoded from
+instructions and outputs results back to the Register File. It cannot operate on data stored in memory directly.
 
 \subsection{Addressing Unit (AU)}
 
@@ -108,12 +142,13 @@ The Addressing Unit calculates memory addresses and manages address-related oper
 
 \begin{itemize}
 	\item Computing effective addresses from base + displacement
-	\item Handling pre-decrement and post-increment addressing modes
-	\item Updating address register pairs (l, a, s, p) for LDEA, jump, and branch instructions
+	\item Computing the updated base address for pre-decrement and post-increment
+	\item Detecting segment overflow in the address calculation, and when an instruction would use a program-counter advance that
+	      wraps the segment
 	\item Presenting calculated addresses to the address bus
 \end{itemize}
 
-The AU works in parallel with the ALU during the execution stage, allowing address calculation to occur simultaneously
+The AU works in parallel with the ALU during the execution phase, allowing address calculation to occur simultaneously
 with ALU operations.
 
 \subsection{Register File}
@@ -121,48 +156,78 @@ with ALU operations.
 The Register File contains all CPU registers organized into three categories:
 
 \begin{itemize}
-	\item \textbf{General Purpose Registers:} \reg{r1}--\reg{r7}
+	\item \textbf{General-Purpose Registers:} \reg{r1}--\reg{r7}
 	\item \textbf{Address Register Pairs:} \reg{l} (link), \reg{a} (address), \reg{s} (stack), \reg{p} (program counter)
 	\item \textbf{Status Register:} \reg{sr}
 \end{itemize}
 
-The Register File provides multi-port access, allowing the ALU, AU, and Control Unit to read and write registers as
-needed during each execution phase. All registers are 16 bits wide, though address register pairs can be combined to
-form 24-bit addresses.
+The Register File allows the ALU, AU, and Control Unit to read and write registers as needed during each execution
+phase. All registers are 16 bits wide, though address register pairs can be combined to form 24-bit addresses.
 
-\subsection{Barrel Shifters}
+\subsection{Barrel Shifter}
 
-A barrel shifter sits between the Register File and the CU, enabling efficient bit manipulation operations.
+A barrel shifter sits between the Register File and the ALU, enabling efficient bit manipulation operations.
 
-The barrel shifters support logical shift left (\mnemonic{LSL}), logical shift right (\mnemonic{LSR}), arithmetic shift
+The barrel shifter supports logical shift left (\mnemonic{LSL}), logical shift right (\mnemonic{LSR}), arithmetic shift
 left (\mnemonic{ASL}), arithmetic shift right (\mnemonic{ASR}), rotate left (\mnemonic{RTL}), and rotate right
 (\mnemonic{RTR}). Shift amounts can be specified as immediate values or dynamically from register contents.
 
 The shift is applied to the first source operand when fetching the source registers for an instruction. Shifts cannot
 be applied to the result or any other source operand.
 
-\section{Design Characteristics}
+\subsection{Exception Coprocessor}
 
-\subsection{Combinatorial Logic Implementation}
-
-The SIRC-1 uses pure combinatorial logic with no microcode engine. Each execution phase is implemented as combinatorial
-circuits that process data in a single clock cycle. This approach:
+The Exception Coprocessor (coprocessor ID \texttt{0x1}) manages faults, hardware interrupts, software exceptions and
+reset. When an exception is pending, it takes control of the processor and diverts execution to the handler through a
+vector. It is responsible for:
 
 \begin{itemize}
-	\item Simplifies the hardware design
-	\item Provides a deterministic, fixed execution sequence
-	\item Eliminates the complexity of microcode sequencing
-	\item Makes the CPU behavior fully predictable and easy to reason about
+	\item Receiving faults, interrupt requests and reset
+	\item Comparing each exception's priority with the current exception level
+	\item Canceling an instruction that raises a retryable fault, so its remaining phases run as no-ops
+	\item Holding the link registers (Chapter~\ref{ch:exceptions}) that save the return address, status register and exception
+	      level
+	\item Writing the exception to service into the coprocessor select register (CSR)
+\end{itemize}
+
+The Control Unit runs the resulting entry sequence through the normal execution phases. The exception instructions
+(\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{WAIT}, \mnemonic{RSET}, \mnemonic{ETFR} and \mnemonic{ETTR}) reach the
+coprocessor as coprocessor calls. Chapter~\ref{ch:exceptions} describes exception handling in detail.
+
+\section{Design Characteristics}
+
+\subsection{Hardwired Control Implementation}
+
+The SIRC-1 is designed to support hardwired control logic without requiring a microcode engine.
+
+A six-phase state machine coordinates instruction execution, with combinational logic performing instruction decoding,
+arithmetic, address calculation and control signal generation. Clocked registers retain architectural and intermediate
+execution state between phases.
+
+Combined with the regularity of the SIRCIS instruction set, this approach offers several potential advantages:
+
+\begin{itemize}
+	\item A deterministic, fixed execution sequence
+	\item Reduced control logic complexity and hardware requirements
+	\item Predictable instruction behavior and execution timing
 \end{itemize}
 
 \subsection{Fixed Execution Sequence}
 
 Ordinary instructions execute in exactly 6 phases, regardless of instruction type or operands, and complete in 6 clock
-cycles when no bus wait states are required. Delayed bus acknowledgement can hold a phase and add wait cycles.
-Coprocessor calls are the exception: the processing-unit instruction takes six cycles and the coprocessor dispatch that
-follows takes a further six; DMA commands additionally hold instruction fetch until the transfer completes. This design
-choice simplifies software timing and eliminates the need for branch prediction or complex multi-stage control logic
-found in variable-time architectures.
+cycles when no bus wait states are required. This design choice reduces the complexity of instruction sequencing and
+simplifies execution timing.
+
+Once an instruction has started, the sequence is never cut short. If a retryable fault cancels an instruction, its
+remaining phases still run, but as no-ops that access no bus and commit no results, and the exception dispatch begins
+at the next phase 0. The alignment fault is the exception: it is detected at phase 0, before the instruction starts,
+and its dispatch begins at that same phase 0 (Section~\ref{sec:alignment-fault}). Hardware interrupts, software
+exceptions and the instruction trace fault let the current instruction finish before they are dispatched.
+
+Coprocessor calls are the exception: the processing-unit instruction takes six cycles and the coprocessor dispatch
+normally takes a further six. A call whose condition is false, or that names coprocessor \texttt{0x0}, has no dispatch
+slot and takes only six cycles. Some coprocessors, such as the DMA coprocessor, can additionally hold instruction fetch
+until the operation completes.
 
 \subsection{Parallel Functional Units}
 
@@ -172,7 +237,8 @@ instructions without additional clock cycles.
 
 \section{External Interface}
 
-The SIRC-1 CPU exposes its bus, interrupt, and reset signals as physical pins; the chip package, the pin-by-pin
-descriptions, and the bus timing diagrams are given in Appendix~\ref{appendix:external-interface}. One architectural
-fact the rest of this chapter relies on: on \texttt{RSTI} assertion the CPU aborts the current instruction or bus wait
-and restarts at phase 0, as described in the six-stage execution phases above.
+The SIRC-1 CPU communicates with memory and peripherals over an external bus, and receives interrupt and reset requests
+from external hardware. How those signals are carried (the package, pinout, electrical characteristics and bus timing)
+is implementation-specific and is described in the \hwmanual{}. When the reset request (\activelow{RSTI}) is raised,
+the CPU abandons the current instruction or bus wait, holds the reset output (Section~\ref{sec:reset-output-hold}), and
+then restarts the phase sequence at phase 0 with the reset-vector fetch (Section~\ref{sec:reset-vector-fetch}).

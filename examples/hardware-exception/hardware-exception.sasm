@@ -61,9 +61,9 @@ BRAN @wait_for_char
 
 :setup_serial
 
-LOAD    r1, #9600
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_BAUD
+MOVI    r1, #9600
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_BAUD
 STOR    (a), r1
 
 RETS
@@ -78,44 +78,44 @@ RETS
 ; TODO: Actually that shouldn't be a problem - better investigate this further (
 ;   maybe the exception handler routines are conflicting with each other)
 
-LOAD    r1, #0x1
-LOAD    al, $SERIAL_DEVICE_RECV_ENABLED
+MOVI    r1, #0x1
+MOVI    al, $SERIAL_DEVICE_RECV_ENABLED
 STOR    (a), r1
 
 RETS
 
 :print_help
 
-LOAD    r1, @help_message
+MOVI    r1, @help_message
 BRAN    @print
 
 :print_exit
 
-LOAD    r1, @exit_message
+MOVI    r1, @exit_message
 BRAN    @print
 
 :print
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_BASE
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_BASE
 STOR    (a), r1
 
 ; Align pointer
-LOAD    r1, #1
+MOVI    r1, #1
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 STOR    (a), r1
 
-LOAD    r1, $TRUE
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    r1, $TRUE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
 STOR    (a), r1
 
 :wait_for_print_finish
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
 LOAD    r1, (a)
 
 CMPI    r1, $TRUE
@@ -148,8 +148,8 @@ RETE
 
 :read_pending_byte
 ; Check if there is something we need to read
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_RECV_PENDING
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_RECV_PENDING
 LOAD    r1, (a)
 
 ; Return early if not
@@ -157,58 +157,58 @@ CMPI    r1, $FALSE
 RETS|==
 
 ; Read pending byte
-LOAD    al, $SERIAL_DEVICE_RECV_DATA
+MOVI    al, $SERIAL_DEVICE_RECV_DATA
 LOAD    r7, (a)
 
-LOAD    al, $SERIAL_DEVICE_RECV_PENDING
-LOAD    r1, $FALSE
+MOVI    al, $SERIAL_DEVICE_RECV_PENDING
+MOVI    r1, $FALSE
 STOR    (a), r1
 RETS
 
 :write_pending_byte
 ; Check if the device is ready to write
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_PENDING
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_PENDING
 LOAD    r1, (a)
 
 ; Return early if not (there is already a send pending)
 CMPI    r1, $TRUE
 RETS|==
 
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 LOAD    r2, (a)
-LOAD    al, $MESSAGE_SEND_BASE
+MOVI    al, $MESSAGE_SEND_BASE
 LOAD    al, (a)
 
-LOAD    ah, $PROGRAM_SEGMENT
+MOVI    ah, $PROGRAM_SEGMENT
 LOAD    r3, (r2, a)
 
 ; If the message buffer (zero terminated) has been sent. Stop sending
 CMPI    r3, #0
 BRAN|== @stop_send
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_DATA
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_DATA
 STOR    (a), r3
 
 ; Increment by two because of lack of packing (a word actually is padded to a DW)
 ADDI    r2, #2
-LOAD    ah, $SCRATCH_SEGMENT
-LOAD    al, $MESSAGE_SEND_POINTER
+MOVI    ah, $SCRATCH_SEGMENT
+MOVI    al, $MESSAGE_SEND_POINTER
 STOR    (a), r2
 
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_PENDING
-LOAD    r1, $TRUE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_PENDING
+MOVI    r1, $TRUE
 STOR    (a), r1
 
 RETS
 
 :stop_send
-LOAD    ah, $SERIAL_DEVICE_SEGMENT
-LOAD    al, $SERIAL_DEVICE_SEND_ENABLED
-LOAD    r1, $FALSE
+MOVI    ah, $SERIAL_DEVICE_SEGMENT
+MOVI    al, $SERIAL_DEVICE_SEND_ENABLED
+MOVI    r1, $FALSE
 STOR    (a), r1
 
 RETS

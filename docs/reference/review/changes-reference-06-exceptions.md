@@ -1,0 +1,49 @@
+# Changes: reference / 06-exceptions.tex
+
+## Findings applied
+The triaged file has no findings IDs in the extract for the quoted-claim items below, so they are listed by topic.
+Findings whose file is this chapter: segment-overflow bus access type (LDEA/LDEL), HALT sampling at every phase 0,
+traced-EXCP trap held in the CSR (with the Reset State row), canceled/canceling, `\hwmanual{}` (2 uses), reset-vector
+exception to the vector-fetch-failure rule, privilege check before the "ignored inside a handler" rule (both places),
+debugger single-step wording, L5 overrun on failed vector fetch, L5 always enabled in the acceptance rule, fourth
+metadata exception (auto-update), executed-ALU/LOAD qualifier (both places), dispatch-fault link-register wording,
+Double Fault quick-reference cell and "except as described" wording, second-L5-in-handler wording, 32-bit vector
+pointer, CSR priority example, reserved-vector row note, ETFR link-register wording, one-digit fault codes.
+Findings in other files that name this chapter: F-hw-14 (NMI held across reset, Reset State row), F-hw-17 (HALT after
+reset, same wording as the HALT decision), F-hw-7 (triple-fault reset behaves as a software reset), F-con-15
+(GP/address/link registers architecturally undefined after reset; three Reset State rows), F-exc-3 (privilege rules bind
+undefined encodings, Invalid Opcode note), F-con-33 (bus transaction to bus cycle, 2 places), F-tim-11 (Privilege
+Violation states phases 2 and 3).
+
+## Not applied as written
+- Reserved-vector row in the Quick Reference table: the Vector column is 1.2 cm wide, so the longer cell would overflow.
+  Used the "table note" alternative: a sentence after the table.
+- `\hwmanual{}`: used as the finding directs, but `docs/reference/main.tex` does not yet define it (only the assembly
+  manual does). It must be added there or the chapter will not build.
+- F-con-32 (active-low names in ARCH): no author decision and STYLE.md scopes `\activelow{}` to the hardware manual;
+  left unchanged.
+- "Fault type" codes: changed only the fault-type list and the double-fault codes in the metadata section; the vector
+  table keeps two-digit vector numbers.
+
+## Open questions
+- Should `docs/reference/main.tex` define `\hwmanual`? (blocking build)
+- HALT latency "at most 6 cycles" and "bus idle" come from the author's decision text; the Reset State halt row now says
+  the CPU halts "at the first phase 0 after reset, before the reset-vector fetch", which is in tension with the
+  Reset Output Hold section's statement that RSTO is held for a fixed countdown first. Confirm the intended order.
+
+## Round 2
+
+Applied: F-con2-1 and decision 9 (trap "held by the exception unit, not in the CSR", in the traced-EXCP paragraph and the Reset State table); F-con2-3 (phase 5 for the address-register-pair write-back appended to the privilege-check phase sentence); decision 2 (Halt Request section now says the six-cycle RSTO hold completes before the CPU halts at the first phase 0, before the reset-vector fetch). No typewriter-font signal names remained.
+
+Open questions: none.
+
+## Improvements
+
+- F-CR-5 / F-CR-7: added subsection "Exception Summary" (`sec:exception-summary`) after the vector table, holding a single
+  table (label `tab:exception-quick-reference`, now referenced by Appendix E) with, per source: vector, priority, maskability,
+  link register, return address, and whether a handler must redirect with ETFR/ETTR before RETE. Double fault is split into the
+  two cases (raised inside a fault handler; failed fault-vector fetch).
+- Removed the old "Exception Quick Reference" section at the end of the chapter; the new table replaces it. Its address
+  column was dropped (address = vector x 2, stated in the Vector Table subsection).
+- Added `\label{sec:link-registers}` on the Link Registers subsection.
+- No TODO(author) items; all values taken from the chapter text.

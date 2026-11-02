@@ -2,12 +2,9 @@
 use num::FromPrimitive;
 use peripheral_bus::BusPeripheral;
 use peripheral_cpu::{
-    coprocessors::processing_unit::{
-        definitions::{
-            ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
-            RegisterInstructionData, ShiftOperand, ShiftType,
-        },
-        stages::alu::perform_shift,
+    coprocessors::processing_unit::definitions::{
+        ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
+        RegisterInstructionData, ShiftOperand, ShiftType,
     },
     registers::{
         AddressRegisterIndexing, AddressRegisterName, RegisterIndexing, RegisterName, Registers,
@@ -168,8 +165,8 @@ fn test_load_indirect_register(
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFA);
             registers.set_at_index(offset_register_index, offset as u16);
-            let (shifted, _) = perform_shift(0xCAFE, shift_type, shift_count.into());
-            registers.set_at_index(dest_register_index, shifted);
+            // The shift fields are reserved for LOAD, so any value in them is ignored
+            registers.set_at_index(dest_register_index, 0xCAFE);
         });
     let test_successful = expected_registers == current.registers;
     if !test_successful {
@@ -239,8 +236,8 @@ fn test_load_indirect_register_post_increment(
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_address_register_at_index(src_address_register_index, 0xFAFA_FAFB);
             registers.set_at_index(offset_register_index, offset as u16);
-            let (shifted, _) = perform_shift(0xCAFE, shift_type, shift_count.into());
-            registers.set_at_index(dest_register_index, shifted);
+            // The shift fields are reserved for LOAD, so any value in them is ignored
+            registers.set_at_index(dest_register_index, 0xCAFE);
         });
     let test_successful = expected_registers == current.registers;
     if !test_successful {

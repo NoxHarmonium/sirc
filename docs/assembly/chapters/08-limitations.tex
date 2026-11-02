@@ -1,0 +1,43 @@
+\chapter{Limitations}
+\label{ch:limitations}
+
+The assembler in this repository is deliberately small. The following are \emph{not} supported. A listing that depends
+on any of them will not assemble.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{p{0.38\textwidth}X}
+		\toprule
+		\textbf{Feature}                                   & \textbf{Instead}                                                   \\
+		\midrule
+		Macros                                             & Repeat the instructions, or generate the source                    \\
+		File inclusion                                     & Assemble each file separately and link the objects together        \\
+		Expressions and arithmetic on labels               & Compute the value by hand and write a number, or use \texttt{.EQU} \\
+		Conditional assembly                               & Maintain separate source files                                     \\
+		Named sections or segments                         & Place code and data with \texttt{.ORG} (Section~\ref{sec:org})     \\
+		Local labels                                       & Give every label a unique name                                     \\
+		Listing and map files                              & Use the debug map written by the linker                            \\
+		Multi-instruction pseudoinstructions               & Write the instructions explicitly                                  \\
+		Label references in ALU and coprocessor immediates & Load the address with \mnemonic{MOVI} first                        \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Features the Assembler Does Not Have}
+	\label{tab:unsupported}
+\end{table}
+
+The architecture requires that every meta-instruction assemble to exactly one instruction, so every mnemonic written in
+the source produces exactly one instruction (see the Meta-Instructions chapter of the \archmanual{}).
+
+Four behaviors are worth knowing about:
+
+\begin{itemize}
+	\item The assembler stops at the first error, so a file with several mistakes needs several runs.
+	\item The assembler does not promise to reject an immediate value that is wider than its field.
+	\item The assembler masks the link-register index of \mnemonic{ETFR} and \mnemonic{ETTR} to four bits without a diagnostic.
+	      The architecture leaves values above \imm{7} architecturally undefined (see the Coprocessor Instructions chapter of the
+	      \archmanual{}).
+	\item The \mnemonic{COPI} instruction with \texttt{\#0x14FF} is a simulator-only test hook, described in
+	      Chapter~\ref{ch:toolchain}. On a conforming CPU it raises an invalid-opcode fault.
+\end{itemize}
+
+This chapter will shrink as the toolchain grows. A feature listed here is not an oversight in the manual.

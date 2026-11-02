@@ -59,7 +59,12 @@ All instruction formats share some common fields:
 
 The immediate format encodes a full 16-bit immediate value within the instruction.
 
-\textbf{Note:} Due to the large 16-bit operand, shift is not supported in this format.
+The format has a single register field. For ALU operations that save a result it is both the first source operand and
+the destination, so \texttt{ADDI r1, \#5} computes \reg{r1} = \reg{r1} + 5; there is no separate destination field.
+Test operations read it as a source only, \mnemonic{MOVI} writes it without reading it, \mnemonic{LOAD} writes it, and
+\mnemonic{STOR} reads it.
+
+\textbf{Note:} Due to the large 16-bit operand, shift is not supported in this format. AF = 10 is still encodable; with no shift fields the shifter result is treated as zero flags, so it clears N, Z, C and V (Chapter~\ref{ch:alu-instructions}).
 
 \begin{figure}[H]
 	\centering
@@ -77,10 +82,11 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register identifier. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
-	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
-	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field; bits 25--24 are unused for these opcodes.
+	\item[Register (bits 25--22)] 4-bit register identifier; its role depends on the instruction (see above). For \mnemonic{LDEA}
+	      and \mnemonic{LDEL} (opcodes \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair
+	      index in bits 23--22 (00 = \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the
+	      same encoding as the AF field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is
+	      architecturally undefined.
 	\item[Immediate (bits 21--6)] 16-bit signed or unsigned immediate value
 	\item[Additional Flags (bits 5--4)] 2-bit address register pair selector (for memory operations)
 	      \begin{itemize}
@@ -94,7 +100,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 		      \item 00 = Status register not updated
 		      \item 01 = Status register updated from ALU operation
 		      \item 10 = Status register updated from shift operation
-		      \item 11 = Reserved for future use
+		      \item 11 = Reserved; N, Z, C and V are architecturally undefined (the operation still completes and writes its result), and assemblers never emit this encoding
 	      \end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
@@ -108,7 +114,7 @@ The immediate format encodes a full 16-bit immediate value within the instructio
 	\item Condition code examples: \texttt{0x0} (0000) = Always, \texttt{0x1} (0001) = Equal (==), \texttt{0xB} (1011) = Signed
 	      >=
 	\item AF field for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
-	      10=update from shift
+	      10=update from shift, 11=reserved (N, Z, C and V architecturally undefined; the result is still written)
 	\item Negative immediates use two's complement (\imm{-2} = \texttt{0xFFFE})
 \end{itemize}
 
@@ -121,6 +127,11 @@ single-instruction operations.
 
 This format is supported only for ALU instructions; it cannot be used with branching or load/store instructions.
 
+As in the immediate format, the single register field is both the first source operand and the destination for ALU
+operations that save a result, so \texttt{ADDI r1, \#5, LSL \#2} computes \reg{r1} = (\reg{r1} shifted left by 2) + 5:
+the shift applies to the register, not the immediate (Chapter~\ref{ch:shift-operations}). Test operations read it as a
+source only.
+
 \begin{figure}[H]
 	\centering
 	\begin{bytefield}[bitwidth=1.3em]{32}
@@ -128,7 +139,7 @@ This format is supported only for ALU instructions; it cannot be used with branc
 		\bitbox{6}{Op} &
 		\bitbox{4}{Reg} &
 		\bitbox{8}{Imm} &
-		\bitbox{1}{SO} &
+		\bitbox{1}{\scriptsize SO} &
 		\bitbox{3}{ST} &
 		\bitbox{4}{SA} &
 		\bitbox{2}{AF} &
@@ -140,7 +151,8 @@ This format is supported only for ALU instructions; it cannot be used with branc
 
 \begin{description}
 	\item[Opcode (bits 31--26)] 6-bit operation code
-	\item[Register (bits 25--22)] 4-bit destination/source register identifier
+	\item[Register (bits 25--22)] 4-bit register identifier; for ALU operations that save a result it is both the first source
+	      and the destination (see above)
 	\item[Immediate (bits 21--14)] 8-bit unsigned immediate value, zero-extended to 16 bits before use
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
 	      \begin{itemize}
@@ -154,7 +166,7 @@ This format is supported only for ALU instructions; it cannot be used with branc
 		      \item 00 = Status register not updated
 		      \item 01 = Status register updated from ALU operation
 		      \item 10 = Status register updated from shift operation
-		      \item 11 = Reserved for future use
+		      \item 11 = Reserved; N, Z, C and V are architecturally undefined (the operation still completes and writes its result), and assemblers never emit this encoding
 	      \end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
@@ -166,9 +178,10 @@ This format is supported only for ALU instructions; it cannot be used with branc
 \noindent\textbf{Notes:}
 \begin{itemize}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see rows 4 and 6)
-	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
-	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7)
-	\item Condition code examples: \texttt{0x0} = Always, \texttt{0x2} = Not Equal (!=), \texttt{0x5} = Negative (<0)
+	\item ST (Shift Type): see Table~\ref{tab:shift-encoding}
+	\item AF field for ALU: 00=no update, 01=update from ALU, 10=update from shift (see SHFT row 7), 11=reserved (N, Z, C and V
+	      architecturally undefined; the result is still written)
+	\item Condition code examples: \texttt{0x0} = Always, \texttt{0x2} = Not Equal (!=), \texttt{0x5} = Negative Set (NS, N = 1)
 	\item SHFT is a meta-instruction using ORRI opcode \opcode{25} with AF=10
 \end{itemize}
 
@@ -186,7 +199,7 @@ The register format allows operations on up to three registers with optional shi
 		\bitbox{4}{R1} &
 		\bitbox{4}{R2} &
 		\bitbox{4}{R3} &
-		\bitbox{1}{SO} &
+		\bitbox{1}{\scriptsize SO} &
 		\bitbox{3}{ST} &
 		\bitbox{4}{SA} &
 		\bitbox{2}{AF} &
@@ -201,7 +214,8 @@ The register format allows operations on up to three registers with optional shi
 	\item[Register 1 (bits 25--22)] 4-bit destination register. For \mnemonic{LDEA} and \mnemonic{LDEL} (opcodes
 	      \texttt{0x18}--\texttt{0x1F}), this field instead holds a 2-bit address-register-pair index in bits 23--22 (00 =
 	      \reg{l}, 01 = \reg{a}, 10 = \reg{s}, 11 = \reg{p}) naming the destination pair, using the same encoding as the AF
-	      field; bits 25--24 are unused for these opcodes.
+	      field. Bits 25--24 are reserved for these opcodes and are written as zero; a non-zero value is architecturally
+	      undefined.
 	\item[Register 2 (bits 21--18)] 4-bit source A register
 	\item[Register 3 (bits 17--14)] 4-bit source B register
 	\item[Shift Operand (bit 13)] Determines how the shift amount field is interpreted
@@ -223,7 +237,7 @@ The register format allows operations on up to three registers with optional shi
 		      \item 00 = Status register not updated
 		      \item 01 = Status register updated from ALU operation
 		      \item 10 = Status register updated from shift operation
-		      \item 11 = Reserved for future use
+		      \item 11 = Reserved; N, Z, C and V are architecturally undefined (the operation still completes and writes its result), and assemblers never emit this encoding
 	      \end{itemize}
 	\item[Condition (bits 3--0)] 4-bit condition code
 \end{description}
@@ -255,9 +269,9 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 	      example \texttt{ADDR r4, r5} uses R1=\texttt{0x3}, R2=\texttt{0x3}, R3=\texttt{0x4}
 	\item SO (Shift Operand): 0 = literal shift amount, 1 = register contains shift amount (see the \texttt{SUBR|>>} and
 	      \texttt{ANDR|CS} rows)
-	\item ST (Shift Type): 000=none, 001=LSL, 010=LSR, 011=ASL, 100=ASR, 101=RTL, 110=RTR
+	\item ST (Shift Type): see Table~\ref{tab:shift-encoding}
 	\item AF for memory ops: 00=\reg{l}, 01=\reg{a}, 10=\reg{s}, 11=\reg{p}; for ALU ops: 00=no update, 01=update from ALU,
-	      10=update from shift
+	      10=update from shift, 11=reserved (N, Z, C and V architecturally undefined; the result is still written)
 	\item Condition code examples: \texttt{0x0} = Always, \texttt{0xD} = Signed > (>>), \texttt{0x3} = Carry Set (CS)
 \end{itemize}
 
@@ -265,60 +279,15 @@ ADDR r1, r2      ; r1 = r1 + r2 (R2 implicitly = R1)
 
 \subsection{Condition Codes}
 
-\begin{table}[H]
-	\centering
-	\small
-	\begin{tabular}{clp{6cm}}
-		\toprule
-		\textbf{Code} & \textbf{Mnemonic} & \textbf{Condition}                         \\
-		\midrule
-		0000          & AL (or none)      & Always (unconditional)                     \\
-		0001          & ==                & Equal (Z = 1)                              \\
-		0010          & !=                & Not Equal (Z = 0)                          \\
-		0011          & CS                & Carry Set (C = 1)                          \\
-		0100          & CC                & Carry Clear (C = 0)                        \\
-		0101          & NS                & Negative Set (N = 1)                       \\
-		0110          & NC                & Negative Clear (N = 0)                     \\
-		0111          & OS                & Overflow Set (V = 1)                       \\
-		1000          & OC                & Overflow Clear (V = 0)                     \\
-		1001          & HI                & Unsigned Higher (C = 0 AND Z = 0)          \\
-		1010          & LO                & Unsigned Lower or Same (C = 1 OR Z = 1)    \\
-		1011          & >=                & Signed Greater or Equal (N = V)            \\
-		1100          & <<                & Signed Less Than (N $\neq$ V)              \\
-		1101          & >>                & Signed Greater Than (Z = 0 AND N = V)      \\
-		1110          & <=                & Signed Less or Equal (Z = 1 OR N $\neq$ V) \\
-		1111          & NV                & Never (never executes)                     \\
-		\bottomrule
-	\end{tabular}
-	\caption{Condition Code Encoding}
-	\label{tab:condition-code-encoding}
-\end{table}
-
-For more details on condition codes see Chapter~\ref{ch:condition-codes}.
+The condition field occupies bits 3--0 of every instruction. The sixteen condition-code encodings and their meanings
+are tabulated once, in Table~\ref{tab:condition-codes} of Chapter~\ref{ch:condition-codes}, which is the authoritative
+copy.
 
 \subsection{Shift Types}
 
-\begin{table}[H]
-	\centering
-	\begin{tabular}{clc}
-		\toprule
-		\textbf{Code} & \textbf{Type}          & \textbf{Mnemonic} \\
-		\midrule
-		000           & None (no shift)        & NUL               \\
-		001           & Logical Shift Left     & LSL               \\
-		010           & Logical Shift Right    & LSR               \\
-		011           & Arithmetic Shift Left  & ASL               \\
-		100           & Arithmetic Shift Right & ASR               \\
-		101           & Rotate Left            & RTL               \\
-		110           & Rotate Right           & RTR               \\
-		111           & Reserved               & --                \\
-		\bottomrule
-	\end{tabular}
-	\caption{Shift Type Encoding}
-	\label{tab:shift-types}
-\end{table}
-
-For more details on shift operations see Chapter~\ref{ch:shift-operations}.
+The shift-type field occupies bits 12--10 of the formats that carry one (see the field descriptions above). The
+shift-type encodings are tabulated once, in Table~\ref{tab:shift-encoding} of Chapter~\ref{ch:shift-operations}, which
+is the authoritative copy.
 
 \section{Opcode Encoding Patterns}
 
@@ -346,8 +315,28 @@ both a "save result" and a "test only" variant:
 \end{itemize}
 
 Adding \texttt{0x8} to a "save result" opcode in the range \texttt{0x\_0}--\texttt{0x\_6} gives its "test only" form.
-Opcodes \texttt{0x27} and \texttt{0x2F} are exceptions to this pattern: they are undocumented opcodes (see
-Appendix~\ref{appendix:undocumented}), not a "save result" operation or a coprocessor call.
+Opcode \texttt{0x\_7} (\mnemonic{MOVI}/\mnemonic{MOVR}) has no test-only form. Opcodes \texttt{0x27} and \texttt{0x2F}
+are exceptions to this pattern: they are undocumented opcodes (see Appendix~\ref{appendix:undocumented}), not a "save
+result" operation or a coprocessor call.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{clll}
+		\toprule
+		\textbf{Operation}  & \textbf{Save result}              & \textbf{Test only}                & \textbf{Test-only opcodes (Imm / Short / Reg)} \\
+		\midrule
+		Add                 & \mnemonic{ADDI} / \mnemonic{ADDR} & \mnemonic{CMNI} / \mnemonic{CMNR} & \opcode{08} / \opcode{28} / \opcode{38}        \\
+		Add with carry      & \mnemonic{ADCI} / \mnemonic{ADCR} & \mnemonic{CNCI} / \mnemonic{CNCR} & \opcode{09} / \opcode{29} / \opcode{39}        \\
+		Subtract            & \mnemonic{SUBI} / \mnemonic{SUBR} & \mnemonic{CMPI} / \mnemonic{CMPR} & \opcode{0A} / \opcode{2A} / \opcode{3A}        \\
+		Subtract with carry & \mnemonic{SBCI} / \mnemonic{SBCR} & \mnemonic{CPCI} / \mnemonic{CPCR} & \opcode{0B} / \opcode{2B} / \opcode{3B}        \\
+		AND                 & \mnemonic{ANDI} / \mnemonic{ANDR} & \mnemonic{TSAI} / \mnemonic{TSAR} & \opcode{0C} / \opcode{2C} / \opcode{3C}        \\
+		OR                  & \mnemonic{ORRI} / \mnemonic{ORRR} & \mnemonic{TSOI} / \mnemonic{TSOR} & \opcode{0D} / \opcode{2D} / \opcode{3D}        \\
+		XOR                 & \mnemonic{XORI} / \mnemonic{XORR} & \mnemonic{TSXI} / \mnemonic{TSXR} & \opcode{0E} / \opcode{2E} / \opcode{3E}        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Save and Test-Only ALU Instructions}
+	\label{tab:save-and-test-instructions}
+\end{table}
 
 For example:
 
@@ -355,6 +344,221 @@ For example:
 	\item \opcode{04}: \mnemonic{ANDI} -- AND immediate, save result
 	\item \opcode{0C}: \mnemonic{TSAI} -- Test AND immediate (does not save the result)
 \end{itemize}
+
+\section{Decode Trees}
+\label{sec:decode-trees}
+
+The opcode alone determines how the rest of a 32-bit instruction is decoded. The figures in this section show that
+process as a decision tree for each opcode group. In every figure the top strip is the instruction word, drawn to
+scale. The shaded boxes are the opcode bits consulted at each level of the tree, with the same shading on the matching
+tree node, and the unshaded boxes are operand fields, whose interpretation is given in the box below the tree.
+\texttt{op[n]} means opcode bit n, which is instruction bit n + 26. Appendix~\ref{appendix:opcode-map} lists every
+opcode in a single table.
+
+% ---- Decode tree helpers ------------------------------------------------------------------------
+\newcommand{\dtu}{0.46}% width of one instruction bit in the word strip, in cm
+
+\tikzset{
+	dt node/.style={draw, rounded corners=1.5pt, align=center, font=\footnotesize, inner sep=3pt},
+	dt edge/.style={-{Latex[length=1.8mm]}, thick},
+	dt label/.style={font=\scriptsize\ttfamily, inner sep=1.5pt}
+}
+
+% \dtbox{first bit column}{width in bits}{fill}{label}{instruction bit range}
+\newcommand{\dtbox}[5]{%
+	\draw[fill=#3] ({\dtu*(#1)},0) rectangle ({\dtu*((#1)+(#2))},-0.55);
+	\node[font=\footnotesize\ttfamily] at ({\dtu*((#1)+(#2)/2)},-0.275) {#4};
+	\node[font=\tiny, text=sircgray] at ({\dtu*((#1)+(#2)/2)},-0.78) {#5};
+}
+
+% \dtrow{op[2:0]}{opcode}{mnemonic}{description}
+\newcommand{\dtrow}[4]{\texttt{#1} & \opcode{#2} & \mnemonic{#3} & #4\\}
+\newcommand{\dtrowx}[4]{\textcolor{sircgray}{\texttt{#1}} & \textcolor{sircgray}{\texttt{0x#2}} & \textcolor{sircgray}{#3} & \textcolor{sircgray}{#4}\\}
+
+% Save rows 0x_0--0x_6 and the move at 0x_7; #1 = opcode high digit, #2 = mnemonic suffix
+\newcommand{\dtsaverows}[2]{%
+	\dtrow{000}{#10}{ADD#2}{Add}
+	\dtrow{001}{#11}{ADC#2}{Add with carry}
+	\dtrow{010}{#12}{SUB#2}{Subtract}
+	\dtrow{011}{#13}{SBC#2}{Subtract with carry}
+	\dtrow{100}{#14}{AND#2}{AND}
+	\dtrow{101}{#15}{ORR#2}{OR}
+	\dtrow{110}{#16}{XOR#2}{XOR}%
+}
+% Test rows 0x_8--0x_E
+\newcommand{\dttestrows}[2]{%
+	\dtrow{000}{#18}{CMN#2}{Compare negative}
+	\dtrow{001}{#19}{CNC#2}{Compare negative with carry}
+	\dtrow{010}{#1A}{CMP#2}{Compare}
+	\dtrow{011}{#1B}{CPC#2}{Compare with carry}
+	\dtrow{100}{#1C}{TSA#2}{Test AND}
+	\dtrow{101}{#1D}{TSO#2}{Test OR}
+	\dtrow{110}{#1E}{TSX#2}{Test XOR}%
+}
+
+% \dtalu{format node text}{strip boxes after the opcode}{op[3]=0 op[2:0]=111 row}{op[3]=1 op[2:0]=111 row}{ALU suffix}{opcode high digit}{legend rows}
+\newcommand{\dtalu}[7]{%
+	\begin{tikzpicture}
+		% Instruction word strip: the opcode is split into the three parts that drive the tree
+		\dtbox{0}{2}{black!4}{5:4}{31--30}
+		\dtbox{2}{1}{black!10}{3}{29}
+		\dtbox{3}{3}{black!16}{2:0}{28--26}
+		#2
+		% Tree
+		\node[dt node, fill=black!4, text width=2.5cm] (fmt) at (1.45,-5.4) {#1};
+		\node[dt node, fill=black!10] (b3) at (5.0,-5.4) {\texttt{op[3]}};
+		\node[dt node, fill=black!16, anchor=north west, inner sep=4pt] (save) at (7.6,-1.7)
+		{\begin{tabular}{@{}c@{\hspace{6pt}}c@{\hspace{6pt}}l@{\hspace{6pt}}l@{}}
+				\multicolumn{4}{@{}l@{}}{\textbf{Save result:} \texttt{op[2:0]} selects the operation} \\[2pt]
+				\dtsaverows{#6}{#5}
+				#3
+			\end{tabular}};
+		\node[dt node, fill=black!16, anchor=north west, inner sep=4pt] (test) at (7.6,-6.1)
+		{\begin{tabular}{@{}c@{\hspace{6pt}}c@{\hspace{6pt}}l@{\hspace{6pt}}l@{}}
+				\multicolumn{4}{@{}l@{}}{\textbf{Test only:} \texttt{op[2:0]} selects the operation} \\[2pt]
+				\dttestrows{#6}{#5}
+				#4
+			\end{tabular}};
+		\draw[dt edge] (fmt) -- (b3);
+		\draw[dt edge] (b3.east) -- ++(0.5,0) |- (save.west) node[dt label, pos=0.82, above] {0};
+		\draw[dt edge] (b3.east) -- ++(0.5,0) |- (test.west) node[dt label, pos=0.82, above] {1};
+		% Operand fields
+		\node[draw, rounded corners=1.5pt, anchor=north west, inner sep=4pt, font=\footnotesize] at (0,-10.5)
+		{\begin{tabular}{@{}p{2.9cm}p{11.4cm}@{}}
+				\multicolumn{2}{@{}l@{}}{\textbf{Operand fields} (read the same way for every opcode above, unless noted)} \\[2pt]
+				#7
+			\end{tabular}};
+	\end{tikzpicture}%
+}
+
+% ---- Figures --------------------------------------------------------------------------------------
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,00}\\Immediate format}
+	{%
+		\dtbox{6}{4}{white}{Reg}{25--22}
+		\dtbox{10}{16}{white}{Immediate}{21--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrow{111}{07}{MOVI}{Move}}
+	{\dtrow{111}{0F}{COPI$^{*}$}{Coprocessor call}}
+	{I}{0}
+	{%
+		Reg (25--22) & \texttt{rD}, the destination, for save forms; \texttt{rS}, the register tested, for test-only forms\\
+		Immediate (21--6) & 16-bit value. This format has no shift fields\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved (N, Z, C and V architecturally undefined)\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\[2pt]
+		\multicolumn{2}{@{}l@{}}{\scriptsize $^{*}$\mnemonic{COPI} is a coprocessor call, not a test form; its fields are described in Chapter~\ref{ch:coprocessor}.}\\
+	}
+	\caption{Decode tree for the immediate ALU group (\texttt{0x0\_})}
+	\label{fig:decode-tree-immediate}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,10}\\Short immediate\\format}
+	{%
+		\dtbox{6}{4}{white}{Reg}{25--22}
+		\dtbox{10}{8}{white}{Imm}{21--14}
+		\dtbox{18}{1}{white}{SO}{13}
+		\dtbox{19}{3}{white}{ST}{12--10}
+		\dtbox{22}{4}{white}{SA}{9--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrowx{111}{27}{--}{Undocumented, Appendix~\ref{appendix:undocumented}}}
+	{\dtrowx{111}{2F}{--}{Undocumented, Appendix~\ref{appendix:undocumented}}}
+	{I}{2}
+	{%
+		Reg (25--22) & \texttt{rD}, the destination, for save forms; \texttt{rS}, the register tested, for test-only forms\\
+		Imm (21--14) & 8-bit unsigned value, zero-extended to 16 bits\\
+		SO, ST, SA (13--6) & \texttt{ST} selects the shift type (Table~\ref{tab:shift-types}). If \texttt{SO} is 0, \texttt{SA} is the literal shift count; if 1, \texttt{SA} names the register holding the count. The shift applies to the register operand, never the immediate\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved (N, Z, C and V architecturally undefined)\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\
+	}
+	\caption{Decode tree for the short immediate ALU group (\texttt{0x2\_})}
+	\label{fig:decode-tree-short-immediate}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\dtalu{\texttt{op[5:4]\,=\,11}\\Register format}
+	{%
+		\dtbox{6}{4}{white}{R1}{25--22}
+		\dtbox{10}{4}{white}{R2}{21--18}
+		\dtbox{14}{4}{white}{R3}{17--14}
+		\dtbox{18}{1}{white}{SO}{13}
+		\dtbox{19}{3}{white}{ST}{12--10}
+		\dtbox{22}{4}{white}{SA}{9--6}
+		\dtbox{26}{2}{white}{AF}{5--4}
+		\dtbox{28}{4}{white}{Cond}{3--0}
+	}
+	{\dtrow{111}{37}{MOVR}{Move}}
+	{\dtrow{111}{3F}{COPR$^{*}$}{Coprocessor call}}
+	{R}{3}
+	{%
+		R1 (25--22) & \texttt{rD}, the destination, for save forms; ignored by test-only forms\\
+		R2 (21--18) & \texttt{rS1}, the left operand. \mnemonic{MOVR} does not use it\\
+		R3 (17--14) & \texttt{rS2}, the right operand (for \mnemonic{MOVR}, the source)\\
+		SO, ST, SA (13--6) & \texttt{ST} selects the shift type (Table~\ref{tab:shift-types}). If \texttt{SO} is 0, \texttt{SA} is the literal shift count; if 1, \texttt{SA} names the register holding the count. The shift applies to \texttt{rS1}\\
+		AF (5--4) & Status update source: \texttt{00} none, \texttt{01} ALU result, \texttt{10} shifter result, \texttt{11} reserved (N, Z, C and V architecturally undefined)\\
+		Cond (3--0) & One of 16 condition codes (Table~\ref{tab:condition-code-encoding})\\[2pt]
+		\multicolumn{2}{@{}l@{}}{\scriptsize $^{*}$\mnemonic{COPR} is a coprocessor call, not a test form; its fields are described in Chapter~\ref{ch:coprocessor}.}\\
+	}
+	\caption{Decode tree for the register ALU group (\texttt{0x3\_})}
+	\label{fig:decode-tree-register}
+\end{figure}
+
+% Memory and control group (0x1_)
+% \dtmem{y}{op1 node text}{op[1]=0 leaf}{op[1]=1 leaf}{label for op[3:2]}
+\newcommand{\dtmemfamily}[6]{%
+	% #1 index (0--3), #2 op[3:2] bits, #3 family mnemonic, #4 leaf 0 text, #5 leaf 1 text, #6 opcode high/low base digit
+	\pgfmathsetmacro{\ya}{-2.45-(2*#1)*1.05}
+	\pgfmathsetmacro{\yb}{-2.45-(2*#1+1)*1.05}
+	\pgfmathsetmacro{\ym}{(\ya+\yb)/2}
+	\node[dt node, fill=black!16] (fam#1) at (7.9,\ym) {\mnemonic{#3}\\\texttt{op[1]}};
+	\node[dt node, fill=black!24, anchor=west, text width=4.7cm] (leafa#1) at (9.5,\ya) {#4};
+	\node[dt node, fill=black!24, anchor=west, text width=4.7cm] (leafb#1) at (9.5,\yb) {#5};
+	\draw[dt edge] (op32.east) -- ++(0.45,0) |- (fam#1.west) node[dt label, pos=0.8, above] {#2};
+	\draw[dt edge] (fam#1.east) -- ++(0.3,0) |- (leafa#1.west) node[dt label, pos=0.8, above] {0};
+	\draw[dt edge] (fam#1.east) -- ++(0.3,0) |- (leafb#1.west) node[dt label, pos=0.8, above] {1};
+}
+
+\begin{figure}[H]
+	\centering
+	\renewcommand{\arraystretch}{1}
+	\begin{tikzpicture}
+		\dtbox{0}{2}{black!4}{5:4}{31--30}
+		\dtbox{2}{2}{black!10}{3:2}{29--28}
+		\dtbox{4}{1}{black!16}{1}{27}
+		\dtbox{5}{1}{black!24}{0}{26}
+		\dtbox{6}{26}{white}{Operand fields (layout chosen by \texttt{op[0]})}{25--0}
+		\node[dt node, fill=black!4, text width=2.5cm] (fmt) at (1.45,-5.7) {\texttt{op[5:4]\,=\,01}\\Memory and control};
+		\node[dt node, fill=black!10] (op32) at (4.9,-5.7) {\texttt{op[3:2]}};
+		\draw[dt edge] (fmt) -- (op32);
+		\node[font=\scriptsize, anchor=south west, align=left, text width=5.1cm, inner sep=1pt] at (9.6,-1.8) {\texttt{op[0]} then picks the format: 0 = \mbox{Immediate}, 1 = \mbox{Register}};
+		\dtmemfamily{0}{00}{STOR}{\textbf{Indirect}\\\opcode{10} imm \,/\, \opcode{11} reg}{\textbf{Pre-decrement}\\\opcode{12} imm \,/\, \opcode{13} reg}{}
+		\dtmemfamily{1}{01}{LOAD}{\textbf{Indirect}\\\opcode{14} imm \,/\, \opcode{15} reg}{\textbf{Post-increment}\\\opcode{16} imm \,/\, \opcode{17} reg}{}
+		\dtmemfamily{2}{10}{LDEA}{\textbf{Indirect}\\\opcode{18} imm \,/\, \opcode{19} reg}{\textbf{Pre-decrement}\\\opcode{1A} imm \,/\, \opcode{1B} reg}{}
+		\dtmemfamily{3}{11}{LDEL}{\textbf{Indirect}\\\opcode{1C} imm \,/\, \opcode{1D} reg}{\textbf{Post-increment}\\\opcode{1E} imm \,/\, \opcode{1F} reg}{}
+		\node[draw, rounded corners=1.5pt, anchor=north west, inner sep=4pt, font=\footnotesize] at (0,-11.4)
+		{\begin{tabular}{@{}p{1.9cm}p{6.1cm}p{6.3cm}@{}}
+				\multicolumn{3}{@{}l@{}}{\textbf{Operand fields} (chosen by \texttt{op[0]})}                                                                                                                                                                                                                                                                                                                     \\[2pt]
+				          & \textbf{Immediate} (\texttt{op[0]} = 0)                                                                                                                                    & \textbf{Register} (\texttt{op[0]} = 1)                                                                                                                                                                  \\[2pt]
+				25--22    & \texttt{rD} for \mnemonic{LOAD}, \texttt{rS} for \mnemonic{STOR}. \mnemonic{LDEA} and \mnemonic{LDEL} put the destination pair in bits 23--22 (25--24 are zero)            & As for the immediate format, except that \mnemonic{STOR} leaves them unused                                                                                                                             \\
+				21--6     & 16-bit displacement added to the address register pair                                                                                                                     & \texttt{rO}, the offset register (17--14). \mnemonic{STOR} also uses \texttt{rS} (21--18) and a shift of \texttt{rS} (\texttt{SO}, \texttt{ST}, \texttt{SA}); those fields are zero for the other three \\
+				5--4 (AF) & \multicolumn{2}{@{}p{12.4cm}@{}}{Address register pair used for the effective address: \texttt{00} \reg{l}, \texttt{01} \reg{a}, \texttt{10} \reg{s}, \texttt{11} \reg{p}}                                                                                                                                                                                                           \\
+				3--0      & \multicolumn{2}{@{}p{12.4cm}@{}}{Condition code}                                                                                                                                                                                                                                                                                                                                     \\
+			\end{tabular}};
+	\end{tikzpicture}
+	\caption{Decode tree for the memory and control group (\texttt{0x1\_})}
+	\label{fig:decode-tree-memory}
+\end{figure}
 
 \section{Instruction Fetch and Alignment}
 
@@ -368,8 +572,10 @@ Since instructions are 32 bits and the data bus is 16 bits wide, each instructio
 	\item After decode, \reg{pl} advances by 2.
 \end{enumerate}
 
-\reg{pl} still holds the address of the instruction being executed while it is decoded, because
-address calculations that select \reg{p} use that value.
+The address of the instruction is latched before \reg{pl} advances. Every read of \reg{p} and every address calculation
+that selects \reg{p} uses that latched address, so they see the instruction's own address even though \reg{pl} has
+already advanced by the time the address is calculated in phase 3. A link value is the latched address plus 2, the
+address of the next instruction.
 
 \subsection{Alignment Requirements}
 

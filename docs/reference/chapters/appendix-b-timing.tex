@@ -6,9 +6,9 @@
 Most SIRCIS instructions follow the six-stage execution phase model and complete in 6 clock cycles when no bus wait
 states are required. A bus operation may hold the current phase until it is acknowledged, adding wait cycles without
 adding execution phases. Coprocessor calls are the exception: the dispatched coprocessor occupies at least one further
-slot after the six-phase call. This fixed execution sequence greatly simplifies software development and hardware
-design. See Appendix~\ref{appendix:external-interface} for the bus signal timing, wait-state, and response-priority
-rules.
+slot after the six-phase call (Section~\ref{sec:coprocessor-call-timing}). This fixed execution sequence greatly
+simplifies software development and hardware design. See the \hwmanual{} for the bus signal timing, wait-state, and
+response-priority rules.
 
 \section{Six-Stage Execution Phases}
 
@@ -29,47 +29,101 @@ For a detailed description of each phase, see Chapter~\ref{ch:cpu-architecture}.
 	\centering
 	\begin{tabular}{p{6.5cm}p{6.5cm}}
 		\toprule
-		\textbf{Instruction Type}                                                                             & \textbf{Cycles}                                           \\
+		\textbf{Instruction Type}                                                                             & \textbf{Cycles}                                                                                                   \\
 		\midrule
-		ALU (Register)                                                                                        & 6                                                         \\
-		ALU (Immediate)                                                                                       & 6                                                         \\
-		Load from Memory                                                                                      & 6                                                         \\
-		Store to Memory                                                                                       & 6                                                         \\
-		Branch (taken)                                                                                        & 6                                                         \\
-		Branch (not taken)                                                                                    & 6                                                         \\
-		Conditional (executed)                                                                                & 6                                                         \\
-		Conditional (not executed)                                                                            & 6                                                         \\
-		\mnemonic{NOOP}                                                                                       & 6                                                         \\
-		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $12 + \max(|n| - 1, 0)$                                   \\
-		\mnemonic{DMAT}                                                                                       & $12 + \max(2n - 1, 0)$                                    \\
-		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch)                           \\
-		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch)                                       \\
-		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \texttt{RSTO} hold + 6 reset-vector fetch) \\
-		\mnemonic{WAIT}                                                                                       & 12 + idle until an enabled interrupt or reset             \\
+		ALU (Register)                                                                                        & 6                                                                                                                 \\
+		ALU (Immediate)                                                                                       & 6                                                                                                                 \\
+		Load from Memory                                                                                      & 6                                                                                                                 \\
+		Store to Memory                                                                                       & 6                                                                                                                 \\
+		Branch (taken)                                                                                        & 6                                                                                                                 \\
+		Branch (not taken)                                                                                    & 6                                                                                                                 \\
+		Conditional processing-unit instruction (executed)                                                    & 6                                                                                                                 \\
+		Conditional processing-unit instruction (not executed)                                                & 6                                                                                                                 \\
+		\mnemonic{NOOP}                                                                                       & 6                                                                                                                 \\
+		\mnemonic{DMAR}/\mnemonic{DMAW}                                                                       & $6 + 6\lceil (|n| + 1)/6 \rceil$                                                                                  \\
+		\mnemonic{DMAT}                                                                                       & $6 + 6\lceil (2n + 1)/6 \rceil$                                                                                   \\
+		\mnemonic{MULU}/\mnemonic{MULS}/\mnemonic{DIVU}/\mnemonic{DIVS}                                       & At least 12; implementation-defined                                                                               \\
+		\mnemonic{COPI}/\mnemonic{COPR}                                                                       & 12 (6 + 6 coprocessor dispatch); 6 for coprocessor \texttt{0x0}, which has no dispatch slot                       \\
+		Exception-unit meta-instructions (\mnemonic{EXCP}, \mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR}) & 12 (6 + 6 dispatch); a discarded \mnemonic{EXCP} also takes 12, as its dispatch slot runs with no-op phases       \\
+		\mnemonic{RSET}                                                                                       & 18 (6 call + 6 \activelow{RSTO} hold + 6 reset-vector fetch; no dispatch slot)                                    \\
+		\mnemonic{WAIT}                                                                                       & 12 + idle (0 if an interrupt that can be taken is already pending) + 6 for the interrupt dispatch, or until reset \\
 		\bottomrule
 	\end{tabular}
 	\caption{Instruction Timing}
+	\label{tab:instruction-timing}
 \end{table}
 
 The cycle counts in this appendix assume that every bus operation is acknowledged without a wait state. For
-\mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, the DMA unit gets at least one post-dispatch cycle after the
-6-cycle \mnemonic{COPI} dispatch. For non-zero transfers, that first post-dispatch cycle may also be the first no-wait
-DMA bus access. A conditional \mnemonic{DMAR}/\mnemonic{DMAW}/\mnemonic{DMAT} whose condition is false does not
-dispatch to the DMA unit and takes only 6 cycles.
+\mnemonic{DMAR}, \mnemonic{DMAW}, and \mnemonic{DMAT}, phase 0 of the DMA slot is a setup cycle with no bus access, and
+the DMA unit then performs one bus access per cycle from phase 1, running on into further whole 6-cycle slots as needed
+(Section~\ref{sec:dma-unit}). Any coprocessor call or meta-instruction whose condition is false writes nothing to the
+CSR, dispatches nothing, and takes 6 cycles; the coprocessor rows give the condition-true figure.
+
+\subsection{Coprocessor Call Timing}
+\label{sec:coprocessor-call-timing}
+
+This subsection is the canonical statement of the coprocessor-call timing rule; Chapters~\ref{ch:introduction},
+\ref{ch:instruction-summary} and~\ref{ch:coprocessor} refer here. A coprocessor call whose condition is true
+(\mnemonic{COPI}, \mnemonic{COPR} and every meta-instruction that assembles to one) takes its own 6 cycles and then a
+second 6-cycle slot for the coprocessor dispatch, which begins at the next phase 0, so most calls take 12 cycles before
+the next instruction is fetched. The exceptions are:
+
+\begin{itemize}
+	\item A call whose condition is false skips its dispatch slot and takes 6 cycles.
+	\item A call naming coprocessor \texttt{0x0} has no dispatch slot and takes 6 cycles.
+	\item \mnemonic{RSET} has no dispatch slot, because its reset request replaces the slot, and takes 18 cycles.
+	\item \mnemonic{WAIT}, DMA transfers and maths-unit operations can take longer than 12 cycles: a \mnemonic{WAIT} idles
+	      until woken, a DMA transfer of more than five accesses runs into further slots, and a maths operation may add
+	      implementation-defined cycles.
+\end{itemize}
 
 \subsection{Exception and Fault Timing}
+\label{sec:exception-and-fault-timing}
 
 A hardware-exception or fault dispatch occupies one 6-cycle slot: the vector's high word is fetched at phase 0, the low
 word at phase 1, and entry to the handler is committed at phase 3. A latched interrupt is dispatched at the next phase
-0, so the worst-case latency from assertion to the handler's first instruction fetch is 6 cycles to finish the current
-instruction plus 6 cycles to dispatch. Reset holds \texttt{RSTO} for 6 cycles before the reset-vector fetch.
+0 at which the CSR is empty and no coprocessor is active (Section~\ref{sec:interrupt-latency}). The worst-case latency
+from the interrupt request to the handler's first instruction fetch is the time the current instruction still needs
+plus 6 cycles to dispatch, with the current instruction being as long as its entry in
+Table~\ref{tab:instruction-timing} allows:
 
-A fault aborts the six-phase sequence of the faulting instruction at the phase that detects it; the remaining phases of
-that instruction do not run. Alignment is detected before phase 0; Privilege Violation is detected at phase 2; Segment
-Overflow is detected at phase 2 or phase 3; Bus and Bus Protection faults are detected at the phase that acknowledges
-the failing bus access. In every case the exception-unit dispatch slot begins in the cycle immediately following
-detection. Alignment, Bus, Bus Protection, Invalid Opcode, Privilege Violation, and Segment Overflow all save the
-address of the faulting instruction and are retryable.
+\begin{itemize}
+	\item Most instructions: 6 + 6 = 12 cycles.
+	\item A coprocessor call: 12 + 6 = 18 cycles, because its dispatch slot completes first.
+	\item \mnemonic{DMAR} or \mnemonic{DMAW} with a count of 7: 18 + 6 = 24 cycles.
+	\item \mnemonic{DMAT} with a count of 255: 522 + 6 = 528 cycles (22 microseconds at an example 24~MHz clock),
+	      because a DMA transfer cannot be interrupted.
+	\item A maths-unit command: 12 + its implementation-defined extra cycles + 6. The architecture sets no upper bound, so an
+	      implementation must document it.
+\end{itemize}
+
+These figures assume no bus wait states. The \mnemonic{DMAT} figure is the worst case only for parts without a maths
+unit, or whose maths operations finish in fewer cycles. Reset holds \activelow{RSTO} for the cycles \activelow{RSTI} is
+asserted plus five more (6 cycles for a one-cycle \activelow{RSTI} or for \mnemonic{RSET}) before the reset-vector
+fetch; a failed reset-vector fetch repeats the hold.
+
+A retryable fault cancels the faulting instruction at the phase that detects it. Once an instruction has started, its
+six-phase sequence is never cut short: the remaining phases still run, but as no-ops that perform no bus access and
+commit no results, so the canceled instruction occupies its full six cycles. Alignment is detected at phase 0, before
+the instruction starts, and issues no bus cycle; its dispatch slot takes the place of the instruction, so it costs no
+extra cycles. Privilege Violation is detected at phase 2 for a write to a privileged register field and for a
+supervisor-only coprocessor operation, at phase 3 for an \mnemonic{EXCP} vector below \texttt{0x60}, and at phase 5 for
+an address-pair write that would change a high word. Segment Overflow is detected at phase 3. Bus and Bus Protection
+faults are detected at the phase that acknowledges the failing bus access. The first fault detected cancels the
+instruction, and the checks belonging to its remaining phases are not made, so an instruction that meets two fault
+conditions raises the one detected in the earlier phase. In phase 3, a privilege violation takes precedence over a
+segment overflow, and an instruction that wraps more than one address (the effective address, the auto-update or the
+program counter) raises a single segment-overflow fault. In every other case the exception-unit dispatch slot begins at
+the next phase 0, after the remaining phases have run. Alignment, Bus, Bus Protection, Invalid Opcode, Privilege
+Violation, and Segment Overflow all save the address of the faulting instruction and are retryable. The instruction
+trace fault is raised after its instruction has completed, so nothing is canceled.
+
+A bus or protection fault during an exception-vector fetch is handled the same way as one during an instruction fetch.
+The exceptions are a failed fault-vector fetch, which raises a double fault; a failed double-fault vector fetch, which
+resets the CPU; and a failed reset-vector fetch, which raises no fault and repeats the reset-output hold
+(Chapter~\ref{ch:exceptions}). The dispatch slot in progress is canceled and its remaining phases run as no-ops, and
+the dispatch for the new fault begins at the next phase 0. Only reset restarts the phase sequence immediately: it
+discards all state and returns to phase 0.
 
 \section{Conditional Execution}
 
@@ -77,7 +131,9 @@ When a conditional instruction's condition is not met:
 \begin{itemize}
 	\item All six phases still occur and consume one cycle each
 	\item The execute, memory-access, and write-back phases perform no operation: no effective address is computed, no
-	      \texttt{SR.A} overflow check is made, and no data bus cycle is driven
+	      data-address \texttt{SR.A} overflow check is made, and no data bus cycle is driven
+	\item The program-counter advance is still checked: with \texttt{SR.A} set, a skipped instruction in the last instruction
+	      slot of a segment raises a segment-overflow fault in phase 3 (Section~\ref{sec:segment-overflow-fault})
 	\item No register, memory, or address-register update occurs
 	\item Status flags are not updated
 \end{itemize}
@@ -90,7 +146,7 @@ execution time.
 \subsection{Simple Loop}
 \begin{lstlisting}
 ; Process 10 elements (assuming no bus wait states)
-LOAD r7, #10                  ; 6 cycles
+MOVI r7, #10                  ; 6 cycles
 :loop
     LOAD r1, (#0, a)+         ; 6 cycles
     ADDI r1, #1               ; 6 cycles
@@ -116,8 +172,8 @@ RETS                          ; 6 cycles
 \subsection{Conditional Block}
 \begin{lstlisting}
 CMPR r1, r2                   ; 6 cycles
-ADDR|HI r3, r4, r5            ; 6 cycles (exec if r1 > r2)
-ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2)
+ADDR[N]|HI r3, r4, r5         ; 6 cycles (exec if r1 > r2, unsigned)
+ADDR|LO r3, r6, r7            ; 6 cycles (exec if r1 <= r2, unsigned)
 ; Total: 18 cycles (one conditional executes, one doesn't)
 \end{lstlisting}
 
@@ -140,13 +196,18 @@ simultaneously. Instead:
 \begin{itemize}
 	\item Instruction fetch, data memory access, and exception vector fetch each occupy one execution phase per 16-bit word
 	      transferred.
-	\item If BACK is not asserted and neither BERR nor BPER aborts the request, the CPU holds that phase until the bus operation
-	      is acknowledged.
-	\item Each wait state adds one clock cycle to the instruction
-	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception or
-	      fault dispatch adds two exception-vector-fetch accesses; a coprocessor dispatch performs no bus access of its own. A
-	      system that inserts $w$ wait states per access therefore adds $2w$ cycles to an ALU instruction and $3w$ cycles to a
-	      load or store.
+	\item If the external memory system has not acknowledged the transfer (\activelow{BACK}) and has not aborted it with a bus
+	      error (\activelow{BERR}) or bus protection error (\activelow{BPER}), the CPU holds that phase until the transfer is
+	      acknowledged.
+	\item Each wait state adds one clock cycle to the instruction, including a wait on a DMA access: the held phase delays the
+	      rest of the transfer and the slot boundaries after it, so the DMA total is not rounded up again
+	\item Every instruction performs two instruction-fetch bus accesses; a load or store adds one data access; an exception-unit
+	      dispatch that enters a handler (a hardware interrupt, a fault, an accepted \mnemonic{EXCP}, or reset) adds two
+	      exception-vector-fetch accesses; any other coprocessor dispatch (\mnemonic{RETE}, \mnemonic{ETFR}, \mnemonic{ETTR},
+	      \mnemonic{WAIT}, or a maths command) performs no bus access of its own, although a DMA command then adds one access per
+	      word read or written. A system that inserts $w$ wait states per access therefore adds $2w$ cycles to an ALU
+	      instruction, $3w$ cycles to a load or store, $(k + 2)w$ cycles to a DMA command with $k$ accesses, $4w$ cycles to an
+	      accepted \mnemonic{EXCP} or to \mnemonic{RSET}, and $2w$ cycles to the other exception-unit meta-instructions.
 \end{itemize}
 
 \subsection{Optimization Guidelines}
@@ -182,7 +243,7 @@ LOAD r1, (#0, a)
 ADDI al, #1
 
 ; Use:
-LOAD r1, (#0, a)+          ; Same result, fewer cycles
+LOAD r1, (#0, a)+          ; Same register result in one instruction (6 cycles saved); flags are not changed
     \end{lstlisting}
 
 	\item \textbf{Loop unrolling reduces overhead}
@@ -207,7 +268,7 @@ At a given clock frequency:
 \begin{itemize}
 	\item \textbf{Instructions per second:} $f_{clock} / 6$
 	\item \textbf{At 10 MHz:} $\approx$ 1.67 million instructions/second
-	\item \textbf{At 24 MHz (maximum rated clock):} $\approx$ 4.0 million instructions/second
+	\item \textbf{At an example 24 MHz clock:} $\approx$ 4.0 million instructions/second
 \end{itemize}
 
 These are theoretical maximums assuming perfect code with no inefficiencies.

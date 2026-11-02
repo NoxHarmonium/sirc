@@ -23,6 +23,7 @@ mem.bin
 # Listings extracted from the manual for QA (see examples/manual-examples)
 examples/manual-examples/extracted/
 examples/manual-examples/.extracted.manifest*
+docs/assembly/extracted/
 
 # AI
 .claude/*

@@ -1,4 +1,9 @@
-# SIRC-1 CPU Reference Manual
+# SIRC-1 Architecture Reference Manual
+
+This is one of the SIRC manuals. The others are the Hardware Reference Manual (`../hardware`: pinout, bus interface,
+timing, electrical characteristics) and the Assembly Programmer's Manual (`../assembly`: assembly syntax, directives and the toolchain). This manual defines the
+architecture: ISA, instruction encodings, canonical assembly notation, exceptions and programmer-visible state. The
+LaTeX preamble in this directory is shared by the hardware manual.
 
 ## Source of Truth
 
@@ -12,7 +17,8 @@ reasoning and the project history this decision is based on.
 ## Diagram Tooling
 
 The CPU block diagram is sourced from Graphviz and committed as a rendered PDF under `diagrams/`.
-Bus timing waveforms are authored directly in LaTeX with the `tikz-timing` package.
+Bus timing waveforms live in the hardware manual and are authored directly in LaTeX with the `tikz-timing` package
+(the preamble style is defined here).
 
 - Building the manual does not require Graphviz when the committed diagram PDF is up to date.
 - Graphviz is only required when changing `.dot` sources and regenerating diagrams.

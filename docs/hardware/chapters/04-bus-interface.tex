@@ -1,0 +1,180 @@
+\chapter{Bus Interface}
+\label{ch:bus-interface}
+
+\section{Clocked Bus Model}
+\label{sec:clocked-bus-model}
+
+All bus timing is described relative to the rising edge of CLKI. The CPU presents a bus request during the execution
+phase that needs external access. If no response is asserted, the CPU repeats the same request and does not advance to
+the next execution phase.
+
+A no-wait-state bus access assumes that the selected external device can assert \activelow{BACK} and, for reads, drive
+valid data during the same CLKI interval in which \activelow{BAS} is asserted, so the CPU accepts the transfer on the
+next rising edge. A device that samples the request on one clock edge and cannot return \activelow{BACK} or read data
+until a later edge adds wait states; this is the normal way to attach slower synchronous memory or peripherals.
+
+\subsection{Clock Edges}
+\label{sec:clock-edges}
+
+The logical relationship between the CPU and CLKI is fixed by five rules. Electrical delays are not specified (see
+Chapter~\ref{ch:electrical-characteristics}).
+
+\begin{enumerate}
+	\item The CPU changes all of its outputs (A0--A23, BRW, BAT0--BAT2, \activelow{BAS}, PROT, D0--D15 on writes, SYNC, and
+	      \activelow{RSTO}) just after the CLKI rising edge that starts a phase.
+	\item \activelow{BAS} is asserted for the whole of a phase that makes a bus access, and is not asserted in phases that do
+	      not.
+	\item The CPU samples \activelow{BACK}, \activelow{BERR}, \activelow{BPER}, and read data on the next rising edge, which ends
+	      the phase. If none of the three responses is asserted, the CPU repeats the phase; this is a wait state.
+	\item \activelow{IRQ1}--\activelow{IRQ4}, \activelow{NMI}, \activelow{HALT}, and \activelow{TRCE} are sampled on every rising edge except during
+	      reset. Sampling is not the same as acting on the input: \activelow{HALT} takes effect at the next phase~0, and
+	      \activelow{TRCE} at the next instruction boundary (Table~\ref{tab:external-input-sampling-rules}).
+	\item The falling edge of CLKI is not used.
+\end{enumerate}
+
+A device must therefore have \activelow{BACK} asserted, and valid read data driven, before the rising edge that ends
+the phase; in the figures \activelow{BACK} is already low across the whole cycle. Timing figures mark the sample points
+with arrows on the rising edges.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Signal} & \textbf{Timing rule}                                                                                                                                                                                                                                                                                          \\
+		\midrule
+		A0--A23         & Valid whenever \activelow{BAS} is asserted. Stable until the request completes or aborts.                                                                                                                                                                                                                     \\
+		D0--D15         & Driven by the CPU only for writes. On reads, the selected device drives the bus and the CPU samples D0--D15 when \activelow{BACK} is accepted.                                                                                                                                                                \\
+		BRW             & Valid whenever \activelow{BAS} is asserted. High requests a read; low requests a write. Stable until the request completes or aborts.                                                                                                                                                                         \\
+		BAT0--BAT2      & Valid whenever \activelow{BAS} is asserted. Encodes the access type for the active request and is stable until completion or abort.                                                                                                                                                                           \\
+		PROT            & Reflects the status register P bit, except that it is deasserted for exception-vector fetches, and may be used with \activelow{BAS}, BAT, and A0--A23 by external protection logic.                                                                                                                           \\
+		\activelow{BAS} & Asserted while a bus request is active. Remains asserted across wait states.                                                                                                                                                                                                                                  \\
+		SYNC            & Asserted only at phase 0 of an instruction fetch or of an exception-unit dispatch slot, and remains asserted if a wait state holds that phase. Deasserted in every other phase, in every other coprocessor slot (DMA and maths) and DMA continuation slot, and while the CPU is halted, waiting, or in reset. \\
+		\bottomrule
+	\end{tabularx}
+	\caption{CPU Bus Output Timing Rules}
+	\label{tab:bus-output-timing-rules}
+\end{table}
+
+When \activelow{BAS} is deasserted there is no active bus cycle. External devices must ignore A0--A23, D0--D15, BRW,
+and BAT0--BAT2 unless \activelow{BAS} is asserted.
+
+The CPU keeps driving A0--A23, BRW, and BAT0--BAT2 while \activelow{BAS} is deasserted, including while it is halted,
+waiting (\mnemonic{WAIT}), or in reset. BRW is high and BAT0--BAT2 is 000 (No I/O); this is the idle value. The value
+of A0--A23 while idle is architecturally undefined. The SIRC-1 has no bus-release mechanism: the CPU never three-states
+these signals, and \activelow{HALT} does not free the bus for another master.
+
+\section{Bus Cycle Completion}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Response} & \textbf{Effect When Sampled While \activelow{BAS} Is Asserted}                                                                                                 \\
+		\midrule
+		\activelow{BACK}  & Completes the request successfully. For reads, D0--D15 is sampled on the accepting clock edge. For writes, the write is externally committed.                  \\
+		\activelow{BERR}  & Aborts the request and raises a bus fault. Read data is ignored and the CPU does not consider a write successfully committed.                                  \\
+		\activelow{BPER}  & Aborts the request and raises a bus protection fault. Read data is ignored and the CPU does not consider a write successfully committed.                       \\
+		No response       & Inserts a wait state. The CPU remains in the current execution phase and keeps A0--A23, D0--D15 for writes, BRW, BAT0--BAT2, PROT, and \activelow{BAS} stable. \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Bus Response Timing Rules}
+	\label{tab:bus-response-timing-rules}
+\end{table}
+
+A bus cycle terminated by Bus Error or Bus Protection Error is architecturally unsuccessful. An external device must
+not commit any externally visible effect from a bus cycle for which it asserts the corresponding error signal. For a
+write, the device must not act on the data driven to it. For a read, the device must not cause any side effect that the
+access would otherwise have, for example a status register that clears on read. This is what makes Bus Fault and Bus
+Protection Fault safe to retry (see the Exception and Interrupt Handling chapter of the \archmanual{}): the CPU assumes
+that a bus cycle it aborted with one of these signals never happened.
+
+\activelow{BACK}, \activelow{BERR}, and \activelow{BPER} are logically mutually exclusive. If more than one is
+asserted for the same request, \activelow{BERR} has priority, then \activelow{BPER}, then \activelow{BACK}.
+
+\section{Bus Cycle Types}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lXXX}
+		\toprule
+		\textbf{Cycle} & \textbf{CPU drives}                                 & \textbf{External device drives}      & \textbf{Completion}                                                                  \\
+		\midrule
+		Read           & A0--A23, BRW=1, BAT, \activelow{BAS}, PROT          & D0--D15 for the selected address     & \activelow{BACK} samples data; \activelow{BERR}/\activelow{BPER} aborts.             \\
+		Write          & A0--A23, D0--D15, BRW=0, BAT, \activelow{BAS}, PROT & No data bus drive                    & \activelow{BACK} accepts write; \activelow{BERR}/\activelow{BPER} aborts.            \\
+		Wait state     & Same values as the previous request cycle           & Same ownership as the active request & Continues until \activelow{BACK}, \activelow{BERR}, or \activelow{BPER} is asserted. \\
+		No bus cycle   & No active bus cycle                                 & No device drives D0--D15             & CPU advances internally.                                                             \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External Bus Cycle Ownership}
+	\label{tab:bus-cycle-ownership}
+\end{table}
+
+\section{DMA Bus Cycles}
+\label{sec:dma-bus-cycles}
+
+The optional DMA coprocessor performs bulk word transfers as ordinary single-word bus cycles. This section describes
+what an external device observes; the \archmanual{} describes the commands and their timing in the Coprocessor
+Instructions chapter. A CPU model without the DMA coprocessor never drives BAT 101 or 110.
+
+\begin{itemize}
+	\item Phase 0 of the DMA slot is a setup cycle with no bus access: \activelow{BAS} is deasserted and the idle values of
+	      Section~\ref{sec:clocked-bus-model} apply.
+	\item From phase 1, each DMA access is a separate bus cycle. \activelow{BAS} is asserted for the access, and the access is
+	      completed by its own \activelow{BACK}, \activelow{BERR}, or \activelow{BPER}, exactly as for any other bus cycle.
+	\item Addresses ascend by one word per access, for both positive and negative counts.
+	\item BAT is 101 (DMA coprocessor read burst) for reads and 110 (DMA coprocessor write burst) for writes. BRW is high for
+	      reads and low for writes. A DMA read command uses only reads and a DMA write command uses only writes. A DMA copy
+	      command reads a chunk of up to seven words with BAT 101, then writes the chunk with BAT 110.
+	\item PROT follows the status register P bit, as for any other access.
+	\item SYNC is deasserted throughout the DMA slot and every DMA continuation slot.
+	\item A wait state on a DMA access holds the phase and keeps the access signals stable, as for any other bus cycle. Each wait
+	      state adds exactly one cycle to the transfer.
+\end{itemize}
+
+Figure~\ref{fig:dma-read-timing} shows a three-word DMA read with no wait states. The address labels \texttt{start},
+\texttt{start+1}, and \texttt{start+2} are the first, second, and third word addresses of the transfer in ascending
+order.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI                         & L 5{0.5H 0.5L}                                 \\
+		Phase                        & D{Setup} D{Read 1} D{Read 2} D{Read 3} D{} D{}  \\
+		SYNC                         & L L L L L L                                     \\
+		\activelow{BAS}              & H L L L H H                                     \\
+		BRW                          & H H H H H H                                     \\
+		BAT0--BAT2                   & D{None} D{101} D{101} D{101} D{None} D{None}    \\
+		A0--A23                      & D{} D{start} D{start+1} D{start+2} D{} D{}      \\
+		D0--D15                      & Z D{d0} D{d1} D{d2} Z Z                         \\
+		\activelow{BACK}             & H L L L H H                                     \\
+		\activelow{BERR}/\activelow{BPER} & H H H H H H                                \\
+		Sample                       & 1.95L 0.1H 0.9L 0.1H 0.9L 0.1H 1.95L           \\
+	\end{tikztimingtable}
+	\caption{Three-Word DMA Read with No Wait States (Pulses in the Sample Row Mark the Rising Edges at Which \activelow{BACK} and Read Data Are Sampled)}
+	\label{fig:dma-read-timing}
+\end{figure}
+
+\section{Control Input Sampling}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Input}                                       & \textbf{Sampling rule}                                                                                                                                                                                                                                                                                                                                                                  \\
+		\midrule
+		\activelow{BACK}, \activelow{BERR}, \activelow{BPER} & Sampled while \activelow{BAS} is asserted. They complete or abort the active bus request.                                                                                                                                                                                                                                                                                               \\
+		\activelow{IRQ1}--\activelow{IRQ4}                   & Level-sensitive and sampled every cycle, except during reset. The requesting device must hold the line asserted until its handler acknowledges it; a line is not latched while its own or a higher-priority handler runs. From the cycle in which reset is requested until the reset-vector fetch completes, no interrupt line, including \activelow{NMI}, is sampled.                  \\
+		\activelow{NMI}                                      & Edge-triggered. Fires once on assertion regardless of how long the pin is held; the pin must be released and reasserted to fire again.                                                                                                                                                                                                                                                  \\
+		\activelow{HALT}                                     & Sampled at every phase 0. If asserted, the CPU stops at that phase 0 with the bus idle, which can fall between an instruction and its coprocessor dispatch slot, between DMA slots, or before a fault, interrupt, or reset dispatch. Halt latency is at most six cycles. The CPU resumes where it stopped when the input is deasserted; interrupt lines are still sampled while halted. \\
+		\activelow{TRCE}                                     & Sampled at instruction boundaries. If asserted, the instruction being started is traced, except inside a fault handler.                                                                                                                                                                                                                                                                 \\
+		\activelow{RSTI}                                     & May be asserted at any time. It aborts the current instruction, exception dispatch, or bus wait and starts the reset sequence.                                                                                                                                                                                                                                                          \\
+		\bottomrule
+	\end{tabularx}
+	\caption{External Input Sampling Rules}
+	\label{tab:external-input-sampling-rules}
+\end{table}

@@ -21,11 +21,12 @@ all other registers are architecturally undefined. See Chapter~\ref{ch:exception
 
 Figure~\ref{fig:register-programming-model} shows the complete sixteen-register programming model: the seven
 general-purpose registers, both words of each of the four address register pairs, and \reg{sr}. The high word of each
-address register pair, marked \textsuperscript{*}, is read-only in protected mode: a protected-mode program can read
-its real value but a direct write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter still: in
-protected mode it is hidden even from reads, which are redacted to zero, and writes to it are silently ignored rather
-than faulting. Its low byte, shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully
-accessible in both modes. See Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
+address register pair, marked \textsuperscript{*}, is read-only in protected mode (the restricted mode selected by the
+P bit of \reg{sr}, Chapter~\ref{ch:status-register}): a protected-mode program can read its real value but a direct
+write faults. \reg{sr}'s high byte, marked \textsuperscript{\dag}, is stricter still: in protected mode it is hidden
+even from reads, which are redacted to zero, and writes to it are silently ignored rather than faulting. Its low byte,
+shown in italics, is the one truly unrestricted half of \reg{sr} and remains fully accessible in both modes. See
+Section~\ref{sec:privilege-restrictions} below for the full read/write privilege rules.
 
 \begin{figure}[H]
 	\centering
@@ -92,9 +93,11 @@ destination operands for all ALU instructions.
 
 The CPU does not enforce any register-usage convention among \reg{r1}--\reg{r7}; all seven registers are equally
 general purpose. Calling conventions and register-preservation rules are outside the scope of this document and are
-addressed in the SIRC-1 ABI and Toolchain documentation.
+addressed in the forthcoming SIRC-1 ABI documentation. Toolchain and object-file topics are covered in the
+\asmmanual{}.
 
 \section{Address Register Pairs}
+\label{sec:address-registers}
 
 \subsection{Overview}
 
@@ -104,10 +107,10 @@ register.
 
 \begin{figure}[H]
 	\centering
-	\begin{bytefield}[bitwidth=0.8em]{32}
+	\begin{bytefield}[bitwidth=1.1em,bitheight=3.2\baselineskip]{32}
 		\bitheader{0-31} \\
-		\bitbox{8}{\color{sircgray}Unused} &
-		\bitbox{8}{High Register} &
+		\bitbox{8}{\color{sircgray}\footnotesize\shortstack{High register [15:8]\\(not used for\\addressing)}} &
+		\bitbox{8}{High register [7:0]} &
 		\bitbox{16}{Low Register} \\
 		\bitbox{8}{\color{sircgray}\tiny bits 31--24} &
 		\bitbox{8}{\tiny bits 23--16} &
@@ -117,18 +120,24 @@ register.
 	\label{fig:addr-pair}
 \end{figure}
 
-The high 8 bits (bits 31--24) of the high register are not used for addressing but remain available for storage,
-enabling techniques such as tagged pointers.
+The high 8 bits of the high register (bits 15--8, shown as pair bits 31--24 in the figure) are not used for addressing
+but remain available for storage, enabling techniques such as tagged pointers.
 
 The exact address composition and stored-address layout are specified in Chapter~\ref{ch:data-representation}.
 
 Although each address register pair has a specific name and a suggested usage by convention, \mnemonic{STOR} and
 \mnemonic{LOAD} instructions treat all four pairs identically, and any pair may be used for indirect addressing.
 
-Loading a value directly into the \reg{p} pair performs a jump.
+Loading a value directly into the \reg{p} pair performs a jump. This includes an ALU or \mnemonic{LOAD} instruction
+that names \reg{pl} as its destination: its write-back replaces the advanced \reg{pl}, so execution continues at the
+written address within the current segment. Such an instruction does not use the advanced address, so it is exempt from
+the program-counter wrap check in the same way as a taken branch (Section~\ref{sec:segment-overflow-fault}). An odd
+value raises an alignment fault at the next instruction fetch. A write to \reg{ph} alone (supervisor mode only) changes
+the segment but not \reg{pl}, so it still uses the advanced address and is still checked.
 
 The link register pair updates automatically when \mnemonic{LDEL}, \mnemonic{LJSR}, or \mnemonic{BRSR} executes. The
-program counter pair increments after every instruction.
+low word of the program counter, \reg{pl}, advances by 2 during the decode phase of every instruction; \reg{ph} is
+never incremented.
 
 \subsection{Link Register (l)}
 
@@ -212,7 +221,7 @@ modes are particularly useful with this register.
 
 The program counter register pair points to the instruction currently being fetched. It is not modified during either
 fetch phase; the low word \reg{pl} advances by 2 during the Decode and Register Fetch phase, and \reg{ph} is never
-incremented, so a wrap stays inside the segment.
+incremented, so an overflow stays inside the segment.
 
 \textbf{Typical Use:}
 \begin{itemize}
@@ -227,8 +236,8 @@ The status register (\reg{sr}) is a special 16-bit register that contains CPU st
 divided into two bytes:
 
 \begin{itemize}
-	\item \textbf{Low Byte (bits 7--0):} Condition flags, readable in both modes and updated as a side effect of ALU and
-	      shift instructions in both modes, and directly writable in both modes
+	\item \textbf{Low Byte (bits 7--0):} Condition flags (bits 3--0) and reserved bits (bits 7--4), readable and writable in both modes; optionally updated as a
+	      side effect of ALU instructions in both modes.
 	\item \textbf{High Byte (bits 15--8):} Control and privileged state
 \end{itemize}
 
@@ -250,17 +259,20 @@ The high component of each address register pair (\reg{lh}, \reg{ah}, \reg{sh}, 
 	\item In \textbf{protected mode}:
 	      \begin{itemize}
 		      \item Reading is allowed.
-		      \item Direct writes trigger a privilege exception.
+		      \item Direct writes trigger a privilege violation fault.
 		      \item Address-register-pair write-back is allowed only when the high word would remain unchanged; otherwise it triggers a
-		            privilege exception.
+		            privilege violation fault. The comparison covers all 16 bits, including tag bits 15--8.
 	      \end{itemize}
+	\item A privilege check is made only when the instruction's condition is true; a skipped instruction never faults on
+	      privilege (Chapter~\ref{ch:condition-codes}).
 \end{itemize}
 
-This restriction provides a form of memory segmentation and protection. User programs running in protected mode cannot
+This restriction provides a form of memory segmentation and protection. Programs running in protected mode cannot
 modify the segment portion of addresses, preventing them from accessing memory outside their designated segment.
 Instructions such as \mnemonic{LDEA}, \mnemonic{LDEL}, \mnemonic{BRAN}, \mnemonic{BRSR}, \mnemonic{LJMP},
-\mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode when they stay within the current segment. If
-their address-register-pair write-back would alter a high word, the CPU raises a privilege violation fault.
+\mnemonic{LJSR}, and \mnemonic{RETS} remain usable in protected mode provided every high word they write is bit-for-bit
+equal to its current value, tag bits included. This applies to the destination pair's high word and, for the linking
+forms, to \reg{lh}, which receives \reg{ph}. Otherwise the CPU raises a privilege violation fault.
 
 The status register differs slightly from the high address registers:
 \begin{itemize}
@@ -273,17 +285,10 @@ The status register differs slightly from the high address registers:
 \subsection{Summary of Privilege Checks}
 \label{sec:privilege-check-flow}
 
-Figure~\ref{fig:privilege-checks} shows where the CPU applies each privilege check as an instruction moves through
-decode, execute, and write-back. The checks apply to different kinds of instruction, so an instruction is only affected
-by the check for its own kind. Every violation raises the same Privilege Violation Fault (vector \texttt{0x05}), which
-is retryable (Chapter~\ref{ch:exceptions}).
-
-\begin{figure}[H]
-	\centering
-	\includegraphics{diagrams/privilege-checks.pdf}
-	\caption{Privilege Checks in Protected Mode}
-	\label{fig:privilege-checks}
-\end{figure}
+Each privilege check is made at a fixed phase of the instruction, and each violation raises the same retryable
+Privilege Violation Fault (vector \texttt{0x05}). Figure~\ref{fig:privilege-checks}, in
+Section~\ref{sec:privilege-violation-fault}, shows where every check is made, together with the external bus protection
+check that the memory system can apply to any bus access.
 
 The following are not violations in protected mode:
 \begin{itemize}
@@ -325,20 +330,15 @@ Registers are addressed using 4-bit register identifiers in instruction encoding
 	\label{tab:register-encoding}
 \end{table}
 
-The register-index assignment is deliberate: \reg{sr} does not occupy field \texttt{0x0} (unlike an earlier revision of
-this encoding), so an all-zero instruction word decodes as \mnemonic{ADDI[N]} \reg{r1}, \texttt{\#0} -- a genuine,
-always-unprivileged no-op. This is what lets erased or uninitialized memory (which reads back as all-zero words) be
-executed safely instead of faulting; see the \mnemonic{NOOP} entry in Chapter~\ref{ch:meta-instructions}.
-
 \section{Usage Examples}
 
 \begin{example}
 	\begin{lstlisting}
-; Load immediate value into r1
-LOAD r1, #100
+; Move immediate value into r1
+MOVI r1, #100
 
 ; Add 2 to the value stored in r1 and store the result into r2
-LOAD r2, r1
+MOVR r2, r1
 ADDI r2, #2
 
 ; Add r1 and r2, store in r3

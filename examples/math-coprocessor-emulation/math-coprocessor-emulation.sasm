@@ -44,87 +44,87 @@
 
 :start
 
-LOAD ah, $PROGRAM_SEGMENT
-LOAD al, #0
-LOAD lh, $PROGRAM_SEGMENT
-LOAD ll, #0
-LOAD sh, $PROGRAM_SEGMENT
-LOAD sl, #0x0800
+MOVI ah, $PROGRAM_SEGMENT
+MOVI al, #0
+MOVI lh, $PROGRAM_SEGMENT
+MOVI ll, #0
+MOVI sh, $PROGRAM_SEGMENT
+MOVI sl, #0x0800
 
-LOAD r4, #0x600D
-LOAD r5, #0
-LOAD r6, #0
+MOVI r4, #0x600D
+MOVI r5, #0
+MOVI r6, #0
 
 ; Run the application code in protected mode. MULU is user-callable, so a
 ; missing maths unit raises invalid-opcode rather than privilege violation.
 ORRI sr, #0x0100
 
 ; MULU case 1: 0x0012 * 0x0034 = 0x000003A8.
-LOAD r1, #0x0012
-LOAD r2, #0x0034
-LOAD r3, #0xFFFF
-LOAD r7, #0x7771
+MOVI r1, #0x0012
+MOVI r2, #0x0034
+MOVI r3, #0xFFFF
+MOVI r7, #0x7771
 MULU
 CMPI r1, #0
-LOAD|!= r6, #0x0101
+MOVI|!= r6, #0x0101
 BRAN|!= @assert_failed
 CMPI r2, #0x03A8
-LOAD|!= r6, #0x0102
+MOVI|!= r6, #0x0102
 BRAN|!= @assert_failed
 CMPI r3, #0
-LOAD|!= r6, #0x0103
+MOVI|!= r6, #0x0103
 BRAN|!= @assert_failed
 CMPI r4, #0x600D
-LOAD|!= r6, #0x0104
+MOVI|!= r6, #0x0104
 BRAN|!= @assert_failed
 CMPI r7, #0x7771
-LOAD|!= r6, #0x0105
+MOVI|!= r6, #0x0105
 BRAN|!= @assert_failed
 ADDI r5, #1
 
 ; MULU case 2: 0x8000 * 0x0002 = 0x00010000.
-LOAD r1, #0x8000
-LOAD r2, #0x0002
-LOAD r3, #0xFFFF
-LOAD r7, #0x7772
+MOVI r1, #0x8000
+MOVI r2, #0x0002
+MOVI r3, #0xFFFF
+MOVI r7, #0x7772
 MULU
 CMPI r1, #0x0001
-LOAD|!= r6, #0x0201
+MOVI|!= r6, #0x0201
 BRAN|!= @assert_failed
 CMPI r2, #0
-LOAD|!= r6, #0x0202
+MOVI|!= r6, #0x0202
 BRAN|!= @assert_failed
 CMPI r3, #0
-LOAD|!= r6, #0x0203
+MOVI|!= r6, #0x0203
 BRAN|!= @assert_failed
 CMPI r4, #0x600D
-LOAD|!= r6, #0x0204
+MOVI|!= r6, #0x0204
 BRAN|!= @assert_failed
 CMPI r7, #0x7772
-LOAD|!= r6, #0x0205
+MOVI|!= r6, #0x0205
 BRAN|!= @assert_failed
 ADDI r5, #1
 
 ; MULU case 3: 0xFFFF * 0xFFFF = 0xFFFE0001.
-LOAD r1, #0xFFFF
-LOAD r2, #0xFFFF
-LOAD r3, #0xFFFF
-LOAD r7, #0x7773
+MOVI r1, #0xFFFF
+MOVI r2, #0xFFFF
+MOVI r3, #0xFFFF
+MOVI r7, #0x7773
 MULU
 CMPI r1, #0xFFFE
-LOAD|!= r6, #0x0301
+MOVI|!= r6, #0x0301
 BRAN|!= @assert_failed
 CMPI r2, #0x0001
-LOAD|!= r6, #0x0302
+MOVI|!= r6, #0x0302
 BRAN|!= @assert_failed
 CMPI r3, #0
-LOAD|!= r6, #0x0303
+MOVI|!= r6, #0x0303
 BRAN|!= @assert_failed
 CMPI r4, #0x600D
-LOAD|!= r6, #0x0304
+MOVI|!= r6, #0x0304
 BRAN|!= @assert_failed
 CMPI r7, #0x7773
-LOAD|!= r6, #0x0305
+MOVI|!= r6, #0x0305
 BRAN|!= @assert_failed
 ADDI r5, #1
 
@@ -132,7 +132,7 @@ ADDI r5, #1
 COPI #0x14FF
 
 :assert_failed
-LOAD r4, #0xBAD0
+MOVI r4, #0xBAD0
 COPI #0x14FF
 
 ;;
@@ -181,21 +181,21 @@ STOR ($FRAME_RETURN_LOW, s), al
 STOR ($FRAME_RETURN_STATUS, s), r7
 
 ; Force RETE to return to the emulation routine, rather than the after the fault
-LOAD ah, $PROGRAM_SEGMENT
-LOAD al, @emulate_mulu
-LOAD r7, #0
+MOVI ah, $PROGRAM_SEGMENT
+MOVI al, @emulate_mulu
+MOVI r7, #0
 ; Transfer a/r7 to exception level 6 (fault) return registers
 ETTR #6
 ; Exit the fault
 RETE
 
 :emulate_mulu
-LOAD r4, r1
-LOAD r5, #0
-LOAD r6, r2
-LOAD r7, #16
-LOAD r1, #0
-LOAD r2, #0
+MOVR r4, r1
+MOVI r5, #0
+MOVR r6, r2
+MOVI r7, #16
+MOVI r1, #0
+MOVI r2, #0
 
 :mulu_loop
 TSAI r6, #1
@@ -219,7 +219,7 @@ SHFT r6, LSR #1
 SUBI r7, #1
 BRAN|!= @mulu_loop
 
-LOAD r3, #0
+MOVI r3, #0
 
 ; Leave fault level by using a software-exception return gate. The gate rewrites
 ; its own link register with the original protected-mode return address and SR,

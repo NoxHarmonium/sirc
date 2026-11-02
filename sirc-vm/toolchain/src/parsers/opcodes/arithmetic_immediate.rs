@@ -21,8 +21,12 @@ fn tag_to_instruction_long(tag: &String) -> Instruction {
         "ANDI" => Instruction::AndImmediate,
         "ORRI" => Instruction::OrImmediate,
         "XORI" => Instruction::XorImmediate,
+        "CMNI" => Instruction::CompareNegativeImmediate,
+        "CNCI" => Instruction::CompareNegativeImmediateWithCarry,
         "CMPI" => Instruction::CompareImmediate,
+        "CPCI" => Instruction::CompareImmediateWithCarry,
         "TSAI" => Instruction::TestAndImmediate,
+        "TSOI" => Instruction::TestOrImmediate,
         "TSXI" => Instruction::TestXorImmediate,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -39,8 +43,12 @@ fn tag_to_instruction_short(tag: &String) -> Instruction {
         // We use OrShortImmediate because it is a no-op with a hardcoded zero value (other instructions could probably also work)
         "ORRI" | "SHFT" => Instruction::OrShortImmediate,
         "XORI" => Instruction::XorShortImmediate,
+        "CMNI" => Instruction::CompareNegativeShortImmediate,
+        "CNCI" => Instruction::CompareNegativeShortImmediateWithCarry,
         "CMPI" => Instruction::CompareShortImmediate,
+        "CPCI" => Instruction::CompareShortImmediateWithCarry,
         "TSAI" => Instruction::TestAndShortImmediate,
+        "TSOI" => Instruction::TestOrShortImmediate,
         "TSXI" => Instruction::TestXorShortImmediate,
         _ => panic!("No tag mapping for instruction [{tag}]"),
     }
@@ -82,8 +90,12 @@ pub fn arithmetic_immediate(i: &str) -> AsmResult<InstructionToken> {
         parse_instruction_tag("ANDI"),
         parse_instruction_tag("ORRI"),
         parse_instruction_tag("XORI"),
+        parse_instruction_tag("CMNI"),
+        parse_instruction_tag("CNCI"),
         parse_instruction_tag("CMPI"),
+        parse_instruction_tag("CPCI"),
         parse_instruction_tag("TSAI"),
+        parse_instruction_tag("TSOI"),
         parse_instruction_tag("TSXI"),
         // Meta instruction - for shifting values between registers
         parse_instruction_tag("SHFT"),

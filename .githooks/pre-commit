@@ -28,6 +28,18 @@ function pre_commit_manual {
     popd
 }
 
+function pre_commit_hardware_manual {
+    pushd docs/hardware
+    make format-check
+    popd
+}
+
+function pre_commit_assembly_manual {
+    pushd docs/assembly
+    make format-check
+    popd
+}
+
 CHANGED_FILES=$(git diff --cached --name-only)
 
 echo "$CHANGED_FILES"
@@ -45,4 +57,14 @@ fi
 if echo "$CHANGED_FILES" | grep --quiet "^docs/reference"
 then
     pre_commit_manual
+fi
+
+if echo "$CHANGED_FILES" | grep --quiet "^docs/hardware"
+then
+    pre_commit_hardware_manual
+fi
+
+if echo "$CHANGED_FILES" | grep --quiet "^docs/assembly"
+then
+    pre_commit_assembly_manual
 fi

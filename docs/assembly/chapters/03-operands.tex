@@ -1,0 +1,97 @@
+\chapter{Operands}
+\label{ch:operands}
+
+An instruction's operands are separated by commas, with the destination first. This chapter lists every operand form
+the assembler accepts. The entry for each instruction in the \archmanual{} gives the forms that instruction accepts,
+and the Addressing Modes chapter of the \archmanual{} gives the meaning of each addressing mode.
+
+\section{Operand Forms}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Form}                                  & \textbf{Name}                     & \textbf{Example}              \\
+		\midrule
+		\texttt{\#n}                                   & Immediate number                  & \texttt{ADDI r1, \#12}        \\
+		\texttt{@label}                                & Immediate label reference         & \texttt{MOVI al, @table}      \\
+		\texttt{\$NAME}                                & Immediate named constant          & \texttt{CMPI r1, \$LIMIT}     \\
+		\texttt{r1}--\texttt{r7}, \texttt{sr}, halves  & Register direct                   & \texttt{MOVR r2, r1}          \\
+		\texttt{a}, \texttt{s}, \texttt{p}, \texttt{l} & Address register pair             & \texttt{LJMP a}               \\
+		\texttt{(addr)}                                & Indirect, zero displacement       & \texttt{LOAD r1, (a)}         \\
+		\texttt{(\#n, addr)}                           & Indirect, immediate offset        & \texttt{LOAD r1, (\#4, a)}    \\
+		\texttt{(rO, addr)}                            & Indirect, register offset         & \texttt{STOR (r2, a), r1}     \\
+		\texttt{(addr)+}                               & Post-increment, zero displacement & \texttt{LOAD r1, (a)+}        \\
+		\texttt{(\#n, addr)+}                          & Post-increment, immediate         & \texttt{LOAD r1, (\#0, a)+}   \\
+		\texttt{(rO, addr)+}                           & Post-increment, register          & \texttt{LOAD r1, (r2, s)+}    \\
+		\texttt{-(addr)}                               & Pre-decrement, zero displacement  & \texttt{STOR -(s), r1}        \\
+		\texttt{-(\#n, addr)}                          & Pre-decrement, immediate          & \texttt{STOR -(\#0, s), r1}   \\
+		\texttt{-(rO, addr)}                           & Pre-decrement, register           & \texttt{STOR -(r2, s), r1}    \\
+		\texttt{type \#count}, \texttt{type rC}        & Shift                             & \texttt{ADDR r1, r2, ASL \#1} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Operand Forms}
+	\label{tab:operand-forms}
+\end{table}
+
+In the indirect forms \texttt{addr} is one of the four address register pairs, \texttt{a}, \texttt{s}, \texttt{p} or
+\texttt{l}. The displacement is added to the low word of the pair. The offset in parentheses may be a number, a label
+reference or a named constant.
+
+An immediate displacement of zero may be omitted: \texttt{(addr)}, \texttt{(addr)+} and \texttt{-(addr)} are the same
+as \texttt{(\#0, addr)}, \texttt{(\#0, addr)+} and \texttt{-(\#0, addr)}. The assembler accepts the shorthand only
+where it accepts the full form, and \mnemonic{LJMP} and \mnemonic{LJSR} take \texttt{addr} rather than \texttt{(addr)}.
+Register displacements have no shorthand.
+
+\section{Immediate Operands}
+
+An immediate operand may be a number, a label reference, or a named constant. A number is written with a leading hash
+(Table~\ref{tab:number-forms}); a label reference and a named constant are not.
+
+A label reference is accepted only by \mnemonic{MOVI}, \mnemonic{LOAD}, \mnemonic{STOR}, \mnemonic{LDEA},
+\mnemonic{LDEL}, \mnemonic{LJMP}, \mnemonic{LJSR}, \mnemonic{BRAN} and \mnemonic{BRSR}. Other instructions with an
+immediate operand accept a number or a named constant only. To use an address with one of them, load it with
+\mnemonic{MOVI} first.
+
+An immediate operand has the width of the instruction format it is encoded in: 16 bits in the immediate format and 8
+bits in the short immediate format. The assembler is not required to diagnose a value that is too wide for its field,
+so a value must be kept in range.
+
+\section{Label References}
+
+A label reference in an operand is resolved by the linker, not the assembler. What it resolves to depends on the
+instruction and on an optional suffix; Chapter~\ref{ch:directives-and-symbols} gives the rules.
+
+\section{Shift Operands}
+
+A shift is written as a shift type followed by a count. The type is one of \texttt{NUL}, \texttt{LSL}, \texttt{LSR},
+\texttt{ASL}, \texttt{ASR}, \texttt{RTL} or \texttt{RTR}. The count is either an immediate number from 0 to 15 or a
+register that holds the count. A space separates the type from the count.
+
+% qa:assemble
+\begin{lstlisting}
+    ADDR r1, r2, LSL #2      ; literal count
+    ADDR r1, r2, LSR r3      ; count held in r3
+\end{lstlisting}
+
+A shift applies to one operand only, as defined for each instruction in the \archmanual{}. A count above 15 is rejected
+by the assembler. The Shift Operations chapter of the \archmanual{} defines each shift type.
+
+\section{Register Shorthand}
+
+A save-result register-form ALU instruction, such as \mnemonic{ADDR}, written with two register operands is shorthand
+for the three-operand form with the destination repeated as the first source. \mnemonic{MOVR} is the exception: its
+only form is \texttt{MOVR rD, rS}. These two lines assemble to the same instruction:
+
+% qa:assemble
+\begin{lstlisting}
+    ADDR r1, r1, r2         ; r1 = r1 + r2
+    ADDR r1, r2             ; r1 = r1 + r2
+\end{lstlisting}
+
+A shift written with the shorthand applies to the left operand, which is the destination register, not to the second
+register written.
+
+The test instructions \mnemonic{CMNR}, \mnemonic{CNCR}, \mnemonic{CMPR}, \mnemonic{CPCR}, \mnemonic{TSAR},
+\mnemonic{TSOR} and \mnemonic{TSXR} have no destination. Each takes exactly two registers, \texttt{rS1, rS2\{,
+	shift\}}.

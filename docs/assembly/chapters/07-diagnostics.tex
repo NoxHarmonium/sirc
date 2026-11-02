@@ -1,0 +1,89 @@
+\chapter{Diagnostics}
+\label{ch:diagnostics}
+
+\section{Assembler Errors}
+
+The assembler stops at the first error. It prints the file, line and column, the lines around the error with a marker
+under the offending token, and the chain of syntax contexts it was inside. The final line states the reason:
+
+\begin{lstlisting}[language={}]
+error: parsing failed
+  --> bad.sasm:6:10
+4 |     ADDI r1, #5
+5 |     ADDI r1, #5, LSL #1
+6 |     LOAD r1, #5
+  |          ^
+
+in section "instruction" at line 6, column 5,
+in section "LOAD instruction" at line 6, column 5,
+external error:
+  Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVI to load an
+  immediate value into a register. at line 6, column 10
+\end{lstlisting}
+
+Where the instruction has a correct alternative, the diagnostic names it. The assembler appends \texttt{at line}
+\emph{n}\texttt{, column} \emph{m} to each message. The diagnostics for the most common mistakes are:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{3.6cm}p{7.2cm}p{3.2cm}}
+		\toprule
+		\textbf{Source}                    & \textbf{What the Assembler Says}                                                                                                                                    & \textbf{Meaning}                                                     \\
+		\midrule
+		\texttt{LOAD r1, \#5}              & \texttt{Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVI to load an immediate value into a register.}                                             & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVI}               \\
+		\texttt{LOAD r1, r2}               & \texttt{Invalid addressing mode for LOAD: LOAD only reads memory. Use MOVR to copy one register to another.}                                                        & \mnemonic{LOAD} only reads memory; use \mnemonic{MOVR}               \\
+		\texttt{LOAD r1, (r2, a), LSL \#1} & \texttt{Invalid addressing mode for LOAD: LOAD does not support a shift. Use SHFT on the offset register before the LOAD, or on the destination register after it.} & \mnemonic{LOAD} has no shift; use \mnemonic{SHFT}                    \\
+		\texttt{MOVI[S] r1, \#5}           & \texttt{The [MOVI] opcode does not support the [S] status register update source because it has no shift operand. Use [A] or [N].}                                  & \texttt{[S]} needs a shift operand; use \texttt{[A]} or \texttt{[N]} \\
+		\texttt{MOVR r1, r2, LSL \#1}      & \texttt{Invalid addressing mode for MOVR:. Cannot use a shift with direct register -> direct register moves. Use SHFT instruction instead.}                         & A register-to-register move has no shift; use \mnemonic{SHFT}        \\
+		\texttt{ADDR r1, r2, LSL \#16}     & \texttt{Shift definitions can only be in the range of 0-15, got 16}                                                                                                 & The shift count must be 0--15                                        \\
+		\texttt{LOAD ah, (\#0, a)+}        & \texttt{Aliased register writes are undefined for LOAD: destination register overlaps the post-increment address register}                                          & The destination is half of the updated address register              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Common Assembler Diagnostics}
+	\label{tab:assembler-diagnostics}
+\end{table}
+
+The \texttt{ADDR} diagnostic is wrapped in the text \texttt{Parsing Failure: Base \{ location: ..., kind:
+	External("...") \}}; the table shows the inner message.
+
+\subsection*{Aliased-write diagnostics}
+
+The aliased-write diagnostic ends with a different phrase for each form. The assembler rejects these forms:
+
+\begin{itemize}
+	\item \mnemonic{LDEA} pre-decrement with the destination equal to the source.
+	\item \mnemonic{LDEL} with destination \reg{l}, in any form.
+	\item \mnemonic{LDEL} post-increment with source \reg{l}, or with the destination equal to the source.
+	\item \mnemonic{LJSR} post-increment from \reg{l} or \reg{p}.
+	\item \mnemonic{LOAD} post-increment whose destination is a half of the auto-updated address-register pair.
+	\item \mnemonic{STOR} pre-decrement whose source is a half of the auto-updated address-register pair.
+\end{itemize}
+
+The assembler is to reject any auto-update of \reg{p} (\texttt{(p)+} or \texttt{-(p)} in any instruction), because the
+update would compete with the program-counter advance. It does not yet do so, except where the form is also listed
+above: for example, \texttt{LOAD r1, (\#0, p)+} assembles today. Do not write such a form. Its result is
+architecturally undefined.
+
+The \mnemonic{DMAR} and \mnemonic{DMAW} count operand must be a literal in the range \texttt{\#-7} to \texttt{\#7}. The
+assembler rejects a literal outside that range with a message that names the permitted range and the value given.
+
+The Memory Access Instructions, Control Flow Instructions and Coprocessor Instructions chapters of the \archmanual{}
+explain why each form is undefined.
+
+When an instruction is given operands it does not accept, the diagnostic names the instruction and either shows the
+operands it parsed or gives an example of an accepted form. When an operand cannot be parsed at all, the diagnostic
+lists the tokens the assembler expected at that point.
+
+\section{Linker Errors}
+
+The linker reports two problems, each as a failure with the cause in the message:
+
+\begin{itemize}
+	\item \textbf{Unresolved symbol.} \texttt{Cannot find symbol [name] in symbol definitions.} A reference names a label
+	      that no linked object declares. Check the spelling, and that the object file that declares it is on the linker's
+	      command line.
+	\item \textbf{Displacement out of range.} \texttt{Offset \ldots{} does not fit into a 16 bit signed integer.} A
+	      \mnemonic{BRAN} or \mnemonic{BRSR} (or a reference forced with \texttt{.r}) is further from its label than a
+	      16-bit signed word displacement can reach. Use \mnemonic{LJMP} or \mnemonic{LJSR} for a long jump.
+\end{itemize}

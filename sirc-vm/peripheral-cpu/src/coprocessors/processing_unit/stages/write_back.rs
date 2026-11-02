@@ -3,10 +3,7 @@ use peripheral_bus::device::BusAssertions;
 use crate::{
     coprocessors::{
         exception_unit::definitions::Faults,
-        processing_unit::{
-            definitions::{Instruction, ShiftOperand, StatusRegisterUpdateSource},
-            stages::{alu::perform_shift, shared::ShiftParameters},
-        },
+        processing_unit::definitions::{Instruction, StatusRegisterUpdateSource},
     },
     raise_fault,
     registers::{
@@ -40,16 +37,6 @@ struct AddressRegisterWrite {
     low_index: u8,
     high_value: u16,
     low_value: u16,
-}
-
-fn get_register_value(registers: &Registers, index: u8) -> u16 {
-    let should_redact_sr = sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers);
-    let sr_register_index = RegisterName::Sr as u8;
-    if should_redact_sr && index == sr_register_index {
-        registers[index] & SR_REDACTION_MASK
-    } else {
-        registers[index]
-    }
 }
 
 fn set_register_value(registers: &mut Registers, index: u8, value: u16) {
@@ -104,27 +91,6 @@ fn set_address_register_values(
             registers[write.high_index] = write.high_value;
         }
         registers[write.low_index] = write.low_value;
-    }
-}
-
-fn do_shift(
-    registers: &Registers,
-    sr_a_before_shift: u16,
-    shift_params: &ShiftParameters,
-) -> (u16, u16) {
-    let ShiftParameters {
-        shift_count,
-        shift_operand,
-        shift_type,
-    } = *shift_params;
-    match shift_operand {
-        ShiftOperand::Immediate => {
-            perform_shift(sr_a_before_shift, shift_type, u16::from(shift_count))
-        }
-        ShiftOperand::Register => {
-            let dereferenced_shift_count = get_register_value(registers, shift_count);
-            perform_shift(sr_a_before_shift, shift_type, dereferenced_shift_count)
-        }
     }
 }
 
@@ -335,10 +301,9 @@ impl StageExecutor for WriteBackExecutor {
         match write_back_step_instruction_type {
             WriteBackInstructionType::MemoryLoad
             | WriteBackInstructionType::AddressWriteLoadPostIncrement => {
-                // LOAD instructions never update the status register, so status register updates are ignored, regardless of the status register update source parameter
-                let (shifted, _) = do_shift(registers, bus_assertions.data, &decoded.shift_params);
-
-                set_register_value(registers, decoded.des, shifted);
+                // LOAD instructions never update the status register, so status register updates are ignored, regardless of the status register update source parameter.
+                // LOAD has no shift: the shift fields of the register-offset encodings are reserved and ignored
+                set_register_value(registers, decoded.des, bus_assertions.data);
             }
             WriteBackInstructionType::NoOp
             | WriteBackInstructionType::AluToRegister

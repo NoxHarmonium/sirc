@@ -429,3 +429,43 @@
 #             ^^ source.sirc-asm
 #               ^^ source.sirc-asm constant.language.register.sirc
 >
+>; ALU moves
+#^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>MOVI r1, #5
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.numeric.decimal.sirc
+>MOVR|== r2, r3
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.language.register.sirc
+>
+>; ALU test variants
+#^^^^^^^^^^^^^^^^^^^ source.sirc-asm comment.line.sirc
+>CMNI r1, #1
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.numeric.decimal.sirc
+>CMNR r1, r2
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm
+#     ^^ source.sirc-asm constant.language.register.sirc
+#       ^^ source.sirc-asm
+#         ^^ source.sirc-asm constant.language.register.sirc
+>TSOR|!= r3, r4
+#^^^^ source.sirc-asm keyword.control.mnemonic.sirc
+#    ^ source.sirc-asm keyword.control.condition.sirc
+#     ^^ source.sirc-asm keyword.control.condition.sirc constant.language.condition-type.sirc
+#       ^ source.sirc-asm
+#        ^^ source.sirc-asm constant.language.register.sirc
+#          ^^ source.sirc-asm
+#            ^^ source.sirc-asm constant.language.register.sirc
+>

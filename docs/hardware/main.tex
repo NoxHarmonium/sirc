@@ -1,0 +1,42 @@
+\documentclass[11pt,letterpaper,twoside]{book}
+
+% ==========================================
+% SIRC-1 Hardware Reference Manual
+% Package, signals, bus interface and timing
+% ==========================================
+
+% Manual-specific strings used by the shared preamble (footer, PDF metadata).
+\newcommand{\sircManualFooter}{SIRC-1 HARDWARE REFERENCE MANUAL}
+\newcommand{\sircManualTitle}{SIRC-1 Hardware Reference Manual}
+\newcommand{\sircManualSubject}{SIRC-1 CPU package, signals, bus interface and timing}
+
+% Name of the sibling manual that defines the architecture, used for cross-manual references
+% (a LaTeX \ref cannot point into another PDF).
+\newcommand{\archmanual}{\textit{SIRC-1 Architecture Reference Manual}}
+
+\input{../reference/preamble}
+
+\begin{document}
+
+% Front Matter
+\frontmatter
+\input{chapters/front-cover}
+\input{chapters/preface}
+\tableofcontents
+\listoftables
+\listoffigures
+
+% Main Content
+\mainmatter
+\input{chapters/01-introduction}
+\input{chapters/02-package-and-pinout}
+\input{chapters/03-signal-descriptions}
+\input{chapters/04-bus-interface}
+\input{chapters/05-bus-timing}
+\input{chapters/06-electrical-characteristics}
+
+\backmatter
+
+\input{chapters/back-cover}
+
+\end{document}

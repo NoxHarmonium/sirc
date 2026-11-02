@@ -1,0 +1,24 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\label{ch:preface}
+
+\section*{About This Manual}
+
+This manual describes the SIRC assembly language and the tools that process it: the assembler, the linker, and the
+simulator. It is for programmers who write SIRC assembly. It is the companion to the \archmanual{}, which defines the
+instructions themselves, and the \hwmanual{}, which describes the chip.
+
+The \archmanual{} defines what each instruction does and gives the canonical notation used in its examples. This manual
+gives the complete language: how a source file is laid out, every operand form and directive, how symbols are resolved,
+and how to turn a source file into a program that runs.
+
+\section*{Assumed Knowledge}
+
+This manual assumes the reader has read the Assembly Language Summary in the Notation and Glossary chapter of the
+\archmanual{} and is comfortable with the SIRC-1 register set and instruction formats.
+
+\section*{Revision Status}
+
+This is Version 1.0 of the SIRC-1 Assembly Programmer's Manual, issued in draft for internal review and not for
+external distribution. It describes the behavior of the toolchain in this repository. Where the assembler does not yet
+implement something a programmer might expect, such as macros, Chapter~\ref{ch:limitations} says so.

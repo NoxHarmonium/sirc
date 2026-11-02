@@ -1,5 +1,5 @@
 % ==========================================
-% Preamble for SIRC-1 CPU Reference Manual
+% Shared preamble for the SIRC-1 manuals (docs/reference and docs/hardware)
 % ==========================================
 
 % ------------------------------------------------------------
@@ -35,6 +35,11 @@
 	headheight=14pt
 }
 
+% The book class flushes page bottoms in two-sided mode. With many [H] tables
+% that cuts pages short, so the leftover space gets spread through lists and
+% paragraphs instead. Let short pages stay short.
+\raggedbottom
+
 % ------------------------------------------------------------
 % General packages
 % ------------------------------------------------------------
@@ -68,6 +73,7 @@
 
 \usepackage{listings}
 \usepackage{bytefield}
+\bytefieldsetup{endianness=big}
 
 \usepackage{tikz}
 \usepackage{tikz-timing}
@@ -110,6 +116,21 @@
 \definecolor{opcodecolor}{RGB}{153,0,0}
 
 % ------------------------------------------------------------
+% Manual-specific strings
+% ------------------------------------------------------------
+% A manual's main.tex defines these (with \newcommand) before it inputs this
+% preamble. The defaults are for the Architecture Reference Manual.
+
+\providecommand{\sircManualFooter}{SIRC-1 ARCHITECTURE REFERENCE MANUAL}
+\providecommand{\sircManualTitle}{SIRC-1 Architecture Reference Manual}
+\providecommand{\sircManualSubject}{SIRCIS Instruction Set Architecture}
+
+% Names of the manuals in the set, for references between them
+\providecommand{\archmanual}{\textit{SIRC-1 Architecture Reference Manual}}
+\providecommand{\hwmanual}{\textit{SIRC-1 Hardware Reference Manual}}
+\providecommand{\asmmanual}{\textit{SIRC-1 Assembly Programmer's Manual}}
+
+% ------------------------------------------------------------
 % Header / footer
 % ------------------------------------------------------------
 
@@ -121,7 +142,7 @@
 \fancyhead[RE,LO]{\small\textcolor{sircred}{DRAFT --- Not for Distribution}}
 
 \fancyfoot[LE,RO]{\thepage}
-\fancyfoot[C]{\small\textcolor{sircgray}{SIRC-1 REFERENCE MANUAL}}
+\fancyfoot[C]{\small\textcolor{sircgray}{\sircManualFooter}}
 
 \renewcommand{\headrulewidth}{0.8pt}
 \renewcommand{\footrulewidth}{0.4pt}
@@ -138,8 +159,8 @@
 	citecolor=sircred,
 	bookmarksnumbered=true,
 	pdfauthor={SIRC Development Team},
-	pdftitle={SIRC-1 CPU Reference Manual},
-	pdfsubject={SIRCIS Instruction Set Architecture},
+	pdftitle={\sircManualTitle},
+	pdfsubject={\sircManualSubject},
 }
 
 % ------------------------------------------------------------
@@ -150,7 +171,7 @@
 	morekeywords={
 			ADDI,ADDR,ADCI,ADCR,SUBI,SUBR,SBCI,SBCR,
 			ANDI,ANDR,ORRI,ORRR,XORI,XORR,
-			LOAD,STOR,CMPI,CMPR,TSAI,TSAR,TSXI,TSXR,
+			LOAD,MOVI,MOVR,STOR,CMNI,CMNR,CNCI,CNCR,CMPI,CMPR,CPCI,CPCR,TSAI,TSAR,TSOI,TSOR,TSXI,TSXR,
 			LDEA,LDEL,BRAN,LJMP,LJSR,BRSR,RETS,NOOP,
 			WAIT,RETE,COPI,COPR,SHFT,EXCP,RSET,
 			ETFR,ETTR,DMAR,DMAW,DMAT,MULU,MULS,DIVU,DIVS
@@ -248,6 +269,9 @@
 \newcommand{\predec}[2]{\texttt{-(#1, #2)}}
 
 \newcommand{\shift}[2]{\texttt{#1 \##2}}
+
+% Active-low signal name with a period overbar, e.g. \activelow{BERR}
+\newcommand{\activelow}[1]{\ensuremath{\overline{\mbox{#1}}}}
 
 % ------------------------------------------------------------
 % Chapter / section styling
