@@ -4,7 +4,10 @@ use num::Integer;
 use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
 use super::stages::shared::DecodedInstruction;
-use crate::coprocessors::exception_unit::definitions::Faults;
+use crate::coprocessors::exception_unit::{
+    definitions::{vectors::USER_EXCEPTION_VECTOR_START, ExceptionUnitOpCodes, Faults},
+    execution::construct_exception_unit_command,
+};
 use crate::coprocessors::processing_unit::definitions::Instruction;
 use crate::coprocessors::processing_unit::stages::execution_effective_address::ExecutionEffectiveAddressExecutor;
 use crate::coprocessors::processing_unit::stages::fetch_and_decode::decode_and_register_fetch;
@@ -17,7 +20,7 @@ use crate::coprocessors::shared::{ExecutionPhase, Executor};
 use crate::raise_fault;
 use crate::registers::{
     sr_bit_is_set, ExceptionUnitRegisters, FullAddressRegisterAccess, RegisterName, Registers,
-    StatusRegisterFields,
+    SegmentedAddress, StatusRegisterFields,
 };
 
 const PRIVILEGED_REGISTERS: &[u8] = &[
@@ -26,6 +29,15 @@ const PRIVILEGED_REGISTERS: &[u8] = &[
     RegisterName::Ph as u8,
     RegisterName::Sh as u8,
 ];
+
+fn is_coprocessor_call(instruction: Instruction) -> bool {
+    matches!(
+        instruction,
+        Instruction::CoprocessorCallImmediate
+            | Instruction::CoprocessorCallRegister
+            | Instruction::CoprocessorCallShortImmediate
+    )
+}
 
 pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) -> bool {
     if !sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers) {
@@ -37,9 +49,7 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
         return false;
     }
 
-    let is_cop_instruction = instruction.ins == Instruction::CoprocessorCallImmediate
-        || instruction.ins == Instruction::CoprocessorCallRegister
-        || instruction.ins == Instruction::CoprocessorCallShortImmediate;
+    let is_cop_instruction = is_coprocessor_call(instruction.ins);
     // Only an actual write to a privileged register is a violation: compare, test and store
     // instructions merely read the register named by their register field.
     let writing_to_privileged_registers =
@@ -170,13 +180,40 @@ impl Executor for ProcessingUnitExecutor {
                 BusAssertions::default()
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
-                ExecutionEffectiveAddressExecutor::execute(
+                let result = ExecutionEffectiveAddressExecutor::execute(
                     &self.decoded_instruction,
                     registers,
                     eu_registers,
                     &mut self.intermediate_registers,
                     bus_assertions,
-                )
+                );
+                // Validate the effective EXCP command before CSR write-back and
+                // handler-level discard. A fault must retry the issuing COP, not
+                // the continuation PC already installed during decode.
+                let command = self.intermediate_registers.alu_output;
+                let reserved_traps =
+                    construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0)
+                        ..construct_exception_unit_command(
+                            &ExceptionUnitOpCodes::SoftwareException,
+                            USER_EXCEPTION_VECTOR_START,
+                        );
+                if self.decoded_instruction.con_
+                    && is_coprocessor_call(self.decoded_instruction.ins)
+                    && sr_bit_is_set(StatusRegisterFields::ProtectedMode, registers)
+                    && reserved_traps.contains(&command)
+                {
+                    raise_fault(
+                        eu_registers,
+                        Faults::PrivilegeViolation,
+                        &bus_assertions,
+                        (
+                            self.decoded_instruction.pc_h_,
+                            self.decoded_instruction.pc_l_,
+                        )
+                            .to_full_address(),
+                    );
+                }
+                result
             }
             ExecutionPhase::MemoryAccessExecutor => MemoryAccessExecutor::execute(
                 &self.decoded_instruction,

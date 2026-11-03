@@ -1573,28 +1573,6 @@ fn test_privilege_violation_fault_on_address_register_high_word_write() {
     );
 }
 
-/// Models the exception unit's own cycle when it fetches a reserved software-exception vector:
-/// the (irrelevant) vector-table contents are still fetched exactly as for a valid vector, but no
-/// dispatch/jump happens this cycle -- `Faults::PrivilegeViolation` is raised instead, to be
-/// dispatched on the *next* cycle via `expect_fault`.
-pub fn expect_software_exception_vector_fetch_without_dispatch(
-    vector: u8,
-) -> Vec<Option<Expectation>> {
-    vec![
-        Some(expectation(None, None, Some(u32::from(vector) * 2), None)),
-        Some(expectation(
-            Some(0x0),
-            None,
-            Some((u32::from(vector) * 2) + 1),
-            None,
-        )),
-        Some(expectation(Some(0x0), None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-        Some(expectation(None, None, None, None)),
-    ]
-}
-
 pub fn build_software_exception_below_reserved_vector_instruction() -> InstructionData {
     InstructionData::Immediate(ImmediateInstructionData {
         op_code: Instruction::CoprocessorCallImmediate,
@@ -1622,12 +1600,6 @@ fn test_privilege_violation_fault_on_reserved_software_exception_vector() {
     run_expectations(
         &mut cpu_peripheral,
         &expect_main_program_cycle_with_instruction(0x0, &software_exception),
-        &mut clocks,
-    );
-
-    run_expectations(
-        &mut cpu_peripheral,
-        &expect_software_exception_vector_fetch_without_dispatch(0x40),
         &mut clocks,
     );
 
