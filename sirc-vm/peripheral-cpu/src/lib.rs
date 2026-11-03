@@ -701,10 +701,13 @@ impl CpuPeripheral {
                 .to_full_address()
         } else {
             if op_code == ExceptionUnitOpCodes::HardwareException && (2..=6).contains(&level) {
-                // Restore this event without running the pin edge detector.
-                // Existing pending requests coalesce. L5 overrun accounting
-                // for a requeue collision is separate work in #458/#482.
-                self.eu_registers.pending_hardware_exceptions |= 1 << (level - 2);
+                // Requeue L5 through the same logical enqueue as pin edges:
+                // a new edge already in its bit means the failed request overran it.
+                if level == ExceptionPriorities::LevelFiveHardware as u8 {
+                    self.enqueue_l5();
+                } else {
+                    self.eu_registers.pending_hardware_exceptions |= 1 << (level - 2);
+                }
             }
             self.registers.get_full_pc_address()
         };
