@@ -289,7 +289,7 @@ impl StageExecutor for WriteBackExecutor {
                 );
             }
             WriteBackInstructionType::CoprocessorCall => {
-                registers.pending_coprocessor_command = intermediate_registers.alu_output;
+                registers.coprocessor_select_register = intermediate_registers.alu_output;
             }
         }
 

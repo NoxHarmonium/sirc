@@ -108,7 +108,7 @@ fn test_software_rset_hold() {
         );
     }
 
-    // Poll 5 (WriteBack): PU sets pending_coprocessor_command = RESET_CAUSE, phase wraps to 0,
+    // Poll 5 (WriteBack): PU sets coprocessor_select_register = RESET_COMMAND, phase wraps to 0,
     // CPU signals rsti in its output. poll_all intercepts and starts the hold. RSTO cycle 1.
     assertions = bus.poll_all(assertions);
     assert!(

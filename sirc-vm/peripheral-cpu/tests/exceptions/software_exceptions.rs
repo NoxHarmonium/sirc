@@ -108,7 +108,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
     );
 
     assert_eq!(0x00CD_AB06, cpu_peripheral.registers.get_full_pc_address());
-    assert_eq!(0x0, cpu_peripheral.registers.pending_coprocessor_command);
+    assert_eq!(0x0, cpu_peripheral.registers.coprocessor_select_register);
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn test_software_exception_is_ignored_during_fault_handler() {
     );
 
     assert_eq_hex!(0x0000_0004, cpu_peripheral.registers.get_full_pc_address());
-    assert_eq!(0x0, cpu_peripheral.registers.pending_coprocessor_command);
+    assert_eq!(0x0, cpu_peripheral.registers.coprocessor_select_register);
     assert_eq!(
         ExceptionPriorities::Fault as u8,
         cpu_peripheral.eu_registers.current_exception_level

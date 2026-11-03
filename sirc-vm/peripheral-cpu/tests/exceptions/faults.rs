@@ -15,7 +15,7 @@ use peripheral_cpu::{
                 },
                 ExceptionUnitOpCodes, Faults, PendingFault,
             },
-            execution::construct_cause_value,
+            execution::construct_exception_unit_command,
         },
         processing_unit::{
             definitions::{ConditionFlags, ImmediateInstructionData, Instruction, InstructionData},
@@ -472,8 +472,8 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
     let mut cpu_peripheral = new_cpu_peripheral();
     let mut clocks = 0;
 
-    cpu_peripheral.registers.pending_coprocessor_command =
-        construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x60);
+    cpu_peripheral.registers.coprocessor_select_register =
+        construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x60);
 
     let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
     assert_eq_hex!(u32::from(0x60_u8) * 2, vector_request.address);

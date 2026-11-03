@@ -19,7 +19,7 @@ use crate::instructions::common;
 struct ProtectedModeResult {
     registers: Registers,
     pending_fault: Option<Faults>,
-    pending_coprocessor_command: u16,
+    coprocessor_select_register: u16,
 }
 
 fn run_instruction<F>(instruction_data: &InstructionData, register_setup: F) -> ProtectedModeResult
@@ -42,7 +42,7 @@ where
             .eu_registers
             .pending_fault
             .map(|pending_fault| pending_fault.fault),
-        pending_coprocessor_command: cpu.registers.pending_coprocessor_command,
+        coprocessor_select_register: cpu.registers.coprocessor_select_register,
     }
 }
 
@@ -633,7 +633,7 @@ fn privileged_coprocessor_calls_fault_only_when_executed() {
         set_sr_bit(StatusRegisterFields::Carry, registers);
     });
     assert_no_fault(&result);
-    assert_eq!(0x0000, result.pending_coprocessor_command);
+    assert_eq!(0x0000, result.coprocessor_select_register);
 
     let privileged_copr = InstructionData::Register(RegisterInstructionData {
         op_code: Instruction::CoprocessorCallRegister,
@@ -670,5 +670,5 @@ fn short_copi_cannot_encode_privileged_coprocessor_command() {
         registers.r1 = 0x1900;
     });
     assert_no_fault(&result);
-    assert_eq!(0x0019, result.pending_coprocessor_command);
+    assert_eq!(0x0019, result.coprocessor_select_register);
 }

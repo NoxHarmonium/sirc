@@ -44,8 +44,8 @@ use coprocessors::{
             PendingFault,
         },
         execution::{
-            construct_cause_value, deconstruct_cause_value, select_pending_event,
-            ExceptionUnitExecutor,
+            construct_exception_unit_command, deconstruct_exception_unit_command,
+            select_pending_event, ExceptionUnitExecutor,
         },
     },
     processing_unit::execution::ProcessingUnitExecutor,
@@ -71,11 +71,11 @@ const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u8 = 6;
 
-// Cause register components
+// Coprocessor select register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
 pub const COPROCESSOR_ID_LENGTH: u16 = 12;
-pub const CAUSE_OPCODE_ID_MASK: u16 = 0x0F00;
-pub const CAUSE_OPCODE_ID_LENGTH: u16 = 8;
+pub const COPROCESSOR_OPCODE_ID_MASK: u16 = 0x0F00;
+pub const COPROCESSOR_OPCODE_ID_LENGTH: u16 = 8;
 
 // pub bus_access_type: BusAccessType, // 3 bits (BAT0-BAT2)
 // pub double_fault: bool, // 1 bit
@@ -128,7 +128,9 @@ pub struct CpuPeripheral {
     pub phase: u8,
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
-    pub cause_register_value: u16,
+    /// Command latched for the active slot, including automatic EU events.
+    /// Slot ownership determines whether completion consumes CSR.
+    pub active_command: u16,
     // Selected at phase 0 and retained through the slot, including bus stalls.
     slot_owner: SlotOwner,
     // Sample once at PU instruction start; retain eligibility until its command completes.
@@ -245,7 +247,7 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         phase: 0,
         processing_unit_executor: ProcessingUnitExecutor::default(),
         exception_unit_executor: ExceptionUnitExecutor::default(),
-        cause_register_value: 0,
+        active_command: 0,
         slot_owner: SlotOwner::ProcessingUnit,
         instruction_trace: InstructionTrace::None,
         pending_bus_request: None,
@@ -362,7 +364,7 @@ impl CpuPeripheral {
 
         if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
             if self.slot_owner == SlotOwner::CsrCommand {
-                self.clear_pending_coprocessor_command();
+                self.clear_coprocessor_select_register();
                 self.instruction_trace = InstructionTrace::None;
             }
             if let Some(vector_fetch_fault_response) =
@@ -399,39 +401,38 @@ impl CpuPeripheral {
         }
 
         if phase == ExecutionPhase::InstructionFetchLow {
-            // Only reset the cause register every full instruction cycle
-            let pending_coprocessor_command = self.registers.pending_coprocessor_command;
+            // Select the active command once per slot, retaining it through bus stalls.
+            let coprocessor_select_register = self.registers.coprocessor_select_register;
             let ignored_software_exception = self.eu_registers.current_exception_level != 0
-                && Self::is_software_exception_command(pending_coprocessor_command);
+                && Self::is_software_exception_command(coprocessor_select_register);
             if ignored_software_exception {
-                self.clear_pending_coprocessor_command();
+                self.clear_coprocessor_select_register();
             }
 
             // An aborting fault cancels pending work. ID-0
             // commands have no dispatch slot and must not block pending events.
             if self.eu_registers.pending_fault.is_some()
-                || Self::decode_processor_id(self.registers.pending_coprocessor_command)
+                || Self::decode_processor_id(self.registers.coprocessor_select_register)
                     == ProcessingUnitExecutor::COPROCESSOR_ID
             {
-                self.clear_pending_coprocessor_command();
+                self.clear_coprocessor_select_register();
             }
 
-            (self.cause_register_value, self.slot_owner) =
-                if self.registers.pending_coprocessor_command != 0 {
-                    (
-                        self.registers.pending_coprocessor_command,
-                        SlotOwner::CsrCommand,
-                    )
-                } else if let Some(event) =
-                    select_pending_event(&self.registers, &self.eu_registers)
-                {
-                    (event.accept(&mut self.eu_registers), SlotOwner::EuEvent)
-                } else {
-                    (0, SlotOwner::ProcessingUnit)
-                };
+            (self.active_command, self.slot_owner) = if self.registers.coprocessor_select_register
+                != 0
+            {
+                (
+                    self.registers.coprocessor_select_register,
+                    SlotOwner::CsrCommand,
+                )
+            } else if let Some(event) = select_pending_event(&self.registers, &self.eu_registers) {
+                (event.accept(&mut self.eu_registers), SlotOwner::EuEvent)
+            } else {
+                (0, SlotOwner::ProcessingUnit)
+            };
         }
 
-        let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
+        let coprocessor_id = Self::decode_processor_id(self.active_command);
 
         // Sample T/TRCE only when a PU instruction begins. A command retains its
         // issuing instruction's decision; automatic EU dispatches never generate trace.
@@ -461,14 +462,14 @@ impl CpuPeripheral {
         let result = match coprocessor_id {
             ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
                 &phase,
-                self.cause_register_value,
+                self.active_command,
                 &mut self.registers,
                 &mut self.eu_registers,
                 bus_assertions,
             ),
             ExceptionUnitExecutor::COPROCESSOR_ID => self.exception_unit_executor.step(
                 &phase,
-                self.cause_register_value,
+                self.active_command,
                 &mut self.registers,
                 &mut self.eu_registers,
                 bus_assertions,
@@ -478,10 +479,10 @@ impl CpuPeripheral {
                     && phase == ExecutionPhase::InstructionFetchLow
                 {
                     warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
-                    let invalid_coprocessor_command = self.cause_register_value;
+                    let invalid_coprocessor_command = self.active_command;
                     // This arm only runs at InstructionFetchLow, one poll cycle after the
                     // faulting instruction's own WriteBackExecutor wrote
-                    // `pending_coprocessor_command` -- since the coprocessor ID has been invalid
+                    // `coprocessor_select_register` -- since the coprocessor ID has been invalid
                     // for the whole intervening cycle, `processing_unit_executor.step()` (and so
                     // its decode) was never invoked, so `decoded_instruction` is still exactly
                     // that faulting instruction's own decode, untouched.
@@ -500,7 +501,7 @@ impl CpuPeripheral {
                         },
                         fault_pc,
                     );
-                    self.clear_pending_coprocessor_command();
+                    self.clear_coprocessor_select_register();
                     self.instruction_trace = InstructionTrace::None;
                 }
 
@@ -511,7 +512,7 @@ impl CpuPeripheral {
         // Executors do not own CSR cleanup. Only the command whose slot just
         // completed (or aborted) consumes CSR; an automatic EU event does not.
         if phase == ExecutionPhase::WriteBackExecutor && self.slot_owner == SlotOwner::CsrCommand {
-            self.clear_pending_coprocessor_command();
+            self.clear_coprocessor_select_register();
         }
 
         if phase == ExecutionPhase::WriteBackExecutor {
@@ -532,11 +533,11 @@ impl CpuPeripheral {
             ..result
         };
 
-        // Software RSET: after WriteBack wraps phase back to 0, if pending_coprocessor_command
-        // was just set to the reset cause value, signal the reset unit via reset_requested so it starts
+        // Software RSET: after WriteBack wraps phase back to 0, if coprocessor_select_register
+        // was just set to the reset command, signal the reset unit via reset_requested so it starts
         // the 6-cycle RSTO hold before the EU fetches the reset vector.
-        let reset_cause = construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
-        if self.phase == 0 && self.registers.pending_coprocessor_command == reset_cause {
+        let reset_command = construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0x0);
+        if self.phase == 0 && self.registers.coprocessor_select_register == reset_command {
             return BusAssertions {
                 reset_requested: true,
                 ..result
@@ -557,8 +558,8 @@ impl CpuPeripheral {
 
         let trace_due = match (self.instruction_trace, &self.slot_owner) {
             (InstructionTrace::Sampled, SlotOwner::ProcessingUnit) => {
-                let command = self.registers.pending_coprocessor_command;
-                if command == construct_cause_value(&ExceptionUnitOpCodes::Reset, 0)
+                let command = self.registers.coprocessor_select_register;
+                if command == construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0)
                     || Self::is_software_exception_command(command)
                 {
                     self.instruction_trace = InstructionTrace::None;
@@ -595,18 +596,18 @@ impl CpuPeripheral {
 
     fn is_software_exception_command(command: u16) -> bool {
         Self::decode_processor_id(command) == ExceptionUnitExecutor::COPROCESSOR_ID
-            && (command & CAUSE_OPCODE_ID_MASK) >> CAUSE_OPCODE_ID_LENGTH
+            && (command & COPROCESSOR_OPCODE_ID_MASK) >> COPROCESSOR_OPCODE_ID_LENGTH
                 == ExceptionUnitOpCodes::SoftwareException as u16
     }
 
     /// Clear the CSR command word on completion, cancellation, or discard.
-    fn clear_pending_coprocessor_command(&mut self) {
-        self.registers.pending_coprocessor_command = 0;
+    fn clear_coprocessor_select_register(&mut self) {
+        self.registers.coprocessor_select_register = 0;
     }
 
     /// Works out which coprocessor should run on this cycle
-    fn decode_processor_id(cause_register_value: u16) -> u8 {
-        ((cause_register_value & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
+    fn decode_processor_id(command: u16) -> u8 {
+        ((command & COPROCESSOR_ID_MASK) >> COPROCESSOR_ID_LENGTH) as u8
     }
 
     fn fault_from_bus_assertions(bus_assertions: BusAssertions) -> Option<Faults> {
@@ -628,7 +629,7 @@ impl CpuPeripheral {
             return None;
         }
 
-        let (op_code, vector, _) = deconstruct_cause_value(self.cause_register_value);
+        let (op_code, vector, _) = deconstruct_exception_unit_command(self.active_command);
         // Abort the current exception-unit dispatch. The next dispatch starts at phase 0 and
         // overwrites any partially fetched vector scratch state in the exception-unit executor.
         self.phase = 0;
@@ -745,8 +746,8 @@ impl CpuPeripheral {
         self.eu_registers.current_exception_level = 0;
         self.phase = 0;
         // Seeds the EU to fetch the reset vector when the RSTO hold expires
-        self.registers.pending_coprocessor_command =
-            construct_cause_value(&ExceptionUnitOpCodes::Reset, 0x0);
+        self.registers.coprocessor_select_register =
+            construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0x0);
     }
 
     /// Runs the CPU for six cycles. Only to keep tests functioning at the moment. Will be removed

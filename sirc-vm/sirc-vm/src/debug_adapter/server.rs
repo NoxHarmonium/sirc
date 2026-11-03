@@ -290,8 +290,8 @@ pub fn start_server(
                             end_column: None,
                         },
                         // TODO Misc:
-                        // cause
-                        // pending_coprocessor_command
+                        // active_command
+                        // coprocessor_select_register
                         // ExceptionUnitRegisters
                     ],
                 }));
