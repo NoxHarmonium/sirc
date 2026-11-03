@@ -525,3 +525,166 @@ fn reset_vector_failures_repeat_full_holds_and_exclude_interrupt_sampling() {
         }
     }
 }
+
+/// Consume the five remaining hold cycles, then observe the first reset read.
+fn finish_hold_with_l5_high(
+    bus: &mut peripheral_bus::BusPeripheral,
+    mut out: BusAssertions,
+) -> BusAssertions {
+    assert!(out.reset_devices_on_bus);
+    for _ in 0..5 {
+        out = bus.poll_all(BusAssertions {
+            interrupt_assertion: 16,
+            ..out
+        });
+        assert!(out.reset_devices_on_bus);
+        assert!(!out.bus_access_strobe);
+        assert_eq!(get_cpu(bus).eu_registers.pending_hardware_exceptions, 0);
+    }
+    out = bus.poll_all(BusAssertions {
+        interrupt_assertion: 16,
+        ..out
+    });
+    assert!(!out.reset_devices_on_bus);
+    assert!(out.bus_access_strobe);
+    assert_eq!(out.address, 0);
+    out
+}
+
+#[test]
+fn held_l5_across_reset_needs_a_real_release_and_reassertion() {
+    for software_reset in [false, true] {
+        for retry in [false, true] {
+            let mut bus = set_up_reset_test();
+            let mut image = vec![0_u8; 0x404];
+            image[2..4].copy_from_slice(&0x0800_u16.to_be_bytes());
+            image[0x42..0x44].copy_from_slice(&0x1000_u16.to_be_bytes());
+            let rset = InstructionData::Immediate(ImmediateInstructionData {
+                op_code: Instruction::CoprocessorCallImmediate,
+                register: 0,
+                value: 0x1b00,
+                condition_flag: ConditionFlags::Always,
+                additional_flags: 0,
+            });
+            image[0x400..0x404].copy_from_slice(&encode_instruction(&rset));
+            bus.load_binary_data_into_segment("RESET_VEC", &image);
+            {
+                let cpu = get_cpu(&mut bus);
+                cpu.registers.pl = 0x0200;
+                cpu.eu_registers.current_exception_level = 7;
+                // Both the pending bit and overrun will be cleared by reset,
+                // while the last observed high level must survive it.
+                for level in [16, 0, 16] {
+                    cpu.raise_hardware_interrupt(level);
+                }
+                assert!(cpu.eu_registers.l5_overrun);
+            }
+            let mut out = ACK;
+            if software_reset {
+                for _ in 0..6 {
+                    out = bus.poll_all(BusAssertions {
+                        interrupt_assertion: 16,
+                        ..out
+                    });
+                }
+                assert!(out.reset_devices_on_bus);
+            } else {
+                // Held external RSTI repeatedly invokes reset at the coordinator.
+                for _ in 0..4 {
+                    out = bus.poll_all(BusAssertions {
+                        interrupt_assertion: 16,
+                        ..RSTI_ASSERTED
+                    });
+                }
+            }
+            assert_eq!(
+                get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                0
+            );
+            assert!(!get_cpu(&mut bus).eu_registers.l5_overrun);
+            out = finish_hold_with_l5_high(&mut bus, out);
+            if retry {
+                out = bus.poll_all(BusAssertions {
+                    bus_error: true,
+                    interrupt_assertion: 16,
+                    ..out
+                });
+                out = finish_hold_with_l5_high(&mut bus, out);
+            }
+            // Transitions wholly inside reset fetch are ignored for sampling,
+            // so its last pre-reset high value must still be remembered.
+            for interrupt in [0, 16, 0, 16, 16] {
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: interrupt,
+                    ..out
+                });
+                assert_eq!(
+                    get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                    0
+                );
+            }
+            out = bus.poll_all(BusAssertions {
+                interrupt_assertion: 16,
+                ..out
+            });
+            assert_eq!(out.address, 0x0800);
+            assert!(out.bus_access_strobe);
+            assert_eq!(get_cpu(&mut bus).active_command, 0);
+            assert_eq!(
+                get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                0
+            );
+            // A release/reassertion after reset is a genuine new edge, even
+            // wholly inside the first program instruction's fetch wait.
+            for interrupt in [0, 16] {
+                out = bus.poll_all(BusAssertions {
+                    bus_acknowledge: false,
+                    interrupt_assertion: interrupt,
+                    ..out
+                });
+                assert_eq!(out.address, 0x0800);
+            }
+            assert_eq!(
+                get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                16
+            );
+            assert!(!get_cpu(&mut bus).eu_registers.l5_overrun);
+            for _ in 1..6 {
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: 16,
+                    ..out
+                });
+            }
+            out = bus.poll_all(BusAssertions {
+                interrupt_assertion: 16,
+                ..out
+            });
+            assert_eq!(out.address, 0x20);
+            for _ in 1..6 {
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: 16,
+                    ..out
+                });
+            }
+            assert_eq!(get_cpu(&mut bus).eu_registers.current_exception_level, 6);
+            assert_eq!(get_cpu(&mut bus).registers.pl, 0x1000);
+            get_cpu(&mut bus).registers.coprocessor_select_register = 0x1a00;
+            for _ in 0..6 {
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: 16,
+                    ..out
+                });
+            }
+            out = bus.poll_all(BusAssertions {
+                interrupt_assertion: 16,
+                ..out
+            });
+            assert_eq!(out.address, 0x0802);
+            assert_eq!(get_cpu(&mut bus).active_command, 0);
+            assert_eq!(
+                get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                0
+            );
+        }
+    }
+}

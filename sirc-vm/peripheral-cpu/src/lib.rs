@@ -157,8 +157,8 @@ pub struct CpuPeripheral {
     // Set when halt_requested is asserted at an instruction boundary. Cleared when deasserted.
     is_halted: bool,
     reset_state: CpuResetState,
-    // Tracks the Level 5 (NMI) pin's state as of the last poll cycle, so a rising edge can be
-    // detected. Unlike levels 1-4 (level-sensitive), Level 5 only latches on a 0->1 transition.
+    // Last sampled Level 5 pin value, retained across reset. Sampling is
+    // disabled during reset; only a later observed 0->1 transition queues L5.
     l5_interrupt_pin_previously_asserted: bool,
 }
 
@@ -818,7 +818,8 @@ impl CpuPeripheral {
         self.active_command = 0;
         self.processing_unit_executor
             .next_instruction_fetch_is_overflow = false;
-        self.l5_interrupt_pin_previously_asserted = false;
+        // Pin history is not architectural pending state. Preserve it so a
+        // line already observed high cannot become a new edge because of reset.
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;
