@@ -9,13 +9,13 @@ Registers {
     r6: 0x0,
     r7: 0x74,
     lh: 0x0,
-    ll: 0x24e,
-    ah: 0xa,
-    al: 0x4,
+    ll: 0x1,
+    ah: 0xb,
+    al: 0x7,
     sh: 0x0,
     sl: 0x24e,
     ph: 0x0,
-    pl: 0x250,
+    pl: 0x256,
     pending_coprocessor_command: 0x0,
 }
 ===EXCEPTION UNIT REGISTERS===

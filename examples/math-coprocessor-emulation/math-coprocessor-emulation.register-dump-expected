@@ -8,14 +8,14 @@ Registers {
     r5: 0x3,
     r6: 0x0,
     r7: 0x7773,
-    lh: 0x0,
-    ll: 0x0,
+    lh: 0xb,
+    ll: 0x7,
     ah: 0x0,
-    al: 0x0,
+    al: 0x1,
     sh: 0x1,
     sl: 0x800,
     ph: 0x0,
-    pl: 0x294,
+    pl: 0x296,
     pending_coprocessor_command: 0x0,
 }
 ===EXCEPTION UNIT REGISTERS===

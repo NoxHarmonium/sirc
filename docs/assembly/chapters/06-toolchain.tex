@@ -21,7 +21,10 @@ Save this program as \texttt{count.sasm}. It counts \reg{r1} up to ten and stops
     ADDI r1, #1
     CMPI r1, #10
     BRAN|!= @loop
-    COPI #0x14FF                ; stop the simulator (test exit)
+    MOVI[N] ah, #0x000B            ; DEBUG device segment
+    MOVI[N] al, #0x0007            ; simulator exit register
+    MOVI[N] ll, #1                 ; termination request, not an exit code
+    STOR (a), ll
 \end{lstlisting}
 
 Assemble, link, and run it:
@@ -34,10 +37,17 @@ sirc_vm --program-file count.bin --register-dump-file count.register-dump
 
 The register dump written at the end shows \reg{r1} holding \texttt{0xA}.
 
-The final \mnemonic{COPI} with \texttt{\#0x14FF} is a test hook that only the simulator implements. It stops the
-simulator. On a conforming CPU, the instruction raises an invalid-opcode fault, because exception coprocessor opcode
-\texttt{0x4} is reserved (see the Exception and Interrupt Handling chapter of the \archmanual{}). Programs for real
-hardware must not use it.
+The final \mnemonic{STOR} writes \imm{1} to the DEBUG device's simulator-exit register at word address
+\texttt{0x0B0007} (device offset \texttt{0x7}). This is a simulator-only memory-mapped device interface, using ordinary
+instructions. It is not a CPU halt instruction or a hardware ABI. Other values and reads do not request an exit. The
+device acknowledges the write and requests termination through the bus; the simulator then writes the requested
+register dump and exits with host status zero. This status only means the simulation stopped: example checks must
+inspect their results to distinguish success from failure.
+
+This sequence clobbers \reg{ah}, \reg{al}, and \reg{ll}, preserving \reg{r1}--\reg{r7} and the status flags for result
+checks. A protected-mode program cannot write \reg{ah} directly. It can prepare an address pair before entering
+protected mode, as the maths-emulation example does, or ask a supervisor handler to perform the write, as the CRC
+example does. Programs for real hardware should use their platform's termination convention instead.
 
 \section{The Assembler}
 

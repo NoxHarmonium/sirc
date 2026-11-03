@@ -47,8 +47,9 @@
 
 MOVI ah, $PROGRAM_SEGMENT
 MOVI al, #0
-MOVI lh, $PROGRAM_SEGMENT
-MOVI ll, #0
+; Reserve l for simulator exit before entering protected mode.
+MOVI lh, #0x000B
+MOVI ll, #0x0007
 ; The emulation frame is writable; PROGRAM is read-only.
 MOVI sh, $SCRATCH_SEGMENT
 MOVI sl, #0x0800
@@ -130,12 +131,15 @@ MOVI|!= r6, #0x0305
 BRAN|!= @assert_failed
 ADDI r5, #1
 
-; Halt CPU.
-COPI #0x14FF
+; l already addresses DEBUG exit; only al is clobbered, even in protected mode.
+MOVI[N] al, #1
+STOR (l), al
 
 :assert_failed
 MOVI r4, #0xBAD0
-COPI #0x14FF
+; l already addresses DEBUG exit; only al is clobbered, even in protected mode.
+MOVI[N] al, #1
+STOR (l), al
 
 ;;
 ;; "System" Code
@@ -164,8 +168,9 @@ CMPI al, #0x3000
 BRAN|== @dispatch_mulu
 
 ; This reference handler only implements MULU.
-; Halt CPU.
-COPI #0x14FF
+; l already addresses DEBUG exit; only al is clobbered, even in protected mode.
+MOVI[N] al, #1
+STOR (l), al
 
 :dispatch_mulu
 ; Save the original fault return state, then retarget the fault return so the
@@ -229,8 +234,9 @@ MOVI r3, #0
 EXCP #0x70
 
 ; EXCP #0x70 should not return here.
-; Halt CPU.
-COPI #0x14FF
+; l already addresses DEBUG exit; only al is clobbered, even in protected mode.
+MOVI[N] al, #1
+STOR (l), al
 
 ;; Software Exception Handlers
 

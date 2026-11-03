@@ -142,5 +142,8 @@ MOVI r7, #0xFA11
 
 :pass
 
-; Halt CPU
-COPI    #0x14FF
+; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] ll, #1
+STOR (a), ll

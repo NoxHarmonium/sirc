@@ -13,6 +13,12 @@ pair, which places the reset vector (Chapter~\ref{ch:exceptions}): the CPU begin
 from word addresses \texttt{0x000000}--\texttt{0x000001}, not by executing whatever instruction happens to be placed
 there. The separately mapped high segment and the standalone data segment shown later do not need one.
 
+Examples stop the simulator by storing \imm{1} to the DEBUG device's exit register at word address \texttt{0x0B0007}.
+This simulator-only interface uses ordinary \mnemonic{MOVI}/\mnemonic{STOR} instructions; it is not an architectural
+CPU halt operation. The exit sequence preserves result registers \reg{r1}--\reg{r7} but uses address-register scratch
+space. A termination request is not a success result: each example's checks inspect its output. The full interface and
+protected-mode usage are described in the Using the Toolchain chapter of the \asmmanual{}.
+
 \section{Byte Sieve}
 
 This program computes primes below 1000 using the Sieve of Eratosthenes, storing one word per candidate number in a

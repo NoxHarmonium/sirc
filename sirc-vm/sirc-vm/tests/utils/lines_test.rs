@@ -25,7 +25,7 @@ BRAN|>= @loop
 NOOP
 
 ; Halt CPU
-COPI    r1, #0x14FF";
+STOR    (a), r1";
 
 // TODO: Add tests for multiple source files for PC <-> Line/Column translation
 // category=Testing
