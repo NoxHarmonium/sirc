@@ -322,9 +322,9 @@ impl CpuPeripheral {
             return BusAssertions::default();
         }
 
-        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
-        // asserted) so Level 5's edge-detection can observe the pin being released, not only
-        // asserted.
+        // Sample requests every cycle, including while waiting or stalled. Queuing
+        // does not wake WAIT: event selection below applies dispatch eligibility.
+        // Sampling released pins also keeps Level 5 edge detection up to date.
         if self.reset_state == CpuResetState::Running {
             self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
         }
@@ -776,7 +776,6 @@ impl CpuPeripheral {
             // category=Refactoring
             // Exception == all exceptions, interrupt = hardware pins, fault = internal exception, software = user triggered exception
             self.eu_registers.pending_hardware_exceptions |= level_sensitive_interrupts;
-            self.eu_registers.waiting_for_exception = false;
         }
 
         // Level 5 (NMI) is edge-triggered: only latch on a 0->1 transition of the pin, and it
@@ -795,7 +794,6 @@ impl CpuPeripheral {
         self.eu_registers.l5_overrun |=
             self.eu_registers.pending_hardware_exceptions & LEVEL_FIVE_INTERRUPT_PIN_BIT != 0;
         self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
-        self.eu_registers.waiting_for_exception = false;
     }
 
     fn advance_phase(&mut self) {
