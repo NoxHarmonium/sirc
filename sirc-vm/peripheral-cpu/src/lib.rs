@@ -264,10 +264,10 @@ impl Device for CpuPeripheral {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
         let result = self.poll_internal(bus_assertions, selected);
         BusAssertions {
-            protected_mode_active: sr_bit_is_set(
-                StatusRegisterFields::ProtectedMode,
-                &self.registers,
-            ),
+            // Vector-table reads are supervisor accesses even before entry
+            // clears live SR.P. Apply this to held requests as well.
+            protected_mode_active: result.bus_access_type != BusAccessType::ExceptionVectorFetch
+                && sr_bit_is_set(StatusRegisterFields::ProtectedMode, &self.registers),
             ..result
         }
     }
@@ -638,7 +638,7 @@ impl CpuPeripheral {
             return None;
         }
 
-        let (op_code, vector, _) = deconstruct_exception_unit_command(self.active_command);
+        let (op_code, vector, level) = deconstruct_exception_unit_command(self.active_command);
         // Stop this slot without resetting phase. In particular, an aborted
         // Fault slot must not clear the replacement fault at EU write-back.
         // The next dispatch overwrites partial vector scratch state normally.
@@ -686,15 +686,30 @@ impl CpuPeripheral {
             return Some(BusAssertions::default());
         }
 
-        // A vector fetch for a hardware/software exception (not yet an active fault dispatch)
-        // has itself bus-faulted. `handle_exception` for that original dispatch never ran, so
-        // `pl`/`ph` are untouched -- still the address execution should resume at once this new
-        // fault's handler is done.
+        // Entry has not committed: live SR/level still hold the state the
+        // failed event would have saved. Normal fault entry saves that state.
+        let return_pc = if op_code == ExceptionUnitOpCodes::SoftwareException {
+            // No PU instruction can run between issuing EXCP and completing
+            // its command slot, so its decode still owns the issuing PC.
+            (
+                self.processing_unit_executor.decoded_instruction.pc_h_,
+                self.processing_unit_executor.decoded_instruction.pc_l_,
+            )
+                .to_full_address()
+        } else {
+            if op_code == ExceptionUnitOpCodes::HardwareException && (2..=6).contains(&level) {
+                // Restore this event without running the pin edge detector.
+                // Existing pending requests coalesce. L5 overrun accounting
+                // for a requeue collision is separate work in #458/#482.
+                self.eu_registers.pending_hardware_exceptions |= 1 << (level - 2);
+            }
+            self.registers.get_full_pc_address()
+        };
         raise_fault(
             &mut self.eu_registers,
             fault,
             &fault_bus_assertions,
-            self.registers.get_full_pc_address(),
+            return_pc,
         );
         Some(BusAssertions::default())
     }

@@ -68,6 +68,9 @@ fn vector_errors_retire_idle_phases_before_the_replacement_fault_dispatch() {
                                 cpu.eu_registers.pending_hardware_exceptions = 1;
                                 LEVEL_ONE_HARDWARE_EXCEPTION
                             };
+                            // A synthetic queued EXCP still needs its issuing decode.
+                            cpu.processing_unit_executor.decoded_instruction.pc_h_ = 0x34;
+                            cpu.processing_unit_executor.decoded_instruction.pc_l_ = 0x0200;
                             let original_registers = cpu.registers;
                             let original_links = cpu.eu_registers.link_registers;
                             let first = tick(&mut cpu, 0);
