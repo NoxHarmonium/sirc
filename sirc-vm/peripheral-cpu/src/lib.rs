@@ -304,6 +304,11 @@ impl CpuPeripheral {
             };
         }
 
+        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
+        // asserted) so Level 5's edge-detection can observe the pin being released, not only
+        // asserted.
+        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+
         // If we have a pending bus request, stall until the device acknowledges (or errors).
         // Bus errors and protection errors also release the stall so fault handling can proceed.
         let completed_bus_request = if let Some(pending_request) = self.pending_bus_request {
@@ -339,11 +344,6 @@ impl CpuPeripheral {
                 self.is_halted = false;
             }
         }
-
-        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
-        // asserted) so Level 5's edge-detection can observe the pin being released, not only
-        // asserted.
-        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
 
         // Command-first dispatch may enter WAIT with an interrupt already
         // latched. Wake for that eligible event so the WAIT slot can finish;

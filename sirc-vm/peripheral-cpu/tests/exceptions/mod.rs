@@ -4,6 +4,7 @@ mod deferred_trace;
 mod excp_privilege;
 mod faults;
 mod hardware_exceptions;
+mod l5_queue;
 mod reset;
 mod software_exceptions;
 mod vector_fault_timing;
