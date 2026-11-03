@@ -253,6 +253,7 @@ fn excp_vector_bus_error_does_not_schedule_trace() {
                 Faults::Bus
             }
         );
+        super::common::finish_aborted_dispatch(&mut cpu);
         run_slot(&mut cpu, 0x0800, false);
         assert!(cpu.eu_registers.pending_fault.is_none());
     }

@@ -519,6 +519,8 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
         cpu_peripheral.eu_registers.link_registers[7].return_address
     );
 
+    super::common::finish_aborted_dispatch(&mut cpu_peripheral);
+
     run_expectations(
         &mut cpu_peripheral,
         &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
@@ -564,6 +566,8 @@ fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
             cpu_peripheral.eu_registers.link_registers[7].return_status_register,
         ),
     );
+
+    super::common::finish_aborted_dispatch(&mut cpu_peripheral);
 
     run_expectations(
         &mut cpu_peripheral,
@@ -618,6 +622,8 @@ fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
         u32::from(INVALID_OPCODE_FAULT) * 2,
         cpu_peripheral.eu_registers.link_registers[7].return_address
     );
+
+    super::common::finish_aborted_dispatch(&mut cpu_peripheral);
 
     run_expectations(
         &mut cpu_peripheral,
