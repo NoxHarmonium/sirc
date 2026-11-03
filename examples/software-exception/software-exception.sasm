@@ -19,11 +19,11 @@ EXCP    #0x60
 
 ; r1 should be 0x0FF here after exception handler runs
 
-; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+; Stop the simulator via DEBUG; r7 is scratch after the results are produced.
 MOVI[N] ah, #0x000B
 MOVI[N] al, #0x0007
-MOVI[N] ll, #1
-STOR (a), ll
+MOVI[N] r7, #1
+STOR (a), r7
 
 .ORG 0x0300
 :exception_handler

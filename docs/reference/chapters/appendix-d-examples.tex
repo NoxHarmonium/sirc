@@ -15,9 +15,10 @@ there. The separately mapped high segment and the standalone data segment shown 
 
 Examples stop the simulator by storing \imm{1} to the DEBUG device's exit register at word address \texttt{0x0B0007}.
 This simulator-only interface uses ordinary \mnemonic{MOVI}/\mnemonic{STOR} instructions; it is not an architectural
-CPU halt operation. The exit sequence preserves result registers \reg{r1}--\reg{r7} but uses address-register scratch
-space. A termination request is not a success result: each example's checks inspect its output. The full interface and
-protected-mode usage are described in the Using the Toolchain chapter of the \asmmanual{}.
+CPU halt operation. Exit setup uses scratch registers. Examples that check all GPR results use a separate
+address-register half for the data value so those results remain intact. A termination request is not a success result:
+each example's checks inspect its output. The full interface and protected-mode usage are described in the Using the
+Toolchain chapter of the \asmmanual{}.
 
 \section{Byte Sieve}
 

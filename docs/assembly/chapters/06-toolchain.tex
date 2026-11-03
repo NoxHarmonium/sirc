@@ -23,8 +23,8 @@ Save this program as \texttt{count.sasm}. It counts \reg{r1} up to ten and stops
     BRAN|!= @loop
     MOVI[N] ah, #0x000B            ; DEBUG device segment
     MOVI[N] al, #0x0007            ; simulator exit register
-    MOVI[N] ll, #1                 ; termination request, not an exit code
-    STOR (a), ll
+    MOVI[N] r7, #1                 ; termination request, not an exit code
+    STOR (a), r7
 \end{lstlisting}
 
 Assemble, link, and run it:
@@ -44,10 +44,14 @@ device acknowledges the write and requests termination through the bus; the simu
 register dump and exits with host status zero. This status only means the simulation stopped: example checks must
 inspect their results to distinguish success from failure.
 
-This sequence clobbers \reg{ah}, \reg{al}, and \reg{ll}, preserving \reg{r1}--\reg{r7} and the status flags for result
-checks. A protected-mode program cannot write \reg{ah} directly. It can prepare an address pair before entering
-protected mode, as the maths-emulation example does, or ask a supervisor handler to perform the write, as the CRC
-example does. Programs for real hardware should use their platform's termination convention instead.
+Here \reg{a} holds the address \texttt{0x0B0007}, while \reg{r7} holds the value \imm{1} to store there.
+\mnemonic{STOR} takes its data from a register; \texttt{STOR (a), \#1} is not an instruction form. The immediate field
+in a store specifies an address displacement, not the stored value.
+
+This sequence clobbers \reg{ah}, \reg{al}, and the scratch register \reg{r7}, preserving the status flags. A
+protected-mode program cannot write \reg{ah} directly. It can prepare an address pair before entering protected mode,
+as the maths-emulation example does, or ask a supervisor handler to perform the write, as the CRC example does.
+Programs for real hardware should use their platform's termination convention instead.
 
 \section{The Assembler}
 

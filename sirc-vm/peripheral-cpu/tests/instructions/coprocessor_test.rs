@@ -1,4 +1,4 @@
-use super::common::set_up_instruction_test;
+use super::common::{set_up_instruction_test, setup_test};
 use peripheral_bus::device::BusAssertions;
 use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
@@ -14,7 +14,7 @@ fn old_magic_command_no_longer_terminates_the_simulation() {
         additional_flags: 0,
     });
     let mut bus = set_up_instruction_test(&instruction, 0x0200);
-    super::common::setup_test(&mut bus, |_, _| {}, 0x0200);
+    setup_test(&mut bus, |_, _| {}, 0x0200);
     let mut response = BusAssertions::default();
     // Include the command's own slot after the issuing PU instruction. Reserved
     // EU operations keep their current behavior until the dispatch/#447 work.

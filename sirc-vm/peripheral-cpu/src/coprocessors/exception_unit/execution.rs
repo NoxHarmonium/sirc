@@ -66,19 +66,17 @@ pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 
 
 pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCodes, u8, u8) {
     let instruction = decode_exception_unit_instruction(cause_register_value);
-    // Reserved operation nibbles (0x2-0x8) are architecturally undefined, per the manual
-    // (chapters/06-exceptions.tex:816, chapters/16-coprocessor-instructions.tex Sec 16.2) -- not
-    // a fault, and certainly not a crash. A program can reach this via COPI/COPR targeting the
-    // exception unit's coprocessor ID with a reserved op nibble. Treat it as a harmless no-op,
-    // the same behavior `None` already gets.
+    // Reserved operations retain the current no-op behavior until #447 introduces
+    // invalid-opcode faults on top of the #445 dispatch foundation.
     let op_code =
         num::FromPrimitive::from_u8(instruction.op_code).unwrap_or(ExceptionUnitOpCodes::None);
     let vector = instruction.value;
-    let level = if op_code == ExceptionUnitOpCodes::SoftwareException {
-        1
-    } else {
-        // TODO: Possible overflow?
-        7 - (vector >> 4)
+    let level = match op_code {
+        ExceptionUnitOpCodes::SoftwareException => 1,
+        // A no-op's payload is not a vector. Deriving a level from e.g. 0xFF
+        // would underflow in debug builds, despite the result never being used.
+        ExceptionUnitOpCodes::None => 0,
+        _ => 7 - (vector >> 4),
     };
     // Make this a struct?
     (op_code, vector, level)
@@ -593,22 +591,22 @@ mod tests {
 
     #[test]
     fn reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking() {
-        // IB-2 (docs/reference/review/implementation-bugs.md): opcodes 0x2-0x8 are reserved --
-        // architecturally undefined, not a crash. Construct the raw cause value directly since
-        // `construct_cause_value` only accepts real `ExceptionUnitOpCodes` variants.
+        // Until #447 replaces the reserved-operation fallback with a fault, its
+        // unused payload must not be interpreted as an exception vector. Construct
+        // raw commands because `construct_cause_value` accepts only defined ops.
         for reserved_op_code in 0x2u8..=0x8 {
             let cause_value = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
                 << COPROCESSOR_ID_LENGTH)
                 & COPROCESSOR_ID_MASK
                 | (u16::from(reserved_op_code) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK;
 
-            let (op_code, _vector, _level) = deconstruct_cause_value(cause_value);
-
-            assert_eq!(
-                op_code,
-                ExceptionUnitOpCodes::None,
-                "reserved op code 0x{reserved_op_code:X} should decode as a harmless no-op, not panic"
-            );
+            for payload in 0..=u8::MAX {
+                let (op_code, vector, level) =
+                    deconstruct_cause_value(cause_value | u16::from(payload));
+                assert_eq!(op_code, ExceptionUnitOpCodes::None);
+                assert_eq!(vector, payload);
+                assert_eq!(level, 0, "a no-op has no exception level");
+            }
         }
     }
 }

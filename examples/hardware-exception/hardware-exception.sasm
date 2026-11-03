@@ -127,11 +127,11 @@ RETS
 
 BRSR    @print_exit
 
-; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+; Stop the simulator via DEBUG; r7 is scratch after the results are produced.
 MOVI[N] ah, #0x000B
 MOVI[N] al, #0x0007
-MOVI[N] ll, #1
-STOR (a), ll
+MOVI[N] r7, #1
+STOR (a), r7
 
 ;;;;;;; EXCEPTION HANDLERS
 
