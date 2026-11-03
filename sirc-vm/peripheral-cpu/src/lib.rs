@@ -402,13 +402,6 @@ impl CpuPeripheral {
 
         if phase == ExecutionPhase::InstructionFetchLow {
             // Select the active command once per slot, retaining it through bus stalls.
-            let coprocessor_select_register = self.registers.coprocessor_select_register;
-            let ignored_software_exception = self.eu_registers.current_exception_level != 0
-                && Self::is_software_exception_command(coprocessor_select_register);
-            if ignored_software_exception {
-                self.clear_coprocessor_select_register();
-            }
-
             // An aborting fault cancels pending work. ID-0
             // commands have no dispatch slot and must not block pending events.
             if self.eu_registers.pending_fault.is_some()

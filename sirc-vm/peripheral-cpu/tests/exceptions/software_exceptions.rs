@@ -10,7 +10,7 @@ use peripheral_cpu::{
 
 use crate::exceptions::common::{
     expect_exception_handler, expect_main_program_cycle_with_instruction, run_expectations,
-    run_return_from_exception,
+    run_idle_dispatch, run_return_from_exception,
 };
 
 use super::common::build_test_instruction;
@@ -100,6 +100,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
     );
 
     assert_eq_hex!(0x00CD_AB04, cpu_peripheral.registers.get_full_pc_address());
+    run_idle_dispatch(&mut cpu_peripheral, &mut clocks);
 
     run_expectations(
         &mut cpu_peripheral,
@@ -127,6 +128,7 @@ fn test_software_exception_is_ignored_during_fault_handler() {
     );
 
     assert_eq_hex!(0x0000_0002, cpu_peripheral.registers.get_full_pc_address());
+    run_idle_dispatch(&mut cpu_peripheral, &mut clocks);
 
     run_expectations(
         &mut cpu_peripheral,

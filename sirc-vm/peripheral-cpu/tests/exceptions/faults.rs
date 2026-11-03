@@ -9,7 +9,7 @@ use peripheral_cpu::{
             definitions::{
                 vectors::{
                     ALIGNMENT_FAULT, BUS_FAULT, BUS_PROTECTION_FAULT, DOUBLE_FAULT_VECTOR,
-                    INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT, LEVEL_FIVE_HARDWARE_EXCEPTION,
+                    INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT,
                     LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, PRIVILEGE_VIOLATION_FAULT,
                     SEGMENT_OVERFLOW_FAULT,
                 },
@@ -1662,22 +1662,8 @@ fn test_level_five_interrupt_conflict_fault() {
     // allowing handle_exception to detect the re-entry and raise LevelFiveInterruptConflict.
     cpu_peripheral.raise_hardware_interrupt(0x10);
 
-    // The exception unit reads the L5 vector table entry (address LEVEL_FIVE_HARDWARE_EXCEPTION * 2)
-    // but handle_exception detects the conflict at phase 3 and raises pending_fault instead
-    // of jumping to the L5 handler. The vector data we provide is irrelevant here.
-    let l5_vector_addr = u32::from(LEVEL_FIVE_HARDWARE_EXCEPTION) * 2;
-    run_expectations(
-        &mut cpu_peripheral,
-        &vec![
-            Some(expectation(None, None, Some(l5_vector_addr), None)),
-            Some(expectation(Some(0x0), None, Some(l5_vector_addr + 1), None)),
-            Some(expectation(Some(0x0), None, None, None)),
-            None,
-            None,
-            None,
-        ],
-        &mut clocks,
-    );
+    // The conflict slot raises the fault without fetching an L5 vector.
+    super::common::run_idle_dispatch(&mut cpu_peripheral, &mut clocks);
 
     assert!(
         cpu_peripheral
