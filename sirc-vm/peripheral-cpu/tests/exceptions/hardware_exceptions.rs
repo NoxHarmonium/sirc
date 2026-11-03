@@ -1,5 +1,10 @@
 use assert_hex::assert_eq_hex;
+use peripheral_bus::device::{BusAssertions, Device};
 use peripheral_cpu::{
+    coprocessors::exception_unit::{
+        definitions::ExceptionUnitOpCodes,
+        execution::{construct_cause_value, hardware_exception_level_to_vector},
+    },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, StatusRegisterFields},
 };
@@ -8,6 +13,41 @@ use crate::exceptions::common::{
     expect_exception_handler, expect_main_program_cycle, run_expectations,
     run_return_from_exception,
 };
+
+#[test]
+fn boundary_uses_the_csr_command_when_no_eu_event_is_eligible() {
+    let mut cpu = new_cpu_peripheral();
+    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
+    cpu.registers.pending_coprocessor_command = command;
+
+    cpu.poll(BusAssertions::default(), true);
+
+    assert_eq!(cpu.cause_register_value, command);
+    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+}
+
+#[test]
+fn boundary_preserves_event_before_command_order_during_selection_refactor() {
+    let mut cpu = new_cpu_peripheral();
+    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
+    cpu.registers.pending_coprocessor_command = command;
+    set_hardware_interrupt_enable(&mut cpu.registers, 0b0001);
+    cpu.raise_hardware_interrupt(0b0001);
+
+    cpu.poll(BusAssertions::default(), true);
+
+    // This first step preserves the old arbitration order. Command precedence
+    // is a later change once execution ownership and completion are explicit.
+    assert_eq!(
+        cpu.cause_register_value,
+        construct_cause_value(
+            &ExceptionUnitOpCodes::HardwareException,
+            hardware_exception_level_to_vector(1),
+        )
+    );
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+}
 
 #[test]
 fn test_hardware_exception_clears_protected_mode() {
@@ -224,7 +264,7 @@ fn test_level_five_interrupt_is_edge_triggered() {
         cpu_peripheral.eu_registers.pending_hardware_exceptions
     );
 
-    // Simulate the exception being dispatched (as `get_cause_register_value` would do).
+    // Simulate the exception being dispatched (when the CU accepts an event).
     cpu_peripheral.eu_registers.pending_hardware_exceptions = 0;
 
     // Pin held high across further poll cycles, with no release in between: must NOT re-latch.

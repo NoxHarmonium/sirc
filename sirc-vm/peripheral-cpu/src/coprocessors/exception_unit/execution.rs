@@ -135,10 +135,20 @@ pub fn hardware_exception_level_to_vector(exception_level: u8) -> u8 {
     vector
 }
 
-pub fn get_cause_register_value(
+/// An EU event eligible for dispatch, not yet consumed from the pending state.
+/// If dispatch is deferred, discard this candidate and select again at the next boundary.
+#[derive(Debug, PartialEq, Eq)]
+pub struct PendingEvent {
+    cause_register_value: u16,
+    // Zero for a fault: its metadata is retained until fault entry completes.
+    interrupt_mask: u8,
+}
+
+/// Select an EU event without consuming it or considering software commands in CSR.
+pub fn select_pending_event(
     registers: &Registers,
-    eu_registers: &mut ExceptionUnitRegisters,
-) -> u16 {
+    eu_registers: &ExceptionUnitRegisters,
+) -> Option<PendingEvent> {
     if let Some(PendingFault { fault, .. }) = eu_registers.pending_fault {
         let vector = match fault {
             Faults::Bus => BUS_FAULT,
@@ -152,7 +162,10 @@ pub fn get_cause_register_value(
             Faults::BusProtection => BUS_PROTECTION_FAULT,
         };
 
-        return construct_cause_value(&ExceptionUnitOpCodes::Fault, vector);
+        return Some(PendingEvent {
+            cause_register_value: construct_cause_value(&ExceptionUnitOpCodes::Fault, vector),
+            interrupt_mask: 0,
+        });
     }
     trace!(
         "eu_registers.pending_hardware_exceptions: 0x[{:X}] hw_interrupt_enable: 0x[{:X}] current_exception_level: 0x[{:X}]",
@@ -196,24 +209,33 @@ pub fn get_cause_register_value(
             continue;
         }
 
-        trace!("servicing interrupt by injecting cause value. exception_level {exception_level}");
+        trace!("eligible interrupt candidate: exception_level {exception_level}");
         let vector = hardware_exception_level_to_vector(exception_level - 1);
-        // Clear this interrupt specifically (not necessarily the highest pending bit) because
-        // we are now servicing it.
-        eu_registers.pending_hardware_exceptions &= !(1 << interrupt_line);
-
-        debug!(
-            "eu_registers.pending_hardware_exceptions: {}",
-            eu_registers.pending_hardware_exceptions
-        );
-        return construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector);
+        return Some(PendingEvent {
+            cause_register_value: construct_cause_value(
+                &ExceptionUnitOpCodes::HardwareException,
+                vector,
+            ),
+            interrupt_mask: 1 << interrupt_line,
+        });
     }
-    trace!(
-        "returning registers.pending_coprocessor_command 0x[{:X}]",
-        registers.pending_coprocessor_command
-    );
+    None
+}
 
-    registers.pending_coprocessor_command
+impl PendingEvent {
+    /// Accept this candidate when the CU grants dispatch, returning its command word.
+    /// Taking ownership prevents the same candidate from being accepted twice.
+    /// Fault metadata stays pending for the existing fault-entry/completion path.
+    pub fn accept(self, eu_registers: &mut ExceptionUnitRegisters) -> u16 {
+        if self.interrupt_mask != 0 {
+            eu_registers.pending_hardware_exceptions &= !self.interrupt_mask;
+            debug!(
+                "eu_registers.pending_hardware_exceptions: {}",
+                eu_registers.pending_hardware_exceptions
+            );
+        }
+        self.cause_register_value
+    }
 }
 
 fn extract_transfer_instruction_parameters<'a>(
@@ -433,7 +455,7 @@ impl Executor for ExceptionUnitExecutor {
                     // elsewhere). Raising the fault here (rather than jumping to the vector this
                     // cycle) is sufficient to suppress dispatch: `Fault` can only ever be this
                     // op-code when `pending_fault` was already `Some` going in
-                    // (`get_cause_register_value` checks it first), so this guard can never
+                    // (`select_pending_event` checks it first), so this guard can never
                     // accidentally intercept a genuine fault dispatch.
                     ExceptionUnitOpCodes::SoftwareException
                         if vector < USER_EXCEPTION_VECTOR_START
@@ -556,7 +578,17 @@ mod tests {
         };
         set_hardware_interrupt_enable(&mut registers, 0b0001);
 
-        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
+        let event = select_pending_event(&registers, &eu_registers).unwrap();
+        assert_eq!(
+            select_pending_event(&registers, &eu_registers).as_ref(),
+            Some(&event),
+            "repeated selection must not consume the candidate"
+        );
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions,
+            LINE_1_AND_LINE_4_PENDING
+        );
+        let cause_value = event.accept(&mut eu_registers);
         let (op_code, vector, _level) = deconstruct_cause_value(cause_value);
 
         assert_eq!(op_code, ExceptionUnitOpCodes::HardwareException);
@@ -574,18 +606,95 @@ mod tests {
     #[test]
     fn nothing_dispatches_when_every_pending_line_is_masked() {
         let mut registers = Registers::default();
-        let mut eu_registers = ExceptionUnitRegisters {
+        let eu_registers = ExceptionUnitRegisters {
             pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
             ..Default::default()
         };
         set_hardware_interrupt_enable(&mut registers, 0b0000);
 
-        let cause_value = get_cause_register_value(&registers, &mut eu_registers);
-
-        assert_eq!(cause_value, 0, "no coprocessor command should be injected");
+        assert_eq!(select_pending_event(&registers, &eu_registers), None);
         assert_eq!(
             eu_registers.pending_hardware_exceptions, LINE_1_AND_LINE_4_PENDING,
             "both lines stay latched, since neither is enabled"
+        );
+    }
+
+    #[test]
+    fn eu_selection_does_not_return_a_software_command() {
+        let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+        let registers = Registers {
+            pending_coprocessor_command: command,
+            ..Default::default()
+        };
+        let eu_registers = ExceptionUnitRegisters::default();
+        assert_eq!(select_pending_event(&registers, &eu_registers), None);
+        assert_eq!(registers.pending_coprocessor_command, command);
+    }
+
+    #[test]
+    fn fault_selection_and_acceptance_preserve_fault_metadata_and_interrupts() {
+        let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+        let mut registers = Registers {
+            pending_coprocessor_command: command,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b1001);
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_fault: Some(PendingFault {
+                fault: Faults::Bus,
+                pc: 0x1234,
+            }),
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        let event = select_pending_event(&registers, &eu_registers).unwrap();
+        assert_eq!(
+            event,
+            select_pending_event(&registers, &eu_registers).unwrap()
+        );
+        let cause = event.accept(&mut eu_registers);
+        assert_eq!(
+            cause,
+            construct_cause_value(&ExceptionUnitOpCodes::Fault, BUS_FAULT)
+        );
+        let fault = eu_registers.pending_fault.unwrap();
+        assert!(matches!(fault.fault, Faults::Bus));
+        assert_eq!(fault.pc, 0x1234);
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions,
+            LINE_1_AND_LINE_4_PENDING
+        );
+        assert_eq!(registers.pending_coprocessor_command, command);
+    }
+
+    #[test]
+    fn deferred_interrupt_is_reselected_using_current_masks_and_priority() {
+        let mut registers = Registers::default();
+        let mut eu_registers = ExceptionUnitRegisters {
+            pending_hardware_exceptions: LINE_1_AND_LINE_4_PENDING,
+            ..Default::default()
+        };
+        set_hardware_interrupt_enable(&mut registers, 0b1001);
+        let event = select_pending_event(&registers, &eu_registers).unwrap();
+        assert_eq!(event.interrupt_mask, LINE_4_PENDING_ONLY);
+        // No dispatch was granted. Discard the candidate; do not carry a stale
+        // decision across a boundary where masking or exception level can change.
+        set_hardware_interrupt_enable(&mut registers, 0b0001);
+        eu_registers.current_exception_level = ExceptionPriorities::LevelOneHardware as u8;
+        assert_eq!(select_pending_event(&registers, &eu_registers), None);
+        eu_registers.current_exception_level = ExceptionPriorities::NoException as u8;
+        let event = select_pending_event(&registers, &eu_registers).unwrap();
+        let cause = event.accept(&mut eu_registers);
+        assert_eq!(
+            cause,
+            construct_cause_value(
+                &ExceptionUnitOpCodes::HardwareException,
+                hardware_exception_level_to_vector(1),
+            )
+        );
+        assert_eq!(
+            eu_registers.pending_hardware_exceptions,
+            LINE_4_PENDING_ONLY
         );
     }
 

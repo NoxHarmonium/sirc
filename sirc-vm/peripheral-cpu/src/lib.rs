@@ -44,7 +44,7 @@ use coprocessors::{
             PendingFault,
         },
         execution::{
-            construct_cause_value, deconstruct_cause_value, get_cause_register_value,
+            construct_cause_value, deconstruct_cause_value, select_pending_event,
             ExceptionUnitExecutor,
         },
     },
@@ -355,7 +355,7 @@ impl CpuPeripheral {
 
             // TODO: Reduce number of mutable references in `CpuPeripheral` poll
             // category=Refactoring
-            // Can we do this without have a mut ref to eu_registers? See also `get_cause_register_value`
+            // Can we do this without have a mut ref to eu_registers?
             raise_fault(
                 &mut self.eu_registers,
                 bus_fault,
@@ -377,8 +377,12 @@ impl CpuPeripheral {
                 self.registers.pending_coprocessor_command = 0x0;
             }
 
-            self.cause_register_value =
-                get_cause_register_value(&self.registers, &mut self.eu_registers);
+            // Preserve the current event-before-command order while separating the
+            // EU's non-consuming selection from the CU's decision to grant dispatch.
+            self.cause_register_value = select_pending_event(&self.registers, &self.eu_registers)
+                .map_or(self.registers.pending_coprocessor_command, |event| {
+                    event.accept(&mut self.eu_registers)
+                });
         }
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
