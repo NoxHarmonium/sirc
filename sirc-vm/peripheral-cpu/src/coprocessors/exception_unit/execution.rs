@@ -255,6 +255,12 @@ fn extract_transfer_instruction_parameters<'a>(
     (register_select, link_register)
 }
 
+/// Faults can enter at any level; other exceptions must outrank the handler.
+/// In particular, L5 re-entry is a conflict, not a second handler entry.
+fn accepts_exception_entry(current_level: u8, requested_level: u8) -> bool {
+    requested_level == ExceptionPriorities::Fault as u8 || requested_level > current_level
+}
+
 fn handle_exception(
     current_exception_level: u8,
     exception_level: u8,
@@ -278,7 +284,7 @@ fn handle_exception(
     }
 
     // Store current PC in windowed link register and jump to vector
-    if current_exception_level >= exception_level && exception_level != 7 {
+    if !accepts_exception_entry(current_exception_level, exception_level) {
         // TODO: Should this just be done when selecting the pending EU event?
         // Ignore lower priority exceptions
         return;
@@ -338,8 +344,20 @@ impl Executor for ExceptionUnitExecutor {
 
         trace!("op_code: {op_code:?} vector: 0x{vector:X} level: 0x{level:X}");
 
+        // Only handler entry reads the vector table. This decision remains
+        // stable through fetch phases/stalls: command and exception level are
+        // unchanged until execution in phase 3. Control/transfer operations,
+        // ignored traps and L5 conflicts retain their slot with idle bus phases.
+        let fetches_vector = matches!(op_code, ExceptionUnitOpCodes::Reset)
+            || (matches!(
+                op_code,
+                ExceptionUnitOpCodes::Fault
+                    | ExceptionUnitOpCodes::HardwareException
+                    | ExceptionUnitOpCodes::SoftwareException
+            ) && accepts_exception_entry(eu_registers.current_exception_level, level));
+
         match phase {
-            ExecutionPhase::InstructionFetchLow => {
+            ExecutionPhase::InstructionFetchLow if fetches_vector => {
                 self.vector_address = vector as u32 * INSTRUCTION_SIZE_WORDS;
                 return BusAssertions {
                     address: self.vector_address,
@@ -349,7 +367,7 @@ impl Executor for ExceptionUnitExecutor {
                     ..BusAssertions::default()
                 };
             }
-            ExecutionPhase::InstructionFetchHigh => {
+            ExecutionPhase::InstructionFetchHigh if fetches_vector => {
                 self.vector_value = (bus_assertions.data as u32) << u16::BITS;
                 return BusAssertions {
                     address: self.vector_address + 1,
@@ -359,7 +377,7 @@ impl Executor for ExceptionUnitExecutor {
                     ..BusAssertions::default()
                 };
             }
-            ExecutionPhase::InstructionDecode => {
+            ExecutionPhase::InstructionDecode if fetches_vector => {
                 self.vector_value |= bus_assertions.data as u32;
 
                 debug!("0x{:X}: {:?}", registers.get_full_pc_address(), op_code);
@@ -463,7 +481,10 @@ impl Executor for ExceptionUnitExecutor {
                     }
                 }
             }
-            ExecutionPhase::MemoryAccessExecutor => {}
+            ExecutionPhase::InstructionFetchLow
+            | ExecutionPhase::InstructionFetchHigh
+            | ExecutionPhase::InstructionDecode
+            | ExecutionPhase::MemoryAccessExecutor => {}
             ExecutionPhase::WriteBackExecutor => {
                 // For Fault ops, pending_fault was set before this cycle and has now been
                 // dispatched at phase 3; clear it as cleanup.

@@ -142,8 +142,9 @@ fn legal_handler_excp_is_ignored_without_vector_reads_or_queued_trap() {
                     tick(&mut cpu, data);
                 }
                 assert!(cpu.eu_registers.pending_fault.is_none());
-                // The next boundary discards the validated command and fetches
-                // the next PU instruction, never the trap vector.
+                // The validated command keeps an idle six-cycle dispatch slot.
+                let mut clocks = 0;
+                super::common::run_idle_dispatch(&mut cpu, &mut clocks);
                 let response = tick(&mut cpu, 0);
                 assert!(response.bus_access_strobe);
                 assert_eq!(response.address, 0x0202);

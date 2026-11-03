@@ -208,31 +208,32 @@ fn traced_rete_records_the_restored_pc_even_when_it_restores_t_clear() {
 }
 
 #[test]
-fn command_stalls_do_not_make_trace_ready_and_a_force_trace_pulse_is_retained() {
+fn call_fetch_stalls_preserve_a_force_trace_pulse_through_command_completion() {
     let mut cpu = new_cpu_peripheral();
     cpu.registers.pl = 0x0200;
     let command =
         construct_exception_unit_command(&ExceptionUnitOpCodes::TransferFromRegister, 0x20);
-    run_instruction(&mut cpu, &call(command), true, 0);
-    tick(&mut cpu, 0, false, 0);
+    let words = bytes_to_words(&encode_instruction(&call(command)));
+    tick(&mut cpu, 0, true, 0);
     for _ in 0..3 {
         cpu.poll(BusAssertions::default(), true);
         assert_eq!(cpu.phase, 1);
-        assert_eq!(cpu.registers.coprocessor_select_register, command);
         assert!(cpu.eu_registers.pending_fault.is_none());
     }
-    for _ in 1..6 {
-        tick(&mut cpu, 0, false, 0);
+    for data in [words[0], words[1], 0, 0, 0] {
+        tick(&mut cpu, data, false, 0);
     }
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    run_slot(&mut cpu, 0, false);
     assert_trace(&cpu, 0x0202);
 }
 
 #[test]
-fn command_vector_bus_error_cancels_its_deferred_trace() {
+fn excp_vector_bus_error_does_not_schedule_trace() {
     for protection_error in [false, true] {
         let mut cpu = traced_cpu();
         let command =
-            construct_exception_unit_command(&ExceptionUnitOpCodes::TransferFromRegister, 0x20);
+            construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x60);
         run_instruction(&mut cpu, &call(command), false, 0);
         tick(&mut cpu, 0, false, 0);
         cpu.poll(
@@ -412,8 +413,10 @@ fn ignored_handler_excp_suppresses_trace_only_for_that_instruction() {
             construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x60);
         run_instruction(&mut cpu, &call(command), force_trace, 0);
         assert!(cpu.eu_registers.pending_fault.is_none());
-        // The ignored command consumes no slot. The next PU instruction
-        // is traced normally, proving suppression does not leak forward.
+        // The ignored command retains an idle dispatch slot. The next PU
+        // instruction traces normally, so suppression does not leak forward.
+        run_slot(&mut cpu, 0, force_trace);
+        assert!(cpu.eu_registers.pending_fault.is_none());
         run_instruction(
             &mut cpu,
             &immediate(

@@ -173,7 +173,7 @@ fn rete_rechecks_restored_exception_level_before_taking_a_queued_interrupt() {
 fn command_bus_stalls_keep_csr_and_interrupt_pending_until_completion() {
     let mut cpu = new_cpu_peripheral();
     set_hardware_interrupt_enable(&mut cpu.registers, 1);
-    let command = transfer_command();
+    let command = construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x60);
     issue(&mut cpu, command, 1, false);
     let request = tick(&mut cpu, 0, 0);
     for _ in 0..3 {
@@ -272,7 +272,12 @@ fn command_vector_bus_fault_cancels_csr_without_consuming_the_interrupt() {
     for protection_error in [false, true] {
         let mut cpu = new_cpu_peripheral();
         set_hardware_interrupt_enable(&mut cpu.registers, 1);
-        issue(&mut cpu, transfer_command(), 1, false);
+        issue(
+            &mut cpu,
+            construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x60),
+            1,
+            false,
+        );
         let request = tick(&mut cpu, 0, 0);
         assert!(request.bus_access_strobe);
         cpu.poll(

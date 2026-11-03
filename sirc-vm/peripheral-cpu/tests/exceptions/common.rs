@@ -209,3 +209,15 @@ pub fn run_return_from_exception(
         Some(expectation(None, Some(interrupt_assertion), None, None)),
     ]
 }
+
+/// A dispatched EU command that does not enter a handler keeps all six
+/// phases but has no bus accesses, including when BACK is absent.
+pub fn run_idle_dispatch(cpu: &mut CpuPeripheral, clocks: &mut usize) {
+    for phase in 0..6 {
+        assert_eq!(cpu.phase, phase);
+        let response = cpu.poll(BusAssertions::default(), true);
+        assert!(!response.bus_access_strobe);
+        *clocks += 1;
+    }
+    assert_eq!(cpu.phase, 0);
+}
