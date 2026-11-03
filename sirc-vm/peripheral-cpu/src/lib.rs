@@ -98,10 +98,16 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+/// Why the current slot is running, selected at phase 0 and retained through
+/// the slot and bus stalls. Both CSR commands and automatic events can run the
+/// EU, so the executor's coprocessor ID alone cannot determine CSR ownership.
 #[derive(Debug, PartialEq, Eq)]
 enum SlotOwner {
+    /// A fetched PU instruction, including COPI/COPR issuing a command for a later slot.
     ProcessingUnit,
+    /// A command accepted into CSR. The CU clears it on completion or cancellation.
     CsrCommand,
+    /// An automatically selected fault or interrupt. Its dispatch does not own a queued CSR command.
     EuEvent,
 }
 
@@ -350,7 +356,7 @@ impl CpuPeripheral {
 
         if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
             if self.slot_owner == SlotOwner::CsrCommand {
-                self.registers.pending_coprocessor_command = 0;
+                self.clear_pending_coprocessor_command();
             }
             if let Some(vector_fetch_fault_response) =
                 self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
@@ -395,7 +401,7 @@ impl CpuPeripheral {
                     == ExceptionUnitExecutor::COPROCESSOR_ID
                 && pending_cop_opcode == ExceptionUnitOpCodes::SoftwareException as u16;
             if ignored_software_exception {
-                self.registers.pending_coprocessor_command = 0x0;
+                self.clear_pending_coprocessor_command();
             }
 
             // Preserve existing fault handling (including trace for now). ID-0
@@ -404,7 +410,7 @@ impl CpuPeripheral {
                 || Self::decode_processor_id(self.registers.pending_coprocessor_command)
                     == ProcessingUnitExecutor::COPROCESSOR_ID
             {
-                self.registers.pending_coprocessor_command = 0;
+                self.clear_pending_coprocessor_command();
             }
 
             (self.cause_register_value, self.slot_owner) =
@@ -481,7 +487,7 @@ impl CpuPeripheral {
                         },
                         fault_pc,
                     );
-                    self.registers.pending_coprocessor_command = 0x0;
+                    self.clear_pending_coprocessor_command();
                 }
 
                 BusAssertions::default()
@@ -491,7 +497,7 @@ impl CpuPeripheral {
         // Executors do not own CSR cleanup. Only the command whose slot just
         // completed (or aborted) consumes CSR; an automatic EU event does not.
         if phase == ExecutionPhase::WriteBackExecutor && self.slot_owner == SlotOwner::CsrCommand {
-            self.registers.pending_coprocessor_command = 0;
+            self.clear_pending_coprocessor_command();
         }
 
         if phase == ExecutionPhase::WriteBackExecutor
@@ -534,6 +540,11 @@ impl CpuPeripheral {
         }
 
         result
+    }
+
+    /// Clear the CSR command word on completion, cancellation, or discard.
+    fn clear_pending_coprocessor_command(&mut self) {
+        self.registers.pending_coprocessor_command = 0;
     }
 
     /// Works out which coprocessor should run on this cycle
