@@ -1686,7 +1686,7 @@ fn test_level_five_interrupt_conflict_fault() {
     cpu_peripheral.eu_registers.current_exception_level = 6;
 
     // Assert a second L5 interrupt (NMI). This should trigger the conflict fault because
-    // get_cause_register_value now lets L5 through when current_exception_level == 6,
+    // Event selection lets L5 through when current_exception_level == 6,
     // allowing handle_exception to detect the re-entry and raise LevelFiveInterruptConflict.
     cpu_peripheral.raise_hardware_interrupt(0x10);
 
