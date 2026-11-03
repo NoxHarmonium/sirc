@@ -356,3 +356,114 @@ fn wait_retains_command_ownership_while_idle_then_finishes_before_interrupt_entr
         u32::from(hardware_exception_level_to_vector(1)) * 2
     );
 }
+
+#[test]
+fn wait_uses_dispatch_priority_and_enable_rules_for_pending_and_new_irqs() {
+    for current_level in 0..=7 {
+        for line in 0..4 {
+            for enabled in [false, true] {
+                for already_pending in [false, true] {
+                    let mut cpu = new_cpu_peripheral();
+                    let command = construct_exception_unit_command(
+                        &ExceptionUnitOpCodes::WaitForException,
+                        0,
+                    );
+                    issue(&mut cpu, command, 0, false);
+                    cpu.eu_registers.current_exception_level = current_level;
+                    let pin = 1 << line;
+                    set_hardware_interrupt_enable(
+                        &mut cpu.registers,
+                        if enabled { pin } else { 0 },
+                    );
+                    if already_pending {
+                        cpu.eu_registers.pending_hardware_exceptions = pin;
+                    }
+                    for _ in 0..4 {
+                        tick(&mut cpu, 0, 0);
+                    }
+                    assert!(cpu.eu_registers.waiting_for_exception);
+                    let eligible = enabled && line + 2 > current_level;
+                    for _ in 0..3 {
+                        let response = tick(&mut cpu, 0, if already_pending { 0 } else { pin });
+                        if eligible {
+                            break;
+                        }
+                        assert!(!response.bus_access_strobe);
+                        assert_eq!(cpu.phase, 4);
+                        assert!(cpu.eu_registers.waiting_for_exception);
+                        assert_eq!(cpu.registers.coprocessor_select_register, command);
+                    }
+                    if eligible {
+                        assert!(!cpu.eu_registers.waiting_for_exception);
+                        assert_eq!(cpu.phase, 5);
+                        // Waking does not accept the interrupt or retire WAIT early.
+                        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, pin);
+                        tick(&mut cpu, 0, 0);
+                        super::common::complete_entry(
+                            &mut cpu,
+                            hardware_exception_level_to_vector(line + 1),
+                            0x1000,
+                        );
+                        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+                    } else {
+                        assert_eq!(
+                            cpu.eu_registers.pending_hardware_exceptions,
+                            if already_pending { pin } else { 0 }
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn wait_l5_wake_preserves_level_seven_queue_and_level_six_conflicts() {
+    use peripheral_cpu::coprocessors::exception_unit::definitions::vectors::LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT;
+    for current_level in [0, 6, 7] {
+        for overrun in [false, true] {
+            let mut cpu = new_cpu_peripheral();
+            let command =
+                construct_exception_unit_command(&ExceptionUnitOpCodes::WaitForException, 0);
+            issue(&mut cpu, command, 0, false);
+            cpu.eu_registers.current_exception_level = current_level;
+            for _ in 0..4 {
+                tick(&mut cpu, 0, 0);
+            }
+            // A fresh edge must queue at level 7 without waking WAIT.
+            if overrun {
+                cpu.eu_registers.pending_hardware_exceptions = 16;
+            }
+            tick(&mut cpu, 0, 16);
+            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 16);
+            assert_eq!(cpu.eu_registers.l5_overrun, overrun);
+            if current_level == 7 {
+                assert!(cpu.eu_registers.waiting_for_exception);
+                for _ in 0..3 {
+                    assert!(!tick(&mut cpu, 0, 16).bus_access_strobe);
+                    assert_eq!(cpu.phase, 4);
+                }
+                assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 16);
+                assert_eq!(cpu.eu_registers.l5_overrun, overrun);
+                // Once dispatch eligibility changes, the retained request wakes WAIT.
+                cpu.eu_registers.current_exception_level = 6;
+                tick(&mut cpu, 0, 16);
+            }
+            assert!(!cpu.eu_registers.waiting_for_exception);
+            assert_eq!(cpu.phase, 5);
+            tick(&mut cpu, 0, 16);
+            let conflict = current_level >= 6 || overrun;
+            let vector = if conflict {
+                LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
+            } else {
+                hardware_exception_level_to_vector(5)
+            };
+            super::common::complete_entry(&mut cpu, vector, 0x1000);
+            assert!(!cpu.eu_registers.l5_overrun);
+            assert_eq!(
+                cpu.eu_registers.pending_hardware_exceptions,
+                if current_level == 0 && overrun { 16 } else { 0 }
+            );
+        }
+    }
+}
