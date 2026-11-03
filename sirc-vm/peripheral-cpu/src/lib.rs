@@ -98,6 +98,13 @@ pub enum Error {
     InvalidInstruction(Registers),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum SlotOwner {
+    ProcessingUnit,
+    CsrCommand,
+    EuEvent,
+}
+
 // These four bools are independent, orthogonal pieces of simulator bookkeeping state (not a
 // combinatorial state machine), so a state-machine/enum refactor wouldn't clarify anything here.
 #[allow(clippy::struct_excessive_bools)]
@@ -108,6 +115,8 @@ pub struct CpuPeripheral {
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
     pub cause_register_value: u16,
+    // Selected at phase 0 and retained through the slot, including bus stalls.
+    slot_owner: SlotOwner,
     // T bit sampled at InstructionFetchLow before any SR writes for the current instruction.
     // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
     // Only set when the processing unit is running (not during exception unit dispatch).
@@ -225,6 +234,7 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         processing_unit_executor: ProcessingUnitExecutor::default(),
         exception_unit_executor: ExceptionUnitExecutor::default(),
         cause_register_value: 0,
+        slot_owner: SlotOwner::ProcessingUnit,
         trace_mode_sampled: false,
         pending_bus_request: None,
         is_halted: false,
@@ -318,6 +328,14 @@ impl CpuPeripheral {
         // asserted.
         self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
 
+        // Command-first dispatch may enter WAIT with an interrupt already
+        // latched. Wake for that eligible event so the WAIT slot can finish;
+        // the event is accepted only at the following phase-0 boundary.
+        if self.eu_registers.waiting_for_exception
+            && select_pending_event(&self.registers, &self.eu_registers).is_some()
+        {
+            self.eu_registers.waiting_for_exception = false;
+        }
         if self.eu_registers.waiting_for_exception {
             return BusAssertions::default();
         }
@@ -331,6 +349,9 @@ impl CpuPeripheral {
             });
 
         if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
+            if self.slot_owner == SlotOwner::CsrCommand {
+                self.registers.pending_coprocessor_command = 0;
+            }
             if let Some(vector_fetch_fault_response) =
                 self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
             {
@@ -377,12 +398,28 @@ impl CpuPeripheral {
                 self.registers.pending_coprocessor_command = 0x0;
             }
 
-            // Preserve the current event-before-command order while separating the
-            // EU's non-consuming selection from the CU's decision to grant dispatch.
-            self.cause_register_value = select_pending_event(&self.registers, &self.eu_registers)
-                .map_or(self.registers.pending_coprocessor_command, |event| {
-                    event.accept(&mut self.eu_registers)
-                });
+            // Preserve existing fault handling (including trace for now). ID-0
+            // commands have no dispatch slot and must not block pending events.
+            if self.eu_registers.pending_fault.is_some()
+                || Self::decode_processor_id(self.registers.pending_coprocessor_command)
+                    == ProcessingUnitExecutor::COPROCESSOR_ID
+            {
+                self.registers.pending_coprocessor_command = 0;
+            }
+
+            (self.cause_register_value, self.slot_owner) =
+                if self.registers.pending_coprocessor_command != 0 {
+                    (
+                        self.registers.pending_coprocessor_command,
+                        SlotOwner::CsrCommand,
+                    )
+                } else if let Some(event) =
+                    select_pending_event(&self.registers, &self.eu_registers)
+                {
+                    (event.accept(&mut self.eu_registers), SlotOwner::EuEvent)
+                } else {
+                    (0, SlotOwner::ProcessingUnit)
+                };
         }
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
@@ -450,6 +487,12 @@ impl CpuPeripheral {
                 BusAssertions::default()
             }
         };
+
+        // Executors do not own CSR cleanup. Only the command whose slot just
+        // completed (or aborted) consumes CSR; an automatic EU event does not.
+        if phase == ExecutionPhase::WriteBackExecutor && self.slot_owner == SlotOwner::CsrCommand {
+            self.registers.pending_coprocessor_command = 0;
+        }
 
         if phase == ExecutionPhase::WriteBackExecutor
             && self.eu_registers.pending_fault.is_none()
@@ -622,6 +665,7 @@ impl CpuPeripheral {
     }
 
     pub fn reset(&mut self) {
+        self.slot_owner = SlotOwner::ProcessingUnit;
         self.pending_bus_request = None;
         self.is_halted = false;
         self.reset_pending = false;

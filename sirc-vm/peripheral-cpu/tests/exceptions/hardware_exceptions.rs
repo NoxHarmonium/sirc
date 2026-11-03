@@ -2,8 +2,7 @@ use assert_hex::assert_eq_hex;
 use peripheral_bus::device::{BusAssertions, Device};
 use peripheral_cpu::{
     coprocessors::exception_unit::{
-        definitions::ExceptionUnitOpCodes,
-        execution::{construct_cause_value, hardware_exception_level_to_vector},
+        definitions::ExceptionUnitOpCodes, execution::construct_cause_value,
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, StatusRegisterFields},
@@ -27,7 +26,7 @@ fn boundary_uses_the_csr_command_when_no_eu_event_is_eligible() {
 }
 
 #[test]
-fn boundary_preserves_event_before_command_order_during_selection_refactor() {
+fn boundary_keeps_a_csr_command_ahead_of_a_pending_interrupt() {
     let mut cpu = new_cpu_peripheral();
     let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
     cpu.registers.pending_coprocessor_command = command;
@@ -36,16 +35,8 @@ fn boundary_preserves_event_before_command_order_during_selection_refactor() {
 
     cpu.poll(BusAssertions::default(), true);
 
-    // This first step preserves the old arbitration order. Command precedence
-    // is a later change once execution ownership and completion are explicit.
-    assert_eq!(
-        cpu.cause_register_value,
-        construct_cause_value(
-            &ExceptionUnitOpCodes::HardwareException,
-            hardware_exception_level_to_vector(1),
-        )
-    );
-    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+    assert_eq!(cpu.cause_register_value, command);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0b0001);
     assert_eq!(cpu.registers.pending_coprocessor_command, command);
 }
 
