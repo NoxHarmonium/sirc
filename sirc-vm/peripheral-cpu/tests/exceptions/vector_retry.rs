@@ -27,16 +27,7 @@ use peripheral_cpu::{
     CpuPeripheral,
 };
 
-fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
-    cpu.poll(
-        BusAssertions {
-            data,
-            bus_acknowledge: true,
-            ..Default::default()
-        },
-        true,
-    )
-}
+use super::common::{complete_entry, tick};
 
 fn issue(cpu: &mut CpuPeripheral, command: u16, register_call: bool) {
     cpu.registers.r1 = command;
@@ -67,21 +58,6 @@ fn issue(cpu: &mut CpuPeripheral, command: u16, register_call: bool) {
     }
     assert_eq!(cpu.phase, 0);
     assert_eq!(cpu.registers.coprocessor_select_register, command);
-}
-
-fn complete_entry(cpu: &mut CpuPeripheral, vector: u8, target: u16) {
-    let first = tick(cpu, 0);
-    assert!(first.bus_access_strobe);
-    assert_eq!(first.address, u32::from(vector) * 2);
-    assert!(!first.protected_mode_active);
-    let second = tick(cpu, 0);
-    assert!(second.bus_access_strobe);
-    assert_eq!(second.address, first.address + 1);
-    assert!(!second.protected_mode_active);
-    for data in [target, 0, 0, 0] {
-        tick(cpu, data);
-    }
-    assert_eq!(cpu.registers.pl, target);
 }
 
 #[test]

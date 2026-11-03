@@ -1,7 +1,4 @@
-use peripheral_bus::{
-    conversion::bytes_to_words,
-    device::{BusAssertions, Device},
-};
+use peripheral_bus::conversion::bytes_to_words;
 use peripheral_cpu::{
     coprocessors::{
         exception_unit::{
@@ -21,19 +18,9 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{set_sr_bit, FullAddressRegisterAccess, RegisterName, StatusRegisterFields},
-    CpuPeripheral,
 };
 
-fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
-    cpu.poll(
-        BusAssertions {
-            data,
-            bus_acknowledge: true,
-            ..Default::default()
-        },
-        true,
-    )
-}
+use super::common::tick;
 
 fn call(command: u16, register: bool, condition: ConditionFlags) -> InstructionData {
     if register {

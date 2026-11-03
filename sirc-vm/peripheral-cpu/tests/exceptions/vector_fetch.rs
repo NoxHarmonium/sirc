@@ -11,19 +11,9 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, ExceptionLinkRegister, FullAddressRegisterAccess},
-    CpuPeripheral,
 };
 
-fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
-    cpu.poll(
-        BusAssertions {
-            data,
-            bus_acknowledge: true,
-            ..Default::default()
-        },
-        true,
-    )
-}
+use super::common::tick;
 
 #[test]
 fn control_and_transfer_slots_never_touch_a_faulting_vector_table() {

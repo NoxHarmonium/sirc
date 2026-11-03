@@ -12,19 +12,9 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, ExceptionLinkRegister, FullAddressRegisterAccess},
-    CpuPeripheral,
 };
 
-fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
-    cpu.poll(
-        BusAssertions {
-            data,
-            bus_acknowledge: true,
-            ..Default::default()
-        },
-        true,
-    )
-}
+use super::common::{complete_entry, tick};
 
 #[test]
 fn vector_errors_retire_idle_phases_before_the_replacement_fault_dispatch() {
@@ -160,16 +150,7 @@ fn vector_errors_retire_idle_phases_before_the_replacement_fault_dispatch() {
                             } else {
                                 BUS_FAULT
                             };
-                            let first = tick(&mut cpu, 0);
-                            assert!(first.instruction_sync);
-                            assert!(first.bus_access_strobe);
-                            assert_eq!(first.address, u32::from(replacement_vector) * 2);
-                            let second = tick(&mut cpu, 0x0012);
-                            assert!(second.bus_access_strobe);
-                            assert_eq!(second.address, first.address + 1);
-                            for data in [0x3456, 0, 0, 0] {
-                                assert!(!tick(&mut cpu, data).bus_access_strobe);
-                            }
+                            complete_entry(&mut cpu, replacement_vector, 0x0012_3456);
                             assert_eq!(cpu.phase, 0);
                             assert_eq!(cpu.registers.get_full_pc_address(), 0x0012_3456);
                             assert_eq!(cpu.eu_registers.current_exception_level, 7);

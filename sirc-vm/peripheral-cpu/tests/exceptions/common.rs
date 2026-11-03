@@ -6,7 +6,7 @@ use peripheral_cpu::coprocessors::processing_unit::definitions::{
     ConditionFlags, ImmediateInstructionData, Instruction,
 };
 use peripheral_cpu::coprocessors::processing_unit::encoding::encode_instruction;
-use peripheral_cpu::registers::{RegisterName, SegmentedAddress};
+use peripheral_cpu::registers::{FullAddressRegisterAccess, RegisterName, SegmentedAddress};
 use peripheral_cpu::CpuPeripheral;
 
 pub fn build_test_instruction() -> InstructionData {
@@ -239,4 +239,37 @@ pub fn finish_aborted_dispatch(cpu: &mut CpuPeripheral) {
         assert_eq!(cpu.eu_registers, eu_registers);
     }
     assert_eq!(cpu.phase, 0);
+}
+
+/// Poll an always-ready bus with no IRQ or trace pin asserted. Tests that
+/// exercise waits/errors or input-pin timing must drive poll directly.
+pub fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
+    cpu.poll(
+        BusAssertions {
+            data,
+            bus_acknowledge: true,
+            ..Default::default()
+        },
+        true,
+    )
+}
+
+/// Complete a six-phase handler entry and check its two supervisor vector reads.
+/// The target is a full address; the CPU's normal address-width rules apply.
+pub fn complete_entry(cpu: &mut CpuPeripheral, vector: u8, target: u32) {
+    assert_eq!(cpu.phase, 0);
+    let first = tick(cpu, 0);
+    assert!(first.instruction_sync);
+    assert!(first.bus_access_strobe);
+    assert_eq!(first.address, u32::from(vector) * 2);
+    assert!(!first.protected_mode_active);
+    let second = tick(cpu, u16::try_from(target >> 16).unwrap());
+    assert!(second.bus_access_strobe);
+    assert_eq!(second.address, first.address + 1);
+    assert!(!second.protected_mode_active);
+    for data in [u16::try_from(target & 0xffff).unwrap(), 0, 0, 0] {
+        assert!(!tick(cpu, data).bus_access_strobe);
+    }
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.get_full_pc_address(), target & 0x00ff_ffff);
 }
