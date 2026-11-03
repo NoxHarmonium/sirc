@@ -19,7 +19,7 @@ pub trait Executor {
     fn step<'a>(
         &mut self,
         phase: &ExecutionPhase,
-        cause_register_value: u16,
+        command: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,

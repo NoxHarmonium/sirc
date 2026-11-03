@@ -161,10 +161,9 @@ pub struct Registers {
 
     // CPU Internal Registers (not directly accessible to programs)
     // No need to segment these registers into 16 bit registers because instructions don't address them
-
-    // Used to delegate to coprocessors
-    // If first nibble is 0x0, will just invoke CPU as normal
-    pub pending_coprocessor_command: u16,
+    /// Coprocessor select register (CSR): queued software command owned by the CU.
+    /// A zero coprocessor ID requests no dispatch slot.
+    pub coprocessor_select_register: u16,
 }
 
 impl Index<u8> for Registers {

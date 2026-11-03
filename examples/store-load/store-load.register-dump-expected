@@ -16,7 +16,7 @@ Registers {
     sl: 0x402,
     ph: 0x0,
     pl: 0x40a,
-    pending_coprocessor_command: 0x0,
+    coprocessor_select_register: 0x0,
 }
 ===EXCEPTION UNIT REGISTERS===
 ExceptionUnitRegisters {

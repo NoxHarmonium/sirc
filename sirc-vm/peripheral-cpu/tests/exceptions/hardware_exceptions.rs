@@ -2,7 +2,7 @@ use assert_hex::assert_eq_hex;
 use peripheral_bus::device::{BusAssertions, Device};
 use peripheral_cpu::{
     coprocessors::exception_unit::{
-        definitions::ExceptionUnitOpCodes, execution::construct_cause_value,
+        definitions::ExceptionUnitOpCodes, execution::construct_exception_unit_command,
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, set_sr_bit, sr_bit_is_set, StatusRegisterFields},
@@ -16,28 +16,28 @@ use crate::exceptions::common::{
 #[test]
 fn boundary_uses_the_csr_command_when_no_eu_event_is_eligible() {
     let mut cpu = new_cpu_peripheral();
-    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
-    cpu.registers.pending_coprocessor_command = command;
+    let command = construct_exception_unit_command(&ExceptionUnitOpCodes::WaitForException, 0);
+    cpu.registers.coprocessor_select_register = command;
 
     cpu.poll(BusAssertions::default(), true);
 
-    assert_eq!(cpu.cause_register_value, command);
-    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+    assert_eq!(cpu.active_command, command);
+    assert_eq!(cpu.registers.coprocessor_select_register, command);
 }
 
 #[test]
 fn boundary_keeps_a_csr_command_ahead_of_a_pending_interrupt() {
     let mut cpu = new_cpu_peripheral();
-    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
-    cpu.registers.pending_coprocessor_command = command;
+    let command = construct_exception_unit_command(&ExceptionUnitOpCodes::WaitForException, 0);
+    cpu.registers.coprocessor_select_register = command;
     set_hardware_interrupt_enable(&mut cpu.registers, 0b0001);
     cpu.raise_hardware_interrupt(0b0001);
 
     cpu.poll(BusAssertions::default(), true);
 
-    assert_eq!(cpu.cause_register_value, command);
+    assert_eq!(cpu.active_command, command);
     assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0b0001);
-    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+    assert_eq!(cpu.registers.coprocessor_select_register, command);
 }
 
 #[test]

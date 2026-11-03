@@ -31,41 +31,41 @@ use crate::{
         ExceptionLinkRegister, ExceptionUnitRegisters, FullAddressRegisterAccess, Registers,
     },
     util::find_highest_active_bit,
-    CAUSE_OPCODE_ID_LENGTH, CAUSE_OPCODE_ID_MASK, COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK,
+    COPROCESSOR_ID_LENGTH, COPROCESSOR_ID_MASK, COPROCESSOR_OPCODE_ID_LENGTH,
+    COPROCESSOR_OPCODE_ID_MASK,
 };
 use crate::{raise_fault, registers::StatusRegisterFields};
 
+/// Encode an exception-unit command word for CSR or automatic EU dispatch.
 ///
-/// Constructs a value that can be put into the cause register to run an exception unit instruction.
+/// The CU keeps the queued CSR command separate from the active slot command.
 ///
-/// The cause register is used to communicate between different CPU units.
-///
-/// The first nibble is the co processor ID (e.g. 1 for the exception unit)
-/// The second nibble is the co processor op code (e.g. what command to run on the exception unit)
+/// The first nibble is the coprocessor ID (e.g. 1 for the exception unit)
+/// The second nibble is the coprocessor op code (e.g. what command to run on the exception unit)
 /// The third and fourth nibbles are an arbitrary value that is optionally used in the instruction.
 ///
 /// ```
-/// use peripheral_cpu::coprocessors::exception_unit::execution::construct_cause_value;
+/// use peripheral_cpu::coprocessors::exception_unit::execution::construct_exception_unit_command;
 /// use peripheral_cpu::coprocessors::exception_unit::definitions::ExceptionUnitOpCodes;
 ///
-/// // Software exeception at vector 0x10
-///  let actual = construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x10);
+/// // Software exception at vector 0x10
+///  let actual = construct_exception_unit_command(&ExceptionUnitOpCodes::SoftwareException, 0x10);
 ///  assert_eq!(0x1110, actual);
 /// ```
 ///
 #[allow(clippy::cast_lossless)]
-pub fn construct_cause_value(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 {
+pub fn construct_exception_unit_command(op_code: &ExceptionUnitOpCodes, vector: u8) -> u16 {
     let executor_id: u8 = ExceptionUnitExecutor::COPROCESSOR_ID;
     let op_code_id = num::ToPrimitive::to_u8(op_code)
         .expect("ExceptionUnitOpCodes values should fit into 8 bits");
 
     ((executor_id as u16) << COPROCESSOR_ID_LENGTH) & COPROCESSOR_ID_MASK
-        | ((op_code_id as u16) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK
+        | ((op_code_id as u16) << COPROCESSOR_OPCODE_ID_LENGTH) & COPROCESSOR_OPCODE_ID_MASK
         | vector as u16
 }
 
-pub fn deconstruct_cause_value(cause_register_value: u16) -> (ExceptionUnitOpCodes, u8, u8) {
-    let instruction = decode_exception_unit_instruction(cause_register_value);
+pub fn deconstruct_exception_unit_command(command: u16) -> (ExceptionUnitOpCodes, u8, u8) {
+    let instruction = decode_exception_unit_instruction(command);
     // Reserved operations retain the current no-op behavior until #447 introduces
     // invalid-opcode faults on top of the #445 dispatch foundation.
     let op_code =
@@ -139,7 +139,7 @@ pub fn hardware_exception_level_to_vector(exception_level: u8) -> u8 {
 /// If dispatch is deferred, discard this candidate and select again at the next boundary.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PendingEvent {
-    cause_register_value: u16,
+    command: u16,
     // Zero for a fault: its metadata is retained until fault entry completes.
     interrupt_mask: u8,
 }
@@ -163,7 +163,7 @@ pub fn select_pending_event(
         };
 
         return Some(PendingEvent {
-            cause_register_value: construct_cause_value(&ExceptionUnitOpCodes::Fault, vector),
+            command: construct_exception_unit_command(&ExceptionUnitOpCodes::Fault, vector),
             interrupt_mask: 0,
         });
     }
@@ -212,7 +212,7 @@ pub fn select_pending_event(
         trace!("eligible interrupt candidate: exception_level {exception_level}");
         let vector = hardware_exception_level_to_vector(exception_level - 1);
         return Some(PendingEvent {
-            cause_register_value: construct_cause_value(
+            command: construct_exception_unit_command(
                 &ExceptionUnitOpCodes::HardwareException,
                 vector,
             ),
@@ -234,7 +234,7 @@ impl PendingEvent {
                 eu_registers.pending_hardware_exceptions
             );
         }
-        self.cause_register_value
+        self.command
     }
 }
 
@@ -280,7 +280,7 @@ fn handle_exception(
 
     // Store current PC in windowed link register and jump to vector
     if current_exception_level >= exception_level && exception_level != 7 {
-        // TODO: Should this just be done when determining the cause register?
+        // TODO: Should this just be done when selecting the pending EU event?
         // Ignore lower priority exceptions
         return;
     }
@@ -324,7 +324,7 @@ impl Executor for ExceptionUnitExecutor {
     fn step<'a>(
         &mut self,
         phase: &ExecutionPhase,
-        cause_register_value: u16,
+        command: u16,
         registers: &'a mut Registers,
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,
@@ -334,8 +334,8 @@ impl Executor for ExceptionUnitExecutor {
             eu_registers.pending_fault
         );
 
-        let instruction = decode_exception_unit_instruction(cause_register_value);
-        let (op_code, vector, level) = deconstruct_cause_value(cause_register_value);
+        let instruction = decode_exception_unit_instruction(command);
+        let (op_code, vector, level) = deconstruct_exception_unit_command(command);
 
         trace!("op_code: {op_code:?} vector: 0x{vector:X} level: 0x{level:X}");
 
@@ -585,8 +585,8 @@ mod tests {
             eu_registers.pending_hardware_exceptions,
             LINE_1_AND_LINE_4_PENDING
         );
-        let cause_value = event.accept(&mut eu_registers);
-        let (op_code, vector, _level) = deconstruct_cause_value(cause_value);
+        let command = event.accept(&mut eu_registers);
+        let (op_code, vector, _level) = deconstruct_exception_unit_command(command);
 
         assert_eq!(op_code, ExceptionUnitOpCodes::HardwareException);
         assert_eq!(
@@ -618,21 +618,23 @@ mod tests {
 
     #[test]
     fn eu_selection_does_not_return_a_software_command() {
-        let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+        let command =
+            construct_exception_unit_command(&ExceptionUnitOpCodes::ReturnFromException, 0);
         let registers = Registers {
-            pending_coprocessor_command: command,
+            coprocessor_select_register: command,
             ..Default::default()
         };
         let eu_registers = ExceptionUnitRegisters::default();
         assert_eq!(select_pending_event(&registers, &eu_registers), None);
-        assert_eq!(registers.pending_coprocessor_command, command);
+        assert_eq!(registers.coprocessor_select_register, command);
     }
 
     #[test]
     fn fault_selection_and_acceptance_preserve_fault_metadata_and_interrupts() {
-        let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+        let command =
+            construct_exception_unit_command(&ExceptionUnitOpCodes::ReturnFromException, 0);
         let mut registers = Registers {
-            pending_coprocessor_command: command,
+            coprocessor_select_register: command,
             ..Default::default()
         };
         set_hardware_interrupt_enable(&mut registers, 0b1001);
@@ -649,10 +651,10 @@ mod tests {
             event,
             select_pending_event(&registers, &eu_registers).unwrap()
         );
-        let cause = event.accept(&mut eu_registers);
+        let selected_command = event.accept(&mut eu_registers);
         assert_eq!(
-            cause,
-            construct_cause_value(&ExceptionUnitOpCodes::Fault, BUS_FAULT)
+            selected_command,
+            construct_exception_unit_command(&ExceptionUnitOpCodes::Fault, BUS_FAULT)
         );
         let fault = eu_registers.pending_fault.unwrap();
         assert!(matches!(fault.fault, Faults::Bus));
@@ -661,7 +663,7 @@ mod tests {
             eu_registers.pending_hardware_exceptions,
             LINE_1_AND_LINE_4_PENDING
         );
-        assert_eq!(registers.pending_coprocessor_command, command);
+        assert_eq!(registers.coprocessor_select_register, command);
     }
 
     #[test]
@@ -681,10 +683,10 @@ mod tests {
         assert_eq!(select_pending_event(&registers, &eu_registers), None);
         eu_registers.current_exception_level = ExceptionPriorities::NoException as u8;
         let event = select_pending_event(&registers, &eu_registers).unwrap();
-        let cause = event.accept(&mut eu_registers);
+        let selected_command = event.accept(&mut eu_registers);
         assert_eq!(
-            cause,
-            construct_cause_value(
+            selected_command,
+            construct_exception_unit_command(
                 &ExceptionUnitOpCodes::HardwareException,
                 hardware_exception_level_to_vector(1),
             )
@@ -699,16 +701,17 @@ mod tests {
     fn reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking() {
         // Until #447 replaces the reserved-operation fallback with a fault, its
         // unused payload must not be interpreted as an exception vector. Construct
-        // raw commands because `construct_cause_value` accepts only defined ops.
+        // raw commands because `construct_exception_unit_command` accepts only defined ops.
         for reserved_op_code in 0x2u8..=0x8 {
-            let cause_value = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
+            let command = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
                 << COPROCESSOR_ID_LENGTH)
                 & COPROCESSOR_ID_MASK
-                | (u16::from(reserved_op_code) << CAUSE_OPCODE_ID_LENGTH) & CAUSE_OPCODE_ID_MASK;
+                | (u16::from(reserved_op_code) << COPROCESSOR_OPCODE_ID_LENGTH)
+                    & COPROCESSOR_OPCODE_ID_MASK;
 
             for payload in 0..=u8::MAX {
                 let (op_code, vector, level) =
-                    deconstruct_cause_value(cause_value | u16::from(payload));
+                    deconstruct_exception_unit_command(command | u16::from(payload));
                 assert_eq!(op_code, ExceptionUnitOpCodes::None);
                 assert_eq!(vector, payload);
                 assert_eq!(level, 0, "a no-op has no exception level");

@@ -8,8 +8,8 @@ pub struct ExceptionUnitInstruction {
     pub value: u8,
 }
 
-pub fn decode_exception_unit_instruction(cause_register_value: u16) -> ExceptionUnitInstruction {
-    let op_code = ((cause_register_value & OP_CODE_MASK) >> OP_CODE_LENGTH) as u8;
-    let value = (cause_register_value & VALUE_MASK) as u8;
+pub fn decode_exception_unit_instruction(command: u16) -> ExceptionUnitInstruction {
+    let op_code = ((command & OP_CODE_MASK) >> OP_CODE_LENGTH) as u8;
+    let value = (command & VALUE_MASK) as u8;
     ExceptionUnitInstruction { op_code, value }
 }
