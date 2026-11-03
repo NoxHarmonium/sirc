@@ -111,9 +111,17 @@ enum SlotOwner {
     EuEvent,
 }
 
-// These four bools are independent, orthogonal pieces of simulator bookkeeping state (not a
-// combinatorial state machine), so a state-machine/enum refactor wouldn't clarify anything here.
-#[allow(clippy::struct_excessive_bools)]
+/// Trace belongs to the logical PU instruction, including any command it issues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InstructionTrace {
+    /// No trace is owed: disabled, canceled, or already made ready for dispatch.
+    None,
+    /// T/TRCE requested trace when the current PU instruction began.
+    Sampled,
+    /// The call committed; its command must succeed before trace can become ready.
+    DeferredCommand,
+}
+
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
@@ -123,10 +131,8 @@ pub struct CpuPeripheral {
     pub cause_register_value: u16,
     // Selected at phase 0 and retained through the slot, including bus stalls.
     slot_owner: SlotOwner,
-    // T bit sampled at InstructionFetchLow before any SR writes for the current instruction.
-    // Used at WriteBackExecutor to decide whether to raise InstructionTrace.
-    // Only set when the processing unit is running (not during exception unit dispatch).
-    trace_mode_sampled: bool,
+    // Sample once at PU instruction start; retain eligibility until its command completes.
+    instruction_trace: InstructionTrace,
     // When the CPU asserts bus_access_strobe, the request is held here until bus_acknowledge
     // (or a bus error) is received. During the wait, the request is re-asserted each cycle
     // without advancing the phase, simulating the CPU stalling on a slow device.
@@ -241,7 +247,7 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         exception_unit_executor: ExceptionUnitExecutor::default(),
         cause_register_value: 0,
         slot_owner: SlotOwner::ProcessingUnit,
-        trace_mode_sampled: false,
+        instruction_trace: InstructionTrace::None,
         pending_bus_request: None,
         is_halted: false,
         reset_pending: false,
@@ -357,6 +363,7 @@ impl CpuPeripheral {
         if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
             if self.slot_owner == SlotOwner::CsrCommand {
                 self.clear_pending_coprocessor_command();
+                self.instruction_trace = InstructionTrace::None;
             }
             if let Some(vector_fetch_fault_response) =
                 self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
@@ -394,17 +401,13 @@ impl CpuPeripheral {
         if phase == ExecutionPhase::InstructionFetchLow {
             // Only reset the cause register every full instruction cycle
             let pending_coprocessor_command = self.registers.pending_coprocessor_command;
-            let pending_cop_opcode =
-                (pending_coprocessor_command & CAUSE_OPCODE_ID_MASK) >> CAUSE_OPCODE_ID_LENGTH;
             let ignored_software_exception = self.eu_registers.current_exception_level != 0
-                && Self::decode_processor_id(pending_coprocessor_command)
-                    == ExceptionUnitExecutor::COPROCESSOR_ID
-                && pending_cop_opcode == ExceptionUnitOpCodes::SoftwareException as u16;
+                && Self::is_software_exception_command(pending_coprocessor_command);
             if ignored_software_exception {
                 self.clear_pending_coprocessor_command();
             }
 
-            // Preserve existing fault handling (including trace for now). ID-0
+            // An aborting fault cancels pending work. ID-0
             // commands have no dispatch slot and must not block pending events.
             if self.eu_registers.pending_fault.is_some()
                 || Self::decode_processor_id(self.registers.pending_coprocessor_command)
@@ -430,14 +433,24 @@ impl CpuPeripheral {
 
         let coprocessor_id = Self::decode_processor_id(self.cause_register_value);
 
-        // Sample the T bit once at InstructionFetchLow, before this instruction can modify SR.
-        // In hardware, the trace decision reads the registered (committed) SR value from the
-        // previous clock edge, not the combinational new value being written this cycle.
-        // Only sample for processing-unit instructions; EU exception dispatch is not traced.
+        // Sample T/TRCE only when a PU instruction begins. A command retains its
+        // issuing instruction's decision; automatic EU dispatches never generate trace.
         if phase == ExecutionPhase::InstructionFetchLow {
-            self.trace_mode_sampled = coprocessor_id == ProcessingUnitExecutor::COPROCESSOR_ID
-                && (sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers)
-                    || bus_assertions.force_trace_mode);
+            match self.slot_owner {
+                SlotOwner::ProcessingUnit => {
+                    let enabled = self.eu_registers.current_exception_level
+                        != ExceptionPriorities::Fault as u8
+                        && (sr_bit_is_set(StatusRegisterFields::TraceMode, &self.registers)
+                            || bus_assertions.force_trace_mode);
+                    self.instruction_trace = if enabled {
+                        InstructionTrace::Sampled
+                    } else {
+                        InstructionTrace::None
+                    };
+                }
+                SlotOwner::CsrCommand => {}
+                SlotOwner::EuEvent => self.instruction_trace = InstructionTrace::None,
+            }
         }
 
         trace!(
@@ -488,6 +501,7 @@ impl CpuPeripheral {
                         fault_pc,
                     );
                     self.clear_pending_coprocessor_command();
+                    self.instruction_trace = InstructionTrace::None;
                 }
 
                 BusAssertions::default()
@@ -500,18 +514,8 @@ impl CpuPeripheral {
             self.clear_pending_coprocessor_command();
         }
 
-        if phase == ExecutionPhase::WriteBackExecutor
-            && self.eu_registers.pending_fault.is_none()
-            && self.trace_mode_sampled
-        {
-            // InstructionTrace is a "next instruction" fault, not retryable, so it keeps reading
-            // the current PC directly rather than the faulting instruction's own address.
-            raise_fault(
-                &mut self.eu_registers,
-                Faults::InstructionTrace,
-                &bus_assertions,
-                self.registers.get_full_pc_address(),
-            );
+        if phase == ExecutionPhase::WriteBackExecutor {
+            self.finish_instruction_trace(bus_assertions);
         }
 
         // TODO: Investigate performance impact of unrolling the six CPU phases
@@ -540,6 +544,60 @@ impl CpuPeripheral {
         }
 
         result
+    }
+
+    /// Make trace eligible only after the entire instruction succeeds, including
+    /// its command. Capture the resulting PC here (not at call write-back), so
+    /// RETE's restored PC is the trace handler's return address.
+    fn finish_instruction_trace(&mut self, bus_assertions: BusAssertions) {
+        if self.eu_registers.pending_fault.is_some() {
+            self.instruction_trace = InstructionTrace::None;
+            return;
+        }
+
+        let trace_due = match (self.instruction_trace, &self.slot_owner) {
+            (InstructionTrace::Sampled, SlotOwner::ProcessingUnit) => {
+                let command = self.registers.pending_coprocessor_command;
+                if command == construct_cause_value(&ExceptionUnitOpCodes::Reset, 0) {
+                    self.instruction_trace = InstructionTrace::None;
+                    false
+                } else if Self::decode_processor_id(command)
+                    != ProcessingUnitExecutor::COPROCESSOR_ID
+                    && !Self::is_software_exception_command(command)
+                {
+                    self.instruction_trace = InstructionTrace::DeferredCommand;
+                    false
+                } else {
+                    // Ordinary instructions and ID-0 calls complete here. EXCP
+                    // also traces here, before trap entry. Retaining/replaying the
+                    // trap belongs to #466/#483, not ordinary command deferral.
+                    self.instruction_trace = InstructionTrace::None;
+                    true
+                }
+            }
+            (InstructionTrace::DeferredCommand, SlotOwner::CsrCommand) => {
+                self.instruction_trace = InstructionTrace::None;
+                true
+            }
+            _ => {
+                self.instruction_trace = InstructionTrace::None;
+                false
+            }
+        };
+        if trace_due {
+            raise_fault(
+                &mut self.eu_registers,
+                Faults::InstructionTrace,
+                &bus_assertions,
+                self.registers.get_full_pc_address(),
+            );
+        }
+    }
+
+    fn is_software_exception_command(command: u16) -> bool {
+        Self::decode_processor_id(command) == ExceptionUnitExecutor::COPROCESSOR_ID
+            && (command & CAUSE_OPCODE_ID_MASK) >> CAUSE_OPCODE_ID_LENGTH
+                == ExceptionUnitOpCodes::SoftwareException as u16
     }
 
     /// Clear the CSR command word on completion, cancellation, or discard.
@@ -676,6 +734,7 @@ impl CpuPeripheral {
     }
 
     pub fn reset(&mut self) {
+        self.instruction_trace = InstructionTrace::None;
         self.slot_owner = SlotOwner::ProcessingUnit;
         self.pending_bus_request = None;
         self.is_halted = false;
