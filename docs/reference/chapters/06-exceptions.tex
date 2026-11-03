@@ -374,15 +374,11 @@ the saved status register via \mnemonic{ETTR} before returning. \texttt{SR.T} is
 instruction, before that instruction can modify it, so a write to \texttt{SR.T} takes effect starting with the next
 instruction boundary; exception-unit dispatches are never traced.
 
-A traced \mnemonic{EXCP} is the one exception to the rule that a call's command completes before its trace fault. The
-trace fault is taken first, with the link register storing the address after the \mnemonic{EXCP}, and the exception
-unit records the trap as a pending software exception instead of entering it. When the trace handler returns with
-\mnemonic{RETE} to exception level 0, the recorded trap is entered at that instruction boundary as if the
-\mnemonic{EXCP} had just executed: link register 0 stores the address after the \mnemonic{EXCP} and the status register
-restored by the trace handler. The recorded trap is held by the exception unit, not in the CSR, so it is entered before
-any pending hardware interrupt. A debugger single-stepping through a system call therefore stops once before the trap
-handler runs (with the instruction after the \mnemonic{EXCP} as the return address), and again after that instruction
-has executed once the handler has returned.
+\mnemonic{EXCP} suppresses instruction trace, whether requested by \texttt{SR.T} or \activelow{TRCE}.
+This also applies to a legal \mnemonic{EXCP} ignored inside a handler. Privilege checks and other instruction faults
+still apply normally. An accepted trap enters directly, without a trace stop or a retained trap to replay. Its link
+register saves the address after \mnemonic{EXCP} and the pre-entry status register, including the original T bit.
+Tracing can resume after the trap handler returns; handler instructions themselves follow the normal rules below.
 
 Trace faults are not raised while a fault handler runs (exception level 7), whether \texttt{SR.T} is set or
 \activelow{TRCE} is active, because each one would otherwise escalate to a double fault. A handler at a lower level is
@@ -550,10 +546,10 @@ Hardware interrupts, software exceptions and instruction trace faults are recogn
 and only when the CSR is empty and no coprocessor is active (Section~\ref{sec:coprocessors-and-csr}). A coprocessor
 call (\mnemonic{COPI}, \mnemonic{COPR}, or a meta-instruction that assembles to one) is part of its instruction: its
 dispatch slot, and the command it starts, complete before a pending hardware interrupt or an instruction trace fault is
-taken. The one exception is a traced \mnemonic{EXCP}, whose trace fault is taken before the trap is entered
-(Section~\ref{sec:instruction-trace-fault}). Nothing is lost by the wait. Level-sensitive requests stay asserted, a
-Level 5 request stays in its pending bit, and a trace fault is still raised. A fault raised by the call itself, such as
-a privilege violation or a failed DMA bus access, is serviced as soon as it occurs.
+taken. \mnemonic{EXCP} suppresses instruction trace (Section~\ref{sec:instruction-trace-fault}). Nothing is lost by the
+wait. Level-sensitive requests stay asserted, a Level 5 request stays in its pending bit, and a trace fault is still
+raised. A fault raised by the call itself, such as a privilege violation or a failed DMA bus access, is serviced as
+soon as it occurs.
 
 The worst-case wait for an interrupt is therefore the remainder of the current instruction, plus the dispatch slot of a
 pending coprocessor call, plus the time a running coprocessor command takes, plus the dispatch slot of the interrupt
@@ -835,7 +831,7 @@ The status register saved in the link register is the value from before entry, w
 \mnemonic{ETFR} and \mnemonic{ETTR} before returning. \texttt{SR.T} is cleared on entry to every handler, including
 fault handlers, so software tracing does not continue into a handler; if it was set before the exception, tracing
 resumes after \mnemonic{RETE}. A handler that sets \texttt{SR.T} itself, or runs while \activelow{TRCE} is active, is
-traced, except that no trace fault is raised at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
+traced, except for \mnemonic{EXCP} and instructions at exception level 7 (Section~\ref{sec:instruction-trace-fault}).
 
 \paragraph{Vector fetch failure.} Except for the reset vector (Section~\ref{sec:reset-vector-fetch}), if a bus or protection fault occurs during an
 exception-vector fetch, the original exception does not enter and the remaining phases of its dispatch slot run as
@@ -948,7 +944,6 @@ program counter.
 		Exception link registers               & Not cleared by reset. Software must treat their contents as architecturally undefined.                                                                                                                                                                                                  \\
 		Pending hardware exceptions and faults & Cleared when reset is requested. Interrupt lines, including Level 5, are not sampled until the
 		reset-vector fetch completes; requests that are still active then are sampled according to the normal interrupt rules. A Level 5 line held asserted across reset does not fire afterwards: reset does not clear the edge detector's last sampled level, so there is no transition, and the line must be released and reasserted. \\
-		Pending software exception             & Cleared when reset is requested. This includes the trap recorded by a traced \mnemonic{EXCP}, which is held by the exception unit.                                                                                                                                                      \\
 		Coprocessor select register (CSR)      & Set internally to the reset operation until the reset vector sequence completes.                                                                                                                                                                                                        \\
 		\bottomrule
 	\end{tabularx}

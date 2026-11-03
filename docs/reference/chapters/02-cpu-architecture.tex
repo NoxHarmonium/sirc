@@ -119,8 +119,8 @@ The exception coprocessor never overwrites a pending command. It keeps its own r
 service, and loads the CSR with a hardware interrupt, software exception or trace fault only when the CSR is empty and
 no coprocessor is active. A fault raised by the call or its command is the exception: it ends the command and is
 dispatched at once. A coprocessor call is therefore part of its instruction: its dispatch slot, and the command it
-starts, complete before any pending interrupt or instruction trace fault is taken, except that a traced \mnemonic{EXCP}
-takes its trace fault first (Section~\ref{sec:interrupt-latency}).
+starts, complete before any pending interrupt or instruction trace fault is taken. \mnemonic{EXCP} suppresses
+instruction trace (Section~\ref{sec:instruction-trace-fault}).
 
 \subsection{Arithmetic Logic Unit (ALU)}
 

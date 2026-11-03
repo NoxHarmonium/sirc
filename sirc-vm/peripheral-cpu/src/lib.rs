@@ -558,19 +558,18 @@ impl CpuPeripheral {
         let trace_due = match (self.instruction_trace, &self.slot_owner) {
             (InstructionTrace::Sampled, SlotOwner::ProcessingUnit) => {
                 let command = self.registers.pending_coprocessor_command;
-                if command == construct_cause_value(&ExceptionUnitOpCodes::Reset, 0) {
+                if command == construct_cause_value(&ExceptionUnitOpCodes::Reset, 0)
+                    || Self::is_software_exception_command(command)
+                {
                     self.instruction_trace = InstructionTrace::None;
                     false
                 } else if Self::decode_processor_id(command)
                     != ProcessingUnitExecutor::COPROCESSOR_ID
-                    && !Self::is_software_exception_command(command)
                 {
                     self.instruction_trace = InstructionTrace::DeferredCommand;
                     false
                 } else {
-                    // Ordinary instructions and ID-0 calls complete here. EXCP
-                    // also traces here, before trap entry. Retaining/replaying the
-                    // trap belongs to #466/#483, not ordinary command deferral.
+                    // Ordinary instructions and ID-0 calls complete here.
                     self.instruction_trace = InstructionTrace::None;
                     true
                 }

@@ -223,7 +223,8 @@ This pin is useful for hardware-driven debugging, as the CPU can be halted and t
 
 When asserted at an instruction boundary, the instruction being started is traced regardless of whether software has
 cleared the Trace Mode (T) flag in the status register. No trace fault is raised while a fault handler runs (exception
-level 7), since it would escalate to a double fault.
+level 7), since it would escalate to a double fault. \mnemonic{EXCP} also suppresses instruction trace, including when
+it is ignored inside a handler; privilege faults still apply normally.
 
 In trace mode, the CPU raises an exception on every instruction to allow software debugging.
 

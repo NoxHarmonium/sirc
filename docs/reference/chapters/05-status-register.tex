@@ -188,7 +188,7 @@ editing bit 13 of a saved status register with \mnemonic{ETTR} has no effect.
 
 \begin{description}
 	\item[When Set (1):] An instruction trace fault (vector \texttt{0x06}) is generated after every instruction, except at
-	      exception level 7
+	      exception level 7 and for \mnemonic{EXCP}
 	\item[When Clear (0):] Normal execution
 	\item[Purpose:] Allows debuggers to single-step through code
 	\item[Note:] Used by SIRCIT (SIRC Instruction Tracer) for debugging

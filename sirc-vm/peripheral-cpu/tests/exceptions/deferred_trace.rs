@@ -369,16 +369,59 @@ fn fault_handler_and_its_rete_do_not_trace_even_when_trce_is_held_high() {
 }
 
 #[test]
-fn traced_excp_takes_trace_before_trap_or_hardware_interrupt() {
-    let mut cpu = traced_cpu();
-    set_hardware_interrupt_enable(&mut cpu.registers, 1);
-    let command = construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x60);
-    run_instruction(&mut cpu, &call(command), false, 1);
-    assert_trace(&cpu, 0x0202);
-    let response = run_slot(&mut cpu, 0x0800, false);
-    assert_eq!(response.address, u32::from(INSTRUCTION_TRACE_FAULT) * 2);
-    assert_eq!(cpu.eu_registers.link_registers[6].return_address, 0x0202);
-    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+fn excp_suppresses_t_and_trce_and_enters_before_waiting_irq() {
+    for force_trace in [false, true] {
+        let mut cpu = traced_cpu();
+        if force_trace {
+            cpu.registers.sr = 0;
+        }
+        set_hardware_interrupt_enable(&mut cpu.registers, 1);
+        let command = construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x60);
+        let original_sr = cpu.registers.sr;
+        run_instruction(&mut cpu, &call(command), force_trace, 1);
+        assert!(cpu.eu_registers.pending_fault.is_none());
+        let response = run_slot(&mut cpu, 0x0800, force_trace);
+        assert_eq!(response.address, 0x60 * 2);
+        assert_eq!(cpu.registers.pl, 0x0800);
+        assert_eq!(cpu.eu_registers.current_exception_level, 1);
+        assert_eq!(cpu.eu_registers.link_registers[0].return_address, 0x0202);
+        assert_eq!(
+            cpu.eu_registers.link_registers[0].return_status_register,
+            original_sr
+        );
+        assert_eq!(cpu.registers.sr & 0x8000, 0);
+        assert!(cpu.eu_registers.pending_fault.is_none());
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    }
+}
+
+#[test]
+fn ignored_handler_excp_suppresses_trace_only_for_that_instruction() {
+    for force_trace in [false, true] {
+        let mut cpu = traced_cpu();
+        cpu.eu_registers.current_exception_level = 2;
+        if force_trace {
+            cpu.registers.sr = 0;
+        }
+        let command = construct_cause_value(&ExceptionUnitOpCodes::SoftwareException, 0x60);
+        run_instruction(&mut cpu, &call(command), force_trace, 0);
+        assert!(cpu.eu_registers.pending_fault.is_none());
+        // The ignored command consumes no slot. The next PU instruction
+        // is traced normally, proving suppression does not leak forward.
+        run_instruction(
+            &mut cpu,
+            &immediate(
+                Instruction::AddImmediate,
+                &RegisterName::R1,
+                1,
+                ConditionFlags::Always,
+            ),
+            force_trace,
+            0,
+        );
+        assert_trace(&cpu, 0x0204);
+        assert_eq!(cpu.eu_registers.current_exception_level, 2);
+    }
 }
 
 #[test]
