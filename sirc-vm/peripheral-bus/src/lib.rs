@@ -235,7 +235,16 @@ impl BusPeripheral {
                 ..BusAssertions::default()
             }
         } else {
-            self.bus_master.poll(assertions, true)
+            let response = self.bus_master.poll(assertions, true);
+            if self.bus_master.take_reset_request() {
+                self.reset_unit.request_reset(&mut *self.bus_master);
+                BusAssertions {
+                    reset_devices_on_bus: true,
+                    ..BusAssertions::default()
+                }
+            } else {
+                response
+            }
         };
         let segments = &mut self.segments;
         let out = segments

@@ -652,8 +652,8 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
     let fault_response =
         cpu_peripheral.poll(bus_protection_error_for_request(vector_request), true);
     assert!(
-        fault_response.reset_requested,
-        "fault while fetching the double-fault vector should request reset"
+        !fault_response.reset_requested && cpu_peripheral.take_reset_request(),
+        "double-fault vector failure requests internal reset without driving RSTI"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -661,13 +661,8 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
     );
 }
 
-// Reproduces a bug: after a triple-fault requests reset, current_exception_level is not cleared.
-// If poll() is called again before reset() with a persistent bus error on the bus (no pending CPU
-// request, so bus_access_type defaults to None / non-ExceptionVectorFetch), handle_vector_fetch_
-// bus_fault returns None and raise_fault is called. With current_exception_level still at 7
-// (Fault level), raise_fault re-queues DoubleFault instead of leaving pending_fault empty.
-// The fix should clear current_exception_level in the triple-fault path (or add an "awaiting
-// reset" guard that suppresses fault dispatch until reset() is called).
+// Once the coordinator consumes a triple-fault request, the CPU stays idle
+// until reset() starts the new sequence, even if an error input remains active.
 #[test]
 fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     let mut cpu_peripheral = new_cpu_peripheral();
@@ -685,8 +680,8 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     // Triple-fault: bus error while fetching the double-fault vector.
     let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
     assert!(
-        fault_response.reset_requested,
-        "bus error during double-fault vector fetch should request reset"
+        !fault_response.reset_requested && cpu_peripheral.take_reset_request(),
+        "double-fault vector failure requests internal reset without driving RSTI"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -694,7 +689,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     );
 
     // Simulate a persistent bus error arriving on the cycle before the ResetUnit calls reset().
-    // The CPU must keep asserting reset_requested and must not re-queue a fault.
+    // The CPU must stay idle after its one-shot handoff and must not re-queue a fault.
     let repeat_response = cpu_peripheral.poll(
         BusAssertions {
             bus_error: true,
@@ -703,8 +698,8 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
         true,
     );
     assert!(
-        repeat_response.reset_requested,
-        "CPU must keep asserting reset_requested until reset() is called"
+        !repeat_response.reset_requested && !cpu_peripheral.take_reset_request(),
+        "internal request is consumed once; CPU stays idle until reset()"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -716,7 +711,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     let post_reset_response = cpu_peripheral.poll(BusAssertions::default(), true);
     assert!(
         !post_reset_response.reset_requested,
-        "reset() must clear reset_pending so the CPU is no longer stuck"
+        "reset() must clear the internal request handoff so execution can resume"
     );
     assert!(
         post_reset_response.bus_access_strobe,

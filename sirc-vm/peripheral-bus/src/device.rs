@@ -166,8 +166,8 @@ pub struct BusAssertions {
 
     /// External reset input
     /// When asserted, the reset unit immediately halts the CPU and begins the 6-cycle RSTO hold.
-    /// Can be driven by external devices or by the CPU itself (software RSET signals its own RSTI
-    /// output to trigger the same reset unit path).
+    /// Driven only by external hardware. CPU-originated resets use the internal
+    /// `Device::take_reset_request` channel, never this pin.
     /// Pin: RSTI
     pub reset_requested: bool,
     /// Asserted during the 6-cycle post-reset hold.
@@ -210,10 +210,15 @@ pub trait Device {
     /// Called every clock so the device can do work and raise interrupts etc.
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions;
     /// Called by the reset unit to immediately halt the device and prepare it for a reset sequence.
-    /// For the CPU: aborts any pending bus transaction, resets phase to 0, seeds the reset cause
-    /// value so the EU fetches the reset vector when the hold expires.
+    /// For the CPU: aborts any pending bus transaction, resets phase to 0, seeds the reset command
+    /// word so the EU fetches the reset vector when the hold expires.
     /// Default is a no-op; non-CPU devices typically don't need to do anything here.
     fn reset(&mut self) {}
+    /// Consume one internal reset request from the bus master. This is an
+    /// emulator coordination channel, not RSTI or RSTO, and is never combined with bus pin assertions.
+    fn take_reset_request(&mut self) -> bool {
+        false
+    }
     fn dump_diagnostic(&self) -> String {
         String::from("TODO")
     }

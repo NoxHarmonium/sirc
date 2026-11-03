@@ -463,7 +463,9 @@ fn traced_rset_requests_reset_instead_of_scheduling_trace() {
     let mut cpu = traced_cpu();
     let command = construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0);
     let response = run_instruction(&mut cpu, &call(command), false, 0);
-    assert!(response.reset_requested);
+    assert!(!response.reset_requested);
+    assert!(cpu.take_reset_request());
+    assert!(!cpu.take_reset_request());
     assert!(cpu.eu_registers.pending_fault.is_none());
 }
 

@@ -125,6 +125,15 @@ enum InstructionTrace {
     DeferredCommand,
 }
 
+/// Internal reset handoff: consume the request once, then remain idle until
+/// the bus reset coordinator calls `reset()`.
+#[derive(Debug, PartialEq, Eq)]
+enum CpuResetState {
+    Running,
+    Requested,
+    AwaitingReset,
+}
+
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
@@ -144,10 +153,7 @@ pub struct CpuPeripheral {
     pending_bus_request: Option<BusAssertions>,
     // Set when halt_requested is asserted at an instruction boundary. Cleared when deasserted.
     is_halted: bool,
-    // Set by a triple fault (bus error during double-fault vector fetch). Gates all CPU logic
-    // and re-asserts reset_requested every cycle until reset() clears it. Models the hardware
-    // flip-flop that a triple fault would set to hold the reset line.
-    reset_pending: bool,
+    reset_state: CpuResetState,
     // Tracks the Level 5 (NMI) pin's state as of the last poll cycle, so a rising edge can be
     // detected. Unlike levels 1-4 (level-sensitive), Level 5 only latches on a 0->1 transition.
     l5_interrupt_pin_previously_asserted: bool,
@@ -255,7 +261,7 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         instruction_trace: InstructionTrace::None,
         pending_bus_request: None,
         is_halted: false,
-        reset_pending: false,
+        reset_state: CpuResetState::Running,
         l5_interrupt_pin_previously_asserted: false,
     }
 }
@@ -289,6 +295,15 @@ impl Device for CpuPeripheral {
         Self::reset(self);
     }
 
+    fn take_reset_request(&mut self) -> bool {
+        if self.reset_state == CpuResetState::Requested {
+            self.reset_state = CpuResetState::AwaitingReset;
+            true
+        } else {
+            false
+        }
+    }
+
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }
@@ -297,11 +312,8 @@ impl Device for CpuPeripheral {
 impl CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll_internal(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
-        if self.reset_pending {
-            return BusAssertions {
-                reset_requested: true,
-                ..BusAssertions::default()
-            };
+        if self.reset_state != CpuResetState::Running {
+            return BusAssertions::default();
         }
 
         // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
@@ -545,15 +557,11 @@ impl CpuPeripheral {
             ..result
         };
 
-        // Software RSET: after WriteBack wraps phase back to 0, if coprocessor_select_register
-        // was just set to the reset command, signal the reset unit via reset_requested so it starts
-        // the 6-cycle RSTO hold before the EU fetches the reset vector.
+        // RSET hands one internal request to the bus coordinator. The request
+        // cycle becomes the first RSTO cycle; CPU never drives the RSTI input.
         let reset_command = construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0x0);
         if self.phase == 0 && self.registers.coprocessor_select_register == reset_command {
-            return BusAssertions {
-                reset_requested: true,
-                ..result
-            };
+            self.reset_state = CpuResetState::Requested;
         }
 
         result
@@ -651,11 +659,8 @@ impl CpuPeripheral {
         if op_code == ExceptionUnitOpCodes::Fault && vector == DOUBLE_FAULT_VECTOR {
             error!("Triple fault! [{fault:?}] raised while fetching the double fault vector. Requesting reset.");
             self.eu_registers.pending_fault = None;
-            self.reset_pending = true;
-            return Some(BusAssertions {
-                reset_requested: true,
-                ..BusAssertions::default()
-            });
+            self.reset_state = CpuResetState::Requested;
+            return Some(BusAssertions::default());
         }
 
         if op_code == ExceptionUnitOpCodes::Fault {
@@ -778,7 +783,7 @@ impl CpuPeripheral {
         self.slot_owner = SlotOwner::ProcessingUnit;
         self.pending_bus_request = None;
         self.is_halted = false;
-        self.reset_pending = false;
+        self.reset_state = CpuResetState::Running;
         self.l5_interrupt_pin_previously_asserted = false;
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;

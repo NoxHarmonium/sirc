@@ -1,6 +1,8 @@
 use assert_hex::assert_eq_hex;
 use peripheral_bus::{
-    device::BusAssertions, memory_mapped_device::new_stub_memory_mapped_device, new_bus_peripheral,
+    device::{BusAssertions, Device},
+    memory_mapped_device::new_stub_memory_mapped_device,
+    new_bus_peripheral,
 };
 use peripheral_cpu::{
     coprocessors::exception_unit::definitions::{Faults, PendingFault},
@@ -82,7 +84,7 @@ const RSTI_ASSERTED: BusAssertions = BusAssertions {
 };
 
 /// Software RSET: executing the RSET COP instruction causes `poll_all` to emit RSTO for 6 cycles
-/// before the EU fetches the reset vector. The `WriteBack` cycle that signals rsti counts as cycle 1.
+/// before the EU fetches the reset vector. The internal request's write-back cycle counts as cycle 1.
 #[test]
 fn test_software_rset_hold() {
     // RSET is encoded as COPI r0, #0x1B00 (EU ID=1, Reset opcode=0xB, vector=0x00)
@@ -109,11 +111,11 @@ fn test_software_rset_hold() {
     }
 
     // Poll 5 (WriteBack): PU sets coprocessor_select_register = RESET_COMMAND, phase wraps to 0,
-    // CPU signals rsti in its output. poll_all intercepts and starts the hold. RSTO cycle 1.
+    // poll_all consumes its internal request and emits RSTO cycle 1, never RSTI.
     assertions = bus.poll_all(assertions);
     assert!(
-        assertions.reset_requested,
-        "reset should be requested on the WriteBack cycle"
+        assertions.reset_devices_on_bus && !assertions.reset_requested,
+        "WriteBack must start RSTO without driving RSTI"
     );
     assert!(
         !assertions.bus_access_strobe,
@@ -121,7 +123,7 @@ fn test_software_rset_hold() {
     );
 
     // Polls 6-10: 5 countdown cycles (total 6 RSTO cycles).
-    for i in 0..6 {
+    for i in 0..5 {
         assertions = bus.poll_all(assertions);
         assert!(
             assertions.reset_devices_on_bus,
@@ -323,4 +325,43 @@ fn test_rsti_mid_instruction_abort() {
         out.address,
         "EU should fetch from address 0, not the stalled address"
     );
+}
+
+#[test]
+fn triple_fault_starts_one_six_cycle_hold_without_driving_rsti() {
+    for second_word in [false, true] {
+        for protection_error in [false, true] {
+            let mut bus = set_up_reset_test();
+            get_cpu(&mut bus).eu_registers.pending_fault = Some(PendingFault {
+                fault: Faults::DoubleFault,
+                pc: 0x0200,
+            });
+            let first = bus.poll_all(ACK);
+            assert!(first.bus_access_strobe);
+            assert_eq!(first.address, 0x10);
+            if second_word {
+                assert_eq!(bus.poll_all(ACK).address, 0x11);
+            }
+            let out = bus.poll_all(BusAssertions {
+                bus_error: !protection_error,
+                bus_protection_error: protection_error,
+                ..ACK
+            });
+            assert!(out.reset_devices_on_bus);
+            assert!(!out.reset_requested);
+            assert!(!out.bus_access_strobe);
+            assert!(!get_cpu(&mut bus).take_reset_request());
+            for _ in 0..5 {
+                let held = bus.poll_all(ACK);
+                assert!(held.reset_devices_on_bus);
+                assert!(!held.reset_requested);
+                assert!(!held.bus_access_strobe);
+            }
+            let fetch = bus.poll_all(ACK);
+            assert!(!fetch.reset_devices_on_bus);
+            assert!(!fetch.reset_requested);
+            assert!(fetch.bus_access_strobe);
+            assert_eq!(fetch.address, 0);
+        }
+    }
 }

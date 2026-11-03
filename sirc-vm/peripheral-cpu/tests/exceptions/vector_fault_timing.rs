@@ -215,10 +215,12 @@ fn failed_double_fault_vector_still_requests_reset_immediately() {
                 },
                 true,
             );
-            assert!(response.reset_requested);
+            assert!(!response.reset_requested);
+            assert!(cpu.take_reset_request());
             assert!(!response.bus_access_strobe);
             assert!(cpu.eu_registers.pending_fault.is_none());
-            assert!(tick(&mut cpu, 0).reset_requested);
+            assert!(!tick(&mut cpu, 0).reset_requested);
+            assert!(!cpu.take_reset_request());
         }
     }
 }

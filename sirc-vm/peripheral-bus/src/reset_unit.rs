@@ -16,10 +16,15 @@ impl ResetUnit {
         Self { hold_cycles: 0 }
     }
 
+    /// Start a six-cycle hold, counting the caller's current cycle as the first.
+    pub fn request_reset(&mut self, bus_master: &mut dyn Device) {
+        bus_master.reset();
+        self.hold_cycles = 5;
+    }
+
     pub fn should_reset(&mut self, assertions: BusAssertions, bus_master: &mut dyn Device) -> bool {
         if assertions.reset_requested {
-            bus_master.reset();
-            self.hold_cycles = 5;
+            self.request_reset(bus_master);
             return true;
         }
         if self.hold_cycles > 0 {
