@@ -1663,21 +1663,8 @@ fn test_level_five_interrupt_conflict_fault() {
     // Simulate being inside a level-5 handler
     cpu_peripheral.eu_registers.current_exception_level = 6;
 
-    // Assert a second L5 interrupt (NMI). This should trigger the conflict fault because
-    // Event selection lets L5 through when current_exception_level == 6,
-    // allowing handle_exception to detect the re-entry and raise LevelFiveInterruptConflict.
+    // Selection accepts a conflict fault instead of fetching an L5 vector.
     cpu_peripheral.raise_hardware_interrupt(0x10);
-
-    // The conflict slot raises the fault without fetching an L5 vector.
-    super::common::run_idle_dispatch(&mut cpu_peripheral, &mut clocks);
-
-    assert!(
-        cpu_peripheral
-            .eu_registers
-            .pending_fault
-            .is_some_and(|pending_fault| pending_fault.fault == Faults::LevelFiveInterruptConflict),
-        "LevelFiveInterruptConflict should be raised when L5 fires while already at exception level 6"
-    );
 
     run_expectations(
         &mut cpu_peripheral,

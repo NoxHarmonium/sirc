@@ -21,6 +21,7 @@ Registers {
 ===EXCEPTION UNIT REGISTERS===
 ExceptionUnitRegisters {
     pending_hardware_exceptions: 0x0,
+    l5_overrun: false,
     pending_fault: None,
     link_registers: [
         ExceptionLinkRegister {

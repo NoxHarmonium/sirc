@@ -141,6 +141,8 @@ pub struct PendingEvent {
     command: u16,
     // Zero for a fault: its metadata is retained until fault entry completes.
     interrupt_mask: u8,
+    // A selected L5 conflict creates its fault and clears overrun only on acceptance.
+    l5_conflict: bool,
 }
 
 /// Select an EU event without consuming it or considering software commands in CSR.
@@ -164,6 +166,7 @@ pub fn select_pending_event(
         return Some(PendingEvent {
             command: construct_exception_unit_command(&ExceptionUnitOpCodes::Fault, vector),
             interrupt_mask: 0,
+            l5_conflict: false,
         });
     }
     trace!(
@@ -190,11 +193,8 @@ pub fn select_pending_event(
 
         // Also check that this exception is higher priority than the current level
         // (higher priority = higher exception level number).
-        // Special case: L5 (NMI) is re-entrant — it fires even when current_exception_level is
-        // already 6, which triggers a LevelFiveInterruptConflict fault in handle_exception.
-        // It does NOT fire when current_exception_level is 7 (fault mode); that case is handled
-        // by handle_exception's priority filter, which silently ignores lower-priority
-        // exceptions.
+        // L5 at level 6 is eligible for a conflict report, not handler re-entry.
+        // At level 7 neither request nor overrun is consumed.
         let is_nmi_reentry = exception_level == ExceptionPriorities::LevelFiveHardware as u8
             && eu_registers.current_exception_level == ExceptionPriorities::LevelFiveHardware as u8;
         if !(exception_level > eu_registers.current_exception_level || is_nmi_reentry) {
@@ -208,6 +208,25 @@ pub fn select_pending_event(
             continue;
         }
 
+        if exception_level == ExceptionPriorities::LevelFiveHardware as u8
+            && (is_nmi_reentry || eu_registers.l5_overrun)
+        {
+            return Some(PendingEvent {
+                command: construct_exception_unit_command(
+                    &ExceptionUnitOpCodes::Fault,
+                    LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT,
+                ),
+                // Re-entry consumes the request. Overrun alone keeps it queued
+                // for delivery after the conflict handler returns.
+                interrupt_mask: if is_nmi_reentry {
+                    1 << interrupt_line
+                } else {
+                    0
+                },
+                l5_conflict: true,
+            });
+        }
+
         trace!("eligible interrupt candidate: exception_level {exception_level}");
         let vector = hardware_exception_level_to_vector(exception_level - 1);
         return Some(PendingEvent {
@@ -216,6 +235,7 @@ pub fn select_pending_event(
                 vector,
             ),
             interrupt_mask: 1 << interrupt_line,
+            l5_conflict: false,
         });
     }
     None
@@ -225,12 +245,21 @@ impl PendingEvent {
     /// Accept this candidate when the CU grants dispatch, returning its command word.
     /// Taking ownership prevents the same candidate from being accepted twice.
     /// Fault metadata stays pending for the existing fault-entry/completion path.
-    pub fn accept(self, eu_registers: &mut ExceptionUnitRegisters) -> u16 {
+    pub fn accept(self, eu_registers: &mut ExceptionUnitRegisters, pc: u32) -> u16 {
         if self.interrupt_mask != 0 {
             eu_registers.pending_hardware_exceptions &= !self.interrupt_mask;
             debug!(
                 "eu_registers.pending_hardware_exceptions: {}",
                 eu_registers.pending_hardware_exceptions
+            );
+        }
+        if self.l5_conflict {
+            eu_registers.l5_overrun = false;
+            raise_fault(
+                eu_registers,
+                Faults::LevelFiveInterruptConflict,
+                &BusAssertions::default(),
+                pc,
             );
         }
         self.command
@@ -267,21 +296,8 @@ fn handle_exception(
     registers: &mut Registers,
     eu_registers: &mut ExceptionUnitRegisters,
     vector_address: u32,
-    bus_assertions: &BusAssertions,
 ) {
     trace!("HANDLE EXCEPTION: current_exception_level: 0x{current_exception_level:X} exception_level: 0x{exception_level:X} pc: 0x{:X} vector_address: 0x{vector_address:X}", registers.get_full_pc_address() );
-
-    // TODO: Magic numbers
-    if current_exception_level == 6 && exception_level == 6 {
-        // Not retryable -- resume after whatever was executing when the conflicting L5 arrived.
-        raise_fault(
-            eu_registers,
-            Faults::LevelFiveInterruptConflict,
-            bus_assertions,
-            registers.get_full_pc_address(),
-        );
-        return;
-    }
 
     // Store current PC in windowed link register and jump to vector
     if !accepts_exception_entry(current_exception_level, exception_level) {
@@ -476,7 +492,6 @@ impl Executor for ExceptionUnitExecutor {
                             registers,
                             eu_registers,
                             self.vector_value,
-                            &bus_assertions,
                         );
                     }
                 }
@@ -508,6 +523,40 @@ mod tests {
     use super::*;
     use crate::registers::set_hardware_interrupt_enable;
     use crate::registers::sr_bit_is_set;
+
+    #[test]
+    fn l5_overrun_selection_is_read_only_until_dispatch_acceptance() {
+        let registers = Registers::default();
+        let mut eu = ExceptionUnitRegisters {
+            pending_hardware_exceptions: 16,
+            l5_overrun: true,
+            ..Default::default()
+        };
+        let before = eu;
+        let event = select_pending_event(&registers, &eu).unwrap();
+        assert_eq!(
+            select_pending_event(&registers, &eu),
+            Some(PendingEvent {
+                command: construct_exception_unit_command(
+                    &ExceptionUnitOpCodes::Fault,
+                    LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT
+                ),
+                interrupt_mask: 0,
+                l5_conflict: true,
+            })
+        );
+        assert_eq!(eu, before);
+        event.accept(&mut eu, 0x1234);
+        assert!(!eu.l5_overrun);
+        assert_eq!(eu.pending_hardware_exceptions, 16);
+        assert_eq!(
+            eu.pending_fault,
+            Some(PendingFault {
+                fault: Faults::LevelFiveInterruptConflict,
+                pc: 0x1234
+            })
+        );
+    }
 
     #[test]
     fn rete_derives_ea_from_restored_level_after_ettr() {
@@ -588,7 +637,7 @@ mod tests {
             eu_registers.pending_hardware_exceptions,
             LINE_1_AND_LINE_4_PENDING
         );
-        let command = event.accept(&mut eu_registers);
+        let command = event.accept(&mut eu_registers, 0);
         let (op_code, vector, _level) = deconstruct_exception_unit_command(command);
 
         assert_eq!(op_code, ExceptionUnitOpCodes::HardwareException);
@@ -654,7 +703,7 @@ mod tests {
             event,
             select_pending_event(&registers, &eu_registers).unwrap()
         );
-        let selected_command = event.accept(&mut eu_registers);
+        let selected_command = event.accept(&mut eu_registers, 0);
         assert_eq!(
             selected_command,
             construct_exception_unit_command(&ExceptionUnitOpCodes::Fault, BUS_FAULT)
@@ -686,7 +735,7 @@ mod tests {
         assert_eq!(select_pending_event(&registers, &eu_registers), None);
         eu_registers.current_exception_level = ExceptionPriorities::NoException as u8;
         let event = select_pending_event(&registers, &eu_registers).unwrap();
-        let selected_command = event.accept(&mut eu_registers);
+        let selected_command = event.accept(&mut eu_registers, 0);
         assert_eq!(
             selected_command,
             construct_exception_unit_command(

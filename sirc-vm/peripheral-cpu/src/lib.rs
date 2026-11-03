@@ -433,7 +433,10 @@ impl CpuPeripheral {
                     SlotOwner::CsrCommand,
                 )
             } else if let Some(event) = select_pending_event(&self.registers, &self.eu_registers) {
-                (event.accept(&mut self.eu_registers), SlotOwner::EuEvent)
+                (
+                    event.accept(&mut self.eu_registers, self.registers.get_full_pc_address()),
+                    SlotOwner::EuEvent,
+                )
             } else {
                 (0, SlotOwner::ProcessingUnit)
             };
@@ -749,10 +752,18 @@ impl CpuPeripheral {
         let l5_asserted = (level & LEVEL_FIVE_INTERRUPT_PIN_BIT) != 0;
         if l5_asserted && !self.l5_interrupt_pin_previously_asserted {
             trace!("Level 5 (NMI) interrupt raised on rising edge");
-            self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
-            self.eu_registers.waiting_for_exception = false;
+            self.enqueue_l5();
         }
         self.l5_interrupt_pin_previously_asserted = l5_asserted;
+    }
+
+    /// Enqueue a logical L5 request without touching the pin edge detector.
+    /// Several lost requests coalesce into one overrun report.
+    fn enqueue_l5(&mut self) {
+        self.eu_registers.l5_overrun |=
+            self.eu_registers.pending_hardware_exceptions & LEVEL_FIVE_INTERRUPT_PIN_BIT != 0;
+        self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        self.eu_registers.waiting_for_exception = false;
     }
 
     fn advance_phase(&mut self) {
@@ -769,6 +780,7 @@ impl CpuPeripheral {
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;
+        self.eu_registers.l5_overrun = false;
         self.eu_registers.current_exception_level = 0;
         self.phase = 0;
         // Seeds the EU to fetch the reset vector when the RSTO hold expires
