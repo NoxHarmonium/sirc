@@ -494,9 +494,6 @@ impl Executor for ExceptionUnitExecutor {
                 if matches!(op_code, ExceptionUnitOpCodes::Fault) {
                     eu_registers.pending_fault = None;
                 }
-
-                // TODO: Check if this could mess things up in situations like: 1. User calls to imaginary coprocessor to do something like a floating point calculation 2. there is a HW interrupt before the COP can handle it. 3. The cause register is cleared and the FP COP never executes anything
-                registers.pending_coprocessor_command = 0x0;
             }
         }
 

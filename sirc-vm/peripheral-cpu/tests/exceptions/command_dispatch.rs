@@ -1,0 +1,352 @@
+use peripheral_bus::{
+    conversion::bytes_to_words,
+    device::{BusAssertions, Device},
+};
+use peripheral_cpu::{
+    coprocessors::{
+        exception_unit::{
+            definitions::{
+                vectors::{BUS_FAULT, INSTRUCTION_TRACE_FAULT, INVALID_OPCODE_FAULT},
+                ExceptionUnitOpCodes, Faults, PendingFault,
+            },
+            execution::{construct_cause_value, hardware_exception_level_to_vector},
+        },
+        processing_unit::{
+            definitions::{
+                ConditionFlags, ImmediateInstructionData, Instruction, InstructionData,
+                RegisterInstructionData, ShiftOperand, ShiftType,
+            },
+            encoding::encode_instruction,
+        },
+    },
+    new_cpu_peripheral,
+    registers::{set_hardware_interrupt_enable, RegisterName, StatusRegisterFields},
+    CpuPeripheral,
+};
+
+fn tick(cpu: &mut CpuPeripheral, data: u16, interrupt: u8) -> BusAssertions {
+    cpu.poll(
+        BusAssertions {
+            data,
+            interrupt_assertion: interrupt,
+            bus_acknowledge: true,
+            ..BusAssertions::default()
+        },
+        true,
+    )
+}
+
+fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bool) {
+    let instruction = if register_call {
+        cpu.registers.r1 = command;
+        InstructionData::Register(RegisterInstructionData {
+            op_code: Instruction::CoprocessorCallRegister,
+            r1: 0,
+            r2: 0,
+            r3: RegisterName::R1.to_register_index(),
+            shift_operand: ShiftOperand::Immediate,
+            shift_type: ShiftType::None,
+            shift_count: 0,
+            condition_flag: ConditionFlags::Always,
+            additional_flags: 0,
+        })
+    } else {
+        InstructionData::Immediate(ImmediateInstructionData {
+            op_code: Instruction::CoprocessorCallImmediate,
+            register: 0,
+            value: command,
+            condition_flag: ConditionFlags::Always,
+            additional_flags: 0,
+        })
+    };
+    let words = bytes_to_words(&encode_instruction(&instruction));
+    cpu.registers.pl = 0x0200;
+    for (phase, data) in [0, words[0], words[1], 0, 0, 0].into_iter().enumerate() {
+        tick(cpu, data, if phase == 5 { interrupt } else { 0 });
+    }
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+}
+
+fn transfer_command() -> u16 {
+    // ETFR r7, #0: a visible command effect without changing interrupt masks.
+    construct_cause_value(&ExceptionUnitOpCodes::TransferFromRegister, 0x20)
+}
+
+#[test]
+fn copi_and_copr_complete_once_before_writeback_interrupts() {
+    for register_call in [false, true] {
+        for (interrupt, line) in [(0b00001, 1), (0b10000, 5)] {
+            let mut cpu = new_cpu_peripheral();
+            set_hardware_interrupt_enable(&mut cpu.registers, 0b1111);
+            cpu.eu_registers.link_registers[0].return_status_register = 0xCAFE;
+            let command = transfer_command();
+            issue(&mut cpu, command, interrupt, register_call);
+            assert_eq!(cpu.registers.r7, 0);
+            for phase in 0..6 {
+                tick(&mut cpu, 0, 0);
+                assert_eq!(cpu.cause_register_value, command);
+                assert_eq!(cpu.eu_registers.pending_hardware_exceptions, interrupt);
+                assert_eq!(
+                    cpu.registers.pending_coprocessor_command,
+                    if phase == 5 { 0 } else { command }
+                );
+            }
+            assert_eq!(cpu.registers.r7, 0xCAFE);
+            cpu.registers.r7 = 0x1234; // A repeated ETFR would overwrite this.
+            let vector = hardware_exception_level_to_vector(line);
+            let response = tick(&mut cpu, 0, 0);
+            assert_eq!(
+                cpu.cause_register_value,
+                construct_cause_value(&ExceptionUnitOpCodes::HardwareException, vector)
+            );
+            assert_eq!(response.address, u32::from(vector) * 2);
+            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+            for _ in 1..6 {
+                tick(&mut cpu, 0, 0);
+            }
+            tick(&mut cpu, 0, 0);
+            assert_eq!(cpu.cause_register_value, 0);
+            assert_eq!(cpu.registers.r7, 0x1234);
+        }
+    }
+}
+
+#[test]
+fn rete_completes_before_interrupt_selection_using_restored_masks() {
+    for enabled_on_return in [false, true] {
+        let mut cpu = new_cpu_peripheral();
+        set_hardware_interrupt_enable(&mut cpu.registers, 0b0001);
+        cpu.eu_registers.current_exception_level = 1;
+        cpu.eu_registers.link_registers[0].return_address = 0x0800;
+        cpu.eu_registers.link_registers[0].return_status_register =
+            if enabled_on_return { 0x0200 } else { 0 };
+        let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+        issue(&mut cpu, command, 1, false);
+        for _ in 0..6 {
+            tick(&mut cpu, 0, 0);
+            assert_eq!(cpu.cause_register_value, command);
+            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+        }
+        assert_eq!(cpu.eu_registers.current_exception_level, 0);
+        assert_eq!(cpu.registers.pl, 0x0800);
+        assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+        let response = tick(&mut cpu, 0, 0);
+        if enabled_on_return {
+            assert_eq!(
+                response.address,
+                u32::from(hardware_exception_level_to_vector(1)) * 2
+            );
+            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+        } else {
+            assert_eq!(response.address, 0x0800);
+            assert_eq!(cpu.cause_register_value, 0);
+            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+        }
+    }
+}
+
+#[test]
+fn rete_rechecks_restored_exception_level_before_taking_a_queued_interrupt() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    cpu.eu_registers.current_exception_level = 3;
+    cpu.eu_registers.pending_hardware_exceptions = 1;
+    cpu.eu_registers.link_registers[2].saved_exception_level = 2;
+    cpu.eu_registers.link_registers[2].return_address = 0x0800;
+    cpu.eu_registers.link_registers[2].return_status_register =
+        StatusRegisterFields::HardwareInterruptEnable1 as u16;
+    let command = construct_cause_value(&ExceptionUnitOpCodes::ReturnFromException, 0);
+    issue(&mut cpu, command, 1, false);
+    for _ in 0..6 {
+        tick(&mut cpu, 0, 0);
+    }
+    let response = tick(&mut cpu, 0, 0);
+    assert_eq!(cpu.eu_registers.current_exception_level, 2);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    assert_eq!(response.address, 0x0800);
+    assert_eq!(cpu.cause_register_value, 0);
+}
+
+#[test]
+fn command_bus_stalls_keep_csr_and_interrupt_pending_until_completion() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    let command = transfer_command();
+    issue(&mut cpu, command, 1, false);
+    let request = tick(&mut cpu, 0, 0);
+    for _ in 0..3 {
+        let stalled = cpu.poll(BusAssertions::default(), true);
+        assert_eq!(stalled.address, request.address);
+        assert_eq!(cpu.phase, 1);
+        assert_eq!(cpu.cause_register_value, command);
+        assert_eq!(cpu.registers.pending_coprocessor_command, command);
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    }
+    for _ in 1..6 {
+        tick(&mut cpu, 0, 0);
+    }
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+}
+
+#[test]
+fn missing_command_fault_cancels_csr_and_preserves_the_waiting_interrupt() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    issue(&mut cpu, 0x3000, 1, false); // Missing maths unit.
+    tick(&mut cpu, 0, 0);
+    let fault = cpu.eu_registers.pending_fault.unwrap();
+    assert!(matches!(fault.fault, Faults::InvalidOpCode));
+    assert_eq!(fault.pc, 0x0200);
+    assert_eq!(cpu.eu_registers.link_registers[7].return_address, 0x3000);
+    assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    for _ in 1..6 {
+        tick(&mut cpu, 0, 0);
+    }
+    let response = tick(&mut cpu, 0, 0);
+    assert_eq!(response.address, u32::from(INVALID_OPCODE_FAULT) * 2);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+}
+
+#[test]
+fn automatic_eu_dispatch_does_not_consume_an_unrelated_csr_command() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    cpu.eu_registers.pending_hardware_exceptions = 1;
+    tick(&mut cpu, 0, 0);
+    // Probe cleanup ownership: this queued command does not belong to the
+    // automatic EU event whose slot is already running.
+    let command = transfer_command();
+    cpu.registers.pending_coprocessor_command = command;
+    for _ in 1..6 {
+        tick(&mut cpu, 0, 0);
+    }
+    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+    tick(&mut cpu, 0, 0);
+    assert_eq!(cpu.cause_register_value, command);
+}
+
+#[test]
+fn id_zero_commands_do_not_add_a_slot_or_block_an_interrupt() {
+    for interrupt in [0, 1] {
+        let mut cpu = new_cpu_peripheral();
+        set_hardware_interrupt_enable(&mut cpu.registers, 1);
+        issue(&mut cpu, 0x0042, interrupt, false);
+        let response = tick(&mut cpu, 0, 0);
+        assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+        let expected_address = if interrupt == 0 {
+            0x0202
+        } else {
+            u32::from(hardware_exception_level_to_vector(1)) * 2
+        };
+        assert_eq!(response.address, expected_address);
+    }
+}
+
+#[test]
+fn already_pending_interrupt_does_not_deadlock_wait() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
+    issue(&mut cpu, command, 1, false);
+    for _ in 0..6 {
+        tick(&mut cpu, 0, 0);
+    }
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+    assert!(!cpu.eu_registers.waiting_for_exception);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    let response = tick(&mut cpu, 0, 0);
+    assert_eq!(
+        response.address,
+        u32::from(hardware_exception_level_to_vector(1)) * 2
+    );
+}
+
+#[test]
+fn command_vector_bus_fault_cancels_csr_without_consuming_the_interrupt() {
+    for protection_error in [false, true] {
+        let mut cpu = new_cpu_peripheral();
+        set_hardware_interrupt_enable(&mut cpu.registers, 1);
+        issue(&mut cpu, transfer_command(), 1, false);
+        let request = tick(&mut cpu, 0, 0);
+        assert!(request.bus_access_strobe);
+        cpu.poll(
+            BusAssertions {
+                bus_error: !protection_error,
+                bus_protection_error: protection_error,
+                ..BusAssertions::default()
+            },
+            true,
+        );
+        assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+        let fault = cpu.eu_registers.pending_fault.unwrap().fault;
+        assert_eq!(
+            fault,
+            if protection_error {
+                Faults::BusProtection
+            } else {
+                Faults::Bus
+            }
+        );
+        tick(&mut cpu, 0, 0);
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    }
+}
+
+#[test]
+fn existing_fault_and_trace_priority_still_cancels_a_waiting_command() {
+    for (fault, vector) in [
+        (Faults::Bus, BUS_FAULT),
+        (Faults::InstructionTrace, INSTRUCTION_TRACE_FAULT),
+    ] {
+        let mut cpu = new_cpu_peripheral();
+        set_hardware_interrupt_enable(&mut cpu.registers, 1);
+        cpu.registers.pending_coprocessor_command = transfer_command();
+        cpu.eu_registers.pending_hardware_exceptions = 1;
+        cpu.eu_registers.pending_fault = Some(PendingFault { fault, pc: 0x1234 });
+        tick(&mut cpu, 0, 0);
+        assert_eq!(
+            cpu.cause_register_value,
+            construct_cause_value(&ExceptionUnitOpCodes::Fault, vector)
+        );
+        assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+        assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+        assert_eq!(cpu.eu_registers.pending_fault.unwrap().pc, 0x1234);
+        assert_eq!(cpu.registers.r7, 0);
+    }
+}
+
+#[test]
+fn wait_retains_command_ownership_while_idle_then_finishes_before_interrupt_entry() {
+    let mut cpu = new_cpu_peripheral();
+    set_hardware_interrupt_enable(&mut cpu.registers, 1);
+    let command = construct_cause_value(&ExceptionUnitOpCodes::WaitForException, 0);
+    issue(&mut cpu, command, 0, false);
+    for _ in 0..4 {
+        tick(&mut cpu, 0, 0);
+    }
+    assert!(cpu.eu_registers.waiting_for_exception);
+    for _ in 0..3 {
+        let response = tick(&mut cpu, 0, 0);
+        assert!(!response.bus_access_strobe);
+        assert_eq!(cpu.phase, 4);
+        assert_eq!(cpu.registers.pending_coprocessor_command, command);
+    }
+    tick(&mut cpu, 0, 1);
+    assert_eq!(cpu.phase, 5);
+    assert_eq!(cpu.registers.pending_coprocessor_command, command);
+    tick(&mut cpu, 0, 0);
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.pending_coprocessor_command, 0);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 1);
+    let response = tick(&mut cpu, 0, 0);
+    assert_eq!(
+        response.address,
+        u32::from(hardware_exception_level_to_vector(1)) * 2
+    );
+}
