@@ -531,51 +531,17 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
 }
 
 #[test]
-fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral();
-    let mut clocks = 0;
-    cpu_peripheral.reset();
-
-    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
-    assert_eq_hex!(0x0, vector_request.address);
-    assert_eq!(
-        BusAccessType::ExceptionVectorFetch,
-        vector_request.bus_access_type
-    );
-
-    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
-    assert!(
-        !fault_response.reset_requested,
-        "reset-vector fetch failure should enter normal fault dispatch, not a reset-failed state"
-    );
-    assert!(
-        cpu_peripheral
-            .eu_registers
-            .pending_fault
-            .is_some_and(|pending_fault| pending_fault.fault == Faults::Bus),
-        "reset-vector fetch bus error should raise a bus fault"
-    );
-    assert_eq!(
-        FaultMetadataRegister {
-            bus_access_type: BusAccessType::ExceptionVectorFetch,
-            double_fault: false,
-            fault: Faults::Bus,
-            original_fault: Faults::Bus,
-        },
-        decode_fault_metadata_register(
-            cpu_peripheral.eu_registers.link_registers[7].return_status_register,
-        ),
-    );
-
-    super::common::finish_aborted_dispatch(&mut cpu_peripheral);
-
-    run_expectations(
-        &mut cpu_peripheral,
-        &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
-        &mut clocks,
-    );
-
-    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+fn test_reset_vector_fetch_bus_error_requests_a_fresh_reset() {
+    let mut cpu = new_cpu_peripheral();
+    cpu.reset();
+    let request = cpu.poll(BusAssertions::default(), true);
+    assert_eq!(request.address, 0);
+    let response = cpu.poll(bus_error_for_request(request), true);
+    assert!(!response.bus_access_strobe);
+    assert!(!response.reset_requested);
+    assert!(cpu.take_reset_request());
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    assert_eq!(cpu.phase, 0);
 }
 
 #[test]

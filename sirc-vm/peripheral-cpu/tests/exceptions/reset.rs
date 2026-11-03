@@ -261,11 +261,23 @@ fn test_reset_clears_pending_exception_state() {
             fault: Faults::BusProtection,
             pc: 0x0,
         });
+        cpu.registers.sr = 0xffff;
+        cpu.registers.r1 = 0xcafe;
+        cpu.registers.ah = 0x1234;
+        cpu.eu_registers.link_registers[5].return_address = 0x5566;
+        cpu.active_command = 0x1234;
+        cpu.processing_unit_executor
+            .next_instruction_fetch_is_overflow = true;
+        cpu.eu_registers.l5_overrun = true;
         cpu.eu_registers.pending_hardware_exceptions = 0x1F;
         cpu.eu_registers.current_exception_level = 7;
         cpu.eu_registers.waiting_for_exception = true;
     }
 
+    let mut expected_registers = get_cpu(&mut bus).registers;
+    expected_registers.sr = 0;
+    expected_registers.coprocessor_select_register = 0x1b00;
+    let links = get_cpu(&mut bus).eu_registers.link_registers;
     let out = bus.poll_all(RSTI_ASSERTED);
     assert!(
         out.reset_devices_on_bus,
@@ -273,6 +285,16 @@ fn test_reset_clears_pending_exception_state() {
     );
 
     let cpu = get_cpu(&mut bus);
+    assert_eq!(cpu.registers, expected_registers);
+    assert_eq!(cpu.eu_registers.link_registers, links);
+    assert_eq!(cpu.active_command, 0);
+    assert!(
+        !cpu.processing_unit_executor
+            .next_instruction_fetch_is_overflow
+    );
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.coprocessor_select_register, 0x1b00);
+    assert!(!cpu.eu_registers.l5_overrun);
     assert_eq!(None, cpu.eu_registers.pending_fault);
     assert_eq!(0, cpu.eu_registers.pending_hardware_exceptions);
     assert_eq!(0, cpu.eu_registers.current_exception_level);
@@ -362,6 +384,144 @@ fn triple_fault_starts_one_six_cycle_hold_without_driving_rsti() {
             assert!(!fetch.reset_requested);
             assert!(fetch.bus_access_strobe);
             assert_eq!(fetch.address, 0);
+        }
+    }
+}
+
+#[test]
+fn software_reset_clears_state_in_the_issuing_write_back_cycle() {
+    let mut cpu = new_cpu_peripheral();
+    cpu.registers.sr = 0x8005;
+    cpu.registers.r1 = 0xcafe;
+    cpu.registers.ah = 0x1234;
+    cpu.eu_registers.current_exception_level = 7;
+    cpu.eu_registers.pending_hardware_exceptions = 31;
+    cpu.eu_registers.l5_overrun = true;
+    cpu.eu_registers.link_registers[5].return_address = 0x5566;
+    let instruction = InstructionData::Immediate(ImmediateInstructionData {
+        op_code: Instruction::CoprocessorCallImmediate,
+        register: 0,
+        value: 0x1b00,
+        condition_flag: ConditionFlags::Always,
+        additional_flags: 0,
+    });
+    let words = peripheral_bus::conversion::bytes_to_words(&encode_instruction(&instruction));
+    for data in [0, words[0], words[1], 0, 0, 0] {
+        assert!(!super::common::tick(&mut cpu, data).reset_requested);
+    }
+    assert_eq!(cpu.registers.sr, 0);
+    assert_eq!(cpu.eu_registers.current_exception_level, 0);
+    assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+    assert!(!cpu.eu_registers.l5_overrun);
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    assert_eq!(cpu.active_command, 0);
+    assert_eq!(cpu.phase, 0);
+    assert_eq!(cpu.registers.r1, 0xcafe);
+    assert_eq!(cpu.registers.ah, 0x1234);
+    assert_eq!(cpu.eu_registers.link_registers[5].return_address, 0x5566);
+    assert!(cpu.take_reset_request());
+}
+
+#[test]
+fn reset_vector_failures_repeat_full_holds_and_exclude_interrupt_sampling() {
+    for failed_word in [0, 1] {
+        for protection_error in [false, true] {
+            let mut bus = set_up_reset_test();
+            bus.load_binary_data_into_segment("RESET_VEC", &[0, 0, 8, 0]);
+            get_cpu(&mut bus).registers.r1 = 0xcafe;
+            get_cpu(&mut bus).eu_registers.link_registers[5].return_address = 0x5566;
+            let mut out = bus.poll_all(RSTI_ASSERTED);
+            for _attempt in 0..3 {
+                assert!(out.reset_devices_on_bus);
+                assert!(!out.reset_requested);
+                assert!(!out.bus_access_strobe);
+                for i in 0..5 {
+                    out = bus.poll_all(BusAssertions {
+                        interrupt_assertion: if i % 2 == 0 { 16 } else { 0 },
+                        ..out
+                    });
+                    assert!(out.reset_devices_on_bus);
+                    assert!(!out.bus_access_strobe);
+                    assert_eq!(
+                        get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                        0
+                    );
+                }
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: 16,
+                    ..out
+                });
+                assert!(out.bus_access_strobe);
+                assert_eq!(out.address, 0);
+                if failed_word == 1 {
+                    out = bus.poll_all(BusAssertions {
+                        interrupt_assertion: 16,
+                        ..out
+                    });
+                }
+                assert_eq!(out.address, failed_word);
+                let waiting_phase = get_cpu(&mut bus).phase;
+                for _ in 0..3 {
+                    out = bus.poll_all(BusAssertions {
+                        bus_acknowledge: false,
+                        interrupt_assertion: 16,
+                        ..out
+                    });
+                    assert!(out.bus_access_strobe);
+                    assert_eq!(out.address, failed_word);
+                    assert_eq!(get_cpu(&mut bus).phase, waiting_phase);
+                    assert_eq!(
+                        get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                        0
+                    );
+                }
+                out = bus.poll_all(BusAssertions {
+                    bus_error: !protection_error,
+                    bus_protection_error: protection_error,
+                    bus_acknowledge: true,
+                    interrupt_assertion: 16,
+                    ..out
+                });
+                assert!(out.reset_devices_on_bus);
+                assert!(!out.bus_access_strobe);
+                let cpu = get_cpu(&mut bus);
+                assert_eq!(cpu.phase, 0);
+                assert_eq!(cpu.registers.sr, 0);
+                assert_eq!(cpu.eu_registers.current_exception_level, 0);
+                assert!(cpu.eu_registers.pending_fault.is_none());
+                assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
+                assert_eq!(cpu.eu_registers.link_registers[5].return_address, 0x5566);
+            }
+            // Final attempt succeeds. Pulses throughout all six fetch-slot
+            // phases are excluded, including after PC loads in phase 3.
+            for _ in 0..5 {
+                out = bus.poll_all(out);
+                assert!(out.reset_devices_on_bus);
+            }
+            for phase in 0..6 {
+                out = bus.poll_all(BusAssertions {
+                    interrupt_assertion: if phase % 2 == 0 { 16 } else { 0 },
+                    ..out
+                });
+                assert!(!out.reset_devices_on_bus);
+                assert_eq!(
+                    get_cpu(&mut bus).eu_registers.pending_hardware_exceptions,
+                    0
+                );
+                assert_eq!(get_cpu(&mut bus).registers.sr, 0);
+            }
+            assert_eq!(get_cpu(&mut bus).registers.get_full_pc_address(), 0x0800);
+            assert_eq!(get_cpu(&mut bus).registers.r1, 0xcafe);
+            assert_eq!(
+                get_cpu(&mut bus).eu_registers.link_registers[5].return_address,
+                0x5566
+            );
+            let next = bus.poll_all(BusAssertions {
+                interrupt_assertion: 0,
+                ..out
+            });
+            assert!(next.bus_access_strobe);
+            assert_eq!(next.address, 0x0800);
         }
     }
 }
