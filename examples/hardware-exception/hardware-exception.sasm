@@ -127,8 +127,11 @@ RETS
 
 BRSR    @print_exit
 
-; Halt CPU
-COPI    #0b0001_0100_1111_1111
+; Stop the simulator via DEBUG; r7 is scratch after the results are produced.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] r7, #1
+STOR (a), r7
 
 ;;;;;;; EXCEPTION HANDLERS
 

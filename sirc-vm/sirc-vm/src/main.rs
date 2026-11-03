@@ -172,7 +172,7 @@ fn main() {
         run_vm(&vm, dump_file);
     }
 
-    info!("Processor asserted simulation aborted (e.g. COP 0x14FF). This type of error exits with code zero for testing purposes.");
+    info!("Simulation termination requested. Exiting with code zero; example checks determine success from their output.");
     exit(0);
 }
 

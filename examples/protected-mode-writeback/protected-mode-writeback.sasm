@@ -120,10 +120,25 @@ MOVI sh, $PROGRAM_SEGMENT
 MOVI sl, #0
 LDEA s, (#1, a)
 
+; Check address-register results before DEBUG exit reuses ah/al/ll.
+CMPI ah, $SCRATCH_SEGMENT
+BRAN|!= @exit_state_failed
+CMPI al, #0x1000
+BRAN|!= @exit_state_failed
+CMPI ll, #0x4321
+BRAN|!= @exit_state_failed
 MOVI r1, #0x600D
+BRAN @finish
 
-; Halt CPU.
-COPI #0x14FF
+:exit_state_failed
+MOVI r1, #0xBAD0
+
+:finish
+; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] ll, #1     ; request data; the address is in a, not l
+STOR (a), ll      ; memory[a] = 1; keep the checked GPR results intact
 
 .ORG 0x0300
 :privilege_violation_handler
@@ -134,7 +149,11 @@ ANDI r7, #0x2000
 CMPI r7, #0
 BRAN|!= @privilege_violation_handler_active
 ADDI r7, #1
-COPI #0x14FF
+; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] ll, #1     ; request data; the address is in a, not l
+STOR (a), ll      ; memory[a] = 1; keep the checked GPR results intact
 
 :privilege_violation_handler_active
 

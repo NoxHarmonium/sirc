@@ -16,4 +16,5 @@
 #![deny(warnings)]
 
 mod debug_adapter;
+mod simulation_exit;
 mod utils;

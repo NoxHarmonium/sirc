@@ -152,8 +152,11 @@ COPI    #0x4000
 
 :after_invalid_opcode_copi
 
-; Halt CPU
-COPI    #0b0001_0100_1111_1111
+; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] ll, #1     ; request data; the address is in a, not l
+STOR (a), ll      ; memory[a] = 1; keep the checked GPR results intact
 
 .ORG 0x0300
 

@@ -36,8 +36,8 @@ Four behaviors are worth knowing about:
 	\item The assembler masks the link-register index of \mnemonic{ETFR} and \mnemonic{ETTR} to four bits without a diagnostic.
 	      The architecture leaves values above \imm{7} architecturally undefined (see the Coprocessor Instructions chapter of the
 	      \archmanual{}).
-	\item The \mnemonic{COPI} instruction with \texttt{\#0x14FF} is a simulator-only test hook, described in
-	      Chapter~\ref{ch:toolchain}. On a conforming CPU it raises an invalid-opcode fault.
+	\item The DEBUG device's exit register is a simulator-only interface, described in Chapter~\ref{ch:toolchain}. A termination
+	      request does not indicate whether an example passed its checks.
 \end{itemize}
 
 This chapter will shrink as the toolchain grows. A feature listed here is not an oversight in the manual.

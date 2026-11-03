@@ -162,6 +162,11 @@ simulator; it is not -- `WAIT` just hangs the same way). Killing the process
 after a timeout, in both cases, left no dump file on disk at all: the dump
 is evidently only written on a clean process exit, never speculatively.
 
+**Current termination interface:** the monitor now stores `1` to the DEBUG device's exit register at word address
+`0x0B0007`. `EXCP #0x81` enters the supervisor monitor so the protected-mode application does not need to change
+address-segment registers. The simulator writes the requested dump and returns host status zero; the report contents
+must still be checked for success. The discovery below records the old simulator behavior, removed by #446.
+
 **What resolved it:** running the sibling `examples/boring` example (via its
 own `Makefile`, as explicitly permitted -- I did not read `boring.sasm`
 itself, only its build output) showed that it exits cleanly and produces
@@ -219,7 +224,7 @@ writes touch address-register state afterward. The monitor
 (`monitor.sasm`) implements a two-call convention documented in a comment
 above it: `EXCP #0x80` ("write_word": `r1` = word offset into the
 `report_file` segment, `r2` = value to write) and `EXCP #0x81` ("halt":
-routes the `COPI #0x14FF` testing hook above through a trap too, purely so
+performs the DEBUG exit-register write through a trap too, so
 the main program never has to leave protected mode even to end the
 simulation).
 

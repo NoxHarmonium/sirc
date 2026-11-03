@@ -1,10 +1,15 @@
-use std::any::Any;
+use std::{any::Any, mem::take};
 
 use log::debug;
 use peripheral_bus::memory_mapped_device::MemoryMapped;
 use peripheral_bus::{
     device::BusAssertions, device::Device, memory_mapped_device::MemoryMappedDevice,
 };
+
+/// Word offset of the simulator-only exit register.
+pub const EXIT_SIMULATION_REGISTER: u32 = 0x7;
+/// Store this value to request termination; it is not a host exit code.
+pub const EXIT_SIMULATION_VALUE: u16 = 1;
 
 ///
 /// A device that just exists to do integration tests on the VM
@@ -14,6 +19,7 @@ pub struct DebugDevice {
     pub trigger_bus_error: bool,
     pub trigger_protection_error: bool,
     pub trigger_interrupt: u8,
+    exit_requested: bool,
 }
 
 #[must_use]
@@ -22,12 +28,19 @@ pub const fn new_debug_device() -> DebugDevice {
         trigger_bus_error: false,
         trigger_protection_error: false,
         trigger_interrupt: 0,
+        exit_requested: false,
     }
 }
 
 impl Device for DebugDevice {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
         let io_assertions = self.perform_bus_io(bus_assertions, selected);
+        // Consume the request once, preserving the store acknowledgment and any
+        // independently pending debug signals returned below.
+        let io_assertions = BusAssertions {
+            exit_simulation: take(&mut self.exit_requested),
+            ..io_assertions
+        };
         // TODO: Bus error should be edge triggered I think so we don't get double faults
         // if devices are slow to stop asserting
         if self.trigger_bus_error {
@@ -72,6 +85,7 @@ impl MemoryMapped for DebugDevice {
             0x0 => u16::from(self.trigger_bus_error),
             0x1..=0x5 => u16::from(address == u32::from(self.trigger_interrupt)),
             0x6 => u16::from(self.trigger_protection_error),
+            EXIT_SIMULATION_REGISTER => u16::from(self.exit_requested),
             _ => 0x0,
         }
     }
@@ -87,6 +101,9 @@ impl MemoryMapped for DebugDevice {
             }
             0x6 if value == 0x1 => {
                 self.trigger_protection_error = true;
+            }
+            EXIT_SIMULATION_REGISTER if value == EXIT_SIMULATION_VALUE => {
+                self.exit_requested = true;
             }
             _ => {}
         }

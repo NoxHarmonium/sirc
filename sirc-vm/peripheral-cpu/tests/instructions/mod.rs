@@ -3,6 +3,7 @@ mod arithmetic_register_test;
 mod arithmetic_short_immediate_test;
 mod common;
 mod condition_flags_test;
+mod coprocessor_test;
 mod ldea_test;
 mod ldel_test;
 mod ljmp_test;

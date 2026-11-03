@@ -17,5 +17,8 @@ BRAN|>= @loop
 
 NOOP
 
-; Halt CPU
-COPI    #0x14FF
+; Stop the simulator via DEBUG; r7 is scratch after the results are produced.
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] r7, #1
+STOR (a), r7

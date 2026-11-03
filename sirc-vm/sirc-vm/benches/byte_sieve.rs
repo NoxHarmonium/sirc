@@ -1,6 +1,7 @@
 use std::{cell::RefCell, fs, path::PathBuf, time::Duration};
 
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
+use device_debug::new_debug_device;
 use device_ram::{new_ram_device_file_mapped, new_ram_device_standard};
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::new_cpu_peripheral;
@@ -25,6 +26,13 @@ fn setup_vm(program: &[u8], mapped_file_path: PathBuf) -> Vm {
         Box::new(program_ram_device),
     );
     bus_peripheral.load_binary_data_into_segment(PROGRAM_SEGMENT, program);
+    bus_peripheral.map_segment(
+        "DEBUG",
+        0x000B_0000,
+        0xF,
+        true,
+        Box::new(new_debug_device()),
+    );
 
     let mm_ram_device = new_ram_device_file_mapped(mapped_file_path);
     bus_peripheral.map_segment(

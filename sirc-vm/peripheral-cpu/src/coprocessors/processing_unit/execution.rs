@@ -167,17 +167,7 @@ impl Executor for ProcessingUnitExecutor {
                 // but we might need to think about how this would work in FPGA
                 registers.pl = self.decoded_instruction.npc_l_;
 
-                // Special instruction just for debugging purposes. Probably won't be in hardware
-                if self.decoded_instruction.ins == Instruction::CoprocessorCallImmediate
-                    && self.decoded_instruction.sr_b_ == 0x14FF
-                {
-                    BusAssertions {
-                        exit_simulation: true,
-                        ..BusAssertions::default()
-                    }
-                } else {
-                    BusAssertions::default()
-                }
+                BusAssertions::default()
             }
             ExecutionPhase::ExecutionEffectiveAddressExecutor => {
                 ExecutionEffectiveAddressExecutor::execute(

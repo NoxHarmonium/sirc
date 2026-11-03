@@ -966,8 +966,12 @@
     MOVR r2, r7             ; Copy test pass count to r2
     MOVI r3, #72            ; Expected count
 
-; Halt CPU
-    COPI #0x14FF
+; Stop the simulator
+    ; Stop the simulator via DEBUG; preserve r1-r7 for result checks.
+    MOVI[N] ah, #0x000B
+    MOVI[N] al, #0x0007
+    MOVI[N] ll, #1     ; request data; the address is in a, not l
+    STOR (a), ll      ; memory[a] = 1; keep the checked GPR results intact
 
 ;;;;;;; DATA
 

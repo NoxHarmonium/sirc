@@ -23,8 +23,8 @@
 ;     call. Touches no other registers.
 ; -
 ;   EXCP #0x81 ("halt"): no arguments. Ends the simulation via the
-;     simulator's COP 0x14FF hook (see NOTES.md "simulation-termination
-;     discovery"). Issued from here, in supervisor mode, purely so the main
+;     debug-device exit register (word address 0x0B0007, value 1).
+;     Issued from here, in supervisor mode, so the main
 ;     program never has to leave protected mode itself just to halt.
 ; ============================================================================
 
@@ -35,5 +35,9 @@
     RETE
 
 :monitor_halt
-    COPI #0x14FF                  ; simulator-recognized "abort simulation" call
-    RETE                           ; unreachable -- COPI #0x14FF ends the run
+    ; Stop the simulator via DEBUG; r7 is scratch after the results are produced.
+    MOVI[N] ah, #0x000B
+    MOVI[N] al, #0x0007
+    MOVI[N] r7, #1
+    STOR (a), r7
+    RETE                           ; unreachable -- the debug write ends the run
