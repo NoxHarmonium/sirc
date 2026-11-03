@@ -221,3 +221,22 @@ pub fn run_idle_dispatch(cpu: &mut CpuPeripheral, clocks: &mut usize) {
     }
     assert_eq!(cpu.phase, 0);
 }
+
+/// Finish a cancelled dispatch without allowing its executor or cleanup to run.
+pub fn finish_aborted_dispatch(cpu: &mut CpuPeripheral) {
+    assert_ne!(
+        cpu.phase, 0,
+        "failure must not restart phase asynchronously"
+    );
+    let registers = cpu.registers;
+    let eu_registers = cpu.eu_registers;
+    for phase in cpu.phase..6 {
+        assert_eq!(cpu.phase, phase);
+        let response = cpu.poll(BusAssertions::default(), true);
+        assert!(!response.bus_access_strobe);
+        assert!(!response.instruction_sync);
+        assert_eq!(cpu.registers, registers);
+        assert_eq!(cpu.eu_registers, eu_registers);
+    }
+    assert_eq!(cpu.phase, 0);
+}

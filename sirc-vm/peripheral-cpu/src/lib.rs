@@ -109,6 +109,9 @@ enum SlotOwner {
     CsrCommand,
     /// An automatically selected fault or interrupt. Its dispatch does not own a queued CSR command.
     EuEvent,
+    /// A vector fetch failed. No executor owns the remaining idle phases;
+    /// its replacement fault is selected at the next phase-0 boundary.
+    Aborted,
 }
 
 /// Trace belongs to the logical PU instruction, including any command it issues.
@@ -354,6 +357,14 @@ impl CpuPeripheral {
             return BusAssertions::default();
         }
 
+        // A newly aborting vector fault differs from the pending fault whose
+        // handler a normal EU slot is entering. Retire the cancelled slot's
+        // remaining phases without running EU execution or write-back cleanup.
+        if self.slot_owner == SlotOwner::Aborted && phase != ExecutionPhase::InstructionFetchLow {
+            self.advance_phase();
+            return BusAssertions::default();
+        }
+
         let fault_bus_assertions =
             completed_bus_request.map_or(bus_assertions, |request| BusAssertions {
                 address: request.address,
@@ -370,6 +381,9 @@ impl CpuPeripheral {
             if let Some(vector_fetch_fault_response) =
                 self.handle_vector_fetch_bus_fault(bus_fault, fault_bus_assertions)
             {
+                // The error completes this bus phase; preserve the rest of
+                // the slot rather than restarting dispatch asynchronously.
+                self.advance_phase();
                 return vector_fetch_fault_response;
             }
 
@@ -443,7 +457,9 @@ impl CpuPeripheral {
                     };
                 }
                 SlotOwner::CsrCommand => {}
-                SlotOwner::EuEvent => self.instruction_trace = InstructionTrace::None,
+                SlotOwner::EuEvent | SlotOwner::Aborted => {
+                    self.instruction_trace = InstructionTrace::None;
+                }
             }
         }
 
@@ -623,9 +639,11 @@ impl CpuPeripheral {
         }
 
         let (op_code, vector, _) = deconstruct_exception_unit_command(self.active_command);
-        // Abort the current exception-unit dispatch. The next dispatch starts at phase 0 and
-        // overwrites any partially fetched vector scratch state in the exception-unit executor.
-        self.phase = 0;
+        // Stop this slot without resetting phase. In particular, an aborted
+        // Fault slot must not clear the replacement fault at EU write-back.
+        // The next dispatch overwrites partial vector scratch state normally.
+        self.slot_owner = SlotOwner::Aborted;
+        self.instruction_trace = InstructionTrace::None;
 
         if op_code == ExceptionUnitOpCodes::Fault && vector == DOUBLE_FAULT_VECTOR {
             error!("Triple fault! [{fault:?}] raised while fetching the double fault vector. Requesting reset.");
