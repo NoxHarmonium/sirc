@@ -531,51 +531,17 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
 }
 
 #[test]
-fn test_reset_vector_fetch_bus_error_raises_bus_fault() {
-    let mut cpu_peripheral = new_cpu_peripheral();
-    let mut clocks = 0;
-    cpu_peripheral.reset();
-
-    let vector_request = cpu_peripheral.poll(BusAssertions::default(), true);
-    assert_eq_hex!(0x0, vector_request.address);
-    assert_eq!(
-        BusAccessType::ExceptionVectorFetch,
-        vector_request.bus_access_type
-    );
-
-    let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
-    assert!(
-        !fault_response.reset_requested,
-        "reset-vector fetch failure should enter normal fault dispatch, not a reset-failed state"
-    );
-    assert!(
-        cpu_peripheral
-            .eu_registers
-            .pending_fault
-            .is_some_and(|pending_fault| pending_fault.fault == Faults::Bus),
-        "reset-vector fetch bus error should raise a bus fault"
-    );
-    assert_eq!(
-        FaultMetadataRegister {
-            bus_access_type: BusAccessType::ExceptionVectorFetch,
-            double_fault: false,
-            fault: Faults::Bus,
-            original_fault: Faults::Bus,
-        },
-        decode_fault_metadata_register(
-            cpu_peripheral.eu_registers.link_registers[7].return_status_register,
-        ),
-    );
-
-    super::common::finish_aborted_dispatch(&mut cpu_peripheral);
-
-    run_expectations(
-        &mut cpu_peripheral,
-        &expect_fault(BUS_FAULT, (0x00AB, 0xCDE0)),
-        &mut clocks,
-    );
-
-    assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
+fn test_reset_vector_fetch_bus_error_requests_a_fresh_reset() {
+    let mut cpu = new_cpu_peripheral();
+    cpu.reset();
+    let request = cpu.poll(BusAssertions::default(), true);
+    assert_eq!(request.address, 0);
+    let response = cpu.poll(bus_error_for_request(request), true);
+    assert!(!response.bus_access_strobe);
+    assert!(!response.reset_requested);
+    assert!(cpu.take_reset_request());
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    assert_eq!(cpu.phase, 0);
 }
 
 #[test]
@@ -652,8 +618,8 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
     let fault_response =
         cpu_peripheral.poll(bus_protection_error_for_request(vector_request), true);
     assert!(
-        fault_response.reset_requested,
-        "fault while fetching the double-fault vector should request reset"
+        !fault_response.reset_requested && cpu_peripheral.take_reset_request(),
+        "double-fault vector failure requests internal reset without driving RSTI"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -661,13 +627,8 @@ fn test_double_fault_vector_fetch_bus_protection_error_requests_reset() {
     );
 }
 
-// Reproduces a bug: after a triple-fault requests reset, current_exception_level is not cleared.
-// If poll() is called again before reset() with a persistent bus error on the bus (no pending CPU
-// request, so bus_access_type defaults to None / non-ExceptionVectorFetch), handle_vector_fetch_
-// bus_fault returns None and raise_fault is called. With current_exception_level still at 7
-// (Fault level), raise_fault re-queues DoubleFault instead of leaving pending_fault empty.
-// The fix should clear current_exception_level in the triple-fault path (or add an "awaiting
-// reset" guard that suppresses fault dispatch until reset() is called).
+// Once the coordinator consumes a triple-fault request, the CPU stays idle
+// until reset() starts the new sequence, even if an error input remains active.
 #[test]
 fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     let mut cpu_peripheral = new_cpu_peripheral();
@@ -685,8 +646,8 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     // Triple-fault: bus error while fetching the double-fault vector.
     let fault_response = cpu_peripheral.poll(bus_error_for_request(vector_request), true);
     assert!(
-        fault_response.reset_requested,
-        "bus error during double-fault vector fetch should request reset"
+        !fault_response.reset_requested && cpu_peripheral.take_reset_request(),
+        "double-fault vector failure requests internal reset without driving RSTI"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -694,7 +655,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     );
 
     // Simulate a persistent bus error arriving on the cycle before the ResetUnit calls reset().
-    // The CPU must keep asserting reset_requested and must not re-queue a fault.
+    // The CPU must stay idle after its one-shot handoff and must not re-queue a fault.
     let repeat_response = cpu_peripheral.poll(
         BusAssertions {
             bus_error: true,
@@ -703,8 +664,8 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
         true,
     );
     assert!(
-        repeat_response.reset_requested,
-        "CPU must keep asserting reset_requested until reset() is called"
+        !repeat_response.reset_requested && !cpu_peripheral.take_reset_request(),
+        "internal request is consumed once; CPU stays idle until reset()"
     );
     assert!(
         cpu_peripheral.eu_registers.pending_fault.is_none(),
@@ -716,7 +677,7 @@ fn test_triple_fault_does_not_re_queue_fault_on_subsequent_bus_error() {
     let post_reset_response = cpu_peripheral.poll(BusAssertions::default(), true);
     assert!(
         !post_reset_response.reset_requested,
-        "reset() must clear reset_pending so the CPU is no longer stuck"
+        "reset() must clear the internal request handoff so execution can resume"
     );
     assert!(
         post_reset_response.bus_access_strobe,

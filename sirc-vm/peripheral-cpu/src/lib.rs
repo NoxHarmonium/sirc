@@ -125,6 +125,18 @@ enum InstructionTrace {
     DeferredCommand,
 }
 
+/// Internal reset handoff: consume the request once, then remain idle until
+/// the bus reset coordinator calls `reset()`.
+#[derive(Debug, PartialEq, Eq)]
+enum CpuResetState {
+    Running,
+    Requested,
+    AwaitingReset,
+    /// Reset hold has begun; the coordinator owns its countdown. Interrupt
+    /// sampling stays disabled until the reset-vector slot completes.
+    FetchingVector,
+}
+
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
@@ -144,12 +156,9 @@ pub struct CpuPeripheral {
     pending_bus_request: Option<BusAssertions>,
     // Set when halt_requested is asserted at an instruction boundary. Cleared when deasserted.
     is_halted: bool,
-    // Set by a triple fault (bus error during double-fault vector fetch). Gates all CPU logic
-    // and re-asserts reset_requested every cycle until reset() clears it. Models the hardware
-    // flip-flop that a triple fault would set to hold the reset line.
-    reset_pending: bool,
-    // Tracks the Level 5 (NMI) pin's state as of the last poll cycle, so a rising edge can be
-    // detected. Unlike levels 1-4 (level-sensitive), Level 5 only latches on a 0->1 transition.
+    reset_state: CpuResetState,
+    // Last sampled Level 5 pin value, retained across reset. Sampling is
+    // disabled during reset; only a later observed 0->1 transition queues L5.
     l5_interrupt_pin_previously_asserted: bool,
 }
 
@@ -255,7 +264,7 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         instruction_trace: InstructionTrace::None,
         pending_bus_request: None,
         is_halted: false,
-        reset_pending: false,
+        reset_state: CpuResetState::Running,
         l5_interrupt_pin_previously_asserted: false,
     }
 }
@@ -289,6 +298,15 @@ impl Device for CpuPeripheral {
         Self::reset(self);
     }
 
+    fn take_reset_request(&mut self) -> bool {
+        if self.reset_state == CpuResetState::Requested {
+            self.reset_state = CpuResetState::AwaitingReset;
+            true
+        } else {
+            false
+        }
+    }
+
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }
@@ -297,17 +315,19 @@ impl Device for CpuPeripheral {
 impl CpuPeripheral {
     #[allow(clippy::cast_possible_truncation)]
     fn poll_internal(&mut self, bus_assertions: BusAssertions, _: bool) -> BusAssertions {
-        if self.reset_pending {
-            return BusAssertions {
-                reset_requested: true,
-                ..BusAssertions::default()
-            };
+        if matches!(
+            self.reset_state,
+            CpuResetState::Requested | CpuResetState::AwaitingReset
+        ) {
+            return BusAssertions::default();
         }
 
         // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
         // asserted) so Level 5's edge-detection can observe the pin being released, not only
         // asserted.
-        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+        if self.reset_state == CpuResetState::Running {
+            self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+        }
 
         // If we have a pending bus request, stall until the device acknowledges (or errors).
         // Bus errors and protection errors also release the stall so fault handling can proceed.
@@ -383,7 +403,9 @@ impl CpuPeripheral {
             {
                 // The error completes this bus phase; preserve the rest of
                 // the slot rather than restarting dispatch asynchronously.
-                self.advance_phase();
+                if self.reset_state != CpuResetState::Requested {
+                    self.advance_phase();
+                }
                 return vector_fetch_fault_response;
             }
 
@@ -537,6 +559,13 @@ impl CpuPeripheral {
             self.pending_bus_request = Some(result);
         }
 
+        if self.reset_state == CpuResetState::FetchingVector
+            && phase == ExecutionPhase::WriteBackExecutor
+            && self.active_command
+                == construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0)
+        {
+            self.reset_state = CpuResetState::Running;
+        }
         self.advance_phase();
 
         // instruction_sync uses the phase captured before advance_phase() above.
@@ -545,15 +574,11 @@ impl CpuPeripheral {
             ..result
         };
 
-        // Software RSET: after WriteBack wraps phase back to 0, if coprocessor_select_register
-        // was just set to the reset command, signal the reset unit via reset_requested so it starts
-        // the 6-cycle RSTO hold before the EU fetches the reset vector.
+        // RSET hands one internal request to the bus coordinator. The request
+        // cycle becomes the first RSTO cycle; CPU never drives the RSTI input.
         let reset_command = construct_exception_unit_command(&ExceptionUnitOpCodes::Reset, 0x0);
         if self.phase == 0 && self.registers.coprocessor_select_register == reset_command {
-            return BusAssertions {
-                reset_requested: true,
-                ..result
-            };
+            self.request_reset();
         }
 
         result
@@ -648,14 +673,18 @@ impl CpuPeripheral {
         self.slot_owner = SlotOwner::Aborted;
         self.instruction_trace = InstructionTrace::None;
 
+        if op_code == ExceptionUnitOpCodes::Reset {
+            // There is no recoverable pre-reset context. Retry through a new
+            // finite RSTO hold instead of entering a fault handler.
+            self.request_reset();
+            return Some(BusAssertions::default());
+        }
+
         if op_code == ExceptionUnitOpCodes::Fault && vector == DOUBLE_FAULT_VECTOR {
             error!("Triple fault! [{fault:?}] raised while fetching the double fault vector. Requesting reset.");
             self.eu_registers.pending_fault = None;
-            self.reset_pending = true;
-            return Some(BusAssertions {
-                reset_requested: true,
-                ..BusAssertions::default()
-            });
+            self.request_reset();
+            return Some(BusAssertions::default());
         }
 
         if op_code == ExceptionUnitOpCodes::Fault {
@@ -773,13 +802,24 @@ impl CpuPeripheral {
         self.phase = (self.phase + 1) % CYCLES_PER_INSTRUCTION;
     }
 
+    /// Clear reset-owned state at the request cycle, then hand off the hold.
+    fn request_reset(&mut self) {
+        self.reset();
+        self.reset_state = CpuResetState::Requested;
+    }
+
     pub fn reset(&mut self) {
         self.instruction_trace = InstructionTrace::None;
         self.slot_owner = SlotOwner::ProcessingUnit;
         self.pending_bus_request = None;
         self.is_halted = false;
-        self.reset_pending = false;
-        self.l5_interrupt_pin_previously_asserted = false;
+        self.reset_state = CpuResetState::FetchingVector;
+        self.registers.sr = 0;
+        self.active_command = 0;
+        self.processing_unit_executor
+            .next_instruction_fetch_is_overflow = false;
+        // Pin history is not architectural pending state. Preserve it so a
+        // line already observed high cannot become a new edge because of reset.
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;
