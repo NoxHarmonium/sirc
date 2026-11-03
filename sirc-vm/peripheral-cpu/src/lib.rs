@@ -304,6 +304,11 @@ impl CpuPeripheral {
             };
         }
 
+        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
+        // asserted) so Level 5's edge-detection can observe the pin being released, not only
+        // asserted.
+        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
+
         // If we have a pending bus request, stall until the device acknowledges (or errors).
         // Bus errors and protection errors also release the stall so fault handling can proceed.
         let completed_bus_request = if let Some(pending_request) = self.pending_bus_request {
@@ -339,11 +344,6 @@ impl CpuPeripheral {
                 self.is_halted = false;
             }
         }
-
-        // Allow wake up if there is a hardware interrupt. Called every cycle (not just when
-        // asserted) so Level 5's edge-detection can observe the pin being released, not only
-        // asserted.
-        self.raise_hardware_interrupt(bus_assertions.interrupt_assertion);
 
         // Command-first dispatch may enter WAIT with an interrupt already
         // latched. Wake for that eligible event so the WAIT slot can finish;
@@ -433,7 +433,10 @@ impl CpuPeripheral {
                     SlotOwner::CsrCommand,
                 )
             } else if let Some(event) = select_pending_event(&self.registers, &self.eu_registers) {
-                (event.accept(&mut self.eu_registers), SlotOwner::EuEvent)
+                (
+                    event.accept(&mut self.eu_registers, self.registers.get_full_pc_address()),
+                    SlotOwner::EuEvent,
+                )
             } else {
                 (0, SlotOwner::ProcessingUnit)
             };
@@ -698,10 +701,13 @@ impl CpuPeripheral {
                 .to_full_address()
         } else {
             if op_code == ExceptionUnitOpCodes::HardwareException && (2..=6).contains(&level) {
-                // Restore this event without running the pin edge detector.
-                // Existing pending requests coalesce. L5 overrun accounting
-                // for a requeue collision is separate work in #458/#482.
-                self.eu_registers.pending_hardware_exceptions |= 1 << (level - 2);
+                // Requeue L5 through the same logical enqueue as pin edges:
+                // a new edge already in its bit means the failed request overran it.
+                if level == ExceptionPriorities::LevelFiveHardware as u8 {
+                    self.enqueue_l5();
+                } else {
+                    self.eu_registers.pending_hardware_exceptions |= 1 << (level - 2);
+                }
             }
             self.registers.get_full_pc_address()
         };
@@ -749,10 +755,18 @@ impl CpuPeripheral {
         let l5_asserted = (level & LEVEL_FIVE_INTERRUPT_PIN_BIT) != 0;
         if l5_asserted && !self.l5_interrupt_pin_previously_asserted {
             trace!("Level 5 (NMI) interrupt raised on rising edge");
-            self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
-            self.eu_registers.waiting_for_exception = false;
+            self.enqueue_l5();
         }
         self.l5_interrupt_pin_previously_asserted = l5_asserted;
+    }
+
+    /// Enqueue a logical L5 request without touching the pin edge detector.
+    /// Several lost requests coalesce into one overrun report.
+    fn enqueue_l5(&mut self) {
+        self.eu_registers.l5_overrun |=
+            self.eu_registers.pending_hardware_exceptions & LEVEL_FIVE_INTERRUPT_PIN_BIT != 0;
+        self.eu_registers.pending_hardware_exceptions |= LEVEL_FIVE_INTERRUPT_PIN_BIT;
+        self.eu_registers.waiting_for_exception = false;
     }
 
     fn advance_phase(&mut self) {
@@ -769,6 +783,7 @@ impl CpuPeripheral {
         self.eu_registers.waiting_for_exception = false;
         self.eu_registers.pending_fault = None;
         self.eu_registers.pending_hardware_exceptions = 0;
+        self.eu_registers.l5_overrun = false;
         self.eu_registers.current_exception_level = 0;
         self.phase = 0;
         // Seeds the EU to fetch the reset vector when the RSTO hold expires

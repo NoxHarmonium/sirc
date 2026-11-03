@@ -11,19 +11,9 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, ExceptionLinkRegister, FullAddressRegisterAccess},
-    CpuPeripheral,
 };
 
-fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
-    cpu.poll(
-        BusAssertions {
-            data,
-            bus_acknowledge: true,
-            ..Default::default()
-        },
-        true,
-    )
-}
+use super::common::tick;
 
 #[test]
 fn control_and_transfer_slots_never_touch_a_faulting_vector_table() {
@@ -173,40 +163,14 @@ fn accepted_entries_fetch_exactly_two_ordered_words_and_hold_reads_through_stall
 }
 
 #[test]
-fn l5_conflict_uses_an_idle_slot_then_only_fetches_the_conflict_fault_vector() {
+fn l5_conflict_fetches_only_the_conflict_fault_vector() {
     let mut cpu = new_cpu_peripheral();
     cpu.registers.pl = 0x0200;
     cpu.eu_registers.current_exception_level = 6;
     cpu.eu_registers.link_registers[5].return_address = 0x00ab_cdef;
     cpu.raise_hardware_interrupt(0x10);
-    for phase in 0..6 {
-        let response = cpu.poll(BusAssertions::default(), true);
-        assert!(!response.bus_access_strobe);
-        assert_eq!(cpu.phase, (phase + 1) % 6);
-        assert_eq!(cpu.eu_registers.current_exception_level, 6);
-        assert_eq!(
-            cpu.eu_registers.link_registers[5].return_address,
-            0x00ab_cdef
-        );
-        if phase >= 3 {
-            let fault = cpu.eu_registers.pending_fault.unwrap();
-            assert_eq!(fault.fault, Faults::LevelFiveInterruptConflict);
-            assert_eq!(fault.pc, 0x0200);
-        }
-    }
+    super::common::complete_entry(&mut cpu, LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT, 0x0800);
     assert_eq!(cpu.eu_registers.pending_hardware_exceptions, 0);
-    let first = tick(&mut cpu, 0);
-    assert_eq!(
-        first.address,
-        u32::from(LEVEL_FIVE_HARDWARE_EXCEPTION_CONFLICT) * 2
-    );
-    assert!(first.bus_access_strobe);
-    assert_eq!(first.bus_access_type, BusAccessType::ExceptionVectorFetch);
-    let second = tick(&mut cpu, 0);
-    assert_eq!(second.address, first.address + 1);
-    for data in [0x0800, 0, 0, 0] {
-        tick(&mut cpu, data);
-    }
     assert_eq!(cpu.eu_registers.current_exception_level, 7);
     assert_eq!(cpu.eu_registers.link_registers[6].return_address, 0x0200);
     assert_eq!(

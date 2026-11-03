@@ -608,6 +608,8 @@ pub struct ExceptionUnitRegisters {
     // TODO: Consider capturing bus information when exception occurs
     // category=Hardware
     pub pending_hardware_exceptions: u8,
+    /// Internal L5 queue-loss flag, not exposed by SR or ETFR/ETTR.
+    pub l5_overrun: bool,
     pub pending_fault: Option<PendingFault>,
     // 8 registers for 7 exception levels + 1 metadata register that stores metadata about faults (at index 0xF)
     pub link_registers: [ExceptionLinkRegister; 8],
