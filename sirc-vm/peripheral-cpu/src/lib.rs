@@ -170,24 +170,22 @@ pub struct FaultMetadataRegister {
     pub bus_access_type: BusAccessType, // 3 bits (bits 0-2, BAT0-BAT2)
     pub double_fault: bool,             // 1 bit (bit 3)
     pub fault: Faults,                  // 4 bits (bits 4-7)
-    /// Fault already being serviced, or whose vector fetch failed (bits 8-11).
+    /// Double faults only: fault already being serviced, or whose vector fetch failed (bits 8-11).
     /// None encodes zero; ordinary faults have no history.
     pub original_fault: Option<Faults>,
-    /// Incoming fault that caused escalation (bits 12-15).
+    /// Double faults only: incoming fault that caused escalation (bits 12-15).
+    /// None encodes zero; ordinary faults have no history.
     pub escalating_fault: Option<Faults>,
 }
 
 pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
-    let history = if val & DOUBLE_FAULT_FLAG_MASK != 0 {
-        val
-    } else {
-        0
-    };
+    let double_fault = ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1;
+    let history = if double_fault { val } else { 0 };
     FaultMetadataRegister {
         bus_access_type: BusAccessType::from(
             ((val & BUS_ACCESS_TYPE_MASK) >> BUS_ACCESS_TYPE_LENGTH) as u8,
         ),
-        double_fault: ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1,
+        double_fault,
         fault: Faults::from_u16((val & CURRENT_FAULT_MASK) >> CURRENT_FAULT_LENGTH).unwrap(),
         original_fault: Faults::from_u16((history & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH),
         escalating_fault: Faults::from_u16(
