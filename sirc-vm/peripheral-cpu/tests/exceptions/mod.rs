@@ -9,6 +9,7 @@ mod hardware_exceptions;
 mod l5_queue;
 mod reset;
 mod software_exceptions;
+mod sync;
 mod vector_fault_timing;
 mod vector_fetch;
 mod vector_retry;
