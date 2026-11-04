@@ -1,5 +1,8 @@
 //! Runtime-installed optional hardware shares the CU's clock and held bus request.
-use crate::{coprocessors::exception_unit::definitions::Faults, registers::Registers};
+use crate::{
+    coprocessors::{exception_unit::definitions::Faults, shared::ExecutionPhase},
+    registers::Registers,
+};
 use peripheral_bus::device::{BusAccessType, BusAssertions};
 
 /// Fault raised by an optional unit, before a request or while accepting its result.
@@ -26,8 +29,8 @@ impl CoprocessorFault {
 /// A compiled-in hardware plugin sharing the CU phase clock.
 ///
 /// The CU calls `start` once in setup phase 0,
-/// `complete_access` once per successful request, and `next_request`
-/// only when the bus is free. A finished command retires at the next slot boundary.
+/// `complete_access` once per successful request, and `step`
+/// once per advancing cycle when the bus is free. A finished command retires at the next slot boundary.
 /// Implementations must not maintain their own phase clock or poll the bus.
 pub trait OptionalCoprocessor {
     /// Return the fixed hardware ID used to route CSR commands to this unit.
@@ -52,13 +55,19 @@ pub trait OptionalCoprocessor {
         registers: &mut Registers,
     ) -> Result<(), CoprocessorFault>;
 
-    /// Produce the next request when the shared bus is free, or idle assertions.
+    /// Advance one cycle of internal work and optionally produce a bus request.
     ///
-    /// The CU holds a presented request through waits; the unit must not advance
-    /// transfer progress until `complete_access` accepts it. An error aborts the
-    /// command before a new request reaches the bus. Keep addresses logical so
-    /// the CU can retain tags for fault metadata and mask only physical pins.
-    fn next_request(&mut self, registers: &Registers) -> Result<BusAssertions, CoprocessorFault>;
+    /// The CU supplies its shared phase; units track arithmetic/transfer progress,
+    /// not another phase clock. This callback is skipped during held bus waits
+    /// and phase-0 HALT. Architectural results may be committed here.
+    /// The CU holds requests until completion; transfer progress must wait for
+    /// `complete_access`. Errors abort before a new request reaches the bus.
+    /// Keep addresses logical so fault metadata retains tags.
+    fn step(
+        &mut self,
+        phase: ExecutionPhase,
+        registers: &mut Registers,
+    ) -> Result<BusAssertions, CoprocessorFault>;
 
     /// Report whether all command work, including final state updates, has finished.
     ///

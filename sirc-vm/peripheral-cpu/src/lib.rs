@@ -743,7 +743,7 @@ impl CpuPeripheral {
             self.optional_coprocessors
                 .get_mut(&id)
                 .unwrap()
-                .next_request(&self.registers)
+                .step(phase, &mut self.registers)
         };
         match result {
             Ok(request) => request,

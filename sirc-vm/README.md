@@ -36,7 +36,7 @@ IDs 0 and 1 are reserved for the mandatory units; duplicate IDs and IDs outside
 2–15 are rejected.
 
 These plugins are compiled-in hardware implementations, installed once at CPU
-construction. Each implements `start`, `next_request`, `complete_access`,
+construction. Each implements `start`, `step`, `complete_access`,
 `is_finished` and `reset`. The CU calls completion only on successful ACK,
 handles bus faults itself, and resets the unit on abort. Implementations share
 the CU phase clock and held-request mechanism rather than owning another clock
