@@ -23,6 +23,8 @@ automatically retrying an entire command.
 
 See [dma-copy](../examples/dma-copy/README.md) for a single binary checked with
 both the DMA chip and a missing-chip software fallback.
+The [dma-stack](../examples/dma-stack/README.md) example demonstrates DMAR/DMAW
+as a batch register push/pop, also checked with and without the chip.
 
 ## Embedding and adding optional hardware
 

@@ -1,23 +1,41 @@
 ;; The same binary copies eight words with either the DMA chip or a small
 ;; invalid-opcode fallback. R6=CAFE means pointers and every copied word passed.
 ;; R5=0 identifies hardware; R5=1 identifies the software fallback.
+; The read-only program segment contains the eight source words.
 .EQU $PROGRAM_SEGMENT #0
+; Writable RAM holds the copy destination and the path marker.
 .EQU $SCRATCH_SEGMENT #1
+; Word offset of the source data within PROGRAM (see the final .ORG).
 .EQU $SOURCE_OFFSET #0x0800
+; First destination word within SCRATCH; l addresses this buffer.
 .EQU $DESTINATION_OFFSET #0x0100
+; Scratch word recording who copied: 0 = hardware, 1 = software fallback.
 .EQU $PATH_MARKER_OFFSET #0x0200
+; Eight words exercise a full seven-register chunk and a short final chunk.
 .EQU $COPY_WORDS #8
+; Expected source low word after advancing SOURCE_OFFSET by COPY_WORDS.
 .EQU $SOURCE_END #0x0808
+; Expected destination low word after advancing DESTINATION_OFFSET by COPY_WORDS.
 .EQU $DESTINATION_END #0x0108
+; Raw command reported in fault metadata for this fixed DMAT a,l,#8 call.
 .EQU $DMAT_EIGHT_WORDS_COMMAND #0x2A08
+; EU link 6 holds the faulting PC and saved SR; advance its PC after emulation.
 .EQU $FAULT_LINK #6
+; EU link 7 reports the rejected command, allowing the handler to recognize it.
 .EQU $FAULT_METADATA_LINK #7
+; Every instruction occupies two words; skip exactly one emulated instruction.
 .EQU $INSTRUCTION_WORDS #2
+; Success signature in r6 after verifying both pointers and every copied word.
 .EQU $CHECK_PASSED #0xCAFE
+; Failure signature in r6 if any pointer or data comparison fails.
 .EQU $CHECK_FAILED #0xDEAD
+; Simulator debug MMIO segment, used only to terminate this example.
 .EQU $DEBUG_SEGMENT #0x000B
+; Word offset of the debug device exit-request register.
 .EQU $DEBUG_EXIT_OFFSET #7
+; The debug device exits when its exit-request register is written with 1.
 .EQU $DEBUG_EXIT_REQUEST #1
+; Value written to the path marker only when the missing-chip handler runs.
 .EQU $SOFTWARE_PATH #1
 
 .ORG 0x0000

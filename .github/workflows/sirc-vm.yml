@@ -104,6 +104,7 @@ jobs:
             "boring",
             "byte-sieve",
             "dma-copy",
+            "dma-stack",
             "faults",
             "hardware-exception",
             "software-exception",
