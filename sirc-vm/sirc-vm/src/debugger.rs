@@ -5,7 +5,7 @@ use super::debug_adapter::types::{
 };
 use super::{utils::cpu_from_bus::cpu_from_bus, DebugState};
 use peripheral_bus::BusPeripheral;
-use peripheral_cpu::registers::FullAddressRegisterAccess;
+use peripheral_cpu::registers::{FullAddressRegisterAccess, ADDRESS_MASK};
 
 pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugState) {
     match message {
@@ -30,7 +30,9 @@ pub fn handle_debug_message(message: DebuggerMessage, debug_state: &mut DebugSta
 
 pub fn yield_to_debugger(bus_peripheral: &mut BusPeripheral, debug_state: &mut DebugState) {
     let cpu = cpu_from_bus(bus_peripheral);
-    let pc = cpu.registers.get_full_pc_address();
+    // Source mappings and breakpoints use physical word addresses. Raw PH
+    // remains visible below so inspecting registers still shows pointer tags.
+    let pc = cpu.registers.get_full_pc_address() & ADDRESS_MASK;
     let capture_vm_state = || {
         VmState {
             pc,

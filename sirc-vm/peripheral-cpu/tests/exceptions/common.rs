@@ -255,7 +255,7 @@ pub fn tick(cpu: &mut CpuPeripheral, data: u16) -> BusAssertions {
 }
 
 /// Complete a six-phase handler entry and check its two supervisor vector reads.
-/// The target is a full address; the CPU's normal address-width rules apply.
+/// The target is a full logical address, including any tag bits.
 pub fn complete_entry(cpu: &mut CpuPeripheral, vector: u8, target: u32) {
     assert_eq!(cpu.phase, 0);
     let first = tick(cpu, 0);
@@ -271,5 +271,5 @@ pub fn complete_entry(cpu: &mut CpuPeripheral, vector: u8, target: u32) {
         assert!(!tick(cpu, data).bus_access_strobe);
     }
     assert_eq!(cpu.phase, 0);
-    assert_eq!(cpu.registers.get_full_pc_address(), target & 0x00ff_ffff);
+    assert_eq!(cpu.registers.get_full_pc_address(), target);
 }

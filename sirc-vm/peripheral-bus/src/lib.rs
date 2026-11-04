@@ -169,6 +169,8 @@ impl BusPeripheral {
     /// Will panic if the segment is in use (unlikely) or if the internal address calculation goes out of bounds.
     #[must_use]
     pub fn read_address(&mut self, address: u32) -> u16 {
+        // Host accesses alias tags exactly like the CPU's physical address pins.
+        let address = address & ADDRESS_MASK;
         self.get_segment_for_address(address).map_or_else(
             || {
                 warn!(
@@ -178,7 +180,7 @@ impl BusPeripheral {
                 0x0000
             },
             |segment| {
-                let relative_address = address - segment.address;
+                let relative_address = address - (segment.address & ADDRESS_MASK);
 
                 segment.device.read_address(relative_address)
             },
@@ -204,6 +206,7 @@ impl BusPeripheral {
     /// # Panics
     /// Will panic if the segment is in use (unlikely), the segment is readonly or if the internal address calculation goes out of bounds.
     pub fn write_address(&mut self, address: u32, value: u16) {
+        let address = address & ADDRESS_MASK;
         self.get_segment_for_address(address).map_or_else(|| {
              // If a segment isn't mapped, the value just goes into a black hole
              warn!(
@@ -216,7 +219,7 @@ impl BusPeripheral {
                 segment.label
             );
 
-            let relative_address = address - segment.address;
+            let relative_address = address - (segment.address & ADDRESS_MASK);
             segment.device.write_address(relative_address , value);
         });
     }

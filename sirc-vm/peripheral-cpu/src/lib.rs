@@ -306,6 +306,9 @@ impl Device for CpuPeripheral {
     fn poll(&mut self, bus_assertions: BusAssertions, selected: bool) -> BusAssertions {
         let result = self.poll_internal(bus_assertions, selected);
         BusAssertions {
+            // Only the physical pins discard tags. Internally, including saved
+            // requests used for fault metadata, retain the full logical address.
+            address: result.address & registers::ADDRESS_MASK,
             // Vector-table reads are supervisor accesses even before entry
             // clears live SR.P. Apply this to held requests as well.
             protected_mode_active: result.bus_access_type != BusAccessType::ExceptionVectorFetch

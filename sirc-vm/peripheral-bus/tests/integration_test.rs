@@ -355,3 +355,21 @@ fn readonly_bus_writes_signal_bper_without_reaching_the_device() {
         assert!(!response.bus_protection_error);
     }
 }
+
+#[test]
+fn host_memory_helpers_ignore_tags_for_both_lookup_and_offset() {
+    let mut bus = new_bus_peripheral(Box::new(new_stub_device()));
+    // Segment selection already aliases tags; offset calculation must agree.
+    bus.map_segment(
+        "TAGGED",
+        0xab12_0000,
+        0xffff,
+        true,
+        Box::new(new_stub_memory_mapped_device()),
+    );
+    bus.write_address(0xcd12_3456, 0xcafe);
+    assert_eq!(bus.read_address(0x0012_3456), 0xcafe);
+    assert_eq!(bus.read_address(0xef12_3456), 0xcafe);
+    bus.write_address(0x0012_3456, 0xbeef);
+    assert_eq!(bus.read_address(0xab12_3456), 0xbeef);
+}

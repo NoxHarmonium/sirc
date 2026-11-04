@@ -292,7 +292,7 @@ fn ldea_allows_same_segment_address_write_in_protected_mode() {
         enable_protected_mode(registers);
         registers.set_address_register_at_index(
             AddressRegisterName::Address.to_register_index(),
-            0x00AA_2222,
+            0xAAAA_2222,
         );
         registers.set_address_register_at_index(
             AddressRegisterName::StackPointer.to_register_index(),
@@ -300,7 +300,7 @@ fn ldea_allows_same_segment_address_write_in_protected_mode() {
         );
     });
     assert_no_fault(&result);
-    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0xAAAA, result.registers.ah);
     assert_eq!(0x1004, result.registers.al);
 }
 
@@ -325,7 +325,7 @@ fn ldea_faults_when_destination_high_word_would_change_in_protected_mode() {
         );
     });
     assert_privilege_fault(&result);
-    assert_eq!(0x0011, result.registers.ah);
+    assert_eq!(0x1111, result.registers.ah);
     assert_eq!(0x2222, result.registers.al);
 }
 
@@ -349,7 +349,7 @@ fn ldea_writes_destination_high_word_in_supervisor_mode() {
         );
     });
     assert_no_fault(&result);
-    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0xAAAA, result.registers.ah);
     assert_eq!(0x1004, result.registers.al);
 }
 
@@ -519,9 +519,9 @@ fn subroutine_calls_write_high_words_in_supervisor_mode() {
         );
     });
     assert_no_fault(&result);
-    assert_eq!(0x00AA, result.registers.ph);
+    assert_eq!(0xAAAA, result.registers.ph);
     assert_eq!(0x1004, result.registers.pl);
-    assert_eq!(0x00AA, result.registers.ah);
+    assert_eq!(0xAAAA, result.registers.ah);
     assert_eq!(0x1001, result.registers.al);
     assert_eq!(0x00CC, result.registers.lh);
     assert_eq!(0x0002, result.registers.ll);

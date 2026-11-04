@@ -7,6 +7,7 @@ mod fault_metadata;
 mod faults;
 mod hardware_exceptions;
 mod l5_queue;
+mod logical_addresses;
 mod reset;
 mod software_exceptions;
 mod sync;

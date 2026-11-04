@@ -1492,7 +1492,7 @@ fn test_reserved_software_exception_vector_allowed_in_supervisor_mode() {
     );
 
     assert_eq!(None, cpu_peripheral.eu_registers.pending_fault);
-    assert_eq_hex!(0x00CD_AB02, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(0xABCD_AB02, cpu_peripheral.registers.get_full_pc_address());
 }
 
 #[test]
