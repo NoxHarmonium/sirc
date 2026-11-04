@@ -10,6 +10,7 @@ use crate::{
         sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, SegmentedAddress,
         StatusRegisterFields, SR_PRIVILEGED_MASK, SR_REDACTION_MASK,
     },
+    COPROCESSOR_ID_MASK,
 };
 
 use super::shared::{DecodedInstruction, IntermediateRegisters, StageExecutor};
@@ -289,7 +290,13 @@ impl StageExecutor for WriteBackExecutor {
                 );
             }
             WriteBackInstructionType::CoprocessorCall => {
-                registers.coprocessor_select_register = intermediate_registers.alu_output;
+                let command = intermediate_registers.alu_output;
+                // ID 0 is a completed PU no-op, not a pending coprocessor dispatch.
+                registers.coprocessor_select_register = if command & COPROCESSOR_ID_MASK == 0 {
+                    0
+                } else {
+                    command
+                };
             }
         }
 

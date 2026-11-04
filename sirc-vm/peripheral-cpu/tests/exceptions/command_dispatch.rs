@@ -36,8 +36,13 @@ fn tick(cpu: &mut CpuPeripheral, data: u16, interrupt: u8) -> BusAssertions {
     )
 }
 
-fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bool) {
-    let instruction = if register_call {
+fn cop_instruction(
+    cpu: &mut CpuPeripheral,
+    command: u16,
+    register_call: bool,
+    condition_flag: ConditionFlags,
+) -> InstructionData {
+    if register_call {
         cpu.registers.r1 = command;
         InstructionData::Register(RegisterInstructionData {
             op_code: Instruction::CoprocessorCallRegister,
@@ -47,7 +52,7 @@ fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bo
             shift_operand: ShiftOperand::Immediate,
             shift_type: ShiftType::None,
             shift_count: 0,
-            condition_flag: ConditionFlags::Always,
+            condition_flag,
             additional_flags: 0,
         })
     } else {
@@ -55,17 +60,24 @@ fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bo
             op_code: Instruction::CoprocessorCallImmediate,
             register: 0,
             value: command,
-            condition_flag: ConditionFlags::Always,
+            condition_flag,
             additional_flags: 0,
         })
-    };
+    }
+}
+
+fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bool) {
+    let instruction = cop_instruction(cpu, command, register_call, ConditionFlags::Always);
     let words = bytes_to_words(&encode_instruction(&instruction));
     cpu.registers.pl = 0x0200;
     for (phase, data) in [0, words[0], words[1], 0, 0, 0].into_iter().enumerate() {
         tick(cpu, data, if phase == 5 { interrupt } else { 0 });
     }
     assert_eq!(cpu.phase, 0);
-    assert_eq!(cpu.registers.coprocessor_select_register, command);
+    assert_eq!(
+        cpu.registers.coprocessor_select_register,
+        if command & 0xf000 == 0 { 0 } else { command }
+    );
 }
 
 fn transfer_command() -> u16 {
@@ -231,19 +243,80 @@ fn automatic_eu_dispatch_does_not_consume_an_unrelated_csr_command() {
 }
 
 #[test]
-fn id_zero_commands_do_not_add_a_slot_or_block_an_interrupt() {
-    for interrupt in [0, 1] {
-        let mut cpu = new_cpu_peripheral();
-        set_hardware_interrupt_enable(&mut cpu.registers, 1);
-        issue(&mut cpu, 0x0042, interrupt, false);
-        let response = tick(&mut cpu, 0, 0);
-        assert_eq!(cpu.registers.coprocessor_select_register, 0);
-        let expected_address = if interrupt == 0 {
-            0x0202
-        } else {
-            u32::from(hardware_exception_level_to_vector(1)) * 2
-        };
-        assert_eq!(response.address, expected_address);
+fn id_zero_calls_finish_in_six_cycles_with_empty_csr_and_normal_event_selection() {
+    for operation in 0..=15 {
+        for payload in [0, 0x23, 0xff] {
+            for register_call in [false, true] {
+                for condition in [ConditionFlags::Always, ConditionFlags::Never] {
+                    // 0: no trace, 1: SR.T, 2: TRCE pulse at instruction start.
+                    for trace in 0..=2 {
+                        for interrupt in [0, 1] {
+                            let mut cpu = new_cpu_peripheral();
+                            set_hardware_interrupt_enable(&mut cpu.registers, 1);
+                            if trace == 1 {
+                                peripheral_cpu::registers::set_sr_bit(
+                                    StatusRegisterFields::TraceMode,
+                                    &mut cpu.registers,
+                                );
+                            }
+                            cpu.registers.pl = 0x0200;
+                            cpu.registers.r2 = 0xcafe;
+                            let command = (operation << 8) | payload;
+                            let instruction =
+                                cop_instruction(&mut cpu, command, register_call, condition);
+                            let words = bytes_to_words(&encode_instruction(&instruction));
+                            let mut expected_registers = cpu.registers;
+                            expected_registers.pl = 0x0202;
+                            for (phase, data) in
+                                [0, words[0], words[1], 0, 0, 0].into_iter().enumerate()
+                            {
+                                let out = cpu.poll(
+                                    BusAssertions {
+                                        data,
+                                        bus_acknowledge: true,
+                                        force_trace_mode: trace == 2 && phase == 0,
+                                        interrupt_assertion: if phase == 5 { interrupt } else { 0 },
+                                        ..Default::default()
+                                    },
+                                    true,
+                                );
+                                assert_eq!(out.bus_access_strobe, phase < 2);
+                                if phase < 2 {
+                                    assert_eq!(out.address, 0x0200 + u32::try_from(phase).unwrap());
+                                }
+                                assert_eq!(cpu.phase, u8::try_from((phase + 1) % 6).unwrap());
+                            }
+                            // Check before polling the next boundary: no stale ID-0 CSR.
+                            assert_eq!(cpu.registers, expected_registers);
+                            assert_eq!(cpu.eu_registers.pending_hardware_exceptions, interrupt);
+                            if trace != 0 {
+                                let fault = cpu.eu_registers.pending_fault.unwrap();
+                                assert_eq!(fault.fault, Faults::InstructionTrace);
+                                assert_eq!(fault.pc, 0x0202);
+                            } else {
+                                assert!(cpu.eu_registers.pending_fault.is_none());
+                            }
+                            if trace != 0 || interrupt != 0 {
+                                let vector = if trace != 0 {
+                                    INSTRUCTION_TRACE_FAULT
+                                } else {
+                                    hardware_exception_level_to_vector(1)
+                                };
+                                super::common::complete_entry(&mut cpu, vector, 0x1000);
+                                assert_eq!(
+                                    cpu.eu_registers.pending_hardware_exceptions,
+                                    if trace != 0 { interrupt } else { 0 }
+                                );
+                            } else {
+                                let fetch = tick(&mut cpu, 0, 0);
+                                assert!(fetch.bus_access_strobe);
+                                assert_eq!(fetch.address, 0x0202);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

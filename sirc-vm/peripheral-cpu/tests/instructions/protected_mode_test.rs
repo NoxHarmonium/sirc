@@ -609,48 +609,50 @@ fn memory_auto_update_preserves_address_high_word_in_protected_mode() {
 #[test]
 #[allow(clippy::similar_names)]
 fn privileged_coprocessor_calls_fault_only_when_executed() {
-    let privileged_copi = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::CoprocessorCallImmediate,
-        register: RegisterName::R1.to_register_index(),
-        value: 0x1900,
-        condition_flag: ConditionFlags::Always,
-        additional_flags: 0x0,
-    });
-    let result = run_instruction(&privileged_copi, |registers, _| {
-        enable_protected_mode(registers);
-    });
-    assert_privilege_fault(&result);
+    for command in [0x0900, 0x1900] {
+        let privileged_copi = InstructionData::Immediate(ImmediateInstructionData {
+            op_code: Instruction::CoprocessorCallImmediate,
+            register: RegisterName::R1.to_register_index(),
+            value: command,
+            condition_flag: ConditionFlags::Always,
+            additional_flags: 0x0,
+        });
+        let result = run_instruction(&privileged_copi, |registers, _| {
+            enable_protected_mode(registers);
+        });
+        assert_privilege_fault(&result);
 
-    let skipped_privileged_copi = InstructionData::Immediate(ImmediateInstructionData {
-        op_code: Instruction::CoprocessorCallImmediate,
-        register: RegisterName::R1.to_register_index(),
-        value: 0x1900,
-        condition_flag: ConditionFlags::CarryClear,
-        additional_flags: 0x0,
-    });
-    let result = run_instruction(&skipped_privileged_copi, |registers, _| {
-        enable_protected_mode(registers);
-        set_sr_bit(StatusRegisterFields::Carry, registers);
-    });
-    assert_no_fault(&result);
-    assert_eq!(0x0000, result.coprocessor_select_register);
+        let skipped_privileged_copi = InstructionData::Immediate(ImmediateInstructionData {
+            op_code: Instruction::CoprocessorCallImmediate,
+            register: RegisterName::R1.to_register_index(),
+            value: command,
+            condition_flag: ConditionFlags::CarryClear,
+            additional_flags: 0x0,
+        });
+        let result = run_instruction(&skipped_privileged_copi, |registers, _| {
+            enable_protected_mode(registers);
+            set_sr_bit(StatusRegisterFields::Carry, registers);
+        });
+        assert_no_fault(&result);
+        assert_eq!(0x0000, result.coprocessor_select_register);
 
-    let privileged_copr = InstructionData::Register(RegisterInstructionData {
-        op_code: Instruction::CoprocessorCallRegister,
-        r1: RegisterName::R1.to_register_index(),
-        r2: RegisterName::R1.to_register_index(),
-        r3: RegisterName::R2.to_register_index(),
-        shift_operand: ShiftOperand::Immediate,
-        shift_type: ShiftType::None,
-        shift_count: 0,
-        condition_flag: ConditionFlags::Always,
-        additional_flags: 0x0,
-    });
-    let result = run_instruction(&privileged_copr, |registers, _| {
-        enable_protected_mode(registers);
-        registers.r2 = 0x1900;
-    });
-    assert_privilege_fault(&result);
+        let privileged_copr = InstructionData::Register(RegisterInstructionData {
+            op_code: Instruction::CoprocessorCallRegister,
+            r1: RegisterName::R1.to_register_index(),
+            r2: RegisterName::R1.to_register_index(),
+            r3: RegisterName::R2.to_register_index(),
+            shift_operand: ShiftOperand::Immediate,
+            shift_type: ShiftType::None,
+            shift_count: 0,
+            condition_flag: ConditionFlags::Always,
+            additional_flags: 0x0,
+        });
+        let result = run_instruction(&privileged_copr, |registers, _| {
+            enable_protected_mode(registers);
+            registers.r2 = command;
+        });
+        assert_privilege_fault(&result);
+    }
 }
 
 #[test]
@@ -670,5 +672,5 @@ fn short_copi_cannot_encode_privileged_coprocessor_command() {
         registers.r1 = 0x1900;
     });
     assert_no_fault(&result);
-    assert_eq!(0x0019, result.coprocessor_select_register);
+    assert_eq!(0, result.coprocessor_select_register);
 }
