@@ -41,11 +41,11 @@ fn test_ldel_indirect_immediate_post_increment_updates_link_source_and_destinati
             registers.ll = 0x0002;
             registers.set_address_register_at_index(
                 AddressRegisterName::Address.to_register_index(),
-                0x00AA_1004,
+                0xAAAA_1004,
             );
             registers.set_address_register_at_index(
                 AddressRegisterName::StackPointer.to_register_index(),
-                0x00AA_1001,
+                0xAAAA_1001,
             );
         });
     assert_eq!(
@@ -91,11 +91,11 @@ fn test_ldel_indirect_register_post_increment_updates_link_source_and_destinatio
             registers.ll = 0x0002;
             registers.set_address_register_at_index(
                 AddressRegisterName::Address.to_register_index(),
-                0x00AA_1004,
+                0xAAAA_1004,
             );
             registers.set_address_register_at_index(
                 AddressRegisterName::StackPointer.to_register_index(),
-                0x00AA_1001,
+                0xAAAA_1001,
             );
         });
     assert_eq!(

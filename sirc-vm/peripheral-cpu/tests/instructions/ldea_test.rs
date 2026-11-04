@@ -165,11 +165,11 @@ fn test_ldea_indirect_immediate_pre_decrement_updates_source_and_destination() {
         get_expected_registers(&previous.registers, |registers: &mut Registers| {
             registers.set_address_register_at_index(
                 AddressRegisterName::Address.to_register_index(),
-                0x00AA_1003,
+                0xAAAA_1003,
             );
             registers.set_address_register_at_index(
                 AddressRegisterName::StackPointer.to_register_index(),
-                0x00AA_0FFF,
+                0xAAAA_0FFF,
             );
         });
     assert_eq!(
@@ -213,11 +213,11 @@ fn test_ldea_indirect_register_pre_decrement_updates_source_and_destination() {
             registers.r1 = 0x0004;
             registers.set_address_register_at_index(
                 AddressRegisterName::Address.to_register_index(),
-                0x00AA_1003,
+                0xAAAA_1003,
             );
             registers.set_address_register_at_index(
                 AddressRegisterName::StackPointer.to_register_index(),
-                0x00AA_0FFF,
+                0xAAAA_0FFF,
             );
         });
     assert_eq!(

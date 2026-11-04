@@ -55,7 +55,7 @@ fn test_software_exception_vector() {
         &cpu_peripheral.registers
     ));
 
-    assert_eq_hex!(0x00CD_AB02, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(0xABCD_AB02, cpu_peripheral.registers.get_full_pc_address());
 
     run_expectations(
         &mut cpu_peripheral,
@@ -91,7 +91,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
         &mut clocks,
     );
 
-    assert_eq_hex!(0x00CD_AB02, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(0xABCD_AB02, cpu_peripheral.registers.get_full_pc_address());
 
     run_expectations(
         &mut cpu_peripheral,
@@ -99,7 +99,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
         &mut clocks,
     );
 
-    assert_eq_hex!(0x00CD_AB04, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq_hex!(0xABCD_AB04, cpu_peripheral.registers.get_full_pc_address());
     run_idle_dispatch(&mut cpu_peripheral, &mut clocks);
 
     run_expectations(
@@ -108,7 +108,7 @@ fn test_software_exception_cannot_interrupt_another_software_exception() {
         &mut clocks,
     );
 
-    assert_eq!(0x00CD_AB06, cpu_peripheral.registers.get_full_pc_address());
+    assert_eq!(0xABCD_AB06, cpu_peripheral.registers.get_full_pc_address());
     assert_eq!(0x0, cpu_peripheral.registers.coprocessor_select_register);
 }
 
