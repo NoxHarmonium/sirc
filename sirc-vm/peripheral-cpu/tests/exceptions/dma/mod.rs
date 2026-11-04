@@ -1,3 +1,4 @@
+mod faults;
 mod support;
 mod timing;
 mod waits;
