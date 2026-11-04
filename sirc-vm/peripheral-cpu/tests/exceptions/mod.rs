@@ -3,6 +3,7 @@ mod command_dispatch;
 mod common;
 mod deferred_trace;
 mod excp_privilege;
+mod fault_metadata;
 mod faults;
 mod hardware_exceptions;
 mod l5_queue;

@@ -61,7 +61,7 @@ ExceptionUnitRegisters {
         },
         ExceptionLinkRegister {
             return_address: 0x3000,
-            return_status_register: 0x440,
+            return_status_register: 0x40,
             saved_exception_level: 0x0,
         },
     ],
