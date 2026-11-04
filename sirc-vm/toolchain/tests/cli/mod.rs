@@ -204,3 +204,43 @@ fn unsupported_relocation_cli_does_not_write_output() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("Unsupported relocation"));
     assert!(!binary.exists());
 }
+
+#[test]
+fn exception_transfer_indices_are_checked_for_every_spelling_and_constants() {
+    for form in [
+        "ETFR {n}",
+        "ETFR a, {n}",
+        "ETFR r7, {n}",
+        "ETTR {n}",
+        "ETTR {n}, a",
+        "ETTR {n}, r7",
+    ] {
+        for index in [0, 7, 8, 15] {
+            for named in [false, true] {
+                let operand = if named {
+                    "$INDEX".to_owned()
+                } else {
+                    format!("#{index}")
+                };
+                let instruction = form.replace("{n}", &operand);
+                let source = format!(".EQU $INDEX #{index}\n{instruction}\n");
+                if index < 8 {
+                    let directory = tempdir().unwrap();
+                    let (output, object) = assemble(directory.path(), "valid", &source);
+                    assert_success(&output);
+                    assert!(object.exists());
+                } else {
+                    assert_assembly_error(&source, "exception link index", "2:");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn transfer_operand_hints_follow_the_direction_of_the_transfer() {
+    assert_assembly_error("ETTR a, #0\n", "ETTR #n, a", "1:");
+    assert_assembly_error("ETTR r7, #0\n", "ETTR #n, r7", "1:");
+    assert_assembly_error("ETFR #0, a\n", "ETFR a, #n", "1:");
+    assert_assembly_error("ETFR #0, r7\n", "ETFR r7, #n", "1:");
+}

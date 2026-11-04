@@ -91,7 +91,12 @@ pub fn exception(i: &str) -> AsmResult<InstructionToken> {
             [AddressingMode::Immediate(value), AddressingMode::DirectAddressRegister(AddressRegisterName::Address)],
         ) => (0x1d10, Some((value, NumericField::ExceptionLinkIndex))),
         modes => {
-            let error_string = format!("Invalid addressing mode for {tag}: ({modes:?})");
+            let syntax = match tag.as_str() {
+                "ETFR" => "; expected ETFR #n, ETFR a, #n, or ETFR r7, #n (n = 0..7)",
+                "ETTR" => "; expected ETTR #n, ETTR #n, a, or ETTR #n, r7 (n = 0..7)",
+                _ => "",
+            };
+            let error_string = format!("Invalid addressing mode for {tag}: ({modes:?}){syntax}");
             return Err(nom::Err::Failure(ErrorTree::from_external_error(
                 i_after_instruction,
                 ErrorKind::Fail,
