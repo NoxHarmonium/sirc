@@ -92,6 +92,8 @@ pub const CURRENT_FAULT_MASK: u16 = 0xF0;
 pub const CURRENT_FAULT_LENGTH: u16 = 4;
 pub const PREVIOUS_FAULT_MASK: u16 = 0xF00;
 pub const PREVIOUS_FAULT_LENGTH: u16 = 8;
+pub const ESCALATING_FAULT_MASK: u16 = 0xF000;
+pub const ESCALATING_FAULT_LENGTH: u16 = 12;
 
 #[derive(Debug)]
 pub enum Error {
@@ -167,25 +169,46 @@ pub struct CpuPeripheral {
 pub struct FaultMetadataRegister {
     pub bus_access_type: BusAccessType, // 3 bits (bits 0-2, BAT0-BAT2)
     pub double_fault: bool,             // 1 bit (bit 3)
-    pub fault: Faults,                  // 4 bits (bits 4-7, needs to hold values up to 0x8)
-    // If double_fault: holds the fault that caused the double fault
-    pub original_fault: Faults, // 4 bits (bits 8-11, needs to hold values up to 0x8)
+    pub fault: Faults,                  // 4 bits (bits 4-7)
+    /// Fault already being serviced, or whose vector fetch failed (bits 8-11).
+    /// None encodes zero; ordinary faults have no history.
+    pub original_fault: Option<Faults>,
+    /// Incoming fault that caused escalation (bits 12-15).
+    pub escalating_fault: Option<Faults>,
 }
 
 pub fn decode_fault_metadata_register(val: u16) -> FaultMetadataRegister {
+    let history = if val & DOUBLE_FAULT_FLAG_MASK != 0 {
+        val
+    } else {
+        0
+    };
     FaultMetadataRegister {
         bus_access_type: BusAccessType::from(
             ((val & BUS_ACCESS_TYPE_MASK) >> BUS_ACCESS_TYPE_LENGTH) as u8,
         ),
         double_fault: ((val & DOUBLE_FAULT_FLAG_MASK) >> DOUBLE_FAULT_FLAG_LENGTH) == 0x1,
         fault: Faults::from_u16((val & CURRENT_FAULT_MASK) >> CURRENT_FAULT_LENGTH).unwrap(),
-        original_fault: Faults::from_u16((val & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH)
-            .unwrap(),
+        original_fault: Faults::from_u16((history & PREVIOUS_FAULT_MASK) >> PREVIOUS_FAULT_LENGTH),
+        escalating_fault: Faults::from_u16(
+            (history & ESCALATING_FAULT_MASK) >> ESCALATING_FAULT_LENGTH,
+        ),
     }
 }
 
 pub fn encode_fault_metadata_register(reg: &FaultMetadataRegister) -> u16 {
-    (reg.original_fault.to_u16().unwrap()) << PREVIOUS_FAULT_LENGTH
+    let history = if reg.double_fault {
+        reg.original_fault
+            .map_or(0, |fault| fault.to_u16().unwrap())
+            << PREVIOUS_FAULT_LENGTH
+            | reg
+                .escalating_fault
+                .map_or(0, |fault| fault.to_u16().unwrap())
+                << ESCALATING_FAULT_LENGTH
+    } else {
+        0
+    };
+    history
         | (reg.fault.to_u16().unwrap()) << CURRENT_FAULT_LENGTH
         | u16::from(reg.double_fault) << DOUBLE_FAULT_FLAG_LENGTH
         | u16::from(reg.bus_access_type as u8)
@@ -225,6 +248,16 @@ pub fn raise_fault(
     } else {
         fault
     };
+    let original_fault = if is_double_fault {
+        Faults::from_u16(
+            (eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX]
+                .return_status_register
+                & CURRENT_FAULT_MASK)
+                >> CURRENT_FAULT_LENGTH,
+        )
+    } else {
+        None
+    };
     // Is always clobbered, so you lose the original fault metadata register if there is a double fault
     // Make sure you save it somewhere if you're being careful
     eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] = ExceptionLinkRegister {
@@ -236,7 +269,8 @@ pub fn raise_fault(
             bus_access_type: bus_assertions.bus_access_type,
             double_fault: is_double_fault,
             fault: resolved_fault,
-            original_fault: fault,
+            original_fault,
+            escalating_fault: is_double_fault.then_some(fault),
         }),
         saved_exception_level: 0, // Not used for fault metadata
     };
@@ -717,6 +751,10 @@ impl CpuPeripheral {
 
         if op_code == ExceptionUnitOpCodes::Fault {
             error!("Double fault! [{fault:?}] raised while fetching a fault vector. Jumping to double fault vector.");
+            let original = self
+                .eu_registers
+                .pending_fault
+                .expect("a fault must already be pending when its own vector fetch bus-faults");
             self.eu_registers.link_registers[FAULT_METADATA_LINK_REGISTER_INDEX] =
                 ExceptionLinkRegister {
                     return_address: fault_bus_assertions.address,
@@ -725,7 +763,8 @@ impl CpuPeripheral {
                             bus_access_type: fault_bus_assertions.bus_access_type,
                             double_fault: true,
                             fault: Faults::DoubleFault,
-                            original_fault: fault,
+                            original_fault: Some(original.fault),
+                            escalating_fault: Some(fault),
                         },
                     ),
                     saved_exception_level: 0,
@@ -734,14 +773,9 @@ impl CpuPeripheral {
             // fault's return address rather than computing a new one, so the double-fault
             // handler still returns to the instruction that started the whole chain. This is
             // the one place `pending_fault` is constructed outside `raise_fault`.
-            let original_pc = self
-                .eu_registers
-                .pending_fault
-                .expect("a fault must already be pending when its own vector fetch bus-faults")
-                .pc;
             self.eu_registers.pending_fault = Some(PendingFault {
                 fault: Faults::DoubleFault,
-                pc: original_pc,
+                pc: original.pc,
             });
             return Some(BusAssertions::default());
         }

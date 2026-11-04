@@ -508,7 +508,8 @@ fn test_exception_vector_fetch_bus_error_raises_bus_fault() {
             bus_access_type: BusAccessType::ExceptionVectorFetch,
             double_fault: false,
             fault: Faults::Bus,
-            original_fault: Faults::Bus,
+            original_fault: None,
+            escalating_fault: None,
         },
         decode_fault_metadata_register(
             cpu_peripheral.eu_registers.link_registers[7].return_status_register,
@@ -578,7 +579,8 @@ fn test_fault_vector_fetch_bus_error_escalates_to_double_fault() {
             bus_access_type: BusAccessType::ExceptionVectorFetch,
             double_fault: true,
             fault: Faults::DoubleFault,
-            original_fault: Faults::Bus,
+            original_fault: Some(Faults::InvalidOpCode),
+            escalating_fault: Some(Faults::Bus),
         },
         decode_fault_metadata_register(
             cpu_peripheral.eu_registers.link_registers[7].return_status_register,
@@ -1170,8 +1172,8 @@ fn test_double_fault() {
             bus_access_type: BusAccessType::None,
             double_fault: false,
             fault: Faults::InvalidOpCode,
-            // Still set when not a double fault to make hardware less complex - doesn't hurt I guess
-            original_fault: Faults::InvalidOpCode
+            original_fault: None,
+            escalating_fault: None,
         },
         decode_fault_metadata_register(
             cpu_peripheral.eu_registers.link_registers[7].return_status_register,
@@ -1223,7 +1225,8 @@ fn test_double_fault() {
             bus_access_type: BusAccessType::None,
             double_fault: true,
             fault: Faults::DoubleFault,
-            original_fault: Faults::InvalidOpCode,
+            original_fault: Some(Faults::InvalidOpCode),
+            escalating_fault: Some(Faults::InvalidOpCode),
         },
         decode_fault_metadata_register(
             cpu_peripheral.eu_registers.link_registers[7].return_status_register,
@@ -1244,170 +1247,52 @@ fn test_double_fault() {
 
 #[test]
 fn test_fault_metadata_register_encode_decode() {
-    // Test all combinations of fields to ensure encoding/decoding is correct
-    let test_cases = vec![
-        // bus_access_type, double_fault, fault, original_fault
-        (BusAccessType::None, false, Faults::Bus, Faults::Bus),
-        (
-            BusAccessType::InstructionFetch,
-            false,
-            Faults::Alignment,
-            Faults::SegmentOverflow,
-        ),
-        (
-            BusAccessType::DataRead,
-            true,
-            Faults::InvalidOpCode,
-            Faults::DoubleFault,
-        ),
-        (
-            BusAccessType::DataWrite,
-            false,
-            Faults::PrivilegeViolation,
-            Faults::Bus,
-        ),
-        (
-            BusAccessType::ExceptionVectorFetch,
-            true,
-            Faults::InstructionTrace,
-            Faults::Alignment,
-        ),
-        (
-            BusAccessType::DmaReadBurst,
-            false,
-            Faults::LevelFiveInterruptConflict,
-            Faults::InvalidOpCode,
-        ),
-        (
-            BusAccessType::Reserved,
-            true,
-            Faults::DoubleFault,
-            Faults::PrivilegeViolation,
-        ),
-        // Edge case: None (= 0)
-        (BusAccessType::None, false, Faults::Bus, Faults::Bus),
-        // Edge case: max values
-        (
-            BusAccessType::Reserved,
-            true,
-            Faults::DoubleFault,
-            Faults::DoubleFault,
-        ),
-    ];
-
-    for (bus_access_type, double_fault, fault, original_fault) in test_cases {
-        let original_reg = FaultMetadataRegister {
-            bus_access_type,
-            double_fault,
-            fault,
-            original_fault,
-        };
-
-        // Encode to u16
-        let encoded = encode_fault_metadata_register(&original_reg);
-
-        // Decode back to struct
-        let decoded = decode_fault_metadata_register(encoded);
-
-        // Verify all fields match
-        assert_eq!(
-            decoded.bus_access_type, bus_access_type,
-            "BusAccessType mismatch for input ({bus_access_type:?}, {double_fault}, {fault:?}, {original_fault:?})"
-        );
-        assert_eq!(
-            decoded.double_fault, double_fault,
-            "Double fault flag mismatch for input ({bus_access_type:?}, {double_fault}, {fault:?}, {original_fault:?})"
-        );
-        assert_eq!(
-            decoded.fault as u16, fault as u16,
-            "Fault mismatch for input ({bus_access_type:?}, {double_fault}, {fault:?}, {original_fault:?})"
-        );
-        assert_eq!(
-            decoded.original_fault as u16, original_fault as u16,
-            "Original fault mismatch for input ({bus_access_type:?}, {double_fault}, {fault:?}, {original_fault:?})"
-        );
+    for bat in 0..=7 {
+        for current in 1..=9 {
+            for original in 0..=9 {
+                for escalating in 0..=9 {
+                    let reg = FaultMetadataRegister {
+                        bus_access_type: BusAccessType::from(bat),
+                        double_fault: true,
+                        fault: num::FromPrimitive::from_u8(current).unwrap(),
+                        original_fault: num::FromPrimitive::from_u8(original),
+                        escalating_fault: num::FromPrimitive::from_u8(escalating),
+                    };
+                    let encoded = encode_fault_metadata_register(&reg);
+                    assert_eq!(
+                        encoded,
+                        u16::from(bat)
+                            | 8
+                            | u16::from(current) << 4
+                            | u16::from(original) << 8
+                            | u16::from(escalating) << 12
+                    );
+                    assert_eq!(decode_fault_metadata_register(encoded), reg);
+                }
+            }
+        }
     }
 }
 
 #[test]
 fn test_fault_metadata_register_bit_layout() {
-    // Verify the bit layout is correct by checking specific patterns
-
-    // Test bus_access_type bits (0-2): Reserved = 0b111 exercises all three bits
     let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::Reserved,
-        double_fault: false,
-        fault: Faults::Bus,
-        original_fault: Faults::Bus,
-    };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(encoded & 0x7, 0b111, "BusAccessType should occupy bits 0-2");
-
-    // Test double_fault bit (3)
-    let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::None,
+        bus_access_type: BusAccessType::ExceptionVectorFetch,
         double_fault: true,
-        fault: Faults::Bus,
-        original_fault: Faults::Bus,
+        fault: Faults::DoubleFault,
+        original_fault: Some(Faults::Alignment),
+        escalating_fault: Some(Faults::BusProtection),
     };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(encoded & 0x8, 0x8, "Double fault should occupy bit 3");
-
-    // Test fault bits (4-7)
-    let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::None,
+    assert_eq!(encode_fault_metadata_register(&reg), 0x928c);
+    // History must be zero for an ordinary fault, even if a caller supplies it.
+    let ordinary = FaultMetadataRegister {
         double_fault: false,
-        fault: Faults::DoubleFault, // = 0x8
-        original_fault: Faults::Bus,
+        ..reg
     };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(
-        (encoded & 0xF0) >> 4,
-        0x8,
-        "Fault 0x8 should occupy bits 4-7"
-    );
-
-    // Test with another fault value
-    let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::None,
-        double_fault: false,
-        fault: Faults::LevelFiveInterruptConflict, // = 0x7
-        original_fault: Faults::Bus,
-    };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(
-        (encoded & 0xF0) >> 4,
-        0x7,
-        "Fault 0x7 should occupy bits 4-7"
-    );
-
-    // Test original_fault bits (8-11)
-    let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::None,
-        double_fault: false,
-        fault: Faults::Bus,
-        original_fault: Faults::InstructionTrace, // = 0x6
-    };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(
-        (encoded & 0xF00) >> 8,
-        0x6,
-        "Original fault 0x6 should occupy bits 8-11"
-    );
-
-    // Test with DoubleFault in original_fault
-    let reg = FaultMetadataRegister {
-        bus_access_type: BusAccessType::None,
-        double_fault: false,
-        fault: Faults::Bus,
-        original_fault: Faults::DoubleFault, // = 0x8
-    };
-    let encoded = encode_fault_metadata_register(&reg);
-    assert_eq!(
-        (encoded & 0xF00) >> 8,
-        0x8,
-        "Original fault 0x8 should occupy bits 8-11"
-    );
+    assert_eq!(encode_fault_metadata_register(&ordinary), 0x84);
+    let decoded = decode_fault_metadata_register(0xff84);
+    assert_eq!(decoded.original_fault, None);
+    assert_eq!(decoded.escalating_fault, None);
 }
 
 pub fn build_privilege_violation_instruction() -> InstructionData {
