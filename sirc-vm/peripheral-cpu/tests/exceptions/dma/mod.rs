@@ -1,3 +1,7 @@
+mod hardware;
+
+mod halt;
+
 mod faults;
 mod ownership;
 mod support;
