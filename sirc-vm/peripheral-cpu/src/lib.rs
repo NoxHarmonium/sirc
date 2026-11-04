@@ -879,8 +879,6 @@ impl CpuPeripheral {
         self.reset_state = CpuResetState::FetchingVector;
         self.registers.sr = 0;
         self.active_command = 0;
-        self.processing_unit_executor
-            .next_instruction_fetch_is_overflow = false;
         // Pin history is not architectural pending state. Preserve it so a
         // line already observed high cannot become a new edge because of reset.
         self.eu_registers.waiting_for_exception = false;

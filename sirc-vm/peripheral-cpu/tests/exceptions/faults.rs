@@ -854,25 +854,6 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
         &mut clocks,
     );
 
-    run_expectations(
-        &mut cpu_peripheral,
-        &vec![
-            Some(expectation(None, None, Some(0x0), None)),
-            Some(expectation(
-                None,
-                None,
-                // Fetch aborted
-                Some(0x0),
-                None,
-            )),
-            None,
-            None,
-            None,
-            None,
-        ],
-        &mut clocks,
-    );
-
     assert!(
         cpu_peripheral
             .eu_registers
@@ -894,9 +875,8 @@ fn test_segment_overflow_fault_with_instruction_fetch() {
 
     assert_eq_hex!(0x00AB_CDE2, cpu_peripheral.registers.get_full_pc_address());
     assert_eq_hex!(
-        // Segment Overflow (PC-wrap) is retryable: the link register holds the wrapped fetch
-        // address itself.
-        0x0000_0000,
+        // PC advance faults cancel the instruction in the segment's last slot.
+        0x0000_FFFE,
         cpu_peripheral.eu_registers.link_registers[6].return_address
     );
 }

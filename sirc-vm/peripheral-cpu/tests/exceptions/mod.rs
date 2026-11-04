@@ -1,3 +1,4 @@
+mod address_wrap;
 mod alignment;
 mod command_dispatch;
 mod common;
@@ -8,9 +9,11 @@ mod faults;
 mod hardware_exceptions;
 mod l5_queue;
 mod logical_addresses;
+mod pc_wrap;
 mod reset;
 mod software_exceptions;
 mod sync;
 mod vector_fault_timing;
 mod vector_fetch;
 mod vector_retry;
+mod wrap_metadata;
