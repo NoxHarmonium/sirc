@@ -26,6 +26,9 @@ pub struct Machine {
 }
 impl Machine {
     pub fn new(command: u16, register_call: bool) -> Self {
+        Self::conditional(command, register_call, ConditionFlags::Always)
+    }
+    pub fn conditional(command: u16, register_call: bool, condition_flag: ConditionFlags) -> Self {
         let mut cpu = new_cpu_peripheral_with_config(CpuConfig {
             optional_coprocessors: vec![Box::new(DmaCoprocessor::default())],
         })
@@ -52,7 +55,7 @@ impl Machine {
                 shift_operand: ShiftOperand::Immediate,
                 shift_type: ShiftType::None,
                 shift_count: 0,
-                condition_flag: ConditionFlags::Always,
+                condition_flag,
                 additional_flags: 0,
             })
         } else {
@@ -60,7 +63,7 @@ impl Machine {
                 op_code: Instruction::CoprocessorCallImmediate,
                 register: 0,
                 value: command,
-                condition_flag: ConditionFlags::Always,
+                condition_flag,
                 additional_flags: 0,
             })
         };

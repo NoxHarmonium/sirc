@@ -1,4 +1,5 @@
 mod support;
+mod timing;
 use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 use support::Machine;
 
