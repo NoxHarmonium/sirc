@@ -29,7 +29,8 @@ use device_ram::{
 use device_terminal::new_terminal_device;
 use peripheral_bus::new_bus_peripheral;
 use peripheral_cpu::{
-    coprocessors::dma::DmaCoprocessor, new_cpu_peripheral_with_config, CpuConfig,
+    coprocessors::{dma::DmaCoprocessor, maths::MathsCoprocessor},
+    new_cpu_peripheral_with_config, CpuConfig,
 };
 
 #[cfg(feature = "video")]
@@ -105,6 +106,7 @@ struct SegmentArg {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum OptionalHardware {
     Dma,
+    Math,
     None,
 }
 
@@ -114,9 +116,9 @@ impl std::str::FromStr for OptionalHardware {
         match value {
             "dma" => Ok(Self::Dma),
             "none" => Ok(Self::None),
-            "math" => Err("math hardware is not implemented".into()),
+            "math" => Ok(Self::Math),
             _ => Err(format!(
-                "unknown optional coprocessor '{value}'; expected dma or none"
+                "unknown optional coprocessor '{value}'; expected dma, math or none"
             )),
         }
     }
@@ -144,7 +146,7 @@ pub struct Args {
     #[clap(short, long)]
     debug: bool,
 
-    /// Comma-separated optional hardware to install (dma or none); defaults to none.
+    /// Comma-separated optional hardware to install (dma, math or none); defaults to none.
     #[arg(long, value_delimiter = ',')]
     optional_coprocessors: Vec<OptionalHardware>,
 }
@@ -158,10 +160,14 @@ impl Args {
         }
         let mut config = CpuConfig::default();
         for hardware in &self.optional_coprocessors {
-            if *hardware == OptionalHardware::Dma {
-                config
+            match hardware {
+                OptionalHardware::Dma => config
                     .optional_coprocessors
-                    .push(Box::new(DmaCoprocessor::default()));
+                    .push(Box::new(DmaCoprocessor::default())),
+                OptionalHardware::Math => config
+                    .optional_coprocessors
+                    .push(Box::new(MathsCoprocessor::default())),
+                OptionalHardware::None => {}
             }
         }
         Ok(config)
@@ -356,6 +362,51 @@ mod hardware_tests {
     }
 
     #[test]
+    fn math_and_dma_can_be_selected_independently_or_together() {
+        for (selection, ids) in [
+            ("math", vec![MathsCoprocessor::COPROCESSOR_ID]),
+            (
+                "dma,math",
+                vec![
+                    DmaCoprocessor::COPROCESSOR_ID,
+                    MathsCoprocessor::COPROCESSOR_ID,
+                ],
+            ),
+            (
+                "math,dma",
+                vec![
+                    MathsCoprocessor::COPROCESSOR_ID,
+                    DmaCoprocessor::COPROCESSOR_ID,
+                ],
+            ),
+        ] {
+            let config = parse(&["--optional-coprocessors", selection])
+                .cpu_config()
+                .unwrap();
+            assert_eq!(
+                config
+                    .optional_coprocessors
+                    .iter()
+                    .map(|unit| unit.id())
+                    .collect::<Vec<_>>(),
+                ids
+            );
+            assert!(new_cpu_peripheral_with_config(config).is_ok());
+        }
+        for selection in ["math,math", "dma,math,math"] {
+            assert!(new_cpu_peripheral_with_config(
+                parse(&["--optional-coprocessors", selection])
+                    .cpu_config()
+                    .unwrap()
+            )
+            .is_err());
+        }
+        assert!(parse(&["--optional-coprocessors", "none,math"])
+            .cpu_config()
+            .is_err());
+    }
+
+    #[test]
     fn invalid_hardware_combinations_fail_instead_of_silently_changing_the_machine() {
         assert!(parse(&["--optional-coprocessors", "none,dma"])
             .cpu_config()
@@ -364,7 +415,7 @@ mod hardware_tests {
             .cpu_config()
             .unwrap();
         assert!(new_cpu_peripheral_with_config(config).is_err());
-        for selection in ["math", "unknown"] {
+        for selection in ["unknown", "dma,unknown"] {
             let error = Args::try_parse_from([
                 "sirc-vm",
                 "--program-file",
@@ -373,11 +424,7 @@ mod hardware_tests {
                 selection,
             ])
             .unwrap_err();
-            assert!(error.to_string().contains(if selection == "math" {
-                "not implemented"
-            } else {
-                "unknown optional coprocessor"
-            }));
+            assert!(error.to_string().contains("unknown optional coprocessor"));
         }
     }
 }

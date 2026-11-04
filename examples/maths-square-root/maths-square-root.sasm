@@ -1,0 +1,275 @@
+;; Integer square root by Newton's (Babylonian) method.
+;; x_next = floor((x + floor(N/x))/2); stop when it no longer decreases.
+;; The same protected-mode program runs with a maths chip or a software shim.
+;; Final r4 is the root, r5 the Newton division count, r6 CAFE on success,
+;; and r7 the number of calls emulated (zero when hardware is installed).
+
+; High word of 123456789, the positive integer whose square root we seek.
+.EQU $INPUT_HIGH #0x075B
+; Low word of 123456789; together the two words form the 32-bit dividend.
+.EQU $INPUT_LOW #0xCD15
+; An upper bound for this input; it also keeps each division quotient in 16 bits.
+.EQU $INITIAL_GUESS #32768
+; Known floor(sqrt(123456789)); the program also verifies the square bounds.
+.EQU $EXPECTED_ROOT #11111
+; SR.P selects protected mode, proving the arithmetic operations are user-callable.
+.EQU $PROTECTED_MODE_BIT #0x0100
+; Writable RAM segment for the fault handler frame and execution-path counter.
+.EQU $SCRATCH_SEGMENT #1
+; l addresses a fixed handler frame; this example enables no interrupts.
+.EQU $HANDLER_FRAME #0x0400
+; Preserve caller r4: the current Newton estimate.
+.EQU $FRAME_R4 #0
+; Preserve caller r5: the candidate estimate / final iteration count.
+.EQU $FRAME_R5 #1
+; Preserve caller r6: the running iteration count / success marker.
+.EQU $FRAME_R6 #2
+; Preserve caller r7 across the software emulator.
+.EQU $FRAME_R7 #3
+; Save the caller address-register high word before reading fault metadata.
+.EQU $FRAME_AH #4
+; Save the caller address-register low word before reading fault metadata.
+.EQU $FRAME_AL #5
+; Original dividend high word, restored if emulated division reports an error.
+.EQU $FRAME_R1 #6
+; Original dividend low word, restored if emulated division reports an error.
+.EQU $FRAME_R2 #7
+; Count emulated maths calls; zero proves hardware handled every call.
+.EQU $EMULATED_CALLS #8
+; Fault metadata command identifying unsigned 16-by-16 multiplication.
+.EQU $MULU_COMMAND #0x3000
+; Fault metadata command identifying unsigned 32-by-16 division.
+.EQU $DIVU_COMMAND #0x3200
+; EU fault link whose retry PC must skip the successfully emulated instruction.
+.EQU $FAULT_LINK #6
+; EU metadata link reporting the raw missing-coprocessor command.
+.EQU $FAULT_METADATA_LINK #7
+; Instruction length in words, used when advancing the saved retry PC.
+.EQU $INSTRUCTION_WORDS #2
+; Number of shift/add or shift/subtract iterations for each software operation.
+.EQU $WORD_BITS #16
+; Maths status E|DZ; preserve r1:r2 and return this in r3 on division by zero.
+.EQU $MATHS_ZERO_DIVISOR #3
+; Maths status E|OV; preserve r1:r2 when an unsigned quotient exceeds 65535.
+.EQU $MATHS_QUOTIENT_OVERFLOW #5
+; Final r6 signature proving convergence and both square-bound checks passed.
+.EQU $CHECK_PASSED #0xCAFE
+; Final r6 signature if an arithmetic status or result check fails.
+.EQU $CHECK_FAILED #0xDEAD
+; Simulator debug MMIO segment, addressed through s for exit.
+.EQU $DEBUG_SEGMENT #0x000B
+; Debug device word offset accepting the simulator exit request.
+.EQU $DEBUG_EXIT_OFFSET #7
+; Value written to the debug exit register after reporting the result.
+.EQU $DEBUG_EXIT_REQUEST #1
+
+.ORG 0
+.DQ @start
+.ORG 0x0008
+.DQ @missing_maths
+
+.ORG 0x0200
+:start
+MOVI lh, $SCRATCH_SEGMENT
+MOVI ll, $HANDLER_FRAME
+MOVI sh, $DEBUG_SEGMENT
+MOVI sl, $DEBUG_EXIT_OFFSET
+MOVI r1, #0
+STOR ($EMULATED_CALLS, l), r1
+MOVI r4, $INITIAL_GUESS
+MOVI r6, #0
+; Maths is user-callable; the missing-chip handler alone runs as supervisor.
+ORRI sr, $PROTECTED_MODE_BIT
+
+; First check some emulator edge cases as well as the Newton workload.
+; Maximum unsigned product exercises carry propagation into the high word.
+MOVI r1, #0xFFFF
+MOVI r2, #0xFFFF
+MULU
+CMPI r1, #0xFFFE
+BRAN|!= @failed
+CMPI r2, #1
+BRAN|!= @failed
+CMPI r3, #0
+BRAN|!= @failed
+
+; A division with a seventeenth-bit trial remainder exercises the carry path.
+MOVI r1, #0xFFFE
+MOVI r2, #0xFFFF
+MOVI r3, #0xFFFF
+DIVU
+CMPI r1, #0xFFFE
+BRAN|!= @failed
+CMPI r2, #0xFFFF
+BRAN|!= @failed
+CMPI r3, #0
+BRAN|!= @failed
+
+; Error status is returned normally, preserving both dividend words.
+MOVI r1, #1
+MOVI r2, #0x1234
+MOVI r3, #0
+DIVU
+CMPI r3, $MATHS_ZERO_DIVISOR
+BRAN|!= @failed
+CMPI r1, #1
+BRAN|!= @failed
+CMPI r2, #0x1234
+BRAN|!= @failed
+MOVI r3, #1
+DIVU
+CMPI r3, $MATHS_QUOTIENT_OVERFLOW
+BRAN|!= @failed
+CMPI r1, #1
+BRAN|!= @failed
+CMPI r2, #0x1234
+BRAN|!= @failed
+
+:newton
+MOVI r1, $INPUT_HIGH
+MOVI r2, $INPUT_LOW
+MOVR r3, r4
+DIVU
+CMPI r3, #0
+BRAN|!= @failed
+ADDI r6, #1
+; For this input and initial upper bound the sum fits a word.
+ADDR r5, r4, r2
+SHFT r5, LSR #1
+CMPR r5, r4
+BRAN|CC @converged           ; no subtraction borrow means candidate >= current
+MOVR r4, r5
+BRAN @newton
+
+:converged
+MOVR r5, r6                  ; keep division count before repurposing r6
+CMPI r4, $EXPECTED_ROOT
+BRAN|!= @failed
+
+; Prove root^2 <= N using a full unsigned two-word comparison.
+MOVR r1, r4
+MOVR r2, r4
+MULU
+CMPI r3, #0
+BRAN|!= @failed
+CMPI r1, $INPUT_HIGH
+BRAN|HI @failed
+BRAN|CS @check_upper_bound
+CMPI r2, $INPUT_LOW
+BRAN|HI @failed
+
+:check_upper_bound
+; Prove (root+1)^2 > N, so root is the floor rather than just a lower bound.
+MOVR r1, r4
+ADDI r1, #1
+MOVR r2, r1
+MULU
+CMPI r3, #0
+BRAN|!= @failed
+CMPI r1, $INPUT_HIGH
+BRAN|HI @passed
+BRAN|CS @failed
+CMPI r2, $INPUT_LOW
+BRAN|HI @passed
+BRAN @failed
+
+:passed
+MOVI r6, $CHECK_PASSED
+BRAN @exit
+:failed
+MOVI r6, $CHECK_FAILED
+:exit
+LOAD r7, ($EMULATED_CALLS, l)
+MOVI[N] al, $DEBUG_EXIT_REQUEST
+STOR (s), al
+
+.ORG 0x0600
+:missing_maths
+; The invalid-opcode fault precedes all optional-unit side effects. This
+; illustrative fixed-frame handler recognizes MULU and DIVU only. It is not
+; reentrant and does not attempt to recover unrelated faults.
+STOR ($FRAME_R4, l), r4
+STOR ($FRAME_R5, l), r5
+STOR ($FRAME_R6, l), r6
+STOR ($FRAME_R7, l), r7
+STOR ($FRAME_AH, l), ah
+STOR ($FRAME_AL, l), al
+STOR ($FRAME_R1, l), r1
+STOR ($FRAME_R2, l), r2
+ETFR a, $FAULT_METADATA_LINK
+CMPI al, $MULU_COMMAND
+BRAN|== @multiply
+CMPI al, $DIVU_COMMAND
+BRAN|== @divide
+BRAN @failed
+
+:multiply
+; Software shift/add: r4:r5 is a shifting 32-bit multiplicand, r6 the
+; multiplier, and r1:r2 the accumulating product. No MUL instruction here!
+MOVI r4, #0
+MOVR r5, r1
+MOVR r6, r2
+MOVI r7, $WORD_BITS
+MOVI r1, #0
+MOVI r2, #0
+:multiply_bit
+TSAI r6, #1
+BRAN|== @multiply_shift
+ADDR r2, r2, r5
+ADCR r1, r1, r4
+:multiply_shift
+SHFT r5, LSL #1
+ADCR r4, r4, r4
+SHFT r6, LSR #1
+SUBI r7, #1
+BRAN|!= @multiply_bit
+MOVI r3, #0
+BRAN @emulated
+
+:divide
+CMPI r3, #0
+BRAN|== @zero_divisor
+CMPR r1, r3
+BRAN|CC @quotient_overflow
+MOVI r7, $WORD_BITS
+:divide_bit
+; Shift remainder:quotient left. ADC carries the quotient's old MSB into
+; the remainder; its own carry retains the seventeenth remainder bit.
+SHFT r2, LSL #1
+ADCR r1, r1, r1
+BRAN|CS @subtract_divisor
+CMPR r1, r3
+BRAN|CS @divide_next
+:subtract_divisor
+SUBR r1, r1, r3
+ORRI r2, #1
+:divide_next
+SUBI r7, #1
+BRAN|!= @divide_bit
+MOVI r3, #0
+BRAN @emulated
+:zero_divisor
+MOVI r3, $MATHS_ZERO_DIVISOR
+BRAN @restore_dividend
+:quotient_overflow
+MOVI r3, $MATHS_QUOTIENT_OVERFLOW
+:restore_dividend
+LOAD r1, ($FRAME_R1, l)
+LOAD r2, ($FRAME_R2, l)
+
+:emulated
+; Skip the retryable COP instruction, preserving its saved SR. Address-only
+; transfers leave r7 alone; RETE restores CPU flags/protected mode atomically.
+ETFR a, $FAULT_LINK
+ADDI al, $INSTRUCTION_WORDS
+ETTR $FAULT_LINK, a
+LOAD al, ($EMULATED_CALLS, l)
+ADDI al, #1
+STOR ($EMULATED_CALLS, l), al
+LOAD r4, ($FRAME_R4, l)
+LOAD r5, ($FRAME_R5, l)
+LOAD r6, ($FRAME_R6, l)
+LOAD r7, ($FRAME_R7, l)
+LOAD ah, ($FRAME_AH, l)
+LOAD al, ($FRAME_AL, l)
+RETE
