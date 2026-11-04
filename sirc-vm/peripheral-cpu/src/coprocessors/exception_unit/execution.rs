@@ -65,20 +65,25 @@ pub fn construct_exception_unit_command(op_code: &ExceptionUnitOpCodes, vector: 
 
 /// Validate the operation before a software command can execute or access vectors.
 #[must_use]
-pub fn is_valid_exception_unit_command(command: u16) -> bool {
-    let instruction = decode_exception_unit_instruction(command);
+pub fn is_valid_exception_unit_instruction(instruction: &ExceptionUnitInstruction) -> bool {
     let operation: Option<ExceptionUnitOpCodes> = num::FromPrimitive::from_u8(instruction.op_code);
-    match operation {
-        Some(
-            ExceptionUnitOpCodes::TransferFromRegister | ExceptionUnitOpCodes::TransferToRegister,
-        ) => (instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK) < 8,
-        Some(_) => true,
-        None => false,
-    }
+    operation.is_some()
+        && (!matches!(
+            operation,
+            Some(
+                ExceptionUnitOpCodes::TransferFromRegister
+                    | ExceptionUnitOpCodes::TransferToRegister
+            )
+        ) || (instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK) < 8)
 }
 
 pub fn deconstruct_exception_unit_command(command: u16) -> (ExceptionUnitOpCodes, u8, u8) {
-    let instruction = decode_exception_unit_instruction(command);
+    deconstruct_exception_unit_instruction(&decode_exception_unit_instruction(command))
+}
+
+fn deconstruct_exception_unit_instruction(
+    instruction: &ExceptionUnitInstruction,
+) -> (ExceptionUnitOpCodes, u8, u8) {
     // The CU rejects reserved operations before dispatch. Keep decoding total for
     // callers inspecting raw command words; decoding alone does not validate them.
     let op_code =
@@ -364,13 +369,34 @@ impl Executor for ExceptionUnitExecutor {
         eu_registers: &'a mut ExceptionUnitRegisters,
         bus_assertions: BusAssertions,
     ) -> BusAssertions {
+        self.step_decoded(
+            phase,
+            &decode_exception_unit_instruction(command),
+            registers,
+            eu_registers,
+            bus_assertions,
+        )
+    }
+}
+
+impl ExceptionUnitExecutor {
+    /// Execute the instruction already decoded and validated by the CU.
+    #[allow(clippy::cast_lossless)]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn step_decoded(
+        &mut self,
+        phase: &ExecutionPhase,
+        instruction: &ExceptionUnitInstruction,
+        registers: &mut Registers,
+        eu_registers: &mut ExceptionUnitRegisters,
+        bus_assertions: BusAssertions,
+    ) -> BusAssertions {
         trace!(
             "PHASE '{phase:?}' :: FAULT '{:?}'",
             eu_registers.pending_fault
         );
 
-        let instruction = decode_exception_unit_instruction(command);
-        let (op_code, vector, level) = deconstruct_exception_unit_command(command);
+        let (op_code, vector, level) = deconstruct_exception_unit_instruction(instruction);
 
         trace!("op_code: {op_code:?} vector: 0x{vector:X} level: 0x{level:X}");
 
@@ -452,7 +478,7 @@ impl Executor for ExceptionUnitExecutor {
                     }
                     ExceptionUnitOpCodes::TransferFromRegister => {
                         let (register_select, link_register) =
-                            extract_transfer_instruction_parameters(&instruction, eu_registers);
+                            extract_transfer_instruction_parameters(instruction, eu_registers);
 
                         match register_select {
                             0 => {}
@@ -472,7 +498,7 @@ impl Executor for ExceptionUnitExecutor {
                     }
                     ExceptionUnitOpCodes::TransferToRegister => {
                         let (register_select, link_register) =
-                            extract_transfer_instruction_parameters(&instruction, eu_registers);
+                            extract_transfer_instruction_parameters(instruction, eu_registers);
 
                         trace!(
                             "B4! Registers: a: [{:X}] r7: [{:X}]",
@@ -770,7 +796,12 @@ mod tests {
                 let command = 0x1000 | (op << 8) | payload;
                 let valid =
                     !(2..=8).contains(&op) && (!(12..=13).contains(&op) || payload & 0xf < 8);
-                assert_eq!(is_valid_exception_unit_command(command), valid);
+                assert_eq!(
+                    is_valid_exception_unit_instruction(&decode_exception_unit_instruction(
+                        command
+                    )),
+                    valid
+                );
             }
         }
     }

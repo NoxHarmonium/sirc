@@ -43,9 +43,10 @@ use coprocessors::{
             vectors::DOUBLE_FAULT_VECTOR, ExceptionPriorities, ExceptionUnitOpCodes, Faults,
             PendingFault,
         },
+        encoding::decode_exception_unit_instruction,
         execution::{
             construct_exception_unit_command, deconstruct_exception_unit_command,
-            is_valid_exception_unit_command, select_pending_event, ExceptionUnitExecutor,
+            is_valid_exception_unit_instruction, select_pending_event, ExceptionUnitExecutor,
         },
     },
     processing_unit::execution::ProcessingUnitExecutor,
@@ -493,20 +494,23 @@ impl CpuPeripheral {
             self.eu_registers.pending_fault
         );
 
-        let result = match coprocessor_id {
-            ProcessingUnitExecutor::COPROCESSOR_ID => self.processing_unit_executor.step(
+        // EU validation and execution share the same decoded instruction.
+        let eu_instruction = (coprocessor_id == ExceptionUnitExecutor::COPROCESSOR_ID)
+            .then(|| decode_exception_unit_instruction(self.active_command));
+        let result = match (coprocessor_id, eu_instruction.as_ref()) {
+            (ProcessingUnitExecutor::COPROCESSOR_ID, _) => self.processing_unit_executor.step(
                 &phase,
                 self.active_command,
                 &mut self.registers,
                 &mut self.eu_registers,
                 bus_assertions,
             ),
-            ExceptionUnitExecutor::COPROCESSOR_ID
-                if is_valid_exception_unit_command(self.active_command) =>
+            (ExceptionUnitExecutor::COPROCESSOR_ID, Some(instruction))
+                if is_valid_exception_unit_instruction(instruction) =>
             {
-                self.exception_unit_executor.step(
+                self.exception_unit_executor.step_decoded(
                     &phase,
-                    self.active_command,
+                    instruction,
                     &mut self.registers,
                     &mut self.eu_registers,
                     bus_assertions,
