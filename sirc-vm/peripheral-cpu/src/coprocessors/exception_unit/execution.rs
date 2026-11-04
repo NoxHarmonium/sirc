@@ -67,14 +67,13 @@ pub fn construct_exception_unit_command(op_code: &ExceptionUnitOpCodes, vector: 
 #[must_use]
 pub fn is_valid_exception_unit_instruction(instruction: &ExceptionUnitInstruction) -> bool {
     let operation: Option<ExceptionUnitOpCodes> = num::FromPrimitive::from_u8(instruction.op_code);
-    operation.is_some()
-        && (!matches!(
-            operation,
-            Some(
-                ExceptionUnitOpCodes::TransferFromRegister
-                    | ExceptionUnitOpCodes::TransferToRegister
-            )
-        ) || (instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK) < 8)
+    match operation {
+        Some(
+            ExceptionUnitOpCodes::TransferFromRegister | ExceptionUnitOpCodes::TransferToRegister,
+        ) => (instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK) < 8,
+        Some(_) => true,
+        None => false,
+    }
 }
 
 pub fn deconstruct_exception_unit_command(command: u16) -> (ExceptionUnitOpCodes, u8, u8) {
