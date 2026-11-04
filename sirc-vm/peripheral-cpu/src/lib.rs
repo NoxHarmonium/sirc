@@ -52,7 +52,7 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
 };
-use num::ToPrimitive;
+use num::{Integer, ToPrimitive};
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
@@ -458,6 +458,26 @@ impl CpuPeripheral {
             } else if let Some(event) = select_pending_event(&self.registers, &self.eu_registers) {
                 (
                     event.accept(&mut self.eu_registers, self.registers.get_full_pc_address()),
+                    SlotOwner::EuEvent,
+                )
+            } else if self.registers.pl.is_odd() {
+                // Alignment matters only when arbitration would start a PU fetch.
+                // Use this very phase 0 for fault entry; the odd PC never reaches the bus.
+                let pc = self.registers.get_full_pc_address();
+                raise_fault(
+                    &mut self.eu_registers,
+                    Faults::Alignment,
+                    &BusAssertions {
+                        address: pc,
+                        bus_access_type: BusAccessType::InstructionFetch,
+                        ..BusAssertions::default()
+                    },
+                    pc,
+                );
+                (
+                    select_pending_event(&self.registers, &self.eu_registers)
+                        .expect("alignment fault must be eligible for dispatch")
+                        .accept(&mut self.eu_registers, pc),
                     SlotOwner::EuEvent,
                 )
             } else {

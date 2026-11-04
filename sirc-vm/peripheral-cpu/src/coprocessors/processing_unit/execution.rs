@@ -1,5 +1,4 @@
 use log::trace;
-use num::Integer;
 // use log::trace;
 use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 
@@ -92,15 +91,6 @@ impl Executor for ProcessingUnitExecutor {
             "phase: {phase:?} sr: 0x{:X} bus_assertions: {bus_assertions:X?}",
             registers.sr
         );
-
-        if registers.pl.is_odd() {
-            raise_fault(
-                eu_registers,
-                Faults::Alignment,
-                &bus_assertions,
-                registers.get_full_pc_address(),
-            );
-        }
 
         let result = match phase {
             ExecutionPhase::InstructionFetchLow => {

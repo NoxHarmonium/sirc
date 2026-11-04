@@ -1,3 +1,4 @@
+mod alignment;
 mod command_dispatch;
 mod common;
 mod deferred_trace;
