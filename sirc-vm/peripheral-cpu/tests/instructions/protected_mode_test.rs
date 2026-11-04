@@ -22,6 +22,13 @@ struct ProtectedModeResult {
     coprocessor_select_register: u16,
 }
 
+fn get_cpu(bus: &mut BusPeripheral) -> &mut CpuPeripheral {
+    bus.bus_master
+        .as_any()
+        .downcast_mut::<CpuPeripheral>()
+        .expect("failed to downcast")
+}
+
 fn run_instruction<F>(instruction_data: &InstructionData, register_setup: F) -> ProtectedModeResult
 where
     F: Fn(&mut Registers, &mut BusPeripheral),
@@ -30,11 +37,7 @@ where
     common::setup_test(&mut bus, register_setup, 0x00CC_0000);
     bus.run_full_cycle(CYCLES_PER_INSTRUCTION.into());
 
-    let cpu: &mut CpuPeripheral = bus
-        .bus_master
-        .as_any()
-        .downcast_mut::<CpuPeripheral>()
-        .expect("failed to downcast");
+    let cpu = get_cpu(&mut bus);
 
     ProtectedModeResult {
         registers: cpu.registers,
@@ -667,10 +670,30 @@ fn short_copi_cannot_encode_privileged_coprocessor_command() {
         condition_flag: ConditionFlags::Always,
         additional_flags: 0x0,
     });
-    let result = run_instruction(&short_copi, |registers, _| {
-        enable_protected_mode(registers);
-        registers.r1 = 0x1900;
-    });
-    assert_no_fault(&result);
-    assert_eq!(0, result.coprocessor_select_register);
+    let mut bus = common::set_up_instruction_test(&short_copi, 0x00CC_0000);
+    common::setup_test(
+        &mut bus,
+        |registers, _| {
+            enable_protected_mode(registers);
+            registers.r1 = 0x1900;
+        },
+        0x00CC_0000,
+    );
+    bus.run_full_cycle(4);
+    let cpu = get_cpu(&mut bus);
+    assert_eq!(cpu.phase, 4);
+    // Before write-back can discard an ID-0 command, prove the effective
+    // command is the zero-extended byte, not shifted or taken from r1.
+    assert_eq!(
+        cpu.processing_unit_executor
+            .intermediate_registers
+            .alu_output,
+        0x0019
+    );
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    bus.run_full_cycle(2);
+    let cpu = get_cpu(&mut bus);
+    assert_eq!(cpu.phase, 0);
+    assert!(cpu.eu_registers.pending_fault.is_none());
+    assert_eq!(cpu.registers.coprocessor_select_register, 0);
 }

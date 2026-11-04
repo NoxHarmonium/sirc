@@ -21,7 +21,7 @@ use peripheral_cpu::{
     },
     new_cpu_peripheral,
     registers::{set_hardware_interrupt_enable, RegisterName, StatusRegisterFields},
-    CpuPeripheral,
+    CpuPeripheral, COPROCESSOR_ID_MASK,
 };
 
 fn tick(cpu: &mut CpuPeripheral, data: u16, interrupt: u8) -> BusAssertions {
@@ -76,7 +76,11 @@ fn issue(cpu: &mut CpuPeripheral, command: u16, interrupt: u8, register_call: bo
     assert_eq!(cpu.phase, 0);
     assert_eq!(
         cpu.registers.coprocessor_select_register,
-        if command & 0xf000 == 0 { 0 } else { command }
+        if command & COPROCESSOR_ID_MASK == 0 {
+            0
+        } else {
+            command
+        }
     );
 }
 
