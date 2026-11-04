@@ -103,6 +103,7 @@ jobs:
             "basic-video",
             "boring",
             "byte-sieve",
+            "dma-copy",
             "faults",
             "hardware-exception",
             "software-exception",

@@ -1,0 +1,83 @@
+;; The same binary copies eight words with either the DMA chip or a small
+;; invalid-opcode fallback. R6=CAFE means pointers and every copied word passed.
+;; R5=0 identifies hardware; R5=1 identifies the software fallback.
+.ORG 0x0000
+.DQ @start
+.ORG 0x0008
+.DQ @missing_dma
+
+.ORG 0x0200
+:start
+MOVI ah, #0
+MOVI al, #0x0800
+MOVI lh, #1
+MOVI ll, #0x0100
+MOVI sh, #1
+MOVI sl, #0x0200
+MOVI r1, #0
+STOR (s), r1
+DMAT a, l, #8
+
+; The architectural pointer advances must agree in both configurations.
+CMPI al, #0x0808
+BRAN|!= @failed
+CMPI ll, #0x0108
+BRAN|!= @failed
+MOVI al, #0x0800
+MOVI ll, #0x0100
+MOVI r3, #8
+:verify
+LOAD r1, (#0, a)+
+LOAD r2, (#0, l)+
+CMPR r1, r2
+BRAN|!= @failed
+SUBI r3, #1
+BRAN|!= @verify
+MOVI r6, #0xCAFE
+BRAN @exit
+:failed
+MOVI r6, #0xDEAD
+:exit
+LOAD r5, (s)
+MOVI ah, #0x000B
+MOVI al, #7
+MOVI r7, #1
+STOR (a), r7
+
+.ORG 0x0400
+:missing_dma
+; This deliberately small handler supports only this example's fixed DMAT #8.
+; Missing hardware faults before any DMA word or pointer has been committed.
+MOVR r2, ah
+MOVR r4, al
+ETFR a, #7
+CMPI al, #0x2A08
+BRAN|!= @failed
+MOVR ah, r2
+MOVR al, r4
+MOVI r3, #8
+:copy_word
+LOAD r1, (#0, a)+
+STOR (#0, l), r1
+ADDI ll, #1
+SUBI r3, #1
+BRAN|!= @copy_word
+MOVI r7, #1
+STOR (s), r7
+
+; Invalid opcode is retryable; skip the emulated instruction on return.
+MOVR r2, ah
+MOVR r4, al
+ETFR a, #6
+ADDI al, #2
+ETTR #6, a
+MOVR ah, r2
+MOVR al, r4
+RETE
+
+.ORG 0x0800
+; Pack pairs into 32-bit data directives: eight consecutive 16-bit words.
+.DQ #0x11112222
+.DQ #0x33334444
+.DQ #0x55556666
+.DQ #0x77778888

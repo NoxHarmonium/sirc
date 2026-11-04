@@ -1,0 +1,71 @@
+===REGISTERS===
+Registers {
+    sr: 0x0,
+    r1: 0x8888,
+    r2: 0x8888,
+    r3: 0x0,
+    r4: 0x4444,
+    r5: 0x0,
+    r6: 0xcafe,
+    r7: 0x1,
+    lh: 0x1,
+    ll: 0x108,
+    ah: 0xb,
+    al: 0x7,
+    sh: 0x1,
+    sl: 0x200,
+    ph: 0x0,
+    pl: 0x23c,
+    coprocessor_select_register: 0x0,
+}
+===EXCEPTION UNIT REGISTERS===
+ExceptionUnitRegisters {
+    pending_hardware_exceptions: 0x0,
+    l5_overrun: false,
+    pending_fault: None,
+    link_registers: [
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+        ExceptionLinkRegister {
+            return_address: 0x0,
+            return_status_register: 0x0,
+            saved_exception_level: 0x0,
+        },
+    ],
+    waiting_for_exception: false,
+    cpu_halted: false,
+    current_exception_level: 0x0,
+}
