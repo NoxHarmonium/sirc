@@ -76,7 +76,11 @@ fn check(opcode: u16, high: u16, low: u16, divisor: u16) {
         assert!(!out.bus_access_strobe);
         steps += 1;
         let work = unit.work.as_ref().unwrap();
-        assert!(work.wide <= 0x0001_ffff);
+        let wide = match work {
+            Work::Multiply(work) => work.accumulator,
+            Work::Divide(work) => work.shifted_remainder,
+        };
+        assert!(wide <= 0x0001_ffff);
         if !unit.is_finished() {
             assert_eq!(registers, before, "no early architectural result");
         }
@@ -127,6 +131,19 @@ fn every_signed_operand_handles_negation_including_the_most_negative_word() {
     }
 }
 
+fn multiply_work(unit: &MathsCoprocessor) -> &MultiplyWork {
+    match unit.work.as_ref().unwrap() {
+        Work::Multiply(work) => work,
+        Work::Divide(_) => panic!("expected multiply work"),
+    }
+}
+fn divide_work(unit: &MathsCoprocessor) -> &DivideWork {
+    match unit.work.as_ref().unwrap() {
+        Work::Divide(work) => work,
+        Work::Multiply(_) => panic!("expected divide work"),
+    }
+}
+
 #[test]
 fn the_datapath_really_advances_one_add_or_shift_per_cycle() {
     let mut registers = Registers {
@@ -140,16 +157,25 @@ fn the_datapath_really_advances_one_add_or_shift_per_cycle() {
         unit.step(ExecutionPhase::InstructionFetchHigh, &mut registers)
             .unwrap();
     }
-    let work = unit.work.as_ref().unwrap();
-    assert_eq!((work.wide, work.low, work.bits_left), (0, 5, 16));
+    let work = multiply_work(&unit);
+    assert_eq!(
+        (work.accumulator, work.multiplier, work.bits_left),
+        (0, 5, 16)
+    );
     unit.step(ExecutionPhase::MemoryAccessExecutor, &mut registers)
         .unwrap();
-    let work = unit.work.as_ref().unwrap();
-    assert_eq!((work.wide, work.low, work.bits_left), (3, 5, 16));
+    let work = multiply_work(&unit);
+    assert_eq!(
+        (work.accumulator, work.multiplier, work.bits_left),
+        (3, 5, 16)
+    );
     unit.step(ExecutionPhase::WriteBackExecutor, &mut registers)
         .unwrap();
-    let work = unit.work.as_ref().unwrap();
-    assert_eq!((work.wide, work.low, work.bits_left), (1, 0x8002, 15));
+    let work = multiply_work(&unit);
+    assert_eq!(
+        (work.accumulator, work.multiplier, work.bits_left),
+        (1, 0x8002, 15)
+    );
     assert_eq!((registers.r1, registers.r2), (3, 5));
 }
 
@@ -169,18 +195,18 @@ fn division_retains_the_shifted_remainder_on_borrow_and_sets_a_quotient_bit_on_s
     }
     unit.step(ExecutionPhase::MemoryAccessExecutor, &mut registers)
         .unwrap();
-    assert_eq!(unit.work.as_ref().unwrap().wide, 2);
+    assert_eq!(divide_work(&unit).shifted_remainder, 2);
     unit.step(ExecutionPhase::WriteBackExecutor, &mut registers)
         .unwrap();
-    let work = unit.work.as_ref().unwrap();
-    assert_eq!((work.high, work.low, work.bits_left), (2, 0, 15));
+    let work = divide_work(&unit);
+    assert_eq!((work.remainder, work.quotient, work.bits_left), (2, 0, 15));
     unit.step(ExecutionPhase::InstructionFetchLow, &mut registers)
         .unwrap();
-    assert_eq!(unit.work.as_ref().unwrap().wide, 4);
+    assert_eq!(divide_work(&unit).shifted_remainder, 4);
     unit.step(ExecutionPhase::InstructionFetchHigh, &mut registers)
         .unwrap();
-    let work = unit.work.as_ref().unwrap();
-    assert_eq!((work.high, work.low, work.bits_left), (1, 1, 14));
+    let work = divide_work(&unit);
+    assert_eq!((work.remainder, work.quotient, work.bits_left), (1, 1, 14));
     assert_eq!((registers.r1, registers.r2, registers.r3), (1, 0, 3));
     unit.reset();
     assert!(unit.is_finished());
