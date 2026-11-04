@@ -62,7 +62,7 @@ impl NumericField {
             Self::Immediate8 => (0, 255, "8 bits for a shifted immediate"),
             Self::ShiftCount => (0, 15, "shift count (range of 0-15)"),
             Self::ExceptionVector => (0, 255, "EXCP vector (8 bits)"),
-            Self::ExceptionLinkIndex => (0, 15, "exception link index (4 bits)"),
+            Self::ExceptionLinkIndex => (0, 7, "exception link index (range of 0-7)"),
             Self::DmaRegisterCount => (-7, 7, "DMA register count (range -7..7)"),
             Self::DmaTransferCount => (0, 255, "DMA transfer count (8 bits)"),
         };

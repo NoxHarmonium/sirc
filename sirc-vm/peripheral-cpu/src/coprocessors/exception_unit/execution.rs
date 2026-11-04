@@ -67,7 +67,14 @@ pub fn construct_exception_unit_command(op_code: &ExceptionUnitOpCodes, vector: 
 #[must_use]
 pub fn is_valid_exception_unit_command(command: u16) -> bool {
     let instruction = decode_exception_unit_instruction(command);
-    num::FromPrimitive::from_u8(instruction.op_code).is_some_and(|_: ExceptionUnitOpCodes| true)
+    let operation: Option<ExceptionUnitOpCodes> = num::FromPrimitive::from_u8(instruction.op_code);
+    match operation {
+        Some(
+            ExceptionUnitOpCodes::TransferFromRegister | ExceptionUnitOpCodes::TransferToRegister,
+        ) => (instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK) < 8,
+        Some(_) => true,
+        None => false,
+    }
 }
 
 pub fn deconstruct_exception_unit_command(command: u16) -> (ExceptionUnitOpCodes, u8, u8) {
@@ -460,7 +467,7 @@ impl Executor for ExceptionUnitExecutor {
                             _ => panic!("ETFR register select can only be in the range of 0-3"),
                         }
 
-                        trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
+                        trace!("ETFR! register_select: {register_select} link_register: {link_register:X?} lri: {} | <-- Registers: a: [{:X}] r7: [{:X}]", instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK, registers.get_full_address_address(), registers.r7);
                         trace!("ALL: {:X?}", eu_registers.link_registers);
                     }
                     ExceptionUnitOpCodes::TransferToRegister => {
@@ -486,7 +493,7 @@ impl Executor for ExceptionUnitExecutor {
                             _ => panic!("ETTR register select can only be in the range of 0-3"),
                         }
 
-                        trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", current_exception_level - 1, registers.get_full_address_address(), registers.r7);
+                        trace!("ETTR! register_select: {register_select} link_register: {link_register:X?} lri: {} | --> Registers: a: [{:X}] r7: [{:X}]", instruction.value & EXCEPTION_UNIT_TRANSFER_EU_REGISTER_MASK, registers.get_full_address_address(), registers.r7);
                     }
                     // Software commands were privilege-checked by their issuing
                     // PU instruction before CSR write-back.
@@ -761,10 +768,9 @@ mod tests {
         for op in 0u16..=15 {
             for payload in 0..=255 {
                 let command = 0x1000 | (op << 8) | payload;
-                assert_eq!(
-                    is_valid_exception_unit_command(command),
-                    !(2..=8).contains(&op)
-                );
+                let valid =
+                    !(2..=8).contains(&op) && (!(12..=13).contains(&op) || payload & 0xf < 8);
+                assert_eq!(is_valid_exception_unit_command(command), valid);
             }
         }
     }

@@ -526,3 +526,105 @@ fn reserved_eu_operations_fault_without_accessing_their_payload_vectors() {
         assert_invalid_command(&mut cpu, command);
     }
 }
+
+#[test]
+fn invalid_transfer_indices_fault_before_modifying_registers_or_links() {
+    for operation in [0x1c00, 0x1d00] {
+        for selection in 0..=3 {
+            for index in 8..=15 {
+                for register_call in [false, true] {
+                    let mut cpu = new_cpu_peripheral();
+                    let command = operation | (selection << 4) | index;
+                    cpu.registers.ah = 0x1234;
+                    cpu.registers.al = 0x5678;
+                    cpu.registers.r7 = 0xabcd;
+                    // Transfer tracing must also be safe outside a handler (level 0).
+                    for (i, link) in cpu.eu_registers.link_registers.iter_mut().enumerate() {
+                        link.return_address = u32::try_from(i).unwrap() * 0x100;
+                        link.return_status_register = 0x4321;
+                    }
+                    issue(&mut cpu, command, 0, register_call);
+                    let mut expected_registers = cpu.registers;
+                    expected_registers.coprocessor_select_register = 0;
+                    let links = cpu.eu_registers.link_registers;
+                    assert_invalid_command(&mut cpu, command);
+                    // Fault entry changes PC/SR and LR6/LR7; no transfer may run.
+                    assert_eq!(cpu.registers.ah, expected_registers.ah);
+                    assert_eq!(cpu.registers.al, expected_registers.al);
+                    assert_eq!(cpu.registers.r7, expected_registers.r7);
+                    assert_eq!(&cpu.eu_registers.link_registers[..6], &links[..6]);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn legal_transfer_index_boundaries_keep_timing_and_selected_fields() {
+    for operation in [0x1c00, 0x1d00] {
+        for selection in 0..=3 {
+            for index in [0u16, 7] {
+                for register_call in [false, true] {
+                    let mut cpu = new_cpu_peripheral();
+                    cpu.registers.ah = 0x12;
+                    cpu.registers.al = 0x3456;
+                    cpu.registers.r7 = 0xabcd;
+                    let link = &mut cpu.eu_registers.link_registers[usize::from(index)];
+                    link.return_address = 0x0065_4321;
+                    link.return_status_register = 0x5678;
+                    let command = operation | (selection << 4) | index;
+                    issue(&mut cpu, command, 0, register_call);
+                    for _ in 0..6 {
+                        assert!(!tick(&mut cpu, 0, 0).bus_access_strobe);
+                        assert!(cpu.eu_registers.pending_fault.is_none());
+                    }
+                    assert_eq!(cpu.phase, 0);
+                    assert_eq!(cpu.registers.pl, 0x0202);
+                    assert_eq!(cpu.registers.coprocessor_select_register, 0);
+                    let link = cpu.eu_registers.link_registers[usize::from(index)];
+                    let from_link = operation == 0x1c00;
+                    assert_eq!(
+                        cpu.registers.ah,
+                        if from_link && selection & 1 != 0 {
+                            0x65
+                        } else {
+                            0x12
+                        }
+                    );
+                    assert_eq!(
+                        cpu.registers.al,
+                        if from_link && selection & 1 != 0 {
+                            0x4321
+                        } else {
+                            0x3456
+                        }
+                    );
+                    assert_eq!(
+                        cpu.registers.r7,
+                        if from_link && selection & 2 != 0 {
+                            0x5678
+                        } else {
+                            0xabcd
+                        }
+                    );
+                    assert_eq!(
+                        link.return_address,
+                        if !from_link && selection & 1 != 0 {
+                            0x0012_3456
+                        } else {
+                            0x0065_4321
+                        }
+                    );
+                    assert_eq!(
+                        link.return_status_register,
+                        if !from_link && selection & 2 != 0 {
+                            0xabcd
+                        } else {
+                            0x5678
+                        }
+                    );
+                }
+            }
+        }
+    }
+}
