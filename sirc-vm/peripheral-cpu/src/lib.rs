@@ -52,7 +52,7 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
 };
-use num::ToPrimitive;
+use num::{Integer, ToPrimitive};
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use registers::ExceptionUnitRegisters;
@@ -460,7 +460,7 @@ impl CpuPeripheral {
                     event.accept(&mut self.eu_registers, self.registers.get_full_pc_address()),
                     SlotOwner::EuEvent,
                 )
-            } else if self.registers.pl & 1 != 0 {
+            } else if self.registers.pl.is_odd() {
                 // Alignment matters only when arbitration would start a PU fetch.
                 // Use this very phase 0 for fault entry; the odd PC never reaches the bus.
                 let pc = self.registers.get_full_pc_address();
