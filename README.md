@@ -74,6 +74,7 @@ the [byte-sieve example project](https://github.com/NoxHarmonium/sirc/blob/main/
 It involves the assembler, linker and the virtual machine.
 
 You can also use the `--help` command line switches for each component.
+Optional hardware is selectable at startup; see the [VM hardware configuration](sirc-vm/README.md).
 
 ```bash
 $ cargo run --bin assembler -- --help

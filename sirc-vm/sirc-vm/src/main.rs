@@ -15,7 +15,7 @@
 
 use std::{cell::RefCell, path::PathBuf, process::exit, thread};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use log::{error, info, Level};
 
 use sirc_vm::debug_adapter::debug_map::read_debug_map;
@@ -28,7 +28,9 @@ use device_ram::{
 };
 use device_terminal::new_terminal_device;
 use peripheral_bus::new_bus_peripheral;
-use peripheral_cpu::new_cpu_peripheral;
+use peripheral_cpu::{
+    coprocessors::dma::DmaCoprocessor, new_cpu_peripheral_with_config, CpuConfig,
+};
 
 #[cfg(feature = "video")]
 use device_video::new_video_device;
@@ -99,6 +101,27 @@ struct SegmentArg {
     pub writeable: bool,
 }
 
+// These are built-in hardware implementations, selected once at VM startup.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum OptionalHardware {
+    Dma,
+    None,
+}
+
+impl std::str::FromStr for OptionalHardware {
+    type Err = String;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "dma" => Ok(Self::Dma),
+            "none" => Ok(Self::None),
+            "math" => Err("math hardware is not implemented".into()),
+            _ => Err(format!(
+                "unknown optional coprocessor '{value}'; expected dma or none"
+            )),
+        }
+    }
+}
+
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
@@ -120,6 +143,29 @@ pub struct Args {
 
     #[clap(short, long)]
     debug: bool,
+
+    /// Comma-separated optional hardware to install (dma or none); defaults to none.
+    #[arg(long, value_delimiter = ',')]
+    optional_coprocessors: Vec<OptionalHardware>,
+}
+
+impl Args {
+    fn cpu_config(&self) -> Result<CpuConfig, String> {
+        if self.optional_coprocessors.contains(&OptionalHardware::None)
+            && self.optional_coprocessors.len() != 1
+        {
+            return Err("none must be used alone in --optional-coprocessors".into());
+        }
+        let mut config = CpuConfig::default();
+        for hardware in &self.optional_coprocessors {
+            if *hardware == OptionalHardware::Dma {
+                config
+                    .optional_coprocessors
+                    .push(Box::new(DmaCoprocessor::default()));
+            }
+        }
+        Ok(config)
+    }
 }
 
 fn main() {
@@ -183,7 +229,14 @@ fn main() {
 fn setup_vm(args: &Args) -> Vm {
     let master_clock_freq = 21_477_272;
 
-    let mut cpu_peripheral = new_cpu_peripheral();
+    let mut cpu_peripheral = args
+        .cpu_config()
+        .and_then(new_cpu_peripheral_with_config)
+        .unwrap_or_else(|message| {
+            Args::command()
+                .error(clap::error::ErrorKind::InvalidValue, message)
+                .exit()
+        });
     // Jump to reset vector
     cpu_peripheral.reset();
 
@@ -266,5 +319,65 @@ fn setup_vm(args: &Args) -> Vm {
     Vm {
         bus_peripheral: RefCell::new(bus_peripheral),
         vsync_frequency,
+    }
+}
+
+#[cfg(test)]
+mod hardware_tests {
+    use super::*;
+
+    fn parse(selection: &[&str]) -> Args {
+        Args::try_parse_from(
+            ["sirc-vm", "--program-file", "unused.bin"]
+                .into_iter()
+                .chain(selection.iter().copied()),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn hardware_is_opt_in_and_none_is_explicitly_supported() {
+        for selection in [&[][..], &["--optional-coprocessors", "none"][..]] {
+            assert!(parse(selection)
+                .cpu_config()
+                .unwrap()
+                .optional_coprocessors
+                .is_empty());
+        }
+        let config = parse(&["--optional-coprocessors", "dma"])
+            .cpu_config()
+            .unwrap();
+        assert_eq!(config.optional_coprocessors.len(), 1);
+        assert_eq!(
+            config.optional_coprocessors[0].id(),
+            DmaCoprocessor::COPROCESSOR_ID
+        );
+        assert!(new_cpu_peripheral_with_config(config).is_ok());
+    }
+
+    #[test]
+    fn invalid_hardware_combinations_fail_instead_of_silently_changing_the_machine() {
+        assert!(parse(&["--optional-coprocessors", "none,dma"])
+            .cpu_config()
+            .is_err());
+        let config = parse(&["--optional-coprocessors", "dma,dma"])
+            .cpu_config()
+            .unwrap();
+        assert!(new_cpu_peripheral_with_config(config).is_err());
+        for selection in ["math", "unknown"] {
+            let error = Args::try_parse_from([
+                "sirc-vm",
+                "--program-file",
+                "unused.bin",
+                "--optional-coprocessors",
+                selection,
+            ])
+            .unwrap_err();
+            assert!(error.to_string().contains(if selection == "math" {
+                "not implemented"
+            } else {
+                "unknown optional coprocessor"
+            }));
+        }
     }
 }

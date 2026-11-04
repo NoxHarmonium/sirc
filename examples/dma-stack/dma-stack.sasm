@@ -1,0 +1,195 @@
+;; Batch push/pop of r1..r7 on a descending stack, using optional DMA hardware.
+;; The same binary has a fixed-command fallback when the DMA chip is absent.
+;; s is the stack; l is reserved for fallback scratch; a is scratch for assertions.
+;; We stay in supervisor mode: DMA commands are privileged.
+
+; Writable RAM segment containing the descending stack and handler scratch area.
+.EQU $STACK_SEGMENT #1
+; Empty stack pointer: the next push reserves words immediately below this address.
+.EQU $STACK_TOP #0x0200
+; Expected stack low word after reserving seven words: STACK_TOP - 7.
+.EQU $FRAME_BOTTOM #0x01F9
+; DMAR/DMAW transfer the fixed r1..r7 window, in ascending register order.
+.EQU $SAVED_REGISTERS #7
+; Negative count pre-decrements s by seven, then writes ascending addresses.
+.EQU $PUSH_REGISTERS #-7
+; l points outside the stack to scratch words used by the missing-chip handler.
+.EQU $HANDLER_SCRATCH #0x0400
+; Handler scratch word preserving the caller's address-register high word.
+.EQU $SAVED_AH #0
+; Handler scratch word preserving the caller's address-register low word.
+.EQU $SAVED_AL #1
+; Handler scratch word: 0 for hardware, 1 if software emulated a burst.
+.EQU $PATH_MARKER #2
+; Handler scratch word holding CAFE on success or DEAD on a failed assertion.
+.EQU $RESULT_MARKER #3
+; Fault metadata encoding of DMAW s,#-7: ID 2, op 9, pair s, backward, count 7.
+.EQU $PUSH_COMMAND #0x29A7
+; Fault metadata encoding of DMAR s,#7: ID 2, op 8, pair s, forward, count 7.
+.EQU $POP_COMMAND #0x2887
+; EU fault link holding the retry PC and SR; its PC is advanced after emulation.
+.EQU $FAULT_LINK #6
+; EU fault metadata link whose address field reports the rejected command.
+.EQU $FAULT_METADATA_LINK #7
+; Size of one instruction in words; skip the successfully emulated COP call.
+.EQU $INSTRUCTION_WORDS #2
+; Marker set only by the missing-chip handler, so checks prove the selected path.
+.EQU $SOFTWARE_PATH #1
+; Result signature written only after stack layout and all restored registers pass.
+.EQU $CHECK_PASSED #0xCAFE
+; Result signature used if a stack, register or unsupported-command check fails.
+.EQU $CHECK_FAILED #0xDEAD
+; Simulator debug MMIO segment used to terminate the example.
+.EQU $DEBUG_SEGMENT #0x000B
+; Word offset of the debug device exit-request register.
+.EQU $DEBUG_EXIT_OFFSET #7
+; Value which requests simulator exit when written to DEBUG_EXIT_OFFSET.
+.EQU $DEBUG_EXIT_REQUEST #1
+
+.ORG 0x0000
+.DQ @start
+.ORG 0x0008
+.DQ @missing_dma
+
+.ORG 0x0200
+:start
+MOVI sh, $STACK_SEGMENT
+MOVI sl, $STACK_TOP
+MOVI lh, $STACK_SEGMENT
+MOVI ll, $HANDLER_SCRATCH
+MOVI r1, #0
+STOR ($PATH_MARKER, l), r1
+MOVI r1, #0x1111
+MOVI r2, #0x2222
+MOVI r3, #0x3333
+MOVI r4, #0x4444
+MOVI r5, #0x5555
+MOVI r6, #0x6666
+MOVI r7, #0x7777
+
+; PUSH: reserve the whole frame first, then write r1 at [s], r2 at [s+1],
+; ... r7 at [s+6]. This is NOT seven individually pre-decremented stores in
+; r1..r7 order (which would reverse the frame's memory layout).
+; At seven words the no-wait DMA call costs 18 cycles; seven STORs cost 42.
+DMAW s, $PUSH_REGISTERS
+CMPI sl, $FRAME_BOTTOM
+BRAN|!= @failed
+
+; Check the complete frame layout without disturbing any general register.
+LOAD al, (#0, s)
+CMPI al, #0x1111
+BRAN|!= @failed
+LOAD al, (#1, s)
+CMPI al, #0x2222
+BRAN|!= @failed
+LOAD al, (#2, s)
+CMPI al, #0x3333
+BRAN|!= @failed
+LOAD al, (#3, s)
+CMPI al, #0x4444
+BRAN|!= @failed
+LOAD al, (#4, s)
+CMPI al, #0x5555
+BRAN|!= @failed
+LOAD al, (#5, s)
+CMPI al, #0x6666
+BRAN|!= @failed
+LOAD al, (#6, s)
+CMPI al, #0x7777
+BRAN|!= @failed
+
+; Stand in for work that needs all seven registers. Their original values
+; now live in the stack frame, so every one can be overwritten safely.
+MOVI r1, #0
+MOVI r2, #0
+MOVI r3, #0
+MOVI r4, #0
+MOVI r5, #0
+MOVI r6, #0
+MOVI r7, #0
+
+; POP: read the same ascending frame into r1..r7, then advance s by seven.
+; A successful pair leaves the stack exactly where it started.
+DMAR s, $SAVED_REGISTERS
+CMPI sl, $STACK_TOP
+BRAN|!= @failed
+CMPI r1, #0x1111
+BRAN|!= @failed
+CMPI r2, #0x2222
+BRAN|!= @failed
+CMPI r3, #0x3333
+BRAN|!= @failed
+CMPI r4, #0x4444
+BRAN|!= @failed
+CMPI r5, #0x5555
+BRAN|!= @failed
+CMPI r6, #0x6666
+BRAN|!= @failed
+CMPI r7, #0x7777
+BRAN|!= @failed
+MOVI al, $CHECK_PASSED
+BRAN @record_result
+:failed
+MOVI al, $CHECK_FAILED
+:record_result
+STOR ($RESULT_MARKER, l), al
+
+; Only after checking all seven restored values, repurpose r5/r6 as report
+; registers. r7 is repurposed for the exit request, not part of the result.
+LOAD r5, ($PATH_MARKER, l)
+LOAD r6, ($RESULT_MARKER, l)
+MOVI ah, $DEBUG_SEGMENT
+MOVI al, $DEBUG_EXIT_OFFSET
+MOVI r7, $DEBUG_EXIT_REQUEST
+STOR (a), r7
+
+.ORG 0x0400
+:missing_dma
+; This small handler recognizes only the two fixed bursts above. Missing
+; hardware faults before any stack adjustment or transfer, so emulating once
+; is safe. A partial hardware bus fault must NOT enter this fallback.
+; Preserve a outside the stack. No r1..r7 may be used as handler scratch:
+; DMAW needs their incoming values, and DMAR must return their loaded values.
+STOR ($SAVED_AH, l), ah
+STOR ($SAVED_AL, l), al
+ETFR a, $FAULT_METADATA_LINK
+CMPI al, $PUSH_COMMAND
+BRAN|== @software_push
+CMPI al, $POP_COMMAND
+BRAN|== @software_pop
+BRAN @failed
+
+:software_push
+; Equivalent successful push: reserve one frame, then store ascending slots.
+SUBI sl, $SAVED_REGISTERS
+STOR (#0, s), r1
+STOR (#1, s), r2
+STOR (#2, s), r3
+STOR (#3, s), r4
+STOR (#4, s), r5
+STOR (#5, s), r6
+STOR (#6, s), r7
+BRAN @emulated
+
+:software_pop
+; Load all values before releasing the frame, matching forward DMAR.
+LOAD r1, (#0, s)
+LOAD r2, (#1, s)
+LOAD r3, (#2, s)
+LOAD r4, (#3, s)
+LOAD r5, (#4, s)
+LOAD r6, (#5, s)
+LOAD r7, (#6, s)
+ADDI sl, $SAVED_REGISTERS
+
+:emulated
+; Address-only transfers preserve r7 and the saved fault SR. RETE restores
+; that SR, discarding flags altered by the handler's comparisons/arithmetic.
+ETFR a, $FAULT_LINK
+ADDI al, $INSTRUCTION_WORDS
+ETTR $FAULT_LINK, a
+MOVI al, $SOFTWARE_PATH
+STOR ($PATH_MARKER, l), al
+LOAD ah, ($SAVED_AH, l)
+LOAD al, ($SAVED_AL, l)
+RETE

@@ -33,10 +33,12 @@ pub mod coprocessors;
 pub mod registers;
 pub mod util;
 
-use std::{any::Any, fmt::Write};
+use std::{any::Any, collections::BTreeMap, fmt::Write};
 
 use log::{debug, error, trace, warn};
 
+use coprocessors::optional::CoprocessorFault;
+pub use coprocessors::optional::{CpuConfig, OptionalCoprocessor};
 use coprocessors::{
     exception_unit::{
         definitions::{
@@ -52,6 +54,7 @@ use coprocessors::{
     processing_unit::execution::ProcessingUnitExecutor,
     shared::{ExecutionPhase, Executor},
 };
+
 use num::{Integer, ToPrimitive};
 use num_traits::FromPrimitive;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
@@ -71,6 +74,11 @@ const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
 
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u8 = 6;
+
+// Optional hardware cannot replace the mandatory PU (0) or EU (1).
+const MIN_OPTIONAL_COPROCESSOR_ID: u8 = 2;
+// CSR dedicates four bits to the coprocessor ID.
+const MAX_OPTIONAL_COPROCESSOR_ID: u8 = 0x0f;
 
 // Coprocessor select register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
@@ -140,12 +148,20 @@ enum CpuResetState {
     FetchingVector,
 }
 
+#[derive(Clone, Copy)]
+struct ActiveOptionalCoprocessor {
+    id: u8,
+    issuing_pc: u32,
+}
+
 pub struct CpuPeripheral {
     pub registers: Registers,
     pub eu_registers: ExceptionUnitRegisters,
     pub phase: u8,
     pub processing_unit_executor: ProcessingUnitExecutor,
     pub exception_unit_executor: ExceptionUnitExecutor,
+    optional_coprocessors: BTreeMap<u8, Box<dyn OptionalCoprocessor>>,
+    active_optional: Option<ActiveOptionalCoprocessor>,
     /// Command latched for the active slot, including automatic EU events.
     /// Slot ownership determines whether completion consumes CSR.
     pub active_command: u16,
@@ -292,6 +308,8 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         phase: 0,
         processing_unit_executor: ProcessingUnitExecutor::default(),
         exception_unit_executor: ExceptionUnitExecutor::default(),
+        optional_coprocessors: BTreeMap::new(),
+        active_optional: None,
         active_command: 0,
         slot_owner: SlotOwner::ProcessingUnit,
         instruction_trace: InstructionTrace::None,
@@ -300,6 +318,24 @@ pub fn new_cpu_peripheral() -> CpuPeripheral {
         reset_state: CpuResetState::Running,
         l5_interrupt_pin_previously_asserted: false,
     }
+}
+
+/// Construct a hardware configuration without allowing plugins to replace PU/EU.
+///
+/// # Errors
+/// Rejects IDs outside 2..=15 and duplicate hardware IDs.
+pub fn new_cpu_peripheral_with_config(config: CpuConfig) -> Result<CpuPeripheral, String> {
+    let mut cpu = new_cpu_peripheral();
+    for unit in config.optional_coprocessors {
+        let id = unit.id();
+        if !(MIN_OPTIONAL_COPROCESSOR_ID..=MAX_OPTIONAL_COPROCESSOR_ID).contains(&id) {
+            return Err(format!("optional coprocessor ID {id} must be in {MIN_OPTIONAL_COPROCESSOR_ID}..={MAX_OPTIONAL_COPROCESSOR_ID}"));
+        }
+        if cpu.optional_coprocessors.insert(id, unit).is_some() {
+            return Err(format!("duplicate optional coprocessor ID {id}"));
+        }
+    }
+    Ok(cpu)
 }
 
 impl Device for CpuPeripheral {
@@ -367,7 +403,7 @@ impl CpuPeripheral {
 
         // If we have a pending bus request, stall until the device acknowledges (or errors).
         // Bus errors and protection errors also release the stall so fault handling can proceed.
-        let completed_bus_request = if let Some(pending_request) = self.pending_bus_request {
+        let mut completed_bus_request = if let Some(pending_request) = self.pending_bus_request {
             let bus_access_complete = bus_assertions.bus_acknowledge
                 || bus_assertions.bus_error
                 || bus_assertions.bus_protection_error;
@@ -385,6 +421,38 @@ impl CpuPeripheral {
 
         let phase: ExecutionPhase =
             FromPrimitive::from_u8(self.phase).expect("Expected phase to be between 0-5");
+
+        // Accept a transfer before phase-0 HALT/arbitration. In particular, the
+        // final phase-5 request can retire without inventing another DMA slot.
+        let optional_completion = self.active_optional.is_some() && completed_bus_request.is_some();
+        if let Some(active) = self.active_optional {
+            if let Some(request) = completed_bus_request.take() {
+                let completion =
+                    if let Some(fault) = Self::fault_from_bus_assertions(bus_assertions) {
+                        Err(CoprocessorFault {
+                            fault,
+                            address: request.address,
+                            bus_access_type: request.bus_access_type,
+                        })
+                    } else {
+                        self.optional_coprocessors
+                            .get_mut(&active.id)
+                            .expect("active optional hardware must remain installed")
+                            .complete_access(request, bus_assertions, &mut self.registers)
+                    };
+                if let Err(fault) = completion {
+                    self.abort_optional(active, fault);
+                }
+            }
+            if self.active_optional.is_some()
+                && phase == ExecutionPhase::InstructionFetchLow
+                && self.optional_coprocessors[&active.id].is_finished()
+            {
+                self.active_optional = None;
+                self.clear_coprocessor_select_register();
+                self.finish_instruction_trace(BusAssertions::default());
+            }
+        }
 
         // Check for halt at instruction boundaries (phase 0). Latch halt when first asserted;
         // stall each subsequent cycle while still asserted; resume when deasserted.
@@ -428,7 +496,9 @@ impl CpuPeripheral {
                 ..bus_assertions
             });
 
-        if let Some(bus_fault) = Self::fault_from_bus_assertions(fault_bus_assertions) {
+        if let Some(bus_fault) =
+            Self::fault_from_bus_assertions(fault_bus_assertions).filter(|_| !optional_completion)
+        {
             if self.slot_owner == SlotOwner::CsrCommand {
                 self.clear_coprocessor_select_register();
                 self.instruction_trace = InstructionTrace::None;
@@ -471,7 +541,7 @@ impl CpuPeripheral {
             );
         }
 
-        if phase == ExecutionPhase::InstructionFetchLow {
+        if phase == ExecutionPhase::InstructionFetchLow && self.active_optional.is_none() {
             // Select the active command once per slot, retaining it through bus stalls.
             // An aborting fault cancels pending work. ID-0
             // commands have no dispatch slot and must not block pending events.
@@ -571,6 +641,9 @@ impl CpuPeripheral {
                     bus_assertions,
                 )
             }
+            (id, _) if self.optional_coprocessors.contains_key(&id) => {
+                self.step_optional(id, phase)
+            }
             _ => {
                 if self.eu_registers.pending_fault.is_none()
                     && phase == ExecutionPhase::InstructionFetchLow
@@ -608,11 +681,14 @@ impl CpuPeripheral {
 
         // Executors do not own CSR cleanup. Only the command whose slot just
         // completed (or aborted) consumes CSR; an automatic EU event does not.
-        if phase == ExecutionPhase::WriteBackExecutor && self.slot_owner == SlotOwner::CsrCommand {
+        if phase == ExecutionPhase::WriteBackExecutor
+            && self.slot_owner == SlotOwner::CsrCommand
+            && self.active_optional.is_none()
+        {
             self.clear_coprocessor_select_register();
         }
 
-        if phase == ExecutionPhase::WriteBackExecutor {
+        if phase == ExecutionPhase::WriteBackExecutor && self.active_optional.is_none() {
             self.finish_instruction_trace(bus_assertions);
         }
 
@@ -647,6 +723,59 @@ impl CpuPeripheral {
         }
 
         result
+    }
+
+    fn step_optional(&mut self, id: u8, phase: ExecutionPhase) -> BusAssertions {
+        let result = if self.active_optional.is_none() {
+            debug_assert_eq!(phase, ExecutionPhase::InstructionFetchLow);
+            let decoded = &self.processing_unit_executor.decoded_instruction;
+            let active = ActiveOptionalCoprocessor {
+                id,
+                issuing_pc: (decoded.pc_h_, decoded.pc_l_).to_full_address(),
+            };
+            self.active_optional = Some(active);
+            self.optional_coprocessors
+                .get_mut(&id)
+                .unwrap()
+                .start(self.active_command, &mut self.registers)
+                .map(|()| BusAssertions::default())
+        } else {
+            self.optional_coprocessors
+                .get_mut(&id)
+                .unwrap()
+                .next_request(&self.registers)
+        };
+        match result {
+            Ok(request) => request,
+            Err(fault) => {
+                let active = self
+                    .active_optional
+                    .expect("optional command owns its fault");
+                self.abort_optional(active, fault);
+                BusAssertions::default()
+            }
+        }
+    }
+
+    fn abort_optional(&mut self, active: ActiveOptionalCoprocessor, fault: CoprocessorFault) {
+        self.optional_coprocessors
+            .get_mut(&active.id)
+            .unwrap()
+            .reset();
+        self.active_optional = None;
+        self.slot_owner = SlotOwner::Aborted;
+        self.instruction_trace = InstructionTrace::None;
+        self.clear_coprocessor_select_register();
+        raise_fault(
+            &mut self.eu_registers,
+            fault.fault,
+            &BusAssertions {
+                address: fault.address,
+                bus_access_type: fault.bus_access_type,
+                ..BusAssertions::default()
+            },
+            active.issuing_pc,
+        );
     }
 
     /// Make trace eligible only after the entire instruction succeeds, including
@@ -879,6 +1008,10 @@ impl CpuPeripheral {
         self.reset_state = CpuResetState::FetchingVector;
         self.registers.sr = 0;
         self.active_command = 0;
+        self.active_optional = None;
+        for unit in self.optional_coprocessors.values_mut() {
+            unit.reset();
+        }
         // Pin history is not architectural pending state. Preserve it so a
         // line already observed high cannot become a new edge because of reset.
         self.eu_registers.waiting_for_exception = false;

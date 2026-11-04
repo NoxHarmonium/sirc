@@ -1,0 +1,120 @@
+;; The same binary copies eight words with either the DMA chip or a small
+;; invalid-opcode fallback. R6=CAFE means pointers and every copied word passed.
+;; R5=0 identifies hardware; R5=1 identifies the software fallback.
+; The read-only program segment contains the eight source words.
+.EQU $PROGRAM_SEGMENT #0
+; Writable RAM holds the copy destination and the path marker.
+.EQU $SCRATCH_SEGMENT #1
+; Word offset of the source data within PROGRAM (see the final .ORG).
+.EQU $SOURCE_OFFSET #0x0800
+; First destination word within SCRATCH; l addresses this buffer.
+.EQU $DESTINATION_OFFSET #0x0100
+; Scratch word recording who copied: 0 = hardware, 1 = software fallback.
+.EQU $PATH_MARKER_OFFSET #0x0200
+; Eight words exercise a full seven-register chunk and a short final chunk.
+.EQU $COPY_WORDS #8
+; Expected source low word after advancing SOURCE_OFFSET by COPY_WORDS.
+.EQU $SOURCE_END #0x0808
+; Expected destination low word after advancing DESTINATION_OFFSET by COPY_WORDS.
+.EQU $DESTINATION_END #0x0108
+; Raw command reported in fault metadata for this fixed DMAT a,l,#8 call.
+.EQU $DMAT_EIGHT_WORDS_COMMAND #0x2A08
+; EU link 6 holds the faulting PC and saved SR; advance its PC after emulation.
+.EQU $FAULT_LINK #6
+; EU link 7 reports the rejected command, allowing the handler to recognize it.
+.EQU $FAULT_METADATA_LINK #7
+; Every instruction occupies two words; skip exactly one emulated instruction.
+.EQU $INSTRUCTION_WORDS #2
+; Success signature in r6 after verifying both pointers and every copied word.
+.EQU $CHECK_PASSED #0xCAFE
+; Failure signature in r6 if any pointer or data comparison fails.
+.EQU $CHECK_FAILED #0xDEAD
+; Simulator debug MMIO segment, used only to terminate this example.
+.EQU $DEBUG_SEGMENT #0x000B
+; Word offset of the debug device exit-request register.
+.EQU $DEBUG_EXIT_OFFSET #7
+; The debug device exits when its exit-request register is written with 1.
+.EQU $DEBUG_EXIT_REQUEST #1
+; Value written to the path marker only when the missing-chip handler runs.
+.EQU $SOFTWARE_PATH #1
+
+.ORG 0x0000
+.DQ @start
+.ORG 0x0008
+.DQ @missing_dma
+
+.ORG 0x0200
+:start
+MOVI ah, $PROGRAM_SEGMENT
+MOVI al, $SOURCE_OFFSET
+MOVI lh, $SCRATCH_SEGMENT
+MOVI ll, $DESTINATION_OFFSET
+MOVI sh, $SCRATCH_SEGMENT
+MOVI sl, $PATH_MARKER_OFFSET
+MOVI r1, #0
+STOR (s), r1
+DMAT a, l, $COPY_WORDS
+
+; The architectural pointer advances must agree in both configurations.
+CMPI al, $SOURCE_END
+BRAN|!= @failed
+CMPI ll, $DESTINATION_END
+BRAN|!= @failed
+MOVI al, $SOURCE_OFFSET
+MOVI ll, $DESTINATION_OFFSET
+MOVI r3, $COPY_WORDS
+:verify
+LOAD r1, (#0, a)+
+LOAD r2, (#0, l)+
+CMPR r1, r2
+BRAN|!= @failed
+SUBI r3, #1
+BRAN|!= @verify
+MOVI r6, $CHECK_PASSED
+BRAN @exit
+:failed
+MOVI r6, $CHECK_FAILED
+:exit
+LOAD r5, (s)
+MOVI ah, $DEBUG_SEGMENT
+MOVI al, $DEBUG_EXIT_OFFSET
+MOVI r7, $DEBUG_EXIT_REQUEST
+STOR (a), r7
+
+.ORG 0x0400
+:missing_dma
+; This deliberately small handler supports only this example's fixed DMAT #8.
+; Missing hardware faults before any DMA word or pointer has been committed.
+MOVR r2, ah
+MOVR r4, al
+ETFR a, $FAULT_METADATA_LINK
+CMPI al, $DMAT_EIGHT_WORDS_COMMAND
+BRAN|!= @failed
+MOVR ah, r2
+MOVR al, r4
+MOVI r3, $COPY_WORDS
+:copy_word
+LOAD r1, (#0, a)+
+STOR (#0, l), r1
+ADDI ll, #1
+SUBI r3, #1
+BRAN|!= @copy_word
+MOVI r7, $SOFTWARE_PATH
+STOR (s), r7
+
+; Invalid opcode is retryable; skip the emulated instruction on return.
+MOVR r2, ah
+MOVR r4, al
+ETFR a, $FAULT_LINK
+ADDI al, $INSTRUCTION_WORDS
+ETTR $FAULT_LINK, a
+MOVR ah, r2
+MOVR al, r4
+RETE
+
+.ORG 0x0800
+; Pack pairs into 32-bit data directives: eight consecutive 16-bit words.
+.DQ #0x11112222
+.DQ #0x33334444
+.DQ #0x55556666
+.DQ #0x77778888
