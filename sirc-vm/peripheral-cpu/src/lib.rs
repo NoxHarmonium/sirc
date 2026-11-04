@@ -369,10 +369,9 @@ impl CpuPeripheral {
                 || bus_assertions.bus_error
                 || bus_assertions.bus_protection_error;
             if !bus_access_complete {
-                return BusAssertions {
-                    instruction_sync: self.phase == ExecutionPhase::InstructionFetchLow as u8,
-                    ..pending_request
-                };
+                // Hold every output from the presented request, including SYNC.
+                // self.phase already points to the phase after this request.
+                return pending_request;
             }
             // Access complete: advance to the next phase and fall through to run it
             self.pending_bus_request = None;
@@ -549,6 +548,9 @@ impl CpuPeripheral {
         // EU validation and execution share the same decoded instruction.
         let eu_instruction = (coprocessor_id == ExceptionUnitExecutor::COPROCESSOR_ID)
             .then(|| decode_exception_unit_instruction(self.active_command));
+        let is_eu_dispatch = eu_instruction
+            .as_ref()
+            .is_some_and(is_valid_exception_unit_instruction);
         let result = match (coprocessor_id, eu_instruction.as_ref()) {
             (ProcessingUnitExecutor::COPROCESSOR_ID, _) => self.processing_unit_executor.step(
                 &phase,
@@ -557,9 +559,7 @@ impl CpuPeripheral {
                 &mut self.eu_registers,
                 bus_assertions,
             ),
-            (ExceptionUnitExecutor::COPROCESSOR_ID, Some(instruction))
-                if is_valid_exception_unit_instruction(instruction) =>
-            {
+            (ExceptionUnitExecutor::COPROCESSOR_ID, Some(instruction)) if is_eu_dispatch => {
                 self.exception_unit_executor.step_decoded(
                     &phase,
                     instruction,
@@ -613,6 +613,14 @@ impl CpuPeripheral {
             self.finish_instruction_trace(bus_assertions);
         }
 
+        // SYNC describes the presented slot/phase, not the bookkeeping phase
+        // after advancement. Save it with bus requests so waits hold it unchanged.
+        let result = BusAssertions {
+            instruction_sync: phase == ExecutionPhase::InstructionFetchLow
+                && (self.slot_owner == SlotOwner::ProcessingUnit || is_eu_dispatch),
+            ..result
+        };
+
         // TODO: Investigate performance impact of unrolling the six CPU phases
         // category=Performance
         if result.bus_access_strobe {
@@ -627,12 +635,6 @@ impl CpuPeripheral {
             self.reset_state = CpuResetState::Running;
         }
         self.advance_phase();
-
-        // instruction_sync uses the phase captured before advance_phase() above.
-        let result = BusAssertions {
-            instruction_sync: phase == ExecutionPhase::InstructionFetchLow,
-            ..result
-        };
 
         // RSET hands one internal request to the bus coordinator. The request
         // cycle becomes the first RSTO cycle; CPU never drives the RSTI input.
