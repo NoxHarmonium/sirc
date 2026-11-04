@@ -63,7 +63,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
         registers: &mut Registers,
         eu_registers: &mut ExceptionUnitRegisters,
         intermediate_registers: &mut IntermediateRegisters,
-        bus_assertions: BusAssertions,
+        _bus_assertions: BusAssertions,
     ) -> BusAssertions {
         // TODO: Clean up `ExecutionEffectiveAddressExecutor`
         // category=Refactoring
@@ -108,7 +108,7 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                 trace!("Calculate offset: base: 0x{base:X} displacement: 0x{:X} EA: 0x{effective_address:X} EA wrapped: {effective_address_overflowed} source update: 0x{updated_source:X} update wrapped: {source_update_overflowed}", decoded.sr_b_);
 
                 // Keep both wrapped results available for write-back and the
-                // later fault-metadata/precedence work (#462/#463).
+                // fault metadata, without committing either register write.
                 intermediate_registers.alu_output = effective_address;
                 intermediate_registers.address_output = if decoded.addr_inc == 0 {
                     effective_address
@@ -124,15 +124,17 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     // (it happened back at decode); recover this instruction's own fetch address
                     // from `decoded` instead so the fault is genuinely retryable.
                     let fault_pc = (decoded.pc_h_, decoded.pc_l_).to_full_address();
-                    let fault_access = if effective_address_overflowed {
-                        BusAssertions {
-                            address: (decoded.ad_h_, effective_address).to_full_address(),
-                            bus_access_type: address_access_type(decoded),
-                            ..BusAssertions::default()
-                        }
+                    // Diagnostic precedence is EA, then source update, regardless
+                    // of the evaluation order needed for pre-decrement arithmetic.
+                    let wrapped = if effective_address_overflowed {
+                        effective_address
                     } else {
-                        // Source-only wrap metadata is handled by #463.
-                        bus_assertions
+                        updated_source
+                    };
+                    let fault_access = BusAssertions {
+                        address: (decoded.ad_h_, wrapped).to_full_address(),
+                        bus_access_type: address_access_type(decoded),
+                        ..BusAssertions::default()
                     };
                     raise_fault(
                         eu_registers,

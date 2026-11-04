@@ -158,3 +158,54 @@ fn effective_address_wrap_metadata_describes_the_intended_access() {
         }
     }
 }
+
+#[test]
+fn source_wrap_metadata_uses_updated_pair_unless_the_effective_address_also_wraps() {
+    use Instruction::{
+        LoadEffectiveAddressAndLinkFromIndirectImmediatePostIncrement as LinkI,
+        LoadEffectiveAddressAndLinkFromIndirectRegisterPostIncrement as LinkR,
+        LoadEffectiveAddressFromIndirectImmediatePreDecrement as AddressI,
+        LoadEffectiveAddressFromIndirectRegisterPreDecrement as AddressR,
+        LoadRegisterFromIndirectImmediatePostIncrement as LoadI,
+        LoadRegisterFromIndirectRegisterPostIncrement as LoadR,
+        StoreRegisterToIndirectImmediatePreDecrement as StoreI,
+        StoreRegisterToIndirectRegisterPreDecrement as StoreR,
+    };
+    let a = AddressRegisterName::Address.to_register_index();
+    let p = AddressRegisterName::ProgramCounter.to_register_index();
+    for (immediate, register, target, pre, bat) in [
+        (
+            LoadI,
+            LoadR,
+            RegisterName::R1.to_register_index(),
+            false,
+            BusAccessType::DataRead,
+        ),
+        (
+            StoreI,
+            StoreR,
+            RegisterName::R1.to_register_index(),
+            true,
+            BusAccessType::DataWrite,
+        ),
+        (AddressI, AddressR, a, true, BusAccessType::None),
+        (AddressI, AddressR, p, true, BusAccessType::InstructionFetch),
+        (LinkI, LinkR, a, false, BusAccessType::None),
+        (LinkI, LinkR, p, false, BusAccessType::InstructionFetch),
+    ] {
+        let cases = if pre {
+            // First: source only. Second: both wrap, with distinguishable
+            // wrapped values (EA=0, source=FFFF), so EA must win.
+            [(0, 0, 0xffff), (0, 1, 0)]
+        } else {
+            [(0xffff, -1, 0), (0xffff, 1, 0)]
+        };
+        for (low, offset, wrapped) in cases {
+            for use_register in [false, true] {
+                let data = instruction(immediate, register, target, offset, use_register);
+                let mut cpu = detect_wrap(&data, low, offset);
+                assert_metadata(&mut cpu, wrapped, bat);
+            }
+        }
+    }
+}
