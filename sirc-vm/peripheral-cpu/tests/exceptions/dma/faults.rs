@@ -1,4 +1,4 @@
-use super::support::Machine;
+use super::support::{Machine, BACKWARD, DMAR, DMAT, DMAW, FAULT_LINK, FAULT_METADATA_LINK};
 use peripheral_bus::device::{BusAccessType, BusAssertions};
 use peripheral_cpu::{
     coprocessors::exception_unit::definitions::Faults,
@@ -26,7 +26,7 @@ fn assert_fault(m: &Machine, fault: Faults, address: u32, bat: BusAccessType) {
     assert_eq!(pending.fault, fault);
     assert_eq!(pending.pc, 0xcd00_0200);
     assert_eq!(m.cpu.registers.coprocessor_select_register, 0);
-    let link = m.cpu.eu_registers.link_registers[7];
+    let link = m.cpu.eu_registers.link_registers[FAULT_METADATA_LINK];
     assert_eq!(link.return_address, address);
     let metadata = decode_fault_metadata_register(link.return_status_register);
     assert_eq!(metadata.fault, fault);
@@ -35,10 +35,17 @@ fn assert_fault(m: &Machine, fault: Faults, address: u32, bat: BusAccessType) {
 
 #[test]
 fn berr_and_bper_keep_only_acknowledged_words_and_completed_chunk_advances() {
-    for command in [0x2807, 0x2827, 0x2907, 0x2927, 0x2a08] {
-        let copy = command == 0x2a08;
-        let write = command & 0x0f00 == 0x0900;
-        let backward = !copy && command & 0x20 != 0;
+    for command in [
+        (DMAR | 7),
+        (DMAR | BACKWARD | 7),
+        (DMAW | 7),
+        (DMAW | BACKWARD | 7),
+        (DMAT | 8),
+    ] {
+        let copy = command == (DMAT | 8);
+        let write = command & peripheral_cpu::COPROCESSOR_OPCODE_ID_MASK
+            == DMAW & peripheral_cpu::COPROCESSOR_OPCODE_ID_MASK;
+        let backward = !copy && command & BACKWARD != 0;
         let failing_indices = if copy {
             vec![0, 3, 6, 7, 10, 13, 14, 15]
         } else {
@@ -149,7 +156,7 @@ fn berr_and_bper_keep_only_acknowledged_words_and_completed_chunk_advances() {
                 }
                 assert!(entered);
                 assert_eq!(
-                    m.cpu.eu_registers.link_registers[6].return_address,
+                    m.cpu.eu_registers.link_registers[FAULT_LINK].return_address,
                     0xcd00_0200
                 );
             }
@@ -161,7 +168,7 @@ fn berr_and_bper_keep_only_acknowledged_words_and_completed_chunk_advances() {
 fn per_word_wraps_and_forward_advances_fault_at_their_own_commit_points() {
     for write in [false, true] {
         for count in [1, 2] {
-            let mut m = Machine::new((if write { 0x2900 } else { 0x2800 }) | count, false);
+            let mut m = Machine::new((if write { DMAW } else { DMAR }) | count, false);
             m.cpu.registers.al = 0xffff;
             set_sr_bit(
                 StatusRegisterFields::TrapOnAddressOverflow,
@@ -193,7 +200,7 @@ fn per_word_wraps_and_forward_advances_fault_at_their_own_commit_points() {
             }
         }
         for trap in [false, true] {
-            let mut m = Machine::new((if write { 0x2900 } else { 0x2800 }) | 0x27, false);
+            let mut m = Machine::new((if write { DMAW } else { DMAR }) | BACKWARD | 7, false);
             m.cpu.registers.al = 3;
             let before = m.cpu.registers;
             if trap {
@@ -244,7 +251,7 @@ fn per_word_wraps_and_forward_advances_fault_at_their_own_commit_points() {
 #[test]
 fn dmat_read_and_write_access_wraps_preserve_the_incomplete_chunk() {
     for writing in [false, true] {
-        let mut m = Machine::new(0x2a02, false);
+        let mut m = Machine::new(DMAT | 2, false);
         if writing {
             m.cpu.registers.ll = 0xffff;
         } else {

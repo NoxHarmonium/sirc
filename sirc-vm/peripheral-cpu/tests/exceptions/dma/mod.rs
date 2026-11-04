@@ -1,14 +1,12 @@
-mod hardware;
-
-mod halt;
-
 mod faults;
+mod halt;
+mod hardware;
 mod ownership;
 mod support;
 mod timing;
 mod waits;
 use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
-use support::Machine;
+use support::{Machine, ADDRESS_PAIR_SHIFT, BACKWARD, DMAR, DMAT, DMAW, FAULT_METADATA_LINK};
 
 #[test]
 fn register_bursts_preserve_flags_tags_and_order_for_every_pair_and_direction() {
@@ -16,9 +14,9 @@ fn register_bursts_preserve_flags_tags_and_order_for_every_pair_and_direction() 
         for pair in 0..3 {
             for backward in [false, true] {
                 for count in [0, 1, 7] {
-                    let command = (if write { 0x2900 } else { 0x2800 })
-                        | (pair << 6)
-                        | if backward { 0x20 | count } else { count };
+                    let command = (if write { DMAW } else { DMAR })
+                        | (pair << ADDRESS_PAIR_SHIFT)
+                        | if backward { BACKWARD | count } else { count };
                     let mut m = Machine::new(command, false);
                     let before = m.cpu.registers;
                     let (high, low) = match pair {
@@ -103,7 +101,7 @@ fn register_bursts_preserve_flags_tags_and_order_for_every_pair_and_direction() 
 fn copy_chunks_use_the_real_register_window_including_short_and_overlapping_chunks() {
     for count in [0u16, 1, 7, 8, 15, 255] {
         for overlap in [false, true] {
-            let mut m = Machine::new(0x2a00 | count, false);
+            let mut m = Machine::new(DMAT | count, false);
             if overlap {
                 m.cpu.registers.lh = 0xef01;
                 m.cpu.registers.ll = 0x1001;
@@ -171,7 +169,7 @@ fn copy_advances_both_pairs_atomically_after_acknowledged_words() {
         (0xffff, 0xffff, true),
     ] {
         for trap in [false, true] {
-            let mut m = Machine::new(0x2a01, false);
+            let mut m = Machine::new(DMAT | 1, false);
             m.cpu.registers.al = source;
             m.cpu.registers.ll = destination;
             if trap {
@@ -195,7 +193,7 @@ fn copy_advances_both_pairs_atomically_after_acknowledged_words() {
                 assert_eq!(m.cpu.eu_registers.pending_fault.unwrap().pc, 0xcd00_0200);
                 assert_eq!(m.cpu.registers.al, source);
                 assert_eq!(m.cpu.registers.ll, destination);
-                let link = m.cpu.eu_registers.link_registers[7];
+                let link = m.cpu.eu_registers.link_registers[FAULT_METADATA_LINK];
                 assert_eq!(
                     link.return_address,
                     if source_wrap {

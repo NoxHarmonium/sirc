@@ -23,3 +23,9 @@ mapped addresses do not fault or wrap. Missing hardware faults before any
 transfer, so it can safely copy once, advance the saved retry PC by two words,
 and return with `RETE`. A partly completed hardware DMA fault would need a
 separate recovery policy and cannot safely use this handler.
+
+DMAR/DMAW burst details are covered by the CPU regressions in
+`sirc-vm/peripheral-cpu/tests/exceptions/dma/`: all three address pairs, both
+directions, zero/short/full bursts, COPI/COPR timing, held requests, partial
+bus faults and segment overflow. This example concentrates on running the same
+DMAT program with different hardware configurations.

@@ -1,4 +1,4 @@
-use super::support::Machine;
+use super::support::{Machine, DMAT, L5_VECTOR, LEVEL_FIVE_PIN};
 use peripheral_bus::device::{BusAccessType, BusAssertions};
 
 fn halt() -> BusAssertions {
@@ -10,10 +10,10 @@ fn halt() -> BusAssertions {
 
 #[test]
 fn halt_at_every_dma_phase_preserves_the_exact_transfer_and_resumes_once() {
-    let mut reference = Machine::new(0x2a0f, false);
+    let mut reference = Machine::new(DMAT | 15, false);
     reference.run_to_resume();
     for offset in 6..42 {
-        let mut m = Machine::new(0x2a0f, false);
+        let mut m = Machine::new(DMAT | 15, false);
         for _ in 0..offset {
             m.clock(BusAssertions::default(), false);
         }
@@ -54,7 +54,7 @@ fn halt_at_every_dma_phase_preserves_the_exact_transfer_and_resumes_once() {
 
 #[test]
 fn halt_cannot_retract_an_unacknowledged_access_and_l5_stays_queued_until_dma_finishes() {
-    let mut m = Machine::new(0x2a08, false);
+    let mut m = Machine::new(DMAT | 8, false);
     for _ in 0..8 {
         m.clock(BusAssertions::default(), false);
     }
@@ -64,7 +64,7 @@ fn halt_cannot_retract_an_unacknowledged_access_and_l5_stays_queued_until_dma_fi
         assert!(out.bus_access_strobe);
         assert_eq!(out.address, request.address);
         assert_eq!(out.data, request.data);
-        assert_eq!(m.cpu.registers.coprocessor_select_register, 0x2a08);
+        assert_eq!(m.cpu.registers.coprocessor_select_register, (DMAT | 8));
     }
     while m.cpu.phase != 0 {
         m.clock(halt(), false);
@@ -74,18 +74,21 @@ fn halt_cannot_retract_an_unacknowledged_access_and_l5_stays_queued_until_dma_fi
     for cycle in 0..10 {
         let out = m.clock(
             BusAssertions {
-                interrupt_assertion: if cycle == 0 { 16 } else { 0 },
+                interrupt_assertion: if cycle == 0 { LEVEL_FIVE_PIN } else { 0 },
                 ..halt()
             },
             false,
         );
         assert!(!out.bus_access_strobe);
-        assert_eq!(m.cpu.eu_registers.pending_hardware_exceptions, 16);
+        assert_eq!(
+            m.cpu.eu_registers.pending_hardware_exceptions,
+            LEVEL_FIVE_PIN
+        );
     }
     for _ in 0..40 {
         let out = m.clock(BusAssertions::default(), false);
         if out.bus_access_type == BusAccessType::ExceptionVectorFetch {
-            assert_eq!(out.address, 0x20);
+            assert_eq!(out.address, L5_VECTOR);
             assert_eq!(m.dma_accesses().len(), 16);
             assert_eq!(m.cpu.registers.coprocessor_select_register, 0);
             return;

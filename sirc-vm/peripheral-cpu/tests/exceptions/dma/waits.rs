@@ -1,4 +1,4 @@
-use super::support::Machine;
+use super::support::{Machine, DMAR, DMAT, DMAW, FAULT_METADATA_LINK};
 use peripheral_bus::device::{BusAccessType, BusAssertions, BusOperation};
 use peripheral_cpu::coprocessors::exception_unit::definitions::Faults;
 
@@ -20,9 +20,9 @@ fn request_at(m: &mut Machine, index: usize) -> BusAssertions {
 
 #[test]
 fn every_wait_holds_outputs_and_progress_and_adds_one_cycle_without_slot_rounding() {
-    for command in [0x2805, 0x2905, 0x2a08] {
-        let accesses = if command == 0x2a08 { 16 } else { 5 };
-        let baseline = if command == 0x2a08 { 24 } else { 12 };
+    for command in [(DMAR | 5), (DMAW | 5), (DMAT | 8)] {
+        let accesses = if command == (DMAT | 8) { 16 } else { 5 };
+        let baseline = if command == (DMAT | 8) { 24 } else { 12 };
         for index in [0, accesses / 2, accesses - 1] {
             for waits in [1, 2] {
                 let mut m = Machine::new(command, false);
@@ -63,7 +63,7 @@ fn every_wait_holds_outputs_and_progress_and_adds_one_cycle_without_slot_roundin
 #[test]
 fn an_error_releases_a_held_final_phase_five_access_without_committing_it() {
     for protection in [false, true] {
-        let mut m = Machine::new(0x2805, false);
+        let mut m = Machine::new(DMAR | 5, false);
         request_at(&mut m, 4);
         assert_eq!(m.cpu.phase, 0);
         for _ in 0..2 {
@@ -92,7 +92,7 @@ fn an_error_releases_a_held_final_phase_five_access_without_committing_it() {
         );
         assert_eq!(pending.pc, 0xcd00_0200);
         assert_eq!(
-            m.cpu.eu_registers.link_registers[7].return_address,
+            m.cpu.eu_registers.link_registers[FAULT_METADATA_LINK].return_address,
             0xab01_1004
         );
         assert_eq!(out.bus_access_type, BusAccessType::ExceptionVectorFetch);

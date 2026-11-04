@@ -1,4 +1,4 @@
-use super::support::Machine;
+use super::support::{Machine, BACKWARD, DMAR, DMAT, DMAW, RESERVED_DMA_OPCODE};
 use peripheral_bus::device::{BusAccessType, BusAssertions};
 use peripheral_cpu::{
     coprocessors::processing_unit::definitions::ConditionFlags,
@@ -8,19 +8,15 @@ use peripheral_cpu::{
 #[test]
 fn setup_accesses_padding_and_continuations_obey_the_documented_cycle_formula() {
     for (operation, counts) in [
-        (0x2800, vec![0, 1, 5, 6, 7]),
-        (0x2900, vec![0, 1, 5, 6, 7]),
-        (0x2a00, vec![0, 1, 3, 7, 8, 255]),
+        (DMAR, vec![0, 1, 5, 6, 7]),
+        (DMAW, vec![0, 1, 5, 6, 7]),
+        (DMAT, vec![0, 1, 3, 7, 8, 255]),
     ] {
         for count in counts {
             for register_call in [false, true] {
                 let command = operation | count;
                 let mut m = Machine::new(command, register_call);
-                let accesses = usize::from(if operation == 0x2a00 {
-                    2 * count
-                } else {
-                    count
-                });
+                let accesses = usize::from(if operation == DMAT { 2 * count } else { count });
                 let elapsed = 6 + 6 * (accesses + 1).div_ceil(6);
                 for cycle in 0..=elapsed {
                     let out = m.clock(BusAssertions::default(), false);
@@ -56,7 +52,12 @@ fn setup_accesses_padding_and_continuations_obey_the_documented_cycle_formula() 
 
 #[test]
 fn skipped_dma_commands_use_only_the_call_slot_even_in_protected_mode() {
-    for command in [0x2807, 0x2927, 0x2aff, 0x2b01] {
+    for command in [
+        (DMAR | 7),
+        (DMAW | BACKWARD | 7),
+        (DMAT | 255),
+        (RESERVED_DMA_OPCODE | 1),
+    ] {
         for register_call in [false, true] {
             let mut m = Machine::conditional(command, register_call, ConditionFlags::Never);
             set_sr_bit(StatusRegisterFields::ProtectedMode, &mut m.cpu.registers);

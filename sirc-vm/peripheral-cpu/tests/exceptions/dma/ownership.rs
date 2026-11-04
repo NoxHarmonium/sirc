@@ -1,4 +1,7 @@
-use super::support::Machine;
+use super::support::{
+    Machine, DMAR, DMAT, DMAW, FAULT_LINK, L1_VECTOR, L5_CONFLICT_VECTOR, L5_VECTOR,
+    LEVEL_FIVE_PIN, RETE, TRACE_VECTOR,
+};
 use peripheral_bus::device::{BusAccessType, BusAssertions};
 use peripheral_cpu::{
     coprocessors::exception_unit::definitions::Faults,
@@ -7,23 +10,24 @@ use peripheral_cpu::{
 
 #[test]
 fn irq_and_trace_wait_until_the_entire_command_retires_then_keep_normal_priority() {
-    for command in [0x2807, 0x2907, 0x2a08] {
-        for trace in 0..3 {
-            for irq in [1, 16, 17] {
+    for command in [(DMAR | 7), (DMAW | 7), (DMAT | 8)] {
+        for (status_trace, pin_trace) in [(false, false), (true, false), (false, true)] {
+            let trace_requested = status_trace || pin_trace;
+            for irq in [1, LEVEL_FIVE_PIN, 1 | LEVEL_FIVE_PIN] {
                 let mut m = Machine::new(command, false);
                 set_hardware_interrupt_enable(&mut m.cpu.registers, 1);
-                if trace == 1 {
+                if status_trace {
                     set_sr_bit(StatusRegisterFields::TraceMode, &mut m.cpu.registers);
                 }
-                for vector in [12, 0x20, 0xa0] {
+                for vector in [TRACE_VECTOR, L5_VECTOR, L1_VECTOR] {
                     m.memory.insert(vector, 0);
                     m.memory.insert(vector + 1, 0x0800);
                 }
-                let elapsed = if command == 0x2a08 { 24 } else { 18 };
+                let elapsed = if command == (DMAT | 8) { 24 } else { 18 };
                 for cycle in 0..elapsed {
                     let out = m.clock(
                         BusAssertions {
-                            force_trace_mode: trace == 2 && cycle == 0,
+                            force_trace_mode: pin_trace && cycle == 0,
                             interrupt_assertion: if cycle == 5 { irq } else { 0 },
                             ..Default::default()
                         },
@@ -40,15 +44,26 @@ fn irq_and_trace_wait_until_the_entire_command_retires_then_keep_normal_priority
                     }
                 }
                 let out = m.clock(BusAssertions::default(), false);
-                let irq_vector = if irq & 16 != 0 { 0x20 } else { 0xa0 };
-                assert_eq!(out.address, if trace == 0 { irq_vector } else { 12 });
+                let irq_vector = if irq & LEVEL_FIVE_PIN != 0 {
+                    L5_VECTOR
+                } else {
+                    L1_VECTOR
+                };
+                assert_eq!(
+                    out.address,
+                    if trace_requested {
+                        TRACE_VECTOR
+                    } else {
+                        irq_vector
+                    }
+                );
                 assert_eq!(out.bus_access_type, BusAccessType::ExceptionVectorFetch);
                 assert_eq!(
                     m.dma_accesses().len(),
-                    if command == 0x2a08 { 16 } else { 7 }
+                    if command == (DMAT | 8) { 16 } else { 7 }
                 );
                 assert_eq!(m.cpu.registers.coprocessor_select_register, 0);
-                if trace != 0 {
+                if trace_requested {
                     let pending = m.cpu.eu_registers.pending_fault.unwrap();
                     assert_eq!(pending.fault, Faults::InstructionTrace);
                     assert_eq!(pending.pc, 0xcd00_0202);
@@ -57,10 +72,10 @@ fn irq_and_trace_wait_until_the_entire_command_retires_then_keep_normal_priority
                         m.clock(BusAssertions::default(), false);
                     }
                     assert_eq!(
-                        m.cpu.eu_registers.link_registers[6].return_address,
+                        m.cpu.eu_registers.link_registers[FAULT_LINK].return_address,
                         0xcd00_0202
                     );
-                    m.cpu.registers.coprocessor_select_register = 0x1a00;
+                    m.cpu.registers.coprocessor_select_register = RETE;
                     for _ in 0..6 {
                         m.clock(BusAssertions::default(), false);
                     }
@@ -68,12 +83,16 @@ fn irq_and_trace_wait_until_the_entire_command_retires_then_keep_normal_priority
                 }
                 assert_eq!(
                     m.cpu.eu_registers.pending_hardware_exceptions,
-                    irq & if irq & 16 != 0 { !16 } else { !1 }
+                    irq & if irq & LEVEL_FIVE_PIN != 0 {
+                        !LEVEL_FIVE_PIN
+                    } else {
+                        !1
+                    }
                 );
                 for _ in 0..5 {
                     m.clock(BusAssertions::default(), false);
                 }
-                let link = if irq & 16 != 0 { 5 } else { 1 };
+                let link = if irq & LEVEL_FIVE_PIN != 0 { 5 } else { 1 };
                 assert_eq!(
                     m.cpu.eu_registers.link_registers[link].return_address,
                     0xcd00_0202
@@ -85,11 +104,11 @@ fn irq_and_trace_wait_until_the_entire_command_retires_then_keep_normal_priority
 
 #[test]
 fn l5_edges_and_overruns_are_sampled_during_dma_waits_but_dispatch_only_after_completion() {
-    let mut m = Machine::new(0x2a08, false);
+    let mut m = Machine::new(DMAT | 8, false);
     for _ in 0..8 {
         m.clock(BusAssertions::default(), false);
     }
-    for interrupt in [16, 0, 16] {
+    for interrupt in [LEVEL_FIVE_PIN, 0, LEVEL_FIVE_PIN] {
         m.clock(
             BusAssertions {
                 interrupt_assertion: interrupt,
@@ -99,20 +118,26 @@ fn l5_edges_and_overruns_are_sampled_during_dma_waits_but_dispatch_only_after_co
         );
     }
     assert!(m.cpu.eu_registers.l5_overrun);
-    assert_eq!(m.cpu.eu_registers.pending_hardware_exceptions, 16);
+    assert_eq!(
+        m.cpu.eu_registers.pending_hardware_exceptions,
+        LEVEL_FIVE_PIN
+    );
     assert!(m.cpu.eu_registers.pending_fault.is_none());
     let mut dispatched = false;
     for _ in 0..40 {
         let out = m.clock(BusAssertions::default(), false);
         if out.bus_access_type == BusAccessType::ExceptionVectorFetch {
-            assert_eq!(out.address, 14);
+            assert_eq!(out.address, L5_CONFLICT_VECTOR);
             assert_eq!(m.dma_accesses().len(), 16);
             assert_eq!(
                 m.cpu.eu_registers.pending_fault.unwrap().fault,
                 Faults::LevelFiveInterruptConflict
             );
             assert!(!m.cpu.eu_registers.l5_overrun);
-            assert_eq!(m.cpu.eu_registers.pending_hardware_exceptions, 16);
+            assert_eq!(
+                m.cpu.eu_registers.pending_hardware_exceptions,
+                LEVEL_FIVE_PIN
+            );
             dispatched = true;
             break;
         }
@@ -122,7 +147,7 @@ fn l5_edges_and_overruns_are_sampled_during_dma_waits_but_dispatch_only_after_co
 
 #[test]
 fn a_dma_fault_cancels_its_deferred_trace_without_consuming_queued_irq() {
-    let mut m = Machine::new(0x2807, false);
+    let mut m = Machine::new(DMAR | 7, false);
     set_sr_bit(StatusRegisterFields::TraceMode, &mut m.cpu.registers);
     set_hardware_interrupt_enable(&mut m.cpu.registers, 1);
     for cycle in 0..6 {
@@ -161,7 +186,7 @@ fn a_dma_fault_cancels_its_deferred_trace_without_consuming_queued_irq() {
     assert!(m.cpu.eu_registers.pending_fault.is_none());
     assert_eq!(m.cpu.eu_registers.pending_hardware_exceptions, 1);
     assert_eq!(
-        m.cpu.eu_registers.link_registers[6].return_address,
+        m.cpu.eu_registers.link_registers[FAULT_LINK].return_address,
         0xcd00_0200
     );
 }

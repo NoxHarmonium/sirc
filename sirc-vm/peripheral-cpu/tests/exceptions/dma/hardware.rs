@@ -1,20 +1,20 @@
-use super::support::Machine;
+use super::support::{Machine, DMAR, DMAT, DMAW, FAULT_METADATA_LINK, RESERVED_PAIR};
 use peripheral_bus::{
     device::{BusAccessType, BusAssertions, Device},
     memory_mapped_device::{new_stub_memory_mapped_device, MemoryMapped, MemoryMappedDevice},
     new_bus_peripheral,
 };
 use peripheral_cpu::{
-    coprocessors::exception_unit::definitions::Faults,
+    coprocessors::{dma::DmaCoprocessor, exception_unit::definitions::Faults},
     decode_fault_metadata_register,
     registers::{set_sr_bit, StatusRegisterFields},
-    CpuPeripheral,
+    CpuPeripheral, COPROCESSOR_ID_LENGTH, COPROCESSOR_OPCODE_ID_LENGTH,
 };
 use std::any::Any;
 
 #[test]
 fn dma_privilege_checks_precede_dispatch_even_for_zero_length_commands() {
-    for command in [0x2800, 0x2807, 0x2900, 0x2907, 0x2a00, 0x2a08] {
+    for command in [DMAR, (DMAR | 7), DMAW, (DMAW | 7), DMAT, (DMAT | 8)] {
         let mut m = Machine::new(command, false);
         set_sr_bit(StatusRegisterFields::ProtectedMode, &mut m.cpu.registers);
         let before = m.cpu.registers;
@@ -36,10 +36,11 @@ fn dma_privilege_checks_precede_dispatch_even_for_zero_length_commands() {
 #[test]
 fn reserved_dma_commands_fail_without_starting_bus_work() {
     for operation in 0..16 {
-        if (8..=10).contains(&operation) {
+        let command = (u16::from(DmaCoprocessor::COPROCESSOR_ID) << COPROCESSOR_ID_LENGTH)
+            | (operation << COPROCESSOR_OPCODE_ID_LENGTH);
+        if [DMAR, DMAW, DMAT].contains(&command) {
             continue;
         }
-        let command = 0x2000 | operation << 8;
         let mut m = Machine::new(command, false);
         for _ in 0..7 {
             m.clock(BusAssertions::default(), false);
@@ -49,12 +50,12 @@ fn reserved_dma_commands_fail_without_starting_bus_work() {
             Faults::InvalidOpCode
         );
         assert_eq!(
-            m.cpu.eu_registers.link_registers[7].return_address,
+            m.cpu.eu_registers.link_registers[FAULT_METADATA_LINK].return_address,
             u32::from(command)
         );
         assert!(m.dma_accesses().is_empty());
     }
-    for command in [0x28c1, 0x29c1] {
+    for command in [(DMAR | RESERVED_PAIR | 1), (DMAW | RESERVED_PAIR | 1)] {
         let mut m = Machine::new(command, false);
         for _ in 0..7 {
             m.clock(BusAssertions::default(), false);
@@ -69,7 +70,7 @@ fn reserved_dma_commands_fail_without_starting_bus_work() {
 
 #[test]
 fn dma_writes_cannot_bypass_bus_segment_protection() {
-    let mut m = Machine::new(0x2901, false);
+    let mut m = Machine::new(DMAW | 1, false);
     m.cpu.registers.al = 0;
     let mut bus = new_bus_peripheral(Box::new(m.cpu));
     bus.map_segment(
@@ -96,7 +97,7 @@ fn dma_writes_cannot_bypass_bus_segment_protection() {
         if let Some(fault) = cpu.eu_registers.pending_fault {
             assert_eq!(fault.fault, Faults::BusProtection);
             assert_eq!(fault.pc, 0xcd00_0200);
-            let metadata = cpu.eu_registers.link_registers[7];
+            let metadata = cpu.eu_registers.link_registers[FAULT_METADATA_LINK];
             assert_eq!(metadata.return_address, 0xab01_0000);
             assert_eq!(
                 decode_fault_metadata_register(metadata.return_status_register).bus_access_type,
@@ -133,7 +134,7 @@ impl Device for NeverAck {
 
 #[test]
 fn reset_aborts_a_held_dma_access_and_cannot_resurrect_the_command() {
-    let m = Machine::new(0x2907, false);
+    let m = Machine::new(DMAW | 7, false);
     let mut bus = new_bus_peripheral(Box::new(m.cpu));
     bus.map_segment(
         "PROGRAM",

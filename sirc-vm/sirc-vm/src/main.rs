@@ -348,7 +348,10 @@ mod hardware_tests {
             .cpu_config()
             .unwrap();
         assert_eq!(config.optional_coprocessors.len(), 1);
-        assert_eq!(config.optional_coprocessors[0].id(), 2);
+        assert_eq!(
+            config.optional_coprocessors[0].id(),
+            DmaCoprocessor::COPROCESSOR_ID
+        );
         assert!(new_cpu_peripheral_with_config(config).is_ok());
     }
 

@@ -1,6 +1,25 @@
 ;; The same binary copies eight words with either the DMA chip or a small
 ;; invalid-opcode fallback. R6=CAFE means pointers and every copied word passed.
 ;; R5=0 identifies hardware; R5=1 identifies the software fallback.
+.EQU $PROGRAM_SEGMENT #0
+.EQU $SCRATCH_SEGMENT #1
+.EQU $SOURCE_OFFSET #0x0800
+.EQU $DESTINATION_OFFSET #0x0100
+.EQU $PATH_MARKER_OFFSET #0x0200
+.EQU $COPY_WORDS #8
+.EQU $SOURCE_END #0x0808
+.EQU $DESTINATION_END #0x0108
+.EQU $DMAT_EIGHT_WORDS_COMMAND #0x2A08
+.EQU $FAULT_LINK #6
+.EQU $FAULT_METADATA_LINK #7
+.EQU $INSTRUCTION_WORDS #2
+.EQU $CHECK_PASSED #0xCAFE
+.EQU $CHECK_FAILED #0xDEAD
+.EQU $DEBUG_SEGMENT #0x000B
+.EQU $DEBUG_EXIT_OFFSET #7
+.EQU $DEBUG_EXIT_REQUEST #1
+.EQU $SOFTWARE_PATH #1
+
 .ORG 0x0000
 .DQ @start
 .ORG 0x0008
@@ -8,24 +27,24 @@
 
 .ORG 0x0200
 :start
-MOVI ah, #0
-MOVI al, #0x0800
-MOVI lh, #1
-MOVI ll, #0x0100
-MOVI sh, #1
-MOVI sl, #0x0200
+MOVI ah, $PROGRAM_SEGMENT
+MOVI al, $SOURCE_OFFSET
+MOVI lh, $SCRATCH_SEGMENT
+MOVI ll, $DESTINATION_OFFSET
+MOVI sh, $SCRATCH_SEGMENT
+MOVI sl, $PATH_MARKER_OFFSET
 MOVI r1, #0
 STOR (s), r1
-DMAT a, l, #8
+DMAT a, l, $COPY_WORDS
 
 ; The architectural pointer advances must agree in both configurations.
-CMPI al, #0x0808
+CMPI al, $SOURCE_END
 BRAN|!= @failed
-CMPI ll, #0x0108
+CMPI ll, $DESTINATION_END
 BRAN|!= @failed
-MOVI al, #0x0800
-MOVI ll, #0x0100
-MOVI r3, #8
+MOVI al, $SOURCE_OFFSET
+MOVI ll, $DESTINATION_OFFSET
+MOVI r3, $COPY_WORDS
 :verify
 LOAD r1, (#0, a)+
 LOAD r2, (#0, l)+
@@ -33,15 +52,15 @@ CMPR r1, r2
 BRAN|!= @failed
 SUBI r3, #1
 BRAN|!= @verify
-MOVI r6, #0xCAFE
+MOVI r6, $CHECK_PASSED
 BRAN @exit
 :failed
-MOVI r6, #0xDEAD
+MOVI r6, $CHECK_FAILED
 :exit
 LOAD r5, (s)
-MOVI ah, #0x000B
-MOVI al, #7
-MOVI r7, #1
+MOVI ah, $DEBUG_SEGMENT
+MOVI al, $DEBUG_EXIT_OFFSET
+MOVI r7, $DEBUG_EXIT_REQUEST
 STOR (a), r7
 
 .ORG 0x0400
@@ -50,27 +69,27 @@ STOR (a), r7
 ; Missing hardware faults before any DMA word or pointer has been committed.
 MOVR r2, ah
 MOVR r4, al
-ETFR a, #7
-CMPI al, #0x2A08
+ETFR a, $FAULT_METADATA_LINK
+CMPI al, $DMAT_EIGHT_WORDS_COMMAND
 BRAN|!= @failed
 MOVR ah, r2
 MOVR al, r4
-MOVI r3, #8
+MOVI r3, $COPY_WORDS
 :copy_word
 LOAD r1, (#0, a)+
 STOR (#0, l), r1
 ADDI ll, #1
 SUBI r3, #1
 BRAN|!= @copy_word
-MOVI r7, #1
+MOVI r7, $SOFTWARE_PATH
 STOR (s), r7
 
 ; Invalid opcode is retryable; skip the emulated instruction on return.
 MOVR r2, ah
 MOVR r4, al
-ETFR a, #6
-ADDI al, #2
-ETTR #6, a
+ETFR a, $FAULT_LINK
+ADDI al, $INSTRUCTION_WORDS
+ETTR $FAULT_LINK, a
 MOVR ah, r2
 MOVR al, r4
 RETE
