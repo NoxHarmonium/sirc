@@ -9,6 +9,7 @@ mod faults;
 mod hardware_exceptions;
 mod l5_queue;
 mod logical_addresses;
+mod optional_coprocessors;
 mod pc_wrap;
 mod reset;
 mod software_exceptions;
