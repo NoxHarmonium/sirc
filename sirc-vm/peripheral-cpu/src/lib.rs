@@ -460,6 +460,26 @@ impl CpuPeripheral {
                     event.accept(&mut self.eu_registers, self.registers.get_full_pc_address()),
                     SlotOwner::EuEvent,
                 )
+            } else if self.registers.pl & 1 != 0 {
+                // Alignment matters only when arbitration would start a PU fetch.
+                // Use this very phase 0 for fault entry; the odd PC never reaches the bus.
+                let pc = self.registers.get_full_pc_address();
+                raise_fault(
+                    &mut self.eu_registers,
+                    Faults::Alignment,
+                    &BusAssertions {
+                        address: pc,
+                        bus_access_type: BusAccessType::InstructionFetch,
+                        ..BusAssertions::default()
+                    },
+                    pc,
+                );
+                (
+                    select_pending_event(&self.registers, &self.eu_registers)
+                        .expect("alignment fault must be eligible for dispatch")
+                        .accept(&mut self.eu_registers, pc),
+                    SlotOwner::EuEvent,
+                )
             } else {
                 (0, SlotOwner::ProcessingUnit)
             };

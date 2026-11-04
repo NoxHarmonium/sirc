@@ -701,12 +701,6 @@ fn test_alignment_fault() {
 
     run_expectations(
         &mut cpu_peripheral,
-        &expect_dummy_instruction(0x1, true),
-        &mut clocks,
-    );
-
-    run_expectations(
-        &mut cpu_peripheral,
         &expect_fault(ALIGNMENT_FAULT, (0x00AB, 0xCDE0)),
         &mut clocks,
     );
