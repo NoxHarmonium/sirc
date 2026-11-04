@@ -30,14 +30,30 @@ impl Pair {
         }
     }
 }
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Forward,
+    Backward,
+    Copy,
+}
+
 struct Burst {
     pair: Pair,
     write: bool,
-    backward: bool,
+    mode: Mode,
     base: (u16, u16),
+    destination: (u16, u16),
+    remaining: u8,
     count: u8,
     index: u8,
     trap: bool,
+}
+fn overflow(base: (u16, u16), low: u16, bat: BusAccessType) -> CoprocessorFault {
+    CoprocessorFault {
+        fault: Faults::SegmentOverflow,
+        address: (base.0, low).to_full_address(),
+        bus_access_type: bat,
+    }
 }
 impl Burst {
     fn bat(&self) -> BusAccessType {
@@ -47,12 +63,48 @@ impl Burst {
             BusAccessType::DmaReadBurst
         }
     }
-    fn overflow(&self, low: u16) -> CoprocessorFault {
-        CoprocessorFault {
-            fault: Faults::SegmentOverflow,
-            address: (self.base.0, low).to_full_address(),
-            bus_access_type: self.bat(),
+    fn access_base(&self) -> (u16, u16) {
+        if self.mode == Mode::Copy && self.write {
+            self.destination
+        } else {
+            self.base
         }
+    }
+    fn finish_chunk(&mut self, registers: &mut Registers) -> Result<(), CoprocessorFault> {
+        if self.mode == Mode::Copy {
+            let (source, source_wrap) = self.base.1.overflowing_add(u16::from(self.count));
+            let (destination, destination_wrap) =
+                self.destination.1.overflowing_add(u16::from(self.count));
+            // Validate both before committing either. Completed words/window
+            // writes survive a fault; a/l still describe the unadvanced chunk.
+            if self.trap && source_wrap {
+                return Err(overflow(self.base, source, BusAccessType::DmaReadBurst));
+            }
+            if self.trap && destination_wrap {
+                return Err(overflow(
+                    self.destination,
+                    destination,
+                    BusAccessType::DmaWriteBurst,
+                ));
+            }
+            registers.al = source;
+            registers.ll = destination;
+            self.base.1 = source;
+            self.destination.1 = destination;
+        } else if self.mode != Mode::Backward {
+            let (low, wrapped) = self.base.1.overflowing_add(u16::from(self.count));
+            if wrapped && self.trap {
+                return Err(overflow(self.base, low, self.bat()));
+            }
+            self.pair.set_low(registers, low);
+        }
+        self.remaining -= self.count;
+        if self.remaining != 0 {
+            self.count = self.remaining.min(7);
+            self.index = 0;
+            self.write = false;
+        }
+        Ok(())
     }
 }
 
@@ -68,33 +120,47 @@ impl OptionalCoprocessor for DmaCoprocessor {
     fn start(&mut self, command: u16, registers: &mut Registers) -> Result<(), CoprocessorFault> {
         self.burst = None;
         let operation = (command >> 8) & 0xf;
-        if !matches!(operation, 8 | 9) {
+        if !matches!(operation, 8..=10) {
             return Err(CoprocessorFault::invalid_command(command));
         }
-        let count = u8::try_from(command & 7).unwrap();
+        let copy = operation == 10;
+        let count = u8::try_from(command & if copy { 0xff } else { 7 }).unwrap();
         if count == 0 {
             return Ok(());
         }
-        let pair = match (command >> 6) & 3 {
-            0 => Pair::Address,
-            1 => Pair::Link,
-            2 => Pair::Stack,
-            // Reserved operands are undefined architecturally; reject safely.
-            _ => return Err(CoprocessorFault::invalid_command(command)),
+        // DMA selector 00=a, 01=l, 10=s differs from the instruction AF layout.
+        let pair = if copy {
+            Pair::Address
+        } else {
+            match (command >> 6) & 3 {
+                0 => Pair::Address,
+                1 => Pair::Link,
+                2 => Pair::Stack,
+                // Reserved operands are undefined architecturally; reject safely.
+                _ => return Err(CoprocessorFault::invalid_command(command)),
+            }
         };
         let mut burst = Burst {
             pair,
             write: operation == 9,
-            backward: command & 0x20 != 0,
+            mode: if copy {
+                Mode::Copy
+            } else if command & 0x20 != 0 {
+                Mode::Backward
+            } else {
+                Mode::Forward
+            },
             base: pair.read(registers),
-            count,
+            destination: (registers.lh, registers.ll),
+            remaining: count,
+            count: count.min(7),
             index: 0,
             trap: sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers),
         };
-        if burst.backward {
+        if burst.mode == Mode::Backward {
             let (low, wrapped) = burst.base.1.overflowing_sub(u16::from(count));
             if wrapped && burst.trap {
-                return Err(burst.overflow(low));
+                return Err(overflow(burst.base, low, burst.bat()));
             }
             burst.base.1 = low;
             pair.set_low(registers, low);
@@ -106,15 +172,16 @@ impl OptionalCoprocessor for DmaCoprocessor {
         let Some(burst) = &self.burst else {
             return Ok(BusAssertions::default());
         };
-        if burst.index == burst.count {
+        if burst.remaining == 0 {
             return Ok(BusAssertions::default());
         }
-        let (low, wrapped) = burst.base.1.overflowing_add(u16::from(burst.index));
+        let base = burst.access_base();
+        let (low, wrapped) = base.1.overflowing_add(u16::from(burst.index));
         if wrapped && burst.trap {
-            return Err(burst.overflow(low));
+            return Err(overflow(base, low, burst.bat()));
         }
         Ok(BusAssertions {
-            address: (burst.base.0, low).to_full_address(),
+            address: (base.0, low).to_full_address(),
             data: if burst.write {
                 registers[burst.index]
             } else {
@@ -144,19 +211,20 @@ impl OptionalCoprocessor for DmaCoprocessor {
             registers[burst.index] = response.data;
         }
         burst.index += 1;
-        if burst.index == burst.count && !burst.backward {
-            let (low, wrapped) = burst.base.1.overflowing_add(u16::from(burst.count));
-            if wrapped && burst.trap {
-                return Err(burst.overflow(low));
+        if burst.index == burst.count {
+            if burst.mode == Mode::Copy && !burst.write {
+                // The actual r1..r7 window is the buffer. No hidden host copy
+                // can conceal its partial reads or short-final-chunk clobbers.
+                burst.write = true;
+                burst.index = 0;
+            } else {
+                burst.finish_chunk(registers)?;
             }
-            burst.pair.set_low(registers, low);
         }
         Ok(())
     }
     fn is_finished(&self) -> bool {
-        self.burst
-            .as_ref()
-            .is_none_or(|burst| burst.index == burst.count)
+        self.burst.as_ref().is_none_or(|burst| burst.remaining == 0)
     }
     fn reset(&mut self) {
         self.burst = None;
