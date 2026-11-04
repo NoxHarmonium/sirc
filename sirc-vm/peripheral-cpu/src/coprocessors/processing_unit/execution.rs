@@ -62,12 +62,29 @@ pub fn check_privilege(instruction: &DecodedInstruction, registers: &Registers) 
     writing_to_privileged_registers || calling_privileged_cop_opcode
 }
 
+/// Linking operations still use next PC as their return address. Only executed
+/// non-link jumps and actual ALU/LOAD writes to pl replace it completely.
+fn uses_advanced_pc(decoded: &DecodedInstruction) -> bool {
+    if !decoded.con_ {
+        return true;
+    }
+    let non_link_jump = matches!(
+        decoded.ins,
+        Instruction::LoadEffectiveAddressFromIndirectImmediate
+            | Instruction::LoadEffectiveAddressFromIndirectRegister
+            | Instruction::LoadEffectiveAddressFromIndirectImmediatePreDecrement
+            | Instruction::LoadEffectiveAddressFromIndirectRegisterPreDecrement
+    ) && decoded.des_ad_l == RegisterName::Pl.to_register_index();
+    let writes_pl =
+        writes_register_field(decoded) && decoded.des == RegisterName::Pl.to_register_index();
+    !(non_link_jump || writes_pl)
+}
+
 #[derive(Default)]
 pub struct ProcessingUnitExecutor {
     pub instruction: u32,
     pub decoded_instruction: DecodedInstruction,
     pub intermediate_registers: IntermediateRegisters,
-    pub next_instruction_fetch_is_overflow: bool,
 }
 
 impl Executor for ProcessingUnitExecutor {
@@ -96,17 +113,6 @@ impl Executor for ProcessingUnitExecutor {
             ExecutionPhase::InstructionFetchLow => {
                 trace!("registers.pl: 0x{:X}", registers.pl);
 
-                // PC Overflow check
-                if self.next_instruction_fetch_is_overflow {
-                    raise_fault(
-                        eu_registers,
-                        Faults::SegmentOverflow,
-                        &bus_assertions,
-                        registers.get_full_pc_address(),
-                    );
-                }
-                self.next_instruction_fetch_is_overflow = false;
-
                 BusAssertions {
                     address: registers.get_full_pc_address(),
                     op: BusOperation::Read,
@@ -131,21 +137,9 @@ impl Executor for ProcessingUnitExecutor {
 
                 trace!("self.instruction: {:?}", self.instruction);
 
-                let (decoded_instruction, next_instruction_fetch_is_overflow) =
+                let (decoded_instruction, _) =
                     decode_and_register_fetch(u32::to_be_bytes(self.instruction), registers);
                 self.decoded_instruction = decoded_instruction;
-
-                if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers) {
-                    // TODO: Remove all the verbose trace statements in the CPU code
-                    // category=Refactoring
-                    // It _might_ be impacting performance slightly in hot code paths and it isn't very useful, especially now we have a debugger
-                    // TODO: Investigate exposing CPU internals in debugger (e.g. decoded instruction components)
-                    // category=Debugging
-                    trace!(
-                        "next_instruction_fetch_is_overflow: {next_instruction_fetch_is_overflow}"
-                    );
-                    self.next_instruction_fetch_is_overflow = next_instruction_fetch_is_overflow;
-                }
 
                 trace!("self.decoded_instruction: {:?}", self.decoded_instruction);
 
@@ -201,6 +195,26 @@ impl Executor for ProcessingUnitExecutor {
                             self.decoded_instruction.pc_l_,
                         )
                             .to_full_address(),
+                    );
+                }
+                // Address calculations have first fault precedence. Check the
+                // PC advance belonging to this instruction before any access or
+                // write-back, never at a later instruction/handler fetch.
+                let decoded = &self.decoded_instruction;
+                if eu_registers.pending_fault.is_none()
+                    && sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
+                    && decoded.npc_l_ < decoded.pc_l_
+                    && uses_advanced_pc(decoded)
+                {
+                    raise_fault(
+                        eu_registers,
+                        Faults::SegmentOverflow,
+                        &BusAssertions {
+                            address: (decoded.npc_h_, decoded.npc_l_).to_full_address(),
+                            bus_access_type: BusAccessType::None,
+                            ..BusAssertions::default()
+                        },
+                        (decoded.pc_h_, decoded.pc_l_).to_full_address(),
                     );
                 }
                 result

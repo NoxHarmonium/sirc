@@ -266,8 +266,6 @@ fn test_reset_clears_pending_exception_state() {
         cpu.registers.ah = 0x1234;
         cpu.eu_registers.link_registers[5].return_address = 0x5566;
         cpu.active_command = 0x1234;
-        cpu.processing_unit_executor
-            .next_instruction_fetch_is_overflow = true;
         cpu.eu_registers.l5_overrun = true;
         cpu.eu_registers.pending_hardware_exceptions = 0x1F;
         cpu.eu_registers.current_exception_level = 7;
@@ -288,10 +286,6 @@ fn test_reset_clears_pending_exception_state() {
     assert_eq!(cpu.registers, expected_registers);
     assert_eq!(cpu.eu_registers.link_registers, links);
     assert_eq!(cpu.active_command, 0);
-    assert!(
-        !cpu.processing_unit_executor
-            .next_instruction_fetch_is_overflow
-    );
     assert_eq!(cpu.phase, 0);
     assert_eq!(cpu.registers.coprocessor_select_register, 0x1b00);
     assert!(!cpu.eu_registers.l5_overrun);
