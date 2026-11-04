@@ -15,3 +15,4 @@ mod sync;
 mod vector_fault_timing;
 mod vector_fetch;
 mod vector_retry;
+mod wrap_metadata;

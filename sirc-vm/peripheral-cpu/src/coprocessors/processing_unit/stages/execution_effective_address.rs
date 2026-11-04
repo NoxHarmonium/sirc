@@ -1,5 +1,5 @@
 use log::trace;
-use peripheral_bus::device::BusAssertions;
+use peripheral_bus::device::{BusAccessType, BusAssertions};
 
 use crate::{
     coprocessors::{
@@ -7,7 +7,8 @@ use crate::{
     },
     raise_fault,
     registers::{
-        sr_bit_is_set, ExceptionUnitRegisters, Registers, SegmentedAddress, StatusRegisterFields,
+        sr_bit_is_set, ExceptionUnitRegisters, RegisterName, Registers, SegmentedAddress,
+        StatusRegisterFields,
     },
 };
 
@@ -41,6 +42,18 @@ fn decode_execution_step_instruction_type(
         0x10..=0x1F => ExecutionStepInstructionType::MemoryRefDisplacement,
         0x20..=0x3F => ExecutionStepInstructionType::Alu,
         _ => panic!("No mapping for [{instruction:?}] to ExecutionStepInstructionType"),
+    }
+}
+
+/// Classify the instruction's intended access, even when overflow prevents it.
+fn address_access_type(decoded: &DecodedInstruction) -> BusAccessType {
+    match num::ToPrimitive::to_u8(&decoded.ins).unwrap() {
+        0x10..=0x13 => BusAccessType::DataWrite,
+        0x14..=0x17 => BusAccessType::DataRead,
+        _ if decoded.des_ad_l == RegisterName::Pl.to_register_index() => {
+            BusAccessType::InstructionFetch
+        }
+        _ => BusAccessType::None,
     }
 }
 
@@ -111,10 +124,20 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
                     // (it happened back at decode); recover this instruction's own fetch address
                     // from `decoded` instead so the fault is genuinely retryable.
                     let fault_pc = (decoded.pc_h_, decoded.pc_l_).to_full_address();
+                    let fault_access = if effective_address_overflowed {
+                        BusAssertions {
+                            address: (decoded.ad_h_, effective_address).to_full_address(),
+                            bus_access_type: address_access_type(decoded),
+                            ..BusAssertions::default()
+                        }
+                    } else {
+                        // Source-only wrap metadata is handled by #463.
+                        bus_assertions
+                    };
                     raise_fault(
                         eu_registers,
                         Faults::SegmentOverflow,
-                        &bus_assertions,
+                        &fault_access,
                         fault_pc,
                     );
                 }
