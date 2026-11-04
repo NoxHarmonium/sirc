@@ -127,6 +127,7 @@ pub struct DmaCoprocessor {
     burst: Option<Burst>,
 }
 impl DmaCoprocessor {
+    /// Standard optional DMA hardware ID in the CSR command word.
     pub const COPROCESSOR_ID: u8 = 2;
 }
 impl OptionalCoprocessor for DmaCoprocessor {

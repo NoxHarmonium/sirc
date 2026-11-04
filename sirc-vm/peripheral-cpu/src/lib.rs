@@ -75,6 +75,11 @@ const LEVEL_FIVE_INTERRUPT_PIN_BIT: u8 = 0b1_0000;
 /// Its always six baby!
 pub const CYCLES_PER_INSTRUCTION: u8 = 6;
 
+// Optional hardware cannot replace the mandatory PU (0) or EU (1).
+const MIN_OPTIONAL_COPROCESSOR_ID: u8 = 2;
+// CSR dedicates four bits to the coprocessor ID.
+const MAX_OPTIONAL_COPROCESSOR_ID: u8 = 0x0f;
+
 // Coprocessor select register components
 pub const COPROCESSOR_ID_MASK: u16 = 0xF000;
 pub const COPROCESSOR_ID_LENGTH: u16 = 12;
@@ -323,8 +328,8 @@ pub fn new_cpu_peripheral_with_config(config: CpuConfig) -> Result<CpuPeripheral
     let mut cpu = new_cpu_peripheral();
     for unit in config.optional_coprocessors {
         let id = unit.id();
-        if !(2..=15).contains(&id) {
-            return Err(format!("optional coprocessor ID {id} must be in 2..=15"));
+        if !(MIN_OPTIONAL_COPROCESSOR_ID..=MAX_OPTIONAL_COPROCESSOR_ID).contains(&id) {
+            return Err(format!("optional coprocessor ID {id} must be in {MIN_OPTIONAL_COPROCESSOR_ID}..={MAX_OPTIONAL_COPROCESSOR_ID}"));
         }
         if cpu.optional_coprocessors.insert(id, unit).is_some() {
             return Err(format!("duplicate optional coprocessor ID {id}"));
