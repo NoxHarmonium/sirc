@@ -13,6 +13,7 @@
 
 ;; Bus access types (fault metadata register, bits 0-2)
 .EQU $BAT_NONE                      #0x0000
+.EQU $BAT_DATA_READ                 #0x0002
 .EQU $BAT_DATA_WRITE                #0x0003
 
 
@@ -45,6 +46,7 @@
 :init
 MOVI    r1, #1
 MOVI    r2, #1
+; Final r3 is 1 + 0x000F (LOAD overflow) + 0x0F00 (PC overflow) = 0x0F10.
 MOVI    r3, #1
 MOVI    r4, #1
 MOVI    r5, #1
@@ -198,8 +200,8 @@ ETTR #6, a
 RETE
 
 :segment_overflow_fault_handler
-; Check which kind of address computation caused the overflow, using the
-; bus access type captured in the fault metadata register
+; This example has a LOAD effective-address overflow and a PC-advance overflow.
+; Route data reads/writes to access recovery and BAT none to the PC test recovery.
 
 ; Transfer fault metadata to r7
 ETFR    r7, #7
@@ -208,8 +210,8 @@ ANDI    r7, #0x7
 
 CMPI    r7, $BAT_NONE
 BRAN|== @segment_overflow_fault_handler_pc
-; Mask off the bus access type (bits 0-2) from the fault metadata register
-ANDI    r7, #0x7
+CMPI    r7, $BAT_DATA_READ
+BRAN|== @segment_overflow_fault_handler_address
 
 CMPI    r7, $BAT_DATA_WRITE
 BRAN|== @segment_overflow_fault_handler_address
@@ -220,8 +222,8 @@ BRAN @segment_overflow_fault_handler_end
 
 ADDI    r3, #0x0F00
 
-; Fix up the return address because it isn't valid
-; Load address after fault
+; PC advance canceled the instruction at FFFE. Redirect past the high-segment
+; test instead of retrying that same instruction and faulting again.
 MOVI    ah, $PROGRAM_SEGMENT
 MOVI    al, @return_from_testing_pc_overflow_with_fault
 ; Transfer corrected address back to ELR
@@ -233,9 +235,8 @@ BRAN @segment_overflow_fault_handler_end
 
 ADDI    r3, #0x000F
 
-; Segment Overflow is retryable: fix up the return address so RETE doesn't retry the same
-; faulting access forever. (This branch is not reached by anything in this example today,
-; but is fixed defensively so it isn't a landmine if that changes.)
+; Intentionally skip the overflowing LOAD. Retrying its unchanged saved PC would
+; repeat the fault forever. Preserve the saved high word while redirecting it.
 ETFR    a, #6
 MOVI    al, @after_segment_overflow_load
 ETTR    #6, a
