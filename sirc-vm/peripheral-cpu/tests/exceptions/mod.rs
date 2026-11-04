@@ -1,3 +1,4 @@
+mod address_wrap;
 mod alignment;
 mod command_dispatch;
 mod common;

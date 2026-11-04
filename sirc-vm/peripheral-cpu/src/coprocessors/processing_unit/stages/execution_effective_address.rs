@@ -44,7 +44,6 @@ fn decode_execution_step_instruction_type(
     }
 }
 
-#[allow(clippy::cast_sign_loss)]
 impl StageExecutor for ExecutionEffectiveAddressExecutor {
     fn execute(
         decoded: &DecodedInstruction,
@@ -76,60 +75,37 @@ impl StageExecutor for ExecutionEffectiveAddressExecutor {
             ExecutionStepInstructionType::NoOp => {}
 
             ExecutionStepInstructionType::MemoryRefDisplacement => {
-                // sr_b_ is a signed two's-complement displacement (manual: "trap fires only when
-                // the low-word calculation wraps, whether the displacement is positive or
-                // negative"). A plain unsigned overflowing_add reports a spurious carry for a
-                // negative displacement that doesn't actually underflow, and misses a genuine
-                // underflow the unsigned view can't see as a carry. Detect the sign and use a
-                // real subtraction for negative displacements, same idiom as the pre-decrement
-                // step below.
-                let (displaced, displacement_overflowed) = if decoded.sr_b_.cast_signed() < 0 {
-                    decoded.ad_l_.overflowing_sub(decoded.sr_b_.wrapping_neg())
-                } else {
-                    decoded.ad_l_.overflowing_add(decoded.sr_b_)
-                };
-                // This is the original address with the pre/post increment/decrement applied (no offset)
-                // we need this value to write back to the source address register to do the inc/dec
-                let (incremented_src, _) = decoded.ad_l_.overflowing_add(decoded.addr_inc as u16);
-                // Pre-decrement's borrow must be computed with a real subtraction: adding the
-                // two's-complement bit pattern of -1 (0xFFFF) via `overflowing_add` reports a
-                // carry for every nonzero `displaced` and no carry only when `displaced == 0`,
-                // which is exactly backwards from the genuine underflow of a -1 decrement (which
-                // only occurs when `displaced == 0` wraps to `0xFFFF`).
-                let (incremented_displacement, displacement_overflowed_after_inc) =
-                    if decoded.addr_inc == -1 {
-                        displaced.overflowing_sub(1)
-                    } else {
-                        displaced.overflowing_add(decoded.addr_inc as u16)
-                    };
-
-                trace!("Calculate offset: ad_l_ 0x{:X} sr_b_: 0x{:X} displaced: 0x{displaced:X} displacement_overflowed: {displacement_overflowed}", decoded.ad_l_ , decoded.sr_b_);
-
-                match decoded.addr_inc {
-                    -1 => {
-                        // :: Pre-decrement ::
-                        // alu_output drives the memory store so it needs to PRE decremented here
-                        intermediate_registers.alu_output = incremented_displacement;
-                        intermediate_registers.address_output = incremented_src;
-                    }
-                    0 => {
-                        // :: Regular ::
-                        intermediate_registers.alu_output = displaced;
-                        // If we aren't doing a pre decrement/post increment,
-                        // the address we want to write is just the calculated address
-                        intermediate_registers.address_output = displaced;
-                    }
-                    1 => {
-                        // :: Post-increment ::
-                        intermediate_registers.alu_output = displaced;
-                        intermediate_registers.address_output = incremented_src;
-                    }
+                // Auto-update changes the source pair by one, independently of
+                // the displacement. Pre-decrement uses that updated low word as
+                // the EA base; post-increment uses the original low word.
+                let (updated_source, source_update_overflowed) = match decoded.addr_inc {
+                    -1 => decoded.ad_l_.overflowing_sub(1),
+                    0 => (decoded.ad_l_, false),
+                    1 => decoded.ad_l_.overflowing_add(1),
                     _ => panic!("addr_inc should never not be -1, 0 or 1"),
-                }
+                };
+                let base = if decoded.addr_inc == -1 {
+                    updated_source
+                } else {
+                    decoded.ad_l_
+                };
+                let (effective_address, effective_address_overflowed) =
+                    base.overflowing_add_signed(decoded.sr_b_.cast_signed());
+
+                trace!("Calculate offset: base: 0x{base:X} displacement: 0x{:X} EA: 0x{effective_address:X} EA wrapped: {effective_address_overflowed} source update: 0x{updated_source:X} update wrapped: {source_update_overflowed}", decoded.sr_b_);
+
+                // Keep both wrapped results available for write-back and the
+                // later fault-metadata/precedence work (#462/#463).
+                intermediate_registers.alu_output = effective_address;
+                intermediate_registers.address_output = if decoded.addr_inc == 0 {
+                    effective_address
+                } else {
+                    updated_source
+                };
 
                 // Overflow check
                 if sr_bit_is_set(StatusRegisterFields::TrapOnAddressOverflow, registers)
-                    && (displacement_overflowed || displacement_overflowed_after_inc)
+                    && (effective_address_overflowed || source_update_overflowed)
                 {
                     // By this phase `registers.pl` has already advanced past this instruction
                     // (it happened back at decode); recover this instruction's own fetch address
