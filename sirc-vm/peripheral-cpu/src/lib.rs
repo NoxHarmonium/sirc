@@ -45,7 +45,7 @@ use coprocessors::{
         },
         execution::{
             construct_exception_unit_command, deconstruct_exception_unit_command,
-            select_pending_event, ExceptionUnitExecutor,
+            is_valid_exception_unit_command, select_pending_event, ExceptionUnitExecutor,
         },
     },
     processing_unit::execution::ProcessingUnitExecutor,
@@ -501,23 +501,27 @@ impl CpuPeripheral {
                 &mut self.eu_registers,
                 bus_assertions,
             ),
-            ExceptionUnitExecutor::COPROCESSOR_ID => self.exception_unit_executor.step(
-                &phase,
-                self.active_command,
-                &mut self.registers,
-                &mut self.eu_registers,
-                bus_assertions,
-            ),
+            ExceptionUnitExecutor::COPROCESSOR_ID
+                if is_valid_exception_unit_command(self.active_command) =>
+            {
+                self.exception_unit_executor.step(
+                    &phase,
+                    self.active_command,
+                    &mut self.registers,
+                    &mut self.eu_registers,
+                    bus_assertions,
+                )
+            }
             _ => {
                 if self.eu_registers.pending_fault.is_none()
                     && phase == ExecutionPhase::InstructionFetchLow
                 {
-                    warn!("Invalid COP coprocessor ID detected: {coprocessor_id}");
+                    warn!("Invalid COP command: {:#06X}", self.active_command);
                     let invalid_coprocessor_command = self.active_command;
                     // This arm only runs at InstructionFetchLow, one poll cycle after the
                     // faulting instruction's own WriteBackExecutor wrote
-                    // `coprocessor_select_register` -- since the coprocessor ID has been invalid
-                    // for the whole intervening cycle, `processing_unit_executor.step()` (and so
+                    // `coprocessor_select_register` -- since the command is rejected before
+                    // dispatch, `processing_unit_executor.step()` (and so
                     // its decode) was never invoked, so `decoded_instruction` is still exactly
                     // that faulting instruction's own decode, untouched.
                     let fault_pc = (
@@ -531,7 +535,7 @@ impl CpuPeripheral {
                         Faults::InvalidOpCode,
                         &BusAssertions {
                             address: u32::from(invalid_coprocessor_command),
-                            ..bus_assertions
+                            ..BusAssertions::default()
                         },
                         fault_pc,
                     );

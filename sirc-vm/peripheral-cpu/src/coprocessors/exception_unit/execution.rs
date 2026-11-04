@@ -63,10 +63,17 @@ pub fn construct_exception_unit_command(op_code: &ExceptionUnitOpCodes, vector: 
         | vector as u16
 }
 
+/// Validate the operation before a software command can execute or access vectors.
+#[must_use]
+pub fn is_valid_exception_unit_command(command: u16) -> bool {
+    let instruction = decode_exception_unit_instruction(command);
+    num::FromPrimitive::from_u8(instruction.op_code).is_some_and(|_: ExceptionUnitOpCodes| true)
+}
+
 pub fn deconstruct_exception_unit_command(command: u16) -> (ExceptionUnitOpCodes, u8, u8) {
     let instruction = decode_exception_unit_instruction(command);
-    // Reserved operations retain the current no-op behavior until #447 introduces
-    // invalid-opcode faults on top of the #445 dispatch foundation.
+    // The CU rejects reserved operations before dispatch. Keep decoding total for
+    // callers inspecting raw command words; decoding alone does not validate them.
     let op_code =
         num::FromPrimitive::from_u8(instruction.op_code).unwrap_or(ExceptionUnitOpCodes::None);
     let vector = instruction.value;
@@ -750,23 +757,14 @@ mod tests {
     }
 
     #[test]
-    fn reserved_exception_unit_opcode_behaves_as_a_no_op_instead_of_panicking() {
-        // Until #447 replaces the reserved-operation fallback with a fault, its
-        // unused payload must not be interpreted as an exception vector. Construct
-        // raw commands because `construct_exception_unit_command` accepts only defined ops.
-        for reserved_op_code in 0x2u8..=0x8 {
-            let command = (u16::from(ExceptionUnitExecutor::COPROCESSOR_ID)
-                << COPROCESSOR_ID_LENGTH)
-                & COPROCESSOR_ID_MASK
-                | (u16::from(reserved_op_code) << COPROCESSOR_OPCODE_ID_LENGTH)
-                    & COPROCESSOR_OPCODE_ID_MASK;
-
-            for payload in 0..=u8::MAX {
-                let (op_code, vector, level) =
-                    deconstruct_exception_unit_command(command | u16::from(payload));
-                assert_eq!(op_code, ExceptionUnitOpCodes::None);
-                assert_eq!(vector, payload);
-                assert_eq!(level, 0, "a no-op has no exception level");
+    fn validates_operation_nibbles_without_interpreting_reserved_payloads() {
+        for op in 0u16..=15 {
+            for payload in 0..=255 {
+                let command = 0x1000 | (op << 8) | payload;
+                assert_eq!(
+                    is_valid_exception_unit_command(command),
+                    !(2..=8).contains(&op)
+                );
             }
         }
     }

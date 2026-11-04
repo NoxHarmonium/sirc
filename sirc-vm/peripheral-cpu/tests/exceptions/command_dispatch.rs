@@ -467,3 +467,62 @@ fn wait_l5_wake_preserves_level_seven_queue_and_level_six_conflicts() {
         }
     }
 }
+
+fn assert_invalid_command(cpu: &mut CpuPeripheral, command: u16) {
+    // Input BAT/address belong to the previous bus cycle, not this non-access fault.
+    let response = cpu.poll(
+        BusAssertions {
+            address: 0xfeed,
+            bus_access_type: peripheral_bus::device::BusAccessType::DataRead,
+            bus_acknowledge: true,
+            ..Default::default()
+        },
+        true,
+    );
+    assert!(!response.bus_access_strobe);
+    let fault = cpu.eu_registers.pending_fault.unwrap();
+    assert_eq!(fault.fault, Faults::InvalidOpCode);
+    assert_eq!(fault.pc, 0x0200);
+    assert_eq!(
+        cpu.eu_registers.link_registers[7].return_address,
+        u32::from(command)
+    );
+    let metadata = peripheral_cpu::decode_fault_metadata_register(
+        cpu.eu_registers.link_registers[7].return_status_register,
+    );
+    assert_eq!(
+        metadata.bus_access_type,
+        peripheral_bus::device::BusAccessType::None
+    );
+    assert_eq!(cpu.registers.coprocessor_select_register, 0);
+    for _ in 1..6 {
+        assert!(!tick(cpu, 0, 0).bus_access_strobe);
+    }
+    super::common::complete_entry(cpu, INVALID_OPCODE_FAULT, 0x1000);
+    assert_eq!(cpu.eu_registers.link_registers[6].return_address, 0x0200);
+}
+
+#[test]
+fn reserved_eu_operations_fault_without_accessing_their_payload_vectors() {
+    for operation in 2..=8 {
+        for payload in [0, 0xff] {
+            for register_call in [false, true] {
+                let mut cpu = new_cpu_peripheral();
+                // A command fault must also cancel any deferred trace.
+                peripheral_cpu::registers::set_sr_bit(
+                    StatusRegisterFields::TraceMode,
+                    &mut cpu.registers,
+                );
+                let command = 0x1000 | (operation << 8) | payload;
+                issue(&mut cpu, command, 0, register_call);
+                assert_invalid_command(&mut cpu, command);
+            }
+        }
+    }
+    // Absent units retain the same software-emulation path.
+    for command in [0x2000, 0x30ff] {
+        let mut cpu = new_cpu_peripheral();
+        issue(&mut cpu, command, 0, false);
+        assert_invalid_command(&mut cpu, command);
+    }
+}
