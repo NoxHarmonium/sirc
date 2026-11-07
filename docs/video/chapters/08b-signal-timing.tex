@@ -1,0 +1,301 @@
+\chapter{Signal Timing}
+\label{ch:signal-timing}
+
+This chapter gives the timing of the pins of the device (Chapter~\ref{ch:package}): the bus cycles in which the CPU
+reads and writes it, the interrupt outputs, reset, and the video output. Chapter~\ref{ch:timing} gives the timing
+inside the device, in the same units.
+
+\section{Reading the Figures}
+
+The figures follow the conventions of the bus timing diagrams of the \hwmanual{}. Each labeled interval is one
+\texttt{CLKI} cycle, which is one PPU cycle, seen between rising edges. Waveform rows show physical levels: for an
+active-low signal, \texttt{L} means asserted. Bands show a value; an empty band carries no defined value, and a
+three-state signal that is not driven is drawn as a flat line at mid-level. The pulses in the \texttt{Sample} row mark
+the rising edges at which the device samples the bus. Electrical delays are not specified, so the figures show logical
+timing only.
+
+\section{Bus Cycles}
+\label{sec:signal-bus}
+
+The device answers every cycle in which \activelow{CS} and \activelow{BAS} are both asserted, and it answers in the
+cycle itself: \activelow{BACK} is asserted from the start of the cycle, so the CPU accepts the cycle at the next rising
+edge and never waits (Chapter~\ref{ch:package}).
+
+\subsection{Writes}
+
+The CPU presents the offset on A0--A15, the data on D0--D15 and BRW low, just after the rising edge that starts the
+cycle. The device takes the data at the rising edge that ends the cycle; the register, palette entry, video memory word
+or sprite table word holds the new value from that edge, and a read in the next cycle returns it. A write to an offset
+that is not stored, or one that the rules of Section~\ref{sec:memory-vram-access} discard, is acknowledged in the same
+way.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI             & L 2{0.5H 0.5L}              \\
+		Phase            & D{access} D{next} D{}       \\
+		\activelow{CS}   & L H H                       \\
+		\activelow{BAS}  & L H H                       \\
+		BRW              & L H H                       \\
+		A0--A15          & D{offset} D{} D{}           \\
+		D0--D15          & D{data} Z Z                 \\
+		\activelow{BACK} & L H H                       \\
+		Stored word      & D{old} 2D{new}              \\
+		Sample           & 0.95L 0.1H 1.95L            \\
+	\end{tikztimingtable}
+	\caption{Write Cycle}
+	\label{fig:signal-write}
+\end{figure}
+
+\subsection{Reads}
+
+On a read the device drives D0--D15 with the word the offset selects, from the start of the cycle to its end, and
+releases the bus after it. The word is valid before the rising edge that ends the cycle, which is the edge at which the
+CPU samples it. A read changes nothing in the device; no register has a side effect on a read.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI             & L 2{0.5H 0.5L}              \\
+		Phase            & D{access} D{next} D{}       \\
+		\activelow{CS}   & L H H                       \\
+		\activelow{BAS}  & L H H                       \\
+		BRW              & H H H                       \\
+		A0--A15          & D{offset} D{} D{}           \\
+		D0--D15          & D{data} Z Z                 \\
+		\activelow{BACK} & L H H                       \\
+		Sample           & 0.95L 0.1H 1.95L            \\
+	\end{tikztimingtable}
+	\caption{Read Cycle}
+	\label{fig:signal-read}
+\end{figure}
+
+\subsection{Consecutive Cycles}
+
+The device accepts one access in every cycle, with no recovery time between accesses. A DMA transfer, which makes one
+bus cycle for each word (\hwmanual{}), therefore moves one word per \texttt{CLKI} cycle into the palette, the sprite
+table or video memory, whichever the offsets address.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI             & L 5{0.5H 0.5L}                                        \\
+		Phase            & D{Setup} D{Write 1} D{Write 2} D{Write 3} D{} D{}     \\
+		\activelow{CS}   & H L L L H H                                           \\
+		\activelow{BAS}  & H L L L H H                                           \\
+		BRW              & H L L L H H                                           \\
+		A0--A15          & D{} D{v} D{v+1} D{v+2} D{} D{}                        \\
+		D0--D15          & Z D{d0} D{d1} D{d2} Z Z                               \\
+		\activelow{BACK} & H L L L H H                                           \\
+		Last word stored & 2D{} D{v} D{v+1} 2D{v+2}                              \\
+		Sample           & 1.95L 0.1H 0.9L 0.1H 0.9L 0.1H 1.95L                  \\
+	\end{tikztimingtable}
+	\caption{Three-Word DMA Write into the Device}
+	\label{fig:signal-dma}
+\end{figure}
+
+\subsection{The Start of Vertical Blanking}
+\label{sec:signal-vblank}
+
+Video memory and the sprite table are open to the CPU from the first cycle of line 224 to the last cycle of line 261,
+and at any time while \texttt{GD} is set (Section~\ref{sec:memory-vram-access}). The gate changes at a line boundary,
+so it is exact to the cycle. A write in the last cycle of line 223 is discarded; a write in the first cycle of line 224
+is stored. The vertical sync interrupt is raised in that same first cycle (Section~\ref{sec:interrupts}), and the CPU
+takes it at the end of the instruction in progress, so the handler's first access to video memory is some cycles later
+than the figure shows.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI              & L 3{0.5H 0.5L}                     \\
+		Line              & D{223} D{223} D{224} D{224}        \\
+		Cycle in line     & D{680} D{681} D{0} D{1}            \\
+		\activelow{CS}    & L L L L                            \\
+		\activelow{BAS}   & L L L L                            \\
+		BRW               & L L L L                            \\
+		A0--A15           & D{v} D{v+1} D{v+2} D{v+3}          \\
+		D0--D15           & D{d0} D{d1} D{d2} D{d3}            \\
+		\activelow{BACK}  & L L L L                            \\
+		Video memory open & L L H H                            \\
+		Word stored       & D{no} D{no} D{yes} D{yes}          \\
+		\activelow{NMI}   & H H L H                            \\
+	\end{tikztimingtable}
+	\caption{Video Memory Writes across the Start of Vertical Blanking (\texttt{VIE} set)}
+	\label{fig:signal-vblank}
+\end{figure}
+
+\section{Interrupt Timing}
+\label{sec:signal-interrupts}
+
+The interrupt outputs change just after a rising edge of \texttt{CLKI}, like the other outputs of the device. The CPU
+samples them at the rising edge that ends the cycle.
+
+\subsection{Vertical Sync}
+
+Figure~\ref{fig:signal-vblank} shows the pulse: \activelow{NMI} is asserted for the whole of the first cycle of line
+224 and deasserted in the next, when \texttt{VIE} is set in the Interrupt Control register. The pulse is one
+\texttt{CLKI} cycle, which the CPU always samples, and the device does not wait for or expect an acknowledgement
+(Section~\ref{sec:interrupts}).
+
+\subsection{Line Compare}
+
+\activelow{IRQ4} is asserted at the first cycle of the line whose number is in \texttt{LINE}, when \texttt{LIE} is set,
+and is held. It is released by the program, with a write to \texttt{LINE}, or by clearing \texttt{LIE}.
+The \texttt{LIP} bit of the Status register follows the output.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI              & L 3{0.5H 0.5L}                     \\
+		Line              & D{N-1} D{N-1} D{N} D{N}            \\
+		Cycle in line     & D{680} D{681} D{0} D{1}            \\
+		\texttt{LINE}     & 4D{N}                              \\
+		\texttt{LIE}      & 4H                                 \\
+		\activelow{IRQ4}  & H H L L                            \\
+		\texttt{LIP}      & L L H H                            \\
+	\end{tikztimingtable}
+	\caption{Line-Compare Interrupt Raised at the Start of Line N}
+	\label{fig:signal-irq-raise}
+\end{figure}
+
+The acknowledging write is an ordinary write cycle. The device releases \activelow{IRQ4} and clears \texttt{LIP} at the
+rising edge that ends the write, so the line is high in the cycle after it. A program should write \texttt{LINE} early
+in its handler, and before it returns, because \activelow{IRQ4} is level-sensitive and the CPU recognises the interrupt
+again if the line is still asserted when the handler ends (Section~\ref{sec:interrupts}).
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI              & L 3{0.5H 0.5L}                     \\
+		Phase             & D{access} D{next} D{} D{}          \\
+		\activelow{CS}    & L H H H                            \\
+		\activelow{BAS}   & L H H H                            \\
+		BRW               & L H H H                            \\
+		A0--A15           & D{0x0015} D{} D{} D{}              \\
+		D0--D15           & D{line} Z Z Z                      \\
+		\activelow{BACK}  & L H H H                            \\
+		\texttt{LINE}     & D{old} 3D{line}                    \\
+		\activelow{IRQ4}  & L H H H                            \\
+		\texttt{LIP}      & H L L L                            \\
+		Sample            & 0.95L 0.1H 2.95L                   \\
+	\end{tikztimingtable}
+	\caption{Acknowledging the Line-Compare Interrupt with a Write to \texttt{LINE}}
+	\label{fig:signal-irq-ack}
+\end{figure}
+
+\section{Reset}
+\label{sec:signal-reset}
+
+\activelow{RST} is sampled at each rising edge of \texttt{CLKI}. Every register takes its reset value at the first edge
+at which \activelow{RST} is sampled asserted (Table~\ref{tab:reset}), and the outputs go to their idle state: the
+interrupt outputs are deasserted, \activelow{CSYNC} is high, and the colour outputs are at black. The line and cycle
+counters are held at the first cycle of line 0 while \activelow{RST} is asserted. The first cycle of line 0 is the cycle
+that follows the rising edge at which \activelow{RST} is first sampled deasserted. The contents of the palette, video
+memory and sprite table are undefined after reset (Chapter~\ref{ch:registers}).
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram, timing/xunit=3em]
+		CLKI              & L 9{0.5H 0.5L}                                   \\
+		\activelow{RST}   & 6L 4H                                            \\
+		Registers         & D{any} 9D{reset values}                          \\
+		Line and cycle    & D{} 6D{held at line 0, cycle 0} D{0} D{1} D{2}   \\
+		Interrupts        & 10H                                           \\
+		\activelow{CSYNC} & 7H 3L                                            \\
+		R, G, B           & 10D{black}                                       \\
+	\end{tikztimingtable}
+	\caption{Reset, with \activelow{RST} Held for the Minimum of Six Cycles}
+	\label{fig:signal-reset}
+\end{figure}
+
+\section{Video Output}
+\label{sec:video-output}
+
+The video outputs follow the line timing of Chapter~\ref{ch:timing}. A new pixel appears on R, G and B every four
+master clocks, at the pixel boundary, and the colour outputs are at black outside the visible part of the line, in the
+vertical blanking interval, and in forced blank. The brightness setting scales the colour before conversion
+(Section~\ref{sec:reg-base-config}).
+
+\subsection{Horizontal Sync}
+
+\activelow{CSYNC} is asserted for the first 100 master clocks (50 cycles) of every line, and is high for the remaining 1264.
+The pulse begins at the first cycle of the line, the same cycle at which the line-compare interrupt is raised. The back
+porch follows it, and the first pixel is 160 master clocks after the end of the pulse. The line ends with the front
+porch, 80 master clocks; the 64 clocks before the first pixel and the 44 before the front porch are black, so the picture
+has a narrow black border on each side.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			x=0.0057\textwidth,
+			y=0.62cm,
+			lane/.style={font=\scriptsize, anchor=east},
+			marker/.style={dashed, thick, sircgray},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		% x is in units of 10 master clocks
+		\node[lane] at (-4,3.3) {\activelow{CSYNC}};
+		\draw[thick] (-4,3.9) -- (0,3.9) -- (0,3.0) -- (10,3.0) -- (10,3.9) -- (140,3.9);
+		\node[lane] at (-4,1.4) {R, G, B};
+		\draw[thick] (-4,1.1) -- (26,1.1) -- (26,1.8) -- (128.4,1.8) -- (128.4,1.1) -- (140,1.1);
+		\fill[sirclightgray] (26,1.1) rectangle (128.4,1.8);
+		\node[font=\scriptsize] at (77.2,1.45) {visible: 256 pixels of 4 clocks};
+		\node[note] at (5,2.45) {sync};
+		\node[note] at (18,2.45) {back porch, 160};
+		\node[note] at (132.4,2.45) {front porch, 80};
+		\draw[marker] (0,0.6) -- (0,4.6);
+		\draw[marker] (10,0.6) -- (10,4.6);
+		\draw[marker] (26,0.6) -- (26,4.6);
+		\draw[marker] (128.4,0.6) -- (128.4,4.6);
+		\draw[marker] (136.4,0.6) -- (136.4,4.6);
+		\foreach \x/\l in {0/0, 10/100, 26/260, 128.4/1284, 136.4/1364} { \node[font=\tiny, anchor=north] at (\x,0.6) {\l}; }
+		\node[note, anchor=north] at (68,-0.2) {master clocks from the start of the line};
+	\end{tikzpicture}
+	\caption{Horizontal Sync and the Visible Part of a Line}
+	\label{fig:signal-hsync}
+\end{figure}
+
+\subsection{Vertical Sync}
+
+Lines 0 to 223 are the picture. The vertical sync is three lines long and ends 14 lines before the first line of the
+picture: lines 245, 246 and 247 on NTSC, and lines 295, 296 and 297 on PAL. In each of those lines \activelow{CSYNC} is
+asserted from the first cycle of the line for 1272 master clocks (636 cycles) and is high for the last 92. The other
+lines of the vertical blanking interval carry the ordinary horizontal sync pulse, and there are no equalising pulses.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			x=0.0012\textwidth,
+			y=0.62cm,
+			lane/.style={font=\scriptsize, anchor=east},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		% x is in units of 10 master clocks; five lines of 136.4 units
+		\node[lane] at (-8,0.5) {\activelow{CSYNC}};
+		\foreach \i in {0,1,2,3,4} {
+				\pgfmathsetmacro{\o}{\i*136.4}
+				\ifnum\i=0 \draw[thick] (\o,1) -- (\o,0) -- (\o+10,0) -- (\o+10,1);
+				\else\ifnum\i=4 \draw[thick] (\o,1) -- (\o,0) -- (\o+10,0) -- (\o+10,1);
+					\else
+						\draw[thick] (\o,1) -- (\o,0) -- (\o+127.2,0) -- (\o+127.2,1) -- (\o+136.4,1);
+					\fi\fi
+			}
+		\draw[thick] (-8,1) -- (0,1);
+		\draw[thick] (10,1) -- (136.4,1);
+		\draw[thick] (4*136.4+10,1) -- (682+8,1);
+		\foreach \i/\l in {0/244, 1/245, 2/246, 3/247, 4/248} {
+				\pgfmathsetmacro{\o}{\i*136.4}
+				\draw[dashed, sircgray] (\o,-0.3) -- (\o,1.4);
+				\node[note, anchor=north] at (\o+68.2,-0.35) {line \l};
+			}
+	\end{tikzpicture}
+	\caption{Vertical Sync in Lines 245 to 247 (NTSC), with Horizontal Sync before and after}
+	\label{fig:signal-vsync}
+\end{figure}

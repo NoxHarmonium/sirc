@@ -1,0 +1,86 @@
+\chapter{Quick Reference}
+\label{app:quick-reference}
+
+\section{Registers}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7cm}}
+		\toprule
+		\textbf{Offset}                  & \textbf{Name}                      & \textbf{Fields}                                                                                                                                                        \\
+		\midrule
+		\texttt{0x0000}                  & \texttt{CONFIG}                    & 15 \texttt{GD}; 14--12 \texttt{B1D}--\texttt{B3D}; 10--8 \texttt{S1D}--\texttt{S3D}; 7 \texttt{SHD}; 6--3 \texttt{BRT}; 2--0 \texttt{MODE} (0, 1, 2 for Modes 1, 2, 3) \\
+		\texttt{0x0001}                  & \texttt{TILESIZE}                  & 15--13 \texttt{B1S}--\texttt{B3S}; 11--9 \texttt{S1S}--\texttt{S3S}; 7--5 \texttt{B1X}--\texttt{B3X}; 3--1 \texttt{B1Y}--\texttt{B3Y}                                  \\
+		\texttt{0x0002}--\texttt{0x0004} & \texttt{B1MAP}--\texttt{B3MAP}     & Tilemap word address                                                                                                                                                   \\
+		\texttt{0x0006}--\texttt{0x0008} & \texttt{B1TILES}--\texttt{B3TILES} & Tile data word address                                                                                                                                                 \\
+		\texttt{0x000A}--\texttt{0x000C} & \texttt{B1SCRX}--\texttt{B3SCRX}   & 9--0 scroll amount                                                                                                                                                     \\
+		\texttt{0x000E}--\texttt{0x0010} & \texttt{B1SCRY}--\texttt{B3SCRY}   & 9--0 scroll amount                                                                                                                                                     \\
+		\texttt{0x0011}                  & \texttt{INTCTL}                    & 1 \texttt{LIE}; 0 \texttt{VIE}                                                                                                                                         \\
+		\texttt{0x0012}--\texttt{0x0014} & \texttt{B1PAL}--\texttt{B3PAL}     & 15--8 \texttt{OFFSET}; 2 \texttt{T2}; 1--0 \texttt{SIZE}                                                                                                               \\
+		\texttt{0x0015}                  & \texttt{LINE}                      & 8--0 line for the line-compare interrupt; a write acknowledges it                                                                                                      \\
+		\texttt{0x0016}                  & \texttt{STILES}                    & Sprite tile data word address                                                                                                                                          \\
+		\texttt{0x0017}                  & \texttt{STATUS}                    & 7 \texttt{VBL}; 6 \texttt{LIP}; 5 \texttt{SOV}; 4 \texttt{OUT}; 3--0 \texttt{VER} (read-only)                                                                          \\
+		\texttt{0x0018}                  & \texttt{VLINE}                     & 8--0 current line (read-only)                                                                                                                                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Register Summary}
+	\label{tab:app-registers}
+\end{table}
+
+\section{Memory Map}
+
+Registers \texttt{0x0000}--\texttt{0x00FF}; palette \texttt{0x6000}--\texttt{0x60FF}; video memory
+\texttt{0x8000}--\texttt{0xFFFF} (32,768 words). Everything else is open bus.
+
+\section{Formats}
+
+\begin{description}
+	\item[Colour:] bit 15 reserved; bits 14--10 red; bits 9--5 green; bits 4--0 blue.
+	\item[Tilemap entry:] bit 15 \texttt{V}; bit 14 \texttt{H}; bit 13 \texttt{P}; bits 12--10 palette selection; bits 9--0 tile
+	      number.
+	\item[Tile data word:] four 4-bit pixels, leftmost in bits 15--12. Value 0 is transparent.
+	\item[Isometric tilemap entry flips:] V darkens, H lightens (both: normal).
+	\item[2-bit orthogonal tile:] 8 words, one per row, leftmost pixel in bits 15--14; word at base $+\ 8t + r$.
+	\item[Sprite shadow:] value 15 of sprite palette 7 darkens what is behind its layer.
+	\item[Palette entry:] $((s \ll k) + \texttt{OFFSET} + v) \bmod 256$, with $k$ = 2, 3, 4, 5 for \texttt{SIZE} 0, 1, 2, 3.
+\end{description}
+
+\section{Orthogonal Tiles}
+
+\begin{description}
+	\item[16 by 16 tile, 4 bits:] 64 words, quadrants top left, top right, bottom left, bottom right; word at base $+\ 64t + 16q +
+		      2(r \bmod 8) + h$.
+	\item[Tilemap sizes:] screens of 32 by 32 entries, A B over C D, 1,024 words apart.
+	\item[Priority bit:] 1 puts the tile in front of all sprites.
+	\item[Reset:] \texttt{CONFIG} = \texttt{0x8078} (blank, full brightness, Mode 1); the other registers are 0.
+\end{description}
+
+\section{Mode 1 Addresses}
+
+Tilemap entry: tilemap base $+\ \lfloor x/8 \rfloor + 32\lfloor y/8 \rfloor$.
+
+Tile data word: tile data base $+\ 16t + 2r + h$ for tile $t$, row $r$ and half $h$ of the row.
+
+\section{Mode 2 Formulas}
+
+For the plane pixel $(X, Y) = (x + \texttt{SCRX},\ y + \texttt{SCRY})$:
+
+\begin{align*}
+	u   & = Y + \lfloor X/2 \rfloor,      & v   & = Y - \lfloor (X+1)/2 \rfloor,  \\
+	c_u & = \lfloor u/16 \rfloor \bmod W, & c_v & = \lfloor v/16 \rfloor \bmod H,
+\end{align*}
+
+\noindent with $W$ and $H$ the map's width and height in cells (32 or 64), and the tilemap entry at tilemap base
+$+\ 1024 s + 32 (c_v \bmod 32) + (c_u \bmod 32)$, where $s = \lfloor c_v/32 \rfloor (W/32) + \lfloor c_u/32 \rfloor$ is the screen.
+
+For the texel $(t_u, t_v) = (u \bmod 16, v \bmod 16)$ of a tile:
+
+\begin{align*}
+	i      & = (t_u - t_v) \bmod 4,                                    \\
+	(a, b) & = (t_u - \lfloor i/2 \rfloor,\ t_v + [0, 1, 1, 2]_i),     \\
+	w      & = 16 \lfloor ((a - b) \bmod 16)/4 \rfloor + (a \bmod 16),
+\end{align*}
+
+\noindent the word $w$ of the tile, at tile data base $+\ 64t + w$, nibble $i$ (0 is bits 15--12).
+
+The top pixel of cell $(c_u, c_v)$ is at the plane pixel $(16(c_u - c_v),\ 8(c_u + c_v))$.

@@ -1,0 +1,303 @@
+\chapter{Registers}
+\label{ch:registers}
+
+\section{Register Map}
+
+The registers occupy the first words of the device segment. Every defined register is 16 bits wide and is read and
+written a word at a time.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllp{5.2cm}}
+		\toprule
+		\textbf{Offset}                  & \textbf{Name}     & \textbf{Access} & \textbf{Description}                                     \\
+		\midrule
+		\texttt{0x0000}                  & \texttt{CONFIG}   & R/W             & Base configuration: mode, layer disables, brightness     \\
+		\texttt{0x0001}                  & \texttt{TILESIZE} & R/W             & Tile and tilemap sizes                                   \\
+		\texttt{0x0002}                  & \texttt{B1MAP}    & R/W             & Background 1 tilemap address                             \\
+		\texttt{0x0003}                  & \texttt{B2MAP}    & R/W             & Background 2 tilemap address                             \\
+		\texttt{0x0004}                  & \texttt{B3MAP}    & R/W             & Background 3 tilemap address                             \\
+		\texttt{0x0005}                  & ---               & Reserved        &                                                          \\
+		\texttt{0x0006}                  & \texttt{B1TILES}  & R/W             & Background 1 tile data address                           \\
+		\texttt{0x0007}                  & \texttt{B2TILES}  & R/W             & Background 2 tile data address                           \\
+		\texttt{0x0008}                  & \texttt{B3TILES}  & R/W             & Background 3 tile data address                           \\
+		\texttt{0x0009}                  & ---               & Reserved        &                                                          \\
+		\texttt{0x000A}                  & \texttt{B1SCRX}   & R/W             & Background 1 horizontal scroll                           \\
+		\texttt{0x000B}                  & \texttt{B2SCRX}   & R/W             & Background 2 horizontal scroll                           \\
+		\texttt{0x000C}                  & \texttt{B3SCRX}   & R/W             & Background 3 horizontal scroll                           \\
+		\texttt{0x000D}                  & ---               & Reserved        &                                                          \\
+		\texttt{0x000E}                  & \texttt{B1SCRY}   & R/W             & Background 1 vertical scroll                             \\
+		\texttt{0x000F}                  & \texttt{B2SCRY}   & R/W             & Background 2 vertical scroll                             \\
+		\texttt{0x0010}                  & \texttt{B3SCRY}   & R/W             & Background 3 vertical scroll                             \\
+		\texttt{0x0011}                  & \texttt{INTCTL}   & R/W             & Interrupt enables                                        \\
+		\texttt{0x0012}                  & \texttt{B1PAL}    & R/W             & Background 1 palette configuration                       \\
+		\texttt{0x0013}                  & \texttt{B2PAL}    & R/W             & Background 2 palette configuration                       \\
+		\texttt{0x0014}                  & \texttt{B3PAL}    & R/W             & Background 3 palette configuration                       \\
+		\texttt{0x0015}                  & \texttt{LINE}     & R/W             & Line-compare interrupt line; a write acknowledges        \\
+		\texttt{0x0016}                  & \texttt{STILES}   & R/W             & Sprite tile data address                                 \\
+		\texttt{0x0017}                  & \texttt{STATUS}   & R               & Version, output mode, sprite overflow, vertical blanking \\
+		\texttt{0x0018}                  & \texttt{VLINE}    & R               & Current line                                             \\
+		\texttt{0x0019}--\texttt{0x00FF} & ---               & Open bus        & Reads zero, writes ignored                               \\
+		\bottomrule
+	\end{tabular}
+	\caption{Register Map}
+	\label{tab:register-map}
+\end{table}
+
+The register names are those of this manual. Software must not write the reserved registers. The registers are laid out
+in groups of three backgrounds followed by one reserved slot, so a register for background $n$ is at the group's base
+plus $n - 1$.
+
+\section{Base Configuration Register}
+\label{sec:reg-base-config}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{1}{GD} &
+		\bitbox{1}{B1D} &
+		\bitbox{1}{B2D} &
+		\bitbox{1}{B3D} &
+		\bitbox{1}{} &
+		\bitbox{1}{S1D} &
+		\bitbox{1}{S2D} &
+		\bitbox{1}{S3D} &
+		\bitbox{1}{\footnotesize SHD} &
+		\bitbox{4}{BRT} &
+		\bitbox{3}{MODE}
+	\end{bytefield}
+	\caption{Base Configuration Register (\texttt{CONFIG}, Offset \texttt{0x0000})}
+	\label{fig:reg-config}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Bits} & \textbf{Field}                           & \textbf{Meaning}                                                                                                                                                                             \\
+		\midrule
+		15            & \texttt{GD}                              & Graphics disable (forced blank): when 1 the picture is black and the device makes no reads, so video memory and the sprite table can be accessed at any time. 1 at reset                     \\
+		14, 13, 12    & \texttt{B1D}, \texttt{B2D}, \texttt{B3D} & Disable background 1, 2, 3 when 1 (Section~\ref{sec:m2-layers})                                                                                                                              \\
+		11            & ---                                      & Reserved                                                                                                                                                                                     \\
+		10, 9, 8      & \texttt{S1D}, \texttt{S2D}, \texttt{S3D} & Disable sprite layer 1, 2, 3 when 1 (Chapter~\ref{ch:sprites})                                                                                                                               \\
+		7             & \texttt{SHD}                             & Sprite shadow enable: when 1, value 15 of sprite palette 7 is a shadow (Section~\ref{sec:sprite-shadow}); 0 at reset                                                                         \\
+		6--3          & \texttt{BRT}                             & Screen brightness: each colour channel of the final picture is multiplied by $(\texttt{BRT} + 1)/16$, so 15 is full brightness and 0 nearly black. \texttt{GD} blanks the picture completely \\
+		2--0          & \texttt{MODE}                            & Video mode: 0 for Mode 1, 1 for Mode 2, 2 for Mode 3, others reserved                                                                                                                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Base Configuration Register Fields}
+	\label{tab:reg-config-fields}
+\end{table}
+
+The \texttt{MODE} field is sampled at the first cycle of each line, so a change takes effect at the start of the next
+line. Software should change mode during vertical blanking.
+
+\section{Tile Size Register}
+\label{sec:reg-tilesize}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{1}{B1S} &
+		\bitbox{1}{B2S} &
+		\bitbox{1}{B3S} &
+		\bitbox{1}{} &
+		\bitbox{1}{S1S} &
+		\bitbox{1}{S2S} &
+		\bitbox{1}{S3S} &
+		\bitbox{1}{} &
+		\bitbox{1}{B1X} &
+		\bitbox{1}{B2X} &
+		\bitbox{1}{B3X} &
+		\bitbox{1}{} &
+		\bitbox{1}{B1Y} &
+		\bitbox{1}{B2Y} &
+		\bitbox{1}{B3Y} &
+		\bitbox{1}{}
+	\end{bytefield}
+	\caption{Tile Size Register (\texttt{TILESIZE}, Offset \texttt{0x0001})}
+	\label{fig:reg-tilesize}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Bits} & \textbf{Field}                           & \textbf{Meaning}                                                                          \\
+		\midrule
+		15, 14, 13    & \texttt{B1S}, \texttt{B2S}, \texttt{B3S} & Orthogonal background tile size: 0 for 8 by 8, 1 for 16 by 16 (Section~\ref{sec:flat-16}) \\
+		11, 10, 9     & \texttt{S1S}, \texttt{S2S}, \texttt{S3S} & Sprite tile size, same encoding                                                           \\
+		7, 6, 5       & \texttt{B1X}, \texttt{B2X}, \texttt{B3X} & Tilemap width: 0 for one screen of 32 entries, 1 for two (Section~\ref{sec:tilemap-size}) \\
+		3, 2, 1       & \texttt{B1Y}, \texttt{B2Y}, \texttt{B3Y} & Tilemap height: 0 for one screen of 32 entries, 1 for two                                 \\
+		12, 8, 4, 0   & ---                                      & Reserved                                                                                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Tile Size Register Fields}
+	\label{tab:reg-tilesize-fields}
+\end{table}
+
+An \emph{orthogonal} background is an ordinary background of square tiles in rows and columns, as opposed to an
+isometric one. The word is used for all of them: the three backgrounds of Mode 1, the two of Mode 3 and the status
+layer of Mode 2. Orthogonal backgrounds scroll, except for the status layer of Mode 2. The tile size bits
+\texttt{B1S}--\texttt{B3S} apply to orthogonal backgrounds, that is, to all three backgrounds in Mode 1 and to
+backgrounds 1 and 2 in Mode 3, but not to the status layer, which always uses 8 by 8 tiles. The tilemap size bits apply
+to orthogonal and isometric backgrounds. Isometric backgrounds always use 16 by 16 texel tiles and ignore the tile size
+bits (Section~\ref{sec:m2-restrictions}).
+
+\section{Tilemap and Tile Data Address Registers}
+
+\texttt{B1MAP}--\texttt{B3MAP} hold the word address of the first entry of the background's tilemap. \texttt{B1TILES}--\texttt{B3TILES}
+hold the word address of the first word of tile number 0 of its tile data. Both are full offsets within the segment, so
+a value for VRAM is at least \texttt{0x8000} (Chapter~\ref{ch:memory-map}). All 16 bits are significant. The renderer
+adds the offset of an entry or tile to the base with 16-bit wraparound.
+
+\texttt{STILES} holds the sprite tile data address (Chapter~\ref{ch:sprites}).
+
+\section{Scroll Registers}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{6}{} &
+		\bitbox{10}{SCROLL}
+	\end{bytefield}
+	\caption{Scroll Registers (\texttt{B1SCRX}--\texttt{B3SCRY})}
+	\label{fig:reg-scroll}
+\end{figure}
+
+Bits 9--0 hold the scroll amount, 0 to 1023, in pixels. Bits 15--10 are reserved. The amount moves the background's
+view of its map: increasing \texttt{SCRX} moves the picture to the left, and increasing \texttt{SCRY} moves it up.
+
+Every background of every mode scrolls. The amounts are sampled once per line, as the chapter of each mode describes.
+
+\section{Palette Configuration Registers}
+\label{sec:reg-palette}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{8}{OFFSET} &
+		\bitbox{6}{} &
+		\bitbox{2}{SIZE}
+	\end{bytefield}
+	\caption{Palette Configuration Registers (\texttt{B1PAL}--\texttt{B3PAL})}
+	\label{fig:reg-pal}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Bits} & \textbf{Field}  & \textbf{Meaning}                                                       \\
+		\midrule
+		15--8         & \texttt{OFFSET} & Palette entry added to every colour address of the background          \\
+		7--3          & ---             & Reserved                                                               \\
+		2             & \texttt{T2}     & 2-bit tiles (Sections~\ref{sec:m2-two-bit} and~\ref{sec:flat-two-bit}) \\
+		1--0          & \texttt{SIZE}   & Colours per palette: 0 for 4, 1 for 8, 2 for 16, 3 for 32              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Palette Configuration Register Fields}
+	\label{tab:reg-pal-fields}
+\end{table}
+
+Section~\ref{sec:palette-select} explains how \texttt{OFFSET} and \texttt{SIZE} combine with a tilemap entry's palette
+selection to choose a palette entry. 4-bit tile data uses sizes of 16 colours or fewer.
+
+\section{Status Register}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{8}{} &
+		\bitbox{1}{VBL} &
+		\bitbox{1}{LIP} &
+		\bitbox{1}{SOV} &
+		\bitbox{1}{OUT} &
+		\bitbox{4}{VER}
+	\end{bytefield}
+	\caption{Status Register (\texttt{STATUS}, Offset \texttt{0x0017})}
+	\label{fig:reg-status}
+\end{figure}
+
+\texttt{VER}, bits 3--0, is the version of the device, which is 1. \texttt{OUT}, bit 4, is the output mode: 0 for NTSC and
+1 for PAL. Both are fixed when the device is made. \texttt{SOV}, bit 5, is the sprite overflow flag: it is set when any
+line of the frame had more than 32 sprites (Section~\ref{sec:sprite-budget}), and cleared at the start of line 0 of the
+next frame, so a program reads it in vertical blanking. \texttt{LIP}, bit 6, is set while a line-compare interrupt is
+pending (Section~\ref{sec:line-interrupt}). \texttt{VBL}, bit 7, is set while the beam is in vertical blanking, from the first cycle
+of line 224 to the last cycle of the last line of the frame, and is clear in lines 0 to 223; it is the flag a program
+polls to know that video memory is open (Section~\ref{sec:memory-vram-access}). Bits 15--8 are reserved. The register is read-only.
+
+\section{Vertical Line Register}
+\label{sec:reg-vline}
+
+\texttt{VLINE}, offset \texttt{0x0018}, holds in bits 8--0 the number of the line the beam is on: 0 to 261 on NTSC and 0 to 311 on
+PAL. It changes at the first cycle of each line, the cycle at which a line-compare interrupt for that line is raised, and
+bits 15--9 read as zero. The register is read-only. A program reads it to find where in the frame it is, and
+reads it twice, or compares it with \texttt{LINE}, when a line may have passed between two accesses.
+
+\section{Line Compare Register}
+\label{sec:reg-line}
+
+\texttt{LINE} holds, in bits 8--0, the number of the line at which the line-compare interrupt fires when \texttt{LIE} is set
+in the Interrupt Control register (Section~\ref{sec:line-interrupt}). Bits 15--9 are reserved. A write to \texttt{LINE}, of
+any value, also acknowledges a pending line-compare interrupt.
+
+\section{Interrupt Control Register}
+\label{sec:reg-intctl}
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{14}{} &
+		\bitbox{1}{LIE} &
+		\bitbox{1}{VIE}
+	\end{bytefield}
+	\caption{Interrupt Control Register (\texttt{INTCTL}, Offset \texttt{0x0011})}
+	\label{fig:reg-intctl}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Bits} & \textbf{Field} & \textbf{Meaning}                                                                                           \\
+		\midrule
+		15--2         & ---            & Reserved                                                                                                   \\
+		1             & \texttt{LIE}   & Line interrupt enable: when 1, the line-compare interrupt can be raised (Section~\ref{sec:line-interrupt}) \\
+		0             & \texttt{VIE}   & Vertical sync interrupt enable: when 1, the device raises the NMI at the start of vertical blanking        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Interrupt Control Register Fields}
+	\label{tab:reg-intctl-fields}
+\end{table}
+
+Both bits are 0 at reset, so no interrupt is raised until the program has set up its handlers.
+
+\section{Reset State}
+\label{sec:reset}
+
+At reset the device is blank and every register is zero, except as follows:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Register} & \textbf{Value at reset} & \textbf{Meaning}                                                      \\
+		\midrule
+		\texttt{CONFIG}   & \texttt{0x8078}         & \texttt{GD} = 1 (picture blank), \texttt{BRT} = 15, \texttt{MODE} = 0 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Registers with a Non-Zero Reset Value}
+	\label{tab:reset}
+\end{table}
+
+The contents of video memory, the palette and the sprite table are undefined at reset. A program must initialise
+whatever it uses, and then clear \texttt{GD}, before the picture is shown. A program should hide every sprite it does
+not use (layer 3) before it clears \texttt{GD}.
+

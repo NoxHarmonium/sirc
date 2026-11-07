@@ -1,0 +1,96 @@
+\chapter{Programming the Device}
+\label{ch:programming}
+
+This chapter collects what a program does in what order. It adds no new rules; each rule is stated where the feature is
+described, and the sections of the earlier chapters are cited.
+
+\section{Starting Up}
+\label{sec:startup}
+
+At reset the picture is blank (\texttt{GD} is 1), every register is zero except \texttt{CONFIG}
+(Section~\ref{sec:reset}), and video memory, the palette and the sprite table are undefined. A program starts the
+device in this order:
+
+\begin{enumerate}
+	\item Install the handler for the vertical sync interrupt, \activelow{NMI}, before anything enables it
+	      (Section~\ref{sec:interrupts}).
+	\item With the picture still blank, write the palette (\texttt{0x6000}--\texttt{0x60FF}), the tile data and the tilemaps into
+	      video memory (Chapter~\ref{ch:memory-map}). Video memory is open to the CPU while \texttt{GD} is 1.
+	\item Fill the sprite table, hiding every entry the program does not use by setting its layer field to 3
+	      (Section~\ref{sec:sprite-entry}).
+	\item Write the tilemap address, tile data address, palette configuration and scroll registers of the backgrounds in use, the
+	      \texttt{STILES} register, and the \texttt{TILESIZE} register.
+	\item Write \texttt{INTCTL} to enable the interrupts the program uses (\texttt{VIE}, and \texttt{LIE} with \texttt{LINE} for
+	      a line-compare interrupt).
+	\item Write \texttt{CONFIG} with the mode, the brightness and \texttt{GD} = 0. The picture appears from the next line.
+\end{enumerate}
+
+\section{One Frame}
+\label{sec:frame-flow}
+
+Figure~\ref{fig:frame-flow} shows a frame as the program sees it. The device draws lines 0 to 223 without help. At the
+first cycle of line 224 it raises the \activelow{NMI} (if \texttt{VIE} is set) and sets the \texttt{VBL} bit of the
+Status register, and the handler has the rest of vertical blanking, 38 lines or 25,916 cycles on NTSC and 88 lines on
+PAL, to change video memory, the sprite table and the registers for the next frame.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			box/.style={draw, rounded corners=2pt, minimum height=0.8cm, text width=3.6cm, align=center, font=\scriptsize},
+			dev/.style={box, fill=sirclightgray},
+			flow/.style={-{Stealth[length=2mm]}, thick}
+		]
+		\node[dev] (draw) at (0,0) {Lines 0 to 223: the device draws the picture};
+		\node[dev] (nmi) at (0,-1.6) {Line 224: \activelow{NMI} (if \texttt{VIE})};
+		\node[box] (h1) at (5,-1.6) {Handler: move sprites, write scroll registers, update tilemaps and tiles};
+		\node[box] (h2) at (5,-3.2) {Return from the interrupt};
+		\node[dev] (blank) at (0,-3.2) {Lines 225 to the end of the frame: no drawing};
+		\draw[flow] (draw) -- (nmi);
+		\draw[flow] (nmi) -- (h1);
+		\draw[flow] (h1) -- (h2);
+		\draw[flow] (h2) -- (blank);
+		\draw[flow] (blank.south) -- ++(0,-0.6) -| (-2.6,0) -- (draw.west);
+	\end{tikzpicture}
+	\caption{A Frame}
+	\label{fig:frame-flow}
+\end{figure}
+
+A program that does not use the interrupt waits for the \texttt{VBL} bit instead: it reads \texttt{STATUS} until bit 7
+is set, and it knows how far into the frame it is from \texttt{VLINE}. A program that polls must finish before
+\texttt{VBL} falls at line 0, so it reads \texttt{VBL} again before each write that matters near the end.
+
+A \texttt{DMAT} of 255 words takes 522 cycles (Section~\ref{sec:cpu-clock}), so a program doing nothing else could move
+at most about 12,600 words in an NTSC vertical blanking interval. A program that needs more than it can move in one
+frame spreads the work over several frames, or turns the picture off (\texttt{GD} = 1) for the time it needs.
+
+\section{Programming Cautions}
+\label{sec:cautions}
+
+\begin{enumerate}
+	\item \textbf{Video memory.} A write to video memory or to the sprite table outside vertical blanking is lost, and a
+	      read returns zero, unless \texttt{GD} is 1 (Section~\ref{sec:memory-vram-access}). A program knows video memory is open when \texttt{VBL} in the
+	      Status register is set. The palette and the registers can be written at any time.
+	\item \textbf{The sprite table.} The table is undefined at reset. A program must hide the entries it does not use before
+	      it clears \texttt{GD}, or random sprites appear.
+	\item \textbf{NMI.} The \activelow{NMI} cannot be masked. Install the handler before setting \texttt{VIE}. A
+	      \texttt{DMAT} that is running at line 224 delays the interrupt until it ends (Section~\ref{sec:interrupts}).
+	\item \textbf{Line compare.} The \activelow{IRQ4} line stays asserted until the program writes \texttt{LINE}. A handler
+	      that does not write \texttt{LINE}, or clear \texttt{LIE}, is entered again as soon as it returns.
+	\item \textbf{Registers during the picture.} The device samples the scroll, address and palette configuration registers
+	      once per line. A change made during a line takes effect on the next line. The tilemap, tile data and palette
+	      configuration of a Mode 2 or Mode 3 background must not be changed during the visible part of a line
+	      (Chapter~\ref{ch:mode2}).
+	\item \textbf{Changing mode.} Change \texttt{MODE} only in vertical blanking or while \texttt{GD} is 1. The values 3 to 7
+	      of \texttt{MODE} are reserved and must not be written.
+	\item \textbf{Reserved registers.} Software must not write the reserved registers and reserved bits
+	      (Chapter~\ref{ch:registers}). A read of an open bus offset returns zero.
+	\item \textbf{Scroll registers.} The scroll registers are 10 bits. A program keeps its position in a wider variable and
+	      writes the low 10 bits; in Mode 2 it also adjusts \texttt{SCRY} when it brings \texttt{SCRX} back past 1024
+	      (Section~\ref{sec:m2-moving}).
+	\item \textbf{Sprites per line.} A line shows at most 32 sprites; the rest are dropped and \texttt{SOV} is set. Read
+	      \texttt{SOV} in vertical blanking (Section~\ref{sec:sprite-budget}).
+	\item \textbf{Transparent pixels.} Pixel value 0 of a background or a sprite is transparent. If every layer is transparent
+	      at a pixel, the device shows palette entry 0 (Section~\ref{sec:compositing}).
+	\item \textbf{PAL and NTSC.} A program that depends on the number of lines or the frame rate reads \texttt{OUT} in the
+	      Status register.
+\end{enumerate}

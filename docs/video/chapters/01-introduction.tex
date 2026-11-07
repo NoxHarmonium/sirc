@@ -1,0 +1,186 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Purpose and Scope}
+
+The SIRC documentation is split into four manuals, each with its own scope:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.2cm}}
+		\toprule
+		\textbf{Manual} & \textbf{Scope}                                                                                                          \\
+		\midrule
+		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state                           \\
+		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage                                   \\
+		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics                                                               \\
+		\videomanual{}  & The picture processing unit: package and pinout, memory map, registers, data formats, video modes, timing (this manual) \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC Manual Set}
+	\label{tab:manual-set}
+\end{table}
+
+This manual covers SIRCADA as a component: its package and pins, what the CPU can read and write, how the device turns
+the contents of its video memory into a picture, and the timing of its signals. It does not describe the CPU, its
+instructions or its bus protocol. The device is a bus peripheral like any other, so the \hwmanual{} is authoritative
+for how the CPU makes a bus cycle, and this manual is authoritative for how the device answers it and for what it does
+once it has been reached.
+
+\section{Device Overview}
+
+The video device draws a picture one scanline at a time, with no frame buffer: for every group of four pixels it
+fetches tilemap entries and tile data from its video memory, resolves them through a palette, and sends the result to
+the display.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Property} & \textbf{Value}                                                                                                     \\
+		\midrule
+		Picture size      & 256 by 224 visible pixels (262 lines NTSC, 312 PAL; Chapter~\ref{ch:timing})                                       \\
+		Colour            & 15 bits per pixel, 5 bits for each of red, green and blue                                                          \\
+		Palette           & 256 entries of 16 bits, directly addressable by the CPU                                                            \\
+		Video memory      & 32,768 words (64 KB), shared by tile data and tilemaps                                                             \\
+		Tile data         & 4 bits per pixel                                                                                                   \\
+		Backgrounds       & Three orthogonal in Mode 1; two isometric and one orthogonal in Mode 2; two orthogonal and one isometric in Mode 3 \\
+		Sprites           & 128 entries, three layers, 32 per line (Chapter~\ref{ch:sprites})                                                  \\
+		Interrupts        & Two: vertical sync (NMI) and line compare (IRQ4)                                                                   \\
+		Line timing       & 1364 master clocks per line, 262 lines per frame                                                                   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Device Summary}
+	\label{tab:device-summary}
+\end{table}
+
+\section{Video Modes}
+\label{sec:video-modes}
+
+The device has three video modes, selected by the \texttt{MODE} field of the Base Configuration register
+(Section~\ref{sec:reg-base-config}). The modes share the memory map, the registers, the palette and the data formats.
+They differ in how the backgrounds are drawn and in the fetch schedule that supports them.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Mode} & \textbf{\texttt{MODE} value} & \textbf{Description}                                                                                                 \\
+		\midrule
+		Mode 1        & 0                            & Three orthogonal backgrounds of square tiles and sprites. The reset mode.                                            \\
+		Mode 2        & 1                            & Two isometric backgrounds: square tiles displayed as diamonds on a 2:1 ground plane, and an orthogonal status layer. \\
+		Mode 3        & 2                            & One isometric background behind two orthogonal backgrounds.                                                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Modes}
+	\label{tab:video-modes}
+\end{table}
+
+Mode 1 is the conventional mode and is described in Chapter~\ref{ch:mode1}. Mode 2 is a specialised mode for games set
+on a flat map seen from above at an angle. It is good at that and at little else; Chapter~\ref{ch:mode2} describes what
+it does and, as importantly, what it gives up. Mode 3 (Chapter~\ref{ch:mode3}) keeps one isometric background and gives
+the fetch slots of the other to two orthogonal ones. The values 3--7 of \texttt{MODE} are reserved; software must not
+write them. The \texttt{MODE} field is sampled at the first cycle of each line, so a change takes effect at the start
+of the next line.
+
+\section{Block Diagrams}
+\label{sec:block-diagrams}
+
+Figure~\ref{fig:block-system} shows the device as the CPU sees it: four areas of memory behind one bus interface, a
+video output, and two interrupt lines. Figure~\ref{fig:block-ppu} shows what is inside. The chapters that follow
+describe each block; the figure says how they feed each other.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.88, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\small},
+			mem/.style={draw, fill=white, align=center, font=\footnotesize, minimum height=0.9cm, minimum width=5.4cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\node[block, minimum width=2.2cm, minimum height=3.8cm] (cpu) at (0,0) {SIRC-1\\CPU};
+		\node[block, minimum width=3.0cm, minimum height=3.8cm] (bus) at (3.7,0) {Bus interface\\and address\\decode\\(segment\\\texttt{0x000C})};
+		\node[mem] (m1) at (9.3,2.1) {Registers \texttt{0x0000}--\texttt{0x0018}};
+		\node[mem] (m2) at (9.3,0.7) {Palette \texttt{0x6000}, 256 words};
+		\node[mem] (m3) at (9.3,-0.7) {Sprite table \texttt{0x7000}, 256 words};
+		\node[mem] (m4) at (9.3,-2.1) {Video memory \texttt{0x8000}, 32,768 words};
+		\node[block, minimum width=2.8cm, minimum height=4.4cm] (ppu) at (14.2,0) {Picture\\processing\\unit};
+		\node[block, minimum width=2.8cm] (out) at (14.2,-3.9) {Video output\\256 by 224};
+		\draw[flow, <->] (cpu) -- node[above, note]{address, data} (bus);
+		\draw[thick] (5.6,2.1) -- (5.6,-2.1);
+		\draw[thick] (bus.east) -- (5.6,0);
+		\foreach \y in {2.1,0.7,-0.7,-2.1} {
+				\draw[flow, <->] (5.6,\y) -- (6.6,\y);
+				\draw[flow, <->] (12.0,\y) -- (ppu.west |- 0,\y);
+			}
+		\draw[flow] (ppu) -- (out);
+		\draw[flow] (ppu.north) -- ++(0,0.9) -| node[above, near start, note]{NMI (vertical sync), IRQ4 (line compare)} (cpu.north);
+	\end{tikzpicture}
+	\caption{The Video Device in the System}
+	\label{fig:block-system}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.86, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\footnotesize, minimum height=0.95cm, minimum width=3.1cm},
+			store/.style={draw, fill=white, align=center, font=\footnotesize, minimum height=0.95cm, minimum width=3.1cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			ctl/.style={-{Stealth[length=2mm]}, thick, dashed},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		% Register file runs down the left edge: every block reads it
+		\node[block, minimum width=8.6cm, minimum height=1.0cm, rotate=90] (regs) at (-1.5,3.4) {Register file (read by every block)};
+		% Control row
+		\node[block] (intr) at (1.6,8.0) {Interrupt logic\\NMI, IRQ4};
+		\node[block] (timing) at (5.3,8.0) {Timing generator\\line, group, slot};
+		\node[block] (seq) at (9.3,8.0) {Fetch sequencer\\slot scheduler};
+		% Column 1: memories and CPU
+		\node[store] (vram) at (1.6,5.4) {Video memory};
+		\node[store] (cpu) at (1.6,3.2) {CPU access\\(vertical blanking only)};
+		\node[store] (oam) at (5.3,-0.9) {Sprite table};
+		% Column 2: arbiter
+		\node[block, minimum height=5.0cm] (arb) at (5.3,3.0) {Memory\\arbiter\\\scriptsize renderer first};
+		% Column 3: engines
+		\node[block] (flat) at (9.3,5.4) {Orthogonal layer engines\\(Modes 1, 3, status)};
+		\node[block] (iso) at (9.3,3.8) {Isometric layer engines\\(Modes 2, 3)};
+		\node[block] (que) at (9.3,2.2) {Status layer queue\\(Mode 2)};
+		\node[block] (spe) at (9.3,0.6) {Sprite engine\\scan, fetch, line buffer};
+		% Column 4: compositor and output
+		\node[block, minimum height=5.0cm, minimum width=2.9cm] (comp) at (13.3,3.0) {Compositor\\priority\\S1 B1 S2 B2\\S3 B3\\shading};
+		\node[store] (pal) at (13.3,-0.9) {Palette\\(colour lookup)};
+		\node[block] (bri) at (13.3,-2.5) {Brightness\\and blanking};
+		\node[block] (vo) at (13.3,-4.1) {Video output};
+		% Control flows
+		\draw[ctl] (timing) -- (intr);
+		\draw[ctl] (timing) -- (seq);
+		\draw[ctl] (seq.south) -- ++(0,-0.55) -| node[above, near start, note]{slot grants} (arb.north);
+		% Data flows
+		\draw[flow, <->] (vram) -- (vram.east -| arb.west);
+		\draw[flow] (cpu) -- (cpu.east -| arb.west);
+		\draw[flow] (oam.east) -| ([xshift=-1.1cm]spe.south) -- ([xshift=-1.1cm]spe.south);
+		\foreach \e in {flat,iso,que} { \draw[flow] (arb.east |- \e) -- (\e.west); }
+		\draw[flow] (arb.east |- spe) -- (spe.west);
+		\foreach \e in {flat,iso,que,spe} { \draw[flow] (\e.east) -- (\e.east -| comp.west); }
+		\draw[flow] (comp.south |- pal.north) -- (pal.north);
+		\draw[flow] (pal) -- (bri);
+		\draw[flow] (bri) -- (vo);
+	\end{tikzpicture}
+	\caption{Blocks of the Picture Processing Unit}
+	\label{fig:block-ppu}
+\end{figure}
+
+\section{Conventions}
+
+\begin{itemize}
+	\item All addresses and sizes are in 16-bit words, as on the CPU. A word address is an offset from the base of the device's
+	      segment unless stated otherwise.
+	\item Bit 0 is the least significant bit. Bit diagrams draw the most significant bit on the left.
+	\item Hexadecimal values carry a \texttt{0x} prefix and upper case digits.
+	\item Ranges of values and addresses use an en dash: \texttt{0x0000}--\texttt{0x00FF}.
+	\item \textbf{Reserved} fields and registers are set aside by the architecture. Software must not rely on what they
+	      read, and should write zero to a reserved field it does not otherwise use.
+	\item A value that the design has not fixed is \textbf{not yet specified}. It is not undefined, and no value is implied.
+\end{itemize}

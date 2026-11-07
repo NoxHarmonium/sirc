@@ -1,0 +1,128 @@
+\chapter{Status and Open Issues}
+\label{ch:status}
+
+This chapter lists what the reference simulator implements, where it disagrees with the older design notes on the
+project wiki or with itself, and the design questions that remain. It is the list to read before relying on anything
+else in the manual.
+
+\section{Implementation Status}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{5.8cm}p{3.4cm}p{5.2cm}}
+		\toprule
+		\textbf{Feature}                                   & \textbf{Status}                                              & \textbf{Notes}                                                                  \\
+		\midrule
+		Registers, palette and VRAM access                 & Implemented                                                  & Open bus reads zero                                                             \\
+		Package, pins, signal timing, video output         & Specified                                                    & The simulator has no pins; Chapters~\ref{ch:package} and~\ref{ch:signal-timing} \\
+		Mode 1 backgrounds, 8 by 8 tiles, 32 by 32 maps    & Implemented                                                  & Layer order corrected with the sprite prototype                                 \\
+		Mode 1 scrolling (specified)                       & Not yet implemented                                          & Registers stored                                                                \\
+		Mode 1 16 by 16 tiles, double tilemaps (specified) & Not yet implemented                                          & Registers stored                                                                \\
+		Orthogonal tile flips (specified), priority bit    & Not yet implemented; priority in Mode 3 and the status layer &                                                                                 \\
+		2-bit tile data (Mode 1)                           & Not yet implemented                                          &                                                                                 \\
+		Graphics disable, brightness (specified)           & Not yet implemented                                          & Bits stored                                                                     \\
+		Background disables                                & Modes 2 and 3 only                                           &                                                                                 \\
+		Sprites, sprite disables and sizes                 & Prototype                                                    & Proposed, both modes; Chapter~\ref{ch:sprites}                                  \\
+		Vertical sync interrupt (NMI)                      & Implemented                                                  & At line 224; on level 4, not the NMI yet                                        \\
+		Vertical blanking flag and current line register   & Implemented                                                  & \texttt{VBL} in Status, \texttt{VLINE} at \texttt{0x0018}                       \\
+		PAL timing and the output mode flag (specified)    & Not yet implemented                                          &                                                                                 \\
+		Blanking-only VRAM access (specified)              & Not yet implemented                                          & Not enforced                                                                    \\
+		Forced blank, graphics disable (specified)         & Not yet implemented                                          & GD stored only                                                                  \\
+		Mode 2                                             & Prototype                                                    & Proposed; Chapter~\ref{ch:mode2}                                                \\
+		Mode 2 status layer (background 3)                 & Prototype                                                    & Proposed; Section~\ref{sec:m2-status-layer}                                     \\
+		Mode 2 2-bit isometric tiles                       & Prototype                                                    & Proposed; Section~\ref{sec:m2-two-bit}                                          \\
+		Mode 3                                             & Prototype                                                    & Proposed; Chapter~\ref{ch:mode3}                                                \\
+		Isometric shading, shadow sprites                  & Prototype                                                    & Proposed; Section~\ref{sec:m2-shading}                                          \\
+		2-bit orthogonal tiles                             & Mode 3 and Mode 2 only                                       & Not yet implemented in Mode 1                                                   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Implementation Status}
+	\label{tab:status}
+\end{table}
+
+\section{Discrepancies}
+\label{sec:status-discrepancies}
+
+The following are known differences between this manual's source, the simulator, and its other sources. Each is a
+defect to be fixed in the simulator or a decision to be made; the manual describes the intended behavior and notes the
+difference.
+
+\begin{enumerate}
+	\item \textbf{Register addresses.} The wiki puts the sprite tile data base at offset \texttt{0x0012} and the status at
+	      \texttt{0x0013}. The simulator puts the three background palette configuration registers at
+	      \texttt{0x0012}--\texttt{0x0014}, the sprite tile data base at \texttt{0x0016} and the status at \texttt{0x0017}.
+	      This manual follows the simulator.
+	\item \textbf{Palette boundary} (fixed). The simulator used to decode palette offsets \texttt{0x6000}--\texttt{0x6100}
+	      inclusive, one past the end of its 256 entries; it now stops at \texttt{0x60FF} (Section~\ref{sec:palette-edge}).
+	\item \textbf{Mode 1 layer order} (fixed with the sprite prototype). The simulator used to show background 3 in front of
+	      background 1; it now uses the intended order (Section~\ref{sec:m1-priority}).
+	\item \textbf{Mode 1 palette sum} (fixed with the sprite prototype). The simulator added the palette offset and the
+	      tile value without wrapping, so a large offset could stop the simulator in a debug build; it now wraps, as
+	      Mode 2 and Section~\ref{sec:palette-select} do.
+	\item \textbf{Status byte order} (fixed). The simulator read the Status register with its bytes swapped relative to every
+	      other register; it no longer does.
+	\item \textbf{Vertical sync position} (fixed). The interrupt used to be asserted at line 0; it is now asserted at line
+	      224, the start of vertical blanking (Chapter~\ref{ch:timing}).
+	\item \textbf{Mode 1 picture offset.} The simulator's Mode 1 shows the first 8 pixels of every line blank and draws the
+	      tilemap 8 pixels to the right of its position, so the last tile column is never shown. The first two groups of a line
+	      are flushed before any data has been fetched (Section~\ref{sec:m1-scrolling}).
+	\item \textbf{Clock accounting.} The simulator polls every device once per \texttt{CLKI} cycle, which the video device counts
+	      as two master clocks (Section~\ref{sec:cpu-clock}); the terminal device counts one poll as one master clock, so its
+	      baud rate is off by a factor of two.
+	\item \textbf{VRAM access during rendering.} The specification ignores accesses to video memory and the sprite table outside
+	      vertical blanking; the simulator allows them (Chapter~\ref{ch:memory-map}).
+\end{enumerate}
+
+\section{Open Design Questions}
+
+\subsection{General}
+
+\begin{itemize}
+	\item \textbf{Interrupts.} Specified (Section~\ref{sec:interrupts}): vertical sync on the \activelow{NMI} with no
+	      acknowledgement, line compare on \activelow{IRQ4}, held until a write to \texttt{LINE}, both enabled from the Interrupt
+	      Control register. The simulator still pulses vertical sync on level 4 and line compare on level 3 for one cycle,
+	      with no enable for vertical sync. A one-cycle NMI pulse is one \texttt{CLKI} cycle, which the CPU's edge detector accepts.
+	\item \textbf{The wiki.} The project wiki's register map (the sprite tile data base and status register offsets) disagrees with
+	      this manual and the simulator, and should be updated from this manual.
+	\item \textbf{Version and region.} \texttt{VER} is 1 and the region is fixed when the device is made; the simulator should
+	      let both be configured at run time.
+	\item \textbf{Package and signals.} The package, the pin assignment and the signal timing of Chapters~\ref{ch:package} and~\ref{ch:signal-timing}
+	      are a first sketch, to be confirmed: the 52-pin PLCC; a chip select instead of the segment address bits; \texttt{CLKI} as
+	      the only clock; \activelow{BACK}, \activelow{NMI} and \activelow{IRQ4} as open-drain outputs; no access-type or protection
+	      inputs; a minimum reset of six cycles; the composite sync widths (a horizontal pulse of 100 master clocks; vertical sync
+	      in three lines, 245 to 247, one long pulse in each, no equalising pulses); and the converter and supply pins. The video memory,
+	      palette and sprite table are inside the package. Electrical characteristics (levels, delays, frequency range, current,
+	      thermal) are not yet specified, as in the \hwmanual{}.
+	\item \textbf{DMA.} A DMA transfer into video memory is subject to the same rule as the CPU
+	      (Section~\ref{sec:memory-vram-access}), and DMA blocks interrupts, the \activelow{NMI} included, so programs keep
+	      transfers short and away from line 224 (Section~\ref{sec:interrupts}).
+\end{itemize}
+
+\subsection{Mode 2}
+
+\begin{itemize}
+	\item \textbf{Whether to approve it.} Mode 2 narrows the device to one kind of picture. That is its purpose, but it is a
+	      decision, not a default.
+	\item \textbf{Sprites.} With no free fetch slot, Mode 2 sprites come from a line buffer filled in the blanking
+	      interval; the prototype shows that 32 sprites per line of either size fit (Chapter~\ref{ch:sprites}). Whether
+	      32 is enough for a vehicle-heavy game, and whether to pay for a second line buffer to double it, is open.
+	\item \textbf{The status layer.} Prototyped with a queue of four groups (Section~\ref{sec:m2-status-layer}). Open: whether
+	      it should scroll, whether its tiles can be flipped, and whether to use its slots for a third isometric background
+	      instead.
+	\item \textbf{2-bit tiles.} Prototyped (Sections~\ref{sec:m2-two-bit} and~\ref{sec:flat-two-bit}). Left to the program:
+	      the palette size with \texttt{T2}. Open: the Mode 1 implementation.
+	\item \textbf{Mode 3.} Prototyped (Chapter~\ref{ch:mode3}). Open: whether the orthogonal backgrounds should have a priority bit to
+	      draw in front of sprites, and whether another arrangement of orthogonal and isometric backgrounds is wanted.
+	\item \textbf{Shading.} Prototyped (Section~\ref{sec:m2-shading}). Open: whether darkening should have more than one level,
+	      and whether a shadow pixel should darken sprites behind it as well as backgrounds.
+	\item \textbf{The tilemap entry cache.} Measured and left out (Section~\ref{sec:m2-entry-cache}); worth revisiting if
+	      the spare slots are wanted for something else.
+	\item \textbf{Rotation of the view.} Ruled out as a register; to show another facing a program needs another set of
+	      tiles and map.
+	\item \textbf{The symmetric diamond.} The footprint of Table~\ref{tab:m2-footprint} is one pixel narrower at the top than the
+	      bottom. A conventionally symmetric diamond does not give a bijection (some texels would be shown twice and
+	      some never). The manual keeps the footprint that does. The slicing tool accepts any picture, but diamonds that
+	      are to tessellate must be drawn to that footprint.
+	\item \textbf{The fixed tilemap size.} A 32 by 32 map is 512 by 512 texels; a transport game would want a larger map and
+	      would page it by rewriting the tilemap.
+\end{itemize}
