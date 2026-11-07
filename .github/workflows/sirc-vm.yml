@@ -105,6 +105,7 @@ jobs:
             "byte-sieve",
             "dma-copy",
             "dma-stack",
+            "maths-square-root",
             "faults",
             "hardware-exception",
             "software-exception",

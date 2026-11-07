@@ -3,6 +3,7 @@ use crate::{
     coprocessors::{
         exception_unit::definitions::Faults,
         optional::{CoprocessorFault, OptionalCoprocessor},
+        shared::ExecutionPhase,
     },
     registers::{sr_bit_is_set, Registers, SegmentedAddress, StatusRegisterFields},
     COPROCESSOR_OPCODE_ID_MASK,
@@ -190,7 +191,11 @@ impl OptionalCoprocessor for DmaCoprocessor {
         self.burst = Some(burst);
         Ok(())
     }
-    fn next_request(&mut self, registers: &Registers) -> Result<BusAssertions, CoprocessorFault> {
+    fn step(
+        &mut self,
+        _: ExecutionPhase,
+        registers: &mut Registers,
+    ) -> Result<BusAssertions, CoprocessorFault> {
         let Some(burst) = &self.burst else {
             return Ok(BusAssertions::default());
         };

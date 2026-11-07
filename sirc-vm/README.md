@@ -9,11 +9,16 @@ cargo run --no-default-features --bin sirc_vm -- \
   --program-file program.bin --optional-coprocessors dma
 ```
 
-`--optional-coprocessors` accepts a comma-separated list. Currently `dma` is the
-only implemented optional unit; `none` explicitly selects the default machine
-and must be used alone. Duplicate or unknown units are errors. `math` reports
-that hardware is not implemented; the maths software-emulation example still
-runs on the default configuration. Model-number aliases are not defined yet.
+`--optional-coprocessors` accepts a comma-separated list: `dma`, `math`, or
+`dma,math`. `none` explicitly selects the default machine and must be used alone.
+Duplicate or unknown units are errors. Model-number aliases are not defined yet.
+
+The maths chip implements user-callable MULU/MULS/DIVU/DIVS with iterative
+word operations, not native host multiplication/division. Ordinary calls take
+48 cycles; early division errors take 12, excluding instruction-fetch waits.
+See the [reference datapath and exact cycle schedule](peripheral-cpu/MATHS.md).
+The [square-root example](../examples/maths-square-root/README.md) runs the same
+protected-mode program using hardware or a missing-chip software emulator.
 
 The DMA chip provides supervisor-only DMAR, DMAW and DMAT. It shares the CU's
 six-phase clock, bus acknowledgment/error handling and interrupt/trace ownership.
@@ -30,13 +35,14 @@ as a batch register push/pop, also checked with and without the chip.
 
 Rust callers can use `new_cpu_peripheral_with_config(CpuConfig { ... })` with a
 list of boxed `OptionalCoprocessor` implementations, such as
-`peripheral_cpu::coprocessors::dma::DmaCoprocessor::default()`. The existing
+`peripheral_cpu::coprocessors::dma::DmaCoprocessor::default()` or
+`peripheral_cpu::coprocessors::maths::MathsCoprocessor::default()`. The existing
 `new_cpu_peripheral()` constructor retains the empty default configuration.
 IDs 0 and 1 are reserved for the mandatory units; duplicate IDs and IDs outside
 2–15 are rejected.
 
 These plugins are compiled-in hardware implementations, installed once at CPU
-construction. Each implements `start`, `next_request`, `complete_access`,
+construction. Each implements `start`, `step`, `complete_access`,
 `is_finished` and `reset`. The CU calls completion only on successful ACK,
 handles bus faults itself, and resets the unit on abort. Implementations share
 the CU phase clock and held-request mechanism rather than owning another clock

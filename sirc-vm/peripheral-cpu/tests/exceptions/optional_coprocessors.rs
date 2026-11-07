@@ -1,7 +1,9 @@
 use super::common::tick;
 use peripheral_bus::device::{BusAccessType, BusAssertions, Device};
 use peripheral_cpu::{
-    coprocessors::optional::CoprocessorFault, new_cpu_peripheral_with_config, registers::Registers,
+    coprocessors::{optional::CoprocessorFault, shared::ExecutionPhase},
+    new_cpu_peripheral_with_config,
+    registers::Registers,
     CpuConfig, OptionalCoprocessor,
 };
 
@@ -17,7 +19,11 @@ impl OptionalCoprocessor for Probe {
         self.finished = false;
         Ok(())
     }
-    fn next_request(&mut self, _: &Registers) -> Result<BusAssertions, CoprocessorFault> {
+    fn step(
+        &mut self,
+        _: ExecutionPhase,
+        _: &mut Registers,
+    ) -> Result<BusAssertions, CoprocessorFault> {
         Ok(if self.finished {
             BusAssertions::default()
         } else {

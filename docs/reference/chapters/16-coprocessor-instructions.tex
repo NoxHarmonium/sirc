@@ -1320,6 +1320,81 @@ Section~\ref{sec:coprocessor-model-revision-policy}). Divide by zero and quotien
 exceptions. If the condition is false, no maths command is dispatched, no coprocessor opcode check is performed, and
 registers and status flags are preserved.
 
+\subsection{Reference Datapath and Execution Timing}
+\label{sec:integer-maths-timing}
+
+The SIRC-1 reference integer maths unit uses iterative word operations: a 16-bit adder/subtractor with carry/borrow,
+shifting registers and a control sequencer. It processes one operand bit in two clock cycles. The CU supplies the
+six-phase clock throughout the command; the maths unit tracks arithmetic progress without running a separate phase
+clock. Table~\ref{tab:integer-maths-cycle-schedule} specifies this unit's exact timing. Other implementations may use a
+different datapath and latency, but must document their timing and preserve the operation, register and exception
+conventions in this section.
+
+\paragraph{Multiplication.}
+The unit latches both 16-bit operands and clears an accumulator. Each of 16 iterations conditionally adds the
+multiplicand to the accumulator when the multiplier's least significant bit is 1, then shifts the combined
+carry:accumulator:multiplier right by one bit. The carry enters the accumulator and the accumulator's low bit enters
+the multiplier. After the final iteration, the accumulator and multiplier hold the high and low product words. An
+addition cycle is reserved even when the multiplier bit is 0, making the iteration time independent of the operand's
+bit pattern.
+
+\paragraph{Division.}
+After normalization, the dividend high word is the initial remainder and its low word becomes the quotient. Each of 16
+iterations first shifts remainder:quotient left by one bit, then trial-subtracts the divisor. If the subtraction
+borrows, the shifted remainder is retained and the new quotient bit stays 0; otherwise the difference is retained and
+the new quotient bit is set to 1. The intermediate sum or shifted remainder has at most 17 significant bits, including
+the carry bit. The final remainder and quotient are written to \reg{r1} and \reg{r2} respectively.
+
+\paragraph{Signed operands and errors.}
+Signed operations first form unsigned magnitudes using word-wise two's complement. The product or quotient is negative
+when exactly one operand is negative. A signed remainder takes the dividend's sign, so division truncates toward zero.
+Normalization and sign-correction cycles remain allocated when no correction is needed, including unsigned calls.
+
+The unit checks a zero divisor first. Otherwise, a normalized dividend high word greater than or equal to the divisor
+proves that the quotient needs more than 16 bits. Either check finishes division early: \reg{r3} is written with
+\texttt{E|DZ} (\texttt{0x0003}) or \texttt{E|OV} (\texttt{0x0005}), respectively, while the original \reg{r1}:\reg{r2}
+is preserved. A signed quotient whose magnitude fits 16 bits but exceeds 32767 for a positive result, or 32768 for a
+negative result, is detected after all iterations and uses the full execution time. All successful operations write
+\reg{r3} as zero. The CPU status flags, \reg{r4}--\reg{r7}, and address-register pairs are preserved.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{lX}
+		\toprule
+		\textbf{Cycle(s)} & \textbf{Reference maths-unit action}                                       \\
+		\midrule
+		0--5              & Issuing \mnemonic{COPI}/\mnemonic{COPR} instruction                        \\
+		6                 & Setup: latch command, operands and signs; no result write                  \\
+		7--8              & First and second word-normalization stages, or idle when unnecessary       \\
+		9                 & Normalize divisor or latch multiplicand                                    \\
+		10                & Check division operands; multiplication continues without an error check   \\
+		11--42            & Sixteen add/shift or shift/subtract iterations, two cycles per bit         \\
+		43                & Check the signed quotient range, or idle                                   \\
+		44                & Correct the product or quotient low-word sign, or idle                     \\
+		45                & Correct the product high-word or remainder sign, or idle                   \\
+		46                & Commit \reg{r1}/\reg{r2}/\reg{r3} on success; write only \reg{r3} on error \\
+		47                & Idle padding to the end of the six-cycle slot                              \\
+		48                & Resume instruction fetch, or dispatch a pending trace/interrupt            \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Reference Integer Maths Unit Cycle Schedule}
+	\label{tab:integer-maths-cycle-schedule}
+\end{table}
+
+Cycle 0 is the issuing instruction's first fetch cycle. A normal operation, including a late signed quotient overflow,
+takes \textbf{48 cycles}: the six-cycle call and seven six-cycle dispatch slots. In the early division-error path,
+cycle 10 selects the error, cycle 11 writes only \reg{r3}, and the next fetch or event dispatch begins at cycle 12:
+\textbf{12 cycles} total. No intermediate arithmetic result is visible before write-back. A condition-false call takes
+only 6 cycles and starts no maths operation.
+
+These figures assume no bus wait states. Maths performs no data-memory access and keeps \texttt{SYNC} deasserted
+throughout its dispatch slots. Waits during the issuing instruction extend the schedule by the number of wait cycles.
+\activelow{HALT} pauses execution at phase 0, preserving the pending arithmetic stage; releasing it resumes that stage.
+Reset discards unfinished work. Pending hardware interrupts, including Level 5, and the issuing instruction's sampled
+trace wait until the complete command retires. A division status error completes the command normally and does not
+cancel its deferred trace; a reserved-opcode fault does cancel it.
+
 \begin{instructionbox}{MULU/MULS}{Integer Multiply Meta-Instructions}
 	\textbf{Applicability:} SIRC-1, all revisions; requires Coprocessor 3 (Integer Maths Unit), an optional
 	coprocessor absent on models that do not implement it.
@@ -1361,9 +1436,10 @@ MULS:
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
 	preserved.
 
-	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
-	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
-	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}).
+	\textbf{Timing:} 48 cycles on the reference integer maths unit: 6 for the issuing call and 42 for execution,
+	including setup, 16 two-cycle iterations, sign correction and write-back. See
+	Section~\ref{sec:integer-maths-timing} for the exact cycle schedule. Other implementations must document their
+	latency; a pending interrupt waits for command completion (Section~\ref{sec:interrupt-latency}).
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
@@ -1452,10 +1528,10 @@ else:
 	\textbf{Condition field:} If the condition is false, no maths command is dispatched and registers and status flags are
 	preserved.
 
-	\textbf{Timing:} At least 12 cycles: 6 for the \mnemonic{COPI} call and 6 for the dispatch slot that begins at the next
-	phase 0. Hardware maths operations may take additional implementation-defined cycles before instruction fetch
-	resumes, and a pending interrupt waits for them (Section~\ref{sec:interrupt-latency}). Software emulation timing is
-	defined by the invalid-opcode handler.
+	\textbf{Timing:} 48 cycles on the reference integer maths unit, or 12 for divide-by-zero and an early
+	high-word quotient-overflow check. Signed quotient overflow detected after iteration takes 48 cycles. See
+	Section~\ref{sec:integer-maths-timing} for the checks and cycle schedule. Other implementations must document their
+	latency. Pending interrupts wait for command completion; software emulation takes the cycles of its handler.
 
 	\textbf{Privilege:} User-callable in protected mode and supervisor mode.
 
