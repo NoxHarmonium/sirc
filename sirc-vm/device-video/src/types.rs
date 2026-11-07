@@ -6,6 +6,7 @@ use peripheral_bus::memory_mapped_device::MemoryMapped;
 use std::ops::{Index, IndexMut};
 
 const READONLY_STATUS_REGISTER_ADDR: u32 = 0x0017;
+const READONLY_VLINE_REGISTER_ADDR: u32 = 0x0018;
 
 // NOTE: The structs are laid out backwards because of the way bitfield works
 // The memory layout in the actual system will be the reverse (see the wiki)
@@ -101,18 +102,25 @@ pub enum Backgrounds {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BaseConfigRegister {
     // Note: Fields declared in reverse order from documentation!
-    pub reserved_3: B3,        // Bits 0-2
-    pub screen_brightness: B4, // Bits 3-6
-    pub reserved_2: B1,        // Bit 7
-    pub s3_disable: B1,        // Bit 8
-    pub s2_disable: B1,        // Bit 9
-    pub s1_disable: B1,        // Bit 10
-    pub reserved_1: B1,        // Bit 11
-    pub b3_disable: B1,        // Bit 12
-    pub b2_disable: B1,        // Bit 13
-    pub b1_disable: B1,        // Bit 14
-    pub graphics_disable: B1,  // Bit 15 (MSB)
+    pub video_mode: B3,            // Bits 0-2 (see VIDEO_MODE_* below)
+    pub screen_brightness: B4,     // Bits 3-6
+    pub shadow_enable: B1,         // Bit 7: sprite palette 7 value 15 is a shadow
+    pub s3_disable: B1,            // Bit 8
+    pub s2_disable: B1,            // Bit 9
+    pub s1_disable: B1,            // Bit 10
+    pub line_interrupt_enable: B1, // Bit 11: raise the line-compare interrupt
+    pub b3_disable: B1,            // Bit 12
+    pub b2_disable: B1,            // Bit 13
+    pub b1_disable: B1,            // Bit 14
+    pub graphics_disable: B1,      // Bit 15 (MSB)
 }
+
+/// Value of `BaseConfigRegister::video_mode` for Mode 1: three orthogonal backgrounds (the default).
+pub const VIDEO_MODE_ORTHOGONAL: u8 = 0;
+/// Value of `BaseConfigRegister::video_mode` for Mode 2: two isometric backgrounds.
+pub const VIDEO_MODE_ISOMETRIC: u8 = 1;
+/// Value of `BaseConfigRegister::video_mode` for Mode 3: two orthogonal backgrounds in front of one isometric one.
+pub const VIDEO_MODE_ISO_ORTHOGONAL: u8 = 2;
 
 #[derive(Specifier, Debug)]
 pub enum TileSize {
@@ -172,7 +180,9 @@ pub struct ScrollRegister {
 pub struct PaletteRegister {
     // Note: Fields declared in reverse order from documentation!
     pub palette_size: PaletteSize,
-    pub reserved: B6,
+    // Bit 2: the layer uses 2 bit tiles (Mode 2 isometric layers only)
+    pub two_bit_tiles: B1,
+    pub reserved: B5,
     pub palette_offset: u8,
 }
 
@@ -189,7 +199,13 @@ pub struct StatusRegister {
     // Note: Fields declared in reverse order from documentation!
     pub ppu_version: B4,
     pub output_mode: OutputMode,
-    pub reserved: B11,
+    /// Bit 5: some line of this frame had more than 32 sprites (cleared at line 0)
+    pub sprite_overflow: B1,
+    /// Bit 6: a line-compare interrupt is pending (not modelled yet)
+    pub line_interrupt_pending: B1,
+    /// Bit 7: the beam is in vertical blanking (line 224 to the last line of the frame)
+    pub vblank: B1,
+    pub reserved: B8,
 }
 
 #[derive(Debug, Default)]
@@ -215,9 +231,12 @@ pub struct PpuRegisters {
     pub b1_palette_config: PaletteRegister,
     pub b2_palette_config: PaletteRegister,
     pub b3_palette_config: PaletteRegister,
-    pub reserved5: u16,
+    /// `LINE`: the line at which the line-compare interrupt fires (bits 8-0)
+    pub line_compare: u16,
     pub s_tile_addr: u16,
     pub status: StatusRegister,
+    /// `VLINE`: the number of the line the beam is on (read only, bits 8-0)
+    pub current_line: u16,
 }
 
 impl MemoryMapped for PpuRegisters {
@@ -246,9 +265,10 @@ impl MemoryMapped for PpuRegisters {
             0x0012 => self.b1_palette_config.into(),
             0x0013 => self.b2_palette_config.into(),
             0x0014 => self.b3_palette_config.into(),
-            0x0015 => self.reserved5,
+            0x0015 => self.line_compare,
             0x0016 => self.s_tile_addr,
-            READONLY_STATUS_REGISTER_ADDR => u16::from_be_bytes(self.status.bytes),
+            READONLY_STATUS_REGISTER_ADDR => u16::from_le_bytes(self.status.bytes),
+            READONLY_VLINE_REGISTER_ADDR => self.current_line,
             _ => 0x0, // Open bus
         }
     }
@@ -276,9 +296,9 @@ impl MemoryMapped for PpuRegisters {
             0x0012 => self.b1_palette_config = value.into(),
             0x0013 => self.b2_palette_config = value.into(),
             0x0014 => self.b3_palette_config = value.into(),
-            0x0015 => self.reserved5 = value,
+            0x0015 => self.line_compare = value,
             0x0016 => self.s_tile_addr = value,
-            // 0x0017 Read Only (status)
+            // 0x0017 (status) and 0x0018 (current line) are read only
             _ => {} // Open bus
         }
     }

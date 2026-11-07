@@ -1,0 +1,6 @@
+---
+source: device-video/src/iso_tests.rs
+expression: frame_png(&dev)
+extension: png
+snapshot_kind: binary
+---
