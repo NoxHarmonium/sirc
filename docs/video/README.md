@@ -1,6 +1,7 @@
 # SIRCADA Reference Manual
 
-The SIRC manual set has four parts:
+The SIRC-1 CPU is documented in three standalone manuals (the CPU was sold separately from the SIRCUS console); SIRCADA, which
+is made for the SIRCUS system, has its own. The four parts are:
 
 | Manual | Scope | Location |
 | --- | --- | --- |
