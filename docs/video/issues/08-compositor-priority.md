@@ -6,14 +6,14 @@
 
 ## Goal
 
-Implement the compositing rule once, for every mode: S1, B1, S2, B2, S3, B3 front to back, the priority bit, and the disable bits.
+Implement the compositing rule once, for every mode: S1, B1, S2, B2, S3, B3, B4 front to back (B4 in Mode 1 only), the priority bit, and the disable bits.
 
 ## Spec
 
 Video Device Reference Manual (`docs/video`):
 
 - Chapter 4: Compositing Rule, Tilemap Entries (`P`); Chapter 5: Priority and Compositing
-- Chapter 3: Base Configuration Register (`B1D`-`B3D`, `S1D`-`S3D`)
+- Chapter 3: Base Configuration Register (`B1D`-`B4D`, `S1D`-`S3D`)
 
 ## State on `main`
 
@@ -23,9 +23,9 @@ Video Device Reference Manual (`docs/video`):
 
 ## Tasks
 
-- [ ] Write one compositor function taking the pixel of each background (palette address or transparent) and the sprite pixel and returning the colour address: the first opaque pixel in the order S1, B1, S2, B2, S3, B3; palette entry 0 if none.
+- [ ] Write one compositor function taking the pixel of each background (palette address or transparent) and the sprite pixel and returning the colour address: the first opaque pixel in the order S1, B1, S2, B2, S3, B3, B4; palette entry 0 if none.
 - [ ] Priority bit set: that tile's pixels are in front of everything, sprite layer 1 included. Zero keeps the layer's place.
-- [ ] `B1D`-`B3D` make a background transparent (all modes). `S1D`-`S3D` are used by the sprite engine (PPU-10).
+- [ ] `B1D`-`B4D` make a background transparent (all modes; background 4 exists in Mode 1 only). `S1D`-`S3D` are used by the sprite engine (PPU-10).
 - [ ] Wrap the palette add (`wrapping_add`).
 
 ## Acceptance criteria

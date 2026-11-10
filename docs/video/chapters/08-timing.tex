@@ -207,9 +207,9 @@ eight slots differently.
 		\toprule
 		\textbf{Use of the slots}                             & \textbf{Mode 1} & \textbf{Mode 2}    & \textbf{Mode 3}   \\
 		\midrule
-		Background tilemap entries                            & 3               & 2--4               & 3--4              \\
-		Background tile data words                            & 3               & 2--4               & 3--4              \\
-		Sprites                                               & 0 (not used)    & 0                  & 0                 \\
+		Background tilemap entries                            & 4               & 2--4               & 3--4              \\
+		Background tile data words                            & 4               & 2--4               & 3--4              \\
+		Sprites                                               & 0               & 0                  & 0                 \\
 		\midrule
 		\textbf{Total, typical (Mode 2, 3) or fixed (Mode 1)} & \textbf{8}      & \textbf{4.75 of 8} & \textbf{6.4 of 8} \\
 		\textbf{Total, worst case}                            & \textbf{8}      & \textbf{8}         & \textbf{8}        \\
@@ -232,8 +232,7 @@ eight slots differently.
 		]
 		\foreach \i in {0,...,7} { \node[head] at (\i*1.75,0.7) {slot \i}; }
 		\node[rowlab] at (-1.0,0) {Mode 1};
-		\foreach \i/\t in {0/B1 entry,1/B2 entry,2/B3 entry,3/B1 word,4/B2 word,5/B3 word} { \node[flatc] at (\i*1.75,0) {\t}; }
-		\foreach \i in {6,7} { \node[free] at (\i*1.75,0) {sprites\\(unused)}; }
+		\foreach \i/\t in {0/B1 entry,1/B2 entry,2/B3 entry,3/B4 entry,4/B1 word,5/B2 word,6/B3 word,7/B4 word} { \node[flatc] at (\i*1.75,0) {\t}; }
 		\node[rowlab] at (-1.0,-1.1) {Mode 2};
 		\foreach \i/\t in {0/B1 entry A,1/B1 word A,4/B2 entry A,5/B2 word A} { \node[isoc] at (\i*1.75,-1.1) {\t}; }
 		\foreach \i/\t in {2/B1 entry B,3/B1 word B,6/B2 entry B,7/B2 word B} { \node[isob] at (\i*1.75,-1.1) {\t}; }
@@ -245,8 +244,7 @@ eight slots differently.
 		\node[flatc, minimum width=1.4cm] at (0,-3.4) {orthogonal};
 		\node[isoc, minimum width=1.4cm] at (1.75,-3.4) {isometric};
 		\node[isob, minimum width=1.4cm] at (3.5,-3.4) {second cell};
-		\node[free, minimum width=1.4cm] at (5.25,-3.4) {unused};
-		\node[head, anchor=west] at (6.3,-3.4) {dashed: used only if needed};
+		\node[head, anchor=west] at (5.0,-3.4) {dashed: used only if needed};
 	\end{tikzpicture}
 	\caption{Who Uses Each Fetch Slot of a Group of Four Pixels}
 	\label{fig:slot-map}
@@ -276,7 +274,7 @@ the isometric background are made only when the group straddles two cells.
 	\begin{tikztimingtable}[sirc timing diagram]
 		CLKI                  & L 7{0.5H 0.5L}                                                  \\
 		Slot                  & D{0} D{1} D{2} D{3} D{4} D{5} D{6} D{7}                         \\
-		Mode 1 read           & D{B1e} D{B2e} D{B3e} D{B1w} D{B2w} D{B3w} D{--} D{--}           \\
+		Mode 1 read           & D{B1e} D{B2e} D{B3e} D{B4e} D{B1w} D{B2w} D{B3w} D{B4w}         \\
 		Mode 3 read           & D{B1e} D{B1w} D{B2e} D{B2w} D{B3e} D{B3w} D{B3e'} D{B3w'}       \\
 		Pixel shown           & 2D{p0} 2D{p1} 2D{p2} 2D{p3}                                     \\
 	\end{tikztimingtable}

@@ -270,7 +270,7 @@ Mode 1, not isometric. The tile size bit \texttt{B3S} is ignored. It is meant fo
 	\item It does not scroll: the scroll registers \texttt{B3SCRX} and \texttt{B3SCRY} are ignored, and screen pixel $(x, y)$
 	      shows tile $(\lfloor x/8 \rfloor, \lfloor y/8 \rfloor)$.
 	\item The priority bit of the tilemap entry puts a tile in front of everything, including sprite layer 1. A tile without it
-	      is behind everything, as background 3 is in Mode 1. The status layer's pixels of value 0 are transparent.
+	      is behind everything, as the last background is in Mode 1. The status layer's pixels of value 0 are transparent.
 	\item \texttt{B3D} in the Base Configuration register turns it off. A program that does not use it must set \texttt{B3D},
 	      or the device reads whatever \texttt{B3MAP} and \texttt{B3TILES} point at.
 \end{itemize}
@@ -365,7 +365,7 @@ Background 1 is in front of background 2. A pixel of background 1 whose value is
 at the same screen position, and if both are 0 the device shows palette entry 0 (Section~\ref{sec:compositing}). The
 disable bits \texttt{B1D} and \texttt{B2D} of the Base Configuration register make the corresponding background
 transparent. The two backgrounds have their own tilemap, tile data, scroll and palette registers; they share nothing
-but the palette.
+but the palette. Background 4 is not drawn in Mode 2.
 
 Because each background scrolls independently, the two can be positioned relative to each other by any amount. That is
 what a height offset is: a background whose \texttt{SCRY} is $h$ smaller than another's is drawn $h$ pixels lower on

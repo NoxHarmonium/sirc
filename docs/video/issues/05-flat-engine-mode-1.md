@@ -18,7 +18,7 @@ Video Device Reference Manual (`docs/video`):
 
 ## State on `main`
 
-- `lib.rs` `poll` is a `RenderStateMachine` (`FetchTilemapEntry`, `FetchTile`, `FetchSpriteTilemapEntry`, `FetchSpriteTile`) with three tilemap entry reads then three tile reads then two sprite stubs per group of four pixels. Entries are re-read for every group.
+- `lib.rs` `poll` is a `RenderStateMachine` (`FetchTilemapEntry`, `FetchTile`, `FetchSpriteTilemapEntry`, `FetchSpriteTile`) with three tilemap entry reads then three tile reads then two sprite stubs per group (the manual's Mode 1 has a fourth background in the two spare slots) of four pixels. Entries are re-read for every group.
 - **Bug (measured):** the first two groups of a line are flushed to blank before anything has been fetched, so the left 8 pixels of every line are blank, and the tilemap is drawn 8 pixels to the right of its position (the last tile column is never shown). A solid tilemap shows `........################` along the first 24 pixels (`.` blank, `#` drawn).
 - Scroll registers are stored and ignored; there is no front-porch prefetch.
 - `test_video_line_timing` asserts the exact per-clock state sequence, and the `last_frame` snapshot encodes the offset picture. Both will change.
@@ -27,7 +27,7 @@ Video Device Reference Manual (`docs/video`):
 
 - [ ] Implement the orthogonal engine: per layer, per group of four pixels, a tilemap entry read then a tile word read, for the plane group `(scroll_x >> 2) + group` (group 0 starts at plane column `4 * (scroll_x >> 2)`); fine scroll via a two-group window and offset `scroll_x & 3`; 32 by 32 wrap (256 by 256 pixels).
 - [ ] Sample the scroll registers once per line before the first visible pixel; prefetch two groups in the front porch.
-- [ ] Keep the slot assignment of Table *Mode 1 Fetch Slots*: slots 0-2 entries, 3-5 words, 6-7 reserved for sprites.
+- [ ] Use the slot assignment of Table *Mode 1 Fetch Slots*: four backgrounds, slots 0-3 entries, 4-7 words, nothing reserved for sprites. Add background 4 as an ordinary orthogonal layer (it is drawn in Mode 1 only).
 - [ ] Keep the pipeline structure (fetch group g+2 while showing group g) so the same engine serves Mode 3.
 - [ ] Regenerate the snapshot (the picture moves 8 pixels left) and replace the per-clock state test with a slot-level test of the new schedule.
 

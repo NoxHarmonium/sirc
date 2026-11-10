@@ -16,6 +16,7 @@ lives on the branch `claude/video-chip-reference-impl`.
 | Registers, palette and VRAM access | Implemented | Open bus reads zero |
 | Package, pins, signal timing, video output | Specified | The simulator has no pins; chapters Package and Pinout, Signal Timing |
 | Mode 1 backgrounds, 8 by 8 tiles, 32 by 32 maps | Implemented | Layer order corrected with the sprite prototype |
+| Mode 1 background 4, register map repacked into groups of four | Not yet implemented | The simulator has three backgrounds and the old register offsets; `STATUS` is at `0x0017`, not `0x0019` |
 | Mode 1 scrolling (specified) | Not yet implemented | Registers stored |
 | Mode 1 16 by 16 tiles, double tilemaps (specified) | Not yet implemented | Registers stored |
 | Orthogonal tile flips (specified), priority bit | Not yet implemented; priority in Mode 3 and the status layer | |
@@ -24,7 +25,7 @@ lives on the branch `claude/video-chip-reference-impl`.
 | Background disables | Modes 2 and 3 only | |
 | Sprites, sprite disables and sizes | Prototype | Proposed, both modes; chapter Sprites |
 | Vertical sync interrupt (NMI) | Implemented | At line 224; on level 4, not the NMI yet |
-| Vertical blanking flag and current line register | Implemented | `VBL` in `STATUS`, `VLINE` at `0x0018` |
+| Vertical blanking flag and current line register | Implemented | `VBL` in `STATUS`, `VLINE` at `0x0018` (`0x001A` in the repacked map) |
 | PAL timing and the output mode flag (specified) | Not yet implemented | |
 | Blanking-only VRAM access (specified) | Not yet implemented | Not enforced |
 | Forced blank, graphics disable (specified) | Not yet implemented | `GD` stored only |
@@ -42,7 +43,7 @@ simulator or a decision to be made; the manual describes the intended behaviour.
 
 1. **Register addresses.** The wiki puts the sprite tile data base at offset `0x0012` and the status at `0x0013`. The
    simulator puts the three background palette configuration registers at `0x0012`–`0x0014`, the sprite tile data base at
-   `0x0016` and the status at `0x0017`. The manual follows the simulator.
+   `0x0016` and the status at `0x0017`. The manual followed the simulator until the register map was repacked into groups of four (see the table above), so the simulator's offsets now differ from the manual's.
 2. **Palette boundary** (fixed). The simulator used to decode palette offsets `0x6000`–`0x6100` inclusive, one past the
    end of its 256 entries; it now stops at `0x60FF`.
 3. **Mode 1 layer order** (fixed with the sprite prototype). The simulator used to show background 3 in front of

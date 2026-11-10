@@ -12,7 +12,7 @@ be rerun with `cargo test -p device_video -- --nocapture`.
 ## Intent
 
 SIRCUS (the SIRC User System) is a fictional console that was very good at one thing and poor at the general case, which is why it faded. The video device
-is built around that: Mode 1 is a conventional three-layer tile mode, and Mode 2 is an isometric mode for orthogonal strategy and simulation
+is built around that: Mode 1 is a conventional four-layer tile mode, and Mode 2 is an isometric mode for orthogonal strategy and simulation
 maps (the Transport Tycoon / SimCity kind). The weakness comes from the same decision as the strength: Mode 2 fetches a tile word
 for nearly every pixel group, which leaves only two isometric layers and no sprite slots in the visible part of a line.
 
@@ -87,8 +87,8 @@ four colours is the program's choice (it would only prevent wasted palette space
 - Line-buffer design: scan the table during the visible time (internal RAM), fetch rows in the horizontal blanking interval, paint into a
   256-entry buffer. 170 porch cycles minus 22 prefetch = 148 reads: 74 sprites of 8 by 8 or 37 of 16 by 16 fit, so 32 per line (a register
   limit, as in the SNES) is never time-limited (`capacity_per_line`). Using the visible slots as well needs a second line buffer and was
-  not adopted (Mode 1: 212 reads, Mode 2: spare slots).
-- Keeping only the frontmost sprite pixel per column is enough for the S1/B1/S2/B2/S3/B3 order.
+  not adopted (Mode 1 has no spare slot now it has four backgrounds, Mode 2: spare slots).
+- Keeping only the frontmost sprite pixel per column is enough for the S1/B1/S2/B2/S3/B3/B4 order.
 - Entry: 8-bit tile number because X (9 bits), Y (8), flips (2), palette (3) and layer (2) leave eight bits.
 - Shadow colour (palette 7, value 15, enabled by `SHD`): a shadow never covers a drawn sprite pixel and is always replaced by one, so
   shadows darken backgrounds only. Darkening does not accumulate (one level).
@@ -175,3 +175,21 @@ math and a window are the two a user is most likely to ask about.
 
 Period-style details worth keeping in mind for later chapters: the Super NES manual gives reset values and read/write per register in a summary table,
 marks forbidden values ("prohibited"), and gives timing in microseconds; and it lists documented problems (our `STATUS.md` plays that role).
+
+## Mode 1 fourth background and the register repack (2026-11-11)
+
+- Mode 1 had two idle fetch slots per group of four pixels (slots 6 and 7): the eight slots are sized for the worst case of the isometric
+  modes (two layers at four slots each), and Mode 1 needs only six. A background costs one tilemap entry and one tile word per group, so a
+  fourth background fits exactly in the idle pair, at any bit depth. Nothing else could use them: the CPU is locked out of video memory
+  outside vertical blanking and sprites are fetched in the blanking intervals into a line buffer. Mode 1 now uses all eight slots.
+- Fixing the new layer at 2 or 1 bit per pixel was rejected. It does not make the layer fit (4-bit already fits), saved reads in alternate
+  groups are unusable in a fixed schedule, and 1-bit tiles would be a new tile format. The layer is a normal background with the `T2` bit,
+  so the four layer engines are identical. Five backgrounds would need 10 reads per group and do not fit without a tilemap entry cache.
+- Background 4 exists in Mode 1 only; Modes 2 and 3 do not draw it, and its registers are ignored there. In priority order it is last
+  (behind B3). `B4D` is `CONFIG` bit 11 and `B4S`, `B4X`, `B4Y` are the spare bits 12, 4 and 0 of `TILESIZE`.
+- Register map repacked into groups of four (MAP, TILES, SCRX, SCRY, PAL) so every register for background n is at group base + n - 1.
+  `INTCTL` moves from `0x0011` to `0x0016`, `LINE` from `0x0015` to `0x0017`, `STILES` from `0x0016` to `0x0018`, `STATUS` from `0x0017` to
+  `0x0019` and `VLINE` from `0x0018` to `0x001A`. The simulator, its tests and the wiki still use the old offsets.
+- Era check: the Super NES offered a three-layer mode with one 2-bit layer and a four-layer mode of 2-bit layers only, so four 4-bit layers
+  is more than that machine did. The trade is die area and cost: four pixel pipelines and the fetch bandwidth to feed them. In the
+  fiction SIRCADA is simply the more expensive part, which fits a CPU maker using up surplus stock in a console.

@@ -10,7 +10,7 @@ layer of windows over it, with the map, and the vehicles and buildings as sprite
 \begin{description}
 	\item[Selected by:] \texttt{MODE} = 2 in the Base Configuration register.
 	\item[Layers:] Orthogonal backgrounds 1 and 2 in front, and an isometric background 3 behind them. The order front to back is
-	      S1, B1, S2, B2, S3, B3, as in Mode 1 (Section~\ref{sec:m1-priority}).
+	      S1, B1, S2, B2, S3, B3, as in Mode 1 without background 4 (Section~\ref{sec:m1-priority}).
 	\item[Registers:] Each background uses its own tilemap, tile data, scroll and palette configuration registers, as in Mode 1.
 	      Background 3 is the isometric one, so \texttt{B3MAP}, \texttt{B3TILES}, \texttt{B3SCRX}, \texttt{B3SCRY} and
 	      \texttt{B3PAL} follow Mode 2 (Chapter~\ref{ch:mode2}).
@@ -72,7 +72,7 @@ Because no background depends on a slot that another leaves spare, the schedule 
 \begin{itemize}
 	\item There is no status layer: the orthogonal backgrounds take its place, and \texttt{B3D} disables the isometric
 	      background.
-	\item \texttt{B1D}, \texttt{B2D} and \texttt{B3D} disable the corresponding background, as in Mode 2.
+	\item \texttt{B1D}, \texttt{B2D} and \texttt{B3D} disable the corresponding background, as in Mode 2. Background 4 is not drawn in Mode 3.
 	\item The isometric background is background 3, so it is behind the orthogonal ones. The shading bits of its tilemap entries
 	      (Section~\ref{sec:m2-shading}) apply to it; the orthogonal backgrounds ignore the flip bits.
 	\item Only one background is isometric, so the height offsets of Section~\ref{sec:m2-layers} between two isometric

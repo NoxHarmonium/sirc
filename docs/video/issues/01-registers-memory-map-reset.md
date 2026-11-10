@@ -21,13 +21,14 @@ Video Device Reference Manual (`docs/video`):
 - `sirc-vm/device-video/src/types.rs` has `PpuRegisters` with registers `0x0000`-`0x0017` as `modular_bitfield` structs, read/write handlers and `test_address_round_trip`.
 - **Bug:** the palette decode in `lib.rs` is `0x6000..=0x6100` (inclusive) but the palette array has 256 entries, so an access to `0x6100` indexes out of bounds and panics.
 - **Bug:** the status register is read with `u16::from_be_bytes`, which is byte-swapped relative to every other register (harmless only while the value is 0).
-- No sprite table (`0x7000`-`0x70FF`), no `INTCTL` (`0x0011`), no `LINE` (`0x0015`), no `SHD` (CONFIG bit 7), no `T2` (palette config bit 2), no `SOV`/`LIP` status bits. The status register always reads 0 (version 0, NTSC).
+- No sprite table (`0x7000`-`0x70FF`), no `INTCTL` (`0x0011` in the old layout), no `LINE` (`0x0015` in the old layout), no `SHD` (CONFIG bit 7), no `T2` (palette config bit 2), no `SOV`/`LIP` status bits. The status register always reads 0 (version 0, NTSC).
 - Reset state is all zeros, so brightness is 0 and the picture is enabled. The manual specifies `CONFIG = 0x8078`.
 
 ## Tasks
 
 - [ ] Fix the palette decode to `0x6000..=0x60FF` (reads of `0x6100` return 0, writes are ignored, no panic).
 - [ ] Fix the status register byte order so it reads like the other registers.
+- [ ] Repack the register map into groups of four backgrounds as the manual's register map shows (`B1MAP`-`B4MAP` at `0x0002`-`0x0005`, tile data, scroll X, scroll Y and palette configuration likewise; `INTCTL` `0x0016`, `LINE` `0x0017`, `STILES` `0x0018`, `STATUS` `0x0019`, `VLINE` `0x001A`) and add the fourth background's registers and `B4D`, `B4S`, `B4X`, `B4Y`. Update the existing tests that use the old offsets.
 - [ ] Add the new fields/registers: `INTCTL` (`VIE` bit 0, `LIE` bit 1), `LINE` (bits 8-0), `CONFIG.SHD` (bit 7), `BxPAL.T2` (bit 2), `STATUS.SOV` (bit 5) and `STATUS.LIP` (bit 6). Behaviour comes from later issues; this issue only stores and reads them.
 - [ ] Add the sprite table storage: 256 words at `0x7000`-`0x70FF`, open bus elsewhere in `0x7000`-`0x7FFF`. Fill it with ones at reset (hides every sprite) or document another choice.
 - [ ] Reset values: `CONFIG = 0x8078` (`GD` = 1, `BRT` = 15, `MODE` = 0), every other register 0. Video memory, palette and sprite table contents are undefined on hardware; the simulator clears them.

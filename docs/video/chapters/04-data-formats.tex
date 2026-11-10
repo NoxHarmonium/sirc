@@ -125,13 +125,13 @@ how it is drawn.
 	\centering
 	\begin{tabular}{llp{7.5cm}}
 		\toprule
-		\textbf{Bits} & \textbf{Field} & \textbf{Meaning}                                                                                                                                   \\
+		\textbf{Bits} & \textbf{Field} & \textbf{Meaning}                                                                                                                                     \\
 		\midrule
-		15            & \texttt{V}     & Flip the tile vertically on an orthogonal layer (Section~\ref{sec:flat-16}); darkens the tile in an isometric layer (Section~\ref{sec:m2-shading}) \\
-		14            & \texttt{H}     & Flip the tile horizontally on an orthogonal layer; lightens the tile in an isometric layer                                                         \\
-		13            & \texttt{P}     & Priority: 1 puts the tile in front of everything, sprite layer 1 included; 0 leaves its layer in the order S1, B1, S2, B2, S3, B3                  \\
-		12--10        & \texttt{PAL}   & Palette selection, 0 to 7 (Section~\ref{sec:palette-select})                                                                                       \\
-		9--0          & \texttt{TILE}  & Tile number, 0 to 1023, counted from the background's tile data base address                                                                       \\
+		15            & \texttt{V}     & Flip the tile vertically on an orthogonal layer (Section~\ref{sec:flat-16}); darkens the tile in an isometric layer (Section~\ref{sec:m2-shading})   \\
+		14            & \texttt{H}     & Flip the tile horizontally on an orthogonal layer; lightens the tile in an isometric layer                                                           \\
+		13            & \texttt{P}     & Priority: 1 puts the tile in front of everything, sprite layer 1 included; 0 leaves its layer in the order S1, B1, S2, B2, S3, B3 (and B4 in Mode 1) \\
+		12--10        & \texttt{PAL}   & Palette selection, 0 to 7 (Section~\ref{sec:palette-select})                                                                                         \\
+		9--0          & \texttt{TILE}  & Tile number, 0 to 1023, counted from the background's tile data base address                                                                         \\
 		\bottomrule
 	\end{tabular}
 	\caption{Tilemap Entry Fields}
@@ -193,6 +193,6 @@ Layers are combined pixel by pixel. For each screen pixel the device takes the f
 whose pixel value is not 0, and shows the palette entry that pixel selects. If every layer is transparent, the device
 shows palette entry 0. There is no blending: a pixel is either transparent or fully opaque.
 
-The front-to-back order of the layers is S1, B1, S2, B2, S3, B3 in Modes 1 and 3 and S1, B1, S2, B2, S3 with a status
-layer in Mode 2; see Sections~\ref{sec:m1-priority} and~\ref{sec:m2-layers}. A tile with its priority bit set is in
-front of everything.
+The front-to-back order of the layers is S1, B1, S2, B2, S3, B3, B4 in Mode 1, the same without B4 in Mode 3, and S1,
+B1, S2, B2, S3 with a status layer in Mode 2; see Sections~\ref{sec:m1-priority} and~\ref{sec:m2-layers}. A tile with
+its priority bit set is in front of everything.

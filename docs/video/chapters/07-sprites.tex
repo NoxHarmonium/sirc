@@ -6,7 +6,7 @@
 The device draws three layers of sprites, S1 to S3, each 4 bits per pixel. The sprites are described by a table of 128
 entries of 32 bits each, mapped at offsets \texttt{0x7000}--\texttt{0x70FF} of the device segment, and their tile data
 is at the address in the \texttt{STILES} register. A sprite layer sits between background layers in the front-to-back
-order S1, B1, S2, B2, S3, B3. Sprite tiles are 8 by 8 or 16 by 16 pixels, chosen for each sprite layer by the
+order S1, B1, S2, B2, S3, B3, B4. Sprite tiles are 8 by 8 or 16 by 16 pixels, chosen for each sprite layer by the
 \texttt{TILESIZE} register.
 
 \section{Sprite Table Entry}
@@ -90,7 +90,7 @@ Keeping only the frontmost sprite pixel is enough. A sprite pixel that lies behi
 the one shown: whatever would cover it, the frontmost sprite pixel is in front of the same things.
 
 When the line is shown, the compositor places the buffered sprite pixel among the backgrounds in the order S1, B1, S2,
-B2, S3, B3 (and, in Mode 1, B3 last), taking the first opaque pixel. This is the same rule in both modes; Mode 2 simply
+B2, S3, B3 (and, in Mode 1, B4 last), taking the first opaque pixel. This is the same rule in both modes; Mode 2 simply
 has no third background.
 
 \section{How Many Sprites}
@@ -129,23 +129,22 @@ The fetch slots of the visible part of the line could be used as well, but the s
 longer be painted into the buffer that is being shown, so a second line buffer (another 256 entries) is needed.
 
 \begin{description}
-	\item[Mode 1] has one slot in each group of four pixels reserved for sprite tile data, 64 reads per line, taking the budget
-	      to 218 reads: 109 sprites of 8 by 8, 54 of 16 by 16.
+	\item[Mode 1] has no slot to spare: its four backgrounds use all eight in every group of four pixels.
 	\item[Mode 2] has no slot reserved, but some of its slots are spare. Which ones depends only on the scroll position, not on
 	      the tile data (Section~\ref{sec:m2-spare-slots}), so the device can know in advance. Over all scroll positions 192 to
 	      224 slots per line out of 512 are spare, 208 on average, and the status layer takes some of them.
 \end{description}
 
-Neither is needed to reach the line limit, so the device does not use them.
+The spare slots of Mode 2 are not needed to reach the line limit, so the device does not use them.
 
 \section{Sprites in Modes 2 and 3}
 
 Sprites are drawn the same way in Modes 2 and 3, at screen positions. In Mode 2, which has two isometric backgrounds,
-the three sprite layers sit as S1, B1, S2, B2, S3. In Mode 3 the order is the same as in Mode 1, S1, B1, S2, B2, S3,
-B3, with the isometric background last. A program sorts its sprites against the map itself: a lorry that is to pass
-behind a tower on B1 goes on S2, one that is to pass in front goes on S1, and it changes layer as it crosses.
-Figure~\ref{fig:sprite-demo} shows both: the lorry on S1 is in front of the tower, and the one on S2 would be hidden by
-it.
+the three sprite layers sit as S1, B1, S2, B2, S3. In Mode 3 the order is the same as in Mode 1 without background 4,
+S1, B1, S2, B2, S3, B3, with the isometric background last. A program sorts its sprites against the map itself: a lorry
+that is to pass behind a tower on B1 goes on S2, one that is to pass in front goes on S1, and it changes layer as it
+crosses. Figure~\ref{fig:sprite-demo} shows both: the lorry on S1 is in front of the tower, and the one on S2 would be
+hidden by it.
 
 \begin{figure}[H]
 	\centering

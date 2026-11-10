@@ -13,7 +13,7 @@ CPU address \texttt{0x000C\_0002}. This manual gives every address as an offset 
 		\toprule
 		\textbf{Offsets}                 & \textbf{Region} & \textbf{Notes}                                                                                           \\
 		\midrule
-		\texttt{0x0000}--\texttt{0x00FF} & Registers       & Offsets \texttt{0x0000}--\texttt{0x0018} are defined (Chapter~\ref{ch:registers}); the rest are open bus \\
+		\texttt{0x0000}--\texttt{0x00FF} & Registers       & Offsets \texttt{0x0000}--\texttt{0x001A} are defined (Chapter~\ref{ch:registers}); the rest are open bus \\
 		\texttt{0x0100}--\texttt{0x5FFF} & Unmapped        & Open bus                                                                                                 \\
 		\texttt{0x6000}--\texttt{0x60FF} & Palette         & 256 entries, one word each (Section~\ref{sec:palette})                                                   \\
 		\texttt{0x6100}--\texttt{0x7FFF} & Unmapped        & Open bus; see Section~\ref{sec:palette-edge}                                                             \\
@@ -46,7 +46,7 @@ A read of a register, a palette entry or a VRAM word returns the stored value. A
 open bus offset returns zero and a write to one is ignored. The device never inserts a wait state: every access
 completes in the cycle it is made, whether or not it takes effect (Section~\ref{sec:memory-vram-access}).
 
-The Status register (offset \texttt{0x0017}) and the Vertical Line register (offset \texttt{0x0018}) are read-only; a
+The Status register (offset \texttt{0x0019}) and the Vertical Line register (offset \texttt{0x001A}) are read-only; a
 write to either is ignored.
 
 \subsection{Access During Rendering}
@@ -86,6 +86,7 @@ of VRAM and the tilemaps at the top, leaving room for the tile set to grow:
 		Background 1 tilemap & \texttt{0xF000}        & 1024 words        \\
 		Background 2 tilemap & \texttt{0xF400}        & 1024 words        \\
 		Background 3 tilemap & \texttt{0xF800}        & 1024 words        \\
+		Background 4 tilemap & \texttt{0xFC00}        & 1024 words        \\
 		\bottomrule
 	\end{tabular}
 	\caption{An Example Mode 1 VRAM Layout}

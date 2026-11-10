@@ -39,17 +39,17 @@ the display.
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Property} & \textbf{Value}                                                                                                     \\
+		\textbf{Property} & \textbf{Value}                                                                                                    \\
 		\midrule
-		Picture size      & 256 by 224 visible pixels (262 lines NTSC, 312 PAL; Chapter~\ref{ch:timing})                                       \\
-		Colour            & 15 bits per pixel, 5 bits for each of red, green and blue                                                          \\
-		Palette           & 256 entries of 16 bits, directly addressable by the CPU                                                            \\
-		Video memory      & 32,768 words (64 KB), shared by tile data and tilemaps                                                             \\
-		Tile data         & 4 bits per pixel                                                                                                   \\
-		Backgrounds       & Three orthogonal in Mode 1; two isometric and one orthogonal in Mode 2; two orthogonal and one isometric in Mode 3 \\
-		Sprites           & 128 entries, three layers, 32 per line (Chapter~\ref{ch:sprites})                                                  \\
-		Interrupts        & Two: vertical sync (NMI) and line compare (IRQ4)                                                                   \\
-		Line timing       & 1364 master clocks per line, 262 lines per frame                                                                   \\
+		Picture size      & 256 by 224 visible pixels (262 lines NTSC, 312 PAL; Chapter~\ref{ch:timing})                                      \\
+		Colour            & 15 bits per pixel, 5 bits for each of red, green and blue                                                         \\
+		Palette           & 256 entries of 16 bits, directly addressable by the CPU                                                           \\
+		Video memory      & 32,768 words (64 KB), shared by tile data and tilemaps                                                            \\
+		Tile data         & 4 bits per pixel                                                                                                  \\
+		Backgrounds       & Four orthogonal in Mode 1; two isometric and one orthogonal in Mode 2; two orthogonal and one isometric in Mode 3 \\
+		Sprites           & 128 entries, three layers, 32 per line (Chapter~\ref{ch:sprites})                                                 \\
+		Interrupts        & Two: vertical sync (NMI) and line compare (IRQ4)                                                                  \\
+		Line timing       & 1364 master clocks per line, 262 lines per frame                                                                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Video Device Summary}
@@ -69,7 +69,7 @@ They differ in how the backgrounds are drawn and in the fetch schedule that supp
 		\toprule
 		\textbf{Mode} & \textbf{\texttt{MODE} value} & \textbf{Description}                                                                                                 \\
 		\midrule
-		Mode 1        & 0                            & Three orthogonal backgrounds of square tiles and sprites. The reset mode.                                            \\
+		Mode 1        & 0                            & Four orthogonal backgrounds of square tiles and sprites. The reset mode.                                             \\
 		Mode 2        & 1                            & Two isometric backgrounds: square tiles displayed as diamonds on a 2:1 ground plane, and an orthogonal status layer. \\
 		Mode 3        & 2                            & One isometric background behind two orthogonal backgrounds.                                                          \\
 		\bottomrule
@@ -103,7 +103,7 @@ describe each block; the figure says how they feed each other.
 		]
 		\node[block, minimum width=2.2cm, minimum height=3.8cm] (cpu) at (0,0) {SIRC-1\\CPU};
 		\node[block, minimum width=3.0cm, minimum height=3.8cm] (bus) at (3.7,0) {Bus interface\\and address\\decode\\(segment\\\texttt{0x000C})};
-		\node[mem] (m1) at (9.3,2.1) {Registers \texttt{0x0000}--\texttt{0x0018}};
+		\node[mem] (m1) at (9.3,2.1) {Registers \texttt{0x0000}--\texttt{0x001A}};
 		\node[mem] (m2) at (9.3,0.7) {Palette \texttt{0x6000}, 256 words};
 		\node[mem] (m3) at (9.3,-0.7) {Sprite table \texttt{0x7000}, 256 words};
 		\node[mem] (m4) at (9.3,-2.1) {Video memory \texttt{0x8000}, 32,768 words};
@@ -151,7 +151,7 @@ describe each block; the figure says how they feed each other.
 		\node[block] (que) at (9.3,2.2) {Status layer queue\\(Mode 2)};
 		\node[block] (spe) at (9.3,0.6) {Sprite engine\\scan, fetch, line buffer};
 		% Column 4: compositor and output
-		\node[block, minimum height=5.0cm, minimum width=2.9cm] (comp) at (13.3,3.0) {Compositor\\priority\\S1 B1 S2 B2\\S3 B3\\shading};
+		\node[block, minimum height=5.0cm, minimum width=2.9cm] (comp) at (13.3,3.0) {Compositor\\priority\\S1 B1 S2 B2\\S3 B3 B4\\shading};
 		\node[store] (pal) at (13.3,-0.9) {Palette\\(colour lookup)};
 		\node[block] (bri) at (13.3,-2.5) {Brightness\\and blanking};
 		\node[block] (vo) at (13.3,-4.1) {Video output};
