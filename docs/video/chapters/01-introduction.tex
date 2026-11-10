@@ -162,11 +162,11 @@ describe each block; the figure says how they feed each other.
 		% Data flows
 		\draw[flow, <->] (vram) -- (vram.east -| arb.west);
 		\draw[flow] (cpu) -- (cpu.east -| arb.west);
-		\draw[flow] (oam.east) -| ([xshift=-1.1cm]spe.south) -- ([xshift=-1.1cm]spe.south);
+		\draw[flow] (oam.east) -| ([xshift=-1.1cm]spe.south);
 		\foreach \e in {flat,iso,que} { \draw[flow] (arb.east |- \e) -- (\e.west); }
 		\draw[flow] (arb.east |- spe) -- (spe.west);
 		\foreach \e in {flat,iso,que,spe} { \draw[flow] (\e.east) -- (\e.east -| comp.west); }
-		\draw[flow] (comp.south |- pal.north) -- (pal.north);
+		\draw[flow] (comp.south) -- (pal.north);
 		\draw[flow] (pal) -- (bri);
 		\draw[flow] (bri) -- (vo);
 	\end{tikzpicture}
