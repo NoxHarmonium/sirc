@@ -61,7 +61,7 @@ simulator or a decision to be made; the manual describes the intended behaviour.
    master clocks; the terminal device counts one poll as one master clock, so its baud rate is off by a factor of two.
 9. **VRAM access during rendering.** The specification ignores accesses to video memory and the sprite table outside
    vertical blanking; the simulator allows them.
-10. **Sprites on line 0.** The manual shows no sprites on line 0, because the device makes no reads in vertical blanking and so cannot fetch them. The prototype's behaviour on line 0 has not been checked against this.
+10. **Blank first line.** The manual makes line 0 always blank (black, no background fetches), with the sprite scan and fetch for line 1 done during it. The simulator draws line 0 as an ordinary line and has not been checked for the sprite preparation timing.
 
 ## Open design questions
 

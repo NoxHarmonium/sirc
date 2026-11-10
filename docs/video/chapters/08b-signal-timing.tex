@@ -267,10 +267,11 @@ has a narrow black border on each side.
 
 \subsection{Vertical Sync}
 
-Lines 0 to 223 are the picture. The vertical sync is three lines long and ends 14 lines before the first line of the
-picture: lines 245, 246 and 247 on NTSC, and lines 295, 296 and 297 on PAL. In each of those lines \activelow{CSYNC} is
-asserted from the first cycle of the line for 1272 master clocks (636 cycles) and is high for the last 92. The other
-lines of the vertical blanking interval carry the ordinary horizontal sync pulse, and there are no equalising pulses.
+Lines 0 to 223 are the picture, and line 0 is always blank (Section~\ref{sec:first-line}). The vertical sync is three
+lines long and ends 14 lines before the first line of the picture: lines 245, 246 and 247 on NTSC, and lines 295, 296
+and 297 on PAL. In each of those lines \activelow{CSYNC} is asserted from the first cycle of the line for 1272 master
+clocks (636 cycles) and is high for the last 92. The other lines of the vertical blanking interval carry the ordinary
+horizontal sync pulse, and there are no equalising pulses.
 
 \begin{figure}[H]
 	\centering

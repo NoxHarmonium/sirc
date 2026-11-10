@@ -28,10 +28,11 @@ device in this order:
 \section{One Frame}
 \label{sec:frame-flow}
 
-Figure~\ref{fig:frame-flow} shows a frame as the program sees it. The device draws lines 0 to 223 without help. At the
-first cycle of line 224 it raises the \activelow{NMI} (if \texttt{VIE} is set) and sets the \texttt{VBL} bit of the
-Status register, and the handler has the rest of vertical blanking, 38 lines or 25,916 cycles on NTSC and 88 lines on
-PAL, to change video memory, the sprite table and the registers for the next frame.
+Figure~\ref{fig:frame-flow} shows a frame as the program sees it. The device draws lines 0 to 223 without help; line 0
+is always blank (Section~\ref{sec:first-line}). At the first cycle of line 224 it raises the \activelow{NMI} (if
+\texttt{VIE} is set) and sets the \texttt{VBL} bit of the Status register, and the handler has the rest of vertical
+blanking, 38 lines or 25,916 cycles on NTSC and 88 lines on PAL, to change video memory, the sprite table and the
+registers for the next frame.
 
 \begin{figure}[H]
 	\centering

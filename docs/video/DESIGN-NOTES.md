@@ -199,3 +199,11 @@ marks forbidden values ("prohibited"), and gives timing in microseconds; and it 
 The simulator turns each 5-bit channel into 8 bits for a host buffer by shifting it left by three, so its brightest value is 248. That is a
 convention of the host picture buffer, not of the chip: the real outputs are analogue, with 32 steps up to the full-scale level set by `IREF`,
 so the manual describes the 5-bit converter and the simulator's conversion stays here.
+
+## The blank first line
+
+Sprites for a line are fetched during the previous line, but vertical blanking belongs to the CPU, so line 0 has no previous line in which
+the renderer may read video memory. Options: a pre-render line at the end of vertical blanking (keeps 224 picture lines, costs the CPU one
+of 38 lines of VRAM access and adds renderer state), or make line 0 itself blank and let it do the preparation for line 1 (costs a picture line,
+which a television hides in overscan, and needs no new state). The second was chosen. Line 0 is black, not the backdrop colour, because
+nothing is fetched for it. Programs keep sprites at Y >= 1 so they show their first row.

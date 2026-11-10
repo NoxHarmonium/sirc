@@ -71,6 +71,16 @@ timing is fixed and the same in both modes:
 
 The visible time of a line is a whole number of master clocks per pixel: four.
 
+\subsection{The First Line}
+\label{sec:first-line}
+
+Line 0 is always blank: the device shows black for the whole of it, whatever the registers hold, and fetches nothing
+for its background layers. The sprites of a line are fetched during the previous line, and line 0 has no previous line
+in which video memory is free, because vertical blanking belongs to the CPU. Line 0 therefore does the work of that
+previous line: it scans the sprite table and fetches the sprites for line 1 as any other line does for the next. The
+picture is 256 by 224 pixels in lines 0 to 223, of which line 0 is black, so 223 lines show a picture. Programs should
+keep nothing of importance on the first line of the picture; a television normally hides it in overscan.
+
 \begin{figure}[H]
 	\centering
 	\begin{tikzpicture}[

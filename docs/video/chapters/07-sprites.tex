@@ -79,9 +79,6 @@ The device draws sprites with a line buffer of 256 entries, which it fills befor
 	      sprites, in table order, whose rows cross the next line and whose layer is neither hidden nor disabled in the Base
 	      Configuration register. A sprite is on the line when $(\text{line} - Y) \bmod 256$ is less than its size.
 	      Further sprites on the line are dropped.
-	      No sprites are shown on line 0. The device makes no reads in vertical blanking, which belongs to the CPU
-	      (Section~\ref{sec:memory-vram-access}), so there is no time to fetch the sprites for line 0 and its buffer is empty: a
-	      sprite with $Y = 0$ loses its first row, and a program that wants a sprite whole gives it $Y \geq 1$.
 	\item \textbf{Fetch.} In the horizontal blanking interval it reads one row of tile data for each kept sprite, one
 	      word per PPU cycle. A word with no pixel on the screen is not read.
 	\item \textbf{Paint.} Each word is expanded into the line buffer. Where sprites overlap, the one on the lower layer
@@ -95,6 +92,10 @@ the one shown: whatever would cover it, the frontmost sprite pixel is in front o
 When the line is shown, the compositor places the buffered sprite pixel among the backgrounds in the order S1, B1, S2,
 B2, S3, B3 (and, in Mode 1, B4 last), taking the first opaque pixel. This is the same rule in both modes; Mode 2 simply
 has no third background.
+
+Line 0 is always blank (Section~\ref{sec:first-line}), so it has no sprites and needs none fetched: the device scans
+and fetches during it for line 1. A sprite with $Y = 0$ therefore loses its first row, and a program that wants a
+sprite whole gives it $Y \geq 1$.
 
 \section{How Many Sprites}
 \label{sec:sprite-budget}
