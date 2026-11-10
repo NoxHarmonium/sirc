@@ -1,0 +1,34 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\label{ch:preface}
+
+\section*{About This Manual}
+
+This manual documents SIRCADA, the SIRC Analogue Display Adapter: the picture processing unit (PPU) that turns tile,
+tilemap and palette data in its own video memory into a 256 by 224 pixel picture. SIRCADA is the display adapter of the
+SIRCUS system, but it is a component in its own right, in a package of its own. It is the companion to the
+\archmanual{}, which defines the SIRC-1 CPU, to the \hwmanual{}, which defines the CPU package and bus, and to the
+\asmmanual{}, which defines the language used to program them.
+
+SIRCADA is a peripheral on a 16-bit bus, and any 16-bit processor that can supply a chip select, a bus strobe and a
+read/write line can drive it. It was designed to work with the SIRC-1, so the signal names, the interrupt arrangements
+and the programming examples in this manual are those of the SIRC-1.
+
+It is written for:
+
+\begin{itemize}
+	\item Programmers writing graphics code for SIRCADA
+	\item Authors of the tools that prepare tiles, tilemaps and palettes
+	\item Engineers implementing the device, in hardware or in software
+\end{itemize}
+
+\section*{Assumed Knowledge}
+
+This manual assumes familiarity with tile-based two-dimensional graphics hardware: tilemaps, palettes, scanline
+rendering and the blanking intervals of a television signal. Readers who need the interrupt mechanism that delivers the
+vertical sync signal to the CPU should read the exception chapters of the \archmanual{}.
+
+\section*{Revision Status}
+
+This is a draft of the \videomanual{}, not for distribution. Anything not yet decided in the manual is marked ``not yet
+specified''; the manual does not invent values for it.

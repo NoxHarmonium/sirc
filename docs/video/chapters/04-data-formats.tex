@@ -1,0 +1,198 @@
+\chapter{Data Formats}
+\label{ch:data-formats}
+
+\section{Colour}
+\label{sec:colour}
+
+A colour is a 16-bit word with 5 bits for each of red, green and blue. Bit 15 is a reserved flag.
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.5em]{16}
+		\bitheader{0-15} \\
+		\bitbox{1}{F} &
+		\bitbox{5}{R} &
+		\bitbox{5}{G} &
+		\bitbox{5}{B}
+	\end{bytefield}
+	\caption{Colour Format}
+	\label{fig:colour}
+\end{figure}
+
+Each 5-bit channel drives the converter of its colour output (Chapter~\ref{ch:package}), which has 32 evenly spaced
+levels from black to full scale. Channel value 31 is full scale, so a pixel of 31 in every channel is full-scale white.
+
+\section{The Palette}
+\label{sec:palette}
+
+The palette holds 256 colours at offsets \texttt{0x6000}--\texttt{0x60FF} (Chapter~\ref{ch:memory-map}). Every pixel of
+every background is a palette lookup. Palette entry 0 is special in one way: it is the backdrop, the colour shown where
+no layer has a visible pixel.
+
+\section{Tile Data}
+\label{sec:tile-data}
+
+A tile is a small square image of 4-bit pixels, each of which is a number from 0 to 15. The value 0 is transparent: the
+pixel shows whatever is behind it. The values 1--15 select a colour through the palette
+(Section~\ref{sec:palette-select}).
+
+\subsection{Mode 1 Tile Layout}
+\label{sec:m1-tile-layout}
+
+Four pixels fill one 16-bit word, with the leftmost pixel in the most significant nibble.
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.5em]{16}
+		\bitheader{0-15} \\
+		\bitbox{4}{P1} &
+		\bitbox{4}{P2} &
+		\bitbox{4}{P3} &
+		\bitbox{4}{P4}
+	\end{bytefield}
+	\caption{Four Pixels of Tile Data}
+	\label{fig:tile-word}
+\end{figure}
+
+An 8 by 8 tile is stored as eight rows of two words each, top row first, so it occupies 16 words. The word for pixels
+$4h$ to $4h + 3$ of row $r$ of tile $t$ is at the tile data base address plus $16t + 2r + h$, where $h$ is 0 for the
+left half of the row and 1 for the right half. A 16 by 16 tile is described in Section~\ref{sec:flat-16}.
+
+\subsection{Mode 2 Tile Layout}
+
+Mode 2 stores a 16 by 16 texel tile in a different arrangement, described in Section~\ref{sec:m2-tile-format}. It takes
+64 words, the same as a 16 by 16 tile would in the row-by-row layout, but the words are not rows.
+
+\subsection{16 by 16 Orthogonal Tiles}
+\label{sec:flat-16}
+
+An orthogonal background whose tile size bit (Section~\ref{sec:reg-tilesize}) is 1 uses 16 by 16 tiles. A 16 by 16 tile
+is stored as four 8 by 8 quadrants in the order top left, top right, bottom left, bottom right, each laid out as in
+Section~\ref{sec:m1-tile-layout}, so a tile is 64 words. For the pixel in column $c$ and row $r$ of tile $t$ the word
+is at
+
+\begin{center}
+	\texttt{tile data base + 64 $\times$ tile number + 16 $\times$ quadrant + 2 $\times$ (row mod 8) + half}
+\end{center}
+
+where the quadrant is $2\lfloor r/8 \rfloor + \lfloor c/8 \rfloor$ and the half is $\lfloor (c \bmod 8)/4 \rfloor$. A
+2-bit 16 by 16 tile is four quadrants of 8 words, 32 words, with the word at \texttt{base + 32 $\times$ tile + 8
+	$\times$ quadrant + (row mod 8)}. A tile of 64 words is the same size as an isometric tile, so one tile number
+addresses either. With 16 by 16 tiles a 32 by 32 tilemap covers 512 by 512 pixels. Each background chooses its own tile
+size, and backgrounds of different tile sizes need no further rule: each is fetched independently.
+
+\subsection{Flipping Orthogonal Tiles}
+
+When the \texttt{H} bit of an orthogonal tilemap entry is set, the tile is mirrored left to right: pixel column $c$ is
+read from column $w - 1 - c$ of the tile, where $w$ is 8 or 16. When \texttt{V} is set, row $r$ is read from row $w - 1
+	- r$. The device reads the mirrored word and reverses the order of its pixels.
+
+\subsection{2-Bit Orthogonal Tiles}
+\label{sec:flat-two-bit}
+
+A background whose \texttt{T2} bit (Section~\ref{sec:reg-palette}) is set uses 2-bit tiles. An 8 by 8 orthogonal tile
+is then 8 words, one for each row, holding the row's eight pixels with the leftmost in bits 15--14:
+
+\begin{center}
+	\texttt{tile data base + 8 $\times$ tile number + row}
+\end{center}
+
+Value 0 is transparent, so a pixel has three colours. A word covers eight pixels, so the device reads it for every
+second group of four. 2-bit tiles apply to every orthogonal background and to the status layer. Isometric 2-bit tiles
+have a layout of their own (Section~\ref{sec:m2-two-bit}).
+
+\section{Tilemap Entries}
+\label{sec:tilemap-entry}
+
+A tilemap is a table of one-word entries, 32 entries to a row and 32 rows, stored row by row. An entry names a tile and
+how it is drawn.
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=1.5em]{16}
+		\bitheader{0-15} \\
+		\bitbox{1}{V} &
+		\bitbox{1}{H} &
+		\bitbox{1}{P} &
+		\bitbox{3}{PAL} &
+		\bitbox{10}{TILE}
+	\end{bytefield}
+	\caption{Tilemap Entry}
+	\label{fig:tilemap-entry}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.5cm}}
+		\toprule
+		\textbf{Bits} & \textbf{Field} & \textbf{Meaning}                                                                                                                                     \\
+		\midrule
+		15            & \texttt{V}     & Flip the tile vertically on an orthogonal layer (Section~\ref{sec:flat-16}); darkens the tile in an isometric layer (Section~\ref{sec:m2-shading})   \\
+		14            & \texttt{H}     & Flip the tile horizontally on an orthogonal layer; lightens the tile in an isometric layer                                                           \\
+		13            & \texttt{P}     & Priority: 1 puts the tile in front of everything, sprite layer 1 included; 0 leaves its layer in the order S1, B1, S2, B2, S3, B3 (and B4 in Mode 1) \\
+		12--10        & \texttt{PAL}   & Palette selection, 0 to 7 (Section~\ref{sec:palette-select})                                                                                         \\
+		9--0          & \texttt{TILE}  & Tile number, 0 to 1023, counted from the background's tile data base address                                                                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{Tilemap Entry Fields}
+	\label{tab:tilemap-entry-fields}
+\end{table}
+
+Tile numbers can reach 1023, but VRAM is not that large for every tile size: 64-word tiles stop at 512 in a VRAM with
+nothing else in it (Chapter~\ref{ch:memory-map}). A tile number whose data lies past the end of the address space wraps
+at 16 bits.
+
+\section{Tilemap Sizes}
+\label{sec:tilemap-size}
+
+A tilemap is made of screens of 32 by 32 entries, stored row by row, 1,024 words each. The width bit \texttt{BnX} and
+the height bit \texttt{BnY} of the Tile Size register (Section~\ref{sec:reg-tilesize}) double the map across or down:
+
+\begin{center}
+	\begin{tabular}{ccl}
+		\toprule
+		\texttt{BnX} & \texttt{BnY} & Map                                                 \\
+		\midrule
+		0            & 0            & One screen, 32 by 32 entries                        \\
+		1            & 0            & Two screens side by side, 64 by 32: A B             \\
+		0            & 1            & Two screens one above the other, 32 by 64: A over B \\
+		1            & 1            & Four screens, 64 by 64: A B over C D                \\
+		\bottomrule
+	\end{tabular}
+\end{center}
+
+The screens are in memory in the order A, B, C, D, starting at the tilemap base. For the entry in column $c$ and row
+$r$ of a map $W$ entries wide and $H$ high (both after wrapping, $c \bmod W$ and $r \bmod H$), the address is
+
+\begin{center}
+	\texttt{tilemap base + 1024 $\times$ screen + 32 $\times$ (r mod 32) + (c mod 32)}
+\end{center}
+
+where the screen is $\lfloor r/32 \rfloor \cdot (W/32) + \lfloor c/32 \rfloor$. A map wraps at its size. The tilemap
+sizes apply to orthogonal backgrounds, where an entry is a tile, and to isometric backgrounds, where an entry is a cell
+(Section~\ref{sec:m2-tilemap}).
+
+\section{Palette Selection}
+\label{sec:palette-select}
+
+A background pixel with a non-zero value $v$ in a tile whose entry has palette selection $s$ reads palette entry
+\[
+	\text{entry} = ((s \ll k) + \texttt{OFFSET} + v) \bmod 256,
+\]
+where \texttt{OFFSET} and $k$ come from the background's palette configuration register
+(Section~\ref{sec:reg-palette}): $k$ is 2, 3, 4 or 5 for \texttt{SIZE} values 0, 1, 2 and 3, that is, for palettes of
+4, 8, 16 or 32 colours. The sum wraps at 8 bits. A pixel whose value is 0 is transparent and reads no palette entry.
+
+With 16-colour palettes, \texttt{OFFSET} 0 and a selection of 3, the value 5 reads palette entry 53. The eight
+selections therefore pick eight palettes of 16 colours, 128 palette entries in all, starting at the offset.
+
+\section{Compositing Rule}
+\label{sec:compositing}
+
+Layers are combined pixel by pixel. For each screen pixel the device takes the first layer, in front-to-back order,
+whose pixel value is not 0, and shows the palette entry that pixel selects. If every layer is transparent, the device
+shows palette entry 0. There is no blending: a pixel is either transparent or fully opaque.
+
+The front-to-back order of the layers is S1, B1, S2, B2, S3, B3, B4 in Mode 1, the same without B4 in Mode 3, and S1,
+B1, S2, B2, S3 with a status layer in Mode 2; see Sections~\ref{sec:m1-priority} and~\ref{sec:m2-layers}. A tile with
+its priority bit set is in front of everything.

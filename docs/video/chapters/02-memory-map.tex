@@ -1,0 +1,100 @@
+\chapter{Memory Map and Bus Access}
+\label{ch:memory-map}
+
+\section{The Device Segment}
+
+The video device occupies one segment of the CPU's address space, 65,536 words long. The segment is chosen by the
+system; the SIRCUS system maps the device at segment \texttt{0x000C}, so a register at offset \texttt{0x0002} is at the
+CPU address \texttt{0x000C\_0002}. This manual gives every address as an offset from the base of the segment.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6.5cm}}
+		\toprule
+		\textbf{Offsets}                 & \textbf{Region} & \textbf{Notes}                                                                                           \\
+		\midrule
+		\texttt{0x0000}--\texttt{0x00FF} & Registers       & Offsets \texttt{0x0000}--\texttt{0x001A} are defined (Chapter~\ref{ch:registers}); the rest are open bus \\
+		\texttt{0x0100}--\texttt{0x5FFF} & Unmapped        & Open bus                                                                                                 \\
+		\texttt{0x6000}--\texttt{0x60FF} & Palette         & 256 entries, one word each (Section~\ref{sec:palette})                                                   \\
+		\texttt{0x6100}--\texttt{0x6FFF} & Unmapped        & Open bus; see Section~\ref{sec:palette-edge}                                                             \\
+		\texttt{0x7000}--\texttt{0x70FF} & Sprite table    & 256 words, 128 entries of two words (Chapter~\ref{ch:sprites})                                           \\
+		\texttt{0x7100}--\texttt{0x7FFF} & Unmapped        & Open bus                                                                                                 \\
+		\texttt{0x8000}--\texttt{0xFFFF} & Video memory    & 32,768 words of tile data and tilemaps                                                                   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Device Memory Map}
+	\label{tab:memory-map}
+\end{table}
+
+\section{Registers, Palette and Video Memory}
+
+The \textbf{registers} control the device. They are described in Chapter~\ref{ch:registers}.
+
+The \textbf{palette} holds 256 colours in a small, fast memory that the renderer reads once per pixel. It can be read
+and written by the CPU at any time.
+
+The \textbf{video memory} (VRAM) holds everything else: tile data, tilemaps and, when they are specified, sprite tile
+data. It is 32,768 words, which is 64 KB. The device does not interpret VRAM in any fixed layout. Each background has a
+base address register for its tilemap and another for its tile data, and any VRAM range may hold either. The only
+constraint is that ranges the renderer reads must not overlap ranges the program expects to stay untouched.
+
+An address in VRAM is written as its offset in the segment, so VRAM begins at \texttt{0x8000}. The base address
+registers hold addresses in this form: a tilemap at the start of VRAM has the base address \texttt{0x8000}, not
+\texttt{0x0000}.
+
+\section{Access Rules}
+
+A read of a register, a palette entry or a VRAM word returns the stored value. A write stores the value. A read of an
+open bus offset returns zero and a write to one is ignored. The device never inserts a wait state: every access
+completes in the cycle it is made, whether or not it takes effect (Section~\ref{sec:memory-vram-access}).
+
+The Status register (offset \texttt{0x0019}) and the Vertical Line register (offset \texttt{0x001A}) are read-only; a
+write to either is ignored.
+
+\subsection{Access During Rendering}
+\label{sec:memory-vram-access}
+
+The renderer reads video memory in the visible lines, and in the horizontal blanking interval too: the sprites of the
+next line are fetched there (Chapter~\ref{ch:sprites}). So video memory and the sprite table are available to the CPU
+only in vertical blanking, the lines after the last visible line (Chapter~\ref{ch:timing}), or while the picture is
+turned off (\texttt{GD} in the Base Configuration register is 1), when the device makes no reads at all:
+
+\begin{itemize}
+	\item A write to video memory or to the sprite table at any other time is ignored, and a read returns zero. At reset
+	      \texttt{GD} is 1, so a program can load video memory straight away and then clear \texttt{GD}.
+	\item The palette and the registers can be read and written at any time. A palette write changes the colour of the pixels
+	      drawn after it, which allows a palette change in the middle of the picture. A register write takes effect when the
+	      device next samples that register, normally at the start of the next line (Chapters~\ref{ch:mode2} and~\ref{ch:mode3}).
+\end{itemize}
+
+\subsection{The Palette Boundary}
+\label{sec:palette-edge}
+
+The palette occupies 256 words, \texttt{0x6000}--\texttt{0x60FF}. The offset \texttt{0x6100} and the rest of the range
+up to \texttt{0x6FFF} are open bus.
+
+\section{Planning a VRAM Layout}
+
+Nothing fixes where tile data and tilemaps live, so a program chooses. One arrangement puts the tile set at the bottom
+of VRAM and the tilemaps at the top, leaving room for the tile set to grow:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Contents}    & \textbf{Offsets}       & \textbf{Size}     \\
+		\midrule
+		Tile set (Mode 1)    & \texttt{0x8000} and up & 16 words per tile \\
+		Background 1 tilemap & \texttt{0xF000}        & 1024 words        \\
+		Background 2 tilemap & \texttt{0xF400}        & 1024 words        \\
+		Background 3 tilemap & \texttt{0xF800}        & 1024 words        \\
+		Background 4 tilemap & \texttt{0xFC00}        & 1024 words        \\
+		\bottomrule
+	\end{tabular}
+	\caption{An Example Mode 1 VRAM Layout}
+	\label{tab:vram-layout}
+\end{table}
+
+A tilemap is a 32 by 32 table of one-word entries, so it takes 1024 words. A Mode 1 tile of 8 by 8 pixels at 4 bits per
+pixel takes 16 words; a Mode 2 tile of 16 by 16 texels takes 64 words (Section~\ref{sec:m2-tile-format}). VRAM can
+therefore hold at most 2048 Mode 1 tiles or 512 Mode 2 tiles, before any tilemap is placed in it.

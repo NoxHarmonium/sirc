@@ -1,0 +1,100 @@
+\chapter{Mode 3: Orthogonal Backgrounds over an Isometric One}
+\label{ch:mode3}
+
+\section{Overview}
+
+Mode 3 keeps one isometric background and gives the fetch slots of the other to two orthogonal ones. It is for a game
+with an isometric ground and a user interface that needs more than the status layer of Mode 2: a status display and a
+layer of windows over it, with the map, and the vehicles and buildings as sprites, underneath.
+
+\begin{description}
+	\item[Selected by:] \texttt{MODE} = 2 in the Base Configuration register.
+	\item[Layers:] Orthogonal backgrounds 1 and 2 in front, and an isometric background 3 behind them. The order front to back is
+	      S1, B1, S2, B2, S3, B3, as in Mode 1 without background 4 (Section~\ref{sec:m1-priority}).
+	\item[Registers:] Each background uses its own tilemap, tile data, scroll and palette configuration registers, as in Mode 1.
+	      Background 3 is the isometric one, so \texttt{B3MAP}, \texttt{B3TILES}, \texttt{B3SCRX}, \texttt{B3SCRY} and
+	      \texttt{B3PAL} follow Mode 2 (Chapter~\ref{ch:mode2}).
+\end{description}
+
+Mode 3 adds no hardware to Mode 2. Each background is the same fetch unit as in the other modes, and the mode only says
+which slots of a group of four pixels belong to which background. The price is the status layer of Mode 2: with no
+spare slots there is no queue, and no second isometric background.
+
+\section{The Orthogonal Backgrounds}
+
+An orthogonal background is the background of Mode 1 (Chapter~\ref{ch:mode1}): a tilemap of 8 by 8 or 16 by 16 tiles,
+32 by 32 entries or larger (Section~\ref{sec:tilemap-size}), that wraps in both directions. Its tilemap entry holds a
+tile number and a palette selection (Section~\ref{sec:tilemap-entry}), and its flip bits and priority bit apply as they
+do in Mode 1. Tiles are 4 bits per pixel, 16 words each (Section~\ref{sec:m1-tile-layout}), or, when \texttt{T2} is set
+in its palette configuration register, 2 bits per pixel, 8 words each (Section~\ref{sec:flat-two-bit}). The palette is
+chosen as in Section~\ref{sec:palette-select}, with the register's own \texttt{OFFSET}. Pixels of value 0 are
+transparent. The priority bit puts a tile in front of every sprite layer.
+
+\subsection{Scrolling}
+\label{sec:m3-scrolling}
+
+Each orthogonal background scrolls independently. Its scroll registers are sampled once per line, as in Mode 2. The
+device fetches groups of four pixels aligned to the plane, so that group $g$ of the line is the plane group $\lfloor
+	\texttt{SCRX}/4 \rfloor + g$. For tiles $w$ pixels square (8 or 16), a group of four lies within one tile, in tile
+column $\lfloor 4q/w \rfloor \bmod C$ and tile row $\lfloor (\text{line} + \texttt{SCRY})/w \rfloor \bmod R$, where $C$
+and $R$ are the width and height of the tilemap in cells (32 or 64, Section~\ref{sec:tilemap-size}). The row of pixels
+within the tile is $(\text{line} + \texttt{SCRY}) \bmod w$, and the plane wraps after $wC$ pixels across and $wR$
+pixels down. When \texttt{SCRX} is not a multiple of four, the line's first pixel is at position $\texttt{SCRX} \bmod
+	4$ in a window of two groups, as in Section~\ref{sec:m2-fetch}. Fine scrolling costs no extra fetches.
+
+\section{Fetch Schedule}
+
+The eight slots of a group of four pixels have fixed owners:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{cp{5.8cm}p{5.2cm}}
+		\toprule
+		\textbf{Slot} & \textbf{Fetch}                                                & \textbf{Used}                            \\
+		\midrule
+		0             & Background 1 tilemap entry                                    & Always (2-bit tiles: every second group) \\
+		1             & Background 1 tile data word                                   & Always (2-bit tiles: every second group) \\
+		2, 3          & The same two fetches for background 2                         &                                          \\
+		4--7          & The four fetches of an isometric background, for background 3 & As in Table~\ref{tab:m2-slots}           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Mode 3 Fetch Slots per Group of Four Pixels}
+	\label{tab:m3-slots}
+\end{table}
+
+The orthogonal backgrounds use four slots in every group, and the isometric background uses two to four, so a group
+uses six or more of the eight and the worst case uses all eight. No slot is left for anything else in the visible part
+of a line. Sprites are fetched in the horizontal blanking interval, as in the other modes (Chapter~\ref{ch:sprites}),
+and the back-porch prefetch of two groups is the same as in Mode 2.
+
+Because no background depends on a slot that another leaves spare, the schedule is fixed and needs no queue.
+
+\section{Differences from Mode 2}
+
+\begin{itemize}
+	\item There is no status layer: the orthogonal backgrounds take its place, and \texttt{B3D} disables the isometric
+	      background.
+	\item \texttt{B1D}, \texttt{B2D} and \texttt{B3D} disable the corresponding background, as in Mode 2. Background 4 is not drawn in Mode 3.
+	\item The isometric background is background 3, so it is behind the orthogonal ones. The shading bits of its tilemap entries
+	      (Section~\ref{sec:m2-shading}) apply to it; the orthogonal backgrounds read the same two bits as horizontal and
+	      vertical flips (Section~\ref{sec:tilemap-entry}).
+	\item Only one background is isometric, so the height offsets of Section~\ref{sec:m2-layers} between two isometric
+	      backgrounds are not available. Buildings and vehicles are sprites.
+\end{itemize}
+
+\section{Restrictions}
+
+\begin{itemize}
+	\item One isometric background, with the restrictions of Mode 2 (Section~\ref{sec:m2-restrictions}).
+\end{itemize}
+
+\section{Programming Mode 3}
+
+\begin{enumerate}
+	\item Write the tilemap, tile data and palettes of the three backgrounds. The orthogonal tiles use the format of
+	      Section~\ref{sec:m1-tile-layout} or~\ref{sec:flat-two-bit}; the isometric tiles use the staircase format
+	      (Section~\ref{sec:m2-tile-format}) or its 2-bit form.
+	\item Set \texttt{B1MAP}--\texttt{B3MAP}, \texttt{B1TILES}--\texttt{B3TILES} and the palette and scroll registers.
+	\item Write 2 to the \texttt{MODE} field. Do it in vertical blanking: a change during a line takes effect at the start of the
+	      next one.
+\end{enumerate}

@@ -1,0 +1,295 @@
+\chapter{Timing}
+\label{ch:timing}
+
+\section{Clocks}
+
+The device runs from the system's master clock. It does one PPU cycle every two master clocks, and one pixel every two
+PPU cycles, which is four master clocks. Table~\ref{tab:clocks} gives the rates for the master clock of the SIRCUS
+system, 21,477,272~Hz, which is the NTSC colour subcarrier frequency multiplied by six.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		\textbf{Clock} & \textbf{Master clocks} & \textbf{At 21,477,272 Hz} \\
+		\midrule
+		Master clock   & 1                      & 21,477,272 Hz             \\
+		PPU cycle      & 2                      & 10,738,636 Hz             \\
+		Pixel          & 4                      & 5,369,318 Hz              \\
+		Line           & 1364                   & 15,746 Hz                 \\
+		Frame          & 357,368                & 60.1 Hz                   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Clock Rates}
+	\label{tab:clocks}
+\end{table}
+
+\section{The CPU Clock}
+\label{sec:cpu-clock}
+
+The CPU advances one execution phase on each rising edge of \texttt{CLKI} (\hwmanual{}). The system supplies the CPU
+and the video device with the same \texttt{CLKI}, which is the only clock the device has, and \texttt{CLKI} is one PPU
+cycle: the master clock divided by two, 10,738,636~Hz at 21,477,272~Hz. The figures that follow are consequences:
+
+\begin{itemize}
+	\item An ordinary instruction takes 6 \texttt{CLKI} cycles, 12 master clocks, so the CPU can run about 1.79 million
+	      instructions a second.
+	\item A line is 682 \texttt{CLKI} cycles, about 113 instructions, and a frame is 178,684 cycles. NTSC vertical blanking, 38
+	      lines, is 25,916 cycles, about 4,300 instructions.
+	\item The registers are sampled 228 master clocks, 114 cycles, after the start of a line. A line-compare interrupt is
+	      recognised at an instruction boundary, so the handler's first instruction is fetched at best 6 and at worst about 12
+	      cycles later (\archmanual{}, interrupt latency; more after a coprocessor call or a DMA transfer). That leaves about 100
+	      cycles, some 16 instructions, for a handler to change a register before it takes effect on the same line.
+	\item A \texttt{DMAT} of 255 words takes 522 cycles, three quarters of a line, and cannot be interrupted.
+\end{itemize}
+
+The video device never waits for the CPU, and it gives the CPU no wait states: every access to the device completes in
+the cycle it is made (Section~\ref{sec:memory-vram-access}).
+
+\section{Line Timing}
+
+A line is 1364 master clocks, 682 PPU cycles, in three parts. A line begins with the horizontal sync pulse
+(Section~\ref{sec:video-output}), and the picture follows the back porch; the front porch ends the line. The line
+timing is fixed and the same in both modes:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrrl}
+		\toprule
+		\textbf{Part}       & \textbf{Master clocks} & \textbf{PPU cycles} & \textbf{Purpose}                    \\
+		\midrule
+		Sync and back porch & 260                    & 130                 & Nothing is drawn; Mode 2 prefetches \\
+		Visible             & 1024                   & 512                 & 256 pixels at 4 master clocks each  \\
+		Front porch         & 80                     & 40                  & Nothing is drawn                    \\
+		\midrule
+		\textbf{Line}       & \textbf{1364}          & \textbf{682}        &                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Line Timing}
+	\label{tab:line-timing}
+\end{table}
+
+The visible time of a line is a whole number of master clocks per pixel: four.
+
+\subsection{The First Line}
+\label{sec:first-line}
+
+Line 0 is always blank: the device shows black for the whole of it, whatever the registers hold, and fetches nothing
+for its background layers. The sprites of a line are fetched during the previous line, and line 0 has no previous line
+in which video memory is free, because vertical blanking belongs to the CPU. Line 0 therefore does the work of that
+previous line: it scans the sprite table and fetches the sprites for line 1 as any other line does for the next. The
+picture is 256 by 224 pixels in lines 0 to 223, of which line 0 is black, so 223 lines show a picture. Programs should
+keep nothing of importance on the first line of the picture; a television normally hides it in overscan.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			x=0.0057\textwidth,
+			y=0.62cm,
+			bar/.style={draw, minimum height=0.55cm, font=\scriptsize, align=center, inner sep=1pt},
+			lane/.style={font=\scriptsize, anchor=east},
+			marker/.style={dashed, thick, sircgray},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		% Line parts (1364 master clocks)
+		\fill[sirclightgray] (0,0) rectangle (26,0.55);
+		\fill[white] (26,0) rectangle (128.4,0.55);
+		\fill[sirclightgray] (128.4,0) rectangle (136.4,0.55);
+		\draw (0,0) rectangle (136.4,0.55);
+		\draw (26,0) -- (26,0.55);
+		\draw (128.4,0) -- (128.4,0.55);
+		\node[font=\scriptsize] at (13,0.28) {sync, back porch};
+		\node[font=\scriptsize] at (77.2,0.28) {visible, 1024 clocks};
+		\node[font=\tiny] at (132.4,0.28) {front};
+		% Lanes
+		\node[lane] at (-1,1.4) {Background fetch};
+		\draw[fill=blue!15] (22.8,1.1) rectangle (26,1.7);
+		\draw[fill=blue!8] (26,1.1) rectangle (128.4,1.7);
+		\node[font=\scriptsize] at (77.2,1.4) {fetch a group of four pixels every 16 master clocks};
+		\node[lane] at (-1,2.5) {Sprite fetch};
+		\draw[fill=orange!20] (0,2.2) rectangle (22.8,2.8);
+		\draw[fill=orange!20] (128.4,2.2) rectangle (136.4,2.8);
+		\node[font=\scriptsize] at (11.4,2.5) {fetch sprite rows};
+		\node[lane] at (-1,3.6) {Sprite scan};
+		\draw[fill=green!10] (26,3.3) rectangle (128.4,3.9);
+		\node[font=\scriptsize] at (77.2,3.6) {scan the sprite table for the next line (internal memory)};
+		% Markers
+		\draw[marker] (0,-0.2) -- (0,4.6);
+		\draw[marker] (22.8,-0.2) -- (22.8,4.6);
+		\draw[marker] (26,-0.2) -- (26,4.6);
+		\node[note, anchor=south west] at (0,4.65) {line-compare IRQ4};
+		\node[note, anchor=south] at (22.8,5.25) {registers sampled};
+		\node[note, anchor=south west] at (26.6,4.65) {first pixel};
+		% Axis
+		\foreach \x/\l in {0/0, 26/260, 128.4/1284, 136.4/1364} { \node[font=\tiny, anchor=north] at (\x,-0.2) {\l}; }
+	\end{tikzpicture}
+	\caption{Timeline of One Visible Line, in Master Clocks}
+	\label{fig:line-timeline}
+\end{figure}
+
+\section{Frame Timing}
+
+A frame is 262 lines on NTSC and 312 on PAL. Lines 0 to 223 are visible and draw the picture. The remaining lines, 38
+on NTSC and 88 on PAL, are the vertical blanking interval, in which nothing is drawn and the CPU may update video
+memory (Section~\ref{sec:memory-vram-access}). The device fetches nothing in these lines.
+
+Table~\ref{tab:times} gives the times. They follow from the clocks: on NTSC the PPU cycle is 93.1~ns and a pixel, four
+master clocks, is 186.2~ns.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                       & \textbf{NTSC} & \textbf{PAL} \\
+		\midrule
+		Master clock           & 21.477~MHz    & 21.281~MHz   \\
+		Line                   & 63.5~$\mu$s   & 64.1~$\mu$s  \\
+		Frame                  & 16.64~ms      & 20.00~ms     \\
+		Frame rate             & 60.10~Hz      & 50.00~Hz     \\
+		Vertical blanking      & 2.41~ms       & 5.64~ms      \\
+		Pixel                  & 186.2~ns      & 188.0~ns     \\
+		Visible part of a line & 47.7~$\mu$s   & 48.1~$\mu$s  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Timing}
+	\label{tab:times}
+\end{table}
+
+\subsection{PAL}
+
+The \texttt{OUT} bit of the Status register says which the device is. PAL has the same picture, 256 by 224 pixels in
+lines 0 to 223, at the top, and the same line timing of 1364 master clocks, but 312 lines per frame, so the vertical
+blanking interval is longer. A program written for NTSC runs unchanged on PAL, with more time in vertical blanking and
+a lower frame rate. With a PAL master clock of 21,281,370 Hz (the PAL colour subcarrier multiplied by 4.8) a frame is
+425,568 master clocks, 50.0 Hz. The region is fixed when the device is made and is read from \texttt{OUT}.
+
+\section{Interrupts}
+\label{sec:interrupts}
+
+The device has two interrupt sources, on different lines, so a handler knows which it is serving. The device races the
+beam: it never waits for the CPU, so an interrupt is raised at a fixed point of the frame whether or not the CPU is
+ready, and the time the CPU takes to respond is the program's concern. A program that shares \activelow{IRQ4} with
+another device can read the \texttt{LIP} bit of the Status register to see whether the device's interrupt is the one
+pending.
+
+\subsection{Vertical Sync}
+
+The vertical sync interrupt is the non-maskable interrupt, \activelow{NMI}, Level 5. It is edge-triggered, so the
+device needs no acknowledgement: when \texttt{VIE} is set in the Interrupt Control register
+(Section~\ref{sec:reg-intctl}), the device asserts the \activelow{NMI} pin for one PPU cycle at the first cycle of line
+224, the start of vertical blanking. The program has the whole of vertical blanking to update video memory
+(Section~\ref{sec:memory-vram-access}). The pulse is exactly one \texttt{CLKI} cycle (Section~\ref{sec:cpu-clock}). The
+CPU samples \activelow{NMI} on every rising edge of \texttt{CLKI} except during reset (\hwmanual{}), so it does not
+miss the pulse. A pulse that arrives while the handler of the previous one is still running, or while a Level 5 request
+is pending, is not taken as an interrupt: it raises the Level Five Hardware Exception Conflict fault (\archmanual{}).
+The handler must therefore return before the next vertical sync, 16.6~ms later on NTSC and 20.0~ms on PAL.
+
+The \activelow{NMI} cannot be masked, so a program must install its handler before it sets \texttt{VIE}. A DMA transfer
+cannot be interrupted, the \activelow{NMI} included. The edge is latched and the interrupt is taken when the transfer
+ends, so it is delayed, not lost, but a transfer that spans line 224 shortens the time the program has in vertical
+blanking by the delay. A program keeps its transfers short (Section~\ref{sec:cpu-clock} gives their lengths), or
+arranges for them to finish before line 224.
+
+\subsection{Line Compare}
+\label{sec:line-interrupt}
+
+The line-compare interrupt is interrupt level 4, \activelow{IRQ4}, the highest of the maskable levels. When
+\texttt{LIE} is set, the device asserts the line at the first cycle of the line whose number is in the \texttt{LINE}
+register (Section~\ref{sec:reg-line}). It fires on any line of the frame, visible or not, so lines 0 to 223 can be used
+for raster effects. The \activelow{IRQ4} line is level-sensitive, so the device holds it asserted until the program
+acknowledges it by writing any value to \texttt{LINE}, which also sets the line for the next interrupt, or by clearing
+\texttt{LIE}. The \texttt{LIP} bit of the Status register is set while the interrupt is pending. A \texttt{LINE} value
+at or beyond the number of lines in the frame never matches. If the line is reached again while an interrupt is still
+pending, nothing is queued: the line is already asserted.
+
+The palette is writable at any time and a write changes the pixels drawn after it; the registers are sampled once per
+line, 32 master clocks before the first visible pixel in Mode 2 and Mode 3, so a register written within the 228 master
+clocks after the interrupt takes effect on that line, and later ones on the next. The device does not wait for the CPU,
+so how soon after the interrupt the CPU's write arrives is the program's concern, and a handler for a raster effect
+must be short and of known length.
+
+\section{Fetch Budget}
+
+Reading video memory is the device's limit: one read per PPU cycle, eight per group of four pixels. The modes spend the
+eight slots differently.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lccc}
+		\toprule
+		\textbf{Use of the slots}                             & \textbf{Mode 1} & \textbf{Mode 2}    & \textbf{Mode 3}   \\
+		\midrule
+		Background tilemap entries                            & 4               & 2--4               & 3--4              \\
+		Background tile data words                            & 4               & 2--4               & 3--4              \\
+		Sprites                                               & 0               & 0                  & 0                 \\
+		\midrule
+		\textbf{Total, typical (Mode 2, 3) or fixed (Mode 1)} & \textbf{8}      & \textbf{4.75 of 8} & \textbf{6.4 of 8} \\
+		\textbf{Total, worst case}                            & \textbf{8}      & \textbf{8}         & \textbf{8}        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Fetch Slots per Group of Four Pixels}
+	\label{tab:fetch-budget}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			cell/.style={draw, minimum width=1.7cm, minimum height=0.85cm, font=\scriptsize, align=center, inner sep=1pt},
+			flatc/.style={cell, fill=orange!20},
+			isoc/.style={cell, fill=blue!15},
+			isob/.style={cell, fill=blue!15, dashed},
+			free/.style={cell, fill=gray!8, dashed},
+			rowlab/.style={font=\small, anchor=east},
+			head/.style={font=\scriptsize, text=sircgray}
+		]
+		\foreach \i in {0,...,7} { \node[head] at (\i*1.75,0.7) {slot \i}; }
+		\node[rowlab] at (-1.0,0) {Mode 1};
+		\foreach \i/\t in {0/B1 entry,1/B2 entry,2/B3 entry,3/B4 entry,4/B1 word,5/B2 word,6/B3 word,7/B4 word} { \node[flatc] at (\i*1.75,0) {\t}; }
+		\node[rowlab] at (-1.0,-1.1) {Mode 2};
+		\foreach \i/\t in {0/B1 entry A,1/B1 word A,4/B2 entry A,5/B2 word A} { \node[isoc] at (\i*1.75,-1.1) {\t}; }
+		\foreach \i/\t in {2/B1 entry B,3/B1 word B,6/B2 entry B,7/B2 word B} { \node[isob] at (\i*1.75,-1.1) {\t}; }
+		\node[rowlab] at (-1.0,-2.2) {Mode 3};
+		\foreach \i/\t in {0/B1 entry,1/B1 word,2/B2 entry,3/B2 word} { \node[flatc] at (\i*1.75,-2.2) {\t}; }
+		\foreach \i/\t in {4/B3 entry A,5/B3 word A} { \node[isoc] at (\i*1.75,-2.2) {\t}; }
+		\foreach \i/\t in {6/B3 entry B,7/B3 word B} { \node[isob] at (\i*1.75,-2.2) {\t}; }
+		% Legend
+		\node[flatc, minimum width=1.4cm] at (0,-3.4) {orthogonal};
+		\node[isoc, minimum width=1.4cm] at (1.75,-3.4) {isometric};
+		\node[isob, minimum width=1.4cm] at (3.5,-3.4) {second cell};
+		\node[head, anchor=west] at (5.0,-3.4) {dashed: used only if needed};
+	\end{tikzpicture}
+	\caption{Who Uses Each Fetch Slot of a Group of Four Pixels}
+	\label{fig:slot-map}
+\end{figure}
+
+The status layer of Mode 2 takes its reads from the slots the isometric backgrounds leave spare, through a queue
+(Section~\ref{sec:m2-status-layer}); they are not in the table. Mode 3's orthogonal backgrounds read a tilemap entry
+and a tile word in every group, at fixed slots (Chapter~\ref{ch:mode3}); with 2-bit tiles they read only in every
+second group. A mode with more backgrounds or a different mix of fetches than these needs more reads per group, such a
+queue, or a faster memory.
+
+\section{Pixel Pipeline}
+
+The device draws a group of four pixels in two stages. During one group the device fetches the data for a later group
+and, at the start of the group, combines the data it already has into four finished pixels, which are shown one at a
+time over the group. Mode 1 combines the fetches of the previous group; Mode 2 combines the data it prefetched
+(Section~\ref{sec:m2-fetch}). The first pixels of a line in Mode 1 are at the position the scroll registers give
+(Section~\ref{sec:m1-scrolling}).
+
+Figure~\ref{fig:fetch-timing} shows the schedule of one group in Modes 1 and 3, one read to a \texttt{CLKI} cycle, with
+the four pixels that are shown while it is made. A pixel lasts two cycles. In Mode 3 the reads of the second cell of
+the isometric background are made only when the group straddles two cells.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI                  & L 7{0.5H 0.5L}                                                  \\
+		Slot                  & D{0} D{1} D{2} D{3} D{4} D{5} D{6} D{7}                         \\
+		Mode 1 read           & D{B1e} D{B2e} D{B3e} D{B4e} D{B1w} D{B2w} D{B3w} D{B4w}         \\
+		Mode 3 read           & D{B1e} D{B1w} D{B2e} D{B2w} D{B3e} D{B3w} D{B3e'} D{B3w'}       \\
+		Pixel shown           & 2D{p0} 2D{p1} 2D{p2} 2D{p3}                                     \\
+	\end{tikztimingtable}
+	\caption{Fetch Schedule of One Group of Four Pixels (e: Tilemap Entry, w: Tile Word, $'$: Second Cell)}
+	\label{fig:fetch-timing}
+\end{figure}

@@ -1,0 +1,81 @@
+\chapter{Mode 1: Orthogonal Backgrounds}
+\label{ch:mode1}
+
+\section{Overview}
+
+Mode 1 is the device's conventional mode, the one it is in at reset. It draws up to four backgrounds of square tiles
+laid out in rows and columns, and three layers of sprites. The tiles of a background are 4 bits per pixel, or 2 bits
+when its \texttt{T2} bit is set (Section~\ref{sec:flat-two-bit}).
+
+\section{Backgrounds}
+
+Each background is a tilemap (Section~\ref{sec:tilemap-size}), 32 by 32 entries by default, and a set of tiles of 8 by
+8 or 16 by 16 pixels (Section~\ref{sec:tile-data}). Each of the four chooses its own tile size and tilemap size, so a
+background covers from 256 by 256 pixels (8 by 8 tiles, one screen) to 1024 by 1024 (16 by 16 tiles, four screens), and
+the 256 by 224 picture is a window onto it. Each background also has its own scroll registers and palette
+configuration.
+
+For the pixel at screen column $x$ and line $y$, the renderer reads, for a background with scroll $(s_x, s_y)$ and
+tiles $w$ pixels square, the tilemap entry in column $\lfloor (x + s_x)/w \rfloor$ and row $\lfloor (y + s_y)/w
+	\rfloor$, both taken modulo the size of the map, and then the word of tile data holding the pixel
+(Sections~\ref{sec:m1-tile-layout} and~\ref{sec:flat-16}). It does this for all four backgrounds at once.
+
+\subsection{Scrolling}
+\label{sec:m1-scrolling}
+
+Scrolling works as it does for the orthogonal backgrounds of Mode 3 (Section~\ref{sec:m3-scrolling}): the scroll
+registers are sampled once per line, groups of four pixels are aligned to the plane, a window of two groups with an
+offset of $s_x \bmod 4$ gives fine scrolling, and a map wraps at its size.
+
+\section{Programming Mode 1}
+
+\begin{enumerate}
+	\item Write the palette, the tile data and the tilemaps into video memory, in vertical blanking or while \texttt{GD} is 1.
+	\item Write the \texttt{TILESIZE} register with the tile size and tilemap size of each background.
+	\item Write the tilemap address, tile data address and palette configuration registers of each background in use.
+	\item Write the Base Configuration register with \texttt{MODE} = 0, and with the disable bit of each unused background set.
+	\item Each frame, during vertical blanking, write the scroll registers and any tilemap entries that have changed.
+\end{enumerate}
+
+\section{Priority and Compositing}
+\label{sec:m1-priority}
+
+The front-to-back order of the layers is sprite layer 1, background 1, sprite layer 2, background 2, sprite layer 3,
+background 3, background 4.
+
+Within a layer the compositing rule of Section~\ref{sec:compositing} applies: a pixel with value 0 is transparent. A
+tile whose priority bit is set is in front of everything, sprite layer 1 included; its pixels of value 0 are still
+transparent.
+
+\section{Fetch Schedule}
+
+The device reads video memory once per PPU cycle, and draws four pixels in eight PPU cycles, so every group of four
+pixels has eight fetch slots. Mode 1 uses them as follows:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{cl}
+		\toprule
+		\textbf{Slot} & \textbf{Fetch}              \\
+		\midrule
+		0             & Background 1 tilemap entry  \\
+		1             & Background 2 tilemap entry  \\
+		2             & Background 3 tilemap entry  \\
+		3             & Background 4 tilemap entry  \\
+		4             & Background 1 tile data word \\
+		5             & Background 2 tile data word \\
+		6             & Background 3 tile data word \\
+		7             & Background 4 tile data word \\
+		\bottomrule
+	\end{tabular}
+	\caption{Mode 1 Fetch Slots per Group of Four Pixels}
+	\label{tab:m1-slots}
+\end{table}
+
+An 8 by 8 tile is eight pixels wide, so the tilemap entries are fetched twice for each tile, once for each group of
+four, and the device does not keep an entry for the second group. The fetched pixels are combined into four finished
+pixels at the start of the next group (Chapter~\ref{ch:timing}).
+
+All eight slots are in use, so Mode 1 leaves none for sprite tile data; sprites are fetched in the blanking intervals
+(Chapter~\ref{ch:sprites}). A background with 2-bit tiles reads its tile data word only in every second group, and its
+slot is idle in the others.

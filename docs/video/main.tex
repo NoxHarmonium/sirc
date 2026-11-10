@@ -1,0 +1,50 @@
+\documentclass[11pt,letterpaper,twoside]{book}
+
+% ==========================================
+% SIRCADA Reference Manual
+% Picture processing unit, memory map and video modes
+% ==========================================
+
+% Manual-specific strings used by the shared preamble (footer, PDF metadata).
+\newcommand{\sircManualFooter}{SIRCADA REFERENCE MANUAL}
+\newcommand{\sircManualTitle}{SIRCADA Reference Manual}
+\newcommand{\sircManualSubject}{SIRCADA, the SIRC Analogue Display Adapter: picture processing unit, memory map and video modes}
+
+% Name of this manual, for references from the other manuals and within the set.
+\newcommand{\videomanual}{\textit{SIRCADA Reference Manual}}
+
+\input{../reference/preamble}
+
+\begin{document}
+
+% Front Matter
+\frontmatter
+\input{chapters/front-cover}
+\input{chapters/preface}
+\tableofcontents
+\listoftables
+\listoffigures
+
+% Main Content
+\mainmatter
+\input{chapters/01-introduction}
+\input{chapters/01b-package-and-pinout}
+\input{chapters/02-memory-map}
+\input{chapters/03-registers}
+\input{chapters/04-data-formats}
+\input{chapters/05-mode-1}
+\input{chapters/06-mode-2}
+\input{chapters/06b-mode-3}
+\input{chapters/07-sprites}
+\input{chapters/08-timing}
+\input{chapters/08b-signal-timing}
+\input{chapters/08c-programming}
+
+\appendix
+\input{chapters/appendix-a-quick-reference}
+
+\backmatter
+
+\input{chapters/back-cover}
+
+\end{document}

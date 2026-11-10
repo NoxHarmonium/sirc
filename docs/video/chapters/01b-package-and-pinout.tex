@@ -1,0 +1,245 @@
+\chapter{Package and Pinout}
+\label{ch:package}
+
+The video device is a single integrated circuit. The picture processing unit, the video memory, the palette, the sprite
+table and the colour converters are all on the one piece of silicon, so the only signals that leave the package are the
+bus, two interrupt outputs, the clock and reset inputs, and the video output. This chapter gives the package and the
+meaning of every pin. Chapter~\ref{ch:signal-timing} gives the timing of the signals.
+
+\section{Chip Layout}
+
+The device is supplied in a 52-pin plastic leaded chip carrier (PLCC-52), 13 pins on each side. Pin 1 is at the centre
+of the top edge, marked by a dot on the package; the pins are numbered counter-clockwise when the package is seen from
+above.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.92, transform shape,
+			pinlabel/.style={font=\scriptsize},
+			pinnum/.style={font=\tiny, text=sircgray},
+			body/.style={draw, thick, fill=gray!8},
+			pin/.style={draw, thick}
+		]
+		\def\pitch{0.44}
+		\def\side{6.3}
+		\def\first{0.51}
+		% Package body
+		\draw[body] (0,0) rectangle (\side,\side);
+		% Pin 1 index dot
+		\fill (\side/2,\side-0.55) circle (0.07);
+		% Top side, left to right: pins 7 to 2, 1, 52 to 47
+		\foreach \n/\name [count=\i from 0] in {
+				7/\activelow{BACK}, 6/BRW, 5/\activelow{BAS}, 4/\activelow{CS}, 3/\activelow{RST}, 2/CLKI, 1/VCC1,
+				52/NC, 51/AGND, 50/B, 49/G, 48/R, 47/IREF
+			} {
+				\pgfmathsetmacro{\x}{\first + \i*\pitch}
+				\draw[pin] (\x,\side) -- (\x,\side+0.4);
+				\node[pinnum, rotate=90, anchor=east] at (\x,\side-0.1) {\n};
+				\node[pinlabel, rotate=90, anchor=west] at (\x,\side+0.46) {\name};
+			}
+		% Right side, top to bottom: pins 46 to 34
+		\foreach \n/\name [count=\i from 0] in {
+				46/AVCC, 45/\activelow{CSYNC}, 44/\activelow{IRQ4}, 43/\activelow{NMI}, 42/GND2,
+				41/D15, 40/D14, 39/D13, 38/D12, 37/D11, 36/D10, 35/D9, 34/D8
+			} {
+				\pgfmathsetmacro{\y}{\side - \first - \i*\pitch}
+				\draw[pin] (\side,\y) -- (\side+0.4,\y);
+				\node[pinnum, anchor=east] at (\side-0.1,\y) {\n};
+				\node[pinlabel, anchor=west] at (\side+0.46,\y) {\name};
+			}
+		% Bottom side, left to right: pins 21 to 33
+		\foreach \n/\name [count=\i from 0] in {
+				21/A13, 22/A14, 23/A15, 24/GND1, 25/VCC2,
+				26/D0, 27/D1, 28/D2, 29/D3, 30/D4, 31/D5, 32/D6, 33/D7
+			} {
+				\pgfmathsetmacro{\x}{\first + \i*\pitch}
+				\draw[pin] (\x,0) -- (\x,-0.4);
+				\node[pinnum, rotate=90, anchor=west] at (\x,0.1) {\n};
+				\node[pinlabel, rotate=90, anchor=east] at (\x,-0.46) {\name};
+			}
+		% Left side, top to bottom: pins 8 to 20
+		\foreach \n/\name [count=\i from 0] in {
+				8/A0, 9/A1, 10/A2, 11/A3, 12/A4, 13/A5, 14/A6, 15/A7, 16/A8, 17/A9, 18/A10, 19/A11, 20/A12
+			} {
+				\pgfmathsetmacro{\y}{\side - \first - \i*\pitch}
+				\draw[pin] (0,\y) -- (-0.4,\y);
+				\node[pinnum, anchor=west] at (0.1,\y) {\n};
+				\node[pinlabel, anchor=east] at (-0.46,\y) {\name};
+			}
+		% Package label
+		\node[font=\bfseries] at (\side/2,\side/2+0.25) {SIRCADA};
+		\node[font=\small] at (\side/2,\side/2-0.25) {52-pin PLCC};
+	\end{tikzpicture}
+	\caption{SIRCADA 52-pin PLCC Pinout, Top View}
+	\label{fig:pinout}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rll}
+		\toprule
+		\textbf{Pin} & \textbf{Name}     & \textbf{Description}           \\
+		\midrule
+		1            & VCC1              & Power supply                   \\
+		2            & CLKI              & Clock input                    \\
+		3            & \activelow{RST}   & Reset input                    \\
+		4            & \activelow{CS}    & Chip select input              \\
+		5            & \activelow{BAS}   & Bus access strobe input        \\
+		6            & BRW               & Bus read/write input           \\
+		7            & \activelow{BACK}  & Bus acknowledge output         \\
+		8--23        & A0--A15           & Address bus bits 0--15         \\
+		24           & GND1              & Ground                         \\
+		25           & VCC2              & Power supply                   \\
+		26--41       & D0--D15           & Data bus bits 0--15            \\
+		42           & GND2              & Ground                         \\
+		43           & \activelow{NMI}   & Vertical sync interrupt output \\
+		44           & \activelow{IRQ4}  & Line-compare interrupt output  \\
+		45           & \activelow{CSYNC} & Composite sync output          \\
+		46           & AVCC              & Analog power supply            \\
+		47           & IREF              & Colour output reference        \\
+		48--50       & R, G, B           & Analog colour outputs          \\
+		51           & AGND              & Analog ground                  \\
+		52           & NC                & No connection                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{SIRCADA 52-pin PLCC Pinout}
+	\label{tab:pinout}
+\end{table}
+
+\section{Signal Descriptions}
+
+Table~\ref{tab:signals} lists the direction and sense of each signal. Active-low signals carry a bar over the name;
+they are asserted when low. Address and data signals are active high. An output marked \emph{open drain} can only pull
+its line low; the system supplies a pull-up, and several devices may share the line.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llllX}
+		\toprule
+		\textbf{Signal}   & \textbf{Pins} & \textbf{Direction} & \textbf{Output type} & \textbf{Function}                             \\
+		\midrule
+		CLKI              & 2             & Input              &                      & Rising edge advances the device one PPU cycle \\
+		\activelow{RST}   & 3             & Input              &                      & Resets the device                             \\
+		\activelow{CS}    & 4             & Input              &                      & Selects the device for a bus cycle            \\
+		\activelow{BAS}   & 5             & Input              &                      & Marks a bus cycle                             \\
+		BRW               & 6             & Input              &                      & High for a read, low for a write              \\
+		\activelow{BACK}  & 7             & Output             & Open drain           & Completes the bus cycle                       \\
+		A0--A15           & 8--23         & Input              &                      & Word offset in the device segment             \\
+		D0--D15           & 26--41        & Bidirectional      & Three-state          & Data                                          \\
+		\activelow{NMI}   & 43            & Output             & Open drain           & Vertical sync interrupt                       \\
+		\activelow{IRQ4}  & 44            & Output             & Open drain           & Line-compare interrupt                        \\
+		\activelow{CSYNC} & 45            & Output             & Driven               & Composite sync                                \\
+		R, G, B           & 48--50        & Output             & Analog               & Colour                                        \\
+		IREF              & 47            & Reference          &                      & Sets the full-scale colour level              \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Signal Summary}
+	\label{tab:signals}
+\end{table}
+
+\subsection{Clock Input (CLKI)}
+
+The device has one clock input, the same \texttt{CLKI} the system supplies to the CPU. One \texttt{CLKI} cycle is one
+PPU cycle: the master clock divided by two (Section~\ref{sec:cpu-clock}). Every internal interval, the pixel, the group
+of four pixels, the line and the frame, is a whole number of \texttt{CLKI} cycles, so the device needs no other clock.
+The pixel rate is \texttt{CLKI} divided by two. The rising edge is the only edge the device uses. The range of clock
+frequencies is not yet specified.
+
+\subsection{Reset Input (\activelow{RST})}
+
+While \activelow{RST} is asserted the device is held in its reset state (Section~\ref{sec:signal-reset}). The input is
+sampled on each rising edge of \texttt{CLKI}, and must stay asserted for at least six cycles. The \activelow{RSTO}
+output of the CPU holds for at least that long and can be connected directly.
+
+\subsection{Bus Signals}
+
+The device is a bus peripheral. It watches the bus of the CPU (\hwmanual{}) and answers the cycles that are addressed
+to it. It has no byte strobes and no access-type inputs: it treats an instruction fetch, a data access and a DMA
+transfer alike.
+
+\begin{description}
+	\item[\activelow{CS}] The system decodes the segment of the device, the upper address bits that the device does not see, and
+	      asserts \activelow{CS} while the segment is addressed. A cycle in which \activelow{CS} or \activelow{BAS} is
+	      deasserted is ignored: the device drives neither the data bus nor \activelow{BACK}.
+	\item[\activelow{BAS}, BRW] The CPU asserts \activelow{BAS} for a whole cycle that makes a bus access. BRW is high for a
+	      read and low for a write. Both are valid for the whole of the cycle.
+	\item[A0--A15] The word offset of the access within the segment (Chapter~\ref{ch:memory-map}). The device accesses one 16-bit
+	      word per cycle.
+	\item[D0--D15] On a write the CPU drives the bus and the device takes the word at the rising edge that ends the cycle. On a
+	      read the device drives the word that the offset selects, from the start of the cycle to its end, and releases the bus
+	      when the cycle ends. A read of an offset that has no register or memory is driven as zero.
+	\item[\activelow{BACK}] The device asserts \activelow{BACK} for the whole of every cycle in which \activelow{CS} and
+	      \activelow{BAS} are asserted, whatever the offset and whatever the state of the picture. It never asks the CPU to
+	      wait and never raises a bus error. \activelow{BACK} is open drain, so it may be joined with the acknowledge from other
+	      devices on the bus.
+\end{description}
+
+\subsection{Interrupt Outputs (\activelow{NMI}, \activelow{IRQ4})}
+
+The vertical sync interrupt is a one-cycle pulse on \activelow{NMI}, and the line-compare interrupt is a level held on
+\activelow{IRQ4} (Section~\ref{sec:interrupts}). Both are open drain, so the line is shared with other devices when the
+system connects them; a program that shares \activelow{IRQ4} reads the \texttt{LIP} bit of the Status register to see
+whose interrupt it is. Neither output is driven while \activelow{RST} is asserted.
+
+\subsection{Video Output}
+
+\begin{description}
+	\item[\activelow{CSYNC}] Composite sync. It is asserted for the horizontal sync pulse of every line and, in the lines of
+	      vertical sync, for the vertical sync pulses (Section~\ref{sec:video-output}).
+	\item[R, G, B] The picture, as three analog levels. Each is converted from 5 bits of the colour of the pixel after the
+	      brightness setting has been applied, so it has 32 steps from black to full scale. In blanking, in forced blank and
+	      during reset the three outputs are at black.
+	\item[IREF] A resistor from IREF to AGND sets the level of full scale for all three outputs. The value of the resistor and
+	      the voltages of the outputs are not yet specified.
+	\item[AVCC, AGND] The supply of the converters, kept apart from VCC1, VCC2, GND1 and GND2 so that the noise of the logic does
+	      not reach the picture. AVCC is 5~V; AGND is connected to the ground of the logic at one point on the board.
+\end{description}
+
+\subsection{Power Pins (VCC1, VCC2, GND1, GND2)}
+
+The four pins supply the logic and are all connected. VCC is 5~V $\pm$ 5\%, as for the CPU. The electrical
+characteristics other than the supply are not yet specified.
+
+\section{Connecting the Device}
+
+Figure~\ref{fig:connections} shows the device in a system. The CPU and the video device share the address bus (the
+device uses the lower 16 bits), the data bus, \activelow{BAS}, BRW, \activelow{BACK} and \texttt{CLKI}. The address
+decoder asserts \activelow{CS} for the segment of the device. The reset output of the CPU resets the device. The
+interrupt outputs of the device go to the interrupt inputs of the CPU, with pull-up resistors, and the video outputs go
+to the display connector.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.9, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\small},
+			sig/.style={-{Stealth[length=2mm]}, thick},
+			bus/.style={{Stealth[length=2mm]}-{Stealth[length=2mm]}, ultra thick},
+			note/.style={font=\scriptsize, text=sircgray, align=center}
+		]
+		\node[block, minimum width=2.4cm, minimum height=6.0cm] (cpu) at (0,0) {SIRC-1\\CPU};
+		\node[block, minimum width=2.6cm, minimum height=6.0cm] (ppu) at (8.0,0) {Video\\device};
+		\node[block, minimum width=2.2cm, minimum height=1.0cm] (dec) at (4.0,4.1) {Address\\decode};
+		\node[block, minimum width=2.2cm, minimum height=1.0cm] (clk) at (4.0,-4.1) {Clock\\generator};
+		\node[block, minimum width=2.6cm, minimum height=1.0cm] (out) at (12.4,0) {Display\\connector};
+		% Lanes between the CPU and the device
+		\draw[bus] (1.2,2.0) -- node[above, note]{A0--A15} (6.7,2.0);
+		\draw[bus] (1.2,1.2) -- node[above, note]{D0--D15} (6.7,1.2);
+		\draw[sig] (1.2,0.4) -- node[above, note]{\activelow{BAS}, BRW} (6.7,0.4);
+		\draw[sig] (6.7,-0.4) -- node[above, note]{\activelow{BACK}} (1.2,-0.4);
+		\draw[sig] (1.2,-1.2) -- node[above, note]{\activelow{RSTO} to \activelow{RST}} (6.7,-1.2);
+		\draw[sig] (6.7,-2.0) -- node[above, note]{\activelow{NMI}, \activelow{IRQ4} (pull-ups)} (1.2,-2.0);
+		% Address decode
+		\draw[sig] (cpu.north) |- node[above, pos=0.75, note]{A16--A23} (dec.west);
+		\draw[sig] (dec.east) -| node[above, pos=0.25, note]{\activelow{CS}} (ppu.north);
+		% Clock
+		\draw[sig] (clk.west) -| node[below, pos=0.25, note]{CLKI} (cpu.south);
+		\draw[sig] (clk.east) -| (ppu.south);
+		% Video
+		\draw[sig] (ppu.east) -- node[above, note]{R, G, B,\\\activelow{CSYNC}} (out.west);
+	\end{tikzpicture}
+	\caption{The Video Device in a System}
+	\label{fig:connections}
+\end{figure}
