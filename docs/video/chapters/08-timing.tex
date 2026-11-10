@@ -168,9 +168,11 @@ The vertical sync interrupt is the non-maskable interrupt, \activelow{NMI}, Leve
 device needs no acknowledgement: when \texttt{VIE} is set in the Interrupt Control register
 (Section~\ref{sec:reg-intctl}), the device asserts the \activelow{NMI} pin for one PPU cycle at the first cycle of line
 224, the start of vertical blanking. The program has the whole of vertical blanking to update video memory
-(Section~\ref{sec:memory-vram-access}). The pulse is exactly one \texttt{CLKI} cycle (Section~\ref{sec:cpu-clock}), and
-the architecture manual latches an edge that is active for at least one clock cycle in every CPU state, so the CPU does
-not miss it.
+(Section~\ref{sec:memory-vram-access}). The pulse is exactly one \texttt{CLKI} cycle (Section~\ref{sec:cpu-clock}). The
+CPU samples \activelow{NMI} on every rising edge of \texttt{CLKI} except during reset (\hwmanual{}), so it does not
+miss the pulse. A pulse that arrives while the handler of the previous one is still running, or while a Level 5 request
+is pending, is not taken as an interrupt: it raises the Level Five Hardware Exception Conflict fault (\archmanual{}).
+The handler must therefore return before the next vertical sync, 16.6~ms later on NTSC and 20.0~ms on PAL.
 
 The \activelow{NMI} cannot be masked, so a program must install its handler before it sets \texttt{VIE}. A DMA transfer
 cannot be interrupted, the \activelow{NMI} included. The edge is latched and the interrupt is taken when the transfer

@@ -35,10 +35,12 @@ transparent. The priority bit puts a tile in front of every sprite layer.
 
 Each orthogonal background scrolls independently. Its scroll registers are sampled once per line, as in Mode 2. The
 device fetches groups of four pixels aligned to the plane, so that group $g$ of the line is the plane group $\lfloor
-	\texttt{SCRX}/4 \rfloor + g$. Plane group $q$ is the left half of tile column $\lfloor q/2 \rfloor \bmod 32$ when $q$
-is even and the right half when it is odd, and the row is $(\text{line} + \texttt{SCRY}) \bmod 256$. When \texttt{SCRX}
-is not a multiple of four, the line's first pixel is at position $\texttt{SCRX} \bmod 4$ in a window of two groups, as
-in Section~\ref{sec:m2-fetch}. Fine scrolling costs no extra fetches.
+	\texttt{SCRX}/4 \rfloor + g$. For tiles $w$ pixels square (8 or 16), a group of four lies within one tile, in tile
+column $\lfloor 4q/w \rfloor \bmod C$ and tile row $\lfloor (\text{line} + \texttt{SCRY})/w \rfloor \bmod R$, where $C$
+and $R$ are the width and height of the tilemap in cells (32 or 64, Section~\ref{sec:tilemap-size}). The row of pixels
+within the tile is $(\text{line} + \texttt{SCRY}) \bmod w$, and the plane wraps after $wC$ pixels across and $wR$
+pixels down. When \texttt{SCRX} is not a multiple of four, the line's first pixel is at position $\texttt{SCRX} \bmod
+	4$ in a window of two groups, as in Section~\ref{sec:m2-fetch}. Fine scrolling costs no extra fetches.
 
 \section{Fetch Schedule}
 
@@ -74,7 +76,8 @@ Because no background depends on a slot that another leaves spare, the schedule 
 	      background.
 	\item \texttt{B1D}, \texttt{B2D} and \texttt{B3D} disable the corresponding background, as in Mode 2. Background 4 is not drawn in Mode 3.
 	\item The isometric background is background 3, so it is behind the orthogonal ones. The shading bits of its tilemap entries
-	      (Section~\ref{sec:m2-shading}) apply to it; the orthogonal backgrounds ignore the flip bits.
+	      (Section~\ref{sec:m2-shading}) apply to it; the orthogonal backgrounds read the same two bits as horizontal and
+	      vertical flips (Section~\ref{sec:tilemap-entry}).
 	\item Only one background is isometric, so the height offsets of Section~\ref{sec:m2-layers} between two isometric
 	      backgrounds are not available. Buildings and vehicles are sprites.
 \end{itemize}

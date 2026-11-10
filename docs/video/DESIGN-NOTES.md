@@ -78,7 +78,7 @@ patterns per layer, 16,384 pairs): required depth 2 for 14,464 pairs, 3 for 1,87
 ## 2-bit tiles
 
 Isometric 2-bit tiles pack perfectly in 32 words with groups of eight (a group of eight never touches more than two cells; 43.75% touch
-two). A 2-bit layer needs 56-65 reads per line (mean 62.9) against 88-97 for 4-bit (`study_two_bit_layer_reads_per_line`). The ground
+two). Without the entry cache a 2-bit layer needs 80-96 reads per line (mean 92.0) against 144-160 (mean 152.0) for 4-bit, before the prefetch; with the rejected cache it would need 56-65 (mean 62.9) against 88-97 (`study_two_bit_layer_reads_per_line`). The ground
 of the demo scene in three colours: 14 tiles, 448 words against 896. The bit is `T2` in each layer's palette register; leaving `SIZE` at
 four colours is the program's choice (it would only prevent wasted palette space).
 
@@ -99,7 +99,7 @@ four colours is the program's choice (it would only prevent wasted palette space
 - `CLKI` = master clock / 2: that is how the simulator already polls (one `poll_all` = one CPU phase = one PPU cycle). At 21,477,272 Hz
   that is 10.74 MHz, 6 cycles per instruction (1.79 MIPS), 113 instructions per line, 25,916 cycles of NTSC vertical blanking.
 - A one-cycle NMI pulse is one `CLKI` cycle; the architecture manual latches an edge active for at least one clock in every CPU state
-  including during DMA, so a DMA transfer delays the NMI rather than losing it. A `DMAT` of 255 words is 522 cycles (about 0.77 line).
+  including during DMA (but not during reset), so a DMA transfer delays the NMI rather than losing it. A second NMI edge while the Level 5 handler runs or is pending raises the Level Five Hardware Exception Conflict fault, so the handler must finish within a frame. A `DMAT` of 255 words is 522 cycles (about 0.77 line).
 - Registers are sampled 228 master clocks (114 cycles) into the line; interrupt latency is 6 to about 12 cycles, so a line-compare handler
   has about 100 cycles (some 16 instructions) to change a register for the same line.
 - Vertical sync on the NMI needs `VIE` because the NMI cannot be masked. Line compare is IRQ4 held until a write to `LINE` (the hardware
@@ -193,3 +193,9 @@ marks forbidden values ("prohibited"), and gives timing in microseconds; and it 
 - Era check: the Super NES offered a three-layer mode with one 2-bit layer and a four-layer mode of 2-bit layers only, so four 4-bit layers
   is more than that machine did. The trade is die area and cost: four pixel pipelines and the fetch bandwidth to feed them. In the
   fiction SIRCADA is simply the more expensive part, which fits a CPU maker using up surplus stock in a console.
+
+## Colour output scaling
+
+The simulator turns each 5-bit channel into 8 bits for a host buffer by shifting it left by three, so its brightest value is 248. That is a
+convention of the host picture buffer, not of the chip: the real outputs are analogue, with 32 steps up to the full-scale level set by `IREF`,
+so the manual describes the 5-bit converter and the simulator's conversion stays here.

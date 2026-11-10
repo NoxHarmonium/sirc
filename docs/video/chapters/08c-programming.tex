@@ -7,7 +7,7 @@ described, and the sections of the earlier chapters are cited.
 \section{Starting Up}
 \label{sec:startup}
 
-At reset the picture is blank (\texttt{GD} is 1), every register is zero except \texttt{CONFIG}
+At reset the picture is blank (\texttt{GD} is 1), every writable register is zero except \texttt{CONFIG}
 (Section~\ref{sec:reset}), and video memory, the palette and the sprite table are undefined. A program starts the
 device in this order:
 
@@ -76,10 +76,7 @@ frame spreads the work over several frames, or turns the picture off (\texttt{GD
 	      \texttt{DMAT} that is running at line 224 delays the interrupt until it ends (Section~\ref{sec:interrupts}).
 	\item \textbf{Line compare.} The \activelow{IRQ4} line stays asserted until the program writes \texttt{LINE}. A handler
 	      that does not write \texttt{LINE}, or clear \texttt{LIE}, is entered again as soon as it returns.
-	\item \textbf{Registers during the picture.} The device samples the scroll, address and palette configuration registers
-	      once per line. A change made during a line takes effect on the next line. The tilemap, tile data and palette
-	      configuration of a Mode 2 or Mode 3 background must not be changed during the visible part of a line
-	      (Chapter~\ref{ch:mode2}).
+	\item \textbf{Registers during the picture.} The device samples the scroll registers once per line, and a change made during a line takes effect on the next line. It reads the tilemap address, tile data address and palette configuration registers as it fetches, so a change during the visible part of a line can mix old and new settings within that line: change them only in vertical blanking or while \texttt{GD} is 1 (Chapter~\ref{ch:mode2}).
 	\item \textbf{Changing mode.} Change \texttt{MODE} only in vertical blanking or while \texttt{GD} is 1. The values 3 to 7
 	      of \texttt{MODE} are reserved and must not be written.
 	\item \textbf{Reserved registers.} Software must not write the reserved registers and reserved bits

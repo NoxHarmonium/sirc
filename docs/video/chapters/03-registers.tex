@@ -181,7 +181,8 @@ Every background of every mode scrolls. The amounts are sampled once per line, a
 	\begin{bytefield}[bitwidth=2em]{16}
 		\bitheader{0-15} \\
 		\bitbox{8}{OFFSET} &
-		\bitbox{6}{} &
+		\bitbox{5}{} &
+		\bitbox{1}{T2} &
 		\bitbox{2}{SIZE}
 	\end{bytefield}
 	\caption{Palette Configuration Registers (\texttt{B1PAL}--\texttt{B4PAL})}
@@ -282,15 +283,16 @@ Both bits are 0 at reset, so no interrupt is raised until the program has set up
 \section{Reset State}
 \label{sec:reset}
 
-At reset the device is blank and every register is zero, except as follows:
+At reset the device is blank and every writable register is zero, except as follows:
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Register} & \textbf{Value at reset} & \textbf{Meaning}                                                      \\
+		\textbf{Register} & \textbf{Value at reset}                       & \textbf{Meaning}                                                      \\
 		\midrule
-		\texttt{CONFIG}   & \texttt{0x8078}         & \texttt{GD} = 1 (picture blank), \texttt{BRT} = 15, \texttt{MODE} = 0 \\
+		\texttt{CONFIG}   & \texttt{0x8078}                               & \texttt{GD} = 1 (picture blank), \texttt{BRT} = 15, \texttt{MODE} = 0 \\
+		\texttt{STATUS}   & \texttt{0x0001} (NTSC), \texttt{0x0011} (PAL) & \texttt{VER} = 1 and \texttt{OUT} fixed by the device; read-only      \\
 		\bottomrule
 	\end{tabular}
 	\caption{Registers with a Non-Zero Reset Value}

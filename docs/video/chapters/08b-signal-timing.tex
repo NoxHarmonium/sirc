@@ -75,8 +75,10 @@ CPU samples it. A read changes nothing in the device; no register has a side eff
 \subsection{Consecutive Cycles}
 
 The device accepts one access in every cycle, with no recovery time between accesses. A DMA transfer, which makes one
-bus cycle for each word (\hwmanual{}), therefore moves one word per \texttt{CLKI} cycle into the palette, the sprite
-table or video memory, whichever the offsets address.
+bus cycle for each word (\hwmanual{}), therefore accepts one word per \texttt{CLKI} cycle into the palette, the sprite
+table or video memory, whichever the offsets address, during the write part of the transfer. That is the rate of the
+writes only: a whole copy also makes source reads and setup cycles, so its rate is lower (\hwmanual{};
+Section~\ref{sec:cpu-clock} gives the time of a \texttt{DMAT}).
 
 \begin{figure}[H]
 	\centering
@@ -138,7 +140,8 @@ samples them at the rising edge that ends the cycle.
 
 Figure~\ref{fig:signal-vblank} shows the pulse: \activelow{NMI} is asserted for the whole of the first cycle of line
 224 and deasserted in the next, when \texttt{VIE} is set in the Interrupt Control register. The pulse is one
-\texttt{CLKI} cycle, which the CPU always samples, and the device does not wait for or expect an acknowledgement
+\texttt{CLKI} cycle, which the CPU samples on every rising edge except during reset, and the device does not wait for
+or expect an acknowledgement. The handler must return before the next pulse, or the CPU raises a conflict fault
 (Section~\ref{sec:interrupts}).
 
 \subsection{Line Compare}
@@ -177,7 +180,7 @@ again if the line is still asserted when the handler ends (Section~\ref{sec:inte
 		\activelow{CS}    & L H H H                            \\
 		\activelow{BAS}   & L H H H                            \\
 		BRW               & L H H H                            \\
-		A0--A15           & D{0x0015} D{} D{} D{}              \\
+		A0--A15 & D{0x0017} D{} D{} D{}              \\
 		D0--D15           & D{line} Z Z Z                      \\
 		\activelow{BACK}  & L H H H                            \\
 		\texttt{LINE}     & D{old} 3D{line}                    \\

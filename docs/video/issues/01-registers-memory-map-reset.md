@@ -31,7 +31,7 @@ Video Device Reference Manual (`docs/video`):
 - [ ] Repack the register map into groups of four backgrounds as the manual's register map shows (`B1MAP`-`B4MAP` at `0x0002`-`0x0005`, tile data, scroll X, scroll Y and palette configuration likewise; `INTCTL` `0x0016`, `LINE` `0x0017`, `STILES` `0x0018`, `STATUS` `0x0019`, `VLINE` `0x001A`) and add the fourth background's registers and `B4D`, `B4S`, `B4X`, `B4Y`. Update the existing tests that use the old offsets.
 - [ ] Add the new fields/registers: `INTCTL` (`VIE` bit 0, `LIE` bit 1), `LINE` (bits 8-0), `CONFIG.SHD` (bit 7), `BxPAL.T2` (bit 2), `STATUS.SOV` (bit 5) and `STATUS.LIP` (bit 6). Behaviour comes from later issues; this issue only stores and reads them.
 - [ ] Add the sprite table storage: 256 words at `0x7000`-`0x70FF`, open bus elsewhere in `0x7000`-`0x7FFF`. Fill it with ones at reset (hides every sprite) or document another choice.
-- [ ] Reset values: `CONFIG = 0x8078` (`GD` = 1, `BRT` = 15, `MODE` = 0), every other register 0. Video memory, palette and sprite table contents are undefined on hardware; the simulator clears them.
+- [ ] Reset values: `CONFIG = 0x8078` (`GD` = 1, `BRT` = 15, `MODE` = 0), every other writable register 0; `STATUS` reads `VER` 1 (`0x0001` NTSC, `0x0011` PAL). Video memory, palette and sprite table contents are undefined on hardware; the simulator clears them.
 - [ ] `VER` reads 1 and the region (`OUT`) is set by the constructor, not hard-coded (the simulator must be able to configure both).
 - [ ] Update the manual's status table (Chapter 9) for the rows you complete.
 
@@ -39,7 +39,7 @@ Video Device Reference Manual (`docs/video`):
 
 - [ ] Unit test: reads and writes round trip for every writable register and every field of the new registers.
 - [ ] Unit test: `0x60FF` is the last palette word; `0x6100` reads 0 and a write to it changes nothing.
-- [ ] Unit test: a fresh device reads `CONFIG = 0x8078`, all other registers 0, `STATUS` = `VER` 1 (and `OUT` per constructor).
+- [ ] Unit test: a fresh device reads `CONFIG = 0x8078`, all other writable registers 0, `STATUS` = `VER` 1 (and `OUT` per constructor).
 - [ ] Unit test: `STATUS` is read-only and reads the same bit layout as the manual's Status Register figure.
 - [ ] `cargo test -p device_video` and `cargo clippy` pass; the existing Mode 1 snapshot test still passes.
 

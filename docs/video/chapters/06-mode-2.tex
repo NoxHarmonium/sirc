@@ -199,13 +199,13 @@ each of its two backgrounds four of them:
 	\centering
 	\begin{tabular}{cll}
 		\toprule
-		\textbf{Slot} & \textbf{Fetch}                         & \textbf{Used}                              \\
+		\textbf{Slot} & \textbf{Fetch}                         & \textbf{Used}                     \\
 		\midrule
-		0             & Background 1 tilemap entry, cell A     & Only when the cell has changed (see below) \\
-		1             & Background 1 tile data word, tile A    & Always                                     \\
-		2             & Background 1 tilemap entry, cell B     & Only when the group has two cells          \\
-		3             & Background 1 tile data word, tile B    & Only when the group has two cells          \\
-		4--7          & The same four fetches for background 2 &                                            \\
+		0             & Background 1 tilemap entry, cell A     & Always                            \\
+		1             & Background 1 tile data word, tile A    & Always                            \\
+		2             & Background 1 tilemap entry, cell B     & Only when the group has two cells \\
+		3             & Background 1 tile data word, tile B    & Only when the group has two cells \\
+		4--7          & The same four fetches for background 2 &                                   \\
 		\bottomrule
 	\end{tabular}
 	\caption{Mode 2 Fetch Slots per Group of Four Pixels}
@@ -298,7 +298,8 @@ for the status layer. It also assumes that the CPU does not read or write video 
 
 An isometric background can have 2-bit tiles, to halve the video memory its tiles take. Terrain and roads need few
 colours; buildings keep 4 bits. Bit 2 of the layer's palette configuration register, \texttt{T2}, selects them, for
-background 1 and background 2 separately. Mode 1 ignores the bit.
+background 1 and background 2 separately. The orthogonal backgrounds have the same bit
+(Section~\ref{sec:flat-two-bit}).
 
 \begin{itemize}
 	\item Groups are eight pixels, aligned to the plane, and the word holding the eight texels of a staircase is one 16-bit word
@@ -312,9 +313,9 @@ background 1 and background 2 separately. Mode 1 ignores the bit.
 	\item Value 0 is transparent, so a pixel has three colours. The palette rule is that of 4-bit tiles
 	      (Section~\ref{sec:palette-select}), with values 0 to 3; \texttt{SIZE} should be 0 (four colours).
 	\item The layer fetches a group of eight for every second group of four pixels, and the other groups leave all four of its
-	      slots spare. A line then needs 56 to 65 reads for the layer, 62.9 on average, against 88 to 97, 92.9 on average, for a
-	      4-bit one. The first group of a line can be the second half of a staircase, so the first group is fetched in the back
-	      porch whole.
+	      slots spare. A line then needs 80 to 96 reads for the layer, 92.0 on average, against 144 to 160, 152.0 on average, for
+	      a 4-bit one, not counting the prefetch. The first group of a line can be the second half of a staircase, so the first
+	      group is fetched in the back porch whole.
 	\item A tilemap in which the demonstration ground of Figure~\ref{fig:m2-demo} is drawn in three colours has 14 unique tiles
 	      and takes 448 words as 2-bit tiles, against 896 as 4-bit ones. Flips stay unsupported.
 \end{itemize}
@@ -343,7 +344,8 @@ An isometric layer cannot flip its tiles, so the two flip bits of its tilemap en
 Shading is applied to the colour after the palette lookup, so one tile serves for a lit and a shaded version of the
 same ground. It costs a shift and an add per colour channel at the output. A program can darken the cells it has not
 yet explored (fog of war), the cells under a tree or at night, and lighten highlighted ones, without extra tiles or
-palettes. Shading applies in Mode 2 and in Mode 3's isometric background. Orthogonal backgrounds ignore the bits.
+palettes. Shading applies in Mode 2 and in Mode 3's isometric background. The orthogonal backgrounds of Mode 3 read the
+same two bits as flips (Section~\ref{sec:tilemap-entry}); the status layer ignores them.
 
 A sprite can darken as well. When the \texttt{SHD} bit of the Base Configuration register is set, a sprite pixel of
 value 15 in sprite palette 7 draws nothing; instead it darkens whatever lies behind the sprite's layer
@@ -447,14 +449,14 @@ The registers were set as follows:
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Register}     & \textbf{Background 1 (buildings)}                  & \textbf{Background 2 (ground)}   \\
+		\textbf{Register}     & \textbf{Background 1 (buildings)}                       & \textbf{Background 2 (ground)}   \\
 		\midrule
-		\texttt{CONFIG}       & \multicolumn{2}{c}{\texttt{MODE} = 1, no disables}                                    \\
-		Tilemap address       & \texttt{0x8000}                                    & \texttt{0x8400}                  \\
-		Tile data address     & \texttt{0x9000}                                    & \texttt{0xA000}                  \\
-		Scroll X, scroll Y    & 0, 8                                               & 0, 0                             \\
-		Palette configuration & \texttt{OFFSET} 0x10, 16 colours                   & \texttt{OFFSET} 0x00, 16 colours \\
-		Palette entries used  & 0x11--0x13                                         & 1--8                             \\
+		\texttt{CONFIG}       & \multicolumn{2}{c}{\texttt{MODE} = 1, \texttt{B3D} = 1}                                    \\
+		Tilemap address       & \texttt{0x8000}                                         & \texttt{0x8400}                  \\
+		Tile data address     & \texttt{0x9000}                                         & \texttt{0xA000}                  \\
+		Scroll X, scroll Y    & 0, 8                                                    & 0, 0                             \\
+		Palette configuration & \texttt{OFFSET} 0x10, 16 colours                        & \texttt{OFFSET} 0x00, 16 colours \\
+		Palette entries used  & 0x11--0x13                                              & 1--8                             \\
 		\bottomrule
 	\end{tabular}
 	\caption{Register Values of the Example Scene}

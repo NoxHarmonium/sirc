@@ -16,7 +16,9 @@ CPU address \texttt{0x000C\_0002}. This manual gives every address as an offset 
 		\texttt{0x0000}--\texttt{0x00FF} & Registers       & Offsets \texttt{0x0000}--\texttt{0x001A} are defined (Chapter~\ref{ch:registers}); the rest are open bus \\
 		\texttt{0x0100}--\texttt{0x5FFF} & Unmapped        & Open bus                                                                                                 \\
 		\texttt{0x6000}--\texttt{0x60FF} & Palette         & 256 entries, one word each (Section~\ref{sec:palette})                                                   \\
-		\texttt{0x6100}--\texttt{0x7FFF} & Unmapped        & Open bus; see Section~\ref{sec:palette-edge}                                                             \\
+		\texttt{0x6100}--\texttt{0x6FFF} & Unmapped        & Open bus; see Section~\ref{sec:palette-edge}                                                             \\
+		\texttt{0x7000}--\texttt{0x70FF} & Sprite table    & 256 words, 128 entries of two words (Chapter~\ref{ch:sprites})                                           \\
+		\texttt{0x7100}--\texttt{0x7FFF} & Unmapped        & Open bus                                                                                                 \\
 		\texttt{0x8000}--\texttt{0xFFFF} & Video memory    & 32,768 words of tile data and tilemaps                                                                   \\
 		\bottomrule
 	\end{tabular}
@@ -69,7 +71,7 @@ turned off (\texttt{GD} in the Base Configuration register is 1), when the devic
 \label{sec:palette-edge}
 
 The palette occupies 256 words, \texttt{0x6000}--\texttt{0x60FF}. The offset \texttt{0x6100} and the rest of the range
-up to \texttt{0x7000} are open bus.
+up to \texttt{0x6FFF} are open bus.
 
 \section{Planning a VRAM Layout}
 

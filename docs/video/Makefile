@@ -12,12 +12,13 @@ LATEX = pdflatex
 LATEX_FLAGS = -interaction=nonstopmode -halt-on-error
 
 TEX := $(MAIN).tex ../reference/preamble.tex $(wildcard chapters/*.tex)
+FIGURES := $(wildcard figures/*.png) ../logos/cover-simple.jpg ../reference/sirc-logo.png
 
 .PHONY: all clean cleanall quick format format-check check-refs qa
 
 all: $(OUTPUT).pdf
 
-$(OUTPUT).pdf: $(TEX)
+$(OUTPUT).pdf: $(TEX) $(FIGURES)
 	@echo "Building PDF (pass 1/3)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex > /dev/null || (cat $(MAIN).log && exit 1)
 	@echo "Building PDF (pass 2/3)..."
@@ -29,7 +30,7 @@ $(OUTPUT).pdf: $(TEX)
 	@$(MAKE) --no-print-directory check-refs
 
 # Quick build (single pass, for drafts)
-quick: $(TEX)
+quick: $(TEX) $(FIGURES)
 	@echo "Quick build (single pass)..."
 	@$(LATEX) $(LATEX_FLAGS) $(MAIN).tex
 	@mv $(MAIN).pdf $(OUTPUT).pdf

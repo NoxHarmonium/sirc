@@ -19,8 +19,8 @@ A colour is a 16-bit word with 5 bits for each of red, green and blue. Bit 15 is
 	\label{fig:colour}
 \end{figure}
 
-The device scales each 5-bit channel up to the 8 bits a display needs by shifting it left by three, so the brightest
-value of a channel is 248, not 255. Pure white is therefore a very light grey.
+Each 5-bit channel drives the converter of its colour output (Chapter~\ref{ch:package}), which has 32 evenly spaced
+levels from black to full scale. Channel value 31 is full scale, so a pixel of 31 in every channel is full-scale white.
 
 \section{The Palette}
 \label{sec:palette}

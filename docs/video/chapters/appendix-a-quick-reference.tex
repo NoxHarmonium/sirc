@@ -29,8 +29,9 @@
 
 \section{Memory Map}
 
-Registers \texttt{0x0000}--\texttt{0x00FF}; palette \texttt{0x6000}--\texttt{0x60FF}; video memory
-\texttt{0x8000}--\texttt{0xFFFF} (32,768 words). Everything else is open bus.
+Registers \texttt{0x0000}--\texttt{0x00FF}; palette \texttt{0x6000}--\texttt{0x60FF}; sprite table
+\texttt{0x7000}--\texttt{0x70FF}; video memory \texttt{0x8000}--\texttt{0xFFFF} (32,768 words). Everything else is open
+bus.
 
 \section{Formats}
 
@@ -52,7 +53,8 @@ Registers \texttt{0x0000}--\texttt{0x00FF}; palette \texttt{0x6000}--\texttt{0x6
 		      2(r \bmod 8) + h$.
 	\item[Tilemap sizes:] screens of 32 by 32 entries, A B over C D, 1,024 words apart.
 	\item[Priority bit:] 1 puts the tile in front of all sprites.
-	\item[Reset:] \texttt{CONFIG} = \texttt{0x8078} (blank, full brightness, Mode 1); the other registers are 0.
+	\item[Reset:] \texttt{CONFIG} = \texttt{0x8078} (blank, full brightness, Mode 1); the other writable registers are 0, and
+	      \texttt{STATUS} reads \texttt{0x0001} on NTSC and \texttt{0x0011} on PAL.
 \end{description}
 
 \section{Mode 1 Addresses}
