@@ -19,20 +19,19 @@ Anything about the CPU belongs in the architecture manual; anything about CPU pi
 
 The manual is written as if it were a period hardware reference for a real console: it states what the device does, with no
 comparisons to other products, no mention of simulators, prototypes, tests or design history, and no project status in the
-body chapters. Status, open questions and the discrepancies with the old wiki live only in the last chapter (Status and Open Issues), which is a working
-record that is not part of the specification. Rationale, precedents (the Super Nintendo PPU, the Mega Drive VDP and so on) and
+body chapters. Status, open questions and the discrepancies with the old wiki live in `STATUS.md`, not in the manual. Rationale, precedents (the Super Nintendo PPU, the Mega Drive VDP and so on) and
 the measurements behind the numbers live in `DESIGN-NOTES.md`, not in the manual.
 
 ## Status
 
 This manual is a working draft and the device it describes is not finished. It is derived from the reference
 simulator in `sirc-vm/device-video`, which is its source of truth. Where the simulator and the older wiki page
-(`PPU-(video-device)`) disagree, the simulator wins and the disagreement is listed in the last chapter.
+(`PPU-(video-device)`) disagree, the simulator wins and the disagreement is listed in `STATUS.md`.
 
 The isometric Mode 2, the orthogonal-over-isometric Mode 3, sprites, shading and 2-bit tiles (Chapters 6, 6b and 7) are
 **proposed**, not approved. They are prototyped in the simulator (`sirc-vm/device-video`: `iso.rs`, `sprite.rs` and
 the lib), and the numbers in them come from tests in that crate. Several features are specified here but not yet
-implemented there; the status table in the last chapter says which. Do not read the proposals as a commitment to build
+implemented there; the status table in `STATUS.md` says which. Do not read the proposals as a commitment to build
 them.
 
 Do not invent values for anything the manual lists as "not yet specified".

@@ -111,7 +111,7 @@ four colours is the program's choice (it would only prevent wasted palette space
 
 ## Package, pins and signal timing
 
-Sketched, not yet confirmed (also listed in Chapter 13 of the manual, working record):
+Sketched, not yet confirmed (also listed in `STATUS.md`, the working record):
 
 - **Single package, one manual.** The CPU has separate architecture and hardware manuals because the architecture could have several
   implementations. The video device has one, so its pinout and timing are in its own manual (Chapters 2 and 11).
@@ -174,4 +174,4 @@ hardware multiply/divide (the CPU has its own). Whether any belongs on a niche c
 math and a window are the two a user is most likely to ask about.
 
 Period-style details worth keeping in mind for later chapters: the Super NES manual gives reset values and read/write per register in a summary table,
-marks forbidden values ("prohibited"), and gives timing in microseconds; and it lists documented problems (our Chapter 13 plays that role).
+marks forbidden values ("prohibited"), and gives timing in microseconds; and it lists documented problems (our `STATUS.md` plays that role).

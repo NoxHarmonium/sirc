@@ -12,7 +12,7 @@ Keep `examples/basic-video` working through the changes, add an example per mode
 
 Video Device Reference Manual (`docs/video`):
 
-- Chapter 9 *Status and Open Issues*: Implementation Status
+- `docs/video/STATUS.md`: Implementation Status
 
 ## State on `main`
 

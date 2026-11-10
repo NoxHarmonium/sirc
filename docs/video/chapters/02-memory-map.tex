@@ -4,9 +4,8 @@
 \section{The Device Segment}
 
 The video device occupies one segment of the CPU's address space, 65,536 words long. The segment is chosen by the
-system; the reference virtual machine maps the device at segment \texttt{0x000C}, so a register at offset
-\texttt{0x0002} is at the CPU address \texttt{0x000C\_0002}. This manual gives every address as an offset from the base
-of the segment.
+system; the SIRCUS system maps the device at segment \texttt{0x000C}, so a register at offset \texttt{0x0002} is at the
+CPU address \texttt{0x000C\_0002}. This manual gives every address as an offset from the base of the segment.
 
 \begin{table}[H]
 	\centering
