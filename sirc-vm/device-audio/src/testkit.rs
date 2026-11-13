@@ -194,3 +194,76 @@ pub fn power_on(s: &mut Sircas) {
     use crate::core::reg;
     s.reg_write(reg::CONFIG, 0x8000);
 }
+
+#[must_use]
+pub fn triangle(len: usize, amp: f64) -> Vec<i8> {
+    (0..len)
+        .map(|i| {
+            let p = i as f64 / len as f64;
+            let v = if p < 0.5 {
+                4.0 * p - 1.0
+            } else {
+                3.0 - 4.0 * p
+            };
+            (amp * v).round() as i8
+        })
+        .collect()
+}
+
+/// Zero-mean pulse wave with the given duty cycle (0..1): high level `2*amp*(1-duty)`, low level
+/// `-2*amp*duty`, so the level is `amp` at 50 % and there is no DC offset.
+#[must_use]
+pub fn pulse(len: usize, duty: f64, amp: f64) -> Vec<i8> {
+    let hi = (2.0 * amp * (1.0 - duty)).round() as i8;
+    let lo = (-2.0 * amp * duty).round() as i8;
+    (0..len)
+        .map(|i| {
+            if (i as f64) < duty * len as f64 {
+                hi
+            } else {
+                lo
+            }
+        })
+        .collect()
+}
+
+/// White noise from a 32-bit xorshift generator (deterministic).
+#[must_use]
+pub fn noise(len: usize, seed: u32, amp: f64) -> Vec<i8> {
+    let mut x = seed.max(1);
+    (0..len)
+        .map(|_| {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            (amp * (f64::from(x >> 8) / f64::from(1u32 << 24) * 2.0 - 1.0)).round() as i8
+        })
+        .collect()
+}
+
+/// Write 16-bit stereo PCM as a WAV file.
+///
+/// # Errors
+/// Returns any I/O error from creating or writing the file.
+pub fn write_wav(path: &std::path::Path, frames: &[(i16, i16)], rate: u32) -> std::io::Result<()> {
+    use std::io::Write;
+    let data_len = (frames.len() * 4) as u32;
+    let mut f = std::io::BufWriter::new(std::fs::File::create(path)?);
+    f.write_all(b"RIFF")?;
+    f.write_all(&(36 + data_len).to_le_bytes())?;
+    f.write_all(b"WAVEfmt ")?;
+    f.write_all(&16u32.to_le_bytes())?;
+    f.write_all(&1u16.to_le_bytes())?; // PCM
+    f.write_all(&2u16.to_le_bytes())?; // channels
+    f.write_all(&rate.to_le_bytes())?;
+    f.write_all(&(rate * 4).to_le_bytes())?;
+    f.write_all(&4u16.to_le_bytes())?;
+    f.write_all(&16u16.to_le_bytes())?;
+    f.write_all(b"data")?;
+    f.write_all(&data_len.to_le_bytes())?;
+    for (l, r) in frames {
+        f.write_all(&l.to_le_bytes())?;
+        f.write_all(&r.to_le_bytes())?;
+    }
+    f.flush()
+}
