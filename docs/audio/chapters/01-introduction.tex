@@ -1,0 +1,210 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Purpose and Scope}
+
+The SIRC-1 CPU is sold on its own, so it is documented in three manuals that stand apart from any system built around
+it. SIRCADA and SIRCAS are made for the SIRCUS system and each has a manual of its own. Together the five manuals have
+the following scopes:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.2cm}}
+		\toprule
+		\textbf{Manual} & \textbf{Scope}                                                                                                                \\
+		\midrule
+		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state                                 \\
+		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage                                         \\
+		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics                                                                     \\
+		\videomanual{}  & The picture processing unit: package and pinout, memory map, registers, data formats, video modes, timing                     \\
+		\audiomanual{}  & The sound processor: package and pinout, memory map, registers, data formats, voices, filter, sequencer, timing (this manual) \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC-1 and SIRCUS Manual Set}
+	\label{tab:manual-set}
+\end{table}
+
+This manual covers SIRCAS as a component: its package and pins, what the CPU can read and write, how the device turns
+the contents of its audio memory into sound, and the timing of its signals. It does not describe the CPU, its
+instructions or its bus protocol. The device is a bus peripheral like any other, so the \hwmanual{} is authoritative
+for how the CPU makes a bus cycle, and this manual is authoritative for how the device answers it and for what it does
+once it has been reached.
+
+\section{Device Overview}
+
+SIRCAS plays six voices at once. Each voice reads eight-bit samples from the device's own audio memory at a pitch set
+by a note number, shapes them with an envelope and a volume, and places them in a stereo mix, either directly or
+through a resonant filter shared by all the voices. Six small sequencers, one for each voice, can play a tune from
+instructions in audio memory with no help from the CPU. The mixed result leaves the device as a serial stream of signed
+16-bit stereo samples for an external digital-to-analogue converter.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Property} & \textbf{Value}                                                                                                      \\
+		\midrule
+		Voices            & Six, each playing signed 8-bit samples by nearest-sample lookup (no interpolation)                                  \\
+		Sample rate       & 31,960.226 Hz: one output sample every 336 \texttt{CLKI} cycles                                                     \\
+		Audio memory      & 32,768 words (64 KB) of external static memory, dedicated to the device (Chapter~\ref{ch:package})                  \\
+		Pitch             & 16.16 fixed-point step; 12-entry pitch table in each instrument; notes 0--119 (Chapter~\ref{ch:playback})           \\
+		Envelope          & 12-bit linear attack, decay, sustain and release, one step every 64 samples (Chapter~\ref{ch:envelope})             \\
+		Mixer             & Per-voice volume (8 bits) and pan (8 bits), master volume, 20-bit accumulators (Chapter~\ref{ch:mixer})             \\
+		Modulation        & Any voice can modulate pitch, volume, pan, filter cutoff, filter pan or master volume (Chapter~\ref{ch:modulation}) \\
+		Filter            & One shared two-pole state-variable filter: low-pass, band-pass or high-pass (Chapter~\ref{ch:filter})               \\
+		Sequencers        & Six, one per voice, with a shared tick; 16-bit instructions (Chapter~\ref{ch:sequencer})                            \\
+		Output            & Stereo, signed 16 bits, serial (I\textsuperscript{2}S framing) to an external converter                             \\
+		Interrupts        & One: sequence completion (\activelow{IRQ3})                                                                         \\
+		Clock             & \texttt{CLKI} at 10,738,636 Hz (half the 21,477,272 Hz system oscillator)                                           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Sound Device Summary}
+	\label{tab:device-summary}
+\end{table}
+
+\section{The Voice Signal Path}
+\label{sec:signal-path}
+
+Every voice follows the same path, shown in Figure~\ref{fig:signal-path}. The voice reads a sample byte from audio
+memory at the position its position accumulator selects. The envelope and the voice's volume scale the sample. What
+happens next depends on the voice's routing bits in the \texttt{CONTROL} register (Section~\ref{sec:reg-control}):
+
+\begin{itemize}
+	\item A \textbf{dry voice} is divided between the left and right accumulators by its pan value.
+	\item A \textbf{filtered voice} is added to the input of the shared filter instead. The filter's output has a volume and a
+	      pan of its own, and is added to the same accumulators.
+	\item A \textbf{modulation voice} makes no sound. Its scaled sample steers a parameter of another voice or of the device
+	      (Chapter~\ref{ch:modulation}).
+\end{itemize}
+
+The master volume scales the two accumulators, and the result is limited to 16 bits and sent to the converter.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.9, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\footnotesize, minimum height=0.9cm, minimum width=2.5cm},
+			store/.style={draw, fill=white, align=center, font=\footnotesize, minimum height=0.9cm, minimum width=2.5cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			ctl/.style={-{Stealth[length=2mm]}, thick, dashed},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\node[store] (ram) at (0,0) {Audio memory\\(samples)};
+		\node[block] (pcm) at (3.4,0) {Sample\\playback};
+		\node[block] (env) at (6.6,0) {Envelope\\and volume};
+		\node[block] (pan) at (9.8,1.2) {Pan\\(dry voice)};
+		\node[block] (flt) at (9.8,-1.2) {Shared filter\\(filtered voice)};
+		\node[block] (acc) at (13.0,0) {Left and right\\accumulators};
+		\node[block] (mst) at (13.0,-2.2) {Master\\volume};
+		\node[block] (out) at (13.0,-4.2) {Serial\\output};
+		\node[block] (mod) at (6.6,2.6) {Modulation\\(voice in modulation mode)};
+		\draw[flow] (ram) -- (pcm);
+		\draw[flow] (pcm) -- (env);
+		\draw[flow] (env.east) -- ++(0.5,0) |- (pan.west);
+		\draw[flow] (env.east) -- ++(0.5,0) |- (flt.west);
+		\draw[flow] (pan.east) -| ([xshift=-0.5cm]acc.north);
+		\draw[flow] (flt.east) -| ([xshift=0.5cm]acc.south);
+		\draw[flow] (acc) -- (mst);
+		\draw[flow] (mst) -- (out);
+		\draw[ctl] (mod.east) -| node[above, near start, note]{pitch, volume, pan, filter, master} (acc.north east);
+	\end{tikzpicture}
+	\caption{The Voice Signal Path}
+	\label{fig:signal-path}
+\end{figure}
+
+\section{Block Diagrams}
+\label{sec:block-diagrams}
+
+Figure~\ref{fig:block-system} shows the device as the CPU sees it: a register block and a window onto audio memory
+behind one bus interface, a serial output, and one interrupt line. The audio memory is not on the CPU's bus. It is a
+separate memory behind the device, and the device alone controls it; the CPU reaches it only through the device. The
+device and its memory are described in Chapters~\ref{ch:package} and~\ref{ch:memory-map}.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.88, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\small},
+			mem/.style={draw, fill=white, align=center, font=\footnotesize, minimum height=0.9cm, minimum width=3.4cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\node[block, minimum width=2.2cm, minimum height=3.0cm] (cpu) at (0,0) {SIRC-1\\CPU};
+		\node[block, minimum width=3.4cm, minimum height=3.0cm] (bus) at (4.4,0) {Bus interface\\and address\\decode};
+		\node[mem] (m1) at (9.0,0.9) {Registers\\\texttt{0x0000}--\texttt{0x006F}};
+		\node[mem] (m2) at (9.0,-0.9) {Audio memory window\\\texttt{0x8000}--\texttt{0xFFFF}};
+		\node[block, minimum width=3.0cm, minimum height=3.0cm] (snd) at (13.2,0) {Sound\\processor};
+		\node[mem] (sram) at (13.2,-3.4) {Audio memory\\32,768 words};
+		\node[block, minimum width=3.0cm] (dac) at (13.2,3.4) {Serial output\\to converter};
+		\draw[flow, <->] (cpu) -- node[above, note]{address, data} (bus);
+		\draw[flow, <->] (bus.east) -- ++(0.6,0) |- (m1.west);
+		\draw[flow, <->] (bus.east) -- ++(0.6,0) |- (m2.west);
+		\draw[flow, <->] (m1.east) -- (m1.east -| snd.west);
+		\draw[flow, <->] (m2.east) -- (m2.east -| snd.west);
+		\draw[flow, <->] (snd) -- (sram);
+		\draw[flow] (snd) -- (dac);
+		\draw[flow] (snd.north west) -- ++(0,0.9) -| node[above, near start, note]{\activelow{IRQ3}} (cpu.north);
+	\end{tikzpicture}
+	\caption{The Sound Device in the System}
+	\label{fig:block-system}
+\end{figure}
+
+Figure~\ref{fig:block-spu} shows what is inside. One slot scheduler decides, in a fixed pattern, whether the audio
+memory is used by the sound processor or by the CPU's window (Chapter~\ref{ch:timing}). The sound processor uses its
+slots for sample reads first, and for the sequencers' instruction, instrument and pitch-table reads with what is left.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.86, transform shape,
+			block/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\footnotesize, minimum height=0.95cm, minimum width=3.1cm},
+			store/.style={draw, fill=white, align=center, font=\footnotesize, minimum height=0.95cm, minimum width=3.1cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			ctl/.style={-{Stealth[length=2mm]}, thick, dashed},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\node[block] (regs) at (0,6.6) {Register file\\(read by every block)};
+		\node[block] (tick) at (4.4,6.6) {Tick generator\\\texttt{SEQ\_PERIOD}};
+		\node[block] (seq) at (8.8,6.6) {Six sequencers\\one shared decoder};
+		\node[store] (sram) at (0,3.2) {Audio memory};
+		\node[block, minimum height=3.4cm] (arb) at (4.4,3.2) {Slot scheduler\\\scriptsize sound processor 1 slot,\\\scriptsize CPU window 3 slots};
+		\node[block] (pcm) at (8.8,4.4) {Six sample\\players};
+		\node[block] (env) at (8.8,2.4) {Six envelope\\generators};
+		\node[block] (mod) at (8.8,0.4) {Modulation\\routing};
+		\node[block] (mix) at (13.2,4.4) {Mixer\\gain, pan};
+		\node[block] (flt) at (13.2,2.4) {Shared filter};
+		\node[block] (mst) at (13.2,0.4) {Master volume\\and limiter};
+		\node[block] (ser) at (13.2,-1.6) {Serial output};
+		\node[block] (cpu) at (0,0.4) {CPU window\\and registers};
+		\draw[ctl] (tick) -- (seq);
+		\draw[flow, <->] (sram) -- (arb);
+		\draw[flow, <->] (cpu) |- (arb.south west);
+		\draw[flow] (arb.east |- pcm) -- (pcm.west);
+		\draw[flow] (seq.south) -- ++(0,-0.4) -| (arb.north east);
+		\draw[flow] (pcm.south) -- (env.north);
+		\draw[flow] (env.east) -- ++(0.5,0) |- (mix.west);
+		\draw[flow] (env.east) -- ++(0.5,0) |- (flt.west);
+		\draw[flow] (mix.south) -- (flt.north);
+		\draw[flow] (flt.south) -- (mst.north);
+		\draw[flow] (mst.south) -- (ser.north);
+		\draw[ctl] (mod.east) -- (mod.east -| mst.west);
+	\end{tikzpicture}
+	\caption{Blocks of the Sound Processor}
+	\label{fig:block-spu}
+\end{figure}
+
+\section{Conventions}
+
+\begin{itemize}
+	\item Register and window addresses are in 16-bit words, as on the CPU. A word address is an offset from the base of the
+	      device's segment unless stated otherwise. Sample data and some fields of the instrument table are byte offsets into
+	      audio memory; each is marked where it occurs (Section~\ref{sec:byte-offsets}).
+	\item Bit 0 is the least significant bit. Bit diagrams draw the most significant bit on the left.
+	\item Hexadecimal values carry a \texttt{0x} prefix and upper case digits.
+	\item Ranges of values and addresses use an en dash: \texttt{0x0000}--\texttt{0x00FF}.
+	\item \textbf{Reserved} fields and registers are set aside by the architecture. Software must not rely on what they
+	      read, and should write zero to a reserved field it does not otherwise use.
+	\item A value that the design has not fixed is \textbf{not yet specified}. It is not undefined, and no value is implied.
+	\item Fixed-point numbers are written $m.n$: $m$ integer bits and $n$ fraction bits. The position and step of a voice are
+	      16.16 values, so their integer part is the high 16 bits.
+\end{itemize}

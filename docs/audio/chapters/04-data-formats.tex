@@ -1,0 +1,151 @@
+\chapter{Data Formats}
+\label{ch:formats}
+
+This chapter defines the structures that live in audio memory and the numbers that the voices compute with. The
+sequencer instruction formats are in Chapter~\ref{ch:sequencer}.
+
+\section{Sample Data}
+\label{sec:sample-data}
+
+A sample is a run of signed 8-bit values in two's complement, one byte for each sample point, from $-128$ to $+127$.
+The bytes lie in audio memory in the order of Section~\ref{sec:byte-order}: the byte at an even offset is the high byte
+of its word. A sample may start at any byte offset, even or odd, and has any length from 1 to 65,535 bytes. A voice
+plays a sample by nearest-sample lookup: it reads the byte the position selects and does not interpolate between bytes
+(Chapter~\ref{ch:playback}). A sample that is played back more than one sample point per output sample skips bytes, and
+one that is played back less than one per output sample repeats them.
+
+\section{The Instrument Table}
+\label{sec:instrument-table}
+
+An \emph{instrument} describes how one sound is played: which bytes, how they loop, how the pitch is found, and how the
+envelope behaves. Instruments are consecutive records in audio memory. The record for instrument $i$ is eight words
+long and starts at the window address \texttt{INSTR\_BASE} $+ 8i$. An instrument number is 8 bits, so a table holds up
+to 256 instruments, which is 2048 words.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{8cm}}
+		\toprule
+		\textbf{Word} & \textbf{Field}                     & \textbf{Contents}                                               \\
+		\midrule
+		0             & \texttt{SAMPLE\_START}             & Byte offset of the first byte of the sample                     \\
+		1             & \texttt{SAMPLE\_LENGTH}            & Length of the sample in bytes                                   \\
+		2             & \texttt{LOOP\_START}               & Loop start, as a byte offset from the start of the sample       \\
+		3             & \texttt{SPIT\_ADDRESS}             & Byte offset of the instrument's pitch table; a multiple of four \\
+		4             & \texttt{ATTACK}, \texttt{DECAY}    & Bits 15--8 are the attack step, bits 7--0 the decay step        \\
+		5             & \texttt{SUSTAIN}, \texttt{RELEASE} & Bits 15--8 are the sustain level, bits 7--0 the release step    \\
+		6             & Flags                              & Bit 15 is \texttt{LOOP\_ENABLE}; the other bits are reserved    \\
+		7             & ---                                & Reserved                                                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instrument Record}
+	\label{tab:instrument}
+\end{table}
+
+\begin{itemize}
+	\item \texttt{SAMPLE\_LENGTH} must not be 0; the result is architecturally undefined.
+	\item \texttt{LOOP\_START} must be less than \texttt{SAMPLE\_LENGTH} when \texttt{LOOP\_ENABLE} is set; otherwise the
+	      result is architecturally undefined. With \texttt{LOOP\_ENABLE} clear it is not used.
+	\item The envelope fields are described in Chapter~\ref{ch:envelope}, and the loop behaviour in Section~\ref{sec:looping}.
+	\item Sample addresses are byte offsets and wrap naturally modulo 65,536: a sample that runs past offset \texttt{0xFFFF}
+	      continues from offset 0.
+\end{itemize}
+
+\section{The Pitch Table}
+\label{sec:pitch-table}
+
+Every instrument names a \emph{pitch table}, its \texttt{SPIT}, which holds the pitch of the instrument's twelve notes
+of one octave. A pitch table is 12 entries of 32 bits, 24 words in all. Each entry is an unsigned 16.16 number: the
+step, in sample bytes per output sample, that plays the sample at the pitch of that note. An entry is two words, the
+high word first, so entry $k$ of a table at byte offset $T$ is at $T + 4k$, and the table must start at a multiple of
+four.
+
+The entries are in semitone order, starting with the lowest note, note 0 (Section~\ref{sec:note-numbers}).
+Table~\ref{tab:pitch-table} shows a table for a one-cycle waveform of 64 bytes, built so that note 48 sounds A4 at
+440~Hz.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrl}
+		\toprule
+		\textbf{Entry} & \textbf{Note} & \textbf{Hz} & \textbf{Value (16.16)} \\
+		\midrule
+		0              & A0            & 27.50       & \texttt{0x00000E19}    \\
+		1              & A$\sharp$0    & 29.14       & \texttt{0x00000EF0}    \\
+		2              & B0            & 30.87       & \texttt{0x00000FD3}    \\
+		3              & C1            & 32.70       & \texttt{0x000010C4}    \\
+		4              & C$\sharp$1    & 34.65       & \texttt{0x000011C3}    \\
+		5              & D1            & 36.71       & \texttt{0x000012D1}    \\
+		6              & D$\sharp$1    & 38.89       & \texttt{0x000013F0}    \\
+		7              & E1            & 41.20       & \texttt{0x0000151F}    \\
+		8              & F1            & 43.65       & \texttt{0x00001661}    \\
+		9              & F$\sharp$1    & 46.25       & \texttt{0x000017B6}    \\
+		10             & G1            & 49.00       & \texttt{0x0000191E}    \\
+		11             & G$\sharp$1    & 51.91       & \texttt{0x00001A9D}    \\
+		\bottomrule
+	\end{tabular}
+	\caption{A Pitch Table for a 64-Byte Waveform}
+	\label{tab:pitch-table}
+\end{table}
+
+An entry is the pitch in Hz times the length of one cycle of the waveform in bytes, divided by the output sample rate
+of 31,960.226~Hz, times 65,536. A longer waveform needs larger entries: a 256-byte cycle needs entries four times as
+large. The table belongs to the instrument, so a sample recorded at any rate is brought to the right pitch by its own
+table, and different instruments can share a table.
+
+\subsection{Note Numbers}
+\label{sec:note-numbers}
+
+A note is a number from 0 to 119: ten octaves of twelve semitones. The octave is the note number divided by 12, and the
+semitone is the remainder. The step for a note is the table entry for the semitone, shifted left by the octave:
+
+\begin{equation*}
+	\mathrm{SPI} = \mathrm{entry}[n \bmod 12] \ll \lfloor n / 12 \rfloor
+\end{equation*}
+
+\noindent The result is limited to 32 bits. Each octave doubles the step, so an entry must be less than $2^{23}$ for
+note 119 not to be limited. A note number above 119 is invalid: the device ignores the note.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllllllllll}
+		\toprule
+		\textbf{Octave}         & 0 & 1  & 2  & 3  & 4  & 5  & 6  & 7  & 8  & 9   \\
+		\midrule
+		\textbf{First note (A)} & 0 & 12 & 24 & 36 & 48 & 60 & 72 & 84 & 96 & 108 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Note Numbers of the A in Each Octave}
+	\label{tab:note-numbers}
+\end{table}
+
+With the pitch table of Table~\ref{tab:pitch-table}, the notes above sound as named: note 48 is A4 at 440~Hz and note
+60 is A5 at 880~Hz. The device attaches no pitch to a note number; the table does.
+
+\section{Number Formats}
+\label{sec:number-formats}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{7.2cm}}
+		\toprule
+		\textbf{Quantity}              & \textbf{Format} & \textbf{Notes}                                                       \\
+		\midrule
+		Sample point                   & Signed 8-bit    & Expanded to 16 bits by placing it in the high byte                   \\
+		Sample position (\texttt{SPA}) & Unsigned 16.16  & The integer part is the byte offset from the start of the sample     \\
+		Sample step (\texttt{SPI})     & Unsigned 16.16  & Sample bytes per output sample                                       \\
+		Envelope level                 & Unsigned 12-bit & 0 to 4095                                                            \\
+		Voice gain                     & Unsigned 12-bit & Envelope times volume (Section~\ref{sec:voice-gain})                 \\
+		Volume, pan, master volume     & Unsigned 8-bit  & Scale by the value divided by 256                                    \\
+		Mix accumulator                & Signed 20-bit   & One for each output channel                                          \\
+		Output sample                  & Signed 16-bit   & Limited, never wrapped                                               \\
+		Filter state                   & Signed 24-bit   & Four fraction bits; limited, never wrapped (Chapter~\ref{ch:filter}) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Number Formats}
+	\label{tab:number-formats}
+\end{table}
+
+Every sum in the mixer and the filter is limited to the range of its register and never wraps around. Where this manual
+says a value is \emph{limited}, a result above the maximum is replaced by the maximum and a result below the minimum by
+the minimum.

@@ -1,0 +1,82 @@
+\chapter{Mixer and Output}
+\label{ch:mixer}
+
+The mixer turns the sample bytes of the voices into the two output channels. For every output sample it scales each
+voice by its envelope and volume, divides it between the channels by its pan, adds in the filter's output, applies the
+master volume, and limits the result to 16 bits. All the arithmetic is integer. A right shift of a negative number
+rounds towards minus infinity, and every sum is limited and never wraps (Section~\ref{sec:number-formats}).
+
+\section{Voice Gain}
+\label{sec:voice-gain}
+
+The envelope and the voice's volume are combined into one gain, so that a voice needs one multiplication and not two.
+The gain is a 12-bit number:
+
+\begin{equation*}
+	G = (\mathrm{level} \times \mathrm{volume}) \gg 8
+\end{equation*}
+
+\noindent where \emph{level} is the 12-bit envelope level and \emph{volume} is the volume in force, 0 to 255 (a volume that a
+modulation voice steers is limited to this range). The sample byte is expanded to 16 bits by placing it in the high byte, and
+the scaled sample is:
+
+\begin{equation*}
+	\mathrm{scaled} = ((\mathrm{sample} \ll 8) \times G) \gg 12
+\end{equation*}
+
+The largest gain is $(4095 \times 255) \gg 8 = 4079$, which is 0.9958 of unity, 0.036 dB below it. A voice at full
+volume and full envelope therefore plays at 99.6\% of the sample's own level: a byte of $+127$ gives $+32{,}377$ and a
+byte of $-128$ gives $-32{,}632$. The gain is calculated again whenever the envelope level, the volume register or a
+volume modulation changes, and not for every output sample.
+
+\section{Panning and Mixing}
+\label{sec:mixing}
+
+A dry voice is divided between the two channels by its pan, an 8-bit number. The device finds the right channel's share
+and takes the rest as the left:
+
+\begin{equation*}
+	\mathrm{right} = (\mathrm{scaled} \times \mathrm{pan}) \gg 8, \qquad \mathrm{left} = \mathrm{scaled} - \mathrm{right}
+\end{equation*}
+
+The two shares add up to the scaled sample, so the pan moves the sound between the channels and does not change its
+total. A pan of 0 puts all of the voice in the left channel. A pan of 128 puts half in each, which is 6 dB below the
+sample in each channel. A pan of 255 puts 255/256 in the right channel and the remaining 1/256 in the left, 48 dB
+below, so the right-hand extreme is not quite a hard pan.
+
+Each channel has an accumulator, a signed 20-bit number. The shares of all the dry voices and of the filter are added
+into the two accumulators. Six voices at full scale add to less than the range of the accumulator, so a sum of voices
+cannot overflow it, but the master volume and the final limit still apply.
+
+\section{The Filter Bus}
+
+A voice whose \texttt{FILTER\_EN} bit is set does not go to the accumulators. Its scaled sample is added to a single
+sum, the filter input, which is a mono signal and is not panned. The filter's output is added to the accumulators with
+its own volume and pan (Section~\ref{sec:filter-output}). A voice in modulation mode contributes to neither the
+accumulators nor the filter input. Chapter~\ref{ch:filter} describes the filter.
+
+\section{Master Volume and Limiting}
+\label{sec:master-volume}
+
+After the filter's output has been added, each accumulator is scaled by the master volume:
+
+\begin{equation*}
+	\mathrm{output} = (\mathrm{accumulator} \times \mathrm{master}) \gg 8
+\end{equation*}
+
+\noindent and limited to the signed 16-bit range, $-32{,}768$ to $+32{,}767$. A mix that is louder than that is
+clipped, not wrapped. The master volume is the 8-bit value in \texttt{MASTER\_VOL}, adjusted by any modulation that
+steers it (Chapter~\ref{ch:modulation}). At its reset value of 255, it passes 255/256 of the mix.
+
+The limit is the only protection against a loud mix. There is no automatic gain control: six full-scale voices sent to
+one channel clip.
+
+\section{Output}
+
+The two limited values are sent to the converter in the serial format of Chapter~\ref{ch:signal-timing}. While
+\texttt{AUDIO\_EN} is 0 the device sends zero in both channels instead. The computation goes on as before, so the
+voices are in the right place when the output is enabled.
+
+An output sample is calculated from the sample bytes read during the previous sample period and sent in the one that
+follows, so there is a delay of three sample periods, about 94 $\mu$s, between a voice reading a byte and its effect at
+the converter (Chapter~\ref{ch:timing}).

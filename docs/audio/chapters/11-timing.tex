@@ -1,0 +1,139 @@
+\chapter{Timing}
+\label{ch:timing}
+
+This chapter gives the timing inside the device: the clock, the sample period, the pattern in which the audio memory is
+shared, and the deadlines that the pattern sets. Chapter~\ref{ch:signal-timing} gives the timing of the pins.
+
+\section{Clocks and Periods}
+
+The system oscillator of an NTSC system runs at 21,477,272 Hz. The device is clocked at half that rate by
+\texttt{CLKI}, 10,738,636 Hz, a period of 93.1 ns. Everything the device does is a whole number of \texttt{CLKI}
+cycles.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrl}
+		\toprule
+		\textbf{Quantity}              & \textbf{Value}               & \textbf{Derivation}                           \\
+		\midrule
+		\texttt{CLKI} period           & 93.1 ns                      & 2 oscillator periods                          \\
+		Output sample period           & 336 cycles, 31.29 $\mu$s     & 672 oscillator periods                        \\
+		Output sample rate             & 31,960.226 Hz                & \texttt{CLKI} / 336                           \\
+		Envelope update interval       & 64 samples, 2.002 ms         & 21,504 cycles; 499.4 updates a second         \\
+		Serial bit clock \texttt{BCLK} & 7 cycles, 1.534 MHz          & \texttt{CLKI} / 7; 48 bits in a sample period \\
+		Memory transaction             & 2 cycles, 186 ns             & One read or one write                         \\
+		Sequencer tick                 & \texttt{SEQ\_PERIOD} samples & Chosen by the program                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{Clocks and Periods}
+	\label{tab:periods}
+\end{table}
+
+The output sample period is the device's hard deadline. Each period the device must read the next sample byte of every
+sounding voice and produce the next stereo output sample. The sequencers have a softer one: their work may run over
+several sample periods, but it must finish before the next tick (Section~\ref{sec:seq-deadlines}). The sample generator
+and the memory schedule run continuously, whether the output is muted or not.
+
+\section{The Audio Memory Schedule}
+\label{sec:memory-schedule}
+
+The audio memory has two users, the sound processor and the CPU's window, and the device never makes them compete. It
+divides time into a fixed pattern of eight cycles, made of four slots of two cycles. One slot belongs to the sound
+processor and three to the CPU:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Slot} & \textbf{Cycles of the pattern} & \textbf{Owner}  \\
+		\midrule
+		0             & 0--1                           & Sound processor \\
+		1             & 2--3                           & CPU window      \\
+		2             & 4--5                           & CPU window      \\
+		3             & 6--7                           & CPU window      \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Audio Memory Schedule}
+	\label{tab:memory-schedule}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			slot/.style={draw, minimum height=0.8cm, minimum width=3.0cm, align=center, font=\footnotesize},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\foreach \i/\label/\fillc in {0/Sound processor/sirclightgray, 1/CPU window/white, 2/CPU window/white, 3/CPU window/white} {
+				\node[slot, fill=\fillc] at (\i*3.0+1.5,0) {\label};
+				\node[note] at (\i*3.0+1.5,-0.65) {cycles \number\numexpr\i*2\relax--\number\numexpr\i*2+1\relax};
+			}
+		\draw[thick] (0,-1.1) -- (12.0,-1.1);
+		\node[note] at (6.0,-1.4) {one pattern: 8 cycles, repeated 42 times in each 336-cycle sample period};
+	\end{tikzpicture}
+	\caption{One Pattern of the Memory Schedule}
+	\label{fig:memory-schedule}
+\end{figure}
+
+A sample period of 336 cycles holds exactly 42 patterns, so it holds 42 sound-processor slots and 126 CPU slots, in the
+same places in every sample period. No slot can be borrowed: the sound processor never takes a CPU slot, and the CPU
+never takes a sound-processor slot, whether or not the owner has anything to do. A slot that its owner does not use is
+left idle.
+
+\subsection{CPU Slots}
+\label{sec:cpu-slots}
+
+A CPU access to the audio memory is held until the next CPU slot, takes two cycles, and is then acknowledged. It
+completes between two and five \texttt{CLKI} cycles after the cycle in which it was made: two if it arrives at the
+start of a CPU slot and five if it just misses one. The time does not depend on the voices, the sequencers or the
+filter. The CPU window can move 126 words, 252 bytes, in each sample period, which is 4.03 million words a second. How
+fast a block move actually runs depends also on the bus cycle of the CPU (\hwmanual{}). Register accesses use no slot
+and are never delayed.
+
+\subsection{Sound Processor Slots}
+\label{sec:spu-slots}
+
+The sound processor uses its 42 slots for each sample period as follows, in this order of priority:
+
+\begin{enumerate}
+	\item \textbf{Sample reads.} A voice that is playing needs one word at most in each sample period, since it uses one
+	      byte. Six voices need six slots at most. The reads are made first in the period.
+	\item \textbf{Sequencer reads.} The slots that remain, at least 36 in each sample period, serve the sequencers. An
+	      instruction takes one read. A note that loads a new instrument takes up to nine more: seven for the instrument
+	      record and two for the pitch table entry; a note on the instrument the voice already has takes two.
+\end{enumerate}
+
+The voices share the sequencer slots in turn, so no voice waits for all of another's.
+
+\section{Deadlines and Overrun}
+\label{sec:deadlines}
+
+The device sets the \texttt{MEM\_OVERRUN} bit of \texttt{STATUS} when it misses a deadline:
+
+\begin{itemize}
+	\item A sample read is not complete when the sample period ends. The slots set aside for sample reads make this impossible
+	      while the device is working within its limits.
+	\item The sequencer work started by a tick is not complete when the next tick comes (Section~\ref{sec:seq-deadlines}).
+\end{itemize}
+
+Work that takes longer than one sample period is not a missed deadline in itself. The bit is held until the program
+clears it through \texttt{STATUSCLR}. An overrun never takes a slot from the CPU, and it never stops the voices: sample
+reads go on, and a voice whose tick was missed is simply started again at the next one.
+
+\subsection{Choosing a Tick}
+\label{sec:choosing-tick}
+
+How short a tick can be depends on how much the sequences do in each. A voice executes at most eight instructions in a
+tick. In the worst case, four of them are notes on instruments different from the one the voice has loaded, and the
+voice reads $8 + 4 \times 9 = 44$ words. Six voices doing that need 264 reads, and at least 36 slots in each sample
+period supply them in 8 sample periods, so a tick shorter than 8 sample periods (about 0.25 ms) can overrun in this
+worst case. A more usual voice reads 13 words in a tick (\texttt{INST}, \texttt{FINE}, \texttt{NOTE} and
+\texttt{WAIT}), and six such voices fit in a tick of 3 sample periods. An ordinary tick of 50 to 200 ticks a second
+leaves nearly all of the slots idle.
+
+\section{Latency}
+
+A voice's sample byte is read during one sample period, scaled and mixed during the next, and sent to the converter
+during the one after. The delay from a read to its sound at the output is three sample periods, 94 $\mu$s. A note takes
+effect after it has read its instrument and pitch entry, which takes a sample period or two, so a note sounds within
+about five sample periods, 0.16 ms, of the sequencer reaching it, and a note on a voice that already has its instrument
+sooner. A write to a voice register, such as volume, is seen from the next sample period.

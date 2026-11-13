@@ -1,0 +1,130 @@
+\chapter{Package and Pinout}
+\label{ch:package}
+
+The sound device is a single integrated circuit with a memory of its own attached. The sound processor, the registers
+and the slot scheduler are on the one piece of silicon. The audio memory is a separate static memory that the device
+alone controls, and it is not on the CPU's bus. The signals that leave the package are therefore the bus, one interrupt
+output, the clock and reset inputs, the memory interface, and the serial output for the converter. This chapter gives
+the groups of signals and the meaning of each. Chapter~\ref{ch:signal-timing} gives the timing of the signals.
+
+\section{Package}
+
+The package and the pin numbers are not yet specified. The device has 77 signal pins, listed in
+Table~\ref{tab:signals}, in addition to its power and ground pins, whose number is also not yet specified.
+
+\section{Signal Groups}
+
+Figure~\ref{fig:signal-groups} shows the signals by group. Three groups face three neighbours: the CPU's bus, the audio
+memory, and the converter.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.9, transform shape,
+			group/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\small, minimum width=3.3cm, minimum height=1.5cm},
+			chip/.style={draw, thick, fill=gray!8, align=center, font=\bfseries, minimum width=3.0cm, minimum height=5.6cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			note/.style={font=\scriptsize, text=sircgray, align=center}
+		]
+		\node[chip] (chip) at (0,0) {SIRCAS};
+		\node[group] (bus) at (-6.2,1.9) {Bus interface\\A0--A15, D0--D15\\\activelow{CS}, \activelow{BAS}, BRW,\\\activelow{BACK}};
+		\node[group] (clk) at (-6.2,-0.2) {Clock and reset\\CLKI, \activelow{RST}};
+		\node[group] (irq) at (-6.2,-2.1) {Interrupt\\\activelow{IRQ3}};
+		\node[group] (mem) at (6.2,1.6) {Audio memory interface\\MA0--MA14, MD0--MD15\\\activelow{MCE}, \activelow{MOE}, \activelow{MWE}};
+		\node[group] (dac) at (6.2,-1.9) {Converter interface\\BCLK, WS, SD, SCK};
+		\draw[flow, <->] (bus.east) -- (bus.east -| chip.west);
+		\draw[flow, <-] (clk.east) -- (clk.east -| chip.west);
+		\draw[flow] (chip.west |- irq) -- (irq.east);
+		\draw[flow, <->] (chip.east |- mem) -- (mem.west);
+		\draw[flow] (chip.east |- dac) -- (dac.west);
+	\end{tikzpicture}
+	\caption{SIRCAS Signal Groups}
+	\label{fig:signal-groups}
+\end{figure}
+
+\section{Signal Descriptions}
+
+Table~\ref{tab:signals} lists the direction and sense of each signal. Active-low signals carry a bar over the name;
+they are asserted when low. Address, data and converter signals are active high. An output marked \emph{open drain} can
+only pull its line low; the system supplies a pull-up, and several devices may share the line.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llllX}
+		\toprule
+		\textbf{Signal}  & \textbf{Count} & \textbf{Direction} & \textbf{Output type} & \textbf{Function}                                              \\
+		\midrule
+		CLKI             & 1              & Input              &                      & Rising edge advances the device one cycle                      \\
+		\activelow{RST}  & 1              & Input              &                      & Resets the device                                              \\
+		\activelow{CS}   & 1              & Input              &                      & Selects the device for a bus cycle                             \\
+		\activelow{BAS}  & 1              & Input              &                      & Marks a bus cycle                                              \\
+		BRW              & 1              & Input              &                      & High for a read, low for a write                               \\
+		\activelow{BACK} & 1              & Output             & Open drain           & Completes the bus cycle                                        \\
+		A0--A15          & 16             & Input              &                      & Word offset in the device segment                              \\
+		D0--D15          & 16             & Bidirectional      & Three-state          & Data                                                           \\
+		\activelow{IRQ3} & 1              & Output             & Open drain           & A completed sequence is waiting (Section~\ref{sec:interrupts}) \\
+		MA0--MA14        & 15             & Output             &                      & Word address of the audio memory                               \\
+		MD0--MD15        & 16             & Bidirectional      & Three-state          & Audio memory data                                              \\
+		\activelow{MCE}  & 1              & Output             &                      & Audio memory chip enable                                       \\
+		\activelow{MOE}  & 1              & Output             &                      & Audio memory output enable                                     \\
+		\activelow{MWE}  & 1              & Output             &                      & Audio memory write enable                                      \\
+		BCLK             & 1              & Output             &                      & Serial bit clock to the converter                              \\
+		WS               & 1              & Output             &                      & Serial word select: low for left, high for right               \\
+		SD               & 1              & Output             &                      & Serial data                                                    \\
+		SCK              & 1              & Output             &                      & Converter system clock                                         \\
+		\bottomrule
+	\end{tabularx}
+	\caption{SIRCAS Signals}
+	\label{tab:signals}
+\end{table}
+
+\subsection{Clock Input (CLKI)}
+
+\textbf{Direction:} Input. The device is clocked by \texttt{CLKI}, a continuous clock of 10,738,636 Hz in an NTSC
+system: half the frequency of the 21,477,272 Hz system oscillator. Every interval in this manual that is measured in
+cycles is a count of \texttt{CLKI} cycles. The sample period is 336 cycles (Chapter~\ref{ch:timing}). A PAL system
+frequency is not yet specified.
+
+\subsection{Reset Input (RST)}
+
+\textbf{Direction:} Input. \textbf{Signal Type:} Active Low. While \activelow{RST} is asserted
+the device holds every register in its reset state (Section~\ref{sec:reset}). The audio memory is not cleared: its
+contents are undefined after power-up and after reset.
+
+\subsection{Bus Signals}
+
+\activelow{CS}, \activelow{BAS}, BRW, A0--A15, D0--D15 and \activelow{BACK} are the peripheral interface of the
+SIRC-1, defined in the \hwmanual{}. A cycle is addressed to the device when \activelow{CS} and \activelow{BAS} are both
+asserted. The address is a word offset in the device's 65,536-word segment (Chapter~\ref{ch:memory-map}). The device
+asserts \activelow{BACK} to complete the cycle. Register accesses are completed without delay. An access to the audio
+memory window is completed when the device has made it, which takes between two and five \texttt{CLKI} cycles
+(Section~\ref{sec:cpu-slots}).
+
+\subsection{Interrupt Output (IRQ3)}
+\label{sec:pin-irq3}
+
+\textbf{Direction:} Output. \textbf{Signal Type:} Active Low, open drain. The device holds \activelow{IRQ3} asserted
+for as long as at least one sequence has completed whose interrupt is enabled (Section~\ref{sec:interrupts}). The
+signal is level-sensitive. It is released when the program has acknowledged every enabled completion.
+
+\subsection{Audio Memory Interface (MA, MD, MCE, MOE, MWE)}
+\label{sec:memory-interface}
+
+The audio memory is 32,768 words of 16 bits, so it has a 15-bit address and a 16-bit data bus. It may be built from two
+32,768 by 8 bit memories used side by side. The memory interface belongs to the sound device alone: the CPU's bus and
+the memory's bus are separate, and the device is the only user of the memory. The device makes every access, both its
+own and the CPU's (Section~\ref{sec:cpu-slots}), in a fixed pattern of slots, so the CPU is never in competition with
+the sound processor for the memory.
+
+Every memory transaction, a read or a write, occupies two \texttt{CLKI} cycles, which is 186 ns. The memory must
+therefore complete an access within two cycles. The electrical details of the interface, the set-up and hold times of
+the address and data and the timing of \activelow{MCE}, \activelow{MOE} and \activelow{MWE}, are not yet specified.
+
+\subsection{Converter Interface (BCLK, WS, SD, SCK)}
+\label{sec:converter-interface}
+
+The device is the master of the serial interface to the converter. It sends the two stereo channels time-multiplexed on
+\texttt{SD}, with \texttt{WS} low for the left channel and high for the right, and \texttt{BCLK} clocking the bits
+(Chapter~\ref{ch:signal-timing}). \texttt{SCK} is a clock for converters that need a system clock in addition to the
+bit clock; its frequency and phase relation to \texttt{BCLK} are not yet specified.

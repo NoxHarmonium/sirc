@@ -225,9 +225,20 @@ What this means for the draft:
 * The sample rate (31.96 kHz) is not oversampled, so the board needs a steep analogue anti-image filter after the DAC. That is a
   board matter, not a chip matter.
 
+## The manual
+
+The manual is in this directory (`main.tex`, `chapters/`): 14 chapters and a quick reference, built with `make`. It follows the SIRCADA
+manual's structure and voice and uses its preamble. It states the behaviour the model implements, including the choices
+in the table above, as the intended behaviour; those choices are proposals until approved. Points the design has not fixed are
+written "not yet specified" and not filled in: the package and pins, the audio memory's electrical interface, `SCK`, the serial
+edge timing and `BCLK` duty cycle, the reset pulse width, the segment of the device, the PAL clock, and the reset values of
+registers not in the reset table.
+
 ## Not done
 
-* No audible output (no host audio backend yet), no WAV export.
+* No live audio. The model renders to WAV (`render_demo`); there is no host audio backend.
 * No SRAM electrical timing (chip enable, output enable, turnaround). Only the schedule is modelled.
+* No converter edge timing, and the `SCK` frequency and phase (against the converter's Figs. 3 and 4) are not settled.
 * No assembly-driven test through the SIRC-1 CPU; the bus path is covered by a scripted master.
-* The manual itself (`docs/audio`, LaTeX chapters) has not been started. The video manual is the template once these questions close.
+* The manual has not had a review pass: no fact-check against the model by chapter, no cold read, and no `make format` run beyond
+  what the build needs. The `docs/video` manual does not yet mention SIRCAS in its manual-set table.

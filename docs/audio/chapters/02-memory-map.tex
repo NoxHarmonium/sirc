@@ -1,0 +1,118 @@
+\chapter{Memory Map and Bus Access}
+\label{ch:memory-map}
+
+\section{The Device Segment}
+
+The sound device occupies one segment of the CPU's address space, 65,536 words long. The segment is chosen by the
+system; the segment that the SIRCUS system uses is not yet specified. This manual gives every address as an offset from
+the base of the segment.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6.5cm}}
+		\toprule
+		\textbf{Offsets}                 & \textbf{Region}     & \textbf{Notes}                                                                    \\
+		\midrule
+		\texttt{0x0000}--\texttt{0x000F} & Global registers    & Offsets \texttt{0x0000}--\texttt{0x000B} are defined (Chapter~\ref{ch:registers}) \\
+		\texttt{0x0010}--\texttt{0x001F} & Voice 0 registers   & Eight registers defined (Section~\ref{sec:voice-registers})                       \\
+		\texttt{0x0020}--\texttt{0x002F} & Voice 1 registers   & As voice 0                                                                        \\
+		\texttt{0x0030}--\texttt{0x003F} & Voice 2 registers   & As voice 0                                                                        \\
+		\texttt{0x0040}--\texttt{0x004F} & Voice 3 registers   & As voice 0                                                                        \\
+		\texttt{0x0050}--\texttt{0x005F} & Voice 4 registers   & As voice 0                                                                        \\
+		\texttt{0x0060}--\texttt{0x006F} & Voice 5 registers   & As voice 0                                                                        \\
+		\texttt{0x0070}--\texttt{0x7FFF} & Reserved            & Reads zero, writes ignored                                                        \\
+		\texttt{0x8000}--\texttt{0xFFFF} & Audio memory window & 32,768 words (Section~\ref{sec:audio-memory})                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Sound Device Memory Map}
+	\label{tab:memory-map}
+\end{table}
+
+The \textbf{registers} control the device. The global registers are at offsets \texttt{0x0000}--\texttt{0x000F}. Each
+of the six voices has a block of 16 registers, at \texttt{0x0010} plus 16 times the voice number. They are described in
+Chapter~\ref{ch:registers}.
+
+\section{The Audio Memory}
+\label{sec:audio-memory}
+
+The audio memory holds everything the voices play and everything that controls them: sample data, the instrument table,
+the pitch tables and the sequences. It is 32,768 words, which is 64 KB. The device does not interpret the memory in any
+fixed layout. Registers and instrument fields hold the addresses of the things they use, and any range of the memory
+may hold any of them.
+
+The CPU reaches the memory through the window at offsets \texttt{0x8000}--\texttt{0xFFFF}. The offset \texttt{0x8000}
+plus $n$ selects word $n$ of the memory. The memory is not on the CPU's bus, and the CPU has no other way to reach it
+(Section~\ref{sec:memory-interface}).
+
+\subsection{Word and Byte Addresses}
+\label{sec:byte-offsets}
+
+Two kinds of address name the same memory, and a field says which it holds:
+
+\begin{itemize}
+	\item A \textbf{window address} is the CPU's word address of a word: \texttt{0x8000} for the first word, \texttt{0xFFFF} for
+	      the last. \texttt{INSTR\_BASE} and \texttt{SEQ\_PC} hold window addresses.
+	\item A \textbf{byte offset} is a count of bytes from the start of the audio memory, \texttt{0x0000}--\texttt{0xFFFF}. The
+	      sample start, the pitch table address and the loop start of an instrument are byte offsets, as are the sample position
+	      of a voice and its length. The byte at offset $b$ is in the word at window address $\texttt{0x8000} + \lfloor b/2
+		      \rfloor$.
+\end{itemize}
+
+The sequencer's \texttt{GOTO} displacement is a count of instruction words (Chapter~\ref{ch:sequencer}).
+
+\subsection{Byte Order}
+\label{sec:byte-order}
+
+A word holds two bytes, and the byte at the even offset is the high byte. For the word \texttt{0x1234}, the byte at an
+even offset is \texttt{0x12} (bits 15--8) and the byte at the next odd offset is \texttt{0x34} (bits 7--0). Sample
+bytes are signed two's-complement values. Multi-byte values in the tables of Chapter~\ref{ch:formats} are stored with
+the high word first.
+
+\section{Access Rules}
+\label{sec:access-rules}
+
+A read of a register, a reserved offset or a word of the window returns the stored value, or zero for a reserved
+offset. A write stores the value, or is ignored at a reserved offset. No register has a side effect on a read. The
+registers that act on a write are described with their registers (Chapter~\ref{ch:registers}).
+
+\begin{itemize}
+	\item \textbf{Registers} are accessed without delay: the device completes the cycle at once. A register access never
+	      waits for the audio memory.
+	\item \textbf{The window} is accessed in the device's memory schedule (Chapter~\ref{ch:timing}). A window access
+	      is held until one of the slots reserved for the CPU comes round, and takes between two and five cycles to
+	      complete, whatever the voices and sequencers are doing.
+	\item \textbf{Playing and the window.} The CPU may read and write the audio memory while the voices play. The sound
+	      processor reads in the first slot of each pattern of four slots and the CPU's window uses the other three, so a
+	      read by the sound processor sees every write by the CPU that completed before its slot began. A program that
+	      rewrites a word a voice is reading must not depend on whether the old or the new value is read for the one sample
+	      in which the two coincide.
+\end{itemize}
+
+At reset the contents of the audio memory are undefined. A program must write every word it uses before it starts a
+voice or a sequence that uses it (Section~\ref{sec:startup}).
+
+\section{Planning an Audio Memory Layout}
+\label{sec:layout}
+
+Nothing fixes where the tables live, so a program chooses. One arrangement puts the instrument table at the start of
+the memory, then the pitch tables, then the sequences, and gives the rest to sample data:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Contents}                       & \textbf{Window addresses}  & \textbf{Size}                     \\
+		\midrule
+		Instrument table (\texttt{INSTR\_BASE}) & \texttt{0x8000} and up     & 8 words (16 bytes) per instrument \\
+		Pitch tables                            & after the instrument table & 24 words (48 bytes) per table     \\
+		Sequences                               & after the pitch tables     & One word per instruction          \\
+		Sample data                             & the rest                   & One byte per sample               \\
+		\bottomrule
+	\end{tabular}
+	\caption{An Example Audio Memory Layout}
+	\label{tab:layout}
+\end{table}
+
+A sample takes one byte per sample point, so the whole memory holds at most about two seconds of sound at the device's
+output rate if it is played at its original pitch with one sample point per output sample. Looping a short waveform
+repeats its bytes, so a looped voice uses very little memory (Chapter~\ref{ch:playback}).

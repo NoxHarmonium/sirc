@@ -1,0 +1,143 @@
+\chapter{Sample Playback}
+\label{ch:playback}
+
+Each of the six voices is an independent player. It holds a position in the sample and a step, reads one byte of the
+sample for every output sample, and adds the step to the position. This chapter describes how a voice starts a note,
+how it plays and loops a sample, and how its pitch is set, adjusted and glided.
+
+\section{Voice State}
+
+A voice keeps these quantities, none of which the CPU can read directly:
+
+\begin{itemize}
+	\item The \textbf{instrument record} of the instrument it last loaded (Section~\ref{sec:instrument-table}).
+	\item The \textbf{position} \texttt{SPA}, a 16.16 number. Its integer part is the byte offset into the sample.
+	\item The \textbf{step} \texttt{SPI}, a 16.16 number: the sample bytes the position advances for each output sample.
+	\item The \textbf{target step}, which the step moves towards when the voice glides (Section~\ref{sec:portamento}).
+	\item The \textbf{envelope level} and phase (Chapter~\ref{ch:envelope}).
+\end{itemize}
+
+\section{Starting a Note}
+\label{sec:note-start}
+
+A note starts when the sequencer executes \texttt{NOTE} or the CPU writes \texttt{COMMAND} with bit 15 set. Both give a
+note number from 0 to 119, and both use the instrument number in the voice's \texttt{INSTR} register. Starting a note
+takes these steps, in order:
+
+\begin{enumerate}
+	\item \textbf{Read the instrument.} If the instrument number differs from the one the voice last loaded, or the voice has
+	      loaded none, the device reads the instrument record: words 0 to 6 of Table~\ref{tab:instrument}. A note on the
+	      instrument the voice has already loaded does not read the record again.
+	\item \textbf{Read the pitch.} The device reads the two words of the pitch table entry for the semitone,
+	      \texttt{SPIT\_ADDRESS} $+ 4 (n \bmod 12)$, and finds the step as in Section~\ref{sec:note-numbers}. The signed
+	      \texttt{FINE} value is added to it (Section~\ref{sec:fine-pitch}).
+	\item \textbf{Apply.} The voice either \emph{retriggers} or \emph{glides}. It glides when \texttt{PORTA\_EN} is set, the
+	      instrument is the one the voice is already playing, and the voice is still sounding, meaning its envelope is not
+	      inactive. A glide changes only the target step. In every other case the voice retriggers: the step and the target
+	      step are both set to the new step, the position is set to 0, the envelope restarts, and the first envelope step is taken
+	      at once (Chapter~\ref{ch:envelope}).
+\end{enumerate}
+
+A change of instrument always retriggers, whether or not portamento is enabled. Reading the instrument and the pitch
+entry takes up to nine reads of audio memory, which are made in the sound processor's memory slots after the sample
+reads (Chapter~\ref{ch:timing}); a note therefore takes effect a little after it is requested, and the CPU is not told
+when. A note that is requested while an earlier one is still being applied is applied after it.
+
+The device reads the instrument record when a voice's instrument changes and not on every note. A program that changes
+the contents of an instrument record that a voice has loaded must start a note on a different instrument on that voice
+before the change is seen.
+
+\section{Playing a Sample}
+\label{sec:playing}
+
+For every output sample, each voice does the following with its position and step:
+
+\begin{enumerate}
+	\item It reads the sample byte at the integer part of the position, relative to \texttt{SAMPLE\_START}, as a signed 8-bit
+	      value. The first byte read after a retrigger is byte 0.
+	\item It adds the step to the position.
+	\item It applies the loop rules of Section~\ref{sec:looping} to the new position.
+\end{enumerate}
+
+The voice does not interpolate: the byte at the integer position is used as it is, and the fraction of the position
+only keeps the pitch accurate over time. A step of 1.0 plays the sample at the output rate. A step of 2.0 plays it an
+octave higher and skips every second byte; a step of 0.5 plays it an octave lower and repeats every byte.
+
+The nearest-sample lookup adds error to the sound that depends on the length of the waveform and not on the pitch. A
+waveform of 64 bytes played this way carries distortion about 24 dB below the signal; a waveform of 256 bytes, about 36
+dB. The error falls by about 6 dB for each doubling of the length, so a long waveform sounds cleaner than a short one.
+Chapter~\ref{ch:programming} gives guidance.
+
+\subsection{Looping}
+\label{sec:looping}
+
+When the integer part of the position reaches \texttt{SAMPLE\_LENGTH} or more:
+
+\begin{itemize}
+	\item With \texttt{LOOP\_ENABLE} set, the device subtracts \texttt{SAMPLE\_LENGTH} $-$ \texttt{LOOP\_START} from the integer
+	      part, once, and keeps the fraction. The overshoot is preserved, so the pitch does not drift. The sample then plays from
+	      \texttt{LOOP\_START} for ever.
+	\item With \texttt{LOOP\_ENABLE} clear, the sample has ended. The voice's output is zero from the next output sample, until a
+	      new note retriggers it. The envelope keeps running, so a voice whose sample has ended is silent, not stopped.
+\end{itemize}
+
+The device subtracts the loop length only once for each output sample. A step that is larger than the loop length
+(\texttt{SAMPLE\_LENGTH} $-$ \texttt{LOOP\_START}) is architecturally undefined. A waveform that holds one cycle and is
+played at any pitch below half the output rate never meets this limit, because its step is less than half of its
+length.
+
+\section{Pitch Adjustment}
+\label{sec:fine-pitch}
+
+The \texttt{FINE} register holds a signed 13-bit value, $-4096$ to $+4095$, that is added to the step as raw 16.16
+units when a note is started. It is added after the octave shift, so a unit is the same size for every note of the
+instrument and not the same fraction of its pitch. Table~\ref{tab:fine-units} shows what that means for the 64-byte
+waveform of Table~\ref{tab:pitch-table}: a unit moves the pitch of a low note by a fraction of a cent that is large and
+of a high note by a fraction that is very small.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rrrr}
+		\toprule
+		\textbf{Note} & \textbf{Step (16.16)} & \textbf{One unit (cents)} & \textbf{$+$4095 units (cents)} \\
+		\midrule
+		0             & 3,609                 & 0.480                     & $+1313$                        \\
+		12            & 7,218                 & 0.240                     & $+778$                         \\
+		24            & 14,436                & 0.120                     & $+432$                         \\
+		48            & 57,744                & 0.030                     & $+119$                         \\
+		96            & 923,904               & 0.0019                    & $+7.7$                         \\
+		119           & 3,488,256             & 0.0005                    & $+2.0$                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Size of a Fine Pitch Unit (64-Byte Waveform)}
+	\label{tab:fine-units}
+\end{table}
+
+A program that detunes by a fixed musical amount across octaves scales the value it writes by the octave, or writes
+\texttt{FINE} before each note.
+
+\section{Portamento}
+\label{sec:portamento}
+
+When a voice glides, its step moves from the current step to the target step, a little at a time, and the pitch slides
+with it. \texttt{PORTA\_RATE} is the size of each move, in raw units of the 16.16 step. The voice makes one move for
+every envelope update, which is once in every 64 output samples, about every 2.0 ms (Chapter~\ref{ch:envelope}). The
+step moves up or down towards the target, and a move that would pass the target stops at it. A rate of zero holds the
+step where it is until another note changes it.
+
+Portamento runs on the voice's own envelope clock, so it needs neither the sequencer nor a particular tick rate: it
+runs when \texttt{SEQ\_PERIOD} is 0, and for a voice the CPU controls directly. It also runs for a voice whose
+\texttt{PORTA\_EN} is clear, if the voice has a target that differs from its step; setting \texttt{PORTA\_EN} only
+decides whether a new note glides or retriggers.
+
+The glide time is the distance between the two steps divided by the rate, times 2.0 ms. The step is linear in
+frequency, so the slide is linear in Hz and not in semitones. The slowest rate, 1, moves the step by one raw unit in
+2.0 ms, so the longest glide between two notes is proportional to the distance between them: an octave up from A0 in
+Table~\ref{tab:pitch-table} is 3,609 units and takes at most 7.2 s. A short glide at a low pitch is limited the other
+way: a semitone up from A0 is 215 units and takes at most 0.43 s.
+
+\section{Stopping a Note}
+
+A stop, whether the sequencer's \texttt{STOP} or a \texttt{COMMAND} with bit 15 clear, starts the voice's envelope
+release. The voice carries on playing its sample under the falling envelope, so the sound dies away and is not cut
+(Chapter~\ref{ch:envelope}). A stop on a voice whose envelope is inactive has no effect.

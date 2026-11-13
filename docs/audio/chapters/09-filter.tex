@@ -1,0 +1,178 @@
+\chapter{The Shared Filter}
+\label{ch:filter}
+
+The device has one filter, shared by all the voices. It is a two-pole resonant filter of the state-variable kind, and
+it can be a low-pass, a band-pass or a high-pass filter. Its input is the sum of the voices whose \texttt{FILTER\_EN}
+bit is set; its output has its own volume and pan, and is mixed with the dry voices (Section~\ref{sec:filter-output}).
+A voice that is filtered is not also heard dry.
+
+\section{Operation}
+
+The filter runs once for every output sample, all the time. It runs when no voice is routed to it, and while the output
+is muted, so its state is always current. There is no register bit that turns it off. A program that does not want the
+filter leaves its voices' \texttt{FILTER\_EN} bits clear.
+
+The filter holds two state values, \emph{low} and \emph{band}. For each output sample, with the input \emph{in}, it
+forms three results in this order:
+
+\begin{align*}
+	\mathrm{low}  & \leftarrow \mathrm{low} + f \times \mathrm{band}               \\
+	\mathrm{high} & \leftarrow \mathrm{in} - \mathrm{low} - q \times \mathrm{band} \\
+	\mathrm{band} & \leftarrow \mathrm{band} + f \times \mathrm{high}
+\end{align*}
+
+\noindent Each line uses the values the lines above it have just produced. The coefficient $f$ comes from the cutoff register
+and $q$ from the resonance register (Sections~\ref{sec:filter-cutoff} and~\ref{sec:filter-resonance}). The output is
+the new \emph{low}, \emph{band} or \emph{high}, as \texttt{FILTER\_CONFIG} selects: low-pass, band-pass or high-pass
+(Table~\ref{tab:reg-filter}).
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.92, transform shape,
+			box/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\footnotesize, minimum height=0.9cm, minimum width=2.1cm},
+			sum/.style={draw, circle, fill=white, font=\footnotesize, inner sep=1pt, minimum size=0.7cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\node (in) at (-1.2,0) {in};
+		\node[sum] (s) at (0.8,0) {$-$};
+		\node[box] (f1) at (3.6,0) {$\times f$};
+		\node[box] (b) at (6.6,0) {band\\integrator};
+		\node[box] (f2) at (10.0,0) {$\times f$};
+		\node[box] (l) at (13.0,0) {low\\integrator};
+		\node[box] (q) at (5.0,-1.7) {$\times q$};
+		\coordinate (bandtap) at (8.3,0);
+		\coordinate (lowtap) at (14.7,0);
+		\draw[flow] (in) -- (s);
+		\draw[flow] (s) -- (f1);
+		\draw[flow] (f1) -- (b);
+		\draw (b) -- (bandtap);
+		\draw[flow] (bandtap) -- (f2);
+		\draw[flow] (f2) -- (l);
+		\draw (l) -- (lowtap);
+		\fill (bandtap) circle (0.06);
+		\fill (lowtap) circle (0.06);
+		\draw (bandtap) -- (8.3,-1.7);
+		\draw[flow] (8.3,-1.7) -- (q.east);
+		\draw (q.west) -- (0.8,-1.7);
+		\draw[flow] (0.8,-1.7) -- (s.south);
+		\draw (lowtap) -- (14.7,-3.0);
+		\draw (14.7,-3.0) -- (1.2,-3.0);
+		\draw[flow] (1.2,-3.0) |- (1.2,-0.5) -- (s.south east);
+		\node[note, above] at (2.2,0.05) {high};
+		\node[note, above] at (8.3,0.05) {band};
+		\node[note, right] at (14.8,0) {low};
+	\end{tikzpicture}
+	\caption{The Filter}
+	\label{fig:filter}
+\end{figure}
+
+\section{Arithmetic}
+
+The filter works on signed 24-bit numbers with four fraction bits: the input sum of the voices' scaled samples is
+multiplied by 16 to enter them, and an output is divided by 16 (with the shift rounding towards minus infinity) and
+limited to 20 bits to leave them. The coefficients $f$ and $q$ are 8-bit numbers divided by 256, so each multiplication
+is a state value times an 8-bit coefficient shifted right by 8. The shift truncates: it rounds towards minus infinity.
+The filter needs three multiplications for each output sample: $f \times \mathrm{band}$, $q \times \mathrm{band}$ and
+$f \times \mathrm{high}$.
+
+Every sum and every state is limited to the 24-bit range and never wraps around. A loud input or a high resonance can
+therefore drive the filter into the limit, and the result is hard-clipped distortion, not a burst of noise. The filter
+does not reduce its gain to avoid this, and it does not remove the small errors its truncation leaves: after a loud
+sound ends, the output settles to within a few output units of zero (at worst about 5), and does not fall further.
+
+\section{Cutoff}
+\label{sec:filter-cutoff}
+
+The cutoff register \texttt{FILTER\_CUTOFF} holds an unsigned 8-bit value $c$, and $f = c / 256$. The frequency of the
+filter's poles, which is its cutoff for a low-pass or a high-pass filter and its centre for a band-pass one, is
+
+\begin{equation*}
+	f_c = \frac{f_s}{\pi} \arcsin\!\left(\frac{f}{2}\right)
+\end{equation*}
+
+\noindent where $f_s$ is the output sample rate of 31,960.226~Hz. The largest value, 255, gives about 5.3~kHz. The frequency is nearly
+proportional to the register: each step is about 20~Hz at the low end, and a little more higher up.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rrr}
+		\toprule
+		\textbf{Register} & \textbf{Frequency (Hz)} & \textbf{Next step up (semitones)} \\
+		\midrule
+		1                 & 19.9                    & 12.0                              \\
+		2                 & 39.7                    & 7.0                               \\
+		4                 & 79.5                    & 3.9                               \\
+		8                 & 159.0                   & 2.0                               \\
+		16                & 318.0                   & 1.05                              \\
+		32                & 636.2                   & 0.53                              \\
+		64                & 1275.0                  & 0.27                              \\
+		128               & 2570.6                  & 0.14                              \\
+		192               & 3910.6                  & 0.09                              \\
+		254               & 5280.9                  & 0.07                              \\
+		255               & 5303.8                  & ---                               \\
+		\bottomrule
+	\end{tabular}
+	\caption{Filter Cutoff Frequencies}
+	\label{tab:filter-cutoff}
+\end{table}
+
+Because the register is linear in frequency, the musical size of a step falls as the cutoff rises: the first step is an
+octave and a step at 2.5~kHz is about a seventh of a semitone. A slow sweep through the low end is therefore heard as
+steps.
+
+A cutoff register value of 0 makes $f$ zero, and then neither of the two lines that change the state of the filter does
+anything: \emph{low} and \emph{band} hold their last values. The low-pass output is a constant, and the high-pass
+output is the input less that constant and the damping term. The filter resumes from the held state when the cutoff is
+raised, with no step. A program that wants the filter silent while it is closed raises the cutoff to 1 and lets the
+input stop.
+
+\section{Resonance}
+\label{sec:filter-resonance}
+
+The resonance register \texttt{FILTER\_RESONANCE} holds an unsigned 8-bit value $R$. It sets the damping of the filter,
+$q = d / 256$, where for $R$ from 0 to 254
+
+\begin{equation*}
+	d = 16 + \left\lfloor \frac{3 (255 - R)}{4} \right\rfloor
+\end{equation*}
+
+\noindent and for $R = 255$ the damping is zero. A smaller damping gives a sharper and taller peak at the pole frequency.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rrrr}
+		\toprule
+		\textbf{Resonance} & \textbf{$d$ ($q \times 256$)} & \textbf{$Q = 1/q$} & \textbf{Band-pass peak (dB)} \\
+		\midrule
+		0                  & 207                           & 1.2                & 1.9                          \\
+		64                 & 159                           & 1.6                & 4.2                          \\
+		128                & 111                           & 2.3                & 7.3                          \\
+		192                & 63                            & 4.1                & 12.2                         \\
+		224                & 39                            & 6.6                & 16.4                         \\
+		240                & 27                            & 9.5                & 19.6                         \\
+		250                & 19                            & 13.5               & 22.7                         \\
+		254                & 16                            & 16.0               & 24.2                         \\
+		255                & 0                             & unbounded          & ---                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Filter Resonance (Cutoff Register 64)}
+	\label{tab:filter-resonance}
+\end{table}
+
+A resonance of 255 is a special value: the damping is zero, so the filter does not lose energy. Once an input or a
+nonzero state sets it going, it oscillates at the pole frequency with a constant amplitude, and that amplitude is held
+until the state is disturbed again. A filter whose states are zero and whose input is zero stays silent. Values near
+255 are very resonant but do damp.
+
+\section{Filter Output}
+\label{sec:filter-output}
+
+The selected output, divided by 16 and limited to 20 bits, is scaled by the filter volume, the high byte of
+\texttt{FILTER\_VOL\_PAN}, and divided between the channels by the filter pan, its low byte, as a voice is
+(Sections~\ref{sec:voice-gain} and~\ref{sec:mixing}). The two shares are added to the accumulators with the dry voices.
+A modulation source can steer the cutoff and the filter pan (Chapter~\ref{ch:modulation}). The resonance and the volume
+cannot be steered.
+
+At reset the filter's state is zero (Section~\ref{sec:reset}).

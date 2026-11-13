@@ -1,0 +1,119 @@
+\chapter{Envelope Generator}
+\label{ch:envelope}
+
+Each voice has an envelope generator that shapes the loudness of its sound over time. The envelope has a level from 0
+to 4095, a 12-bit unsigned number, and four phases: attack, decay, sustain and release. The four values that shape it
+are in the instrument record, so every instrument has its own shape (Table~\ref{tab:instrument}).
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=1.0,
+			axis/.style={-{Stealth[length=2mm]}, thick},
+			note/.style={font=\scriptsize, text=sircgray}
+		]
+		\draw[axis] (0,0) -- (9.4,0) node[right, font=\scriptsize] {time};
+		\draw[axis] (0,0) -- (0,3.7) node[above, font=\scriptsize] {level};
+		\draw[very thick] (0,0) -- (1.4,3.2) -- (2.9,1.8) -- (6.0,1.8) -- (8.4,0);
+		\draw[dashed, sircgray] (1.4,3.2) -- (1.4,0);
+		\draw[dashed, sircgray] (2.9,1.8) -- (2.9,0);
+		\draw[dashed, sircgray] (6.0,1.8) -- (6.0,0);
+		\draw[dashed, sircgray] (0,3.2) -- (1.4,3.2);
+		\draw[dashed, sircgray] (0,1.8) -- (2.9,1.8);
+		\node[note, anchor=east] at (0,3.2) {4095};
+		\node[note, anchor=east] at (0,1.8) {sustain};
+		\node[note] at (0.7,-0.3) {attack};
+		\node[note] at (2.15,-0.3) {decay};
+		\node[note] at (4.45,-0.3) {sustain};
+		\node[note] at (7.2,-0.3) {release};
+		\node[note, anchor=south] at (6.0,0.05) {stop};
+	\end{tikzpicture}
+	\caption{The Envelope Phases}
+	\label{fig:envelope}
+\end{figure}
+
+\section{Phases}
+\label{sec:envelope-phases}
+
+The envelope is updated once in every 64 output samples (an interval of about 2.0 ms, or 499.4 updates a second). At
+each update it takes one step, as follows:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{9cm}}
+		\toprule
+		\textbf{Phase} & \textbf{Behaviour at each update}                                                                                                                                             \\
+		\midrule
+		Attack         & The level rises by \texttt{ATTACK}. When it reaches 4095, it stops there and the phase becomes decay. \texttt{ATTACK} of 0 sets the level to 4095 at once                     \\
+		Decay          & The level falls by \texttt{DECAY}, but not below the sustain level. When it reaches that level, the phase becomes sustain. \texttt{DECAY} of 0 sets the sustain level at once \\
+		Sustain        & The level stays at the sustain level until the voice is stopped                                                                                                               \\
+		Release        & The level falls by \texttt{RELEASE}. When it reaches 0 the envelope is inactive. \texttt{RELEASE} of 0 sets the level to 0 at once                                            \\
+		Inactive       & The level is 0 and stays there. The voice is silent until a note starts                                                                                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Envelope Phases}
+	\label{tab:envelope-phases}
+\end{table}
+
+\texttt{ATTACK}, \texttt{DECAY} and \texttt{RELEASE} are unsigned 8-bit steps in units of the 12-bit level. \texttt{SUSTAIN}
+is an unsigned 8-bit level, converted to the 12-bit scale by repeating its top four bits below it: the 12-bit level is
+$(\texttt{SUSTAIN} \ll 4) \mathbin{|} (\texttt{SUSTAIN} \gg 4)$. A \texttt{SUSTAIN} of 255 gives the full level, 4095, and 0
+gives 0. When the sustain level is 0 the voice is silent once the decay ends, but it is still sounding as far as the
+rules of Section~\ref{sec:note-start} go: its envelope is in the sustain phase, not inactive.
+
+A stop (Section~\ref{sec:reg-command}) puts the envelope in the release phase from whatever phase it is in. A stop on
+an inactive envelope has no effect.
+
+\section{Starting a Note}
+
+A note that retriggers (Section~\ref{sec:note-start}) sets the level to 0 and the phase to attack, and takes the first
+step at once, without waiting for the voice's next update. An \texttt{ATTACK} of 0 therefore reaches full level
+immediately, and any other attack starts at its first step and not at 0. The voice's own update then continues at its
+regular intervals.
+
+The time a full-scale attack takes is $(\lceil 4095 / \mathrm{step} \rceil - 1) \times 2.0$ ms after the note starts;
+the time a full-scale decay or release takes is $\lceil 4095 / \mathrm{step} \rceil \times 2.0$ ms or less, since a
+release begins part-way through an update interval.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rr}
+		\toprule
+		\textbf{Step} & \textbf{Time for 4095 levels (about)} \\
+		\midrule
+		255           & 32 ms                                 \\
+		128           & 64 ms                                 \\
+		64            & 128 ms                                \\
+		32            & 256 ms                                \\
+		16            & 512 ms                                \\
+		8             & 1.0 s                                 \\
+		4             & 2.0 s                                 \\
+		2             & 4.1 s                                 \\
+		1             & 8.2 s                                 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Envelope Step and Time}
+	\label{tab:envelope-times}
+\end{table}
+
+A step of 1 is the slowest the envelope goes. A voice with an \texttt{ATTACK} of 1 is silent at first: with a step of 1
+the level is 1, which is too small to produce any output after the volume is applied (Section~\ref{sec:voice-gain}),
+and the voice becomes audible after a few updates.
+
+\section{Update Timing}
+\label{sec:envelope-timing}
+
+The six voices do not update together. Their updates are spread evenly across the 64 output samples of each interval,
+so that in any one output sample at most one voice updates, and the arithmetic of the updates does not pile up. Each
+voice still updates once in 64 output samples; the stagger fixes only which sample of the interval it is. The
+assignment is fixed and is the same after every reset.
+
+An envelope update is visible to the mixer from the next output sample.
+
+\section{Retriggering}
+
+A note that retriggers a voice that is still sounding restarts its envelope at 0 (Section~\ref{sec:note-start}). The
+sound of the old note is replaced at once by the start of the new one, with no crossfade. A new note, with a position
+of 0, begins with the first byte of its sample at its new level, so the output moves in one sample from wherever the
+old note was to the new note's first value. A tune that retriggers a voice while the previous note is still loud has a
+step in the output at each note. Chapter~\ref{ch:programming} describes how an instrument is designed to avoid it.

@@ -1,0 +1,156 @@
+\chapter{The Sequencers}
+\label{ch:sequencer}
+
+Each voice has a sequencer that can play a tune from instructions in audio memory with no help from the CPU. The six
+sequencers are independent: each has a program counter of its own, and each voice can run a different sequence. They
+share one instruction decoder and one tick, so they keep time together.
+
+\section{Operation}
+
+A sequencer is enabled by its voice's \texttt{SEQ\_EN} bit. It starts at the window address its \texttt{SEQ\_PC}
+register holds (Section~\ref{sec:seq-restart}) and runs one instruction at a time, each a single 16-bit word.
+
+The tick is the sequencers' clock. \texttt{SEQ\_PERIOD} gives its period in output samples, from 1 to 65,535; a value
+of 0 stops the ticks, and then no sequencer advances. On each tick every running sequencer executes instructions, in
+program order, until it reaches a \texttt{WAIT}, finishes, or has executed eight instructions. Executing an instruction
+can take several output samples, because reading it and, for a note, the instrument and pitch table take reads of audio
+memory (Chapter~\ref{ch:timing}); the order of a voice's instructions is always preserved.
+
+A sequencer keeps its program counter, a \texttt{WAIT} counter, an 8-bit \texttt{END} counter and a flag that says it
+has finished.
+
+\section{Instruction Set}
+\label{sec:seq-instructions}
+
+Every instruction is one 16-bit word. Bits 15--13 are the opcode and bits 12--0 are the operand.
+
+\begin{figure}[H]
+	\centering
+	\begin{bytefield}[bitwidth=2em]{16}
+		\bitheader{0-15} \\
+		\bitbox{3}{OP} &
+		\bitbox{13}{Operand}
+	\end{bytefield}
+	\caption{Sequencer Instruction Format}
+	\label{fig:seq-format}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllp{5.1cm}}
+		\toprule
+		\textbf{Opcode} & \textbf{Instruction} & \textbf{Operand}                       & \textbf{Effect}                                               \\
+		\midrule
+		000             & \texttt{NOTE}        & Bits 6--0: note, 0--119                & Starts a note, or glides to it (Section~\ref{sec:note-start}) \\
+		001             & \texttt{STOP}        & Unused                                 & Starts the envelope release                                   \\
+		010             & \texttt{WAIT}        & Bits 12--0: ticks, 1--8191             & Waits that number of ticks                                    \\
+		011             & \texttt{INST}        & Bits 7--0: instrument number           & Selects the instrument for the next note                      \\
+		100             & \texttt{FINE}        & Bits 12--0: signed                     & Sets the fine pitch adjustment                                \\
+		101             & \texttt{GOTO}        & Bits 12--0: signed, $-4096$ to $+4095$ & Jumps by that many instruction words                          \\
+		110             & \texttt{END}         & Bits 7--0: count, 0--255               & Ends the sequence, now or after a count                       \\
+		111             & ---                  & ---                                    & Reserved                                                      \\
+		\bottomrule
+	\end{tabular}
+	\caption{Sequencer Instructions}
+	\label{tab:seq-instructions}
+\end{table}
+
+Operand bits that an instruction does not use are reserved. A reserved opcode is ignored: it does nothing but use one
+of the eight instructions of the tick. A \texttt{NOTE} with a number above 119 is ignored in the same way. Software
+must not rely on either.
+
+\begin{description}
+	\item[\texttt{NOTE}] Starts the note given, on the instrument in \texttt{INSTR}. The voice retriggers or glides as
+	      Section~\ref{sec:note-start} describes, and the sequencer carries on with the instruction after \texttt{NOTE}
+	      when the note has been applied.
+	\item[\texttt{STOP}] Starts the release of the voice's envelope.
+	\item[\texttt{WAIT}] Sets the voice's \texttt{WAIT} counter to the operand and ends the voice's work for the tick. At
+	      each later tick the counter is decremented, and when it reaches 0 the voice carries on, in that same tick, with
+	      the instruction after the \texttt{WAIT}. A \texttt{WAIT} of 1 therefore carries on at the next tick, and the notes of
+	      \texttt{NOTE}, \texttt{WAIT 1}, \texttt{NOTE} are one tick apart. A \texttt{WAIT} of 0 delays nothing and is not
+	      the same as 1: software must not use it.
+	\item[\texttt{INST}] Writes the operand to the voice's \texttt{INSTR} register.
+	\item[\texttt{FINE}] Writes the signed operand to the voice's \texttt{FINE} register.
+	\item[\texttt{GOTO}] Adds the signed operand to the address of the instruction after the \texttt{GOTO}, in instruction
+	      words. A displacement of $-1$ jumps back to the \texttt{GOTO} itself; $-2$ jumps to the instruction before it. The
+	      address wraps within the window.
+	\item[\texttt{END}] Ends the sequence now or after a count (Section~\ref{sec:seq-end}).
+\end{description}
+
+\subsection{Counted END}
+\label{sec:seq-end}
+
+An \texttt{END} of 0 ends the sequence at once. An \texttt{END} of $N$, for $N$ from 1 to 255, adds 1 to the voice's
+\texttt{END} counter (which stops at 255), and ends the sequence if the counter is then $N$ or more; otherwise the
+sequencer carries on with the instruction after the \texttt{END}. A sequence that loops can therefore play a section a
+number of times.
+
+All the \texttt{END} instructions of a voice share one counter. \texttt{GOTO} does not reset it, there are no nested
+counts, and only a write to \texttt{SEQ\_PC} clears it (Section~\ref{sec:seq-restart}).
+
+When a sequence ends, the voice's flag in \texttt{SEQ\_DONE} is set, exactly once, and the sequencer stops. The voice
+carries on playing its sample under its envelope. The sequencer stays stopped until \texttt{SEQ\_PC} is written.
+
+\subsection{An Example}
+
+Table~\ref{tab:seq-example} is a sequence that plays two notes, each held for ten ticks, and repeats five times. The
+instrument is set by the program that starts it, or by an \texttt{INST} before the first note.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rlll}
+		\toprule
+		\textbf{Word} & \textbf{Instruction} & \textbf{Encoding} & \textbf{Comment}                                       \\
+		\midrule
+		0             & \texttt{NOTE 48}     & \texttt{0x0030}   & A4 with the pitch table of Table~\ref{tab:pitch-table} \\
+		1             & \texttt{WAIT 10}     & \texttt{0x400A}   &                                                        \\
+		2             & \texttt{NOTE 50}     & \texttt{0x0032}   & B4                                                     \\
+		3             & \texttt{WAIT 10}     & \texttt{0x400A}   &                                                        \\
+		4             & \texttt{END 5}       & \texttt{0xC005}   & Ends on the fifth pass                                 \\
+		5             & \texttt{GOTO} $-6$   & \texttt{0xBFFA}   & Back to word 0                                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{An Example Sequence}
+	\label{tab:seq-example}
+\end{table}
+
+The sequence plays its two notes five times and sets its \texttt{SEQ\_DONE} flag. It is then halted until
+\texttt{SEQ\_PC} is written again.
+
+\section{Restarting a Sequence}
+\label{sec:seq-restart}
+
+A write to \texttt{SEQ\_PC} restarts the voice's sequence at the address written. It clears the voice's \texttt{WAIT}
+counter and \texttt{END} counter and its \texttt{SEQ\_DONE} flag, and starts the sequencer if it had finished. Any
+instruction fetch or note load that was in progress is abandoned; what had already been applied, such as a note that
+has started to sound, stays. The sequencer then runs on the next tick if \texttt{SEQ\_EN} is 1, and not before. A voice
+whose \texttt{SEQ\_EN} is 0 does not run a sequence, and writing \texttt{SEQ\_PC} only sets up its counter.
+
+\section{Completion Interrupt}
+\label{sec:interrupts}
+
+The device has one interrupt, \activelow{IRQ3}, for the end of a sequence. The signal is asserted whenever the logical
+AND of any bit of \texttt{SEQ\_DONE} and the same bit of \texttt{SEQ\_INT\_EN} is 1 (Section~\ref{sec:reg-sequencer}).
+It is level-sensitive: it is released when the program has cleared the enabled flags, by writing 1s to
+\texttt{SEQ\_DONE}, or has disabled their interrupts. A sequence that ended while its interrupt was disabled asserts
+the signal when the interrupt is enabled afterwards. The \texttt{SEQ\_IRQ} bit of \texttt{STATUS} follows the signal. A
+handler that does not clear the flag is entered again as soon as it returns. Writing \texttt{SEQ\_PC} also clears the
+voice's flag.
+
+\section{Deadlines}
+\label{sec:seq-deadlines}
+
+The work that a tick starts must be finished before the next tick. A voice that has not finished its work when the next
+tick comes is not started again: it misses that tick, its \texttt{WAIT} counter is not decremented for it, and the
+\texttt{MEM\_OVERRUN} bit of \texttt{STATUS} is set. The rest of its work then completes as before, so the music slows
+by the ticks that were missed. A program avoids the condition by keeping the work in each tick small, and by choosing a
+tick that is not too short (Section~\ref{sec:deadlines}).
+
+\section{Direct Control and Sound Effects}
+\label{sec:direct-control}
+
+The device has no separate engine for sound effects. A voice with \texttt{SEQ\_EN} clear is controlled by the CPU: it
+writes \texttt{INSTR} and \texttt{FINE}, then \texttt{COMMAND} to start or stop a note. The other voice registers,
+volume, pan, portamento, routing and modulation, can be written in either mode. The CPU can take a voice from the
+sequencer by clearing \texttt{SEQ\_EN}, play an effect, and give it back by setting \texttt{SEQ\_EN} and writing
+\texttt{SEQ\_PC}: setting \texttt{SEQ\_EN} alone does not restart the sequence (Section~\ref{sec:reg-control}).

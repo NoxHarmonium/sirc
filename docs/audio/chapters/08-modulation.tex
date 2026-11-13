@@ -1,0 +1,111 @@
+\chapter{Modulation}
+\label{ch:modulation}
+
+Any voice can be made a \emph{modulation source}. It then plays like any other voice, from an instrument, through an
+envelope and a volume, but it makes no sound: its output steers one parameter of another voice or of the device. A
+sample that is a slow sine wave gives vibrato, tremolo or a sweeping filter; a faster or more complex one gives
+stranger effects. A modulation source takes a whole voice, so using one leaves five voices for sound.
+
+\section{Modulation Sources}
+
+A voice is a modulation source while its \texttt{MOD\_MODE} bit is 1 (Section~\ref{sec:reg-control}). Its scaled
+sample, the same value a sounding voice would send to the mixer (Section~\ref{sec:voice-gain}), is the source value.
+The device takes the high eight bits of it, a signed number from $-128$ to $+127$, and calls it $M$. The voice's volume
+and envelope therefore set the depth of the modulation, and its sample sets the shape. A voice's \texttt{MOD\_ROUTE}
+register says where its value goes; it is read only while \texttt{MOD\_MODE} is 1 (Section~\ref{sec:reg-mod-route}).
+
+\section{Destinations}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllp{6.4cm}}
+		\toprule
+		\textbf{\texttt{DEST}} & \textbf{Destination} & \textbf{Voice field} & \textbf{Parameter steered}                \\
+		\midrule
+		0                      & Off                  & Ignored              & The voice is a source with no destination \\
+		1                      & Pitch                & Used                 & The step of the destination voice         \\
+		2                      & Volume               & Used                 & The volume of the destination voice       \\
+		3                      & Pan                  & Used                 & The pan of the destination voice          \\
+		4                      & Filter cutoff        & Ignored              & \texttt{FILTER\_CUTOFF}                   \\
+		5                      & Master volume        & Ignored              & \texttt{MASTER\_VOL}                      \\
+		6                      & Filter pan           & Ignored              & The pan byte of \texttt{FILTER\_VOL\_PAN} \\
+		7                      & Reserved             & ---                  & Software must not use it                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Modulation Destinations}
+	\label{tab:mod-destinations}
+\end{table}
+
+The filter resonance cannot be modulated. A voice may modulate any voice, including itself.
+
+\section{Scaling}
+\label{sec:mod-scaling}
+
+The change to the destination is:
+
+\begin{equation*}
+	\Delta = M \times 2^{\,\mathrm{SHIFT} + K}
+\end{equation*}
+
+\noindent where \texttt{SHIFT} is the signed field of \texttt{MOD\_ROUTE} ($-8$ to $+7$) and $K$ depends on the destination:
+$K = 4$ for pitch and for filter cutoff, and $K = 0$ for volume, pan, master volume and filter pan. A negative exponent is an
+arithmetic shift right. The \texttt{INV} bit negates $M$ first. The change is added to the value the destination
+holds, and the sum is limited to the destination's range: 0 to 255 for volume, pan, master volume, filter cutoff and
+filter pan, and 0 to the largest 16.16 value for the pitch step. The register itself is not changed: it keeps the value the
+program wrote, and the sum is the value in force.
+
+For volume and pan, a change of the value in force is a change in the same units as the register, so a shift of 0 with
+a source of $+127$ moves the volume by 127 steps of the 256. For the cutoff the unit is a step of the cutoff register
+(Chapter~\ref{ch:filter}). For pitch the unit is a raw unit of the 16.16 step.
+
+\subsection{The Depth of Pitch Modulation}
+\label{sec:mod-pitch-depth}
+
+The pitch change is added to the step in raw units, so its size as a fraction of the pitch depends on the note. A
+source of $+127$ with a shift of 0 adds $127 \ll 4 = 2032$ units. Table~\ref{tab:mod-pitch-depth} shows what that is,
+in cents, for the 64-byte waveform of Table~\ref{tab:pitch-table}: a slow sine routed to a low note makes a wide swing,
+and the same source routed to a high note a barely audible one. A program that wants an equal vibrato across the range
+changes the shift as the octave changes.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rr}
+		\toprule
+		\textbf{Note} & \textbf{Change for $M = +127$, shift 0 (cents)} \\
+		\midrule
+		0             & 773                                             \\
+		24            & 228                                             \\
+		48            & 59.9                                            \\
+		72            & 15.2                                            \\
+		96            & 3.8                                             \\
+		119           & 1.0                                             \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Depth of Pitch Modulation (64-Byte Waveform)}
+	\label{tab:mod-pitch-depth}
+\end{table}
+
+\section{Rules}
+
+\begin{itemize}
+	\item \textbf{One source for each destination.} At most one modulation source affects any destination. If several
+	      voices route to the same destination, the one with the lowest voice number wins and the others have no effect. A
+	      source with \texttt{DEST} of 0 does not take part.
+	\item \textbf{One sample of delay.} A source's value is used by its destination from the next output sample after the
+	      source's byte is read. Modulation can therefore be cascaded, and two voices can modulate each other, with no
+	      loop that has to settle within one sample: the result is always determined.
+	\item \textbf{The envelope comes first.} The envelope of the destination voice is applied before modulation. Modulating a
+	      voice's volume never makes sound from a voice whose envelope is inactive, because the gain is the product of the
+	      envelope and the volume (Section~\ref{sec:voice-gain}).
+	\item \textbf{The programmed value stays.} A destination holds the value the program wrote. Switching the modulation
+	      off, by clearing \texttt{MOD\_MODE} on the source or setting \texttt{DEST} to 0, returns the destination to it with
+	      no further action.
+\end{itemize}
+
+\section{Making a Low-Frequency Oscillator}
+
+A modulation voice is an ordinary voice, so its rate is set by its note and its instrument's pitch table. The lowest
+note of a pitch table built for a waveform's real length is 27.5~Hz, which is too fast for vibrato. The program builds
+the modulation instrument's pitch table for a cycle that is shorter than the waveform really is, so that its entries
+are smaller: a 64-byte sine with a pitch table built as for a 12.8-byte cycle plays at one fifth of the usual rate,
+5.5~Hz at note 0. Chapter~\ref{ch:programming} gives an example.

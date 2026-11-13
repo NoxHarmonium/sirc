@@ -1,0 +1,35 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\label{ch:preface}
+
+\section*{About This Manual}
+
+This manual documents SIRCAS, the SIRC Audio System: the sound processor that plays eight-bit samples through six
+voices and sends a stereo signal to a digital-to-analogue converter. SIRCAS is the sound system of the SIRCUS console,
+but it is a component in its own right, in a package of its own, with a memory of its own. It is a companion to the
+\archmanual{}, which defines the SIRC-1 CPU, to the \hwmanual{}, which defines the CPU package and bus, to the
+\asmmanual{}, which defines the language used to program them, and to the \videomanual{}, which defines the display
+adapter that shares the console's bus.
+
+SIRCAS is a peripheral on a 16-bit bus, and any 16-bit processor that can supply a chip select, a bus strobe and a
+read/write line can drive it. It was designed to work with the SIRC-1, so the signal names, the interrupt arrangements
+and the programming examples in this manual are those of the SIRC-1.
+
+It is written for:
+
+\begin{itemize}
+	\item Programmers writing music and sound code for SIRCAS
+	\item Authors of the tools that prepare samples, instruments and sequences
+	\item Engineers implementing the device, in hardware or in software
+\end{itemize}
+
+\section*{Assumed Knowledge}
+
+This manual assumes familiarity with sampled-sound hardware: sample playback with a fixed-point position and step,
+envelopes, panning and the state-variable filter. Readers who need the interrupt mechanism that delivers the
+sequencer's completion signal to the CPU should read the exception chapters of the \archmanual{}.
+
+\section*{Revision Status}
+
+This is a draft of the \audiomanual{}, not for distribution. Anything not yet decided in the manual is marked ``not yet
+specified''; the manual does not invent values for it.

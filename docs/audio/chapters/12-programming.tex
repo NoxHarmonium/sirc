@@ -1,0 +1,121 @@
+\chapter{Programming the Device}
+\label{ch:programming}
+
+This chapter collects what a program does in what order. It adds no new rules; each rule is stated where the feature is
+described, and the sections of the earlier chapters are cited.
+
+\section{Starting Up}
+\label{sec:startup}
+
+At reset the output is silent (\texttt{AUDIO\_EN} is 0), the registers listed in Table~\ref{tab:reset} are set, and the
+audio memory is undefined. A program starts the device in this order:
+
+\begin{enumerate}
+	\item Write the audio memory through the window (Chapter~\ref{ch:memory-map}): the instrument table, the pitch tables, the
+	      sequences and the sample data. A voice that plays a word the program has not written plays noise.
+	\item Write \texttt{INSTR\_BASE} with the window address of the instrument table.
+	\item Write \texttt{MASTER\_VOL}, and the filter registers if any voice is filtered (Section~\ref{sec:reg-filter}).
+	\item For each voice, write \texttt{CONTROL}, \texttt{VOLUME\_PAN}, \texttt{PORTA\_RATE} and, for a modulation voice,
+	      \texttt{MOD\_ROUTE}. A voice's reset volume is 0, so it is silent until its volume is set.
+	\item If a handler will serve the completion interrupt, install it, then write \texttt{SEQ\_INT\_EN}
+	      (Section~\ref{sec:interrupts}).
+	\item Write \texttt{CONFIG} to set \texttt{AUDIO\_EN}.
+	\item For each voice that runs a sequence, set \texttt{SEQ\_EN} in \texttt{CONTROL} and write \texttt{SEQ\_PC}. Write
+	      \texttt{SEQ\_PERIOD} last: the sequences then all start on the first tick.
+\end{enumerate}
+
+\section{Playing a Note by Hand}
+
+A voice with \texttt{SEQ\_EN} clear is played from the CPU. To start a note, write the instrument number to
+\texttt{INSTR}, then write \texttt{COMMAND} with bit 15 set and the note number in bits 6--0. To release it, write
+\texttt{COMMAND} with bit 15 clear. The note sounds a few sample periods after the write
+(Section~\ref{sec:note-start}); the CPU is not told when. A sound effect is a voice borrowed in this way: clear its
+\texttt{SEQ\_EN}, play the effect, and give the voice back with \texttt{SEQ\_EN} and a write to \texttt{SEQ\_PC}
+(Section~\ref{sec:direct-control}).
+
+\section{Building an Instrument}
+
+\begin{itemize}
+	\item \textbf{Waveform length.} The lookup does not interpolate, so a short waveform is noisier than a long one: the
+	      error is about 24 dB below the signal for 64 bytes and 36 dB for 256, and it falls 6 dB with each doubling
+	      (Section~\ref{sec:playing}). A waveform of 256 bytes or more is a good length for a clean tone. A single cycle in a loop
+	      is cheap in memory, and can be played at any pitch below half the output rate.
+	\item \textbf{Pitch table.} Build one for each distinct waveform length, from the formula of
+	      Section~\ref{sec:pitch-table}. Instruments that use the same waveform can share a table.
+	\item \textbf{Where the waveform starts.} A note starts at byte 0. A waveform that starts near zero, a sine or triangle
+	      from its zero crossing for example, begins smoothly, and one that starts at a peak, the usual form of a sawtooth, does
+	      not.
+	\item \textbf{The envelope against retriggering.} A note on a sounding voice replaces it at once, with a step in the
+	      output (Chapter~\ref{ch:envelope}). The step is small if the old note has died away. For notes that are played
+	      one after another on one voice, choose a decay that reaches silence before the next note, or a gentle attack, or
+	      start the next note only after a \texttt{STOP}. A voice with portamento enabled does not retrigger when the note is on
+	      the same instrument and it is still sounding.
+	\item \textbf{Looping.} A loop shorter than the step is architecturally undefined (Section~\ref{sec:looping}). A
+	      single-cycle waveform never meets it.
+\end{itemize}
+
+\section{Timing a Sequence}
+
+A tick is the smallest time step of a sequence, and a \texttt{WAIT} of $n$ is $n$ ticks. A tick of a few milliseconds,
+which is a \texttt{SEQ\_PERIOD} of a few hundred samples, gives fine control of timing, and a note is then held with a
+\texttt{WAIT} of several ticks. Portamento and envelopes run on their own 2.0 ms clock and do not depend on the tick,
+so the tick can be chosen for the music alone. A tick that is too short for the work in it overruns
+(Section~\ref{sec:choosing-tick}).
+
+\section{Vibrato and Other Effects}
+
+Vibrato needs a modulation voice with a slow sine wave, routed to the pitch of the voice that plays the tune
+(Chapter~\ref{ch:modulation}):
+
+\begin{enumerate}
+	\item Make an instrument with a sine of 64 bytes, looped, with an attack of 0 and a sustain of 255. Build its pitch table for
+	      a cycle of 12.8 bytes, one fifth of the real length, so that note 0 gives 5.5~Hz.
+	\item Set the voice in modulation mode with a volume of 255, and write its \texttt{MOD\_ROUTE} with destination 1 (pitch),
+	      the number of the voice to steer, and a shift of $-2$.
+	\item Start note 0 on it.
+\end{enumerate}
+
+For a 64-byte waveform this swings the pitch of a lead voice by about 16 cents at G4 and 8 cents at G5, since pitch
+modulation is added in raw units (Section~\ref{sec:mod-pitch-depth}). A greater shift deepens it. Tremolo routes to a
+voice's volume, a sweeping pan to its pan, and a filter that wobbles to the cutoff.
+
+A filter sweep is written by the program: change \texttt{FILTER\_CUTOFF} at a steady rate, for example once every few
+milliseconds. A slow sweep through the lowest registers is heard in steps (Section~\ref{sec:filter-cutoff}).
+
+\section{Programming Cautions}
+\label{sec:cautions}
+
+\begin{enumerate}
+	\item \textbf{Audio memory.} The memory is undefined at reset. Write everything a voice or a sequence reads before it
+	      starts (Section~\ref{sec:audio-memory}).
+	\item \textbf{Instrument changes.} A voice reads its instrument record when the instrument changes, not on each note.
+	      Changing a record that a voice has loaded takes effect only after a note on a different instrument
+	      (Section~\ref{sec:note-start}).
+	\item \textbf{Retrigger steps.} A new note on a sounding voice makes a step in the output unless the old one has died
+	      away (Chapter~\ref{ch:envelope}).
+	\item \textbf{Fine pitch.} A raw unit of \texttt{FINE} is a different fraction of the pitch in each octave
+	      (Section~\ref{sec:fine-pitch}). Pitch modulation is the same (Section~\ref{sec:mod-pitch-depth}).
+	\item \textbf{Glides.} A glide needs \texttt{PORTA\_EN}, the same instrument, and a voice that is still sounding. A stopped
+	      voice whose envelope has gone inactive retriggers.
+	\item \textbf{WAIT.} A \texttt{WAIT} counts ticks, from 1 to 8191. Do not use 0 (Section~\ref{sec:seq-instructions}).
+	\item \textbf{Overrun.} If \texttt{MEM\_OVERRUN} is set, a tick was missed or a sample read was late. Clear it through
+	      \texttt{STATUSCLR}, lengthen the tick, or simplify the sequences (Section~\ref{sec:deadlines}).
+	\item \textbf{Completion interrupt.} \activelow{IRQ3} is level-sensitive and stays asserted until the enabled flags are
+	      cleared, by writing 1s to \texttt{SEQ\_DONE}. A handler that does not clear them is entered again at once
+	      (Section~\ref{sec:interrupts}).
+	\item \textbf{Counted END.} All \texttt{END} instructions of a voice share one counter, and only a write to
+	      \texttt{SEQ\_PC} clears it (Section~\ref{sec:seq-end}).
+	\item \textbf{Changing SEQ\_EN.} It does not restart a sequence. Write \texttt{SEQ\_PC} to start one
+	      (Section~\ref{sec:direct-control}).
+	\item \textbf{Modulation voices.} A modulation voice takes one of the six. Only one source drives each destination, and
+	      the lowest-numbered wins (Section~\ref{sec:mod-scaling}).
+	\item \textbf{The filter.} A cutoff of 0 freezes the filter (Section~\ref{sec:filter-cutoff}). A resonance of 255
+	      oscillates once started (Section~\ref{sec:filter-resonance}). A loud mix through the filter clips
+	      (Chapter~\ref{ch:filter}).
+	\item \textbf{Loud mixes.} Six voices at full scale in one channel clip the output (Section~\ref{sec:master-volume}).
+	      Set volumes so that the sum of the voices does not exceed full scale.
+	\item \textbf{Reserved fields.} Software must not write the reserved registers, bits and encodings
+	      (Chapter~\ref{ch:registers}). A read of a reserved offset returns zero.
+	\item \textbf{Muting.} \texttt{AUDIO\_EN} mutes the output only. Notes, envelopes and sequences continue while it is clear
+	      (Section~\ref{sec:reg-config}).
+\end{enumerate}

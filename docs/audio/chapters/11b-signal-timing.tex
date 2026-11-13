@@ -1,0 +1,114 @@
+\chapter{Signal Timing}
+\label{ch:signal-timing}
+
+This chapter gives the timing of the pins of the device (Chapter~\ref{ch:package}): the bus cycles in which the CPU
+reads and writes it, the interrupt output, reset, and the serial output. Chapter~\ref{ch:timing} gives the timing
+inside the device, in the same units.
+
+\section{Reading the Figures}
+
+The figures follow the conventions of the bus timing diagrams of the \hwmanual{}. Each labeled interval is one
+\texttt{CLKI} cycle, seen between rising edges. Waveform rows show physical levels: for an active-low signal,
+\texttt{L} means asserted. Bands show a value; an empty band carries no defined value, and a three-state signal that is
+not driven is drawn as a flat line at mid-level. Electrical delays are not specified, so the figures show logical
+timing only.
+
+\section{Bus Cycles}
+\label{sec:signal-bus}
+
+The device answers every cycle in which \activelow{CS} and \activelow{BAS} are both asserted. How soon it asserts
+\activelow{BACK} depends on the address: a register is answered in the cycle itself, and a word of the audio memory
+window when the device has made the access.
+
+\subsection{Register Accesses}
+
+A register read or write is completed in the cycle in which it is made: \activelow{BACK} is asserted from the start of
+the cycle, so the CPU accepts the cycle at the next rising edge and does not wait. On a write the register holds the
+new value from that edge, and a read in the next cycle returns it. A write to a reserved offset is acknowledged in the
+same way and changes nothing.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI             & L 2{0.5H 0.5L}              \\
+		Phase            & D{access} D{next} D{}       \\
+		\activelow{CS}   & L H H                       \\
+		\activelow{BAS}  & L H H                       \\
+		BRW              & L H H                       \\
+		A0--A15          & D{offset} D{} D{}           \\
+		D0--D15          & D{data} Z Z                 \\
+		\activelow{BACK} & L H H                       \\
+		Register         & D{old} 2D{new}              \\
+	\end{tikztimingtable}
+	\caption{Register Write Cycle}
+	\label{fig:signal-write}
+\end{figure}
+
+On a read the device drives D0--D15 with the register's value from the start of the cycle to its end, and releases the
+bus after it. A read changes nothing in the device.
+
+\subsection{Audio Memory Window Accesses}
+
+An access to the window waits for a CPU slot of the memory schedule (Section~\ref{sec:cpu-slots}). The CPU holds its
+signals and the device holds \activelow{BACK} deasserted until the access is made, then asserts \activelow{BACK} for
+the cycle in which a read puts its data on D0--D15, or a write takes its data. A window access is acknowledged two to
+five cycles after it begins, whatever the voices are doing. Figure~\ref{fig:signal-window-read} shows a read of the
+slowest case, five cycles.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI             & L 5{0.5H 0.5L}                    \\
+		Phase            & D{access} 3D{wait} D{done} D{}    \\
+		\activelow{CS}   & 5L H                              \\
+		\activelow{BAS}  & 5L H                              \\
+		BRW              & 6H                                \\
+		A0--A15          & 5D{offset} D{}                    \\
+		D0--D15          & 4Z D{data} Z                      \\
+		\activelow{BACK} & 4H L H                            \\
+	\end{tikztimingtable}
+	\caption{Audio Memory Window Read Cycle with Waits}
+	\label{fig:signal-window-read}
+\end{figure}
+
+\section{Interrupt Output}
+
+\activelow{IRQ3} is asserted while any \texttt{SEQ\_DONE} flag is set and its interrupt is enabled, and released when no
+such flag remains (Section~\ref{sec:interrupts}). It is level-sensitive; no edge is produced. Its delay from the change
+of the flags is not yet specified.
+
+\section{Reset}
+
+While \activelow{RST} is asserted the device holds the reset state of Section~\ref{sec:reset}. The converter output is
+digital zero from reset until the program sets \texttt{AUDIO\_EN}. No interrupt is raised by reset. The minimum width
+of the reset pulse is not yet specified.
+
+\section{Serial Output}
+\label{sec:serial-output}
+
+The device sends one stereo sample every 336 \texttt{CLKI} cycles. The frame has 48 bit clocks, \texttt{BCLK}, of 7
+cycles each, divided into two slots of 24, one for each channel. \texttt{WS} is low during the left slot and high
+during the right. The duty cycle of \texttt{BCLK} is not yet specified.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lllp{6.4cm}}
+		\toprule
+		\textbf{Slot} & \textbf{\texttt{BCLK} periods of the frame} & \textbf{\texttt{WS}} & \textbf{\texttt{SD}}                                                                    \\
+		\midrule
+		Left          & 0--23                                       & Low                  & Data bits 15--0 (most significant first) in periods 1--16 of the slot; zero in the rest \\
+		Right         & 24--47                                      & High                 & The same in periods 25--40 of the frame; zero in the rest                               \\
+		\bottomrule
+	\end{tabular}
+	\caption{Serial Frame Layout}
+	\label{tab:serial-frame}
+\end{table}
+
+The format is that of a standard two-channel serial audio interface. \texttt{WS} changes one bit clock before the most
+significant bit of the word it announces, so the first period of each slot carries no data: it holds the padding that
+ended the previous word, which is zero. The 16 data bits are the output sample as a signed two's-complement number. The
+remaining periods of each slot are zero, so a converter that takes 16 bits for each word uses the first 16 data bits of
+each slot. The alignment of the edges of \texttt{WS} and \texttt{SD} to \texttt{BCLK}, their set-up and hold times, and
+the \texttt{SCK} frequency and phase, are not yet specified.

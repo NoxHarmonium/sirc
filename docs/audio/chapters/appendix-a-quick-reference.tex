@@ -1,0 +1,109 @@
+\chapter{Quick Reference}
+\label{app:quick-reference}
+
+\section{Registers}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lllp{6.2cm}}
+		\toprule
+		\textbf{Offset} & \textbf{Name}              & \textbf{Access} & \textbf{Fields}                                                                           \\
+		\midrule
+		\texttt{0x0000} & \texttt{CONFIG}            & R/W             & 15 \texttt{AUDIO\_EN}                                                                     \\
+		\texttt{0x0001} & \texttt{STATUS}            & R               & 5 \texttt{MEM\_OVERRUN}, 4 \texttt{SEQ\_IRQ}, 3--0 version                                \\
+		\texttt{0x0002} & \texttt{STATUSCLR}         & W               & 5 clears \texttt{MEM\_OVERRUN}                                                            \\
+		\texttt{0x0003} & \texttt{SEQ\_PERIOD}       & R/W             & Samples per tick; 0 stops                                                                 \\
+		\texttt{0x0004} & \texttt{SEQ\_DONE}         & R, W1C          & 5--0 one flag per voice                                                                   \\
+		\texttt{0x0005} & \texttt{SEQ\_INT\_EN}      & R/W             & 5--0 one enable per voice                                                                 \\
+		\texttt{0x0006} & \texttt{INSTR\_BASE}       & R/W             & Window address of the instrument table                                                    \\
+		\texttt{0x0007} & \texttt{MASTER\_VOL}       & R/W             & 7--0 volume; 255 at reset                                                                 \\
+		\texttt{0x0008} & \texttt{FILTER\_CONFIG}    & R/W             & 1--0: 00 low-pass, 01 band-pass, 10 high-pass                                             \\
+		\texttt{0x0009} & \texttt{FILTER\_CUTOFF}    & R/W             & 7--0 cutoff                                                                               \\
+		\texttt{0x000A} & \texttt{FILTER\_RESONANCE} & R/W             & 7--0 resonance                                                                            \\
+		\texttt{0x000B} & \texttt{FILTER\_VOL\_PAN}  & R/W             & 15--8 volume, 7--0 pan                                                                    \\
+		\midrule
+		\multicolumn{4}{l}{\textit{Voice registers at \texttt{0x0010} + 16 $\times$ voice}}                                                                        \\
+		\midrule
+		+0              & \texttt{CONTROL}           & R/W             & 15 \texttt{SEQ\_EN}, 14 \texttt{MOD\_MODE}, 13 \texttt{FILTER\_EN}, 12 \texttt{PORTA\_EN} \\
+		+1              & \texttt{VOLUME\_PAN}       & R/W             & 15--8 volume, 7--0 pan; 0 and 128 at reset                                                \\
+		+2              & \texttt{MOD\_ROUTE}        & R/W             & 15--13 dest, 12--10 voice, 9--6 shift, 5 invert                                           \\
+		+3              & \texttt{INSTR}             & R/W             & 7--0 instrument                                                                           \\
+		+4              & \texttt{FINE}              & R/W             & 12--0 signed                                                                              \\
+		+5              & \texttt{PORTA\_RATE}       & R/W             & Raw step units per 2 ms update                                                            \\
+		+6              & \texttt{COMMAND}           & W               & 15 note (1) or stop (0), 6--0 note                                                        \\
+		+7              & \texttt{SEQ\_PC}           & R/W             & Window address of the next instruction                                                    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Register Summary}
+	\label{tab:qr-registers}
+\end{table}
+
+\section{Sequencer Instructions}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Instruction} & \textbf{Encoding}                & \textbf{Operand}     & \textbf{Effect}                                  \\
+		\midrule
+		\texttt{NOTE n}      & \texttt{0x0000} + $n$            & $n$ 0--119           & Start or glide to note $n$                       \\
+		\texttt{STOP}        & \texttt{0x2000}                  & ---                  & Release                                          \\
+		\texttt{WAIT n}      & \texttt{0x4000} + $n$            & $n$ 1--8191          & Wait $n$ ticks                                   \\
+		\texttt{INST i}      & \texttt{0x6000} + $i$            & $i$ 0--255           & Select instrument                                \\
+		\texttt{FINE v}      & \texttt{0x8000} + $v$ (13 bits)  & $v$ $-4096$--$+4095$ & Set fine pitch                                   \\
+		\texttt{GOTO d}      & \texttt{0xA000} + $d$ (13 bits)  & $d$ $-4096$--$+4095$ & Jump $d$ words from the next instruction         \\
+		\texttt{END n}       & \texttt{0xC000} + $n$            & $n$ 0--255           & End now ($n = 0$), or when the count reaches $n$ \\
+		Reserved             & \texttt{0xE000}--\texttt{0xFFFF} & ---                  & Ignored                                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instruction Summary}
+	\label{tab:qr-instructions}
+\end{table}
+
+\section{Formulas}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Quantity}   & \textbf{Formula}                                                                                 \\
+		\midrule
+		Step for a note $n$ & entry$[n \bmod 12] \ll \lfloor n/12 \rfloor$, plus \texttt{FINE}                                 \\
+		Pitch table entry   & Hz $\times$ cycle length in bytes / 31,960.226 $\times$ 65,536                                   \\
+		Gain                & $(\mathrm{level} \times \mathrm{volume}) \gg 8$                                                  \\
+		Scaled sample       & $((\mathrm{sample} \ll 8) \times G) \gg 12$                                                      \\
+		Pan                 & right $= (\mathrm{scaled} \times \mathrm{pan}) \gg 8$; left $= \mathrm{scaled} - \mathrm{right}$ \\
+		Output              & $(\mathrm{accumulator} \times \mathrm{master}) \gg 8$, limited to 16 bits                        \\
+		Sustain, 12-bit     & $(\texttt{SUSTAIN} \ll 4) \mathbin{|} (\texttt{SUSTAIN} \gg 4)$                                  \\
+		Modulation          & $\Delta = M \times 2^{\mathrm{SHIFT} + K}$, $K = 4$ for pitch and cutoff, 0 otherwise            \\
+		Filter cutoff       & $f = c / 256$; $f_c = (f_s / \pi) \arcsin(f / 2)$                                                \\
+		Filter damping      & $q = (16 + \lfloor 3 (255 - R) / 4 \rfloor) / 256$; $q = 0$ for $R = 255$                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Formulas}
+	\label{tab:qr-formulas}
+\end{table}
+
+\section{Key Figures}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Quantity}               & \textbf{Value}                                \\
+		\midrule
+		\texttt{CLKI}                   & 10,738,636 Hz                                 \\
+		Sample period                   & 336 cycles, 31.29 $\mu$s, 31,960.226 Hz       \\
+		Memory pattern                  & 8 cycles: 1 sound processor slot, 3 CPU slots \\
+		CPU window access               & 2 to 5 cycles                                 \\
+		Envelope update                 & Every 64 samples, 2.0 ms                      \\
+		Instructions per tick per voice & 8                                             \\
+		Notes                           & 0--119; 12 to the octave                      \\
+		Instrument record               & 8 words; pitch table 24 words                 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Key Figures}
+	\label{tab:qr-figures}
+\end{table}
