@@ -65,11 +65,11 @@ The numbers in the manual come from the tests and studies in `sirc-vm/device-aud
 
 ```bash
 cd ../../sirc-vm
-cargo test -p device_audio
-cargo run --release -p device_audio --example filter_study
-cargo run --release -p device_audio --example budget_study
-cargo run --release -p device_audio --example resample_study
-cargo run --release -p device_audio --example render_demo -- <output dir>   # a demo piece and stems as WAV
+cargo test -p sirc_umf -p device_audio
+cargo run --release -p sirc_umf --example filter_study
+cargo run --release -p sirc_umf --example budget_study
+cargo run --release -p sirc_umf --example resample_study
+cargo run --release -p sirc_umf --example render_demo -- <output dir>   # a demo piece and stems as WAV
 ```
 
 | Manual figure | Source |

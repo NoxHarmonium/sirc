@@ -1,9 +1,9 @@
 //! Nearest-neighbour playback quality: how much error and how large a spurious tone does the
 //! chip's no-interpolation playback add, by table length and pitch?
-//! `cargo run --release -p device_audio --example resample_study`
+//! `cargo run --release -p sirc_umf --example resample_study`
 
-use device_audio::testkit::{note_freq, spit_entries};
-use device_audio::OUTPUT_RATE_HZ;
+use sirc_umf::testkit::{note_freq, spit_entries};
+use sirc_umf::OUTPUT_RATE_HZ;
 
 fn tri(p: f64) -> f64 {
     let p = p - p.floor();

@@ -1,11 +1,9 @@
 //! Budget and numerics study for SIRCAS.
-//! `cargo run --release -p device_audio --example budget_study`
+//! `cargo run --release -p sirc_umf --example budget_study`
 
-use device_audio::core::{mod_route, moddest, reg, FinePolicy, PitchModLaw, Policy, Sircas};
-use device_audio::testkit::{
-    isa, power_on, run_frames, sine, spit_entries, Builder, InstrumentSpec,
-};
-use device_audio::{CLKI_PER_FRAME, OUTPUT_RATE_HZ};
+use sirc_umf::core::{mod_route, moddest, reg, FinePolicy, PitchModLaw, Policy, Sircas};
+use sirc_umf::testkit::{isa, power_on, run_frames, sine, spit_entries, Builder, InstrumentSpec};
+use sirc_umf::{CLKI_PER_FRAME, OUTPUT_RATE_HZ};
 
 const CH: fn(usize, u16) -> u16 = reg::ch;
 
@@ -222,7 +220,7 @@ fn main() {
                 .log2();
         let unit = 1200.0 * ((spi as f64 + 1.0) / spi as f64).log2();
         println!("{note:4}  {:8.1}  {spi:11}  {:5.2} B/sample   {after:9.2} | {before:7.2}     {unit:8.5}",
-            device_audio::testkit::note_freq(note), spi as f64 / 65536.0);
+            sirc_umf::testkit::note_freq(note), spi as f64 / 65536.0);
     }
 
     println!("\n=== F. Vibrato depth of a pitch-modulation source (M = +127, S = 0), additive vs proportional ===");

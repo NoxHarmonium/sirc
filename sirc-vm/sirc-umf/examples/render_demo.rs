@@ -1,15 +1,15 @@
 //! Render a short demo piece through the SIRCAS model to a WAV file.
-//! `cargo run --release -p device_audio --example render_demo -- demo.wav`
+//! `cargo run --release -p sirc_umf --example render_demo -- demo.wav`
 //!
 //! Six voices: filtered saw bass, portamento pulse lead with LFO vibrato, plucked arpeggio,
 //! sine-sweep kick (portamento), noise hat and snare. The CPU role is played by this program:
 //! it sets up the registers, then only sweeps the filter cutoff while the sequencers run.
 
-use device_audio::core::{mod_route, moddest, reg, Policy, Sircas};
-use device_audio::testkit::{
+use sirc_umf::core::{mod_route, moddest, reg, Policy, Sircas};
+use sirc_umf::testkit::{
     isa, noise, pulse, run_frames, saw, sine, spit_entries, write_wav, Builder, InstrumentSpec,
 };
-use device_audio::OUTPUT_RATE_HZ;
+use sirc_umf::OUTPUT_RATE_HZ;
 
 const CH: fn(usize, u16) -> u16 = reg::ch;
 // 400 samples is 12.5 ms (80 Hz); a sixteenth note at about 120 BPM is ten ticks. (Portamento

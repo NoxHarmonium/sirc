@@ -1,8 +1,8 @@
 //! Filter study: measures the fixed-point SVF against the float reference.
-//! `cargo run --release -p device_audio --example filter_study`
+//! `cargo run --release -p sirc_umf --example filter_study`
 
-use device_audio::filter::{cutoff_hz, damping, Rounding, SvfConfig, SvfFixed, SvfFloat};
-use device_audio::OUTPUT_RATE_HZ;
+use sirc_umf::filter::{cutoff_hz, damping, Rounding, SvfConfig, SvfFixed, SvfFloat};
+use sirc_umf::OUTPUT_RATE_HZ;
 
 const FS: f64 = OUTPUT_RATE_HZ;
 

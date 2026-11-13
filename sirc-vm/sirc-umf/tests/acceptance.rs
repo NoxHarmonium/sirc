@@ -1,9 +1,9 @@
 //! Acceptance tests from section 16 of the draft specification.
 
-use device_audio::core::{mod_route, moddest, reg, CpuReq, EnvPhase, Policy};
-use device_audio::i2s::{deserialise, serialise, I2sFormat};
-use device_audio::testkit::{isa, power_on, run_frames, Builder, InstrumentSpec};
-use device_audio::{Sircas, CLKI_PER_FRAME};
+use sirc_umf::core::{mod_route, moddest, reg, CpuReq, EnvPhase, Policy};
+use sirc_umf::i2s::{deserialise, serialise, I2sFormat};
+use sirc_umf::testkit::{isa, power_on, run_frames, Builder, InstrumentSpec};
+use sirc_umf::{Sircas, CLKI_PER_FRAME};
 
 const CH: fn(usize, u16) -> u16 = reg::ch;
 
@@ -33,20 +33,10 @@ fn dc_instrument(b: &mut Builder, s: &mut Sircas, index: usize, value: i8, relea
 }
 
 fn setup_voices(s: &mut Sircas, b: &mut Builder) {
-    let saw = device_audio::testkit::saw(64, 100.0);
+    let saw = sirc_umf::testkit::saw(64, 100.0);
     b.looping_instrument(s, 0, &saw, (20, 5, 200, 10));
-    b.looping_instrument(
-        s,
-        1,
-        &device_audio::testkit::sine(32, 100.0),
-        (20, 5, 200, 10),
-    );
-    b.looping_instrument(
-        s,
-        2,
-        &device_audio::testkit::square(16, 90.0),
-        (20, 5, 200, 10),
-    );
+    b.looping_instrument(s, 1, &sirc_umf::testkit::sine(32, 100.0), (20, 5, 200, 10));
+    b.looping_instrument(s, 2, &sirc_umf::testkit::square(16, 90.0), (20, 5, 200, 10));
     for c in 0..6 {
         s.reg_write(CH(c, reg::CH_VOLUME_PAN), 0x8000 | (c as u16 * 20 + 20));
     }

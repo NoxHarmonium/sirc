@@ -25,9 +25,9 @@ Run it:
 
 ```bash
 cd sirc-vm
-cargo test -p device_audio
-cargo run --release -p device_audio --example filter_study
-cargo run --release -p device_audio --example budget_study
+cargo test -p sirc_umf -p device_audio
+cargo run --release -p sirc_umf --example filter_study
+cargo run --release -p sirc_umf --example budget_study
 cargo run -p sirc_vm -- --enable-audio ...   # maps SIRCAS at 0x000D0000, 0x10000 words
 ```
 

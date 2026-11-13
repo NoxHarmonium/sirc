@@ -1,0 +1,7 @@
+[package]
+name = "sirc_umf"
+version = "0.1.0"
+edition = "2021"
+description = "SIRC Unified Music Framework: SIRCAS reference model and music tooling backend"
+
+[dependencies]
