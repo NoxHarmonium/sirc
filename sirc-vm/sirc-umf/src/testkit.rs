@@ -210,6 +210,24 @@ pub fn triangle(len: usize, amp: f64) -> Vec<i8> {
         .collect()
 }
 
+/// Triangle that starts at zero and rises, so a note begins without a step.
+#[must_use]
+pub fn triangle_from_zero(len: usize, amp: f64) -> Vec<i8> {
+    (0..len)
+        .map(|i| {
+            let p = i as f64 / len as f64;
+            let v = if p < 0.25 {
+                4.0 * p
+            } else if p < 0.75 {
+                2.0 - 4.0 * p
+            } else {
+                4.0 * p - 4.0
+            };
+            (amp * v).round() as i8
+        })
+        .collect()
+}
+
 /// Zero-mean pulse wave with the given duty cycle (0..1): high level `2*amp*(1-duty)`, low level
 /// `-2*amp*duty`, so the level is `amp` at 50 % and there is no DC offset.
 #[must_use]

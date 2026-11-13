@@ -1,0 +1,11 @@
+[package]
+name = "erence"
+version = "0.1.0"
+edition = "2021"
+description = "ERENCE: Event Recording, Editing, Notation and Composition Environment (SIRCUMF)"
+
+[dependencies]
+sirc_umf = { path = "../sirc-umf" }
+ratatui = "0.29"
+crossterm = "0.28"
+cpal = "0.15"

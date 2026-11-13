@@ -1,0 +1,106 @@
+;; Plays a song exported by ERENCE on SIRCAS.
+;;
+;; Link this with the exported data (erence_image and erence_regs), for example:
+;;   erence --export song.sasm song.erence
+;; See the Makefile for the assemble and link steps, and run it with --enable-audio.
+
+.EQU $SCRATCH_SEGMENT               #0x0001
+.EQU $AUDIO_SEGMENT                 #0x000D
+.EQU $AUDIO_WINDOW                  #0x8000
+.EQU $AUDIO_SEQ_DONE                #0x0004
+
+; Channels that have a sequence in demo-once.erence: 1, 2, 3, 4 and 6 (bits 0-3 and 5)
+.EQU $SEQ_DONE_MASK                 #0x002F
+
+; Offset 0 is the reset vector
+.ORG 0x0000
+.DQ @start
+
+.ORG 0x0200
+:start
+; Stack works backwards from the end of the scratch segment
+MOVI sh, $SCRATCH_SEGMENT
+MOVI sl, #0xFFFF
+
+BRSR @erence_load
+
+; The device is playing. Wait until every sequence has run to its END.
+:wait_for_end
+MOVI ah, $AUDIO_SEGMENT
+MOVI al, $AUDIO_SEQ_DONE
+LOAD r1, (a)
+ANDI r1, #0x003F
+CMPI r1, $SEQ_DONE_MASK
+BRAN|!= @wait_for_end
+
+; Let the last releases ring out: a counted delay of about two seconds of simulated time
+MOVI r2, #0x0015
+:tail_outer
+MOVI r1, #0xFFFF
+:tail_inner
+SUBI r1, #1
+BRAN|!= @tail_inner
+SUBI r2, #1
+BRAN|!= @tail_outer
+
+; Stop the simulator through the debug device
+MOVI[N] ah, #0x000B
+MOVI[N] al, #0x0007
+MOVI[N] r7, #1
+STOR (a), r7
+
+;; erence_load: copy the audio memory image into the device window, then make the register
+;; writes in order. The last of them start the sequencers.
+;; Uses r1-r6 and a. Returns with RETS.
+:erence_load
+STOR -(s), lh
+STOR -(s), ll
+
+; Source tables are consecutive 16-bit words: a count, then the data.
+MOVI r1, @erence_image.l
+MOVI r2, @erence_image.u
+MOVI al, #0
+MOVR ah, r2
+LOAD r5, (r1, a)
+ADDI r1, #1
+MOVI r3, $AUDIO_WINDOW
+MOVI r4, $AUDIO_SEGMENT
+CMPI r5, #0
+BRAN|== @image_done
+
+:image_loop
+MOVR ah, r2
+LOAD r6, (r1, a)
+MOVR ah, r4
+STOR (r3, a), r6
+ADDI r1, #1
+ADDI r3, #1
+SUBI r5, #1
+BRAN|!= @image_loop
+
+:image_done
+MOVI r1, @erence_regs.l
+MOVI r2, @erence_regs.u
+MOVI al, #0
+MOVR ah, r2
+LOAD r5, (r1, a)
+ADDI r1, #1
+CMPI r5, #0
+BRAN|== @regs_done
+
+:regs_loop
+; (offset, value) pairs
+MOVR ah, r2
+LOAD r3, (r1, a)
+ADDI r1, #1
+LOAD r6, (r1, a)
+ADDI r1, #1
+MOVR ah, r4
+STOR (r3, a), r6
+SUBI r5, #1
+BRAN|!= @regs_loop
+
+:regs_done
+LOAD ll, (s)+
+LOAD lh, (s)+
+RETS

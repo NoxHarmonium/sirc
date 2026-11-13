@@ -4,10 +4,13 @@
 //! The model is clocked at `CLKI` resolution so that memory slot scheduling, deadlines and DSP cycle
 //! budgets can be measured. It is not RTL. See `docs/audio/STATUS.md`.
 
+pub mod compile;
 pub mod core;
 pub mod filter;
 pub mod i2s;
+pub mod song;
 pub mod testkit;
+pub mod wav;
 
 pub use crate::core::{CpuReq, Policy, Sircas};
 

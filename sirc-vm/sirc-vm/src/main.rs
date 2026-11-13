@@ -149,6 +149,11 @@ pub struct Args {
     #[clap(long)]
     enable_audio: bool,
 
+    /// Map the audio device (as --enable-audio) and write what it played to this WAV file when
+    /// the simulation ends.
+    #[clap(long)]
+    audio_wav: Option<PathBuf>,
+
     #[clap(short, long)]
     debug: bool,
 
@@ -177,6 +182,20 @@ impl Args {
             }
         }
         Ok(config)
+    }
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn write_audio_wav(vm: &Vm, path: &std::path::Path) {
+    let mut bus = vm.bus_peripheral.borrow_mut();
+    let Some(audio) = bus.device_as::<device_audio::AudioDevice>(AUDIO_SEGMENT) else {
+        error!("No audio device is mapped, so there is no audio to write");
+        return;
+    };
+    let frames = std::mem::take(&mut audio.core.captured);
+    match device_audio::testkit::write_wav(path, &frames, device_audio::OUTPUT_RATE_HZ as u32) {
+        Ok(()) => info!("Wrote {} audio frames to {}", frames.len(), path.display()),
+        Err(e) => error!("Could not write {}: {e}", path.display()),
     }
 }
 
@@ -229,6 +248,10 @@ fn main() {
         debugger_join_handle.join().unwrap();
     } else {
         run_vm(&vm, dump_file);
+    }
+
+    if let Some(path) = &args.audio_wav {
+        write_audio_wav(&vm, path);
     }
 
     info!("Simulation termination requested. Exiting with code zero; example checks determine success from their output.");
@@ -305,13 +328,16 @@ fn setup_vm(args: &Args) -> Vm {
     #[cfg(not(feature = "video"))]
     let vsync_frequency = 60f64;
 
-    if args.enable_audio {
+    if args.enable_audio || args.audio_wav.is_some() {
         bus_peripheral.map_segment(
             AUDIO_SEGMENT,
             0x000D_0000,
             0x1_0000,
             true,
-            Box::new(new_audio_device(AudioPolicy::default())),
+            Box::new(new_audio_device(AudioPolicy {
+                capture: args.audio_wav.is_some(),
+                ..AudioPolicy::default()
+            })),
         );
     }
 

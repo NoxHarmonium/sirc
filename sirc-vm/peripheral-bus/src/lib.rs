@@ -147,6 +147,15 @@ impl BusPeripheral {
         device.write_raw_bytes(binary_data);
     }
 
+    /// Gives typed access to the device mapped under `label`, or `None` if there is no such
+    /// segment or the device is not a `T`. For host-side tools that need more than raw bytes.
+    pub fn device_as<T: 'static>(&mut self, label: &str) -> Option<&mut T> {
+        self.get_segment_for_label(label)?
+            .device
+            .as_any()
+            .downcast_mut::<T>()
+    }
+
     /// Dumps a segment to raw binary data
     ///
     /// # Panics

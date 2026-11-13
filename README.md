@@ -49,6 +49,13 @@ A cross platform GUI (QT/C++) to make it a bit easier to process images into til
 Will quantize images into the limited palette available on the SIRC and export assembly snippets that can be used in
 programs.
 
+### sirc-umf and erence
+
+SIRCUMF (the SIRC Unified Music Framework) is the music tooling for SIRCAS, the audio chip. `sirc-vm/sirc-umf` is its
+library: the SIRCAS reference model (shared with the VM's audio device), the song model, a compiler from tracker rows to
+SIRCAS sequences and an assembly exporter. `sirc-vm/erence` is ERENCE (Event Recording, Editing, Notation and
+Composition Environment), a tracker-style terminal editor built on it. See `sirc-vm/erence/README.md`.
+
 ### examples
 
 Lots of real world programs that test the sirc-vm but could also be run on the real hardware in the future.
@@ -116,6 +123,7 @@ Options:
   -q, --quiet...                   Decrease logging verbosity
   -e, --enable-video
       --enable-audio                   Map the SIRCAS audio device at 0x000D0000
+      --audio-wav <AUDIO_WAV>          Map the audio device and write what it played to a WAV file
   -d, --debug
   -h, --help                       Print help
   -V, --version                    Print version
