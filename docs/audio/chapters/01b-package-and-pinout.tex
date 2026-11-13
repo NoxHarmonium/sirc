@@ -94,8 +94,7 @@ contents are undefined after power-up and after reset.
 
 \subsection{Bus Signals}
 
-\activelow{CS}, \activelow{BAS}, BRW, A0--A15, D0--D15 and \activelow{BACK} are the peripheral interface of the
-SIRC-1, defined in the \hwmanual{}. A cycle is addressed to the device when \activelow{CS} and \activelow{BAS} are both
+\activelow{BAS}, BRW, A0--A15, D0--D15 and \activelow{BACK} are bus signals of the SIRC-1, defined in the \hwmanual{}. \activelow{CS} is produced by the system's address decoding of the device's segment. A cycle is addressed to the device when \activelow{CS} and \activelow{BAS} are both
 asserted. The address is a word offset in the device's 65,536-word segment (Chapter~\ref{ch:memory-map}). The device
 asserts \activelow{BACK} to complete the cycle. Register accesses are completed without delay. An access to the audio
 memory window is completed when the device has made it, which takes between two and five \texttt{CLKI} cycles
@@ -106,7 +105,7 @@ memory window is completed when the device has made it, which takes between two 
 
 \textbf{Direction:} Output. \textbf{Signal Type:} Active Low, open drain. The device holds \activelow{IRQ3} asserted
 for as long as at least one sequence has completed whose interrupt is enabled (Section~\ref{sec:interrupts}). The
-signal is level-sensitive. It is released when the program has acknowledged every enabled completion.
+signal is level-sensitive. It is released when no enabled flag remains set.
 
 \subsection{Audio Memory Interface (MA, MD, MCE, MOE, MWE)}
 \label{sec:memory-interface}

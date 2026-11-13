@@ -16,7 +16,7 @@ the following scopes:
 		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state                                 \\
 		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage                                         \\
 		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics                                                                     \\
-		\videomanual{}  & The picture processing unit: package and pinout, memory map, registers, data formats, video modes, timing                     \\
+		\videomanual{}  & The display adapter: package and pinout, memory map, registers, data formats, video modes, timing                             \\
 		\audiomanual{}  & The sound processor: package and pinout, memory map, registers, data formats, voices, filter, sequencer, timing (this manual) \\
 		\bottomrule
 	\end{tabular}
@@ -47,7 +47,7 @@ instructions in audio memory with no help from the CPU. The mixed result leaves 
 		Voices            & Six, each playing signed 8-bit samples by nearest-sample lookup (no interpolation)                                  \\
 		Sample rate       & 31,960.226 Hz: one output sample every 336 \texttt{CLKI} cycles                                                     \\
 		Audio memory      & 32,768 words (64 KB) of external static memory, dedicated to the device (Chapter~\ref{ch:package})                  \\
-		Pitch             & 16.16 fixed-point step; 12-entry pitch table in each instrument; notes 0--119 (Chapter~\ref{ch:playback})           \\
+		Pitch             & 16.16 fixed-point step; A 12-entry pitch table for each instrument; notes 0--119 (Chapter~\ref{ch:playback})        \\
 		Envelope          & 12-bit linear attack, decay, sustain and release, one step every 64 samples (Chapter~\ref{ch:envelope})             \\
 		Mixer             & Per-voice volume (8 bits) and pan (8 bits), master volume, 20-bit accumulators (Chapter~\ref{ch:mixer})             \\
 		Modulation        & Any voice can modulate pitch, volume, pan, filter cutoff, filter pan or master volume (Chapter~\ref{ch:modulation}) \\
@@ -207,4 +207,16 @@ slots for sample reads first, and for the sequencers' instruction, instrument an
 	\item A value that the design has not fixed is \textbf{not yet specified}. It is not undefined, and no value is implied.
 	\item Fixed-point numbers are written $m.n$: $m$ integer bits and $n$ fraction bits. The position and step of a voice are
 	      16.16 values, so their integer part is the high 16 bits.
+	\item The \textbf{device} is the whole package, SIRCAS. It contains the \textbf{sound processor}, which is the six voices,
+	      the mixer and the filter, together with the registers, the sequencers and the memory slot scheduler.
+	\item A \textbf{tick} is one step of the sequencers' clock, whose period is set by \texttt{SEQ\_PERIOD}
+	      (Chapter~\ref{ch:sequencer}). An \textbf{envelope update} is one step of a voice's envelope, made once in every 64
+	      output samples (Chapter~\ref{ch:envelope}); portamento steps on it too.
+	\item \textbf{Architecturally undefined} means that the manual does not say what the device does: the result may differ
+	      between devices and between runs, and software must not depend on it. It is not the same as \textbf{not yet
+		      specified}, which marks a decision the design has still to make, nor as the contents of audio memory at reset, which
+	      are \textbf{undefined} until the program writes them.
+	\item In formulas, $\ll$ and $\gg$ are shifts left and right (a right shift of a negative number rounds towards minus
+	      infinity), $\lfloor x \rfloor$ rounds down, $\lceil x \rceil$ rounds up, and $a \bmod b$ is the remainder of $a$
+	      divided by $b$.
 \end{itemize}

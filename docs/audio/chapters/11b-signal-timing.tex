@@ -52,9 +52,9 @@ bus after it. A read changes nothing in the device.
 
 An access to the window waits for a CPU slot of the memory schedule (Section~\ref{sec:cpu-slots}). The CPU holds its
 signals and the device holds \activelow{BACK} deasserted until the access is made, then asserts \activelow{BACK} for
-the cycle in which a read puts its data on D0--D15, or a write takes its data. A window access is acknowledged two to
-five cycles after it begins, whatever the voices are doing. Figure~\ref{fig:signal-window-read} shows a read of the
-slowest case, five cycles.
+the cycle in which a read puts its data on D0--D15, or a write takes its data. A window access is acknowledged in the
+second to fifth cycle of the access, whatever the voices are doing (Section~\ref{sec:cpu-slots}).
+Figure~\ref{fig:signal-window-read} shows a read of the slowest case, five cycles.
 
 \begin{figure}[H]
 	\centering
@@ -96,10 +96,10 @@ during the right. The duty cycle of \texttt{BCLK} is not yet specified.
 	\centering
 	\begin{tabular}{lllp{6.4cm}}
 		\toprule
-		\textbf{Slot} & \textbf{\texttt{BCLK} periods of the frame} & \textbf{\texttt{WS}} & \textbf{\texttt{SD}}                                                                    \\
+		\textbf{Slot} & \textbf{\texttt{BCLK} periods of the frame} & \textbf{\texttt{WS}} & \textbf{\texttt{SD}}                                                        \\
 		\midrule
-		Left          & 0--23                                       & Low                  & Data bits 15--0 (most significant first) in periods 1--16 of the slot; zero in the rest \\
-		Right         & 24--47                                      & High                 & The same in periods 25--40 of the frame; zero in the rest                               \\
+		Left          & 0--23                                       & Low                  & Data bits 15--0 (most significant first) in periods 1--16; zero in the rest \\
+		Right         & 24--47                                      & High                 & Data bits 15--0 in periods 25--40; zero in the rest                         \\
 		\bottomrule
 	\end{tabular}
 	\caption{Serial Frame Layout}

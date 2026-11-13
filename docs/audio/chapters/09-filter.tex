@@ -78,21 +78,23 @@ The filter needs three multiplications for each output sample: $f \times \mathrm
 $f \times \mathrm{high}$.
 
 Every sum and every state is limited to the 24-bit range and never wraps around. A loud input or a high resonance can
-therefore drive the filter into the limit, and the result is hard-clipped distortion, not a burst of noise. The filter
-does not reduce its gain to avoid this, and it does not remove the small errors its truncation leaves: after a loud
-sound ends, the output settles to within a few output units of zero (at worst about 5), and does not fall further.
+therefore drive the filter into the limit, and the states are held at the limit of their range: they do not wrap, so
+the filter stays bounded. The filter does not reduce its gain to avoid this, and it does not remove the small errors
+its truncation leaves: after a loud sound ends, the output settles to within a few output units of zero (at worst about
+5), and does not fall further, provided that the resonance is below 255.
 
 \section{Cutoff}
 \label{sec:filter-cutoff}
 
-The cutoff register \texttt{FILTER\_CUTOFF} holds an unsigned 8-bit value $c$, and $f = c / 256$. The frequency of the
-filter's poles, which is its cutoff for a low-pass or a high-pass filter and its centre for a band-pass one, is
+The cutoff register \texttt{FILTER\_CUTOFF} holds an unsigned 8-bit value $c$, and $f = c / 256$. The nominal cutoff
+frequency of the filter, which is the frequency of its poles when the damping is zero and is close to it for light
+damping, is
 
 \begin{equation*}
 	f_c = \frac{f_s}{\pi} \arcsin\!\left(\frac{f}{2}\right)
 \end{equation*}
 
-\noindent where $f_s$ is the output sample rate of 31,960.226~Hz. The largest value, 255, gives about 5.3~kHz. The frequency is nearly
+\noindent where $f_s$ is the output sample rate of 31,960.226~Hz. The largest value, 255, gives about 5.3~kHz. With heavy damping the peak of the band-pass response lies a little above the nominal frequency, about 6\% above at the lowest resonance. The frequency is nearly
 proportional to the register: each step is about 20~Hz at the low end, and a little more higher up.
 
 \begin{table}[H]
@@ -114,7 +116,7 @@ proportional to the register: each step is about 20~Hz at the low end, and a lit
 		255               & 5303.8                  & ---                               \\
 		\bottomrule
 	\end{tabular}
-	\caption{Filter Cutoff Frequencies}
+	\caption{Nominal Filter Cutoff Frequencies}
 	\label{tab:filter-cutoff}
 \end{table}
 
@@ -125,8 +127,8 @@ steps.
 A cutoff register value of 0 makes $f$ zero, and then neither of the two lines that change the state of the filter does
 anything: \emph{low} and \emph{band} hold their last values. The low-pass output is a constant, and the high-pass
 output is the input less that constant and the damping term. The filter resumes from the held state when the cutoff is
-raised, with no step. A program that wants the filter silent while it is closed raises the cutoff to 1 and lets the
-input stop.
+raised, with no step. A program that wants the filter silent sets the volume byte of \texttt{FILTER\_VOL\_PAN} to 0, or
+clears \texttt{FILTER\_EN} on its voices.
 
 \section{Resonance}
 \label{sec:filter-resonance}

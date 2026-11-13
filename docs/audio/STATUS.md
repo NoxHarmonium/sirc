@@ -240,5 +240,26 @@ registers not in the reset table.
 * No SRAM electrical timing (chip enable, output enable, turnaround). Only the schedule is modelled.
 * No converter edge timing, and the `SCK` frequency and phase (against the converter's Figs. 3 and 4) are not settled.
 * No assembly-driven test through the SIRC-1 CPU; the bus path is covered by a scripted master.
-* The manual has not had a review pass: no fact-check against the model by chapter, no cold read, and no `make format` run beyond
-  what the build needs. The `docs/video` manual does not yet mention SIRCAS in its manual-set table.
+* The manual has had one review pass (below). It has not had a second pass, and no human has read it end to end.
+
+## Review pass
+
+Four fact-checkers (one per chapter group) and one cold reader were run over the manual. Every finding was checked against the model
+before it was applied; two cold-read claims were wrong and were not applied (the +127 scaled value is 32,377, and the CPU window
+latency of two to five cycles is right). Corrected:
+
+* The loop start and the voice position are relative to the start of the sample, not of the memory; a voice has no length field.
+* "A 12-entry pitch table in each instrument" is a table the instrument names, kept elsewhere in memory.
+* A glide needs a voice that is *active*: envelope not inactive and sample not ended (the manual said only the envelope).
+* `SEQ_PC` writes clear that voice's `SEQ_DONE` flag and restart its state whether or not `SEQ_EN` is set.
+* `MEM_OVERRUN` covers a missed tick as well as a late sample read.
+* The mix accumulators are limited to 20 bits after the filter output is added.
+* The filter formula is the nominal cutoff (the pole frequency only at zero damping); the "silence" advice and the settling claim
+  apply below resonance 255; filter volume 0 is the way to silence it.
+* Modulation delay, "destination", the vibrato figures (17 and 8.5 cents peak for a sine of amplitude 127), the arithmetic of a
+  tick in samples, the envelope time bounds and update offsets, the CPU window access time table, and the tick-limit table were
+  made exact or added.
+* Terms defined in Conventions: device versus sound processor, tick, envelope update, architecturally undefined, shift notation.
+
+Not applied: the clamps on the modulation delta (cutoff 1024, pitch $2^{30}$), which cannot be observed because the final sums are
+limited tighter; and the suggestion to rename `SPIT`, which is expanded once as the sample pitch table instead.

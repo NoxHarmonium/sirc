@@ -32,8 +32,7 @@ takes these steps, in order:
 	      \texttt{SPIT\_ADDRESS} $+ 4 (n \bmod 12)$, and finds the step as in Section~\ref{sec:note-numbers}. The signed
 	      \texttt{FINE} value is added to it (Section~\ref{sec:fine-pitch}).
 	\item \textbf{Apply.} The voice either \emph{retriggers} or \emph{glides}. It glides when \texttt{PORTA\_EN} is set, the
-	      instrument is the one the voice is already playing, and the voice is still sounding, meaning its envelope is not
-	      inactive. A glide changes only the target step. In every other case the voice retriggers: the step and the target
+	      instrument is the one the voice is already playing, and the voice is \emph{active}, meaning that its envelope is not inactive and its sample has not ended. A glide changes only the target step. In every other case the voice retriggers: the step and the target
 	      step are both set to the new step, the position is set to 0, the envelope restarts, and the first envelope step is taken
 	      at once (Chapter~\ref{ch:envelope}).
 \end{enumerate}
@@ -41,7 +40,8 @@ takes these steps, in order:
 A change of instrument always retriggers, whether or not portamento is enabled. Reading the instrument and the pitch
 entry takes up to nine reads of audio memory, which are made in the sound processor's memory slots after the sample
 reads (Chapter~\ref{ch:timing}); a note therefore takes effect a little after it is requested, and the CPU is not told
-when. A note that is requested while an earlier one is still being applied is applied after it.
+when. A sequencer's notes are applied in order. A direct command written while an earlier one is still waiting replaces
+it (Section~\ref{sec:reg-command}).
 
 The device reads the instrument record when a voice's instrument changes and not on every note. A program that changes
 the contents of an instrument record that a voice has loaded must start a note on a different instrument on that voice
@@ -64,9 +64,9 @@ only keeps the pitch accurate over time. A step of 1.0 plays the sample at the o
 octave higher and skips every second byte; a step of 0.5 plays it an octave lower and repeats every byte.
 
 The nearest-sample lookup adds error to the sound that depends on the length of the waveform and not on the pitch. A
-waveform of 64 bytes played this way carries distortion about 24 dB below the signal; a waveform of 256 bytes, about 36
-dB. The error falls by about 6 dB for each doubling of the length, so a long waveform sounds cleaner than a short one.
-Chapter~\ref{ch:programming} gives guidance.
+waveform of 64 bytes played this way carries distortion about 24 dB below the signal (for a sine or triangle waveform);
+a waveform of 256 bytes, about 36 dB. The error falls by about 6 dB for each doubling of the length, so a long waveform
+sounds cleaner than a short one. Chapter~\ref{ch:programming} gives guidance.
 
 \subsection{Looping}
 \label{sec:looping}
@@ -78,13 +78,14 @@ When the integer part of the position reaches \texttt{SAMPLE\_LENGTH} or more:
 	      part, once, and keeps the fraction. The overshoot is preserved, so the pitch does not drift. The sample then plays from
 	      \texttt{LOOP\_START} for ever.
 	\item With \texttt{LOOP\_ENABLE} clear, the sample has ended. The voice's output is zero from the next output sample, until a
-	      new note retriggers it. The envelope keeps running, so a voice whose sample has ended is silent, not stopped.
+	      new note retriggers it. The envelope keeps running, but the voice is no longer active (Section~\ref{sec:note-start}): a
+	      new note on it retriggers.
 \end{itemize}
 
 The device subtracts the loop length only once for each output sample. A step that is larger than the loop length
-(\texttt{SAMPLE\_LENGTH} $-$ \texttt{LOOP\_START}) is architecturally undefined. A waveform that holds one cycle and is
-played at any pitch below half the output rate never meets this limit, because its step is less than half of its
-length.
+(\texttt{SAMPLE\_LENGTH} $-$ \texttt{LOOP\_START}) is architecturally undefined. A one-cycle waveform whose loop starts
+at byte 0 (a \texttt{LOOP\_START} of 0), played at any pitch below half the output rate, never meets this limit,
+because its step is less than half of its length.
 
 \section{Pitch Adjustment}
 \label{sec:fine-pitch}
@@ -126,9 +127,9 @@ step moves up or down towards the target, and a move that would pass the target 
 step where it is until another note changes it.
 
 Portamento runs on the voice's own envelope clock, so it needs neither the sequencer nor a particular tick rate: it
-runs when \texttt{SEQ\_PERIOD} is 0, and for a voice the CPU controls directly. It also runs for a voice whose
-\texttt{PORTA\_EN} is clear, if the voice has a target that differs from its step; setting \texttt{PORTA\_EN} only
-decides whether a new note glides or retriggers.
+runs at any tick rate, including a \texttt{SEQ\_PERIOD} of 0, and for a voice the CPU controls directly. It also
+continues if \texttt{PORTA\_EN} is cleared during a glide, which lets the glide finish; \texttt{PORTA\_EN} only decides
+whether a new note glides or retriggers.
 
 The glide time is the distance between the two steps divided by the rate, times 2.0 ms. The step is linear in
 frequency, so the slide is linear in Hz and not in semitones. The slowest rate, 1, moves the step by one raw unit in

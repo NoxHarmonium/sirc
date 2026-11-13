@@ -12,17 +12,17 @@ cycles.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lrl}
+	\begin{tabular}{llp{6.4cm}}
 		\toprule
-		\textbf{Quantity}              & \textbf{Value}               & \textbf{Derivation}                           \\
+		\textbf{Quantity}              & \textbf{Value}               & \textbf{Derivation}                                  \\
 		\midrule
-		\texttt{CLKI} period           & 93.1 ns                      & 2 oscillator periods                          \\
-		Output sample period           & 336 cycles, 31.29 $\mu$s     & 672 oscillator periods                        \\
-		Output sample rate             & 31,960.226 Hz                & \texttt{CLKI} / 336                           \\
-		Envelope update interval       & 64 samples, 2.002 ms         & 21,504 cycles; 499.4 updates a second         \\
-		Serial bit clock \texttt{BCLK} & 7 cycles, 1.534 MHz          & \texttt{CLKI} / 7; 48 bits in a sample period \\
-		Memory transaction             & 2 cycles, 186 ns             & One read or one write                         \\
-		Sequencer tick                 & \texttt{SEQ\_PERIOD} samples & Chosen by the program                         \\
+		\texttt{CLKI} period           & 93.1 ns                      & 2 oscillator periods                                 \\
+		Output sample period           & 336 cycles, 31.29 $\mu$s     & 672 oscillator periods                               \\
+		Output sample rate             & 31,960.226 Hz                & \texttt{CLKI} / 336                                  \\
+		Envelope update interval       & 64 samples, 2.002 ms         & 21,504 cycles; 499.4 updates a second for each voice \\
+		Serial bit clock \texttt{BCLK} & 7 cycles, 1.534 MHz          & \texttt{CLKI} / 7; 48 bits in a sample period        \\
+		Memory transaction             & 2 cycles, 186 ns             & One read or one write                                \\
+		Sequencer tick                 & \texttt{SEQ\_PERIOD} samples & Chosen by the program                                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Clocks and Periods}
@@ -30,9 +30,9 @@ cycles.
 \end{table}
 
 The output sample period is the device's hard deadline. Each period the device must read the next sample byte of every
-sounding voice and produce the next stereo output sample. The sequencers have a softer one: their work may run over
-several sample periods, but it must finish before the next tick (Section~\ref{sec:seq-deadlines}). The sample generator
-and the memory schedule run continuously, whether the output is muted or not.
+voice that is playing a sample and produce the next stereo output sample. The sequencers have a softer one: their work
+may run over several sample periods, but it must finish before the next tick (Section~\ref{sec:seq-deadlines}). The
+sample generator and the memory schedule run continuously, whether the output is muted or not.
 
 \section{The Audio Memory Schedule}
 \label{sec:memory-schedule}
@@ -82,12 +82,28 @@ left idle.
 \subsection{CPU Slots}
 \label{sec:cpu-slots}
 
-A CPU access to the audio memory is held until the next CPU slot, takes two cycles, and is then acknowledged. It
-completes between two and five \texttt{CLKI} cycles after the cycle in which it was made: two if it arrives at the
-start of a CPU slot and five if it just misses one. The time does not depend on the voices, the sequencers or the
-filter. The CPU window can move 126 words, 252 bytes, in each sample period, which is 4.03 million words a second. How
-fast a block move actually runs depends also on the bus cycle of the CPU (\hwmanual{}). Register accesses use no slot
-and are never delayed.
+A CPU access to the audio memory is held until the next CPU slot, takes two cycles, and is then acknowledged. It is
+acknowledged in the second to the fifth cycle of the access, counting the cycle in which the access is made as the
+first (Table~\ref{tab:cpu-latency}). The time does not depend on the voices, the sequencers or the filter. The CPU
+window can move 126 words, 252 bytes, in each sample period, which is 4.03 million words a second. How fast a block
+move actually runs depends also on the bus cycle of the CPU (\hwmanual{}). Register accesses use no slot and are never
+delayed.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{5.2cm}cccccccc}
+		\toprule
+		\textbf{Access made in cycle}  & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+		\midrule
+		\textbf{Acknowledged in cycle} & 4 & 3 & 2 & 3 & 2 & 3 & 2 & 5 \\
+		\bottomrule
+	\end{tabular}
+	\caption{CPU Window Access Time (Cycles of the Eight-Cycle Pattern)}
+	\label{tab:cpu-latency}
+\end{table}
+
+An access made in the first cycle of a CPU slot (cycles 2, 4 and 6) is the quickest. The slowest is one made in the
+last cycle of the pattern, which has to wait for the first CPU slot of the next.
 
 \subsection{Sound Processor Slots}
 \label{sec:spu-slots}
@@ -123,17 +139,35 @@ reads go on, and a voice whose tick was missed is simply started again at the ne
 \label{sec:choosing-tick}
 
 How short a tick can be depends on how much the sequences do in each. A voice executes at most eight instructions in a
-tick. In the worst case, four of them are notes on instruments different from the one the voice has loaded, and the
-voice reads $8 + 4 \times 9 = 44$ words. Six voices doing that need 264 reads, and at least 36 slots in each sample
-period supply them in 8 sample periods, so a tick shorter than 8 sample periods (about 0.25 ms) can overrun in this
-worst case. A more usual voice reads 13 words in a tick (\texttt{INST}, \texttt{FINE}, \texttt{NOTE} and
-\texttt{WAIT}), and six such voices fit in a tick of 3 sample periods. An ordinary tick of 50 to 200 ticks a second
-leaves nearly all of the slots idle.
+tick, and each instruction is one read; a note also reads its instrument record when the instrument has changed (seven
+reads) and its pitch table entry (two). Six voices share at least 36 sequencer slots in each sample period, so the
+number of reads in a tick, divided by 36, gives the shortest tick in sample periods that cannot overrun.
+Table~\ref{tab:tick-limits} works out three cases.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{7.4cm}rrr}
+		\toprule
+		\textbf{Case, for each voice in one tick}                                                   & \textbf{Reads} & \textbf{Six voices} & \textbf{Periods at least} \\
+		\midrule
+		Worst: eight instructions, four of them notes on a different instrument                     & 44             & 264                 & 8                         \\
+		A note on a new instrument and three other instructions                                     & 13             & 78                  & 3                         \\
+		Notes on the instrument already loaded, with \texttt{INST}, \texttt{FINE} and \texttt{WAIT} & 6              & 36                  & 1                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{Reads in a Tick}
+	\label{tab:tick-limits}
+\end{table}
+
+These are bounds. A sequence that waits between notes does less in most ticks, so a tick can be shorter than the table
+says. A tick of 50 to 200 a second leaves nearly all of the slots idle.
 
 \section{Latency}
 
 A voice's sample byte is read during one sample period, scaled and mixed during the next, and sent to the converter
 during the one after. The delay from a read to its sound at the output is three sample periods, 94 $\mu$s. A note takes
-effect after it has read its instrument and pitch entry, which takes a sample period or two, so a note sounds within
-about five sample periods, 0.16 ms, of the sequencer reaching it, and a note on a voice that already has its instrument
-sooner. A write to a voice register, such as volume, is seen from the next sample period.
+effect after the device has read its instrument record and pitch entry, which takes a sample period or two, and its
+first sample byte then goes through the three periods above, so a note sounds within about five sample periods, 0.16
+ms, of the sequencer reaching it. A note on a voice that already has its instrument is sooner. A write to a voice
+register, such as volume, is seen from the next sample period.

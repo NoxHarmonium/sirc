@@ -54,11 +54,11 @@ to 256 instruments, which is 2048 words.
 \section{The Pitch Table}
 \label{sec:pitch-table}
 
-Every instrument names a \emph{pitch table}, its \texttt{SPIT}, which holds the pitch of the instrument's twelve notes
-of one octave. A pitch table is 12 entries of 32 bits, 24 words in all. Each entry is an unsigned 16.16 number: the
-step, in sample bytes per output sample, that plays the sample at the pitch of that note. An entry is two words, the
-high word first, so entry $k$ of a table at byte offset $T$ is at $T + 4k$, and the table must start at a multiple of
-four.
+Every instrument names a \emph{pitch table}, abbreviated \texttt{SPIT} (sample pitch table), which holds the pitch of
+the instrument's twelve notes of one octave. A pitch table is 12 entries of 32 bits, 24 words in all. Each entry is an
+unsigned 16.16 number: the step, in sample bytes per output sample, that plays the sample at the pitch of that note. An
+entry is two words, the high word first, so entry $k$ of a table at byte offset $T$ is at $T + 4k$, and the table must
+start at a multiple of four.
 
 The entries are in semitone order, starting with the lowest note, note 0 (Section~\ref{sec:note-numbers}).
 Table~\ref{tab:pitch-table} shows a table for a one-cycle waveform of 64 bytes, built so that note 48 sounds A4 at
@@ -89,9 +89,9 @@ Table~\ref{tab:pitch-table} shows a table for a one-cycle waveform of 64 bytes, 
 \end{table}
 
 An entry is the pitch in Hz times the length of one cycle of the waveform in bytes, divided by the output sample rate
-of 31,960.226~Hz, times 65,536. A longer waveform needs larger entries: a 256-byte cycle needs entries four times as
-large. The table belongs to the instrument, so a sample recorded at any rate is brought to the right pitch by its own
-table, and different instruments can share a table.
+of 31,960.226~Hz, times 65,536, rounded to the nearest whole number. A longer waveform needs larger entries: a 256-byte
+cycle needs entries four times as large. The table belongs to the instrument, so a sample recorded at any rate is
+brought to the right pitch by its own table, and different instruments can share a table.
 
 \subsection{Note Numbers}
 \label{sec:note-numbers}
@@ -129,23 +129,23 @@ With the pitch table of Table~\ref{tab:pitch-table}, the notes above sound as na
 	\centering
 	\begin{tabular}{llp{7.2cm}}
 		\toprule
-		\textbf{Quantity}              & \textbf{Format} & \textbf{Notes}                                                       \\
+		\textbf{Quantity}              & \textbf{Format} & \textbf{Notes}                                                                 \\
 		\midrule
-		Sample point                   & Signed 8-bit    & Expanded to 16 bits by placing it in the high byte                   \\
-		Sample position (\texttt{SPA}) & Unsigned 16.16  & The integer part is the byte offset from the start of the sample     \\
-		Sample step (\texttt{SPI})     & Unsigned 16.16  & Sample bytes per output sample                                       \\
-		Envelope level                 & Unsigned 12-bit & 0 to 4095                                                            \\
-		Voice gain                     & Unsigned 12-bit & Envelope times volume (Section~\ref{sec:voice-gain})                 \\
-		Volume, pan, master volume     & Unsigned 8-bit  & Scale by the value divided by 256                                    \\
-		Mix accumulator                & Signed 20-bit   & One for each output channel                                          \\
-		Output sample                  & Signed 16-bit   & Limited, never wrapped                                               \\
-		Filter state                   & Signed 24-bit   & Four fraction bits; limited, never wrapped (Chapter~\ref{ch:filter}) \\
+		Sample point                   & Signed 8-bit    & Expanded to 16 bits by placing it in the high byte                             \\
+		Sample position (\texttt{SPA}) & Unsigned 16.16  & The integer part is the byte offset from the start of the sample               \\
+		Sample step (\texttt{SPI})     & Unsigned 16.16  & Sample bytes per output sample                                                 \\
+		Envelope level                 & Unsigned 12-bit & 0 to 4095                                                                      \\
+		Voice gain                     & Unsigned 12-bit & $(\mathrm{level} \times \mathrm{volume}) \gg 8$ (Section~\ref{sec:voice-gain}) \\
+		Volume, pan, master volume     & Unsigned 8-bit  & Scale by the value divided by 256                                              \\
+		Mix accumulator                & Signed 20-bit   & One for each output channel                                                    \\
+		Output sample                  & Signed 16-bit   & Limited, never wrapped                                                         \\
+		Filter state                   & Signed 24-bit   & Four fraction bits; limited, never wrapped (Chapter~\ref{ch:filter})           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Number Formats}
 	\label{tab:number-formats}
 \end{table}
 
-Every sum in the mixer and the filter is limited to the range of its register and never wraps around. Where this manual
-says a value is \emph{limited}, a result above the maximum is replaced by the maximum and a result below the minimum by
-the minimum.
+The mix accumulators, the filter's states and the output are limited to the range of their registers and never wrap
+around. Where this manual says a value is \emph{limited}, a result above the maximum is replaced by the maximum and a
+result below the minimum by the minimum.

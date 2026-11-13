@@ -53,9 +53,9 @@ Two kinds of address name the same memory, and a field says which it holds:
 	\item A \textbf{window address} is the CPU's word address of a word: \texttt{0x8000} for the first word, \texttt{0xFFFF} for
 	      the last. \texttt{INSTR\_BASE} and \texttt{SEQ\_PC} hold window addresses.
 	\item A \textbf{byte offset} is a count of bytes from the start of the audio memory, \texttt{0x0000}--\texttt{0xFFFF}. The
-	      sample start, the pitch table address and the loop start of an instrument are byte offsets, as are the sample position
-	      of a voice and its length. The byte at offset $b$ is in the word at window address $\texttt{0x8000} + \lfloor b/2
-		      \rfloor$.
+	      sample start and the pitch table address of an instrument are byte offsets. The loop start and the position of a voice
+	      are counted in bytes from the start of the sample, and not from the start of the memory. The byte at offset $b$ is in
+	      the word at window address $\texttt{0x8000} + \lfloor b/2 \rfloor$.
 \end{itemize}
 
 The sequencer's \texttt{GOTO} displacement is a count of instruction words (Chapter~\ref{ch:sequencer}).
@@ -114,5 +114,5 @@ the memory, then the pitch tables, then the sequences, and gives the rest to sam
 \end{table}
 
 A sample takes one byte per sample point, so the whole memory holds at most about two seconds of sound at the device's
-output rate if it is played at its original pitch with one sample point per output sample. Looping a short waveform
-repeats its bytes, so a looped voice uses very little memory (Chapter~\ref{ch:playback}).
+output rate if it is played at one sample point per output sample. Looping a short waveform repeats its bytes, so a
+looped voice uses very little memory (Chapter~\ref{ch:playback}).

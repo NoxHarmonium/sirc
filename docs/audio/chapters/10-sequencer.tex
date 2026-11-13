@@ -72,8 +72,7 @@ must not rely on either.
 	\item[\texttt{INST}] Writes the operand to the voice's \texttt{INSTR} register.
 	\item[\texttt{FINE}] Writes the signed operand to the voice's \texttt{FINE} register.
 	\item[\texttt{GOTO}] Adds the signed operand to the address of the instruction after the \texttt{GOTO}, in instruction
-	      words. A displacement of $-1$ jumps back to the \texttt{GOTO} itself; $-2$ jumps to the instruction before it. The
-	      address wraps within the window.
+	      words. A displacement of $-1$ jumps back to the \texttt{GOTO} itself; $-2$ jumps to the instruction before it. An address that passes \texttt{0xFFFF} continues at \texttt{0x8000}.
 	\item[\texttt{END}] Ends the sequence now or after a count (Section~\ref{sec:seq-end}).
 \end{description}
 
@@ -124,7 +123,8 @@ A write to \texttt{SEQ\_PC} restarts the voice's sequence at the address written
 counter and \texttt{END} counter and its \texttt{SEQ\_DONE} flag, and starts the sequencer if it had finished. Any
 instruction fetch or note load that was in progress is abandoned; what had already been applied, such as a note that
 has started to sound, stays. The sequencer then runs on the next tick if \texttt{SEQ\_EN} is 1, and not before. A voice
-whose \texttt{SEQ\_EN} is 0 does not run a sequence, and writing \texttt{SEQ\_PC} only sets up its counter.
+whose \texttt{SEQ\_EN} is 0 does not run a sequence; the write still sets the counter and clears the voice's flags, and
+the sequence runs once \texttt{SEQ\_EN} is set and the next tick comes.
 
 \section{Completion Interrupt}
 \label{sec:interrupts}
@@ -141,10 +141,10 @@ voice's flag.
 \label{sec:seq-deadlines}
 
 The work that a tick starts must be finished before the next tick. A voice that has not finished its work when the next
-tick comes is not started again: it misses that tick, its \texttt{WAIT} counter is not decremented for it, and the
-\texttt{MEM\_OVERRUN} bit of \texttt{STATUS} is set. The rest of its work then completes as before, so the music slows
-by the ticks that were missed. A program avoids the condition by keeping the work in each tick small, and by choosing a
-tick that is not too short (Section~\ref{sec:deadlines}).
+tick comes skips that tick: its \texttt{WAIT} counter is not decremented for it, and the \texttt{MEM\_OVERRUN} bit of
+\texttt{STATUS} is set. The rest of its work then completes as before, so the music slows by the ticks that were
+missed. A program avoids the condition by keeping the work in each tick small, and by choosing a tick that is not too
+short (Section~\ref{sec:deadlines}).
 
 \section{Direct Control and Sound Effects}
 \label{sec:direct-control}
@@ -153,4 +153,7 @@ The device has no separate engine for sound effects. A voice with \texttt{SEQ\_E
 writes \texttt{INSTR} and \texttt{FINE}, then \texttt{COMMAND} to start or stop a note. The other voice registers,
 volume, pan, portamento, routing and modulation, can be written in either mode. The CPU can take a voice from the
 sequencer by clearing \texttt{SEQ\_EN}, play an effect, and give it back by setting \texttt{SEQ\_EN} and writing
-\texttt{SEQ\_PC}: setting \texttt{SEQ\_EN} alone does not restart the sequence (Section~\ref{sec:reg-control}).
+\texttt{SEQ\_PC}: setting \texttt{SEQ\_EN} alone does not restart the sequence (Section~\ref{sec:reg-control}). To
+return the voice to where its sequence stood, the CPU reads \texttt{SEQ\_PC} before the borrow and writes the value
+back afterwards. The effect's instrument replaces the one the sequence had selected, so the sequence selects its own
+again with \texttt{INST}.

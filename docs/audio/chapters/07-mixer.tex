@@ -4,7 +4,8 @@
 The mixer turns the sample bytes of the voices into the two output channels. For every output sample it scales each
 voice by its envelope and volume, divides it between the channels by its pan, adds in the filter's output, applies the
 master volume, and limits the result to 16 bits. All the arithmetic is integer. A right shift of a negative number
-rounds towards minus infinity, and every sum is limited and never wraps (Section~\ref{sec:number-formats}).
+rounds towards minus infinity, and the accumulators and the output are limited and never wrap
+(Section~\ref{sec:number-formats}).
 
 \section{Voice Gain}
 \label{sec:voice-gain}
@@ -26,8 +27,8 @@ the scaled sample is:
 
 The largest gain is $(4095 \times 255) \gg 8 = 4079$, which is 0.9958 of unity, 0.036 dB below it. A voice at full
 volume and full envelope therefore plays at 99.6\% of the sample's own level: a byte of $+127$ gives $+32{,}377$ and a
-byte of $-128$ gives $-32{,}632$. The gain is calculated again whenever the envelope level, the volume register or a
-volume modulation changes, and not for every output sample.
+byte of $-128$ gives $-32{,}632$. The gain depends only on the envelope level and the volume in force, so it changes
+only when one of them does.
 
 \section{Panning and Mixing}
 \label{sec:mixing}
@@ -42,11 +43,12 @@ and takes the rest as the left:
 The two shares add up to the scaled sample, so the pan moves the sound between the channels and does not change its
 total. A pan of 0 puts all of the voice in the left channel. A pan of 128 puts half in each, which is 6 dB below the
 sample in each channel. A pan of 255 puts 255/256 in the right channel and the remaining 1/256 in the left, 48 dB
-below, so the right-hand extreme is not quite a hard pan.
+below, so the right-hand extreme is not quite a hard pan. The centre is 6 dB down in each channel by design: the pan
+has no compensation, so a voice at centre is quieter in each channel than the same voice panned hard to one side.
 
 Each channel has an accumulator, a signed 20-bit number. The shares of all the dry voices and of the filter are added
-into the two accumulators. Six voices at full scale add to less than the range of the accumulator, so a sum of voices
-cannot overflow it, but the master volume and the final limit still apply.
+into the two accumulators. Six voices at full scale add to less than the range of the accumulator, but adding the
+filter's output can take a sum past it, so each accumulator is limited to 20 bits after the filter's output is added.
 
 \section{The Filter Bus}
 
@@ -77,6 +79,6 @@ The two limited values are sent to the converter in the serial format of Chapter
 \texttt{AUDIO\_EN} is 0 the device sends zero in both channels instead. The computation goes on as before, so the
 voices are in the right place when the output is enabled.
 
-An output sample is calculated from the sample bytes read during the previous sample period and sent in the one that
-follows, so there is a delay of three sample periods, about 94 $\mu$s, between a voice reading a byte and its effect at
-the converter (Chapter~\ref{ch:timing}).
+A voice reads its sample byte in one sample period, the byte is scaled and mixed in the next, and the result is sent to
+the converter in the one after that: three sample periods, about 94 $\mu$s, from a read to its effect at the converter
+(Chapter~\ref{ch:timing}).

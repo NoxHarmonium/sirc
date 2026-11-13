@@ -58,8 +58,7 @@ each update it takes one step, as follows:
 \texttt{ATTACK}, \texttt{DECAY} and \texttt{RELEASE} are unsigned 8-bit steps in units of the 12-bit level. \texttt{SUSTAIN}
 is an unsigned 8-bit level, converted to the 12-bit scale by repeating its top four bits below it: the 12-bit level is
 $(\texttt{SUSTAIN} \ll 4) \mathbin{|} (\texttt{SUSTAIN} \gg 4)$. A \texttt{SUSTAIN} of 255 gives the full level, 4095, and 0
-gives 0. When the sustain level is 0 the voice is silent once the decay ends, but it is still sounding as far as the
-rules of Section~\ref{sec:note-start} go: its envelope is in the sustain phase, not inactive.
+gives 0. When the sustain level is 0 the voice is silent once the decay ends, but it is still active as far as the rules of Section~\ref{sec:note-start} go: its envelope is in the sustain phase, not inactive.
 
 A stop (Section~\ref{sec:reg-command}) puts the envelope in the release phase from whatever phase it is in. A stop on
 an inactive envelope has no effect.
@@ -71,9 +70,10 @@ step at once, without waiting for the voice's next update. An \texttt{ATTACK} of
 immediately, and any other attack starts at its first step and not at 0. The voice's own update then continues at its
 regular intervals.
 
-The time a full-scale attack takes is $(\lceil 4095 / \mathrm{step} \rceil - 1) \times 2.0$ ms after the note starts;
-the time a full-scale decay or release takes is $\lceil 4095 / \mathrm{step} \rceil \times 2.0$ ms or less, since a
-release begins part-way through an update interval.
+A full-scale attack takes at most $(\lceil 4095 / \mathrm{step} \rceil - 1) \times 2.0$ ms after the note starts, since
+the first regular update falls within one interval of the note. A full-scale decay or release takes at most $\lceil
+	4095 / \mathrm{step} \rceil \times 2.0$ ms. Table~\ref{tab:envelope-times} gives $4095 / \mathrm{step}$ intervals of
+2.0 ms.
 
 \begin{table}[H]
 	\centering
@@ -87,7 +87,7 @@ release begins part-way through an update interval.
 		32            & 256 ms                                \\
 		16            & 512 ms                                \\
 		8             & 1.0 s                                 \\
-		4             & 2.0 s                                 \\
+		4             & 2.05 s                                \\
 		2             & 4.1 s                                 \\
 		1             & 8.2 s                                 \\
 		\bottomrule
@@ -98,7 +98,7 @@ release begins part-way through an update interval.
 
 A step of 1 is the slowest the envelope goes. A voice with an \texttt{ATTACK} of 1 is silent at first: with a step of 1
 the level is 1, which is too small to produce any output after the volume is applied (Section~\ref{sec:voice-gain}),
-and the voice becomes audible after a few updates.
+and the voice becomes audible only after one or more updates, later for a lower volume.
 
 \section{Update Timing}
 \label{sec:envelope-timing}
@@ -106,13 +106,14 @@ and the voice becomes audible after a few updates.
 The six voices do not update together. Their updates are spread evenly across the 64 output samples of each interval,
 so that in any one output sample at most one voice updates, and the arithmetic of the updates does not pile up. Each
 voice still updates once in 64 output samples; the stagger fixes only which sample of the interval it is. The
-assignment is fixed and is the same after every reset.
+assignment is fixed and is the same after every reset: voice $n$ updates when the count of sample periods since reset,
+modulo 64, equals $(64 - \lfloor 64n/6 \rfloor) \bmod 64$, which is 0, 54, 43, 32, 22 and 11 for voices 0 to 5.
 
 An envelope update is visible to the mixer from the next output sample.
 
 \section{Retriggering}
 
-A note that retriggers a voice that is still sounding restarts its envelope at 0 (Section~\ref{sec:note-start}). The
+A note that retriggers a voice that is still active restarts its envelope at 0 (Section~\ref{sec:note-start}). The
 sound of the old note is replaced at once by the start of the new one, with no crossfade. A new note, with a position
 of 0, begins with the first byte of its sample at its new level, so the output moves in one sample from wherever the
 old note was to the new note's first value. A tune that retriggers a voice while the previous note is still loud has a

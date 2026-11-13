@@ -77,9 +77,9 @@ manual. A voice register for voice $n$ is at \texttt{0x0010} $+ 16n +$ its offse
 	\label{tab:reg-config-fields}
 \end{table}
 
-\texttt{AUDIO\_EN} gates the output only. While it is 0 the device runs exactly as it does when it is 1: envelopes
-advance, sample positions move, modulation and the filter run, and the sequencers keep time. Clearing and setting it
-mutes and unmutes without changing any of that.
+In Figure~\ref{fig:reg-config}, EN is \texttt{AUDIO\_EN}. \texttt{AUDIO\_EN} gates the output only. While it is 0 the
+device runs exactly as it does when it is 1: envelopes advance, sample positions move, modulation and the filter run,
+and the sequencers keep time. Clearing and setting it mutes and unmutes without changing any of that.
 
 \subsection{Status and Status Clear Registers}
 \label{sec:reg-status}
@@ -101,20 +101,21 @@ mutes and unmutes without changing any of that.
 	\centering
 	\begin{tabular}{llp{8.0cm}}
 		\toprule
-		\textbf{Bits} & \textbf{Field}        & \textbf{Meaning}                                                                                                                           \\
+		\textbf{Bits} & \textbf{Field}        & \textbf{Meaning}                                                                                                                                                                \\
 		\midrule
-		15--6         & ---                   & Reads zero                                                                                                                                 \\
-		5             & \texttt{MEM\_OVERRUN} & A deadline for a memory read was missed (Section~\ref{sec:deadlines}). Set by the device and held until cleared through \texttt{STATUSCLR} \\
-		4             & \texttt{SEQ\_IRQ}     & 1 while \activelow{IRQ3} is asserted: at least one \texttt{SEQ\_DONE} flag is set and enabled in \texttt{SEQ\_INT\_EN}                     \\
-		3--0          & \texttt{VERSION}      & Device revision, 1                                                                                                                         \\
+		15--6         & ---                   & Reads zero                                                                                                                                                                      \\
+		5             & \texttt{MEM\_OVERRUN} & A memory deadline was missed: a sample read, or the sequencer work of a tick (Section~\ref{sec:deadlines}). Set by the device and held until cleared through \texttt{STATUSCLR} \\
+		4             & \texttt{SEQ\_IRQ}     & 1 while \activelow{IRQ3} is asserted: at least one \texttt{SEQ\_DONE} flag is set and enabled in \texttt{SEQ\_INT\_EN}                                                          \\
+		3--0          & \texttt{VERSION}      & Device revision, 1                                                                                                                                                              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Status Register Fields}
 	\label{tab:reg-status-fields}
 \end{table}
 
-\texttt{STATUS} is read-only; a write to its offset is ignored. A write to \texttt{STATUSCLR} (offset
-\texttt{0x0002}) with bit 5 set clears \texttt{MEM\_OVERRUN}; the other bits are ignored, and the register reads zero.
+In Figure~\ref{fig:reg-status}, OVR is \texttt{MEM\_OVERRUN} and IRQ is \texttt{SEQ\_IRQ}. \texttt{STATUS} is
+read-only; a write to its offset is ignored. A write to \texttt{STATUSCLR} (offset \texttt{0x0002}) with bit 5 set
+clears \texttt{MEM\_OVERRUN}; the other bits are ignored, and the register reads zero.
 
 \subsection{Sequencer Registers}
 \label{sec:reg-sequencer}
@@ -123,11 +124,11 @@ mutes and unmutes without changing any of that.
 Zero stops the ticks. A tick of 666 samples, for example, is about 20.84 ms. A write restarts the count towards the
 next tick (Chapter~\ref{ch:sequencer}).
 
-\texttt{SEQ\_DONE} (offset \texttt{0x0004}) holds one sticky flag for each voice, in bits 5--0: the device sets a voice's
+\texttt{SEQ\_DONE} (offset \texttt{0x0004}) holds one sticky flag for each voice, in bits 5--0 (bit $n$ belongs to voice $n$): the device sets a voice's
 flag when its sequence ends (Section~\ref{sec:seq-end}). Reading the register does not clear a flag. Writing a 1 to a
-bit clears that flag. Bits 15--6 read zero.
+bit clears that flag; so does a write to the voice's \texttt{SEQ\_PC}. Bits 15--6 read zero.
 
-\texttt{SEQ\_INT\_EN} (offset \texttt{0x0005}) holds one interrupt enable for each voice, in bits 5--0. Bits 15--6 read
+\texttt{SEQ\_INT\_EN} (offset \texttt{0x0005}) holds one interrupt enable for each voice, in bits 5--0 (bit $n$ for voice $n$). Bits 15--6 read
 zero. Disabling an interrupt never clears a flag. \activelow{IRQ3} is asserted whenever any bit of
 \texttt{SEQ\_DONE} and the same bit of \texttt{SEQ\_INT\_EN} are both 1 (Section~\ref{sec:interrupts}).
 
@@ -231,22 +232,23 @@ A program writes every register it relies on before it starts a voice (Section~\
 	\centering
 	\begin{tabular}{llp{8.0cm}}
 		\toprule
-		\textbf{Bits} & \textbf{Field}      & \textbf{Meaning}                                                                                                            \\
+		\textbf{Bits} & \textbf{Field}      & \textbf{Meaning}                                                                                                              \\
 		\midrule
-		15            & \texttt{SEQ\_EN}    & Sequencer enable: the voice's sequencer runs. When 0 the CPU controls the voice directly (Section~\ref{sec:direct-control}) \\
-		14            & \texttt{MOD\_MODE}  & Modulation source: the voice makes no sound and steers a parameter (Chapter~\ref{ch:modulation})                            \\
-		13            & \texttt{FILTER\_EN} & Filtered: the voice goes to the filter input instead of the dry mix                                                         \\
-		12            & \texttt{PORTA\_EN}  & Portamento: a note on an instrument that is already sounding glides to the new pitch (Section~\ref{sec:portamento})         \\
-		11--0         & ---                 & Reserved                                                                                                                    \\
+		15            & \texttt{SEQ\_EN}    & Sequencer enable: the voice's sequencer runs. When 0 the CPU controls the voice directly (Section~\ref{sec:direct-control})   \\
+		14            & \texttt{MOD\_MODE}  & Modulation source: the voice makes no sound and steers a parameter (Chapter~\ref{ch:modulation})                              \\
+		13            & \texttt{FILTER\_EN} & Filtered: the voice goes to the filter input instead of the dry mix                                                           \\
+		12            & \texttt{PORTA\_EN}  & Portamento: a note on the instrument that the voice is already playing glides to the new pitch (Section~\ref{sec:portamento}) \\
+		11--0         & ---                 & Reserved                                                                                                                      \\
 		\bottomrule
 	\end{tabular}
 	\caption{Voice Control Register Fields}
 	\label{tab:reg-control-fields}
 \end{table}
 
-\texttt{MOD\_MODE} takes precedence over \texttt{FILTER\_EN}: a voice in modulation mode is in neither mix. Changing
-\texttt{SEQ\_EN} does not start, stop or restart anything. A voice that was playing keeps playing, and a sequence keeps
-its program counter.
+In Figure~\ref{fig:reg-control}, SEQ, MOD, FLT and POR are \texttt{SEQ\_EN}, \texttt{MOD\_MODE}, \texttt{FILTER\_EN}
+and \texttt{PORTA\_EN}. \texttt{MOD\_MODE} takes precedence over \texttt{FILTER\_EN}: a voice in modulation mode is in
+neither mix. Changing \texttt{SEQ\_EN} does not start, stop or restart anything. A voice that was playing keeps
+playing, and a sequence keeps its program counter.
 
 \subsection{Volume and Pan Register}
 
@@ -312,8 +314,7 @@ discarded.
 
 \subsection{Portamento Rate Register}
 
-\texttt{PORTA\_RATE} (voice offset 5) is an unsigned 16-bit rate, in raw units of the 16.16 step per envelope update
-(Section~\ref{sec:portamento}). Zero holds the current pitch.
+\texttt{PORTA\_RATE} (voice offset 5) is an unsigned 16-bit rate: how far the step moves at each envelope update, in raw units of the 16.16 step, where one unit is 1/65,536 of a sample byte per output sample. An envelope update is made every 64 output samples, 2.0 ms (Section~\ref{sec:portamento}). Zero holds the current pitch.
 
 \subsection{Command Register}
 \label{sec:reg-command}
@@ -330,10 +331,10 @@ discarded.
 	\label{fig:reg-command}
 \end{figure}
 
-\texttt{COMMAND} is write-only and reads zero. With bit 15 set, a write starts the note in bits 6--0, a number from 0 to
-119 (Section~\ref{sec:note-numbers}). With bit 15 clear, a write stops the voice: its envelope enters release; the sound
-is not cut (Chapter~\ref{ch:envelope}). The other bits are reserved. A write is accepted only while \texttt{SEQ\_EN} is
-0; with \texttt{SEQ\_EN} set it is ignored.
+In Figure~\ref{fig:reg-command}, N is bit 15. \texttt{COMMAND} is write-only and reads zero. With bit 15 set, a write
+starts the note in bits 6--0, a number from 0 to 119 (Section~\ref{sec:note-numbers}). With bit 15 clear, a write stops
+the voice: its envelope enters release; the sound is not cut (Chapter~\ref{ch:envelope}). The other bits are reserved.
+A write is accepted only while \texttt{SEQ\_EN} is 0; with \texttt{SEQ\_EN} set it is ignored.
 
 A note can need the instrument and pitch table to be read from audio memory first, so it can take more than one output
 sample to start sounding (Section~\ref{sec:note-start}). The device holds the command until it can apply it. It holds
