@@ -12,6 +12,7 @@ members = [
     "device-ram",
     "device-terminal",
     "device-video",
+    "device-audio",
 ]
 
 [profile.release]

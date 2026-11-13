@@ -22,6 +22,7 @@ use sirc_vm::debug_adapter::debug_map::read_debug_map;
 use sirc_vm::debug_adapter::server::{create_server_channels, start_server};
 use sirc_vm::{run_vm, run_vm_debug, Vm};
 
+use device_audio::{core::Policy as AudioPolicy, new_audio_device};
 use device_debug::new_debug_device;
 use device_ram::{
     new_ram_device_file_mapped, new_ram_device_standard, new_ram_device_with_latency,
@@ -40,6 +41,7 @@ static PROGRAM_SEGMENT: &str = "PROGRAM";
 static TERMINAL_SEGMENT: &str = "TERMINAL";
 static DEBUG_SEGMENT: &str = "DEBUG";
 static VIDEO_SEGMENT: &str = "VIDEO";
+static AUDIO_SEGMENT: &str = "AUDIO";
 
 fn segment_arg_parser(s: &str) -> Result<SegmentArg, String> {
     let segment_args: Vec<_> = s.split(':').collect();
@@ -143,6 +145,10 @@ pub struct Args {
     #[clap(short, long)]
     enable_video: bool,
 
+    /// Map the SIRCAS audio prototype at 0x000D0000 (reference model; produces no sound yet).
+    #[clap(long)]
+    enable_audio: bool,
+
     #[clap(short, long)]
     debug: bool,
 
@@ -189,6 +195,7 @@ fn main() {
     stderrlog::new()
         .module(module_path!())
         .modules(vec![
+            "device_audio",
             "device_debug",
             "device_ram",
             "device_terminal",
@@ -297,6 +304,16 @@ fn setup_vm(args: &Args) -> Vm {
 
     #[cfg(not(feature = "video"))]
     let vsync_frequency = 60f64;
+
+    if args.enable_audio {
+        bus_peripheral.map_segment(
+            AUDIO_SEGMENT,
+            0x000D_0000,
+            0x1_0000,
+            true,
+            Box::new(new_audio_device(AudioPolicy::default())),
+        );
+    }
 
     bus_peripheral.load_binary_data_into_segment_from_file(PROGRAM_SEGMENT, &args.program_file);
 
