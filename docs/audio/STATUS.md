@@ -18,7 +18,8 @@ It is not RTL and produces no sound on the host yet; it captures the stereo outp
 | Bus | `src/lib.rs` | `AudioDevice`: registers acknowledged at once, RAM held for a CPU slot, `IRQ3` on the bus |
 | Test kit | `src/testkit.rs` | Sequencer assembler, waveforms, pitch tables, RAM builder |
 | Tests | `tests/acceptance.rs`, `tests/bus.rs` | All twelve acceptance tests of draft section 16, plus the real bus path |
-| Studies | `examples/filter_study.rs`, `examples/budget_study.rs` | The measurements quoted below |
+| Studies | `examples/filter_study.rs`, `examples/budget_study.rs`, `examples/resample_study.rs` | The measurements quoted below |
+| Demo | `examples/render_demo.rs` | Renders a 28 s six-voice piece and per-voice stems to WAV (`-- <output dir>`) |
 
 Run it:
 
@@ -40,7 +41,7 @@ cargo run -p sirc_vm -- --enable-audio ...   # maps SIRCAS at 0x000D0000, 0x1000
 | 4 | Overload | **Pass.** Sticky `MEM_OVERRUN`, dropped ticks counted, CPU slots untouched, no PCM miss. |
 | 5 | Sequencer | **Pass.** `WAIT`, signed `GOTO`, 8-instruction cap, `END 0`, counted `END`, `SEQ_PC` rewrite, `IRQ3` level and W1C. |
 | 6 | Direct notes | **Pass** under the policy chosen below. |
-| 7 | ADSR and portamento | **Pass.** Updates every 64 frames per channel at six distinct phases; exact `ATTACK` step; glide once per tick without retrigger. |
+| 7 | ADSR and portamento | **Pass.** Updates every 64 frames per channel at six distinct phases; exact `ATTACK` step; glide once per 2 ms envelope update without retrigger (the draft says once per tick; see Decisions, number 9). |
 | 8 | Modulation | **Pass.** Lowest source wins; mutual feedback is deterministic. |
 | 9 | Filter | **Pass** for determinism and saturation. Numerics: see findings. |
 | 10 | DSP cycles | **Pass.** Maximum 276 of 336 with every cached gain invalidated every frame. |
@@ -120,6 +121,11 @@ the sums stay below 336, leaving roughly 50 to 120 clocks to spend.
   Proportional modulation (`SPI·M·2^S/2^16`, one extra 8-bit multiply per pitch-modulated channel, 10 clocks) gives a constant
   3.4 cents at `S = 0`, from 0.01 cent (`S = −8`) to 384 cents (`S = +7`), whatever the note.
 * Portamento is linear in SPI, so it is a linear glide in Hz, not in semitones.
+* **Longest glide on the envelope clock.** The slowest rate is 1 unit per 2.0 ms, so glide time is about the distance in SPI units times
+  2 ms. For a 64-byte single-cycle table: an octave up from A0 takes at most 7.2 s, from A2 29 s, from A4 116 s (multiply by 4 for a
+  256-byte table). The limit that matters is a short distance at low pitch: a semitone from A0 can take at most 0.43 s, from A1 0.86 s.
+  If slow low-pitch slides matter, treat `PORTA_RATE` as 12.4 fixed point (16 times longer maximums, up to 4095 units per update; costs
+  4 fractional bits per channel). Not done.
 
 ### Smaller points
 
@@ -134,6 +140,27 @@ the sums stay below 336, leaving roughly 50 to 120 clocks to spend.
   Both round-trip bit-exactly, and the TDA1541 accepts either (see Decisions).
 * **Loop shorter than `SPI`.** With the single-subtraction loop, any loop span shorter than the per-sample step is undefined. This
   is harmless for single-cycle waveforms below Nyquist, but it bites on short multi-cycle loops.
+
+### Findings from listening to the demo
+
+* **Portamento on the sequencer tick was too coarse (resolved).** The draft steps a glide once per sequencer tick. The first demo used
+  125 ms ticks, so the lead held a note for 500 ms and moved in three coarse steps without reaching its target, and the kick sat at
+  494 Hz for 250 ms (it sounded like a cowbell). Faster ticks fixed it, but made slow music need long `WAIT`s. The model now steps
+  portamento on each channel's own envelope clock (every 64 frames, 2 ms), independent of the sequencer. See Decisions, number 9.
+* **Model bug found and fixed: stale PCM byte at retrigger.** The byte already fetched for the previous note was played at the new
+  note's gain, giving a one-frame spike on every retrigger (up to full scale if the old note had released). It appeared once the first
+  envelope step moved to note-on (the envelope used to start at 0 and hide it). The fetch pipeline is now flushed at retrigger, with a
+  regression test.
+* **A hard retrigger is still a step.** A new note restarts its waveform at its first value at its new level, so the output jumps from
+  wherever the previous note was. With a sustained arpeggio the step is about 40 % of the peak (mean 2356 of 5807). A voice whose
+  envelope decays to silence before the next note has no step (mean 261, the same as ordinary mid-note steps). Waveforms that start at
+  a zero crossing help. This is inherent to a single voice retriggering; it is an instrument-design matter, not a chip defect.
+* **No interpolation: playback error is set by table length.** Nearest-neighbour playback of a 64-entry table has an error of about -24
+  dB against an ideal waveform (-30 dB once the constant half-entry delay is discounted) and non-harmonic components near -36 dB. That
+  is the subtle ringing heard on a 64-byte arpeggio. The error falls about 6 dB per doubling of the table: 256 entries give about -36 dB
+  and non-harmonic components of -40 to -48 dB. It does not depend on the note. Use tables of 256 entries or more for clean tones.
+  Linear interpolation would cost about one 8-bit multiply per channel (about 10 clocks, 60 for six) plus a second sample fetch, which
+  the DSP and RAM budgets could just absorb, but it is not planned.
 
 ## Choices the model made for the open points
 
@@ -151,7 +178,7 @@ Every item here is my pick, made so tests could be deterministic. They are all e
 | Instrument layout | ADSR bytes MSB first (`ATTACK` high). `LOOP_ENABLE` is bit 15 of word 6. |
 | `SPIT` entry | High word first, at `SPIT + 4·(note mod 12)`; `SPI = entry << (note / 12)`. |
 | `FINE` | Applied when the `NOTE` is processed, after the octave shift (`FinePolicy`, switchable). |
-| Portamento | Glide only if same instrument, `PORTA_EN`, and the channel is sounding. Otherwise a full retrigger. |
+| Portamento | Glide only if same instrument, `PORTA_EN`, and the channel is sounding. Otherwise a full retrigger. One step per envelope update (2 ms) toward the target, clamped so it never overshoots. |
 | Retrigger | Position 0, envelope level 0, attack phase, then the first envelope step is taken immediately. |
 | Envelope | Zero attack, decay or release step means instantaneous. Sustain 8 to 12 bits as `(S<<4) | (S>>4)`. |
 | Modulation scale | Internal `M` is the top 8 bits of the post-gain sample. `K` = 4 for pitch and cutoff, 0 otherwise. One frame of delay. |
@@ -173,6 +200,7 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 6 | DAC | Philips TDA1541. See the next section. |
 | 7 | Missed tick | Drop the tick (as modelled). |
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
+| 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
 
 ### Target DAC: Philips TDA1541 (product specification, November 1985)
 

@@ -1,6 +1,6 @@
 //! Acceptance tests from section 16 of the draft specification.
 
-use device_audio::core::{mod_route, moddest, reg, ChannelSnapshot, CpuReq, EnvPhase, Policy};
+use device_audio::core::{mod_route, moddest, reg, CpuReq, EnvPhase, Policy};
 use device_audio::i2s::{deserialise, serialise, I2sFormat};
 use device_audio::testkit::{isa, power_on, run_frames, Builder, InstrumentSpec};
 use device_audio::{Sircas, CLKI_PER_FRAME};
@@ -461,46 +461,84 @@ fn first_envelope_step_happens_at_note_on() {
 }
 
 #[test]
-fn portamento_glides_once_per_tick_without_retrigger() {
+fn retrigger_does_not_play_the_previous_notes_last_byte() {
+    // Note A is a constant +127 that has fully released. Note B is silence (all zero bytes) with
+    // an instant attack. The stale +127 left in the fetch pipeline must not be played at B's gain.
+    let mut s = Sircas::new(Policy {
+        capture: true,
+        ..Policy::default()
+    });
+    let mut b = Builder::default();
+    dc_instrument(&mut b, &mut s, 0, 127, 255);
+    dc_instrument(&mut b, &mut s, 1, 0, 255);
+    power_on(&mut s);
+    s.reg_write(CH(0, reg::CH_VOLUME_PAN), 0xFF00);
+    start_direct(&mut s, 0, 0, 12);
+    run_frames(&mut s, 200);
+    s.reg_write(CH(0, reg::CH_COMMAND), 0); // STOP
+    run_frames(&mut s, 2000); // release (255 per 64 frames) completes
+    assert_eq!(s.snapshot(0).env_phase, EnvPhase::Off);
+    let before = s.captured.len();
+    start_direct(&mut s, 0, 1, 12);
+    run_frames(&mut s, 30);
+    assert!(
+        s.captured[before..].iter().all(|&f| f == (0, 0)),
+        "stale byte played at the new gain: {:?}",
+        &s.captured[before..]
+    );
+}
+
+#[test]
+fn portamento_steps_on_the_envelope_clock_without_retrigger() {
+    // The sequencer is off (SEQ_PERIOD = 0): glides still run, once per 64 frames.
     let mut s = new();
     let mut b = Builder::default();
     setup_voices(&mut s, &mut b);
     power_on(&mut s);
     s.reg_write(CH(0, reg::CH_CONTROL), reg::CONTROL_PORTA_EN);
-    s.reg_write(CH(0, reg::CH_PORTA_RATE), 500);
-    s.reg_write(reg::SEQ_PERIOD, 20);
+    s.reg_write(CH(0, reg::CH_PORTA_RATE), 300);
     start_direct(&mut s, 0, 0, 48);
-    run_frames(&mut s, 10);
+    run_frames(&mut s, 200);
     let from = s.snapshot(0).spi;
-    let spa_before = s.snapshot(0).spa;
     start_direct(&mut s, 0, 0, 55);
-    run_frames(&mut s, 5);
+    run_frames(&mut s, 3);
     let snap = s.snapshot(0);
-    assert!(snap.spi_target > from);
+    assert!(snap.spi_target > from + 10_000, "target moved");
     assert!(
-        snap.spa >= spa_before,
-        "a glide must not restart the sample"
+        snap.spi < from + 1_000,
+        "a glide must not jump to the new pitch (that would be a retrigger)"
     );
-    run_frames(&mut s, 20 * 3);
-    let after3 = s.snapshot(0).spi;
-    assert!(
-        after3 > from && after3 <= from + 500 * 4,
-        "{from} -> {after3}"
-    );
-    // a different instrument always retriggers
+    // Watch 640 frames: every change is exactly one rate step, roughly ten of them.
+    let mut last = s.snapshot(0).spi;
+    let mut steps = vec![];
+    for _ in 0..640 {
+        run_frames(&mut s, 1);
+        let spi = s.snapshot(0).spi;
+        if spi != last {
+            steps.push(spi - last);
+            last = spi;
+        }
+    }
+    println!("portamento steps in 640 frames: {}", steps.len());
+    assert!((9..=11).contains(&steps.len()), "{} steps", steps.len());
+    assert!(steps.iter().all(|&d| d == 300), "{steps:?}");
+
+    // Gliding down, with a rate larger than the distance, lands exactly on the target.
+    s.reg_write(CH(0, reg::CH_PORTA_RATE), 65535);
+    start_direct(&mut s, 0, 0, 36);
+    run_frames(&mut s, 200);
+    let snap = s.snapshot(0);
+    assert_eq!(snap.spi, snap.spi_target, "no overshoot");
+    assert!(snap.spi < from);
+
+    // A different instrument always retriggers.
     start_direct(&mut s, 0, 1, 55);
     run_frames(&mut s, 3);
-    let snap = s.snapshot(ChannelSnapshot::default_channel());
-    assert!(snap.spa < spa_before + 1_000_000);
-}
-
-trait DefaultChannel {
-    fn default_channel() -> usize;
-}
-impl DefaultChannel for ChannelSnapshot {
-    fn default_channel() -> usize {
-        0
-    }
+    let snap = s.snapshot(0);
+    assert_eq!(
+        snap.spi, snap.spi_target,
+        "retrigger jumps straight to the new pitch"
+    );
 }
 
 // 8 -----------------------------------------------------------------------------------------

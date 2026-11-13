@@ -901,6 +901,10 @@ impl Sircas {
             ch.env_phase = EnvPhase::Attack;
             ch.gain_dirty = true;
             ch.cache = None;
+            // Flush the fetch pipeline: the byte already fetched for the previous note must not be
+            // played at the new note's gain (it would be a one-frame click).
+            ch.cur_valid = false;
+            ch.pcm_job = None;
             retriggered = true;
         }
         let latency = clk.saturating_sub(ch.tick_clk);
@@ -949,6 +953,7 @@ impl Sircas {
             let phase = (c as u64 * u64::from(ENVELOPE_PERIOD)) / NUM_CHANNELS as u64;
             if (self.frame + phase).is_multiple_of(u64::from(ENVELOPE_PERIOD)) {
                 self.envelope_update(c);
+                self.portamento_step(c);
             }
         }
 
@@ -969,16 +974,7 @@ impl Sircas {
     fn fire_tick(&mut self) {
         let clk = self.clk;
         for c in 0..NUM_CHANNELS {
-            // Portamento runs on every tick whatever the sequencer is doing.
             let ch = &mut self.chans[c];
-            if ch.porta_rate != 0 && ch.spi_current != ch.spi_target {
-                let rate = u32::from(ch.porta_rate);
-                ch.spi_current = if ch.spi_current < ch.spi_target {
-                    (ch.spi_current.saturating_add(rate)).min(ch.spi_target)
-                } else {
-                    ch.spi_current.saturating_sub(rate).max(ch.spi_target)
-                };
-            }
             if !ch.seq_en() || ch.halted {
                 continue;
             }
@@ -998,6 +994,20 @@ impl Sircas {
             ch.budget = 8;
             ch.tick_clk = clk;
             ch.ctl = Ctl::Fetch;
+        }
+    }
+
+    /// Portamento runs on the channel's own envelope clock (every 64 frames, 2 ms), whatever the
+    /// sequencer is doing. `PORTA_RATE` is raw 16.16 SPI units per update.
+    fn portamento_step(&mut self, c: usize) {
+        let ch = &mut self.chans[c];
+        if ch.porta_rate != 0 && ch.spi_current != ch.spi_target {
+            let rate = u32::from(ch.porta_rate);
+            ch.spi_current = if ch.spi_current < ch.spi_target {
+                ch.spi_current.saturating_add(rate).min(ch.spi_target)
+            } else {
+                ch.spi_current.saturating_sub(rate).max(ch.spi_target)
+            };
         }
     }
 
