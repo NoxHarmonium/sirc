@@ -21,7 +21,7 @@ Video Device Reference Manual (`docs/video`):
 
 ## Tasks
 
-- [ ] `MODE` = 2: slots 0-1 orthogonal B1 (entry, word), 2-3 orthogonal B2, 4-7 isometric B3 (entry A, word A, entry B, word B).
+- [ ] `MODE` = 2: slots 0-1 orthogonal entries (B1, B2), 2-3 orthogonal words (B1, B2), 4-7 isometric B3 (entry A, entry B, word A, word B).
 - [ ] Orthogonal layers scroll independently; priority bit puts a tile in front of sprite layer 1; `T2` per layer.
 - [ ] Isometric B3 uses the B3 registers (`B3MAP`, `B3TILES`, `B3SCRX/Y`, `B3PAL`); shading applies to it.
 - [ ] Order S1, B1, S2, B2, S3, B3.

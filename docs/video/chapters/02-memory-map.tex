@@ -45,8 +45,10 @@ registers hold addresses in this form: a tilemap at the start of VRAM has the ba
 \section{Access Rules}
 
 A read of a register, a palette entry or a VRAM word returns the stored value. A write stores the value. A read of an
-open bus offset returns zero and a write to one is ignored. The device never inserts a wait state: every access
-completes in the cycle it is made, whether or not it takes effect (Section~\ref{sec:memory-vram-access}).
+open bus offset returns zero and a write to one is ignored. The device inserts no wait state on an access to a
+register, the palette or the sprite table, and none on a write to video memory: those complete in the cycle they are
+made, whether or not they take effect (Section~\ref{sec:memory-vram-access}). A read of video memory takes one wait
+state (Section~\ref{sec:signal-vram}).
 
 The Status register (offset \texttt{0x0019}) and the Vertical Line register (offset \texttt{0x001A}) are read-only; a
 write to either is ignored.
@@ -60,8 +62,8 @@ only in vertical blanking, the lines after the last visible line (Chapter~\ref{c
 turned off (\texttt{GD} in the Base Configuration register is 1), when the device makes no reads at all:
 
 \begin{itemize}
-	\item A write to video memory or to the sprite table at any other time is ignored, and a read returns zero. At reset
-	      \texttt{GD} is 1, so a program can load video memory straight away and then clear \texttt{GD}.
+	\item A write to video memory or to the sprite table at any other time is ignored, and a read returns zero at once, with no
+	      wait state. At reset \texttt{GD} is 1, so a program can load video memory straight away and then clear \texttt{GD}.
 	\item The palette and the registers can be read and written at any time. A palette write changes the colour of the pixels
 	      drawn after it, which allows a palette change in the middle of the picture. A register write takes effect when the
 	      device next samples that register, normally at the start of the next line (Chapters~\ref{ch:mode2} and~\ref{ch:mode3}).

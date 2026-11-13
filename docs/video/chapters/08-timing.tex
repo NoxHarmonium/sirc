@@ -43,8 +43,8 @@ cycle: the master clock divided by two, 10,738,636~Hz at 21,477,272~Hz. The figu
 	\item A \texttt{DMAT} of 255 words takes 522 cycles, three quarters of a line, and cannot be interrupted.
 \end{itemize}
 
-The video device never waits for the CPU, and it gives the CPU no wait states: every access to the device completes in
-the cycle it is made (Section~\ref{sec:memory-vram-access}).
+The video device never waits for the CPU. It gives the CPU no wait state on any access except a read of video memory,
+which takes one (Sections~\ref{sec:memory-vram-access} and~\ref{sec:signal-vram}).
 
 \section{Line Timing}
 
@@ -246,12 +246,12 @@ eight slots differently.
 		\node[rowlab] at (-1.0,0) {Mode 1};
 		\foreach \i/\t in {0/B1 entry,1/B2 entry,2/B3 entry,3/B4 entry,4/B1 word,5/B2 word,6/B3 word,7/B4 word} { \node[flatc] at (\i*1.75,0) {\t}; }
 		\node[rowlab] at (-1.0,-1.1) {Mode 2};
-		\foreach \i/\t in {0/B1 entry A,1/B1 word A,4/B2 entry A,5/B2 word A} { \node[isoc] at (\i*1.75,-1.1) {\t}; }
-		\foreach \i/\t in {2/B1 entry B,3/B1 word B,6/B2 entry B,7/B2 word B} { \node[isob] at (\i*1.75,-1.1) {\t}; }
+		\foreach \i/\t in {0/B1 entry A,2/B1 word A,4/B2 entry A,6/B2 word A} { \node[isoc] at (\i*1.75,-1.1) {\t}; }
+		\foreach \i/\t in {1/B1 entry B,3/B1 word B,5/B2 entry B,7/B2 word B} { \node[isob] at (\i*1.75,-1.1) {\t}; }
 		\node[rowlab] at (-1.0,-2.2) {Mode 3};
-		\foreach \i/\t in {0/B1 entry,1/B1 word,2/B2 entry,3/B2 word} { \node[flatc] at (\i*1.75,-2.2) {\t}; }
-		\foreach \i/\t in {4/B3 entry A,5/B3 word A} { \node[isoc] at (\i*1.75,-2.2) {\t}; }
-		\foreach \i/\t in {6/B3 entry B,7/B3 word B} { \node[isob] at (\i*1.75,-2.2) {\t}; }
+		\foreach \i/\t in {0/B1 entry,1/B2 entry,2/B1 word,3/B2 word} { \node[flatc] at (\i*1.75,-2.2) {\t}; }
+		\foreach \i/\t in {4/B3 entry A,6/B3 word A} { \node[isoc] at (\i*1.75,-2.2) {\t}; }
+		\foreach \i/\t in {5/B3 entry B,7/B3 word B} { \node[isob] at (\i*1.75,-2.2) {\t}; }
 		% Legend
 		\node[flatc, minimum width=1.4cm] at (0,-3.4) {orthogonal};
 		\node[isoc, minimum width=1.4cm] at (1.75,-3.4) {isometric};
@@ -267,6 +267,15 @@ The status layer of Mode 2 takes its reads from the slots the isometric backgrou
 and a tile word in every group, at fixed slots (Chapter~\ref{ch:mode3}); with 2-bit tiles they read only in every
 second group. A mode with more backgrounds or a different mix of fetches than these needs more reads per group, such a
 queue, or a faster memory.
+
+\subsection{Read Latency}
+\label{sec:read-latency}
+
+The video memory is outside the device (Chapter~\ref{ch:package}). A read made in one slot delivers its word at the
+start of the next, so a read that needs the result of an earlier one cannot be made before the second slot after it.
+The address of a tile data word depends on its tilemap entry, so the schedules of all three modes read the entries
+first and the words afterwards. The one cycle of latency does not lengthen the back-porch prefetch: the last read of
+the prefetch is for the second group, which is needed eight cycles after the first pixel.
 
 \section{Pixel Pipeline}
 
@@ -287,7 +296,7 @@ the isometric background are made only when the group straddles two cells.
 		CLKI                  & L 7{0.5H 0.5L}                                                  \\
 		Slot                  & D{0} D{1} D{2} D{3} D{4} D{5} D{6} D{7}                         \\
 		Mode 1 read           & D{B1e} D{B2e} D{B3e} D{B4e} D{B1w} D{B2w} D{B3w} D{B4w}         \\
-		Mode 3 read           & D{B1e} D{B1w} D{B2e} D{B2w} D{B3e} D{B3w} D{B3e'} D{B3w'}       \\
+		Mode 3 read           & D{B1e} D{B2e} D{B1w} D{B2w} D{B3e} D{B3e'} D{B3w} D{B3w'}       \\
 		Pixel shown           & 2D{p0} 2D{p1} 2D{p2} 2D{p3}                                     \\
 	\end{tikztimingtable}
 	\caption{Fetch Schedule of One Group of Four Pixels (e: Tilemap Entry, w: Tile Word, $'$: Second Cell)}

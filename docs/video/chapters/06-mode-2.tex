@@ -202,8 +202,8 @@ each of its two backgrounds four of them:
 		\textbf{Slot} & \textbf{Fetch}                         & \textbf{Used}                     \\
 		\midrule
 		0             & Background 1 tilemap entry, cell A     & Always                            \\
-		1             & Background 1 tile data word, tile A    & Always                            \\
-		2             & Background 1 tilemap entry, cell B     & Only when the group has two cells \\
+		1             & Background 1 tilemap entry, cell B     & Only when the group has two cells \\
+		2             & Background 1 tile data word, tile A    & Always                            \\
 		3             & Background 1 tile data word, tile B    & Only when the group has two cells \\
 		4--7          & The same four fetches for background 2 &                                   \\
 		\bottomrule
@@ -212,6 +212,7 @@ each of its two backgrounds four of them:
 	\label{tab:m2-slots}
 \end{table}
 
+The entries come before the words because the address of a word depends on its entry (Section~\ref{sec:read-latency}).
 Cell A is the cell of the group's first pixel. Cell B is the other cell, when one of the remaining pixels falls in a
 different cell; otherwise the B slots are idle. Over any 16,384 groups, 3072 of them (18.75\%) have a second cell. That
 is geometry, not a property of the tile data: the edges between cells run diagonally, move two pixels sideways on each

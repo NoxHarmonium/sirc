@@ -1,77 +1,87 @@
 \chapter{Package and Pinout}
 \label{ch:package}
 
-The video device is a single integrated circuit. The picture processing unit, the video memory, the palette, the sprite
-table and the colour converters are all on the one piece of silicon, so the only signals that leave the package are the
-bus, two interrupt outputs, the clock and reset inputs, and the video output. This chapter gives the package and the
-meaning of every pin. Chapter~\ref{ch:signal-timing} gives the timing of the signals.
+The video device is a single integrated circuit with its video memory in separate static RAM chips. The picture
+processing unit, the palette, the sprite table and the colour converters are on the one piece of silicon. The 64 KB of
+video memory is outside it, on a memory bus of its own, so besides the bus of the CPU, two interrupt outputs, the clock
+and reset inputs and the video output, the package carries the signals of that memory bus. This chapter gives the
+package, the meaning of every pin and the timing the video memory must meet. Chapter~\ref{ch:signal-timing} gives the
+timing of the signals.
 
 \section{Chip Layout}
 
-The device is supplied in a 52-pin plastic leaded chip carrier (PLCC-52), 13 pins on each side. Pin 1 is at the centre
-of the top edge, marked by a dot on the package; the pins are numbered counter-clockwise when the package is seen from
-above.
+The device is supplied in a 100-pin plastic quad flat package (QFP-100), 25 pins on each side. Pin 1 is at the top left
+corner, marked by a dot on the package; the pins are numbered counter-clockwise when the package is seen from above.
 
 \begin{figure}[H]
 	\centering
 	\begin{tikzpicture}[
-			scale=0.92, transform shape,
-			pinlabel/.style={font=\scriptsize},
+			scale=0.74, transform shape,
+			pinlabel/.style={font=\tiny},
 			pinnum/.style={font=\tiny, text=sircgray},
 			body/.style={draw, thick, fill=gray!8},
 			pin/.style={draw, thick}
 		]
-		\def\pitch{0.44}
-		\def\side{6.3}
-		\def\first{0.51}
+		\def\pitch{0.4}
+		\def\side{10.6}
+		\def\first{0.5}
 		% Package body
 		\draw[body] (0,0) rectangle (\side,\side);
 		% Pin 1 index dot
-		\fill (\side/2,\side-0.55) circle (0.07);
-		% Top side, left to right: pins 7 to 2, 1, 52 to 47
+		\fill (0.55,\side-0.55) circle (0.08);
+		% Left side, top to bottom: pins 1 to 25
 		\foreach \n/\name [count=\i from 0] in {
-				7/\activelow{BACK}, 6/BRW, 5/\activelow{BAS}, 4/\activelow{CS}, 3/\activelow{RST}, 2/CLKI, 1/VCC1,
-				52/NC, 51/AGND, 50/B, 49/G, 48/R, 47/IREF
-			} {
-				\pgfmathsetmacro{\x}{\first + \i*\pitch}
-				\draw[pin] (\x,\side) -- (\x,\side+0.4);
-				\node[pinnum, rotate=90, anchor=east] at (\x,\side-0.1) {\n};
-				\node[pinlabel, rotate=90, anchor=west] at (\x,\side+0.46) {\name};
-			}
-		% Right side, top to bottom: pins 46 to 34
-		\foreach \n/\name [count=\i from 0] in {
-				46/AVCC, 45/\activelow{CSYNC}, 44/\activelow{IRQ4}, 43/\activelow{NMI}, 42/GND2,
-				41/D15, 40/D14, 39/D13, 38/D12, 37/D11, 36/D10, 35/D9, 34/D8
-			} {
-				\pgfmathsetmacro{\y}{\side - \first - \i*\pitch}
-				\draw[pin] (\side,\y) -- (\side+0.4,\y);
-				\node[pinnum, anchor=east] at (\side-0.1,\y) {\n};
-				\node[pinlabel, anchor=west] at (\side+0.46,\y) {\name};
-			}
-		% Bottom side, left to right: pins 21 to 33
-		\foreach \n/\name [count=\i from 0] in {
-				21/A13, 22/A14, 23/A15, 24/GND1, 25/VCC2,
-				26/D0, 27/D1, 28/D2, 29/D3, 30/D4, 31/D5, 32/D6, 33/D7
-			} {
-				\pgfmathsetmacro{\x}{\first + \i*\pitch}
-				\draw[pin] (\x,0) -- (\x,-0.4);
-				\node[pinnum, rotate=90, anchor=west] at (\x,0.1) {\n};
-				\node[pinlabel, rotate=90, anchor=east] at (\x,-0.46) {\name};
-			}
-		% Left side, top to bottom: pins 8 to 20
-		\foreach \n/\name [count=\i from 0] in {
-				8/A0, 9/A1, 10/A2, 11/A3, 12/A4, 13/A5, 14/A6, 15/A7, 16/A8, 17/A9, 18/A10, 19/A11, 20/A12
+				1/VCC1, 2/CLKI, 3/\activelow{RST}, 4/\activelow{CS}, 5/\activelow{BAS}, 6/BRW, 7/\activelow{BACK}, 8/A0,
+				9/A1, 10/A2, 11/A3, 12/A4, 13/A5, 14/A6, 15/A7, 16/A8,
+				17/A9, 18/A10, 19/A11, 20/A12, 21/A13, 22/A14, 23/A15, 24/GND1,
+				25/VCC2
 			} {
 				\pgfmathsetmacro{\y}{\side - \first - \i*\pitch}
 				\draw[pin] (0,\y) -- (-0.4,\y);
 				\node[pinnum, anchor=west] at (0.1,\y) {\n};
 				\node[pinlabel, anchor=east] at (-0.46,\y) {\name};
 			}
+		% Bottom side, left to right: pins 26 to 50
+		\foreach \n/\name [count=\i from 0] in {
+				26/D0, 27/D1, 28/D2, 29/D3, 30/D4, 31/D5, 32/D6, 33/D7,
+				34/D8, 35/D9, 36/D10, 37/D11, 38/D12, 39/D13, 40/D14, 41/D15,
+				42/GND2, 43/\activelow{NMI}, 44/\activelow{IRQ4}, 45/\activelow{CSYNC}, 46/AVCC, 47/IREF, 48/R, 49/G,
+				50/B
+			} {
+				\pgfmathsetmacro{\x}{\first + \i*\pitch}
+				\draw[pin] (\x,0) -- (\x,-0.4);
+				\node[pinnum, rotate=90, anchor=west] at (\x,0.1) {\n};
+				\node[pinlabel, rotate=90, anchor=east] at (\x,-0.46) {\name};
+			}
+		% Right side, bottom to top: pins 51 to 75
+		\foreach \n/\name [count=\i from 0] in {
+				51/AGND, 52/VCC3, 53/VA0, 54/VA1, 55/VA2, 56/VA3, 57/VA4, 58/VA5,
+				59/VA6, 60/VA7, 61/VA8, 62/VA9, 63/VA10, 64/VA11, 65/VA12, 66/VA13,
+				67/VA14, 68/GND3, 69/VCC4, 70/VD0, 71/VD1, 72/VD2, 73/VD3, 74/VD4,
+				75/VD5
+			} {
+				\pgfmathsetmacro{\y}{\first + \i*\pitch}
+				\draw[pin] (\side,\y) -- (\side+0.4,\y);
+				\node[pinnum, anchor=east] at (\side-0.1,\y) {\n};
+				\node[pinlabel, anchor=west] at (\side+0.46,\y) {\name};
+			}
+		% Top side, right to left: pins 76 to 100
+		\foreach \n/\name [count=\i from 0] in {
+				76/VD6, 77/VD7, 78/VD8, 79/VD9, 80/VD10, 81/VD11, 82/VD12, 83/VD13,
+				84/VD14, 85/VD15, 86/GND4, 87/\activelow{VCE}, 88/\activelow{VOE}, 89/\activelow{VWE}, 90/NC, 91/NC,
+				92/NC, 93/NC, 94/NC, 95/NC, 96/NC, 97/NC, 98/NC, 99/NC,
+				100/NC
+			} {
+				\pgfmathsetmacro{\x}{\side - \first - \i*\pitch}
+				\draw[pin] (\x,\side) -- (\x,\side+0.4);
+				\node[pinnum, rotate=90, anchor=east] at (\x,\side-0.1) {\n};
+				\node[pinlabel, rotate=90, anchor=west] at (\x,\side+0.46) {\name};
+			}
 		% Package label
 		\node[font=\bfseries] at (\side/2,\side/2+0.25) {SIRCADA};
-		\node[font=\small] at (\side/2,\side/2-0.25) {52-pin PLCC};
+		\node[font=\small] at (\side/2,\side/2-0.25) {100-pin QFP};
 	\end{tikzpicture}
-	\caption{SIRCADA 52-pin PLCC Pinout, Top View}
+	\caption{SIRCADA 100-pin QFP Pinout, Top View}
 	\label{fig:pinout}
 \end{figure}
 
@@ -79,31 +89,40 @@ above.
 	\centering
 	\begin{tabular}{rll}
 		\toprule
-		\textbf{Pin} & \textbf{Name}     & \textbf{Description}           \\
+		\textbf{Pin} & \textbf{Name}     & \textbf{Description}              \\
 		\midrule
-		1            & VCC1              & Power supply                   \\
-		2            & CLKI              & Clock input                    \\
-		3            & \activelow{RST}   & Reset input                    \\
-		4            & \activelow{CS}    & Chip select input              \\
-		5            & \activelow{BAS}   & Bus access strobe input        \\
-		6            & BRW               & Bus read/write input           \\
-		7            & \activelow{BACK}  & Bus acknowledge output         \\
-		8--23        & A0--A15           & Address bus bits 0--15         \\
-		24           & GND1              & Ground                         \\
-		25           & VCC2              & Power supply                   \\
-		26--41       & D0--D15           & Data bus bits 0--15            \\
-		42           & GND2              & Ground                         \\
-		43           & \activelow{NMI}   & Vertical sync interrupt output \\
-		44           & \activelow{IRQ4}  & Line-compare interrupt output  \\
-		45           & \activelow{CSYNC} & Composite sync output          \\
-		46           & AVCC              & Analog power supply            \\
-		47           & IREF              & Colour output reference        \\
-		48--50       & R, G, B           & Analog colour outputs          \\
-		51           & AGND              & Analog ground                  \\
-		52           & NC                & No connection                  \\
+		1            & VCC1              & Power supply                      \\
+		2            & CLKI              & Clock input                       \\
+		3            & \activelow{RST}   & Reset input                       \\
+		4            & \activelow{CS}    & Chip select input                 \\
+		5            & \activelow{BAS}   & Bus access strobe input           \\
+		6            & BRW               & Bus read/write input              \\
+		7            & \activelow{BACK}  & Bus acknowledge output            \\
+		8--23        & A0--A15           & Address bus bits 0--15            \\
+		24           & GND1              & Ground                            \\
+		25           & VCC2              & Power supply                      \\
+		26--41       & D0--D15           & Data bus bits 0--15               \\
+		42           & GND2              & Ground                            \\
+		43           & \activelow{NMI}   & Vertical sync interrupt output    \\
+		44           & \activelow{IRQ4}  & Line-compare interrupt output     \\
+		45           & \activelow{CSYNC} & Composite sync output             \\
+		46           & AVCC              & Analog power supply               \\
+		47           & IREF              & Colour output reference           \\
+		48--50       & R, G, B           & Analog colour outputs             \\
+		51           & AGND              & Analog ground                     \\
+		52           & VCC3              & Power supply                      \\
+		53--67       & VA0--VA14         & Video memory address bits 0--14   \\
+		68           & GND3              & Ground                            \\
+		69           & VCC4              & Power supply                      \\
+		70--85       & VD0--VD15         & Video memory data bits 0--15      \\
+		86           & GND4              & Ground                            \\
+		87           & \activelow{VCE}   & Video memory chip enable output   \\
+		88           & \activelow{VOE}   & Video memory output enable output \\
+		89           & \activelow{VWE}   & Video memory write enable output  \\
+		90--100      & NC                & No connection                     \\
 		\bottomrule
 	\end{tabular}
-	\caption{SIRCADA 52-pin PLCC Pinout}
+	\caption{SIRCADA 100-pin QFP Pinout}
 	\label{tab:pinout}
 \end{table}
 
@@ -129,6 +148,11 @@ its line low; the system supplies a pull-up, and several devices may share the l
 		A0--A15           & 8--23         & Input              &                      & Word offset in the device segment             \\
 		D0--D15           & 26--41        & Bidirectional      & Three-state          & Data                                          \\
 		\activelow{NMI}   & 43            & Output             & Open drain           & Vertical sync interrupt                       \\
+		VA0--VA14         & 53--67        & Output             & Driven               & Video memory word address                     \\
+		VD0--VD15         & 70--85        & Bidirectional      & Three-state          & Video memory data                             \\
+		\activelow{VCE}   & 87            & Output             & Driven               & Enables the video memory                      \\
+		\activelow{VOE}   & 88            & Output             & Driven               & Video memory drives its data                  \\
+		\activelow{VWE}   & 89            & Output             & Driven               & Video memory takes a word                     \\
 		\activelow{IRQ4}  & 44            & Output             & Open drain           & Line-compare interrupt                        \\
 		\activelow{CSYNC} & 45            & Output             & Driven               & Composite sync                                \\
 		R, G, B           & 48--50        & Output             & Analog               & Colour                                        \\
@@ -170,11 +194,51 @@ transfer alike.
 	\item[D0--D15] On a write the CPU drives the bus and the device takes the word at the rising edge that ends the cycle. On a
 	      read the device drives the word that the offset selects, from the start of the cycle to its end, and releases the bus
 	      when the cycle ends. A read of an offset that has no register or memory is driven as zero.
-	\item[\activelow{BACK}] The device asserts \activelow{BACK} for the whole of every cycle in which \activelow{CS} and
-	      \activelow{BAS} are asserted, whatever the offset and whatever the state of the picture. It never asks the CPU to
-	      wait and never raises a bus error. \activelow{BACK} is open drain, so it may be joined with the acknowledge from other
-	      devices on the bus.
+	\item[\activelow{BACK}] The device asserts \activelow{BACK} for the whole of every cycle in which \activelow{CS} and \activelow{BAS} are asserted, whatever the offset and whatever the state of the picture, with one exception: for a read of video memory it holds \activelow{BACK} off for the first cycle, which makes the CPU wait one cycle (Section~\ref{sec:signal-vram}), or two when a write to video memory immediately precedes it. It never raises a bus error. \activelow{BACK} is open drain, so it may be joined with the acknowledge from other devices on the bus.
 \end{description}
+
+\subsection{Video Memory Bus (VA0--VA14, VD0--VD15, \activelow{VCE}, \activelow{VOE}, \activelow{VWE})}
+\label{sec:package-vram-bus}
+
+The video memory is 32,768 words of 16 bits, for instance two static RAMs of 32,768 by 8 bits, one for the low byte and
+one for the high byte of every word. The device is the only master of this bus. The CPU reaches video memory through
+the device, in the cycles the renderer leaves free (Section~\ref{sec:memory-vram-access}).
+
+\begin{description}
+	\item[VA0--VA14] The word address of the access. Address bit 15 of the offset in the segment (\texttt{0x8000}) selects video
+	      memory and is not part of this address.
+	\item[VD0--VD15] On a read the memory drives the word and the device takes it at the rising edge of \texttt{CLKI} that ends
+	      the cycle. On a write the device drives the word for the whole of the cycle in which \activelow{VWE} is asserted.
+	\item[\activelow{VCE}, \activelow{VOE}, \activelow{VWE}] \activelow{VCE} is asserted in every cycle in which the device
+	      accesses the memory. \activelow{VOE} is asserted as well for a read and \activelow{VWE} for a write.
+\end{description}
+
+The memory must meet the requirements of Table~\ref{tab:vram-timing}, which are those of one access in every cycle. A
+cycle is one \texttt{CLKI} cycle, 93~ns at the 10.74~MHz of the SIRCUS system. The values are maxima, measured at the
+pins of the device, so the delays of the board and of the pins of the device are already counted in them.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lr}
+		\toprule
+		\textbf{Requirement}                          & \textbf{Maximum} \\
+		\midrule
+		Address valid to data valid (read)            & 70~ns            \\
+		\activelow{VCE} asserted to data valid (read) & 70~ns            \\
+		\activelow{VOE} asserted to data valid (read) & 70~ns            \\
+		Address valid to end of write                 & 70~ns            \\
+		\activelow{VCE} asserted to end of write      & 70~ns            \\
+		Write pulse width                             & 70~ns            \\
+		Data valid to end of write                    & 70~ns            \\
+		Write cycle time                              & 93~ns            \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Memory Timing Requirements}
+	\label{tab:vram-timing}
+\end{table}
+
+The memory must need no address or data hold time after the end of a write. Which memory parts meet the requirements,
+and how they are placed on the board, is for the system to decide.
 
 \subsection{Interrupt Outputs (\activelow{NMI}, \activelow{IRQ4})}
 
@@ -193,22 +257,22 @@ whose interrupt it is. Neither output is driven while \activelow{RST} is asserte
 	      during reset the three outputs are at black.
 	\item[IREF] A resistor from IREF to AGND sets the level of full scale for all three outputs. The value of the resistor and
 	      the voltages of the outputs are not yet specified.
-	\item[AVCC, AGND] The supply of the converters, kept apart from VCC1, VCC2, GND1 and GND2 so that the noise of the logic does
+	\item[AVCC, AGND] The supply of the converters, kept apart from VCC1--VCC4 and GND1--GND4 so that the noise of the logic does
 	      not reach the picture. AVCC is 5~V; AGND is connected to the ground of the logic at one point on the board.
 \end{description}
 
-\subsection{Power Pins (VCC1, VCC2, GND1, GND2)}
+\subsection{Power Pins (VCC1--VCC4, GND1--GND4)}
 
-The four pins supply the logic and are all connected. VCC is 5~V $\pm$ 5\%, as for the CPU. The electrical
-characteristics other than the supply are not yet specified.
+The eight pins supply the logic and the pads of the video memory bus, and are all connected. VCC is 5~V $\pm$ 5\%, as
+for the CPU. The electrical characteristics other than the supply are not yet specified.
 
 \section{Connecting the Device}
 
 Figure~\ref{fig:connections} shows the device in a system. The CPU and the video device share the address bus (the
 device uses the lower 16 bits), the data bus, \activelow{BAS}, BRW, \activelow{BACK} and \texttt{CLKI}. The address
-decoder asserts \activelow{CS} for the segment of the device. The reset output of the CPU resets the device. The
-interrupt outputs of the device go to the interrupt inputs of the CPU, with pull-up resistors, and the video outputs go
-to the display connector.
+decoder asserts \activelow{CS} for the segment of the device. The reset output of the CPU resets the device. The video
+memory is joined to the memory bus of the device and to nothing else. The interrupt outputs of the device go to the
+interrupt inputs of the CPU, with pull-up resistors, and the video outputs go to the display connector.
 
 \begin{figure}[H]
 	\centering
@@ -220,10 +284,11 @@ to the display connector.
 			note/.style={font=\scriptsize, text=sircgray, align=center}
 		]
 		\node[block, minimum width=2.4cm, minimum height=6.0cm] (cpu) at (0,0) {SIRC-1\\CPU};
-		\node[block, minimum width=2.6cm, minimum height=6.0cm] (ppu) at (8.0,0) {Video\\device};
+		\node[block, minimum width=2.6cm, minimum height=6.0cm] (ppu) at (8.0,0) {SIRCADA};
 		\node[block, minimum width=2.2cm, minimum height=1.0cm] (dec) at (4.0,4.1) {Address\\decode};
 		\node[block, minimum width=2.2cm, minimum height=1.0cm] (clk) at (4.0,-4.1) {Clock\\generator};
 		\node[block, minimum width=2.6cm, minimum height=1.0cm] (out) at (12.4,0) {Display\\connector};
+		\node[block, minimum width=2.6cm, minimum height=1.0cm] (vram) at (12.4,-4.1) {Video memory\\32K by 16};
 		% Lanes between the CPU and the device
 		\draw[bus] (1.2,2.0) -- node[above, note]{A0--A15} (6.7,2.0);
 		\draw[bus] (1.2,1.2) -- node[above, note]{D0--D15} (6.7,1.2);
@@ -239,6 +304,8 @@ to the display connector.
 		\draw[sig] (clk.east) -| (ppu.south);
 		% Video
 		\draw[sig] (ppu.east) -- node[above, note]{R, G, B,\\\activelow{CSYNC}} (out.west);
+		% Video memory bus
+		\draw[bus] ([xshift=0.8cm]ppu.south) |- node[below, pos=0.55, note]{VA, VD, \activelow{VCE}, \activelow{VOE}, \activelow{VWE}} (vram.west);
 	\end{tikzpicture}
 	\caption{The Video Device in a System}
 	\label{fig:connections}

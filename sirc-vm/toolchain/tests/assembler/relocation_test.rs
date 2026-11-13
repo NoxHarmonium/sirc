@@ -40,7 +40,7 @@ fn duplicate_labels_are_rejected_even_if_unused() {
     for usage in ["", "MOVI r1, @same.l\n"] {
         let source = format!(":same\nNOOP\n:same\n{usage}");
         let (_, tokens) = parse_tokens(&source).unwrap();
-        let error = try_build_object(tokens, "test.sasm".into(), source.clone()).unwrap_err();
+        let error = try_build_object(tokens, "test.sasm".into(), source).unwrap_err();
         assert!(error.message.contains("Duplicate label [same]"));
         assert_eq!(error.input_offset, 11);
         let first = assemble_object(&format!(":same\nNOOP\n{usage}"));
