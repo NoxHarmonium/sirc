@@ -15,6 +15,7 @@ lives on the branch `claude/video-chip-reference-impl`.
 | --- | --- | --- |
 | Registers, palette and VRAM access | Implemented | Open bus reads zero |
 | Package, pins, signal timing, video output | Specified | The simulator has no pins; chapters Package and Pinout, Signal Timing |
+| External video memory bus; wait state on video memory reads; entries-before-words slot order in Modes 2 and 3 | Not yet implemented | The simulator has video memory on the device, no wait states and the old slot order |
 | Mode 1 backgrounds, 8 by 8 tiles, 32 by 32 maps | Implemented | Layer order corrected with the sprite prototype |
 | Mode 1 background 4, register map repacked into groups of four | Not yet implemented | The simulator has three backgrounds and the old register offsets; `STATUS` is at `0x0017`, not `0x0019` |
 | Mode 1 scrolling (specified) | Not yet implemented | Registers stored |
@@ -76,10 +77,10 @@ simulator or a decision to be made; the manual describes the intended behaviour.
 - **Version and region.** `VER` is 1 and the region is fixed when the device is made; the simulator should let both be
   configured at run time.
 - **Package and signals.** The package, the pin assignment and the signal timing are a first sketch, to be confirmed: the
-  52-pin PLCC; a chip select instead of the segment address bits; `CLKI` as the only clock; `BACK#`, `NMI#` and `IRQ4#`
+  100-pin QFP with an external video memory bus; a chip select instead of the segment address bits; `CLKI` as the only clock; `BACK#`, `NMI#` and `IRQ4#`
   as open-drain outputs; no access-type or protection inputs; a minimum reset of six cycles; the composite sync widths (a
   horizontal pulse of 100 master clocks; vertical sync in three lines, 245 to 247, one long pulse in each, no equalising
-  pulses); and the converter and supply pins. The video memory, palette and sprite table are inside the package.
+  pulses); and the converter and supply pins. The palette and sprite table are on the die and the video memory is external.
   Electrical characteristics (levels, delays, frequency range, current, thermal) are not yet specified, as in the
   hardware manual.
 - **DMA.** A DMA transfer into video memory is subject to the same rule as the CPU, and DMA blocks interrupts, the `NMI#`

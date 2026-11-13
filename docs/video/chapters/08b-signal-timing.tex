@@ -19,7 +19,8 @@ timing only.
 
 The device answers every cycle in which \activelow{CS} and \activelow{BAS} are both asserted, and it answers in the
 cycle itself: \activelow{BACK} is asserted from the start of the cycle, so the CPU accepts the cycle at the next rising
-edge and never waits (Chapter~\ref{ch:package}).
+edge and does not wait. The one exception is a read of video memory, which takes one wait state
+(Section~\ref{sec:signal-vram}).
 
 \subsection{Writes}
 
@@ -50,9 +51,10 @@ way.
 
 \subsection{Reads}
 
-On a read the device drives D0--D15 with the word the offset selects, from the start of the cycle to its end, and
-releases the bus after it. The word is valid before the rising edge that ends the cycle, which is the edge at which the
-CPU samples it. A read changes nothing in the device; no register has a side effect on a read.
+On a read of a register, the palette or the sprite table the device drives D0--D15 with the word the offset selects,
+from the start of the cycle to its end, and releases the bus after it. The word is valid before the rising edge that
+ends the cycle, which is the edge at which the CPU samples it. A read changes nothing in the device; no register has a
+side effect on a read.
 
 \begin{figure}[H]
 	\centering
@@ -128,6 +130,81 @@ than the figure shows.
 	\end{tikztimingtable}
 	\caption{Video Memory Writes across the Start of Vertical Blanking (\texttt{VIE} set)}
 	\label{fig:signal-vblank}
+\end{figure}
+
+\section{Video Memory Bus}
+\label{sec:signal-vram}
+
+The device makes one access to video memory in every cycle in which the renderer or the CPU needs one
+(Section~\ref{sec:package-vram-bus} gives the requirements of the memory). The renderer has first claim; the CPU has
+the cycles that the renderer leaves free, which are all of vertical blanking and all of the time that \texttt{GD} is 1
+(Section~\ref{sec:memory-vram-access}).
+
+\subsection{Renderer Reads}
+
+A read for the renderer asserts \activelow{VCE} and \activelow{VOE} and puts the address on VA0--VA14 just after the
+rising edge that starts the cycle. The memory returns the word on VD0--VD15, and the device takes it at the rising edge
+that ends the cycle. The renderer uses the word from the start of the next cycle, so the address of a read that depends
+on another cannot be given before the second cycle after it (Section~\ref{sec:read-latency}). A new read can start in
+every cycle.
+
+\subsection{CPU Reads}
+
+A read of video memory takes two cycles. In the first the device holds \activelow{BACK} off, so the CPU repeats the
+phase as a wait state, and makes the access on the memory bus as a renderer read does. In the second it asserts
+\activelow{BACK} and drives D0--D15 with the word. A read made while the renderer owns the memory is answered at once
+with zero, with \activelow{BACK} asserted in the first cycle.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI                 & L 2{0.5H 0.5L}                \\
+		Phase                & D{access} D{answer} D{next}   \\
+		\activelow{CS}       & L L H                         \\
+		\activelow{BAS}      & L L H                         \\
+		BRW                  & H H H                         \\
+		A0--A15              & D{offset} D{offset} D{}       \\
+		\activelow{VCE}      & L H H                         \\
+		\activelow{VOE}      & L H H                         \\
+		VA0--VA14            & D{va} D{} D{}                 \\
+		VD0--VD15            & D{word} Z Z                   \\
+		D0--D15              & Z D{word} Z                   \\
+		\activelow{BACK}     & H L H                         \\
+		Sample               & 0.95L 0.1H 0.9L 0.1H 0.95L    \\
+	\end{tikztimingtable}
+	\caption{Read of Video Memory by the CPU}
+	\label{fig:signal-vram-read}
+\end{figure}
+
+\subsection{CPU Writes}
+
+A write to video memory is acknowledged in its own cycle like any other write, and the device holds the address and the
+word. In the next cycle it writes them to the memory, asserting \activelow{VCE} and \activelow{VWE}. The renderer makes
+no read in the first cycle of a line, so a write made in the last cycle of vertical blanking still reaches the memory.
+A read of video memory in the cycle after a write has to wait for the write, and takes three cycles in all, two wait
+states.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI                 & L 2{0.5H 0.5L}                \\
+		Phase                & D{write} D{store} D{next}     \\
+		\activelow{CS}       & L H H                         \\
+		\activelow{BAS}      & L H H                         \\
+		BRW                  & L H H                         \\
+		A0--A15              & D{offset} D{} D{}             \\
+		D0--D15              & D{word} Z Z                   \\
+		\activelow{BACK}     & L H H                         \\
+		\activelow{VCE}      & H L H                         \\
+		\activelow{VWE}      & H L H                         \\
+		VA0--VA14            & D{} D{va} D{}                 \\
+		VD0--VD15            & Z D{word} Z                   \\
+		Sample               & 0.95L 0.1H 1.95L              \\
+	\end{tikztimingtable}
+	\caption{Write to Video Memory by the CPU}
+	\label{fig:signal-vram-write}
 \end{figure}
 
 \section{Interrupt Timing}

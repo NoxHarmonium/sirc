@@ -50,12 +50,13 @@ The eight slots of a group of four pixels have fixed owners:
 	\centering
 	\begin{tabular}{cp{5.8cm}p{5.2cm}}
 		\toprule
-		\textbf{Slot} & \textbf{Fetch}                                                & \textbf{Used}                            \\
+		\textbf{Slot} & \textbf{Fetch}                                                               & \textbf{Used}                            \\
 		\midrule
-		0             & Background 1 tilemap entry                                    & Always (2-bit tiles: every second group) \\
-		1             & Background 1 tile data word                                   & Always (2-bit tiles: every second group) \\
-		2, 3          & The same two fetches for background 2                         &                                          \\
-		4--7          & The four fetches of an isometric background, for background 3 & As in Table~\ref{tab:m2-slots}           \\
+		0             & Background 1 tilemap entry                                                   & Always (2-bit tiles: every second group) \\
+		1             & Background 2 tilemap entry                                                   & Always (2-bit tiles: every second group) \\
+		2             & Background 1 tile data word                                                  & Always (2-bit tiles: every second group) \\
+		3             & Background 2 tile data word                                                  & Always (2-bit tiles: every second group) \\
+		4--7          & The four fetches of an isometric background, for background 3, entries first & As in Table~\ref{tab:m2-slots}           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Mode 3 Fetch Slots per Group of Four Pixels}

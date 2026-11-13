@@ -53,7 +53,7 @@ Recalled from memory, not checked against sources.
 
 ## Fetch budget
 
-- 8 PPU cycles per group of four pixels; Mode 2 gives each layer four slots (entry A, word A, entry B, word B); B slots only when the
+- 8 PPU cycles per group of four pixels; Mode 2 gives each layer four slots (entry A, entry B, word A, word B); B slots only when the
   group straddles. Average 4.75 of 8, worst case 8, so no sprite slots in the visible part of a line.
 - Fine X scroll costs nothing: groups are aligned to the plane, a two-group window holds the pixels, and the line starts at offset
   `scroll_x & 3`. Two groups are prefetched in the back porch, 32 master clocks before the first pixel.
@@ -115,11 +115,11 @@ Sketched, not yet confirmed (also listed in `STATUS.md`, the working record):
 
 - **Single package, one manual.** The CPU has separate architecture and hardware manuals because the architecture could have several
   implementations. The video device has one, so its pinout and timing are in its own manual (Chapters 2 and 11).
-- **Everything on one die.** Video memory (64 KB), palette, sprite table and DACs are on the package. External video memory would
-  need about 35 more pins and a wait-state story for the CPU; the manual's "no wait states, every access completes in its cycle"
-  is only simple with on-chip memory. (On-chip 64 KB of SRAM is generous for the period; a fictional console can have it.)
-- **52-pin PLCC.** Signal count: bus 36 (A0-A15, D0-D15, CS#, BAS#, BRW, BACK#), clock and reset 2, interrupts 2, video 5
-  (R, G, B, CSYNC#, IREF), power 6 (VCC1/2, GND1/2, AVCC, AGND) = 51, plus one NC. Digital and analog supplies are separate,
+- **Video memory outside the die.** The palette, sprite table and DACs are on the die; the 64 KB of video memory is in external SRAM on
+  its own bus (see "External video memory" below). It was first drawn on-chip, which is generous for the period.
+- **100-pin QFP.** Signal count: bus 36 (A0-A15, D0-D15, CS#, BAS#, BRW, BACK#), clock and reset 2, interrupts 2, video 5
+  (R, G, B, CSYNC#, IREF), video memory 34 (VA0-VA14, VD0-VD15, VCE#, VOE#, VWE#), power 10 (VCC1-4, GND1-4, AVCC, AGND)
+  = 89, plus eleven NC. (The first sketch had video memory on the die in a 52-pin PLCC.) Digital and analog supplies are separate,
   as a period video DAC would have.
 - **CS# instead of segment address pins.** The manual already says the system chooses the segment; a chip select keeps the device
   independent of the address map. No BAT or PROT inputs: the device treats every cycle type alike.
@@ -207,3 +207,27 @@ the renderer may read video memory. Options: a pre-render line at the end of ver
 of 38 lines of VRAM access and adds renderer state), or make line 0 itself blank and let it do the preparation for line 1 (costs a picture line,
 which a television hides in overscan, and needs no new state). The second was chosen. Line 0 is black, not the backdrop colour, because
 nothing is fetched for it. Programs keep sprites at Y >= 1 so they show their first row.
+
+## External video memory (2026-11-13)
+
+- 64 KB of on-chip SRAM was not feasible for the period, so the video memory is two 32K x 8 SRAMs on a bus of its own, as on the SNES. The CPU
+  interface (register map, offsets, memory map, access rules) is unchanged. Palette and sprite table stay on the die (small, and the palette
+  must be writable mid-picture).
+- Bandwidth: SIRCADA reads one 16-bit word every PPU cycle (93 ns, 10.74 MHz) because the worst case of Mode 2 needs all eight slots of a
+  group, so the isometric mode sets the peak. The Super NES needs one read per pixel (186 ns) and its datasheet SRAM is about 100 ns (one secondary
+  source, not the datasheet), so SIRCADA needs roughly twice the memory speed. Dropping the fourth orthogonal layer would not relax this,
+  because Mode 2 and Mode 3 still need eight slots. The manual requires an address access time of 70 ns at the pins and a write cycle of
+  one PPU cycle. The 70 ns is the manual's requirement, set as 93 ns minus 23 ns for pad delays and setup; it is specified at the pins of the device and used for every read access time and every write 'to end of write' time (table in the package chapter). Checked against the
+  March 1990 Hitachi SRAM data book (bitsavers, pp. 189 and 197): the standard 32K x 8 CMOS line, HM62256, runs from 85 ns (-8: tAA 85, tOE 45, tWC 85,
+  tWP 60) to 150 ns, so it meets the write cycle but not the 70 ns read requirement; the fast 32K x 8 line, HM62832, is 25 to 45 ns (-45: tAA 45,
+  tWC 45, tWP 25) and meets both. There was no 70 ns grade in that catalogue. So SIRCADA needs the fast, dearer SRAM where the SNES's roughly 100 ns
+  fits the standard line; in the fiction that is the price of the isometric mode.
+- Which SRAM part and board layout meet that belongs to the manual of the console (SIRCUS) that puts the components together; this manual
+  states the requirement only.
+- Read latency: a read made in one slot delivers its word at the start of the next, so a dependent read cannot be made before the second slot
+  after it. The Mode 2 and Mode 3 schedules read the entries before the words (0 entry A, 1 entry B, 2 word A, 3 word B per layer). Mode 1
+  already had entries in slots 0-3 and words in 4-7. The back-porch prefetch is unchanged because its last read is for the second group.
+- CPU: writes are posted (acknowledged in their cycle, written to the SRAM in the next), so zero wait states; a read of video memory takes one
+  wait state (two straight after a write), using the wait the CPU already supports (a cycle in which BACK# is not asserted is repeated).
+  Reads outside vertical blanking or forced blank still return zero at once. The DMA write rate of one word per cycle still holds.
+- Package: 34 more pins (VA0-VA14, VD0-VD15, VCE#, VOE#, VWE#) and four more supply pins, so the package is a 100-pin QFP with eleven unused pins.

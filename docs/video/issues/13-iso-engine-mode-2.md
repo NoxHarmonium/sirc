@@ -22,7 +22,7 @@ Video Device Reference Manual (`docs/video`):
 ## Tasks
 
 - [ ] Mode select: sample `MODE` at the first cycle of each line; 0 = Mode 1, 1 = Mode 2, 2 = Mode 3, others reserved.
-- [ ] Per group of four pixels each layer has four slots: entry A, word A, entry B, word B (B only when the group straddles two cells).
+- [ ] Per group of four pixels each layer has four slots: entry A, entry B, word A, word B (B only when the group straddles two cells; entries come first because of the one-cycle read latency).
 - [ ] Group g+2 is fetched while group g is shown; two groups are prefetched in the front porch, 32 master clocks before the first pixel; scroll registers are sampled once per line there.
 - [ ] Fine scroll: window of two groups, offset `scroll_x & 3`.
 - [ ] Background 1 in front of 2; `B1D`/`B2D`; palette rule per layer; tile numbers address 64-word tiles.

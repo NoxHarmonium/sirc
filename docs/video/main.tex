@@ -15,6 +15,12 @@
 
 \input{../reference/preamble}
 
+% Wider number column in the lists of figures and tables: chapters 10 and 11 have two-digit figure numbers.
+\makeatletter
+\renewcommand*\l@figure{\@dottedtocline{1}{1.5em}{3.0em}}
+\renewcommand*\l@table{\@dottedtocline{1}{1.5em}{3.0em}}
+\makeatother
+
 \begin{document}
 
 % Front Matter
