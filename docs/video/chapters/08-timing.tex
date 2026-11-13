@@ -43,7 +43,7 @@ cycle: the master clock divided by two, 10,738,636~Hz at 21,477,272~Hz. The figu
 	\item A \texttt{DMAT} of 255 words takes 522 cycles, three quarters of a line, and cannot be interrupted.
 \end{itemize}
 
-The video device never waits for the CPU. It gives the CPU no wait state on any access except a read of video memory,
+The video device never waits for the CPU. It gives the CPU no wait state on any access except an allowed read of video memory,
 which takes one (Sections~\ref{sec:memory-vram-access} and~\ref{sec:signal-vram}).
 
 \section{Line Timing}
@@ -271,18 +271,26 @@ queue, or a faster memory.
 \subsection{Read Latency}
 \label{sec:read-latency}
 
-The video memory is outside the device (Chapter~\ref{ch:package}). A read made in one slot delivers its word at the
-start of the next, so a read that needs the result of an earlier one cannot be made before the second slot after it.
-The address of a tile data word depends on its tilemap entry, so the schedules of all three modes read the entries
-first and the words afterwards. The one cycle of latency does not lengthen the back-porch prefetch: the last read of
-the prefetch is for the second group, which is needed eight cycles after the first pixel.
+The video memory is outside the device (Chapter~\ref{ch:package}). A read made in one slot delivers its
+word at the start of the next, so a read that needs the result of an earlier one cannot be made before the
+second slot after it. The address of a tile data word depends on its tilemap entry, so the schedules of all
+three modes read the entries first and the words afterwards.
+
+In Modes 2 and 3, the two back-porch groups are fetched in the 16 cycles immediately before the first
+visible pixel. The final word, the second cell's tile data word of the second prefetched group (slot 7),
+is sampled at the rising edge that begins the first visible cycle. A combinational forwarding path
+delivers this newly sampled word directly to the initial two-group pixel window and compositor in that
+cycle, without a further register stage. This matters when \texttt{SCRX} is not a multiple of four: the
+first displayed group can need pixels from both prefetched groups, including the second cell of the
+second group. The forwarded word is available to form those pixels in the first visible cycle. Subsequent
+groups use the normal pipeline. No extra prefetch cycle or earlier register sampling is needed.
 
 \section{Pixel Pipeline}
 
 The device draws a group of four pixels in two stages. During one group the device fetches the data for a later group
 and, at the start of the group, combines the data it already has into four finished pixels, which are shown one at a
-time over the group. Mode 1 combines the fetches of the previous group; Mode 2 combines the data it prefetched
-(Section~\ref{sec:m2-fetch}). The first pixels of a line in Mode 1 are at the position the scroll registers give
+time over the group. Mode 1 combines the fetches of the previous group; Mode 2 combines the data it prefetched,
+with the final prefetch word forwarded as described above (Section~\ref{sec:m2-fetch}). The first pixels of a line in Mode 1 are at the position the scroll registers give
 (Section~\ref{sec:m1-scrolling}).
 
 Figure~\ref{fig:fetch-timing} shows the schedule of one group in Modes 1 and 3, one read to a \texttt{CLKI} cycle, with

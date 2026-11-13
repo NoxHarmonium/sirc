@@ -226,7 +226,14 @@ nothing is fetched for it. Programs keep sprites at Y >= 1 so they show their fi
   states the requirement only.
 - Read latency: a read made in one slot delivers its word at the start of the next, so a dependent read cannot be made before the second slot
   after it. The Mode 2 and Mode 3 schedules read the entries before the words (0 entry A, 1 entry B, 2 word A, 3 word B per layer). Mode 1
-  already had entries in slots 0-3 and words in 4-7. The back-porch prefetch is unchanged because its last read is for the second group.
+  already had entries in slots 0-3 and words in 4-7. The final back-porch read (second group's second-cell word, slot 7) is captured on
+  the edge beginning the first visible cycle. With fine scrolling, the initial displayed four pixels can draw from *both* prefetched groups
+  (e.g. SCRX mod 4 = 3); therefore this last word cannot wait for another register stage. A combinational forwarding path sends the
+  just-sampled word directly to the initial two-group window/compositor in that same cycle. The 16-cycle prefetch and 32-master-clock
+  register sample position stay unchanged.
+- SRAM writes: every word has a distinct VWE# low pulse that terminates before the next address/data value is presented. Even in
+  back-to-back DMA writes, VWE# must return high between pulses; VCE# can remain low. The 93 ns CLKI cycle accommodates at least 70 ns
+  of write pulse and setup with an inactive interval; there is no extra dead PPU cycle. The external write bus diagrams illustrate this.
 - CPU: writes are posted (acknowledged in their cycle, written to the SRAM in the next), so zero wait states; a read of video memory takes one
   wait state (two straight after a write), using the wait the CPU already supports (a cycle in which BACK# is not asserted is repeated).
   Reads outside vertical blanking or forced blank still return zero at once. The DMA write rate of one word per cycle still holds.
