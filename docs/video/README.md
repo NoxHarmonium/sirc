@@ -1,7 +1,7 @@
 # SIRCADA Reference Manual
 
-The SIRC-1 CPU is documented in three standalone manuals (the CPU was sold separately from the SIRCUS console); SIRCADA, which
-is made for the SIRCUS system, has its own. The four parts are:
+The SIRC-1 CPU is documented in three standalone manuals (the CPU was sold separately from the SIRCUS console); SIRCADA and
+SIRCAS, which are made for the SIRCUS system, have one each. The five parts are:
 
 | Manual | Scope | Location |
 | --- | --- | --- |
@@ -9,6 +9,7 @@ is made for the SIRCUS system, has its own. The four parts are:
 | SIRC Assembly Programmer's Manual | Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage | `../assembly` |
 | SIRC Hardware Reference Manual | Pinout, bus interface, timing, electrical characteristics | `../hardware` |
 | SIRCADA Reference Manual | The picture processing unit: package and pinout, memory map, registers, data formats, video modes, timing | this directory |
+| SIRCAS Reference Manual | The sound processor: package and pinout, memory map, registers, data formats, voices, filter, sequencer, timing | `../audio` |
 
 This manual describes the video device (the PPU) as a single component: its package and pins, what is mapped where on the
 CPU's bus, what each register does, how the device turns video memory into a picture, and the timing of its signals. The

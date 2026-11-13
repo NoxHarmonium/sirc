@@ -115,6 +115,7 @@ Options:
   -v, --verbose...                 Increase logging verbosity
   -q, --quiet...                   Decrease logging verbosity
   -e, --enable-video
+      --enable-audio                   Map the SIRCAS audio device at 0x000D0000
   -d, --debug
   -h, --help                       Print help
   -V, --version                    Print version
