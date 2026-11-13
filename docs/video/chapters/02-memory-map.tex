@@ -47,8 +47,8 @@ registers hold addresses in this form: a tilemap at the start of VRAM has the ba
 A read of a register, a palette entry or a VRAM word returns the stored value. A write stores the value. A read of an
 open bus offset returns zero and a write to one is ignored. The device inserts no wait state on an access to a
 register, the palette or the sprite table, and none on a write to video memory: those complete in the cycle they are
-made, whether or not they take effect (Section~\ref{sec:memory-vram-access}). A read of video memory takes one wait
-state (Section~\ref{sec:signal-vram}).
+made, whether or not they take effect (Section~\ref{sec:memory-vram-access}). An allowed read of video memory takes one wait
+state (Section~\ref{sec:signal-vram}); a blocked read is acknowledged immediately and returns zero.
 
 The Status register (offset \texttt{0x0019}) and the Vertical Line register (offset \texttt{0x001A}) are read-only; a
 write to either is ignored.

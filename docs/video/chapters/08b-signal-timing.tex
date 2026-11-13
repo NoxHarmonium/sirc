@@ -19,7 +19,7 @@ timing only.
 
 The device answers every cycle in which \activelow{CS} and \activelow{BAS} are both asserted, and it answers in the
 cycle itself: \activelow{BACK} is asserted from the start of the cycle, so the CPU accepts the cycle at the next rising
-edge and does not wait. The one exception is a read of video memory, which takes one wait state
+edge and does not wait. The one exception is an allowed read of video memory, which takes one wait state
 (Section~\ref{sec:signal-vram}).
 
 \subsection{Writes}
@@ -150,10 +150,11 @@ every cycle.
 
 \subsection{CPU Reads}
 
-A read of video memory takes two cycles. In the first the device holds \activelow{BACK} off, so the CPU repeats the
-phase as a wait state, and makes the access on the memory bus as a renderer read does. In the second it asserts
-\activelow{BACK} and drives D0--D15 with the word. A read made while the renderer owns the memory is answered at once
-with zero, with \activelow{BACK} asserted in the first cycle.
+An allowed read of video memory takes two cycles. In the first the device holds \activelow{BACK} off,
+so the CPU repeats the phase as a wait state, and makes the access on the memory bus as a renderer read
+does. In the second it asserts \activelow{BACK} and drives D0--D15 with the word. When rendering blocks
+the read, the device does not drive the external memory bus: it drives zero on D0--D15 and asserts
+\activelow{BACK} in the first cycle, without a wait state.
 
 \begin{figure}[H]
 	\centering
@@ -179,11 +180,17 @@ with zero, with \activelow{BACK} asserted in the first cycle.
 
 \subsection{CPU Writes}
 
-A write to video memory is acknowledged in its own cycle like any other write, and the device holds the address and the
-word. In the next cycle it writes them to the memory, asserting \activelow{VCE} and \activelow{VWE}. The renderer makes
-no read in the first cycle of a line, so a write made in the last cycle of vertical blanking still reaches the memory.
-A read of video memory in the cycle after a write has to wait for the write, and takes three cycles in all, two wait
-states.
+A write to video memory is acknowledged in its own cycle like any other write, and the device
+holds the address and the word. In the next cycle it presents them to the SRAM, asserts \activelow{VCE},
+keeps \activelow{VOE} high and gives \activelow{VWE} a terminating low pulse. VA0--VA14 and VD0--VD15
+are valid before \activelow{VWE} falls and remain stable until after it rises. The pulse lasts at least
+70~ns, with \activelow{VWE} high before the next word's address or data changes; a new pulse is issued for
+every posted word, even in consecutive cycles (Table~\ref{tab:vram-timing}). No extra cycle is needed
+between consecutive SRAM writes.
+
+The renderer makes no read in the first cycle of a line, so a write made in the last cycle of vertical
+blanking still reaches the memory. A read of video memory in the cycle after a write has to wait for the
+write, and takes three cycles in all, two wait states.
 
 \begin{figure}[H]
 	\centering
@@ -198,13 +205,34 @@ states.
 		D0--D15              & D{word} Z Z                   \\
 		\activelow{BACK}     & L H H                         \\
 		\activelow{VCE}      & H L H                         \\
-		\activelow{VWE}      & H L H                         \\
+		\activelow{VWE}      & H 0.1H 0.8L 0.1H H                         \\
 		VA0--VA14            & D{} D{va} D{}                 \\
 		VD0--VD15            & Z D{word} Z                   \\
 		Sample               & 0.95L 0.1H 1.95L              \\
 	\end{tikztimingtable}
 	\caption{Write to Video Memory by the CPU}
 	\label{fig:signal-vram-write}
+\end{figure}
+
+For consecutive posted writes, \activelow{VCE} may stay low, but \activelow{VWE} must be high
+between the per-word pulses. Figure~\ref{fig:signal-vram-consecutive-writes} illustrates three
+successive stores, one in each cycle. The pulse fractions are schematic; Table~\ref{tab:vram-timing}
+defines the minimum pulse and setup times at the pins.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI                 & L 3{0.5H 0.5L}                              \\
+		Phase                & D{store 0} D{store 1} D{store 2} D{idle}    \\
+		\activelow{VCE}      & L L L H                                      \\
+		\activelow{VOE}      & H H H H                                      \\
+		\activelow{VWE}      & 3{0.1H 0.8L 0.1H} H                          \\
+		VA0--VA14            & D{a} D{a+1} D{a+2} D{}                       \\
+		VD0--VD15            & D{d0} D{d1} D{d2} Z                         \\
+	\end{tikztimingtable}
+	\caption{Distinct Write Pulses for Consecutive Video-Memory Stores}
+	\label{fig:signal-vram-consecutive-writes}
 \end{figure}
 
 \section{Interrupt Timing}

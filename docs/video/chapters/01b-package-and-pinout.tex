@@ -194,7 +194,15 @@ transfer alike.
 	\item[D0--D15] On a write the CPU drives the bus and the device takes the word at the rising edge that ends the cycle. On a
 	      read the device drives the word that the offset selects, from the start of the cycle to its end, and releases the bus
 	      when the cycle ends. A read of an offset that has no register or memory is driven as zero.
-	\item[\activelow{BACK}] The device asserts \activelow{BACK} for the whole of every cycle in which \activelow{CS} and \activelow{BAS} are asserted, whatever the offset and whatever the state of the picture, with one exception: for a read of video memory it holds \activelow{BACK} off for the first cycle, which makes the CPU wait one cycle (Section~\ref{sec:signal-vram}), or two when a write to video memory immediately precedes it. It never raises a bus error. \activelow{BACK} is open drain, so it may be joined with the acknowledge from other devices on the bus.
+	\item[\activelow{BACK}] The device asserts \activelow{BACK} in the first cycle of every selected access
+	      except an allowed read of video memory. For an allowed video-memory read it withholds \activelow{BACK}
+	      for one wait state (two when a video-memory write immediately precedes the read), then acknowledges
+	      the result (Section~\ref{sec:signal-vram}). When rendering blocks a video-memory read, the device
+	      returns zero and asserts \activelow{BACK} in the first cycle, with no wait state and no external memory
+	      read (Section~\ref{sec:memory-vram-access}). This is also true of a blocked sprite-table read.
+	      Other offsets are always acknowledged in their first cycle, regardless of the picture state. The
+	      device never raises a bus error. \activelow{BACK} is open drain, so it may be joined with the
+	      acknowledge from other devices on the bus.
 \end{description}
 
 \subsection{Video Memory Bus (VA0--VA14, VD0--VD15, \activelow{VCE}, \activelow{VOE}, \activelow{VWE})}
@@ -207,15 +215,26 @@ the device, in the cycles the renderer leaves free (Section~\ref{sec:memory-vram
 \begin{description}
 	\item[VA0--VA14] The word address of the access. Address bit 15 of the offset in the segment (\texttt{0x8000}) selects video
 	      memory and is not part of this address.
-	\item[VD0--VD15] On a read the memory drives the word and the device takes it at the rising edge of \texttt{CLKI} that ends
-	      the cycle. On a write the device drives the word for the whole of the cycle in which \activelow{VWE} is asserted.
-	\item[\activelow{VCE}, \activelow{VOE}, \activelow{VWE}] \activelow{VCE} is asserted in every cycle in which the device
-	      accesses the memory. \activelow{VOE} is asserted as well for a read and \activelow{VWE} for a write.
+	\item[VD0--VD15] On a read the memory drives the word and the device takes it at the rising edge of
+	      \texttt{CLKI} that ends the cycle. On a write the device drives the word before the write pulse begins
+	      and holds it stable through the rising edge of \activelow{VWE} that terminates the write.
+	\item[\activelow{VCE}, \activelow{VOE}, \activelow{VWE}] \activelow{VCE} is asserted during each memory
+	      access; \activelow{VOE} is asserted for a read, and \activelow{VWE} is pulsed low for a write.
+	      Every word has its own terminating rising edge of \activelow{VWE}, even when writes occur in
+	      consecutive cycles. \activelow{VWE} goes high between pulses, before the next word's address or
+	      data changes. \activelow{VCE} may remain low across consecutive writes; \activelow{VOE} stays high.
 \end{description}
 
-The memory must meet the requirements of Table~\ref{tab:vram-timing}, which are those of one access in every cycle. A
-cycle is one \texttt{CLKI} cycle, 93~ns at the 10.74~MHz of the SIRCUS system. The values are maxima, measured at the
-pins of the device, so the delays of the board and of the pins of the device are already counted in them.
+The device can write one word per \texttt{CLKI} cycle, 93~ns at the 10.74~MHz of the SIRCUS system,
+including consecutive posted CPU or DMA writes. Each write pulse begins after the address and data have
+become valid, lasts at least 70~ns, and ends before the next cycle's address or data changes. The high
+interval of \activelow{VWE} between successive pulses makes them distinct SRAM writes without inserting
+an idle \texttt{CLKI} cycle (Section~\ref{sec:signal-vram}).
+
+The SRAM must meet Table~\ref{tab:vram-timing}. The listed maxima are limits on the SRAM part's timing
+requirements: read access times must be no greater than 70~ns; the minimum write pulse and setup times
+required by the SRAM must be no greater than the 70~ns supplied by the device; and the SRAM must support
+a write cycle of 93~ns or less. All timings are measured at the device pins, including board and pin delays.
 
 \begin{table}[H]
 	\centering

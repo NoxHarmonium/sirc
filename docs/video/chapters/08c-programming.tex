@@ -85,7 +85,7 @@ frame spreads the work over several frames, or turns the picture off (\texttt{GD
 	\item \textbf{Scroll registers.} The scroll registers are 10 bits. A program keeps its position in a wider variable and
 	      writes the low 10 bits; in Mode 2 it also adjusts \texttt{SCRY} when it brings \texttt{SCRX} back past 1024
 	      (Section~\ref{sec:m2-moving}).
-	\item \textbf{Reading video memory.} A read of video memory takes one wait state, and two straight after a write, and it returns zero outside vertical blanking and forced blank (Section~\ref{sec:signal-vram}). A program keeps in RAM what it will need again, instead of reading it back.
+	\item \textbf{Reading video memory.} An allowed read of video memory takes one wait state, or two straight after a write. Outside vertical blanking and forced blank a read returns zero immediately, without a wait state (Section~\ref{sec:signal-vram}). A program keeps in RAM what it will need again, instead of reading it back.
 	\item \textbf{Sprites per line.} A line shows at most 32 sprites; the rest are dropped and \texttt{SOV} is set. Read
 	      \texttt{SOV} in vertical blanking (Section~\ref{sec:sprite-budget}).
 	\item \textbf{Transparent pixels.} Pixel value 0 of a background or a sprite is transparent. If every layer is transparent
