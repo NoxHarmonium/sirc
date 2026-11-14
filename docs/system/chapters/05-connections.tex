@@ -211,6 +211,47 @@ The DUART's signals are TTL levels. A link between two consoles may use them as 
 an ordinary serial port needs RS-232 levels, from a level circuit that is not yet specified, and which may need further
 supplies. The connectors, the handshake lines they carry and the speed range of the link are not yet specified.
 
+\section{The Controller Ports}
+\label{sec:controller-ports}
+
+SIRCUS has two controller ports. A controller holds a parallel-in, serial-out shift register, a 4021 or a 74HC165,
+loaded from its buttons. The console reads a controller with three lines: it pulses \textsc{latch} to load the
+register, then pulses \textsc{clock} once for each bit, and reads \textsc{data} after each pulse. A controller of up to
+16 buttons is read in 16 clocks. The console has no circuit of its own for this. Software drives and reads the parallel
+pins of the serial device (Section~\ref{sec:serial-device}), which are independent of its serial channels:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Signal} & \textbf{DUART pin} & \textbf{Notes}       \\
+		\midrule
+		\textsc{clock}  & OP2, pin 28        & Output to both ports \\
+		\textsc{latch}  & OP3, pin 13        & Output to both ports \\
+		\textsc{data 1} & IP2, pin 36        & Input from port 1    \\
+		\textsc{data 2} & IP3, pin 2         & Input from port 2    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Controller Connections}
+	\label{tab:controller-nets}
+\end{table}
+
+\noindent The output port is inverted: a bit set in the output port register makes its pin low, and a bit is set or cleared
+by a write to one of two addresses, so each edge of a line is a single write. The input port is not latched, and one read
+returns both data lines. The two inputs have change-of-state detectors, which stay masked so that they raise no interrupt.
+Both ports are read together: one pass of 16 clocks reads two controllers, in about 50 accesses to the serial device, which is
+400 to 750 cycles, 0.2 to 0.4\% of an NTSC frame. A program reads the controllers once a frame.
+
+Port 1 is a controller port only. Port 2 is either a controller port or the second channel of the serial device with a
+TTL cable, and the cable decides which. Each port has $+5$ V and ground and three signal pins, which are
+\textsc{clock}, \textsc{latch} and \textsc{data} for a controller, and for the serial device \texttt{TxDB}, a
+request-to-send and \texttt{RxDB}. The inputs of the two functions can share a pin. The outputs share a pin through
+open-collector gates, which is possible because both functions leave the line high when idle. A modem or a computer is
+connected to port 2 through an adapter cable that carries its own RS-232 level circuit, so the console needs no RS-232
+level circuit and none of the supplies it would need. The connectors, their pins and the speed of the serial link are
+not yet specified.
+
 \section{SIRCAS and the Audio Memory}
 \label{sec:audio-memory-wiring}
 

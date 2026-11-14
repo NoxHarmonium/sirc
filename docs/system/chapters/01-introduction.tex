@@ -50,6 +50,7 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 		System ROM        & Not yet specified           & Holds the start-up code and the driver routines that programs call                              \\
 		Cartridge         & Connector not yet specified & Holds a game's program and data in a ROM; its first words are the reset vector                  \\
 		Serial I/O        & MC68681 DUART               & Motorola dual serial port: links two consoles, a modem or a debugger                            \\
+		Controller ports  & Not yet specified           & Two ports for shift-register controllers, read through the serial device's parallel pins        \\
 		Select logic      & 74LS138, 16-pin DIP         & Decodes A23 to A21 into a chip select for each device; a latch holds the boot overlay           \\
 		Clock circuit     & Not yet specified           & Makes the master clock and divides it by two to make \texttt{CLKI}                              \\
 		\bottomrule
