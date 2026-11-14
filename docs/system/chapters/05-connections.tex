@@ -52,7 +52,7 @@ select logic.
 		\activelow{IRQ4} & 61 (in)      & \activelow{IRQ4} (out) & ---                    & Pull-up; line compare                \\
 		\activelow{IRQ3} & 60 (in)      & ---                    & \activelow{IRQ3} (out) & Pull-up; sequence complete           \\
 		\activelow{IRQ2} & 59 (in)      & ---                    & ---                    & Pull-up; serial device, DUART pin 21 \\
-		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Not yet specified                    \\
+		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Pull-up; cartridge connector         \\
 		\activelow{RSTO} & 64 (out)     & \activelow{RST} (in)   & \activelow{RST} (in)   & One net to both devices              \\
 		\activelow{RSTI} & 63 (in)      & ---                    & ---                    & Reset circuit                        \\
 		\bottomrule
@@ -261,6 +261,68 @@ interrupt registers, and holds both transmitters in the mark state.
 The DUART's signals are TTL levels. A link between two consoles may use them as they are over a short cable. A modem or
 an ordinary serial port needs RS-232 levels, from a level circuit that is not yet specified, and which may need further
 supplies. The connectors, the handshake lines they carry and the speed range of the link are not yet specified.
+
+\section{The Cartridge Connector}
+\label{sec:cartridge-connector}
+
+The cartridge plugs into a card-edge connector of 60 contacts in two rows of 30, on a 2.54~mm pitch. A cartridge needs
+the address bits that select a word within its 2M-word region (Section~\ref{sec:selecting}), the data bus, a select,
+the read and write line, and a few lines for hardware on the cartridge. \activelow{CS} is the output of the decoder's
+Y2, so it is asserted for a whole bus cycle and carries \activelow{BAS} with it, and the boot overlay's gating of the
+select (Section~\ref{sec:boot-overlay}) is behind the same pin; the cartridge does not know whether it is answering at
+region Y2 or at the low words.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{rllrll}
+		\toprule
+		\textbf{Pin} & \textbf{Top}     & \textbf{Notes} & \textbf{Pin} & \textbf{Bottom} & \textbf{Notes} \\
+		\midrule
+		1            & Ground           &                & 1            & Ground          &                \\
+		2            & $+5$ V           &                & 2            & $+5$ V          &                \\
+		3--6         & D0--D3           &                & 3--6         & A0--A3          &                \\
+		7            & Ground           &                & 7            & Ground          &                \\
+		8--11        & D4--D7           &                & 8--11        & A4--A7          &                \\
+		12           & Ground           &                & 12           & Ground          &                \\
+		13--16       & D8--D11          &                & 13--16       & A8--A11         &                \\
+		17           & Ground           &                & 17           & Ground          &                \\
+		18--21       & D12--D15         &                & 18--21       & A12--A15        &                \\
+		22           & Ground           &                & 22           & Ground          &                \\
+		23           & \activelow{CS}   & From Y2        & 23--27       & A16--A20        &                \\
+		24           & BRW              & High to read   & 28           & Reserved        & Leave open     \\
+		25           & \activelow{IRQ1} & Open drain     & 29           & $+5$ V          &                \\
+		26           & \activelow{RSTO} & Reset output   & 30           & Ground          &                \\
+		27           & \texttt{CLKI}    &                &              &                 &                \\
+		28           & \activelow{CART} & Grounded       &              &                 &                \\
+		29           & $+5$ V           &                &              &                 &                \\
+		30           & Ground           &                &              &                 &                \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Cartridge Connector}
+	\label{tab:cartridge-connector}
+\end{table}
+
+\noindent The signals are the console's own bus nets (Table~\ref{tab:shared-nets}). A cartridge uses the address bits A0 to
+A20 only; A21 to A23 are decoded in the console. A cartridge that holds only a ROM connects \activelow{CS} to the
+memory's chip enable, BRW to its output enable, and the address and data lines bit for bit, and grounds \activelow{CART}.
+
+\begin{itemize}
+	\item \activelow{CART}: the cartridge connects this pin to ground, and a resistor on the console pulls it up. The select
+	      logic reads it for the boot overlay (Section~\ref{sec:boot-overlay}).
+	\item \activelow{BACK}: not on the connector. The console's wait-state generator ends every access to the cartridge
+	      after three cycles (Table~\ref{tab:wait-states}), so the cartridge must have its data ready by then, and cannot
+	      ask for more time.
+	\item \activelow{IRQ1}: the interrupt line of level 1, which is the cartridge's alone. It is open drain, and the console
+	      holds it high with the pull-up of Chapter~\ref{ch:interrupts}.
+	\item \activelow{RSTO} and \texttt{CLKI}: let hardware on the cartridge, such as a bank register or a battery-backed
+	      memory, reset itself and run in step with the bus.
+	\item Writes: BRW low with \activelow{CS} reaches the cartridge, so hardware on the cartridge may decode a write to its
+	      region as a register, for example to switch banks, or hold a memory with a battery that saves the game. Both are the
+	      cartridge's own affair; the console neither requires nor prevents them.
+	\item Power: the contacts of the power and ground pins are longer than the rest, so that they meet first and part last. The
+	      cartridge draws its power from the two $+5$~V pins; the console's budget allows the cartridge about 50~mA.
+\end{itemize}
 
 \section{The Controller Ports}
 \label{sec:controller-ports}
@@ -509,3 +571,16 @@ The load draws the supply current up to about 60~mA. The output rests above 4~V 
 through a large coupling capacitor, whose value is not yet specified. The values of the components that
 Table~\ref{tab:display-nets} does not give are those of the encoder's reference circuit. The output goes to the video
 jack (Section~\ref{sec:av-connector}).
+
+\subsection{The RGB Outputs}
+\label{sec:rgb-wiring}
+
+The colour outputs of SIRCADA and its composite sync leave the console as well, for a monitor that takes RGB and gives
+a sharper picture than composite video does, with none of the cross-colour of the encoder. Each of R, G, B and
+\activelow{CSYNC} goes through a buffer: a single-supply wideband amplifier, of gain two, whose output reaches ground,
+followed by 75~$\Omega$ in series. It gives 1.0~V peak to peak into a 75~$\Omega$ input, with black at 0~V. The
+amplifiers need a bandwidth of 20~MHz or better, because SIRCADA's pixel is 186~ns. They run from $+5$~V. The picture
+is the same picture as the composite output, since it comes from the same outputs ahead of the encoder, so the RGB
+signal needs neither the chroma network nor the delay line. The signals leave on the multi-out connector
+(Section~\ref{sec:av-connector}).
+

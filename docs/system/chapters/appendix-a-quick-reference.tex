@@ -46,13 +46,13 @@
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\textbf{Line}    & \textbf{Level} & \textbf{Source} & \textbf{Condition} \\
+		\textbf{Line}    & \textbf{Level} & \textbf{Source} & \textbf{Condition}   \\
 		\midrule
-		\activelow{NMI}  & 5              & SIRCADA         & Vertical sync      \\
-		\activelow{IRQ4} & 4              & SIRCADA         & Line compare       \\
-		\activelow{IRQ3} & 3              & SIRCAS          & Sequence complete  \\
-		\activelow{IRQ2} & 2              & Serial device   & Character or timer \\
-		\activelow{IRQ1} & 1              & ---             & Not yet specified  \\
+		\activelow{NMI}  & 5              & SIRCADA         & Vertical sync        \\
+		\activelow{IRQ4} & 4              & SIRCADA         & Line compare         \\
+		\activelow{IRQ3} & 3              & SIRCAS          & Sequence complete    \\
+		\activelow{IRQ2} & 2              & Serial device   & Character or timer   \\
+		\activelow{IRQ1} & 1              & Cartridge       & Set by the cartridge \\
 		\bottomrule
 	\end{tabular}
 	\caption{Interrupt Summary}

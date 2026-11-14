@@ -92,12 +92,43 @@ The sound and the picture leave the console on three RCA jacks, in the usual col
 the console and is not described in this manual, takes the three signals and modulates them onto a television channel
 for a set that has only an aerial input.
 
+\subsection{The RGB Connector}
+
+The console also has a nine-pin multi-out connector for a monitor that takes RGB. It carries the buffered red, green
+and blue and the composite sync, so the picture is not encoded, together with the audio and the composite video, so one
+cable can serve a monitor of either kind (Section~\ref{sec:rgb-wiring}):
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rll}
+		\toprule
+		\textbf{Pin} & \textbf{Signal} & \textbf{Level}                                    \\
+		\midrule
+		1            & Red             & 1.0 V peak to peak into 75 $\Omega$               \\
+		2            & Green           & 1.0 V peak to peak into 75 $\Omega$               \\
+		3            & Blue            & 1.0 V peak to peak into 75 $\Omega$               \\
+		4            & Composite sync  & 1.0 V peak to peak into 75 $\Omega$, low for sync \\
+		5            & Left audio      & As the white jack                                 \\
+		6            & Right audio     & As the red jack                                   \\
+		7            & Composite video & As the yellow jack                                \\
+		8            & Video ground    & Returns for pins 1 to 4 and 7                     \\
+		9            & Audio ground    & Returns for pins 5 and 6                          \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Multi-out Connector}
+	\label{tab:multi-out}
+\end{table}
+
+\noindent The connector's type is not yet specified. A cable that connects each of these pins to the matching input of a
+monitor, or to the scart connector of a television, is the only accessory the RGB output needs.
+
 \section{Other Connections}
 
 The serial port leaves the console on a connector. It links the console to another console, to a modem or to a
 debugger. Its levels are described in Section~\ref{sec:serial-device}. The connector, the handshake lines and the speed
 range are not yet specified. The controller ports are described in Section~\ref{sec:controller-ports}; their connectors
-are not yet specified. The cartridge connector and the physical form of the console are not yet specified either.
+are not yet specified. The cartridge connector is described in Section~\ref{sec:cartridge-connector}. The physical form
+of the console is not yet specified.
 
 \section{Power}
 \label{sec:power}

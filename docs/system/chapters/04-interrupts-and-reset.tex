@@ -13,13 +13,13 @@ every chip.
 	\small
 	\begin{tabular}{llllp{4.6cm}}
 		\toprule
-		\textbf{Line}    & \textbf{Level} & \textbf{Source}   & \textbf{Condition}     & \textbf{Behaviour}                                                  \\
+		\textbf{Line}    & \textbf{Level} & \textbf{Source} & \textbf{Condition}     & \textbf{Behaviour}                                                  \\
 		\midrule
-		\activelow{NMI}  & 5              & SIRCADA           & Vertical sync          & One-cycle pulse at the start of vertical blanking; edge-triggered   \\
-		\activelow{IRQ4} & 4              & SIRCADA           & Line compare           & Level-sensitive; held until the program acknowledges it             \\
-		\activelow{IRQ3} & 3              & SIRCAS            & A sequence is complete & Level-sensitive; held until the program clears the completion flags \\
-		\activelow{IRQ2} & 2              & Serial device     & Character or timer     & Level-sensitive; held until the program clears the cause            \\
-		\activelow{IRQ1} & 1              & Not yet specified &                        &                                                                     \\
+		\activelow{NMI}  & 5              & SIRCADA         & Vertical sync          & One-cycle pulse at the start of vertical blanking; edge-triggered   \\
+		\activelow{IRQ4} & 4              & SIRCADA         & Line compare           & Level-sensitive; held until the program acknowledges it             \\
+		\activelow{IRQ3} & 3              & SIRCAS          & A sequence is complete & Level-sensitive; held until the program clears the completion flags \\
+		\activelow{IRQ2} & 2              & Serial device   & Character or timer     & Level-sensitive; held until the program clears the cause            \\
+		\activelow{IRQ1} & 1              & Cartridge       & Set by the cartridge   & Level-sensitive; held until the program clears the cause            \\
 		\bottomrule
 	\end{tabular}
 	\caption{Interrupt Assignments}
