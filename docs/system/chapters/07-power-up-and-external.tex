@@ -62,7 +62,7 @@ yet specified.
 
 \section{The Audio Output}
 
-SIRCAS produces a serial stream of signed 16-bit stereo samples, and the TDA1541A turns it into two analogue currents
+SIRCAS produces a serial stream of signed 16-bit stereo samples, and the TDA1543 turns it into two analogue currents
 (Section~\ref{sec:converter}). An amplifier for each channel turns the current into a voltage, and the board needs a
 filter after it that removes the images of the signal around the sample rate (\audiomanual{}, timing chapter). The
 amplifiers, the filter, the output stage and the connector are not yet specified.
@@ -81,25 +81,22 @@ Each chip has its own supply pins: the CPU has two pairs of power and ground pin
 analogue supply, AVCC and AGND, and SIRCAS has power and ground pins whose number is not yet specified. The supply
 voltages of those chips, the regulation, the decoupling and the power connector are not yet specified.
 
-The converter needs three supplies, and they are the only ones this manual can state:
+The converter runs from the same $+5$~V as the logic, and needs no other supply:
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{llrrr}
 		\toprule
-		\textbf{Pin} & \textbf{Supply} & \textbf{Range}     & \textbf{Typical current} & \textbf{Maximum current} \\
+		\textbf{Pin} & \textbf{Supply} & \textbf{Range} & \textbf{Typical current} & \textbf{Maximum current} \\
 		\midrule
-		28           & $+5$ V          & 4.5 to 5.5 V       & 27 mA                    & 40 mA                    \\
-		26           & $-5$ V          & $-4.5$ to $-5.5$ V & 37 mA                    & 50 mA                    \\
-		15           & $-15$ V         & $-14$ to $-16$ V   & 25 mA                    & 35 mA                    \\
+		5            & $+5$ V          & 3.0 to 8.0 V   & 50 mA                    & 60 mA                    \\
 		\bottomrule
 	\end{tabular}
-	\caption{Converter Supplies}
+	\caption{Converter Supply}
 	\label{tab:converter-supplies}
 \end{table}
 
-\noindent The analogue and digital grounds, pins 5 and 14, are joined, and must not differ by more than 0.3~V. The part
-dissipates about 700~mW. The $-15$~V supply passes the most ripple to the output: the converter rejects 100~Hz ripple by
-58~dB on it, against 76~dB on the $+5$~V supply and 84~dB on the $-5$~V supply, so it is the one that needs the quietest
-regulation. A supply for the output amplifiers is also needed, and is not yet specified. The serial device, the MC68681, takes $+5$~V
+\noindent The part dissipates about 250~mW. It rejects 100~Hz ripple on its supply by only 50~dB, so it takes a branch of
+the $+5$~V supply of its own, decoupled with 100~nF at the pin. A supply for the output amplifiers is also needed, and is not
+yet specified. The serial device, the MC68681, takes $+5$~V
 at up to 150~mA.

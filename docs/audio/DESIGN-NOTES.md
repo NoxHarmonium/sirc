@@ -68,14 +68,14 @@ must not carry any of this. `STATUS.md` records the model's implementation statu
 
 ## The converter
 
-The target converter is the Philips TDA1541A (product specification, February 1991): a dual 16-bit current-output converter,
-time-multiplexed input, MSB first, up to 16 bits, two's-complement mode selected by a pin. Unlike the 1985 TDA1541 it has no
-system clock input, so `SCK` is not needed for it; SIRCAS keeps the pin for converters that do need one. Limits are far from the
-design: `BCK` up to 6.4 MHz and 46 ns high and low (SIRCAS: 1.02 MHz mean), set-up 32 ns and hold 0 ns. Supplies are +5 V,
--5 V and -15 V, and the outputs are currents that need an I/V stage. The datasheet says nothing about bits after the 16th, so the
-serial slot is exactly 16 bits wide: 32 bit clocks a frame, of 10 and 11 cycles alternately, since 336 / 32 is not a whole
-number of cycles (`STATUS.md`). The sample rate is not oversampled, so
-the board needs a steep analogue filter.
+The target converter is the Philips TDA1543 (product specification, February 1991), the economy version: a dual 16-bit current-output
+converter in an 8-pin package, standard I2S input (two's complement, any word length, most significant bit first), a single +5 V
+supply and no system clock input, so `SCK` is not needed for it; SIRCAS keeps the pin for converters that do need one. Limits are
+far from the design: a bit clock cycle of 108 ns or more and 22 ns high and low (SIRCAS: 931 ns or more), set-up of 32 ns and hold of
+2 ns. The earlier choice was the hi-fi TDA1541A, which needs +5 V, -5 V and -15 V supplies and costs more; the 16-bit slot format works
+with either. The outputs are currents that need an I/V stage. The serial slot is exactly 16 bits wide: 32 bit clocks a frame, of 10
+and 11 cycles alternately, since 336 / 32 is not a whole number of cycles (`STATUS.md`). The sample rate is not oversampled, so the
+board needs a steep analogue filter.
 
 ## Mixer
 

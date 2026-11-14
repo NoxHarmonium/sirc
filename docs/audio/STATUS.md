@@ -200,37 +200,29 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 3 | Filter arithmetic | Bare truncation. |
 | 4 | Cutoff register 0 | Keep the freeze: the state holds, `LP` outputs a constant. Costs nothing; documented behaviour. |
 | 5 | Note onset | Apply the first envelope step at note-on (implemented). `ATTACK = 0` now reaches full level in about 0.1 ms. |
-| 6 | DAC | Philips TDA1541A. See the next section. |
+| 6 | DAC | Philips TDA1543, the economy version, replacing the hi-fi TDA1541A. See the next section. |
 | 7 | Missed tick | Drop the tick (as modelled). |
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
 | 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
 | 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. The PAL `CLKI` is 10,640,685 Hz (the SIRCADA manual's PAL master clock of 21,281,370 Hz, divided by two), 15.9 cents flat of NTSC, and is inside the range. |
 | 11 | Serial format | **Changed from the draft:** 16-bit slots, 32 bit clocks a frame of 10 and 11 `CLKI` cycles alternately, replacing 24-bit slots with `CLKI/7`. The datasheet of the target converter is silent about bits after the 16th. The mean bit clock is `CLKI/10.5`, 1.023 MHz at NTSC. |
 
-### Target DAC: Philips TDA1541A (product specification, February 1991)
+### Target DAC: Philips TDA1543 (product specification, February 1991)
 
-The datasheet supplied for the console is the TDA1541A. An earlier reading of the November 1985 TDA1541 (OCR of a scanned
-copy) is superseded by it: **the 1991 part has no `SCK` pin.** It runs its own oscillator (470 pF between pins 16 and 17). The
-SIRCAS manual keeps `SCK` for converters that need a system clock. The TDA1541A leaves it unconnected.
+The console's converter is the economy TDA1543. It replaces the hi-fi TDA1541A (and the 1985 TDA1541 before it), which needed three
+supplies. The SIRCAS manual names no converter; this is what the system manual uses.
 
-* Dual 16-bit current-output converter, full-scale output current 4.0 mA (3.4 to 4.6). Needs an I/V stage per channel and three
-  supplies: +5 V, -5 V and -15 V (-15 V is 14 to 16 V, 25 mA typical).
-* `OB/TWC` (pin 27) selects the input mode. At +5 V it is time-multiplexed two's complement (I2S): `LE/WS` is the word select
-  (low is left, high is right), `BCK` the bit clock, `DATA L/DATA` the data. SIRCAS's levels and signedness match.
-* Limits: `BCK` 6.4 MHz maximum, cycle time 156 ns minimum, high and low times 46 ns minimum, rise and fall 32 ns maximum; `WS`
-  200 kHz maximum; data and `WS` set-up 32 ns before the `BCK` rising edge, hold 0 ns.
-* SIRCAS meets every limit: `BCLK` is 1.53 MHz (652 ns a cycle), any split of its 7 cycles gives at least 93 ns high and low, and
-  the sample rate is 31.96 kHz. The edges of `SD` and `WS` must still change at least 32 ns before the rising edge of `BCLK`,
-  which the SIRCAS manual leaves unspecified. Changing them on the falling edge gives 279 ns or more.
-* **The 16-bit word in a slot (resolved).** The datasheet says the input is up to 16 bits, MSB first, and is silent about bits
-  after the 16th. The earlier 24-bit slots padded each word with 7 zeros, which a converter that loads the last 16 bits before
-  the `WS` edge would convert wrongly. The slot is now exactly 16 bits wide, so there is nothing after the 16th bit.
-
-What this means for the draft:
-
-* **The 16-bit slot format is within every limit.** The shortest bit clock period is 10 `CLKI` cycles, 931 ns against the
-  converter's 156 ns minimum, and each of its halves is at least one cycle, 93 ns against 46 ns.
-* The sample rate (31.96 kHz) is not oversampled, so the board needs a steep analogue anti-image filter after the DAC. That is a
+* Dual 16-bit converter with current outputs, 8-pin DIP (a 16-pin SO version exists). Single supply, 3.0 to 8.0 V, 5 V
+  typical, 50 mA typical. Full-scale output current 2.3 mA, sinking; reference output 2.2 V.
+* Input is standard I2S: `BCK`, `WS` and `DATA`, two's complement, any word length, most significant bit first. `WS` low is left,
+  high is right. SIRCAS's levels, signedness and framing match. It has no `SCK` pin.
+* Limits: bit clock cycle 108 ns minimum, high and low 22 ns minimum, rise and fall 32 ns maximum, `WS` 192 kHz maximum, set-up
+  of data and `WS` 32 ns, hold 2 ns.
+* SIRCAS meets every limit: its bit clock periods are 10 or 11 `CLKI` cycles (931 ns or more), each half is at least one cycle
+  (93 ns), and the sample rate is 31.96 kHz. The edges of `SD` and `WS` must still lead the rising edge of `BCLK` by 32 ns and
+  trail it by 2 ns, which the SIRCAS manual leaves unspecified. Changing them on the falling edge gives at least 93 ns both ways.
+* The 16-bit slot format also suits the TDA1541A, which is the dearer alternative.
+* The sample rate (31.96 kHz) is not oversampled, so the board needs a steep analogue anti-image filter after the converter. That is a
   board matter, not a chip matter.
 
 ## The manual

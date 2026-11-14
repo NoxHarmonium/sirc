@@ -14,7 +14,7 @@ for pins and registers and not for ratings (the MC68HC681 user's manual is dated
 | Part | Role | Availability |
 | --- | --- | --- |
 | Motorola MC68681 DUART | Serial port | Advance information datasheet dated September 1985, derived from the Signetics 2681. The MC68HC681 is a CMOS version in the same pins. |
-| Philips TDA1541A | Audio converter | The TDA1541 dates from 1985. The datasheet used is the A version, February 1991. |
+| Philips TDA1543 | Audio converter | The economy version of Philips' 16-bit converters. The datasheet used is dated February 1991. An earlier draft used the hi-fi TDA1541A (datasheet of the same month), which needs three supplies and costs more. |
 | 74LS138 | Select decoder | Standard TTL part, decades old by 1993. |
 
 ## Sources used for the serial device
@@ -36,7 +36,7 @@ reproduce what a program can see.
   asynchronous transmit and receive with their buffers, the baud-rate generator, the counter/timer, the parallel input and
   output ports (which read the controllers) and the interrupt. The model can follow the datasheet. It should include the access
   time of 2 to 9 cycles (`DTACK` follows the DUART's own clock), which the VM already supports as bus latency. The 74LS138 is
-  the VM's segment map. The TDA1541A is the sample stream that SIRCAS's model already produces. The serial channels would
+  the VM's segment map. The TDA1543 is the sample stream that SIRCAS's model already produces. The serial channels would
   connect to the host as a pipe, a terminal or a TCP socket, so two VMs could be linked for the multiplayer link.
 * **FPGA.** The SIRC-1, SIRCADA and SIRCAS are the project's own designs and would go in the FPGA as RTL. The vendor parts can
   stay real, on a board next to the FPGA, with the bus brought out to them. That needs level translation between the FPGA's
@@ -56,8 +56,9 @@ these was a mistake: each was the simplest or the best-sounding choice, and toge
   needed the fetch schedule redesigned, so it was not taken (`docs/video/DESIGN-NOTES.md`).
 * **Static RAM everywhere.** The working memory (128 KB), the video memory and the audio memory are all static RAM. DRAM would have
   been cheaper per bit but needs refresh and a controller, and makes timing less exact.
-* **A hi-fi converter.** The audio converter is a 16-bit part made for CD players, with three supplies and two output amplifiers,
-  and a console that carries it also needs the extra supplies.
 * **Big custom chips.** SIRCADA and SIRCAS each have about 77 to 79 signal pins plus power, so their packages are large.
 * **Wait states.** The bus is fast compared with the memory of the time, which costs speed more than money, but a console
   with a faster cartridge ROM would need dearer cartridges.
+
+An earlier draft listed a hi-fi converter among these. The converter is now the economy TDA1543, which runs from the +5 V supply
+alone and also takes standard I2S, so it is not a cost driver.
