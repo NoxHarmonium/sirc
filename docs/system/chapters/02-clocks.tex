@@ -24,7 +24,11 @@ makes must match the colour subcarrier of the television standard:
 	\label{tab:master-clock}
 \end{table}
 
-The oscillator itself, its tolerance and its drive circuit are not yet specified.
+The master clock comes from a crystal oscillator module at the frequency of the region. A D flip-flop divides it by two
+to make \texttt{CLKI}, which gives \texttt{CLKI} an even duty cycle, and the one \texttt{CLKI} net feeds all three
+chips. The serial device has a crystal of its own, 3.6864 MHz, because its baud rates depend on that exact frequency
+(Section~\ref{sec:serial-device}). The tolerance of the oscillator and the electrical characteristics of the clock are
+not yet specified.
 
 \section{The Clock Rail}
 \label{sec:clock-rail}

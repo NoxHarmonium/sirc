@@ -30,6 +30,30 @@ that fit in each part of the picture. An instruction that waits on the bus, or a
 	\label{tab:cpu-budget}
 \end{table}
 
+\noindent Those figures assume no wait states. Every instruction makes two bus accesses to be fetched, and each access to a
+memory waits (Table~\ref{tab:wait-states}), so an ordinary instruction takes 6 cycles plus two for each wait state. A load or
+a store adds one access more. The counts a program really gets are lower:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrrrr}
+		\toprule
+		                                  & \multicolumn{2}{c}{\textbf{From working memory or ROM}} & \multicolumn{2}{c}{\textbf{From the cartridge}}                                \\
+		                                  & \textbf{NTSC}                                           & \textbf{PAL}                                    & \textbf{NTSC} & \textbf{PAL} \\
+		\midrule
+		Cycles an ordinary instruction    & 8                                                       & 8                                               & 10            & 10           \\
+		Instructions in a line            & 85.3                                                    & 85.3                                            & 68.2          & 68.2         \\
+		Instructions in a frame           & 22,336                                                  & 26,598                                          & 17,868        & 21,278       \\
+		Instructions in vertical blanking & 3,240                                                   & 7,502                                           & 2,592         & 6,002        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instructions That Fit in the Picture, With Wait States}
+	\label{tab:cpu-budget-waits}
+\end{table}
+
+\noindent Code that runs from the cartridge goes at four fifths of the speed of code in working memory, so a program that needs the
+speed copies its inner loops into working memory.
+
 \noindent A program has the whole of vertical blanking to change the display adapter's memory, and the interrupt that
 starts it arrives at its beginning (\videomanual{}, timing chapter).
 

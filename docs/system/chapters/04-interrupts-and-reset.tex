@@ -82,20 +82,22 @@ Reset has one input and one output at the CPU, and each of the two other chips h
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lll}
+	\begin{tabular}{p{3.4cm}p{3.6cm}p{5cm}}
 		\toprule
-		\textbf{Net}     & \textbf{Driven by}             & \textbf{Received by}                                              \\
+		\textbf{Net}               & \textbf{Driven by}             & \textbf{Received by}                                     \\
 		\midrule
-		\activelow{RSTI} & The power-on and reset circuit & CPU \activelow{RSTI}                                              \\
-		\activelow{RSTO} & CPU                            & SIRCADA \activelow{RST}, SIRCAS \activelow{RST}, the boot overlay \\
+		\activelow{RSTI}           & The power-on and reset circuit & CPU \activelow{RSTI}                                     \\
+		\activelow{RSTO}           & CPU                            & SIRCADA \activelow{RST}, the boot overlay, the stretcher \\
+		Stretched \activelow{RSTO} & The stretcher                  & DUART \activelow{RESET}, SIRCAS \activelow{RST}          \\
 		\bottomrule
 	\end{tabular}
 	\caption{The Reset Nets}
 	\label{tab:reset-nets}
 \end{table}
 
-The reset circuit, which asserts \activelow{RSTI} at power-up and when the console is reset by hand, is not yet
-specified.
+The reset circuit is a resistor and a capacitor feeding two Schmitt-trigger inverters, which hold \activelow{RSTI}
+asserted for about 100~ms after the supply reaches $+5$~V, long enough for the supplies and the clock to settle. A
+button on the console shorts the capacitor, to reset by hand.
 
 The CPU asserts \activelow{RSTO} while \activelow{RSTI} is asserted, and for six \texttt{CLKI} cycles after it is
 released, before it fetches the reset vector. It asserts it again for the same six cycles after a software reset (the
@@ -104,6 +106,11 @@ fetch (\hwmanual{}, signal descriptions chapter). \activelow{RSTO} is wired to t
 sets the boot overlay (Section~\ref{sec:boot-overlay}), so a reset of the CPU is a reset of the whole console and
 leaves the system ROM answering at the low words. A program that resets the CPU must expect to start again with the
 display and the sound in their reset states, and must set both up again.
+
+A monostable, a 74LS123, triggered by the fall of \activelow{RSTO}, makes the stretched reset. Its pulse is 2~$\mu$s or
+more. It feeds the DUART, whose \activelow{RESET} needs 1.0~$\mu$s and which \activelow{RSTO} does not give after a
+software reset, and SIRCAS, whose minimum is not yet specified. SIRCADA needs six cycles and takes \activelow{RSTO}
+directly. The start-up routine waits at least 3~$\mu$s after a reset before it writes to the DUART or to SIRCAS.
 
 What reset does to each chip is in its own manual. In short: SIRCAS goes silent, its registers take their reset values
 and the contents of the audio memory are lost (\audiomanual{}, registers chapter); SIRCADA comes up blank, in the mode

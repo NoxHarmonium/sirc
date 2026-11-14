@@ -127,15 +127,15 @@ chapter).
 	\centering
 	\begin{tabular}{p{5.4cm}p{2.7cm}p{4.2cm}}
 		\toprule
-		\textbf{Access}                                        & \textbf{Cycles}   & \textbf{Source}                       \\
+		\textbf{Access}                                        & \textbf{Cycles}    & \textbf{Source}                       \\
 		\midrule
-		SIRCADA registers, palette, sprite table, video memory & 1, no wait states & \videomanual{}, timing chapter        \\
-		SIRCAS registers                                       & 1, no wait states & \audiomanual{}, signal timing chapter \\
-		SIRCAS audio memory window                             & 2 to 5            & \audiomanual{}, signal timing chapter \\
-		Working memory                                         & Not yet specified &                                       \\
-		System ROM                                             & Not yet specified &                                       \\
-		Cartridge                                              & Not yet specified &                                       \\
-		Serial I/O                                             & 2 to 9            & Section~\ref{sec:serial-device}       \\
+		SIRCADA registers, palette, sprite table, video memory & 1, no wait states  & \videomanual{}, timing chapter        \\
+		SIRCAS registers                                       & 1, no wait states  & \audiomanual{}, signal timing chapter \\
+		SIRCAS audio memory window                             & 2 to 5             & \audiomanual{}, signal timing chapter \\
+		Working memory                                         & 2, one wait state  & Section~\ref{sec:glue}                \\
+		System ROM                                             & 2, one wait state  & Section~\ref{sec:glue}                \\
+		Cartridge                                              & 3, two wait states & Section~\ref{sec:glue}                \\
+		Serial I/O                                             & 2 to 9             & Section~\ref{sec:serial-device}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Bus Cycle Lengths}
