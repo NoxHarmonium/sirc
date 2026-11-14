@@ -228,7 +228,8 @@ What this means for the draft:
 
 ## The manual
 
-The manual is in this directory (`main.tex`, `chapters/`): 14 chapters and a quick reference, built with `make`. It follows the SIRCADA
+The manual is in this directory (`main.tex`, `chapters/`): 14 chapters, a quick reference and an appendix of worked instrument and sequence examples (every figure is checked by
+`sirc-vm/sirc-umf/tests/recipes.rs`), built with `make`. It follows the SIRCADA
 manual's structure and voice and uses its preamble. It states the behaviour the model implements, including the choices
 in the table above, as the intended behaviour; those choices are proposals until approved. Points the design has not fixed are
 written "not yet specified" and not filled in: the package and pins, the audio memory's electrical interface, `SCK`, the serial
