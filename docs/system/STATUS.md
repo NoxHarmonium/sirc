@@ -11,8 +11,8 @@ manual does not say it.
 
 | ID | Question | Where it appears | What exists today |
 | --- | --- | --- | --- |
-| U1 | **Program memory.** What is it: RAM, ROM, both? Size, type, speed (wait states), and which words of the address space it fills. | Ch. 1 table 1.2, ch. 3 (map, cycle lengths), ch. 5, ch. 7 | The VM maps 64K words at segment 0, read-only, with a 2-cycle latency. The architecture manual puts the vectors in the low words, so something must answer there. |
-| U2 | **How a program gets in.** Cartridge slot, boot ROM, or something else? Where does the reset vector live? | Ch. 3, ch. 7 | The VM loads a binary into the program segment. Nothing in the manuals says. |
+| U1 | **Working RAM and system ROM.** *Answered: 128 KB of working RAM (I took KB as kilobytes, 65,536 words, which is exactly one segment; say if you meant otherwise) and a system ROM.* Still open: RAM type and speed (wait states), ROM size, type and speed, and the segment of each. | Ch. 1 table 1.2, ch. 3, ch. 5, ch. 7, appendix | The VM maps 64K words at segment 0, read-only, with a 2-cycle latency. |
+| U2 | **How a program gets in.** *Answered in outline: the reset vector is in the system ROM, whose start-up code initialises the system and jumps to the program on a cartridge.* Still open: the cartridge entry point (a header, a fixed address?), what the ROM does if no cartridge is present, and what exactly it initialises. | Ch. 3, ch. 7 | The VM loads a binary into the program segment. |
 | U3 | **Reset circuit.** What asserts `RSTI` at power-up? Is there a reset button? How long is it held? | Ch. 4, ch. 7 | Nothing. The CPU manual only says what `RSTI` does. |
 | U4 | **SIRCAS reset width.** Minimum `RST` pulse (already open in the SIRCAS manual). SIRCADA needs 6 cycles, which the CPU's 6-cycle `RSTO` hold gives. | Ch. 4 | Open in `docs/audio`. |
 | U5 | **Chip-select decoder and the SIRCAS segment.** What decodes A16 to A23? Which segment does SIRCAS take? | Ch. 1, ch. 3 (address map), ch. 5, appendix | The VM puts SIRCAS at segment `0x0D`. SIRCADA is at `0x0C` (in the video manual). The SIRCAS manual says "not yet specified". |
@@ -27,12 +27,15 @@ manual does not say it.
 | U14 | **Converter and analogue stage.** *Converter answered: the Philips TDA1541A (datasheet supplied, Feb 1991); the chapters use its pins, limits and supplies. It has no `SCK` pin, so `SCK` is left unconnected.* Still open: the output amplifier part and its supplies, the anti-image filter, the output connector, and the edge timing of `SD` and `WS` (set-up of 32 ns needed, SIRCAS leaves it open). | Ch. 1, ch. 5, ch. 7 | The datasheet's reference circuit uses two NE5534 or equivalent with 1.8 kOhm and 2.2 nF in the feedback; the draft quotes it as a reference, not as the design. |
 | U15 | **Video output circuit.** Value of the `IREF` reference, the output stage, the connector, signal levels. | Ch. 5, ch. 7 | Nothing. |
 | U16 | **Controller ports.** Does the console have any, and how do they connect? | Ch. 7 | None in any manual. |
-| U17 | **Expansion or cartridge connector, and the physical form** of the console. | Ch. 7 | None. |
+| U17 | **Cartridge connector and the physical form** of the console. *Cartridges are confirmed.* Open: the connector, which bus signals and interrupt lines it carries, its address window (which segments, how large, any bank switching), how the console detects a cartridge, and whether a cartridge may hold RAM or other hardware. | Ch. 1, ch. 3, ch. 5, ch. 7 | None. |
 | U18 | **Power.** Supply voltages for the CPU, SIRCADA and SIRCAS, regulation, decoupling, the amplifiers' supplies, the connector. | Ch. 7 | Answered for the converter only: +5 V, -5 V and -15 V, with currents and ripple rejection (table 7.1). |
 | U19 | **Electrical timing between chips.** Set-up and hold, delays. Every manual shows logical timing only. | Ch. 2 | Nothing. |
 | U20 | **SIRCAS package and pin numbers** (open in the SIRCAS manual). Table 5.1 shows SIRCAS pins by name only. | Ch. 1, ch. 5 | Open in `docs/audio`. |
 | U21 | **Region parts.** The video manual says SIRCADA's region is fixed when it is made. So is a PAL console a PAL SIRCADA plus a 21.28 MHz oscillator, and does the audio chip need no variant? | Ch. 2 | The SIRCAS manual has no region input. |
 | U22 | ~~The 16-bit word in a 24-bit slot.~~ **Resolved:** SIRCAS now sends 16-bit slots, 32 bit clocks a frame of 10 and 11 `CLKI` cycles alternately, so nothing follows the 16th bit (`docs/audio`, serial output; the model and its test are changed). | Ch. 2, ch. 5 | Done. |
+| U23 | **Installing interrupt handlers.** The CPU's vector table is fixed at words `0x0000` to `0x01FF` and holds the reset vector, the interrupt vectors (vertical sync, line compare, SIRCAS) and 160 trap vectors. With the system ROM at the low words at reset, those vectors are read-only. Options: (a) an *overlay*: the ROM answers at the low words at reset, and its start-up code then switches the low words to RAM (a latch or a register write in the decoder, cleared again by reset), so the program writes its own vectors and handler latency is unchanged; (b) the ROM's vectors point to stubs that jump through a table in RAM, which costs a few instructions on every interrupt (the line-compare budget is only about 16 instructions); (c) the vectors stay in ROM and the program cannot install handlers. | Ch. 3 (vector table), ch. 4, ch. 7 | The CPU manual fixes the table's place. The VM has the program segment at 0 and read-only. |
+| U24 | **System ROM driver routines.** Where is the entry table, what is the calling convention, which services (video set-up, loading the audio memory, input, and so on)? Probably a manual of its own. | Ch. 3 (only mentions them) | Nothing yet. |
+| U25 | **ROM and RAM wait states** matter to the budgets in ch. 6: the instruction counts per line and frame assume no wait states. | Ch. 3, ch. 6 | Nothing. |
 
 ## Findings while writing
 
@@ -57,7 +60,7 @@ All easy to change.
 
 | Choice | Why |
 | --- | --- |
-| Program memory at segment `0x00` | The vectors are in the low words of the address space, so something must answer there. Size is left open. |
+| System ROM at the low words at reset | You said the reset vector is in the ROM, and the vector table is fixed at the low words, so the ROM must answer there at reset. How it behaves afterwards is U23. |
 | The manual says SIRCAS's segment is unspecified, not `0x0D` | The SIRCAS manual says so. The VM's `0x0D` is only evidence (U5). |
 | Both regions given in every table | The PAL clock is fixed by the video manual, so there is nothing to withhold. |
 | Block diagram has one clock rail and no interrupt lines | The lines are in ch. 4 and the net tables of ch. 5. |

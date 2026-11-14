@@ -18,15 +18,18 @@ The program then has a console in the following state, and it sets up each part 
 		\toprule
 		\textbf{Part}  & \textbf{State at the start of the program}                                                                                                         \\
 		\midrule
-		CPU            & At the reset vector, with its registers as the architecture defines them (\archmanual{}, exceptions chapter)                                       \\
+		CPU            & At the reset vector in the system ROM, with its registers as the architecture defines them (\archmanual{}, exceptions chapter)                     \\
 		SIRCADA        & Blank, in Mode 1, every writable register zero except those the registers chapter lists (\videomanual{})                                           \\
 		SIRCAS         & Silent: the output is disabled, the registers hold their reset values, and the audio memory holds nothing the program can rely on (\audiomanual{}) \\
-		Program memory & Not yet specified                                                                                                                                  \\
+		Working memory & Not yet specified                                                                                                                                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{State After Reset}
 	\label{tab:reset-state}
 \end{table}
+
+The CPU's first instructions are in the system ROM. Its start-up code sets the system up and then jumps to the program
+on the cartridge. What the code sets up, and the address it jumps to, are not yet specified.
 
 \subsection{Order of Setting Up}
 
@@ -56,8 +59,8 @@ amplifiers, the filter, the output stage and the connector are not yet specified
 
 \section{Other Connections}
 
-SIRCUS has no other chip that this manual describes. The controller ports, any expansion or cartridge connector, and
-the physical form of the console are not yet specified.
+SIRCUS has no other chip that this manual describes. The cartridge connector, the controller ports and the physical
+form of the console are not yet specified.
 
 \section{Power}
 \label{sec:power}

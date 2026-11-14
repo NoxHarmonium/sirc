@@ -16,18 +16,18 @@ has no pin numbers.
 	\small
 	\begin{tabular}{lllll}
 		\toprule
-		\textbf{Net}           & \textbf{CPU} & \textbf{SIRCADA} & \textbf{SIRCAS}        & \textbf{Other}          \\
+		\textbf{Net}           & \textbf{CPU} & \textbf{SIRCADA} & \textbf{SIRCAS}        & \textbf{Other}               \\
 		\midrule
-		A0--A7                 & 1--8         & 8--15            & A0--A7                 & Program memory, decoder \\
-		A8--A15                & 10--17       & 16--23           & A8--A15                & Program memory, decoder \\
-		A16--A23               & 18--25       & ---              & ---                    & Decoder, program memory \\
-		D0--D15                & 27--42       & 26--41           & D0--D15                & Program memory          \\
-		\activelow{BAS}        & 47 (out)     & 5 (in)           & \activelow{BAS} (in)   & Decoder                 \\
-		BRW                    & 48 (out)     & 6 (in)           & BRW (in)               & Program memory          \\
-		\activelow{BACK}       & 49 (in)      & 7 (out)          & \activelow{BACK} (out) & Program memory; pull-up \\
-		\activelow{CS} (video) & ---          & 4                & ---                    & Decoder                 \\
-		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Decoder                 \\
-		CLKI                   & 45           & 2                & CLKI                   & Clock circuit           \\
+		A0--A7                 & 1--8         & 8--15            & A0--A7                 & Memories, cartridge, decoder \\
+		A8--A15                & 10--17       & 16--23           & A8--A15                & Memories, cartridge, decoder \\
+		A16--A23               & 18--25       & ---              & ---                    & Decoder, memories, cartridge \\
+		D0--D15                & 27--42       & 26--41           & D0--D15                & Memories, cartridge          \\
+		\activelow{BAS}        & 47 (out)     & 5 (in)           & \activelow{BAS} (in)   & Decoder                      \\
+		BRW                    & 48 (out)     & 6 (in)           & BRW (in)               & Memories, cartridge          \\
+		\activelow{BACK}       & 49 (in)      & 7 (out)          & \activelow{BACK} (out) & Memories, cartridge; pull-up \\
+		\activelow{CS} (video) & ---          & 4                & ---                    & Decoder                      \\
+		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Decoder                      \\
+		CLKI                   & 45           & 2                & CLKI                   & Clock circuit                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Nets Shared by the Chips}
@@ -36,7 +36,7 @@ has no pin numbers.
 
 \noindent The data and address bits connect bit for bit: D0 of the CPU to D0 of each device, and so on.
 \activelow{BACK} is open drain at the devices, so it is a wired net, pulled up by a resistor whose value is not yet
-specified. The program memory may take part in it too. The \activelow{CS} of each device is a separate net from the
+specified. The memories and the cartridge may take part in it too. The \activelow{CS} of each device is a separate net from the
 decoder.
 
 \section{Interrupts and Reset}

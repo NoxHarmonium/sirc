@@ -26,11 +26,13 @@
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Segment}  & \textbf{Device} \\
+		\textbf{Segment}  & \textbf{Device}         \\
 		\midrule
-		\texttt{0x00}     & Program memory  \\
-		\texttt{0x0C}     & SIRCADA         \\
-		Not yet specified & SIRCAS          \\
+		\texttt{0x00}     & System ROM at reset     \\
+		Not yet specified & Working memory (128 KB) \\
+		Not yet specified & Cartridge               \\
+		\texttt{0x0C}     & SIRCADA                 \\
+		Not yet specified & SIRCAS                  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Address Map Summary}
@@ -65,7 +67,7 @@
 		SIRCADA registers, palette, sprite table, video memory & 1                 \\
 		SIRCAS registers                                       & 1                 \\
 		SIRCAS audio memory window                             & 2 to 5            \\
-		Program memory                                         & Not yet specified \\
+		Working memory, system ROM, cartridge                  & Not yet specified \\
 		\bottomrule
 	\end{tabular}
 	\caption{Bus Cycle Length Summary}
