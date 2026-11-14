@@ -57,15 +57,40 @@ The three chips do not depend on each other, so a program may set them up in any
 
 SIRCADA produces an analogue colour signal on three outputs, R, G and B, and a composite sync, \activelow{CSYNC}. An
 output reference, IREF, sets the full-scale colour level. During reset the three outputs are at black (\videomanual{},
-package chapter). The circuit that turns these into a signal for a display, the connector and the levels at it are not
-yet specified.
+package chapter). A video encoder turns them into composite video (Section~\ref{sec:display-wiring}), which leaves the
+console on the video jack. The encoder and the reference are not yet specified.
 
 \section{The Audio Output}
 
 SIRCAS produces a serial stream of signed 16-bit stereo samples, and the TDA1543 turns it into two analogue currents
 (Section~\ref{sec:converter}). The output stage (Section~\ref{sec:output-stage}) turns each current into a voltage and
 filters it, and the board needs a filter that removes the images of the signal around the sample rate (\audiomanual{},
-timing chapter), which that filter does in part. The output connector is not yet specified.
+timing chapter), which that filter does in part. The signals leave on the left and right jacks
+(Section~\ref{sec:av-connector}).
+
+\section{The Audio and Video Connector}
+\label{sec:av-connector}
+
+The sound and the picture leave the console on three RCA jacks, in the usual colours:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Jack} & \textbf{Signal} & \textbf{Level}                                                 \\
+		\midrule
+		Yellow        & Composite video & 1 V peak to peak into 75 $\Omega$                              \\
+		White         & Left audio      & About 1.1 V RMS at full scale (Section~\ref{sec:output-stage}) \\
+		Red           & Right audio     & About 1.1 V RMS at full scale                                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Audio and Video Jacks}
+	\label{tab:av-jacks}
+\end{table}
+
+\noindent A television or a monitor with composite and audio inputs connects directly. An optional adapter, which is not part of
+the console and is not described in this manual, takes the three signals and modulates them onto a television channel
+for a set that has only an aerial input.
 
 \section{Other Connections}
 

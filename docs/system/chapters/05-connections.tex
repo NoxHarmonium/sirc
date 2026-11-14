@@ -461,8 +461,11 @@ the memory has that cycle less the delay of the interface.
 (\videomanual{}, package chapter).
 
 \section{SIRCADA and the Display}
+\label{sec:display-wiring}
 
-SIRCADA's video output leaves the system as an analogue colour signal and a composite sync.
+SIRCADA's video output is an analogue colour signal on three outputs and a composite sync. A television takes composite
+video, in which the colour is encoded on a subcarrier and the sync is added, so a video encoder sits between SIRCADA
+and the connector.
 
 \begin{table}[H]
 	\centering
@@ -470,8 +473,8 @@ SIRCADA's video output leaves the system as an analogue colour signal and a comp
 		\toprule
 		\textbf{SIRCADA}  & \textbf{Connection}                               \\
 		\midrule
-		R, G, B           & Display connector, through the output circuit     \\
-		\activelow{CSYNC} & Display connector                                 \\
+		R, G, B           & The video encoder                                 \\
+		\activelow{CSYNC} & The video encoder                                 \\
 		IREF              & A reference that sets the full-scale colour level \\
 		AVCC, AGND        & The analogue supply and ground                    \\
 		\bottomrule
@@ -480,4 +483,8 @@ SIRCADA's video output leaves the system as an analogue colour signal and a comp
 	\label{tab:display-nets}
 \end{table}
 
-\noindent The output circuit, the reference, the connector and the levels at it are not yet specified.
+\noindent The encoder needs the colour subcarrier. In an NTSC system it is the master clock divided by six, 3,579,545~Hz, which is
+why the master clock is six times the subcarrier. In a PAL system the master clock is 4.8 times the subcarrier, which
+is not a whole number, so the encoder takes the subcarrier, 4,433,618.75~Hz, from a crystal of its own. The encoder, its
+supply, the reference, and the level of its output are not yet specified. Its output goes to the video jack
+(Section~\ref{sec:av-connector}).
