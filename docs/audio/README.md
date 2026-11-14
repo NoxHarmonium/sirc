@@ -80,3 +80,4 @@ cargo run --release -p sirc_umf --example render_demo -- <output dir>   # a demo
 | Pitch resolution and modulation depth tables (Chapters 6 and 9) | `budget_study` |
 | Playback error by waveform length (Chapters 6 and 14) | `resample_study` |
 | Envelope step and time (Chapter 7) | arithmetic of the 64-sample update |
+| Instrument and sequence examples (Appendix B) | `cargo test -p sirc_umf --test recipes -- --nocapture` |

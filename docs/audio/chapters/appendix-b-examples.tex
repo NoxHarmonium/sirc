@@ -1,0 +1,400 @@
+\chapter{Instrument and Sequence Examples}
+\label{app:examples}
+
+This appendix gives worked examples of instruments and sequences: a lead, a bass, a violin with vibrato, a kick drum, a
+hat and a snare, and a plucked note, then a one-bar pattern that plays several of them. Each one lists everything a
+program writes to make the sound, and what the sound does. They are starting points. Change a waveform, an envelope
+step or a modulation depth, and listen.
+
+\section{Reading the Examples}
+
+\subsection{Instrument Records}
+
+An instrument is described by the record of Table~\ref{tab:instrument}. The examples give each record as the values of
+its fields. \texttt{SAMPLE\_START}, \texttt{SAMPLE\_LENGTH} and \texttt{SPIT\_ADDRESS} depend on where the program puts
+the waveform and the pitch table in audio memory, so only the length is given. Every waveform in the examples is a loop
+that starts at byte 0 and covers the whole sample, so \texttt{LOOP\_START} is 0 and \texttt{LOOP\_ENABLE} is set (word
+6 is \texttt{0x8000}).
+
+\subsection{Pitch Tables}
+
+The pitch table of an instrument holds the twelve steps of one octave (Section~\ref{sec:pitch-table}). A table for a
+one-cycle waveform of $N$ bytes has entries $N/64$ times those of Table~\ref{tab:pitch-table}.
+Table~\ref{tab:example-spit} gives the entry for note 0 of each table the examples use. Instruments with the same
+length of waveform share a table.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Waveform}  & \textbf{Entry 0 (A0)} & \textbf{Used by}                  \\
+		\midrule
+		64 bytes           & \texttt{0x00000E19}   & Lead, kick                        \\
+		256 bytes          & \texttt{0x00003864}   & Bass, violin, pluck               \\
+		4096 bytes         & \texttt{0x0003863E}   & Hat, snare                        \\
+		64 bytes, $\div 5$ & \texttt{0x000002D2}   & Vibrato source (5.5~Hz at note 0) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Pitch Tables Used in the Examples}
+	\label{tab:example-spit}
+\end{table}
+
+\subsection{Envelope Times}
+
+An envelope takes one step every 2.0~ms (Chapter~\ref{ch:envelope}), so the time a phase takes is the number of steps
+times 2.0~ms. Attack takes $\lceil 4095 / \texttt{ATTACK} \rceil$ steps. Decay takes $\lceil (4095 - S) /
+	\texttt{DECAY} \rceil$ steps, where $S$ is the 12-bit sustain level, and release takes $\lceil S / \texttt{RELEASE}
+	\rceil$ steps. An \texttt{ATTACK} of 0 is instant. A \texttt{DECAY} of 0 goes to the sustain level at once.
+
+\subsection{Conditions}
+
+The levels and times quoted are for a voice that plays alone, at a volume of 255 and a pan of 128, with
+\texttt{MASTER\_VOL} at 255 and \texttt{AUDIO\_EN} set. A note is started by writing \texttt{INSTR} and then
+\texttt{COMMAND} (Section~\ref{sec:startup}). Where a sequence is used, the tick is 400 samples, 12.5~ms
+(\texttt{SEQ\_PERIOD} = 400).
+
+\section{A Square Lead}
+
+A plain tone with a soft start. The waveform is a square of 64 bytes, $+90$ in the first half and $-90$ in the second.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Field}                     & \textbf{Value} & \textbf{Meaning}                                     \\
+		\midrule
+		\texttt{SAMPLE\_LENGTH}            & 64             & One cycle                                            \\
+		\texttt{ATTACK}, \texttt{DECAY}    & 128, 8         & Word 4 is \texttt{0x8008}                            \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 190, 24        & Word 5 is \texttt{0xBE18}; sustain level 3051 (75\%) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Square Lead: Instrument}
+	\label{tab:ex-lead}
+\end{table}
+
+The voice needs \texttt{CONTROL} = \texttt{0x0000} and \texttt{VOLUME\_PAN} = \texttt{0xFF80}. To play A4, write the
+instrument number to \texttt{INSTR} and \texttt{0x8030} (note 48) to \texttt{COMMAND}.
+
+\textbf{Result.} The note sounds at 440.0~Hz. The attack takes 32 steps, 64~ms, and the level then decays for about
+262~ms to the sustain level. After a stop the release takes 256~ms to reach silence, and the level is below 1\% of the
+peak after 252~ms.
+
+\section{A Filtered Bass}
+
+A sawtooth of 256 bytes, rising from $-105$ to $+105$, through the low-pass filter. The sawtooth is rich in harmonics
+and the filter takes the top off them.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Field}                     & \textbf{Value} & \textbf{Meaning}                                     \\
+		\midrule
+		\texttt{SAMPLE\_LENGTH}            & 256            & One cycle                                            \\
+		\texttt{ATTACK}, \texttt{DECAY}    & 0, 8           & Word 4 is \texttt{0x0008}; instant attack            \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 140, 40        & Word 5 is \texttt{0x8C28}; sustain level 2248 (55\%) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Filtered Bass: Instrument}
+	\label{tab:ex-bass}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Register}          & \textbf{Value}  & \textbf{Meaning}                                       \\
+		\midrule
+		\texttt{CONTROL}           & \texttt{0x2000} & \texttt{FILTER\_EN}: the voice goes through the filter \\
+		\texttt{VOLUME\_PAN}       & \texttt{0xFF80} & Volume 255, centre                                     \\
+		\texttt{FILTER\_CONFIG}    & 0               & Low-pass                                               \\
+		\texttt{FILTER\_CUTOFF}    & 16              & 318~Hz (Table~\ref{tab:filter-cutoff})                 \\
+		\texttt{FILTER\_RESONANCE} & 64              & A gentle peak at the cutoff                            \\
+		\texttt{FILTER\_VOL\_PAN}  & \texttt{0xFF80} & Filter volume 255, centre                              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Filtered Bass: Registers}
+	\label{tab:ex-bass-regs}
+\end{table}
+
+\textbf{Result.} Note 12 sounds A1 at 55.0~Hz. The fundamental is unchanged by the filter. The sixteenth harmonic,
+880~Hz, nearly three octaves above the cutoff, is 16.6~dB weaker than in the same voice with \texttt{FILTER\_EN}
+clear. A higher cutoff brightens the sound. Writing the cutoff register while the note plays gives the familiar sweep,
+in steps at the low end (Section~\ref{sec:filter-cutoff}).
+
+\section{A Violin with Vibrato}
+
+A bowed tone has a slow attack and a vibrato that comes in after the note has started. It needs two voices: one plays
+the tone, and a second, in modulation mode, supplies the vibrato (Chapter~\ref{ch:modulation}). The tone is a sawtooth
+of 256 bytes with an amplitude of 100. The vibrato source is a sine of 64 bytes with an amplitude of 120.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Field}                     & \textbf{Tone (instrument 0)} & \textbf{Vibrato source (instrument 1)} \\
+		\midrule
+		\texttt{SAMPLE\_LENGTH}            & 256                          & 64                                     \\
+		Pitch table                        & 256 bytes                    & 64 bytes, $\div 5$                     \\
+		\texttt{ATTACK}, \texttt{DECAY}    & 30, 4                        & 8, 0                                   \\
+		Word 4                             & \texttt{0x1E04}              & \texttt{0x0800}                        \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 200, 20                      & 255, 10                                \\
+		Word 5                             & \texttt{0xC814}              & \texttt{0xFF0A}                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Violin: Instruments}
+	\label{tab:ex-violin}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Register}    & \textbf{Voice 0 (tone)} & \textbf{Voice 5 (vibrato)} & \textbf{Meaning}                      \\
+		\midrule
+		\texttt{CONTROL}     & \texttt{0x0000}         & \texttt{0x4000}            & Voice 5 is in modulation mode         \\
+		\texttt{VOLUME\_PAN} & \texttt{0xFF80}         & \texttt{0xFF80}            & Volume 255, centre                    \\
+		\texttt{MOD\_ROUTE}  & ---                     & \texttt{0x2000}            & Pitch, voice 0, shift 0, not inverted \\
+		\bottomrule
+	\end{tabular}
+	\caption{Violin: Registers}
+	\label{tab:ex-violin-regs}
+\end{table}
+
+Start the vibrato source with \texttt{INSTR} = 1 and \texttt{COMMAND} = \texttt{0x8000} on voice 5. Start the tone with
+\texttt{INSTR} = 0 and \texttt{COMMAND} = \texttt{0x8030} on voice 0. A fingered phrase is a run of \texttt{NOTE}
+instructions on voice 0; the vibrato source keeps running underneath.
+
+\textbf{Result.} The tone sounds A4 at 440~Hz. The tone's attack takes 137 steps, 274~ms. The vibrato source runs at
+5.5~Hz, since note 0 of its table is built for that rate. Its own attack is slow, 512 steps or 1.0~s, so the vibrato
+grows with it: in the first 200~ms the pitch moves by about $\pm 2.5$ cents, and from the first second it moves by
+about $\pm 14$ cents.
+
+The depth is set by the shift in \texttt{MOD\_ROUTE}, and each step of the shift doubles it. Pitch modulation is added
+in raw units (Section~\ref{sec:mod-pitch-depth}), so the same setting gives half the depth in cents an octave higher. A
+tone with a shorter waveform needs a smaller shift for the same depth in cents.
+
+\section{A Kick Drum}
+
+A kick is a low sine whose pitch falls quickly. The sine has 64 bytes and an amplitude of 115. The note starts high and
+a second \texttt{NOTE} glides it down, which is what \texttt{PORTA\_EN} is for (Section~\ref{sec:note-start}).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Field}                     & \textbf{Value} & \textbf{Meaning}                                 \\
+		\midrule
+		\texttt{SAMPLE\_LENGTH}            & 64             & One cycle                                        \\
+		\texttt{ATTACK}, \texttt{DECAY}    & 0, 60          & Word 4 is \texttt{0x003C}                        \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 0, 20          & Word 5 is \texttt{0x0014}; the level decays to 0 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Kick: Instrument}
+	\label{tab:ex-kick}
+\end{table}
+
+The voice needs \texttt{CONTROL} with \texttt{PORTA\_EN} set (\texttt{0x1000}, or \texttt{0x9000} with the sequencer
+on), \texttt{VOLUME\_PAN} = \texttt{0xB080} and \texttt{PORTA\_RATE} = 1120. One hit is this sequence:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llp{6.4cm}r}
+		\toprule
+		\textbf{Word}   & \textbf{Instruction} & \textbf{Effect}                                   & \textbf{Tick} \\
+		\midrule
+		\texttt{0x0024} & \texttt{NOTE 36}     & Starts A3, 220~Hz                                 & 0             \\
+		\texttt{0x4001} & \texttt{WAIT 1}      & One tick                                          &               \\
+		\texttt{0x000C} & \texttt{NOTE 12}     & Same instrument, voice active: glides to A1       & 1             \\
+		\texttt{0x4013} & \texttt{WAIT 19}     & Lets the sound die away                           &               \\
+		\texttt{0x2000} & \texttt{STOP}        & Releases the envelope, so the next hit retriggers & 20            \\
+		\bottomrule
+	\end{tabular}
+	\caption{One Kick Hit}
+	\label{tab:ex-kick-seq}
+\end{table}
+
+The first \texttt{NOTE} finds the voice idle, so it starts a note. The second finds the voice active on the same
+instrument with \texttt{PORTA\_EN} set, so it glides. The \texttt{STOP} is needed because a \texttt{NOTE} on a voice
+that is still active would glide again and not start a new hit; with the envelope released and finished, the next
+\texttt{NOTE} retriggers.
+
+\textbf{Result.} The pitch falls from 220~Hz to 55~Hz in 38~ms. The time of a glide is about the distance in step
+units divided by \texttt{PORTA\_RATE}, times 2.0~ms; here $21{,}654 / 1120 \times 2.0 = 38.7$~ms. The level falls below 1\%
+of its peak after 136~ms.
+
+\section{A Hat and a Snare}
+
+Noise needs no pitch, only a sample that is not periodic. Both instruments use 4096 bytes of noise with an amplitude of
+100, loop the whole sample, and share one voice by changing the instrument between hits. The hat and the snare use
+different noise, and the note number only chooses which bytes are read. Use a pitch table for 4096 bytes
+(Table~\ref{tab:example-spit}).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Field}                     & \textbf{Hat (instrument 1)} & \textbf{Snare (instrument 2)} \\
+		\midrule
+		\texttt{ATTACK}, \texttt{DECAY}    & 0, 255 (\texttt{0x00FF})    & 0, 40 (\texttt{0x0028})       \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 0, 255 (\texttt{0x00FF})    & 0, 60 (\texttt{0x003C})       \\
+		Note used                          & 100                         & 62                            \\
+		\bottomrule
+	\end{tabular}
+	\caption{Hat and Snare: Instruments}
+	\label{tab:ex-hat}
+\end{table}
+
+A hit is \texttt{INST 1} (\texttt{0x6001}) then \texttt{NOTE 100} (\texttt{0x0064}) for the hat, or \texttt{INST 2}
+(\texttt{0x6002}) then \texttt{NOTE 62} (\texttt{0x003E}) for the snare.
+
+\textbf{Result.} Both sounds start at full level. The hat falls below 2\% of its peak after 32~ms, and the snare after
+202~ms.
+
+\section{A Plucked Note}
+
+A short, bright note for an arpeggio. The waveform is a triangle of 256 bytes that starts at zero and rises, with an
+amplitude of 105.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Field}                     & \textbf{Value} & \textbf{Meaning}          \\
+		\midrule
+		\texttt{SAMPLE\_LENGTH}            & 256            & One cycle                 \\
+		\texttt{ATTACK}, \texttt{DECAY}    & 0, 80          & Word 4 is \texttt{0x0050} \\
+		\texttt{SUSTAIN}, \texttt{RELEASE} & 0, 60          & Word 5 is \texttt{0x003C} \\
+		\bottomrule
+	\end{tabular}
+	\caption{Pluck: Instrument}
+	\label{tab:ex-pluck}
+\end{table}
+
+\textbf{Result.} Note 51 sounds C5 at 523.3~Hz. The level reaches silence 104~ms after the start (the decay takes 52
+steps), and is below 1\% of the peak after 102~ms. A run of these notes, each longer than 110~ms, starts
+each one from silence, so a retrigger makes no step in the output (Chapter~\ref{ch:envelope}).
+
+\section{A One-Bar Pattern}
+
+The last example plays three of the instruments together as a bar of sixteen steps and repeats it. A step is a
+sixteenth note: ten ticks, 125.2~ms, which makes four steps a beat at 119.9 beats a minute. A bar is 160 ticks,
+2002.5~ms. The voices are:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Voice} & \textbf{Instruments}                    & \textbf{\texttt{CONTROL}} & \textbf{\texttt{VOLUME\_PAN}} \\
+		\midrule
+		0              & Kick (instrument 0)                     & \texttt{0x9000}           & \texttt{0xB080}               \\
+		1              & Hat (1) and snare (2)                   & \texttt{0x8000}           & \texttt{0x5A80}               \\
+		2              & Bass (3, as in Table~\ref{tab:ex-bass}) & \texttt{0x8000}           & \texttt{0xC880}               \\
+		\bottomrule
+	\end{tabular}
+	\caption{One-Bar Pattern: Voices}
+	\label{tab:ex-pattern-voices}
+\end{table}
+
+\noindent Voice 0 also has \texttt{PORTA\_RATE} = 1120. The bass voice does not use the filter, so its \texttt{FILTER\_EN} is clear. Write \texttt{SEQ\_PC} of each voice with the address of its sequence, and write
+\texttt{SEQ\_PERIOD} = 400 last, so that all three sequences start on the first tick (Section~\ref{sec:startup}).
+
+\subsection{The Kick Sequence}
+
+The kick plays on steps 0, 8 and 11. After each hit comes a wait that brings the sequence to the next hit.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{6.7cm}p{4.3cm}r}
+		\toprule
+		\textbf{Words}                                     & \textbf{Instructions}                                                                                  & \textbf{Tick} \\
+		\midrule
+		\texttt{0x6000}                                    & \texttt{INST 0}                                                                                        & 0             \\
+		\texttt{0x0024 0x4001 0x000C 0x4013 0x2000 0x403C} & \texttt{NOTE 36}, \texttt{WAIT 1}, \texttt{NOTE 12}, \texttt{WAIT 19}, \texttt{STOP}, \texttt{WAIT 60} & 0 (step 0)    \\
+		\texttt{0x0024 0x4001 0x000C 0x4013 0x2000 0x400A} & the same hit, then \texttt{WAIT 10}                                                                    & 80 (step 8)   \\
+		\texttt{0x0024 0x4001 0x000C 0x4013 0x2000 0x401E} & the same hit, then \texttt{WAIT 30}                                                                    & 110 (step 11) \\
+		\texttt{0xBFED}                                    & \texttt{GOTO} $-19$                                                                                    & 160           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Kick Sequence}
+	\label{tab:ex-kick-pattern}
+\end{table}
+
+\noindent The \texttt{GOTO} jumps back 19 words, to the first \texttt{NOTE}, not to the \texttt{INST}, which need
+only be selected once (Section~\ref{sec:seq-instructions}).
+
+\subsection{The Hat and Snare Sequence}
+
+The hat plays on steps 2, 6, 10 and 14 and the snare on steps 4 and 12. Each hit is preceded by the wait from the hit
+before it, so the sequence begins with a wait.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{5.4cm}p{5.4cm}r}
+		\toprule
+		\textbf{Words}                & \textbf{Instructions}                                & \textbf{Step}            \\
+		\midrule
+		\texttt{0x4014 0x6001 0x0064} & \texttt{WAIT 20}, \texttt{INST 1}, \texttt{NOTE 100} & 2 (hat)                  \\
+		\texttt{0x4014 0x6002 0x003E} & \texttt{WAIT 20}, \texttt{INST 2}, \texttt{NOTE 62}  & 4 (snare)                \\
+		\texttt{0x4014 0x6001 0x0064} & \texttt{WAIT 20}, \texttt{INST 1}, \texttt{NOTE 100} & 6 (hat)                  \\
+		\texttt{0x4028 0x6001 0x0064} & \texttt{WAIT 40}, \texttt{INST 1}, \texttt{NOTE 100} & 10 (hat)                 \\
+		\texttt{0x4014 0x6002 0x003E} & \texttt{WAIT 20}, \texttt{INST 2}, \texttt{NOTE 62}  & 12 (snare)               \\
+		\texttt{0x4014 0x6001 0x0064} & \texttt{WAIT 20}, \texttt{INST 1}, \texttt{NOTE 100} & 14 (hat)                 \\
+		\texttt{0x4014 0xBFEC}        & \texttt{WAIT 20}, \texttt{GOTO} $-20$                & 16, the start of the bar \\
+		\bottomrule
+	\end{tabular}
+	\caption{Hat and Snare Sequence}
+	\label{tab:ex-hat-pattern}
+\end{table}
+
+\subsection{The Bass Sequence}
+
+The bass plays on every second step, root then octave, as notes 12 and 24. Each note is held for 19 ticks and released,
+and one tick is left before the next, so that every note starts from a released envelope.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{6.7cm}p{4.3cm}r}
+		\toprule
+		\textbf{Words}                       & \textbf{Instructions}                                              & \textbf{Tick} \\
+		\midrule
+		\texttt{0x6003}                      & \texttt{INST 3}                                                    & 0             \\
+		\texttt{0x000C 0x4013 0x2000 0x4001} & \texttt{NOTE 12}, \texttt{WAIT 19}, \texttt{STOP}, \texttt{WAIT 1} & 0             \\
+		\texttt{0x0018 0x4013 0x2000 0x4001} & \texttt{NOTE 24}, \texttt{WAIT 19}, \texttt{STOP}, \texttt{WAIT 1} & 20            \\
+		\multicolumn{3}{l}{The last two lines are repeated three more times, and make eight notes in all (ticks 0 to 140).}       \\
+		\texttt{0xBFDF}                      & \texttt{GOTO} $-33$                                                & 160           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Bass Sequence}
+	\label{tab:ex-bass-pattern}
+\end{table}
+
+\textbf{Result.} The kick sounds at the start of the bar, at step 8 and at step 11, and the pattern repeats every
+160 ticks with no drift. The three sequences complete every tick without a missed deadline. The sequences loop for
+ever, so they never set \texttt{SEQ\_DONE}; to finish a song, end each voice with \texttt{END 0} (Chapter~\ref{ch:sequencer}).
+
+\section{Summary}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llllp{4.6cm}}
+		\toprule
+		\textbf{Example} & \textbf{Waveform} & \textbf{ADSR}   & \textbf{Note} & \textbf{Measured}                        \\
+		\midrule
+		Lead             & Square, 64        & 128, 8, 190, 24 & A4, 440.0~Hz  & Attack 64~ms, release 252~ms to 1\%      \\
+		Bass             & Sawtooth, 256     & 0, 8, 140, 40   & A1, 55.0~Hz   & 16th harmonic $-16.6$~dB with the filter \\
+		Violin           & Sawtooth, 256     & 30, 4, 200, 20  & A4, 440~Hz    & Vibrato 5.5~Hz, $\pm 14$ cents after 1~s \\
+		Kick             & Sine, 64          & 0, 60, 0, 20    & A3 to A1      & 220 to 55~Hz in 38~ms; 1\% after 136~ms  \\
+		Hat              & Noise, 4096       & 0, 255, 0, 255  & 100           & 2\% after 32~ms                          \\
+		Snare            & Noise, 4096       & 0, 40, 0, 60    & 62            & 2\% after 202~ms                         \\
+		Pluck            & Triangle, 256     & 0, 80, 0, 60    & C5, 523.3~Hz  & 1\% after 102~ms                         \\
+		\bottomrule
+	\end{tabular}
+	\caption{Summary of the Examples}
+	\label{tab:ex-summary}
+\end{table}
