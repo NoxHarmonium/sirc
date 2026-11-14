@@ -81,3 +81,11 @@ The converter's datasheet shows each output current turned into a voltage by an 
 * **Coupling.** The output rests at the 2.2 V reference, so a 10 uF capacitor removes it: -3 dB at 1.6 Hz into 10 kOhm.
 * **Amplifiers.** Two sections for each channel make a quad op-amp. It needs an output that swings to within 0.3 V of each rail on 5 V.
   The datasheet's NE5532 needs a wider supply, so a rail-to-rail type is required.
+
+## The power budget
+
+A rough 5 V budget, from typical figures of the period (to be replaced when the custom chips' currents are known): working RAM 100 mA,
+video memory 200 mA, audio memory 50 mA, DUART 150 mA, converter 50 mA, glue logic 100 mA, cartridge 50 mA, the three custom chips
+150 mA each (assumed), and 40 mA of controllers and op-amps: about 1.19 A, 5.95 W. A linear regulator from 12 V would lose 8.3 W.
+A switching regulator at 82 percent loses 1.3 W and draws 0.6 A at 12 V. Adding the encoder's 0.72 W gives about 8 W, so a 12 V 1 A
+adapter. It is regulated because the MC1377 must not see more than 14 V, which an unregulated adapter gives at light load.

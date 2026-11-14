@@ -122,6 +122,12 @@ The converter runs from the same $+5$~V as the logic, and needs no other supply:
 \end{table}
 
 \noindent The part dissipates about 250~mW. It rejects 100~Hz ripple on its supply by only 50~dB, so it takes a branch of
-the $+5$~V supply of its own, decoupled with 100~nF at the pin. The output stage runs from the same $+5$~V. The video encoder needs a supply of 10 to 14~V, nominally $+12$~V, which need not be regulated. It draws 35~mA with no load and about
-60~mA with its output loaded, and dissipates about 600~mW. Where the 12~V comes from is not yet specified. The serial device, the MC68681, takes $+5$~V
+the $+5$~V supply of its own, decoupled with 100~nF at the pin. The output stage runs from the same $+5$~V. The video encoder needs a supply of 10 to 14~V, nominally $+12$~V; the console takes it directly from the power input. It draws 35~mA with no load and about
+60~mA with its output loaded, and dissipates about 600~mW. The serial device, the MC68681, takes $+5$~V
 at up to 150~mA.
+
+\noindent The console is powered from a regulated 12~V DC adapter. The $+5$~V rail is made on the board by a step-down switching
+regulator, not a linear one: the logic draws about 1.2~A at 5~V (about 6~W), and a linear regulator dropping 7~V at that
+current would dissipate about 8~W. A switching regulator at about 80~percent efficiency dissipates about 1.3~W and draws about
+0.6~A from the adapter. With the encoder, the adapter must supply about 8~W, so a 12~V adapter rated at 1~A. The adapter must be
+regulated, because the video encoder's maximum supply is 14~V. The regulator and the connector are not yet specified.
