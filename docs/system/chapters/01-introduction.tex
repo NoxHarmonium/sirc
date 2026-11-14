@@ -38,16 +38,17 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 	\small
 	\begin{tabular}{llp{5.2cm}}
 		\toprule
-		\textbf{Part}       & \textbf{Package}  & \textbf{Function}                                                                \\
+		\textbf{Part}       & \textbf{Package}     & \textbf{Function}                                                                               \\
 		\midrule
-		SIRC-1 CPU          & 64-pin DIP        & Runs the program; the only master of the bus                                     \\
-		SIRCADA             & 52-pin PLCC       & Display adapter: tiles, sprites and the video signal; holds its own video memory \\
-		SIRCAS              & Not yet specified & Sound processor: six voices, filter and sequencers; has its own audio memory     \\
-		Audio memory        & Not yet specified & Static memory of 32,768 words, used by SIRCAS alone                              \\
-		Converter           & Not yet specified & Turns SIRCAS's serial output into the analogue stereo signal                     \\
-		Program memory      & Not yet specified & Holds the program and its data                                                   \\
-		Chip-select decoder & Not yet specified & Turns the high address bits into a chip select for each device                   \\
-		Clock circuit       & Not yet specified & Makes the master clock and divides it by two to make \texttt{CLKI}               \\
+		SIRC-1 CPU          & 64-pin DIP           & Runs the program; the only master of the bus                                                    \\
+		SIRCADA             & 52-pin PLCC          & Display adapter: tiles, sprites and the video signal; holds its own video memory                \\
+		SIRCAS              & Not yet specified    & Sound processor: six voices, filter and sequencers; has its own audio memory                    \\
+		Audio memory        & Not yet specified    & Static memory of 32,768 words, used by SIRCAS alone                                             \\
+		Converter           & TDA1541A, 28-pin DIP & Philips dual 16-bit converter: turns SIRCAS's serial output into two analogue currents          \\
+		Output amplifiers   & Not yet specified    & Turn the converter's currents into voltages (a reference circuit uses two NE5534 or equivalent) \\
+		Program memory      & Not yet specified    & Holds the program and its data                                                                  \\
+		Chip-select decoder & Not yet specified    & Turns the high address bits into a chip select for each device                                  \\
+		Clock circuit       & Not yet specified    & Makes the master clock and divides it by two to make \texttt{CLKI}                              \\
 		\bottomrule
 	\end{tabular}
 	\caption{The Parts of SIRCUS}

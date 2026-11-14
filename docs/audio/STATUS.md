@@ -137,7 +137,7 @@ the sums stay below 336, leaving roughly 50 to 120 clocks to spend.
 * **Pan endpoints leak.** `pan = 255` leaks 1/256 (−48 dB) into the other side (measured 126 of 32250). Centre is −6.02 dB per side
   (linear law, constant amplitude).
 * **`BCLK = CLKI/7` has a 4:3 duty cycle.** `CLKI/8` with 21-bit slots fills the 336-clock frame exactly with a 50 % duty cycle.
-  Both round-trip bit-exactly, and the TDA1541 accepts either (see Decisions).
+  Both round-trip bit-exactly, and the TDA1541A accepts either (see Decisions).
 * **Loop shorter than `SPI`.** With the single-subtraction loop, any loop span shorter than the per-sample step is undefined. This
   is harmless for single-cycle waveforms below Nyquist, but it bites on short multi-cycle loops.
 
@@ -197,32 +197,37 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 3 | Filter arithmetic | Bare truncation. |
 | 4 | Cutoff register 0 | Keep the freeze: the state holds, `LP` outputs a constant. Costs nothing; documented behaviour. |
 | 5 | Note onset | Apply the first envelope step at note-on (implemented). `ATTACK = 0` now reaches full level in about 0.1 ms. |
-| 6 | DAC | Philips TDA1541. See the next section. |
+| 6 | DAC | Philips TDA1541A. See the next section. |
 | 7 | Missed tick | Drop the tick (as modelled). |
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
 | 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
 | 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. The PAL `CLKI` is 10,640,685 Hz (the SIRCADA manual's PAL master clock of 21,281,370 Hz, divided by two), 15.9 cents flat of NTSC, and is inside the range. |
 
-### Target DAC: Philips TDA1541 (product specification, November 1985)
+### Target DAC: Philips TDA1541A (product specification, February 1991)
 
-Read from the datasheet (OCR of a scanned copy; the timing waveforms, Figs. 3 to 5, are images and were **not** read):
+The datasheet supplied for the console is the TDA1541A. An earlier reading of the November 1985 TDA1541 (OCR of a scanned
+copy) is superseded by it: **the 1991 part has no `SCK` pin.** It runs its own oscillator (470 pF between pins 16 and 17). The
+SIRCAS manual keeps `SCK` for converters that need a system clock. The TDA1541A leaves it unconnected.
 
-* Dual 16-bit current-output DAC (4 mA full scale). It needs an external I/V stage per channel and three supplies: +5 V, -5 V
-  and -15 V.
-* Time-multiplexed serial input on `WS`, `BCK` and `DATA`, MSB first, "any bit length". The pin `OB/TWC` selects offset binary
-  (ground) or **two's complement (+5 V)**. SIRCAS outputs signed 16-bit, so it ties the pin to +5 V.
-* **A separate system clock input `SCK` is required**, for jitter-free output timing. The datasheet shows two time-multiplexed
-  formats: `fSCK = fBCK` (labelled I2S, Fig. 3) and `fSCK = 2 x fBCK` (Fig. 4). SIRCAS therefore needs an `SCK` output pin.
-* Limits: `BCK` 6 MHz maximum, `SCK` 12 MHz, `WS` 200 kHz. `BCK` period 160 ns minimum, high and low 48 ns minimum. Data set-up
-  32 ns, hold 0 ns. Fixed phase relations between `SCK` and `BCK` edges (32 ns and 50 ns margins).
-* Channel separation 80 dB, signal-to-noise 95 dB, inter-channel delay up to 1 us.
+* Dual 16-bit current-output converter, full-scale output current 4.0 mA (3.4 to 4.6). Needs an I/V stage per channel and three
+  supplies: +5 V, -5 V and -15 V (-15 V is 14 to 16 V, 25 mA typical).
+* `OB/TWC` (pin 27) selects the input mode. At +5 V it is time-multiplexed two's complement (I2S): `LE/WS` is the word select
+  (low is left, high is right), `BCK` the bit clock, `DATA L/DATA` the data. SIRCAS's levels and signedness match.
+* Limits: `BCK` 6.4 MHz maximum, cycle time 156 ns minimum, high and low times 46 ns minimum, rise and fall 32 ns maximum; `WS`
+  200 kHz maximum; data and `WS` set-up 32 ns before the `BCK` rising edge, hold 0 ns.
+* SIRCAS meets every limit: `BCLK` is 1.53 MHz (652 ns a cycle), any split of its 7 cycles gives at least 93 ns high and low, and
+  the sample rate is 31.96 kHz. The edges of `SD` and `WS` must still change at least 32 ns before the rising edge of `BCLK`,
+  which the SIRCAS manual leaves unspecified. Changing them on the falling edge gives 279 ns or more.
+* **Open: the 16-bit word and the 24-bit slot.** The datasheet says the input is up to 16 bits, MSB first. It does not say what
+  the converter does with bits that follow the 16th. SIRCAS sends 16 data bits, MSB one clock after `WS`, then seven zeros
+  before `WS` changes again. If the converter loads whatever it has shifted in at the `WS` edge, those zeros push the data out
+  and the converter would convert the wrong 16 bits. If it counts 16 bits from `WS`, the format works. This needs a bench
+  check or a statement from the datasheet's source. A fix that does not depend on it is a 16-bit slot (32 `BCLK` periods of
+  10 and 11 cycles alternately), which the converter does not mind because it has no clock recovery.
 
 What this means for the draft:
 
-* **Both `CLKI/7` and `CLKI/8` are fine.** `BCK` at 1.53 MHz or 1.34 MHz is far below the limit, and the DAC only needs 48 ns high
-  and low, so the 4:3 duty cycle of `CLKI/7` does not matter. Keep the draft's `CLKI/7` with 24-bit slots.
-* Add an `SCK` output equal to the `BCK` frequency (Fig. 3 format), offset in phase by one or two `CLKI` cycles (93 ns each) from `BCK`
-  to meet the edge margins. The phase offsets must be checked against Figs. 3 and 4 in the datasheet before the pinout is frozen.
+* **Both `CLKI/7` and `CLKI/8` are fine.** Keep the draft's `CLKI/7` with 24-bit slots, subject to the open point above.
 * The sample rate (31.96 kHz) is not oversampled, so the board needs a steep analogue anti-image filter after the DAC. That is a
   board matter, not a chip matter.
 

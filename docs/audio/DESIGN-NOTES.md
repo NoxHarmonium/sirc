@@ -68,13 +68,12 @@ must not carry any of this. `STATUS.md` records the model's implementation statu
 
 ## The converter
 
-The target converter is the Philips TDA1541 (product specification, November 1985): a dual 16-bit current-output converter,
-time-multiplexed input, MSB first, any bit length, two's-complement mode selectable by a pin. It also needs a system clock
-input `SCK` (equal to the bit clock frequency, or twice it) in addition to `BCK` and `WS`, which is why SIRCAS has an `SCK`
-output. Limits are far from the design: `BCK` up to 6 MHz and 48 ns high and low (SIRCAS: 1.53 MHz, 4:3 duty), `SCK` up to
-12 MHz. The converter has a fixed phase relation between `SCK` and `BCK` edges (32 ns and 50 ns margins), one `CLKI` cycle is 93 ns, so a one or
-two cycle offset should meet them; to be checked against the datasheet's timing figures, which were not machine-readable.
-Supplies are +5 V, -5 V and -15 V, and the outputs are currents that need an I/V stage. The sample rate is not oversampled, so
+The target converter is the Philips TDA1541A (product specification, February 1991): a dual 16-bit current-output converter,
+time-multiplexed input, MSB first, up to 16 bits, two's-complement mode selected by a pin. Unlike the 1985 TDA1541 it has no
+system clock input, so `SCK` is not needed for it; SIRCAS keeps the pin for converters that do need one. Limits are far from the
+design: `BCK` up to 6.4 MHz and 46 ns high and low (SIRCAS: 1.53 MHz, 4:3 duty), set-up 32 ns and hold 0 ns. Supplies are +5 V,
+-5 V and -15 V, and the outputs are currents that need an I/V stage. One point is open: the datasheet says nothing about bits
+after the 16th, and SIRCAS pads each 24-bit slot with seven zeros (see `STATUS.md`). The sample rate is not oversampled, so
 the board needs a steep analogue filter. `CLKI`/8 with 21-bit slots would give an exact 50 % duty cycle and is equally
 acceptable to this converter; `CLKI`/7 with 24-bit slots was kept.
 

@@ -21,7 +21,9 @@ CPU, the display and the sound.
 
 Like the other manuals, it is written as if it were a period hardware reference for a real console: it states what the system
 does, with no comparisons to other products, no mention of simulators, prototypes or tests, and no project status in the
-body chapters. Status, open questions and the choices made live in `STATUS.md`.
+body chapters. Unlike the chip manuals, it **names the real parts** the console is built from (such as the TDA1541A converter),
+because it describes the actual design of the console. The SIRCAS and SIRCADA manuals must stay generic, since the chips can
+be used with any part of the right specification. Status, open questions and the choices made live in `STATUS.md`.
 
 ## Status
 

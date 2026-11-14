@@ -49,10 +49,10 @@ yet specified.
 
 \section{The Audio Output}
 
-SIRCAS produces a serial stream of signed 16-bit stereo samples, and the converter turns it into an analogue signal.
-The board needs a filter after the converter that removes the images of the signal around the sample rate
-(\audiomanual{}, timing chapter). The converter, its supplies, the filter, the output stage and the connector are not
-yet specified.
+SIRCAS produces a serial stream of signed 16-bit stereo samples, and the TDA1541A turns it into two analogue currents
+(Section~\ref{sec:converter}). An amplifier for each channel turns the current into a voltage, and the board needs a
+filter after it that removes the images of the signal around the sample rate (\audiomanual{}, timing chapter). The
+amplifiers, the filter, the output stage and the connector are not yet specified.
 
 \section{Other Connections}
 
@@ -60,7 +60,30 @@ SIRCUS has no other chip that this manual describes. The controller ports, any e
 the physical form of the console are not yet specified.
 
 \section{Power}
+\label{sec:power}
 
 Each chip has its own supply pins: the CPU has two pairs of power and ground pins, SIRCADA has two pairs and a separate
 analogue supply, AVCC and AGND, and SIRCAS has power and ground pins whose number is not yet specified. The supply
-voltages, the regulation, the decoupling and the power connector are not yet specified.
+voltages of those chips, the regulation, the decoupling and the power connector are not yet specified.
+
+The converter needs three supplies, and they are the only ones this manual can state:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrrr}
+		\toprule
+		\textbf{Pin} & \textbf{Supply} & \textbf{Range}     & \textbf{Typical current} & \textbf{Maximum current} \\
+		\midrule
+		28           & $+5$ V          & 4.5 to 5.5 V       & 27 mA                    & 40 mA                    \\
+		26           & $-5$ V          & $-4.5$ to $-5.5$ V & 37 mA                    & 50 mA                    \\
+		15           & $-15$ V         & $-14$ to $-16$ V   & 25 mA                    & 35 mA                    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Converter Supplies}
+	\label{tab:converter-supplies}
+\end{table}
+
+\noindent The analogue and digital grounds, pins 5 and 14, are joined, and must not differ by more than 0.3~V. The part
+dissipates about 700~mW. The $-15$~V supply passes the most ripple to the output: the converter rejects 100~Hz ripple by
+58~dB on it, against 76~dB on the $+5$~V supply and 84~dB on the $-5$~V supply, so it is the one that needs the quietest
+regulation. A supply for the output amplifiers is also needed, and is not yet specified.

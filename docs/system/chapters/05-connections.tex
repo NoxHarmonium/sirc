@@ -115,25 +115,72 @@ chosen for the memory, are not yet specified (\audiomanual{}, package chapter). 
 memories follows the byte order of the audio memory (\audiomanual{}, memory map chapter).
 
 \section{SIRCAS and the Converter}
+\label{sec:converter}
 
-SIRCAS sends its output to the converter as a serial stream. The converter, and everything between it and the audio
-connector, is not yet specified.
+SIRCAS sends its output to the converter as a serial stream. The converter is the Philips TDA1541A, a stereo 16-bit
+converter with current outputs, in a 28-pin DIP. It is used in its time-multiplexed two's-complement mode, which takes
+the word select, the bit clock and one data line.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lll}
+	\small
+	\begin{tabular}{llp{6.4cm}}
 		\toprule
-		\textbf{SIRCAS} & \textbf{Converter} & \textbf{Notes}                                 \\
+		\textbf{SIRCAS} & \textbf{TDA1541A}             & \textbf{Notes}                                                  \\
 		\midrule
-		BCLK            & Bit clock input    & \texttt{CLKI}/7: 1.534 MHz NTSC, 1.520 MHz PAL \\
-		WS              & Word select input  & Low for left, high for right; the sample rate  \\
-		SD              & Serial data input  & Signed 16-bit samples                          \\
-		SCK             & System clock input & Frequency and phase not yet specified          \\
+		BCLK            & BCK, pin 2                    & \texttt{CLKI}/7: 1.534 MHz NTSC, 1.520 MHz PAL                  \\
+		WS              & LE/WS, pin 1                  & Low for left, high for right; the sample rate                   \\
+		SD              & DATA L/DATA, pin 3            & Signed 16-bit samples, most significant bit first               \\
+		SCK             & ---                           & Not connected: the converter has no system clock input          \\
+		---             & DATA R, pin 4                 & Not used in this mode                                           \\
+		---             & \activelow{OB}/TWC, pin 27    & Tied to +5 V: time-multiplexed, two's complement                \\
+		---             & COSC, pins 16 and 17          & A 470 pF capacitor between them: the converter's own oscillator \\
+		---             & DECOU, pins 7 to 13, 18 to 24 & A 100 nF capacitor from each to ground                          \\
+		---             & AOL, pin 25; AOR, pin 6       & The current outputs, one to each output amplifier               \\
 		\bottomrule
 	\end{tabular}
 	\caption{Converter Connections}
 	\label{tab:converter-nets}
 \end{table}
+
+\subsection{Converter Timing}
+
+Table~\ref{tab:converter-timing} sets what the converter requires of its inputs against what SIRCAS gives.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{4.6cm}p{2.9cm}p{4.6cm}}
+		\toprule
+		\textbf{Parameter}                                    & \textbf{Converter needs} & \textbf{SIRCAS gives}                                   \\
+		\midrule
+		Bit clock cycle                                       & 156 ns or more           & 652 ns NTSC, 658 ns PAL (7 \texttt{CLKI} cycles)        \\
+		Bit clock high time, low time                         & 46 ns or more each       & At least 93 ns each, whatever the split of the 7 cycles \\
+		Word select rate                                      & 200 kHz or less          & 31.96 kHz NTSC, 31.67 kHz PAL                           \\
+		Rise and fall times                                   & 32 ns or less            & Not yet specified                                       \\
+		Data and word select set-up before \texttt{BCK} rises & 32 ns or more            & Not yet specified                                       \\
+		Data and word select hold after \texttt{BCK} rises    & 0 ns or more             & Not yet specified                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Converter Input Timing}
+	\label{tab:converter-timing}
+\end{table}
+
+\noindent The bit clock is far inside the converter's limits. Whether the data edges meet the set-up time depends on which
+edge of \texttt{BCLK} SIRCAS changes them on, which its manual leaves open; a change on the falling edge leaves the low time of
+the bit clock, at least one \texttt{CLKI} cycle, 93 ns, whatever the duty cycle. The converter accepts words of up to 16 bits, most significant bit first. SIRCAS sends 16 data
+bits in a slot of 24 bit clocks and fills the rest of the slot with zeros. How the converter treats the bits that follow the
+sixteenth is not yet specified.
+
+\subsection{The Output Amplifiers}
+
+Each output of the converter is a current that sinks up to 4.0 mA at full scale (3.4 to 4.6 mA), and must be held at
+virtual earth within $\pm 25$~mV. A reference circuit for the part converts it to a voltage with an operational
+amplifier for each channel, the inverting input at the converter output, the other input at analogue ground, and a
+1.8~k$\Omega$ resistor with a 2.2~nF capacitor in parallel in the feedback. The full-scale output of that circuit is
+4.0~mA times 1.8~k$\Omega$, 7.2~V. The capacitor and resistor give a corner at 40~kHz, which is above half the sample
+rate here, so the circuit does not by itself remove the images of the signal around 32~kHz; a steeper filter follows.
+The amplifier, its supplies, the filter and the output connector are not yet specified.
 
 \section{SIRCADA and the Display}
 
