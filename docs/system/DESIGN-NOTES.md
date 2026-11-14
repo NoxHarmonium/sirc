@@ -85,7 +85,7 @@ The converter's datasheet shows each output current turned into a voltage by an 
 ## The power budget
 
 A rough 5 V budget, from typical figures of the period (to be replaced when the custom chips' currents are known): working RAM 100 mA,
-video memory 200 mA, audio memory 50 mA, DUART 150 mA, converter 50 mA, glue logic 100 mA, cartridge 50 mA, the three custom chips
-150 mA each (assumed), and 40 mA of controllers and op-amps: about 1.19 A, 5.95 W. A linear regulator from 12 V would lose 8.3 W.
-A switching regulator at 82 percent loses 1.3 W and draws 0.6 A at 12 V. Adding the encoder's 0.72 W gives about 8 W, so a 12 V 1 A
+video memory 200 mA, audio memory 50 mA, DUART 150 mA, converter 50 mA, glue logic 100 mA, cartridge 250 mA (room for a coprocessor and its memory), the three custom chips
+150 mA each (assumed), and 40 mA of controllers and op-amps: about 1.39 A, 6.95 W. A linear regulator from 12 V would lose 9.7 W.
+A switching regulator at 82 percent loses 1.5 W and draws 0.7 A at 12 V. Adding the encoder's 0.72 W gives about 9 W, so a 12 V 1 A
 adapter. It is regulated because the MC1377 must not see more than 14 V, which an unregulated adapter gives at light load.
