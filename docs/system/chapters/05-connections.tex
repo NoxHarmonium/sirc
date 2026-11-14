@@ -123,7 +123,8 @@ produces \activelow{BACK}, are not yet specified.
 \section{The Serial Device}
 
 The serial device is a basic serial port. Its purpose is to link a console to another console for two-player games, to
-a modem, or to a debugger. The part, its signals, its speed and its connector are not yet specified. It takes its
+a modem, or to a debugger. The part is the Motorola MC68681 DUART, which has two channels, so one can serve the link
+and the other a modem or a debugger. Its signals, its speed and its connectors are not yet specified. It takes its
 \activelow{CS} from output Y5 of the decoder and the signals of the shared bus (Table~\ref{tab:shared-nets}), and it
 needs an interrupt (Chapter~\ref{ch:interrupts}).
 
