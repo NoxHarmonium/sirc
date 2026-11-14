@@ -43,8 +43,11 @@ they answer it with data and \activelow{BACK}.
 The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. The system's select
 logic watches these bits and \activelow{BAS}, and asserts the \activelow{CS} of the device that owns the segment for
 the whole of the cycle. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never
-drives the data bus. The select logic also holds the boot overlay (Section~\ref{sec:boot-overlay}). What it is built
-from, its delay and any other inputs it takes are not yet specified.
+drives the data bus. The select logic also holds the boot overlay (Section~\ref{sec:boot-overlay}). The select logic is
+made from 74LS138 decoders. Each takes three address bits and asserts one of eight active-low outputs, which match the
+active-low \activelow{CS} inputs of the devices, and each has enable inputs that take \activelow{BAS}, so a select is
+asserted only in a bus cycle. Which address bits the decoders take, how many there are and the segment each device gets
+are not yet specified, apart from those in Table~\ref{tab:address-map}.
 
 \section{The Address Map}
 \label{sec:address-map}
