@@ -9,7 +9,7 @@ use device_audio::new_audio_device;
 use peripheral_bus::device::{BusAssertions, BusOperation, Device, LEVEL_THREE_INTERRUPT};
 use peripheral_bus::new_bus_peripheral;
 
-const BASE: u32 = 0x000D_0000;
+const BASE: u32 = 0x0080_0000;
 
 type Results = Rc<RefCell<Vec<(u16, u64)>>>;
 

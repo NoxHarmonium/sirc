@@ -40,35 +40,41 @@ they answer it with data and \activelow{BACK}.
 \section{Selecting a Device}
 \label{sec:selecting}
 
-The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. The system's select
-logic watches these bits and \activelow{BAS}, and asserts the \activelow{CS} of the device that owns the segment for
-the whole of the cycle. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never
-drives the data bus. The select logic also holds the boot overlay (Section~\ref{sec:boot-overlay}). The select logic is
-made from 74LS138 decoders. Each takes three address bits and asserts one of eight active-low outputs, which match the
-active-low \activelow{CS} inputs of the devices, and each has enable inputs that take \activelow{BAS}, so a select is
-asserted only in a bus cycle. Which address bits the decoders take, how many there are and the segment each device gets
-are not yet specified, apart from those in Table~\ref{tab:address-map}.
+The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. SIRCUS gives each
+device a region of 32 segments, 2M words, and selects it with one 74LS138 decoder. The decoder takes A23, A22 and A21,
+asserts one of eight active-low outputs, and has its enable inputs on \activelow{BAS}, so an output is asserted only in
+a bus cycle and for the whole of it. The outputs are active low like the \activelow{CS} inputs of the devices, so each
+wires straight to one. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never
+drives the data bus.
+
+A device is wired to no address bit between A16 and A20, so its segment repeats 32 times through its region. A program
+uses the first segment of each region and does not rely on the repeats. Space is plentiful, so the regions are large
+and no device shares one.
 
 \section{The Address Map}
 \label{sec:address-map}
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{llp{6cm}}
+	\begin{tabular}{llllp{4.6cm}}
 		\toprule
-		\textbf{Segment}  & \textbf{Device}             & \textbf{Notes}                                                                                                       \\
+		\textbf{Output} & \textbf{A23--A21} & \textbf{Segments}            & \textbf{Device} & \textbf{Notes}                                                                         \\
 		\midrule
-		\texttt{0x00}     & Cartridge or working memory & The cartridge while the boot overlay is set (the system ROM if there is none), the 128 KB of working memory after it \\
-		Not yet specified & System ROM                  & Its own segment: the start-up routine and the driver routines                                                        \\
-		Not yet specified & Cartridge                   & Its own segment: the program and data of the game; the connector is not yet specified                                \\
-		\texttt{0x0C}     & SIRCADA                     & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter)                               \\
-		\texttt{0x80}     & SIRCAS                      & Registers and the window to the audio memory (\audiomanual{}, memory map chapter)                                    \\
-		Others            & ---                         & Not yet specified                                                                                                    \\
+		Y0              & 000               & \texttt{0x00}--\texttt{0x1F} & Working memory  & 128 KB; the cartridge answers here while the boot overlay is set                       \\
+		Y1              & 001               & \texttt{0x20}--\texttt{0x3F} & System ROM      & The start-up routine and the driver routines                                           \\
+		Y2              & 010               & \texttt{0x40}--\texttt{0x5F} & Cartridge       & The program and data of the game                                                       \\
+		Y3              & 011               & \texttt{0x60}--\texttt{0x7F} & SIRCADA         & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter) \\
+		Y4              & 100               & \texttt{0x80}--\texttt{0x9F} & SIRCAS          & Registers and the window to the audio memory (\audiomanual{}, memory map chapter)      \\
+		Y5              & 101               & \texttt{0xA0}--\texttt{0xBF} & Serial I/O      & Not yet specified beyond the region                                                    \\
+		Y6              & 110               & \texttt{0xC0}--\texttt{0xDF} & ---             & Not yet specified                                                                      \\
+		Y7              & 111               & \texttt{0xE0}--\texttt{0xFF} & ---             & Not yet specified                                                                      \\
 		\bottomrule
 	\end{tabular}
 	\caption{The SIRCUS Address Map}
 	\label{tab:address-map}
 \end{table}
+
+So SIRCADA's registers start at the CPU address \texttt{0x0060\_0000} and SIRCAS's at \texttt{0x0080\_0000}.
 
 \subsection{The Vector Table and the Boot Overlay}
 \label{sec:boot-overlay}
@@ -81,11 +87,11 @@ system starts, because the reset vector is the first entry. It must be in RAM wh
 can write its own handlers. A \emph{boot overlay} provides both:
 
 \begin{itemize}
-	\item While the overlay is set, the cartridge answers at segment \texttt{0x00}, and the working memory does not. If no
-	      cartridge is present, the system ROM answers there instead.
+	\item While the overlay is set, the cartridge answers in region Y0, and the working memory does not. If no cartridge is
+	      present, the system ROM answers there instead.
 	\item Reset sets the overlay. \activelow{RSTO} is wired to it, so a software reset sets it too.
-	\item A write to the system ROM's own segment clears the overlay. The ROM ignores the write itself. From then on the working
-	      memory answers at segment \texttt{0x00}, and the cartridge and the system ROM answer only at their own segments.
+	\item A write to the system ROM's region clears the overlay. The ROM ignores the write itself. From then on the working
+	      memory answers in Y0, and the cartridge and the system ROM answer only in their own regions.
 \end{itemize}
 
 The first entry of the vector table, words 0 and 1 of the cartridge, is the reset vector. A cartridge sets it to the
@@ -94,8 +100,8 @@ working memory, sets the system up and jumps to the program on the cartridge (Se
 
 A game that wants its own boot code sets the reset vector to the address of that code instead. Nothing forces it to use
 the ROM. It clears the overlay itself with the same write, writes its own vector table, and need never call the ROM
-again. The ROM stays readable at its own segment for programs that do use its driver routines. Where the system ROM and
-the cartridge sit in the address space, how a cartridge is detected, and the select logic are not yet specified.
+again. The ROM stays readable in its own region for programs that do use its driver routines. How a cartridge is
+detected is not yet specified.
 
 The contents of the system ROM, its start-up sequence and the interface to its driver routines are not described in
 this manual.
@@ -103,11 +109,10 @@ this manual.
 \section{What Happens at an Unmapped Address}
 \label{sec:unmapped}
 
-A cycle to an address that selects no device is answered by nobody. Which addresses those are depends on the logic that
-selects the memories, which is not yet specified. No \activelow{BACK} is asserted, so the CPU inserts wait states and,
-unless the system ends the cycle, waits for ever. A system that wants a fault instead must assert \activelow{BERR} for
-a segment it has not mapped, which makes the CPU raise a bus fault (\hwmanual{}, bus interface chapter). Whether SIRCUS
-does so, and after how long, is not yet specified.
+A cycle to a region that no device owns, Y6 or Y7, is answered by nobody. No \activelow{BACK} is asserted, so the CPU
+inserts wait states and, unless the system ends the cycle, waits for ever. A system that wants a fault instead must
+assert \activelow{BERR} for those regions, which makes the CPU raise a bus fault (\hwmanual{}, bus interface chapter).
+The two unused outputs of the decoder could drive it. Whether SIRCUS does so, and after how long, is not yet specified.
 
 \section{How Long Each Device Takes}
 \label{sec:answer-times}
@@ -128,6 +133,7 @@ chapter).
 		Working memory                                         & Not yet specified &                                       \\
 		System ROM                                             & Not yet specified &                                       \\
 		Cartridge                                              & Not yet specified &                                       \\
+		Serial I/O                                             & Not yet specified &                                       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Bus Cycle Lengths}

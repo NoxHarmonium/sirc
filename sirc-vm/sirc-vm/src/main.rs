@@ -145,7 +145,7 @@ pub struct Args {
     #[clap(short, long)]
     enable_video: bool,
 
-    /// Map the SIRCAS audio prototype at 0x000D0000 (reference model; produces no sound yet).
+    /// Map the SIRCAS audio prototype at 0x00800000 (reference model; produces no sound yet).
     #[clap(long)]
     enable_audio: bool,
 
@@ -313,7 +313,7 @@ fn setup_vm(args: &Args) -> Vm {
         let vsync_frequency = video_device.vsync_frequency;
         bus_peripheral.map_segment(
             VIDEO_SEGMENT,
-            0x000C_0000,
+            0x0060_0000,
             0xFFFF,
             true,
             Box::new(video_device),
@@ -331,7 +331,7 @@ fn setup_vm(args: &Args) -> Vm {
     if args.enable_audio || args.audio_wav.is_some() {
         bus_peripheral.map_segment(
             AUDIO_SEGMENT,
-            0x000D_0000,
+            0x0080_0000,
             0x1_0000,
             true,
             Box::new(new_audio_device(AudioPolicy {

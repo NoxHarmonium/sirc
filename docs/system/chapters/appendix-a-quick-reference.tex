@@ -24,15 +24,17 @@
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{ll}
+	\begin{tabular}{lll}
 		\toprule
-		\textbf{Segment}  & \textbf{Device}                                  \\
+		\textbf{Segments}            & \textbf{Device}                                         & \textbf{Output (A23--A21)} \\
 		\midrule
-		\texttt{0x00}     & Cartridge at reset, then working memory (128 KB) \\
-		Not yet specified & System ROM, own segment                          \\
-		Not yet specified & Cartridge                                        \\
-		\texttt{0x0C}     & SIRCADA                                          \\
-		\texttt{0x80}     & SIRCAS                                           \\
+		\texttt{0x00}--\texttt{0x1F} & Working memory (the cartridge while the overlay is set) & Y0 (000)                   \\
+		\texttt{0x20}--\texttt{0x3F} & System ROM                                              & Y1 (001)                   \\
+		\texttt{0x40}--\texttt{0x5F} & Cartridge                                               & Y2 (010)                   \\
+		\texttt{0x60}--\texttt{0x7F} & SIRCADA                                                 & Y3 (011)                   \\
+		\texttt{0x80}--\texttt{0x9F} & SIRCAS                                                  & Y4 (100)                   \\
+		\texttt{0xA0}--\texttt{0xBF} & Serial I/O                                              & Y5 (101)                   \\
+		\texttt{0xC0}--\texttt{0xFF} & Not yet specified                                       & Y6, Y7                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Address Map Summary}
@@ -67,7 +69,7 @@
 		SIRCADA registers, palette, sprite table, video memory & 1                 \\
 		SIRCAS registers                                       & 1                 \\
 		SIRCAS audio memory window                             & 2 to 5            \\
-		Working memory, system ROM, cartridge                  & Not yet specified \\
+		Working memory, system ROM, cartridge, serial I/O      & Not yet specified \\
 		\bottomrule
 	\end{tabular}
 	\caption{Bus Cycle Length Summary}

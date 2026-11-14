@@ -26,6 +26,8 @@ every chip.
 	\label{tab:interrupt-lines}
 \end{table}
 
+The serial device also needs an interrupt, on \activelow{IRQ1} or \activelow{IRQ2}; which one is not yet specified.
+
 Every source is an open-drain output, so a line may be shared by several devices and is released by all of them when
 none asks for service. The pull-up that holds each line high is part of the system. Its value is not yet specified. A
 handler on a shared line reads the status of each device to find which one is asking. The display adapter has a bit for

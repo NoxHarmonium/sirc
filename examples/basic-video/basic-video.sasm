@@ -9,7 +9,7 @@
 ;; Devices
 
 ; Video
-.EQU $VIDEO_DEVICE_SEGMENT         #0x000C
+.EQU $VIDEO_DEVICE_SEGMENT         #0x0060
 ; Video device mapping
 ; 0x0000..0x00FF => ppu_registers
 ; 0x6000..0x6100 => palette (256 entries of CGRAM)

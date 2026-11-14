@@ -25,8 +25,8 @@ has no pin numbers.
 		\activelow{BAS}        & 47 (out)     & 5 (in)           & \activelow{BAS} (in)   & Select logic                      \\
 		BRW                    & 48 (out)     & 6 (in)           & BRW (in)               & Memories, cartridge               \\
 		\activelow{BACK}       & 49 (in)      & 7 (out)          & \activelow{BACK} (out) & Memories, cartridge; pull-up      \\
-		\activelow{CS} (video) & ---          & 4                & ---                    & Select logic                      \\
-		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Select logic                      \\
+		\activelow{CS} (video) & ---          & 4                & ---                    & Select logic, Y3                  \\
+		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Select logic, Y4                  \\
 		CLKI                   & 45           & 2                & CLKI                   & Clock circuit                     \\
 		\bottomrule
 	\end{tabular}
@@ -84,6 +84,48 @@ The CPU drives and receives more signals than the other two chips use. What SIRC
 	\caption{CPU Signals Not Shared with the Other Chips}
 	\label{tab:unused-cpu}
 \end{table}
+
+\section{The Select Logic}
+\label{sec:select-logic}
+
+One 74LS138 decoder makes every chip select (Section~\ref{sec:selecting}).
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lllp{5.6cm}}
+		\toprule
+		\textbf{74LS138 pin} & \textbf{Name} & \textbf{Connection}            & \textbf{Notes}                                                \\
+		\midrule
+		1                    & A             & CPU A21 (pin 23)               &                                                               \\
+		2                    & B             & CPU A22 (pin 24)               &                                                               \\
+		3                    & C             & CPU A23 (pin 25)               &                                                               \\
+		4                    & G2A           & \activelow{BAS}                & Enable, active low                                            \\
+		5                    & G2B           & Ground                         & Enable, active low                                            \\
+		6                    & G1            & $+5$ V                         & Enable, active high                                           \\
+		15                   & Y0            & Working memory                 & Gated by the boot overlay; see Section~\ref{sec:boot-overlay} \\
+		14                   & Y1            & System ROM                     &                                                               \\
+		13                   & Y2            & Cartridge                      &                                                               \\
+		12                   & Y3            & SIRCADA \activelow{CS} (pin 4) &                                                               \\
+		11                   & Y4            & SIRCAS \activelow{CS}          &                                                               \\
+		10                   & Y5            & Serial I/O                     &                                                               \\
+		9, 7                 & Y6, Y7        & Not yet specified              & Could drive \activelow{BERR}                                  \\
+		8, 16                & GND, VCC      & Ground, $+5$ V                 &                                                               \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Select Decoder}
+	\label{tab:select-decoder}
+\end{table}
+
+\noindent The gating of the working memory's select and of the cartridge's by the boot overlay, and the way each memory
+produces \activelow{BACK}, are not yet specified.
+
+\section{The Serial Device}
+
+The serial device is a basic serial port. Its purpose is to link a console to another console for two-player games, to
+a modem, or to a debugger. The part, its signals, its speed and its connector are not yet specified. It takes its
+\activelow{CS} from output Y5 of the decoder and the signals of the shared bus (Table~\ref{tab:shared-nets}), and it
+needs an interrupt (Chapter~\ref{ch:interrupts}).
 
 \section{SIRCAS and the Audio Memory}
 \label{sec:audio-memory-wiring}

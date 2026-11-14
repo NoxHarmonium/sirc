@@ -28,7 +28,7 @@ cd sirc-vm
 cargo test -p sirc_umf -p device_audio
 cargo run --release -p sirc_umf --example filter_study
 cargo run --release -p sirc_umf --example budget_study
-cargo run -p sirc_vm -- --enable-audio ...   # maps SIRCAS at 0x000D0000, 0x10000 words
+cargo run -p sirc_vm -- --enable-audio ...   # maps SIRCAS at 0x00800000, 0x10000 words
 ```
 
 ## Acceptance tests (draft section 16)
@@ -240,7 +240,7 @@ The manual is in this directory (`main.tex`, `chapters/`): 14 chapters, a quick 
 manual's structure and voice and uses its preamble. It states the behaviour the model implements, including the choices
 in the table above, as the intended behaviour; those choices are proposals until approved. Points the design has not fixed are
 written "not yet specified" and not filled in: the package and pins, the audio memory's electrical interface, `SCK`, the serial
-edge timing and `BCLK` duty cycle, the reset pulse width, the segment of the device, and the reset values of
+edge timing and `BCLK` duty cycle, the reset pulse width, the reset values of
 registers not in the reset table.
 
 ## Not done

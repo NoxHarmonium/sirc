@@ -49,7 +49,8 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 		Working memory    & Not yet specified           & 128 KB (65,536 words) of RAM for the program's data and stack                                   \\
 		System ROM        & Not yet specified           & Holds the start-up code and the driver routines that programs call                              \\
 		Cartridge         & Connector not yet specified & Holds a game's program and data in a ROM; its first words are the reset vector                  \\
-		Select logic      & 74LS138, 16-pin DIP         & Decoders that make each chip select from the high address bits; a latch holds the boot overlay  \\
+		Serial I/O        & Not yet specified           & A basic serial port, to link two consoles, to a modem or to a debugger                          \\
+		Select logic      & 74LS138, 16-pin DIP         & Decodes A23 to A21 into a chip select for each device; a latch holds the boot overlay           \\
 		Clock circuit     & Not yet specified           & Makes the master clock and divides it by two to make \texttt{CLKI}                              \\
 		\bottomrule
 	\end{tabular}
@@ -60,7 +61,8 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 The video memory is inside SIRCADA, and the CPU reaches it through the device's own segment (\videomanual{}, memory map
 chapter). The audio memory is outside SIRCAS, but it is not on the CPU's bus: the CPU reaches it only through a window
 of SIRCAS's segment, and SIRCAS makes every access to it itself (\audiomanual{}, memory map chapter). The CPU's bus
-therefore carries traffic for only five things: the working memory, the system ROM, the cartridge, SIRCADA and SIRCAS.
+therefore carries traffic for only six things: the working memory, the system ROM, the cartridge, SIRCADA, SIRCAS and
+the serial device.
 
 \section{Block Diagram}
 
@@ -98,6 +100,10 @@ each of the other two chips has outputs that the CPU never sees directly: the pi
 		\node[box, minimum width=2.0cm] (rom) at (-4.2,-4.2) {System\\ROM};
 		\node[box, minimum width=2.0cm] (cart) at (-1.8,-4.2) {Cartridge};
 		\node[box, minimum width=2.2cm] (sel) at (4.4,-4.2) {Select\\logic};
+		\node[box, minimum width=2.0cm] (ser) at (6.9,-4.2) {Serial\\I/O};
+		\node[box, minimum width=2.0cm] (sconn) at (9.2,-4.2) {Serial\\connector};
+		\draw[thick, <->] (ser.north) -- (ser |- 0,-2.0);
+		\draw[flow, <->] (ser) -- (sconn);
 		\foreach \c in {ram,rom,cart,sel} { \draw[thick, <->] (\c.north) -- (\c |- 0,-2.0); }
 		% Outputs
 		\node[box] (disp) at (1.4,-4.9) {Display\\R, G, B, \activelow{CSYNC}};

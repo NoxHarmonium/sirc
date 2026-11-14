@@ -34,8 +34,7 @@ is **proposed**: it is what the model does, listed in `STATUS.md`, and awaits ap
 have been approved: portamento steps on the envelope clock, and the first envelope step is taken at note-on.
 
 Not yet specified, and so marked in the manual: the package and pin numbers, the electrical interface to the audio memory, the
-`SCK` frequency and phase, the serial output edge timing and `BCLK` duty cycle, the reset pulse width, the NTSC segment of the
-device, and the reset value of registers not listed in the reset table. The `CLKI` range (9.0 to 12.0 MHz)
+`SCK` frequency and phase, the serial output edge timing and `BCLK` duty cycle, the reset pulse width, and the reset value of registers not listed in the reset table. The `CLKI` range (9.0 to 12.0 MHz)
 is specified, but its limits are proposed targets (`STATUS.md`, Decisions, number 10).
 
 Do not invent values for anything the manual lists as "not yet specified".

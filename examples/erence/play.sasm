@@ -5,7 +5,7 @@
 ;; See the Makefile for the assemble and link steps, and run it with --enable-audio.
 
 .EQU $SCRATCH_SEGMENT               #0x0001
-.EQU $AUDIO_SEGMENT                 #0x000D
+.EQU $AUDIO_SEGMENT                 #0x0080
 .EQU $AUDIO_WINDOW                  #0x8000
 .EQU $AUDIO_SEQ_DONE                #0x0004
 
