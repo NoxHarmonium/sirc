@@ -56,6 +56,8 @@ these was a mistake: each was the simplest or the best-sounding choice, and toge
   needed the fetch schedule redesigned, so it was not taken (`docs/video/DESIGN-NOTES.md`).
 * **Static RAM everywhere.** The working memory (128 KB), the video memory and the audio memory are all static RAM. DRAM would have
   been cheaper per bit but needs refresh and a controller, and makes timing less exact.
+* **A composite video encoder.** The picture leaves as composite video on a yellow jack, which needs the MC1377 encoder, a +12 V
+  rail for it, a tuned chroma transformer and a 400 ns luminance delay line, because the picture has detail well above 1.5 MHz.
 * **Big custom chips.** SIRCADA and SIRCAS each have about 77 to 79 signal pins plus power, so their packages are large.
 * **Wait states.** The bus is fast compared with the memory of the time, which costs speed more than money, but a console
   with a faster cartridge ROM would need dearer cartridges.

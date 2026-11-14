@@ -57,8 +57,8 @@ The three chips do not depend on each other, so a program may set them up in any
 
 SIRCADA produces an analogue colour signal on three outputs, R, G and B, and a composite sync, \activelow{CSYNC}. An
 output reference, IREF, sets the full-scale colour level. During reset the three outputs are at black (\videomanual{},
-package chapter). A video encoder turns them into composite video (Section~\ref{sec:display-wiring}), which leaves the
-console on the video jack. The encoder and the reference are not yet specified.
+package chapter). The MC1377 video encoder turns them into composite video (Section~\ref{sec:display-wiring}), which
+leaves the console on the video jack.
 
 \section{The Audio Output}
 
@@ -122,5 +122,6 @@ The converter runs from the same $+5$~V as the logic, and needs no other supply:
 \end{table}
 
 \noindent The part dissipates about 250~mW. It rejects 100~Hz ripple on its supply by only 50~dB, so it takes a branch of
-the $+5$~V supply of its own, decoupled with 100~nF at the pin. The output stage runs from the same $+5$~V. The serial device, the MC68681, takes $+5$~V
+the $+5$~V supply of its own, decoupled with 100~nF at the pin. The output stage runs from the same $+5$~V. The video encoder needs a supply of 10 to 14~V, nominally $+12$~V, which need not be regulated. It draws 35~mA with no load and about
+60~mA with its output loaded, and dissipates about 600~mW. Where the 12~V comes from is not yet specified. The serial device, the MC68681, takes $+5$~V
 at up to 150~mA.

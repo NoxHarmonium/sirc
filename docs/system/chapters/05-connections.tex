@@ -465,26 +465,47 @@ the memory has that cycle less the delay of the interface.
 
 SIRCADA's video output is an analogue colour signal on three outputs and a composite sync. A television takes composite
 video, in which the colour is encoded on a subcarrier and the sync is added, so a video encoder sits between SIRCADA
-and the connector.
+and the video jack. The encoder is the Motorola MC1377, an RGB to PAL and NTSC encoder in a 20-pin DIP.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{ll}
+	\small
+	\begin{tabular}{llp{6.6cm}}
 		\toprule
-		\textbf{SIRCADA}  & \textbf{Connection}                               \\
+		\textbf{SIRCADA}  & \textbf{MC1377 pin} & \textbf{Connection}                                                                                  \\
 		\midrule
-		R, G, B           & The video encoder                                 \\
-		\activelow{CSYNC} & The video encoder                                 \\
-		IREF              & A reference that sets the full-scale colour level \\
-		AVCC, AGND        & The analogue supply and ground                    \\
+		R, G, B           & 3, 4, 5             & Each through a 15~$\mu$F capacitor; 1.0~V peak to peak at full scale                                 \\
+		\activelow{CSYNC} & 2                   & Low for the sync tip, high for blanking; 10~k$\Omega$ input                                          \\
+		IREF, AVCC, AGND  & ---                 & The reference that sets SIRCADA's full-scale level, and its analogue supply and ground               \\
+		---               & 20                  & Grounded in an NTSC console, open in a PAL console                                                   \\
+		---               & 17, 18              & A 3.579545~MHz (NTSC) or 4.43361875~MHz (PAL) crystal, 220~pF to ground from each pin, and a trimmer \\
+		---               & 1                   & 0.001~$\mu$F to ground, and 51~k$\Omega$ to pin 16: sets the colour burst                            \\
+		---               & 14, 15              & $+12$ V and ground                                                                                   \\
+		---               & 16, 7, 11, 12, 19   & The 8.2 V reference, and capacitors to ground on pins 16, 7, 11, 12 and 19                           \\
+		---               & 13 to 10            & A chroma bandpass network, a fixed tuned transformer                                                 \\
+		---               & 6 to 8              & A 400~ns luminance delay line, with 1.2~k$\Omega$ at each end                                        \\
+		---               & 9                   & Composite video: 150~$\Omega$ to ground, then 75~$\Omega$ in series to the video jack                \\
 		\bottomrule
 	\end{tabular}
-	\caption{Display Connections}
+	\caption{Video Encoder Connections}
 	\label{tab:display-nets}
 \end{table}
 
-\noindent The encoder needs the colour subcarrier. In an NTSC system it is the master clock divided by six, 3,579,545~Hz, which is
-why the master clock is six times the subcarrier. In a PAL system the master clock is 4.8 times the subcarrier, which
-is not a whole number, so the encoder takes the subcarrier, 4,433,618.75~Hz, from a crystal of its own. The encoder, its
-supply, the reference, and the level of its output are not yet specified. Its output goes to the video jack
-(Section~\ref{sec:av-connector}).
+\noindent The encoder takes the signals SIRCADA gives. The sync tip must lie between $-0.5$ and $+0.9$~V and the blanking level
+between 1.7 and 8.2~V, and the pulse must last 2.5 to 5.2~$\mu$s: SIRCADA's \activelow{CSYNC} is low for the pulse and high
+otherwise, and its horizontal pulse is 100 master clocks, 4.66~$\mu$s in an NTSC system and 4.70~$\mu$s in a PAL system. The
+encoder wants the portion of each colour input during sync to be black, which SIRCADA gives in blanking, and in PAL it wants
+vertical sync that is serrated, which SIRCADA's is, with a long pulse in each of its sync lines. Full scale of each colour
+output must be 1.0~V peak to peak, which the reference of SIRCADA is set to give.
+
+The colour burst and the chroma are made from the subcarrier of the crystal. SIRCADA's pixel is 186~ns, so the picture
+has detail well above the 1.5~MHz that the encoder's datasheet calls very low resolution, and so the chroma bandpass
+network and the luminance delay line are needed; the network delays the chroma by about 350~ns, which the luminance
+delay line matches.
+
+The composite output is 2.0~V peak to peak (0.6~V of sync and 1.4~V of luminance) from a source of 50~$\Omega$. Loaded
+by 150~$\Omega$, as above, it gives about 1.0~V peak to peak into a 75~$\Omega$ cable and monitor, the standard level.
+The load draws the supply current up to about 60~mA. The output rests above 4~V on average, so the video jack takes it
+through a large coupling capacitor, whose value is not yet specified. The values of the components that
+Table~\ref{tab:display-nets} does not give are those of the encoder's reference circuit. The output goes to the video
+jack (Section~\ref{sec:av-connector}).
