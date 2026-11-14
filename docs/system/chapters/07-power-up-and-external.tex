@@ -63,9 +63,9 @@ yet specified.
 \section{The Audio Output}
 
 SIRCAS produces a serial stream of signed 16-bit stereo samples, and the TDA1543 turns it into two analogue currents
-(Section~\ref{sec:converter}). An amplifier for each channel turns the current into a voltage, and the board needs a
-filter after it that removes the images of the signal around the sample rate (\audiomanual{}, timing chapter). The
-amplifiers, the filter, the output stage and the connector are not yet specified.
+(Section~\ref{sec:converter}). The output stage (Section~\ref{sec:output-stage}) turns each current into a voltage and
+filters it, and the board needs a filter that removes the images of the signal around the sample rate (\audiomanual{},
+timing chapter), which that filter does in part. The output connector is not yet specified.
 
 \section{Other Connections}
 
@@ -97,6 +97,5 @@ The converter runs from the same $+5$~V as the logic, and needs no other supply:
 \end{table}
 
 \noindent The part dissipates about 250~mW. It rejects 100~Hz ripple on its supply by only 50~dB, so it takes a branch of
-the $+5$~V supply of its own, decoupled with 100~nF at the pin. A supply for the output amplifiers is also needed, and is not
-yet specified. The serial device, the MC68681, takes $+5$~V
+the $+5$~V supply of its own, decoupled with 100~nF at the pin. The output stage runs from the same $+5$~V. The serial device, the MC68681, takes $+5$~V
 at up to 150~mA.

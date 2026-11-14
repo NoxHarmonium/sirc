@@ -393,19 +393,43 @@ sends exactly 16 in a slot of 16 bit clocks. As in the standard interface, the l
 clock of the next slot, after the word select has changed. The bit clock periods alternate between 10 and 11 cycles in a
 pattern that repeats every sample, so the edges fall at the same cycle of the sample each time.
 
-\subsection{The Output Amplifiers}
+\subsection{The Output Stage}
+\label{sec:output-stage}
 
 Each output of the converter is a current that sinks up to 2.3~mA at full scale (1.95 to 2.65~mA), and must be held
 within $\pm 25$~mV of its voltage, which can be from 1.8~V to 1.2~V below the supply. The converter makes a reference
-voltage of 2.2~V on pin 7. A reference circuit for the part converts each current to a voltage with an operational
-amplifier, the inverting input at the converter output, the other input at the reference, and a 1.2~k$\Omega$ resistor
-with a 3.3~nF capacitor in parallel in the feedback; the datasheet shows half an NE5532 for each channel. The
-full-scale output of that circuit is 2.3~mA times 1.2~k$\Omega$, 2.76~V, about the reference voltage, so the output
-stage removes the 2.2~V. The capacitor and resistor give a corner at 40~kHz, which is above half the sample rate here,
-so the circuit does not by itself remove the images of the signal around 32~kHz; a steeper filter follows. A resistor
-from the reference pin to ground sets a bias current, adjustable from $-0.6$ to 5.0~mA, which is added to the output
-currents to bias the amplifiers. The amplifier and its supply, the bias resistor, the filter and the output connector
-are not yet specified.
+voltage of 2.2~V (2.10 to 2.30~V) on pin 7. The datasheet's reference circuit converts each current to a voltage with
+an operational amplifier, the inverting input at the converter output, the other input at the reference, and a
+1.2~k$\Omega$ resistor with a 3.3~nF capacitor in the feedback. Its output swings 2.76~V either side of the reference,
+which a single $+5$~V supply cannot give, so SIRCUS changes the values. Each channel has three stages, built from half
+of a quad operational amplifier, which runs from the $+5$~V supply and whose output swings to within 0.3~V of each
+rail:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lp{5.4cm}p{4.4cm}}
+		\toprule
+		\textbf{Stage}     & \textbf{Components}                                                                                                                                    & \textbf{Result}                                                                        \\
+		\midrule
+		Current to voltage & Non-inverting input at pin 7. A 680~$\Omega$ resistor in parallel with a 5.6~nF capacitor from the output to the inverting input and the converter pin & Full scale 2.3~mA $\times$ 680~$\Omega$ = 1.56~V either side of 2.2~V; corner 41.8~kHz \\
+		Low-pass filter    & Second-order Sallen-Key, unity gain: 10~k$\Omega$, 10~k$\Omega$, 1.5~nF in the feedback and 820~pF to the reference voltage                            & Corner 14.4~kHz, $Q$ 0.68                                                              \\
+		Output coupling    & A 10~$\mu$F capacitor in series with the output, into a load of 10~k$\Omega$ or more                                                                   & Removes the 2.2~V; $-3$~dB at 1.6~Hz                                                   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Output Stage, per Channel}
+	\label{tab:output-stage}
+\end{table}
+
+\noindent With the converter's largest full-scale current, 2.65~mA, the first stage reaches 1.80~V either side of the
+reference, which leaves it within the supply at the largest reference voltage. The full-scale output is 1.56~V peak, about
+1.1~V RMS, at the output of the coupling capacitor.
+
+The filter is a compromise. The output is not oversampled, so the images of the signal around the sample rate begin
+just above half of it, and a low-order filter removes them only in part. At 16~kHz, half the sample rate, the filter is
+down 4.4~dB, and the image of a 10~kHz tone, which lies at 22~kHz, is down 8.4~dB. The bias resistor that the datasheet
+allows on pin 7 is omitted. The output connector, the level at it, and the way the sound reaches the television are not
+yet specified.
 
 \section{SIRCADA and the Video Memory}
 \label{sec:video-memory-wiring}

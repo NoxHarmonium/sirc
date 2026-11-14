@@ -62,3 +62,20 @@ these was a mistake: each was the simplest or the best-sounding choice, and toge
 
 An earlier draft listed a hi-fi converter among these. The converter is now the economy TDA1543, which runs from the +5 V supply
 alone and also takes standard I2S, so it is not a cost driver.
+
+## The audio output stage
+
+The converter's datasheet shows each output current turned into a voltage by an op-amp with 1.2 kOhm and 3.3 nF in the feedback, which swings
+2.76 V either side of the 2.2 V reference. That needs a supply wider than the console's +5 V, so the values are changed.
+
+* **Current to voltage.** The top of the swing must stay at least 0.3 V under the supply and the bottom at least 0.3 V above ground. With
+  the reference at its lowest, 2.10 V, that allows 1.8 V either side, and the converter's largest full-scale current is 2.65 mA, so the
+  feedback resistor is at most 680 Ohm (1.8 V divided by 2.65 mA). 5.6 nF in parallel keeps the corner near 40 kHz, 41.8 kHz.
+* **Low-pass filter.** The output is not oversampled, so images of the signal sit around 31.96 kHz and start just above 16 kHz, which no
+  cheap filter removes. A second-order Sallen-Key filter is cheap (one op-amp section for each channel) and takes the top off:
+  10 kOhm, 10 kOhm, 1.5 nF and 820 pF give a corner of 14.4 kHz and a Q of 0.68. Its response is -1.2 dB at 10 kHz, -3.2 dB at 14 kHz,
+  -4.4 dB at 16 kHz, -8.4 dB at 22 kHz (the image of a 10 kHz tone) and -13 dB at 30 kHz. The images are only partly removed, which
+  gives the console some of its character. A steeper filter would cost more op-amp sections and still lose the top of the band.
+* **Coupling.** The output rests at the 2.2 V reference, so a 10 uF capacitor removes it: -3 dB at 1.6 Hz into 10 kOhm.
+* **Amplifiers.** Two sections for each channel make a quad op-amp. It needs an output that swings to within 0.3 V of each rail on 5 V.
+  The datasheet's NE5532 needs a wider supply, so a rail-to-rail type is required.
