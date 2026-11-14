@@ -1,0 +1,33 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\label{ch:preface}
+
+\section*{About This Manual}
+
+This manual documents SIRCUS, the SIRC User System: the console built from the SIRC-1 CPU, the SIRCADA display adapter
+and the SIRCAS sound processor. The three chips each have a manual of their own, which describes what the chip does and
+how it behaves at its pins. This manual describes what the chips do not describe for themselves: how they are
+connected, which clock each one runs from, how they share one bus and a small set of interrupt lines, how they are
+reset, and how the timing of each one relates to the others.
+
+It is a companion to the \archmanual{}, which defines the CPU's instructions and exceptions, to the \hwmanual{}, which
+defines the CPU package and bus, to the \asmmanual{}, which defines the language used to program the system, to the
+\videomanual{} and to the \audiomanual{}.
+
+It is written for:
+
+\begin{itemize}
+	\item Engineers building the console, who need to know what every pin connects to and how fast
+	\item Programmers who need the timing relationships between the picture, the sound and the CPU
+	\item Authors of tools and emulators, who must reproduce those relationships
+\end{itemize}
+
+\section*{Assumed Knowledge}
+
+This manual assumes the reader has the manual of each chip to hand. It repeats a fact from them only where the fact is
+needed to understand the connection, and it names the chapter that holds the full account instead of reproducing it.
+
+\section*{Revision Status}
+
+This is a draft of the \sysmanual{}, not for distribution. Anything not yet decided in the manual is marked ``not yet
+specified''; the manual does not invent values for it.

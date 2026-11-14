@@ -1,0 +1,72 @@
+\chapter{Quick Reference}
+\label{app:quick-reference}
+
+\section{Clocks}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                           & \textbf{NTSC} & \textbf{PAL}  \\
+		\midrule
+		Master clock               & 21,477,272 Hz & 21,281,370 Hz \\
+		\texttt{CLKI} (master / 2) & 10,738,636 Hz & 10,640,685 Hz \\
+		CPU instruction (6 cycles) & 558.7 ns      & 563.9 ns      \\
+		Line (682 cycles)          & 63.51 $\mu$s  & 64.09 $\mu$s  \\
+		Frame                      & 16.64 ms      & 20.00 ms      \\
+		Audio sample (336 cycles)  & 31,960.2 Hz   & 31,668.7 Hz   \\
+		\bottomrule
+	\end{tabular}
+	\caption{Clock Summary}
+\end{table}
+
+\section{Address Map}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Segment}  & \textbf{Device} \\
+		\midrule
+		\texttt{0x00}     & Program memory  \\
+		\texttt{0x0C}     & SIRCADA         \\
+		Not yet specified & SIRCAS          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Address Map Summary}
+\end{table}
+
+\section{Interrupts}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llll}
+		\toprule
+		\textbf{Line}    & \textbf{Level} & \textbf{Source} & \textbf{Condition} \\
+		\midrule
+		\activelow{NMI}  & 5              & SIRCADA         & Vertical sync      \\
+		\activelow{IRQ4} & 4              & SIRCADA         & Line compare       \\
+		\activelow{IRQ3} & 3              & SIRCAS          & Sequence complete  \\
+		\activelow{IRQ2} & 2              & ---             & Not yet specified  \\
+		\activelow{IRQ1} & 1              & ---             & Not yet specified  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Interrupt Summary}
+\end{table}
+
+\section{Bus Cycle Lengths}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{Access}                                        & \textbf{Cycles}   \\
+		\midrule
+		SIRCADA registers, palette, sprite table, video memory & 1                 \\
+		SIRCAS registers                                       & 1                 \\
+		SIRCAS audio memory window                             & 2 to 5            \\
+		Program memory                                         & Not yet specified \\
+		\bottomrule
+	\end{tabular}
+	\caption{Bus Cycle Length Summary}
+\end{table}

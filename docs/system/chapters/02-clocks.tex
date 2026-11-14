@@ -1,0 +1,114 @@
+\chapter{Clocks}
+\label{ch:clocks}
+
+SIRCUS has one oscillator. Every other rate in the system is that oscillator divided down, so every timing in the
+console is a whole number of cycles of it, and the three chips stay in step without any of them watching another.
+
+\section{The Master Clock}
+\label{sec:master-clock}
+
+The master clock is the system oscillator. Its frequency depends on the region, because the video signal that SIRCADA
+makes must match the colour subcarrier of the television standard:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Region} & \textbf{Master clock} & \textbf{Derivation}                 \\
+		\midrule
+		NTSC            & 21,477,272 Hz         & The NTSC colour subcarrier times 6  \\
+		PAL             & 21,281,370 Hz         & The PAL colour subcarrier times 4.8 \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Master Clock}
+	\label{tab:master-clock}
+\end{table}
+
+The oscillator itself, its tolerance and its drive circuit are not yet specified.
+
+\section{The Clock Rail}
+\label{sec:clock-rail}
+
+The system divides the master clock by two, and the result is \texttt{CLKI}. All three chips take the same
+\texttt{CLKI}: the CPU, SIRCADA and SIRCAS each have a single clock input and no other clock. \texttt{CLKI} is
+10,738,636 Hz in an NTSC system and 10,640,685 Hz in a PAL system. The CPU does one execution phase on each rising edge
+(\hwmanual{}, signal descriptions chapter), SIRCADA does one PPU cycle, and SIRCAS does one cycle of its own. The three
+devices therefore count the same cycles at the same moments, and a cycle count in one manual is a cycle count in the
+others.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Chip} & \textbf{What one \texttt{CLKI} cycle is} & \textbf{Longer intervals}                                \\
+		\midrule
+		SIRC-1        & One execution phase                      & An instruction is 6 cycles                               \\
+		SIRCADA       & One PPU cycle                            & A pixel is 2 cycles; a line is 682 cycles                \\
+		SIRCAS        & One cycle of the device                  & A sample is 336 cycles; the serial bit clock is 7 cycles \\
+		\bottomrule
+	\end{tabular}
+	\caption{What the Clock Means to Each Chip}
+	\label{tab:clock-meaning}
+\end{table}
+
+The phase relationship between the rising edges at the three chips, and the electrical characteristics of the clock,
+are not yet specified. The figures in this manual show logical timing only, as the manuals of the chips do.
+
+\section{Rates in Both Regions}
+\label{sec:rates}
+
+Every figure below follows from the clock and the cycle counts of Table~\ref{tab:clock-meaning}.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                                      & \textbf{NTSC} & \textbf{PAL}  \\
+		\midrule
+		Master clock                          & 21,477,272 Hz & 21,281,370 Hz \\
+		\texttt{CLKI}                         & 10,738,636 Hz & 10,640,685 Hz \\
+		\texttt{CLKI} period                  & 93.1 ns       & 94.0 ns       \\
+		CPU instruction (6 cycles)            & 558.7 ns      & 563.9 ns      \\
+		Pixel (2 cycles)                      & 186.2 ns      & 188.0 ns      \\
+		Line (682 cycles)                     & 63.51 $\mu$s  & 64.09 $\mu$s  \\
+		Lines in a frame                      & 262           & 312           \\
+		Frame (cycles)                        & 178,684       & 212,784       \\
+		Frame                                 & 16.64 ms      & 20.00 ms      \\
+		Frame rate                            & 60.10 Hz      & 50.01 Hz      \\
+		Vertical blanking (cycles)            & 25,916        & 60,016        \\
+		Vertical blanking                     & 2.41 ms       & 5.64 ms       \\
+		Audio sample (336 cycles)             & 31.29 $\mu$s  & 31.58 $\mu$s  \\
+		Audio sample rate                     & 31,960.2 Hz   & 31,668.7 Hz   \\
+		Envelope update (21,504 cycles)       & 2.002 ms      & 2.021 ms      \\
+		Converter bit clock (\texttt{CLKI}/7) & 1,534,091 Hz  & 1,520,098 Hz  \\
+		\bottomrule
+	\end{tabular}
+	\caption{Rates in Both Regions}
+	\label{tab:system-rates}
+\end{table}
+
+\section{NTSC and PAL}
+\label{sec:regions}
+
+A PAL console is the same console with a different oscillator. Nothing else in the logic changes, and a program written
+for NTSC runs on PAL. Three things differ:
+
+\begin{itemize}
+	\item \textbf{The picture.} The frame has 312 lines instead of 262, so vertical blanking is longer, 5.64~ms
+	      against 2.41~ms, and the frame rate is 50 Hz against 60 Hz. The region of the display adapter is fixed when
+	      it is made and the program reads it from the \texttt{OUT} bit of the Status register
+	      (\videomanual{}, registers chapter).
+	\item \textbf{The CPU.} It runs 0.9\% slower, and a frame holds more of its instructions, about 35,464 against
+	      29,781, since the frame is longer. Code that is timed in instructions to fill a frame needs a figure for each
+	      region.
+	\item \textbf{The sound.} SIRCAS has no region input. It runs at the \texttt{CLKI} it is given, so every note in a
+	      PAL console is 15.9 cents flat of an NTSC console, and a sequence takes 0.9\% longer. A program that must be in
+	      tune in both regions builds its pitch tables for the clock of the region it finds itself in
+	      (\audiomanual{}, timing chapter).
+\end{itemize}
+
+\section{The Range SIRCAS Accepts}
+
+SIRCAS works at any steady \texttt{CLKI} from 9.0 to 12.0 MHz (\audiomanual{}, timing chapter). Both regions are well
+inside the range, and the clock circuit of any other system built around the chip may divide its own oscillator to any
+frequency in it. The CPU and SIRCADA have no stated range; they are specified at the \texttt{CLKI} of this system.

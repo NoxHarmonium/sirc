@@ -1,0 +1,130 @@
+\chapter{Timing Between the Chips}
+\label{ch:synchronisation}
+
+The three chips run from the same clock, so their timings can be stated against each other. This chapter gives the
+relationships that a program or a tool needs: what the CPU can do in a line and in a frame, how the sound lines up with
+the picture, and how long it takes to reach each chip.
+
+\section{What the CPU Can Do in a Frame}
+\label{sec:cpu-budget}
+
+An ordinary instruction takes six \texttt{CLKI} cycles. Table~\ref{tab:cpu-budget} gives the number of instructions
+that fit in each part of the picture. An instruction that waits on the bus, or a coprocessor call, takes longer
+(\archmanual{}, instruction timing appendix).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                                  & \textbf{NTSC} & \textbf{PAL} \\
+		\midrule
+		Cycles in a line                  & 682           & 682          \\
+		Instructions in a line            & 113.7         & 113.7        \\
+		Cycles in a frame                 & 178,684       & 212,784      \\
+		Instructions in a frame           & 29,781        & 35,464       \\
+		Cycles in vertical blanking       & 25,916        & 60,016       \\
+		Instructions in vertical blanking & 4,319         & 10,003       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Instructions That Fit in the Picture}
+	\label{tab:cpu-budget}
+\end{table}
+
+\noindent A program has the whole of vertical blanking to change the display adapter's memory, and the interrupt that
+starts it arrives at its beginning (\videomanual{}, timing chapter).
+
+\section{Sound Against Picture}
+\label{sec:sound-picture}
+
+SIRCAS makes one output sample every 336 cycles. A line is 682 cycles, so a line holds a little over two samples. The
+numbers over a frame are:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                                    & \textbf{NTSC} & \textbf{PAL} \\
+		\midrule
+		Audio samples in a line             & 2.030         & 2.030        \\
+		Audio samples in a frame            & 531.80        & 633.29       \\
+		Envelope updates in a frame         & 8.31          & 9.90         \\
+		Sample periods in vertical blanking & 77.1          & 178.6        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Sound and Picture}
+	\label{tab:sound-picture}
+\end{table}
+
+A frame does not hold a whole number of samples, and the sequencers count samples, not frames, so a sequence is never
+locked to the picture. A program that changes the instruments of the sound once a frame does so at a different point of
+the sample period each time, and that is not audible. A program that must keep a sequence in step with the picture
+cannot rely on the two staying together, as the next section shows.
+
+\subsection{Keeping a Sequencer Tick Near a Frame}
+
+The tick of the sequencers is \texttt{SEQ\_PERIOD} samples (\audiomanual{}, sequencer chapter). The nearest whole
+number of samples to a frame gives a tick close to a frame, and it drifts:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrr}
+		\toprule
+		                                      & \textbf{NTSC} & \textbf{PAL}  \\
+		\midrule
+		Frame, in samples                     & 531.80        & 633.29        \\
+		\texttt{SEQ\_PERIOD} nearest a frame  & 532           & 633           \\
+		Tick, in cycles                       & 178,752       & 212,688       \\
+		Tick against the frame                & 0.038\% long  & 0.045\% short \\
+		Frames for the tick to slip one frame & about 2,628   & about 2,216   \\
+		Time for the tick to slip one frame   & 43.7 s        & 44.3 s        \\
+		\bottomrule
+	\end{tabular}
+	\caption{A Tick of One Frame}
+	\label{tab:tick-frame}
+\end{table}
+
+\noindent A program that needs the sound to stay with the picture over longer than that counts frames and changes the
+period, or starts the sequence again, from time to time.
+
+\section{Reaching the Chips}
+\label{sec:reaching}
+
+Table~\ref{tab:answer-times} gave the length of a bus cycle to each chip. What happens after a write differs between
+them:
+
+\begin{itemize}
+	\item \textbf{SIRCADA.} A register write completes in the cycle it is made. The display adapter samples its registers
+	      228 master clocks, 114 cycles, after the start of a line, so a write made earlier in the line than that takes
+	      effect on the same line (\videomanual{}, timing chapter).
+	\item \textbf{SIRCAS.} A register write also completes in the cycle. When the change is heard depends on what was
+	      written: a note started by the CPU sounds a few sample periods later, about a line and a half of the picture,
+	      and some changes wait for the next envelope update, which is up to 2.0~ms, about 31 lines, away
+	      (\audiomanual{}, playback and envelope chapters).
+	\item \textbf{The audio memory.} A word written through the window is in the memory when the cycle ends, and a
+	      voice that reads that word reads the new value from then on. The window takes two to five cycles a word
+	      (Table~\ref{tab:answer-times}).
+\end{itemize}
+
+\section{Loading the Audio Memory}
+
+Filling the audio memory is the slowest thing a program does to the system. The window takes two to five cycles to
+accept a word, so a transfer of $n$ words takes between $2n$ and $5n$ cycles for the writes alone, on top of whatever
+the CPU takes to fetch the words. Table~\ref{tab:load-times} gives the writes for a few sizes.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{rrrr}
+		\toprule
+		\textbf{Words} & \textbf{Fastest (cycles)} & \textbf{Slowest (cycles)} & \textbf{Slowest, in NTSC lines} \\
+		\midrule
+		256            & 512                       & 1,280                     & 1.9                             \\
+		4,096          & 8,192                     & 20,480                    & 30.0                            \\
+		32,768         & 65,536                    & 163,840                   & 240.2                           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Writing the Audio Memory Through the Window}
+	\label{tab:load-times}
+\end{table}
+
+\noindent The whole memory therefore takes at most 163,840 cycles, 15.3~ms, to write: less than one NTSC frame, but far longer than the 2.41~ms of vertical blanking. The sound plays while it is being written, so a program loads it before it enables
+the output (\audiomanual{}, programming chapter).

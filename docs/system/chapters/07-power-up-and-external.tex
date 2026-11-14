@@ -1,0 +1,66 @@
+\chapter{Power-Up and the Outside World}
+\label{ch:power-up}
+
+\section{Starting the System}
+\label{sec:system-start}
+
+When power is applied, the reset circuit holds \activelow{RSTI} asserted while the supplies and the clock settle. The
+CPU, and through \activelow{RSTO} the two other chips, are held in reset. When \activelow{RSTI} is released the CPU
+holds \activelow{RSTO} for a further six cycles, and then it fetches its reset vector and starts the program
+(Section~\ref{sec:reset}). How long the reset circuit holds \activelow{RSTI}, and what it waits for, are not yet
+specified.
+
+The program then has a console in the following state, and it sets up each part before it uses it:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.4cm}}
+		\toprule
+		\textbf{Part}  & \textbf{State at the start of the program}                                                                                                         \\
+		\midrule
+		CPU            & At the reset vector, with its registers as the architecture defines them (\archmanual{}, exceptions chapter)                                       \\
+		SIRCADA        & Blank, in Mode 1, every writable register zero except those the registers chapter lists (\videomanual{})                                           \\
+		SIRCAS         & Silent: the output is disabled, the registers hold their reset values, and the audio memory holds nothing the program can rely on (\audiomanual{}) \\
+		Program memory & Not yet specified                                                                                                                                  \\
+		\bottomrule
+	\end{tabular}
+	\caption{State After Reset}
+	\label{tab:reset-state}
+\end{table}
+
+\subsection{Order of Setting Up}
+
+The three chips do not depend on each other, so a program may set them up in any order. Two rules apply to each:
+
+\begin{itemize}
+	\item \textbf{SIRCADA.} Install the interrupt handlers before setting the interrupt enable bits, because the vertical
+	      sync interrupt cannot be masked (\videomanual{}, timing chapter).
+	\item \textbf{SIRCAS.} Write the audio memory first, then the registers, and set the output enable last
+	      (\audiomanual{}, programming chapter). Load the audio memory in vertical blanking if the picture is running, or
+	      with the picture blanked, since the window is slow (Section~\ref{sec:reaching}).
+\end{itemize}
+
+\section{The Video Output}
+
+SIRCADA produces an analogue colour signal on three outputs, R, G and B, and a composite sync, \activelow{CSYNC}. An
+output reference, IREF, sets the full-scale colour level. During reset the three outputs are at black (\videomanual{},
+package chapter). The circuit that turns these into a signal for a display, the connector and the levels at it are not
+yet specified.
+
+\section{The Audio Output}
+
+SIRCAS produces a serial stream of signed 16-bit stereo samples, and the converter turns it into an analogue signal.
+The board needs a filter after the converter that removes the images of the signal around the sample rate
+(\audiomanual{}, timing chapter). The converter, its supplies, the filter, the output stage and the connector are not
+yet specified.
+
+\section{Other Connections}
+
+SIRCUS has no other chip that this manual describes. The controller ports, any expansion or cartridge connector, and
+the physical form of the console are not yet specified.
+
+\section{Power}
+
+Each chip has its own supply pins: the CPU has two pairs of power and ground pins, SIRCADA has two pairs and a separate
+analogue supply, AVCC and AGND, and SIRCAS has power and ground pins whose number is not yet specified. The supply
+voltages, the regulation, the decoupling and the power connector are not yet specified.

@@ -1,0 +1,128 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Purpose and Scope}
+
+The SIRC-1 CPU is sold on its own, so it is documented in three manuals that stand apart from any system built around
+it. SIRCADA and SIRCAS are made for the SIRCUS system and each has a manual of its own. This manual completes the set:
+it describes the system that the parts are built into. The six manuals have these scopes:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lp{8.2cm}}
+		\toprule
+		\textbf{Manual} & \textbf{Scope}                                                                                               \\
+		\midrule
+		\archmanual{}   & ISA, instruction encodings, canonical assembly notation, exceptions, programmer-visible state                \\
+		\asmmanual{}    & Complete assembly syntax, directives, symbols, meta-instructions, and toolchain usage                        \\
+		\hwmanual{}     & Pinout, bus interface, timing, electrical characteristics                                                    \\
+		\videomanual{}  & The display adapter: package and pinout, memory map, registers, data formats, video modes, timing            \\
+		\audiomanual{}  & The sound processor: package and pinout, memory map, registers, data formats, voices, filter, sequencer      \\
+		\sysmanual{}    & The console: clocks, bus, address map, interrupts, reset, connections and timing between chips (this manual) \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRC-1 and SIRCUS Manual Set}
+	\label{tab:manual-set}
+\end{table}
+
+Where a chip's own manual is authoritative for something, this manual says so and names the chapter. Where the
+connection of two chips creates a fact that neither manual could state alone, such as the number of audio samples in a
+video frame, this manual is authoritative.
+
+\section{The Parts of the System}
+
+SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and the memories and circuits around them.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llp{5.2cm}}
+		\toprule
+		\textbf{Part}       & \textbf{Package}  & \textbf{Function}                                                                \\
+		\midrule
+		SIRC-1 CPU          & 64-pin DIP        & Runs the program; the only master of the bus                                     \\
+		SIRCADA             & 52-pin PLCC       & Display adapter: tiles, sprites and the video signal; holds its own video memory \\
+		SIRCAS              & Not yet specified & Sound processor: six voices, filter and sequencers; has its own audio memory     \\
+		Audio memory        & Not yet specified & Static memory of 32,768 words, used by SIRCAS alone                              \\
+		Converter           & Not yet specified & Turns SIRCAS's serial output into the analogue stereo signal                     \\
+		Program memory      & Not yet specified & Holds the program and its data                                                   \\
+		Chip-select decoder & Not yet specified & Turns the high address bits into a chip select for each device                   \\
+		Clock circuit       & Not yet specified & Makes the master clock and divides it by two to make \texttt{CLKI}               \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Parts of SIRCUS}
+	\label{tab:parts}
+\end{table}
+
+The video memory is inside SIRCADA, and the CPU reaches it through the device's own segment (\videomanual{}, memory map
+chapter). The audio memory is outside SIRCAS, but it is not on the CPU's bus: the CPU reaches it only through a window
+of SIRCAS's segment, and SIRCAS makes every access to it itself (\audiomanual{}, memory map chapter). The CPU's bus
+therefore carries only three kinds of traffic: the program memory, SIRCADA and SIRCAS.
+
+\section{Block Diagram}
+
+Figure~\ref{fig:block-diagram} shows the connections. One clock rail feeds all three chips, one bus joins them, and
+each of the other two chips has outputs that the CPU never sees directly: the picture, and the sound.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[
+			scale=0.72, transform shape,
+			chip/.style={draw, thick, fill=gray!8, align=center, font=\bfseries\small, minimum width=2.7cm, minimum height=1.6cm},
+			box/.style={draw, rounded corners=2pt, fill=sirclightgray, align=center, font=\small, minimum width=2.5cm, minimum height=0.95cm},
+			flow/.style={-{Stealth[length=2mm]}, thick},
+			rail/.style={very thick},
+			note/.style={font=\scriptsize, text=sircgray, align=center}
+		]
+		% Clock
+		\node[box] (osc) at (0,5.6) {Master clock oscillator};
+		\node[box] (div) at (0,4.0) {Divide by 2};
+		\draw[flow] (osc) -- (div);
+		\draw[rail] (-5,2.9) -- (5,2.9);
+		\draw[thick] (div.south) -- (0,2.9);
+		\node[note, anchor=south west] at (0.2,3.0) {\texttt{CLKI}};
+		% Chips
+		\node[chip] (cpu) at (-5,0) {SIRC-1\\CPU};
+		\node[chip] (ppu) at (0,0) {SIRCADA};
+		\node[chip] (snd) at (5,0) {SIRCAS};
+		\foreach \c in {cpu,ppu,snd} { \draw[flow] (\c |- 0,2.9) -- (\c.north); }
+		% Bus
+		\draw[rail] (-6.4,-2.0) -- (6.4,-2.0);
+		\foreach \c in {cpu,ppu,snd} { \draw[thick, <->] (\c.south) -- (\c |- 0,-2.0); }
+		\node[note, anchor=south west, align=left] at (0.55,-1.97) {A0--A23, D0--D15\\\activelow{BAS}, BRW, \activelow{BACK}};
+		% Below the bus
+		\node[box] (mem) at (-6.0,-4.2) {Program\\memory};
+		\node[box] (dec) at (-2.9,-4.2) {Chip-select\\decoder};
+		\draw[thick, <->] (mem.north) -- (mem |- 0,-2.0);
+		\draw[thick, <->] (dec.north) -- (dec |- 0,-2.0);
+		% Outputs
+		\node[box] (disp) at (1.2,-4.9) {Display\\R, G, B, \activelow{CSYNC}};
+		\draw[flow] (0.6,-0.8) -- (0.6,-4.43);
+		% Audio side
+		\node[box] (amem) at (9.2,0.9) {Audio\\memory};
+		\node[box] (dac) at (9.2,-0.9) {Converter};
+		\draw[thick, <->] (snd.east |- amem) -- (amem.west);
+		\draw[flow] (snd.east |- dac) -- (dac.west);
+		\node[box] (out) at (9.2,-2.9) {Stereo\\audio out};
+		\draw[flow] (dac) -- (out);
+	\end{tikzpicture}
+	\caption{SIRCUS Block Diagram}
+	\label{fig:block-diagram}
+\end{figure}
+
+The interrupt and reset connections are not drawn; Chapter~\ref{ch:interrupts} gives them, and
+Chapter~\ref{ch:connections} lists every connection of every chip.
+
+\section{Conventions}
+
+\begin{itemize}
+	\item \textbf{Addresses} are word addresses of 24 bits, as in the \hwmanual{}. A segment is 65,536 words, and the
+	      eight high address bits select it.
+	\item \textbf{Active-low signals} carry a bar over the name and are asserted when low.
+	\item \textbf{Clock cycles} are cycles of \texttt{CLKI}, the clock every chip takes, unless a figure says otherwise.
+	      The master clock is twice as fast.
+	\item \textbf{Both regions.} Figures are given for an NTSC console and a PAL console. A figure without a region
+	      holds for both.
+	\item \textbf{Not yet specified.} A value that the design has not fixed is marked ``not yet specified''. It is not
+	      undefined, and no value is implied.
+\end{itemize}

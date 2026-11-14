@@ -1,0 +1,159 @@
+\chapter{Connections}
+\label{ch:connections}
+
+This chapter lists what every signal of every chip connects to. A net is one wire that joins the pins named in the row.
+A pin that is not in any table is a power pin, or has no connection that this manual can state.
+
+\section{The Shared Bus}
+\label{sec:shared-bus}
+
+The three chips share the signals of Table~\ref{tab:shared-nets}. Pin numbers are those of the packages: the CPU is a
+64-pin DIP and SIRCADA a 52-pin PLCC (\hwmanual{}, \videomanual{}). The package of SIRCAS is not yet specified, so it
+has no pin numbers.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lllll}
+		\toprule
+		\textbf{Net}           & \textbf{CPU} & \textbf{SIRCADA} & \textbf{SIRCAS}        & \textbf{Other}          \\
+		\midrule
+		A0--A7                 & 1--8         & 8--15            & A0--A7                 & Program memory, decoder \\
+		A8--A15                & 10--17       & 16--23           & A8--A15                & Program memory, decoder \\
+		A16--A23               & 18--25       & ---              & ---                    & Decoder, program memory \\
+		D0--D15                & 27--42       & 26--41           & D0--D15                & Program memory          \\
+		\activelow{BAS}        & 47 (out)     & 5 (in)           & \activelow{BAS} (in)   & Decoder                 \\
+		BRW                    & 48 (out)     & 6 (in)           & BRW (in)               & Program memory          \\
+		\activelow{BACK}       & 49 (in)      & 7 (out)          & \activelow{BACK} (out) & Program memory; pull-up \\
+		\activelow{CS} (video) & ---          & 4                & ---                    & Decoder                 \\
+		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Decoder                 \\
+		CLKI                   & 45           & 2                & CLKI                   & Clock circuit           \\
+		\bottomrule
+	\end{tabular}
+	\caption{Nets Shared by the Chips}
+	\label{tab:shared-nets}
+\end{table}
+
+\noindent The data and address bits connect bit for bit: D0 of the CPU to D0 of each device, and so on.
+\activelow{BACK} is open drain at the devices, so it is a wired net, pulled up by a resistor whose value is not yet
+specified. The program memory may take part in it too. The \activelow{CS} of each device is a separate net from the
+decoder.
+
+\section{Interrupts and Reset}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lllll}
+		\toprule
+		\textbf{Net}     & \textbf{CPU} & \textbf{SIRCADA}       & \textbf{SIRCAS}        & \textbf{Notes}             \\
+		\midrule
+		\activelow{NMI}  & 62 (in)      & 43 (out)               & ---                    & Pull-up; vertical sync     \\
+		\activelow{IRQ4} & 61 (in)      & 44 (out)               & ---                    & Pull-up; line compare      \\
+		\activelow{IRQ3} & 60 (in)      & ---                    & \activelow{IRQ3} (out) & Pull-up; sequence complete \\
+		\activelow{IRQ2} & 59 (in)      & ---                    & ---                    & Not yet specified          \\
+		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Not yet specified          \\
+		\activelow{RSTO} & 64 (out)     & 3 (\activelow{RST} in) & \activelow{RST} (in)   & One net to both devices    \\
+		\activelow{RSTI} & 63 (in)      & ---                    & ---                    & Reset circuit              \\
+		\bottomrule
+	\end{tabular}
+	\caption{Interrupt and Reset Nets}
+	\label{tab:irq-reset-nets}
+\end{table}
+
+\section{Signals the Devices Do Not Use}
+
+The CPU drives and receives more signals than the other two chips use. What SIRCUS does with them is as follows.
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{CPU signal} & \textbf{Pin} & \textbf{Connection}                                             \\
+		\midrule
+		\activelow{BERR}    & 50 (in)      & Driven by the system for an unmapped segment; not yet specified \\
+		\activelow{BPER}    & 51 (in)      & Driven by a memory controller, if any; not yet specified        \\
+		BAT0--BAT2          & 52--54 (out) & Memory controller, if any; not yet specified                    \\
+		PROT                & 55 (out)     & Memory controller, if any; not yet specified                    \\
+		SYNC                & 46 (out)     & Not yet specified                                               \\
+		\activelow{HALT}    & 56 (in)      & Not yet specified                                               \\
+		\activelow{TRCE}    & 57 (in)      & Not yet specified                                               \\
+		\bottomrule
+	\end{tabular}
+	\caption{CPU Signals Not Shared with the Other Chips}
+	\label{tab:unused-cpu}
+\end{table}
+
+\section{SIRCAS and the Audio Memory}
+\label{sec:audio-memory-wiring}
+
+The audio memory is a static memory of 32,768 words of 16 bits, which may be two memories of 32,768 by 8 bits side by
+side. It connects to SIRCAS and to nothing else.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{SIRCAS} & \textbf{Audio memory}                  & \textbf{Notes} \\
+		\midrule
+		MA0--MA14       & A0--A14 of both memories               & Word address   \\
+		MD0--MD7        & D0--D7 of the memory for the low byte  & Three-state    \\
+		MD8--MD15       & D0--D7 of the memory for the high byte & Three-state    \\
+		\activelow{MCE} & Chip enable of both                    &                \\
+		\activelow{MOE} & Output enable of both                  &                \\
+		\activelow{MWE} & Write enable of both                   &                \\
+		\bottomrule
+	\end{tabular}
+	\caption{Audio Memory Connections}
+	\label{tab:audio-memory-nets}
+\end{table}
+
+A transaction occupies two \texttt{CLKI} cycles, 186 ns in an NTSC system and 188 ns in a PAL system, so the memory
+must complete an access within that time less the set-up and hold times of the interface. Those times, and the part
+chosen for the memory, are not yet specified (\audiomanual{}, package chapter). The mapping of data bits to the
+memories follows the byte order of the audio memory (\audiomanual{}, memory map chapter).
+
+\section{SIRCAS and the Converter}
+
+SIRCAS sends its output to the converter as a serial stream. The converter, and everything between it and the audio
+connector, is not yet specified.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{SIRCAS} & \textbf{Converter} & \textbf{Notes}                                 \\
+		\midrule
+		BCLK            & Bit clock input    & \texttt{CLKI}/7: 1.534 MHz NTSC, 1.520 MHz PAL \\
+		WS              & Word select input  & Low for left, high for right; the sample rate  \\
+		SD              & Serial data input  & Signed 16-bit samples                          \\
+		SCK             & System clock input & Frequency and phase not yet specified          \\
+		\bottomrule
+	\end{tabular}
+	\caption{Converter Connections}
+	\label{tab:converter-nets}
+\end{table}
+
+\section{SIRCADA and the Display}
+
+SIRCADA's video output leaves the system as an analogue colour signal and a composite sync. The video memory is inside
+the device, so it has no memory interface.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{SIRCADA}  & \textbf{Pin} & \textbf{Connection}                               \\
+		\midrule
+		R, G, B           & 48--50       & Display connector, through the output circuit     \\
+		\activelow{CSYNC} & 45           & Display connector                                 \\
+		IREF              & 47           & A reference that sets the full-scale colour level \\
+		AVCC, AGND        & 46, 51       & The analogue supply and ground                    \\
+		\bottomrule
+	\end{tabular}
+	\caption{Display Connections}
+	\label{tab:display-nets}
+\end{table}
+
+\noindent The output circuit, the reference, the connector and the levels at it are not yet specified.

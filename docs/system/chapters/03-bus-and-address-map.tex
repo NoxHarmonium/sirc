@@ -1,0 +1,122 @@
+\chapter{The Bus and the Address Map}
+\label{ch:bus-and-address-map}
+
+The CPU is the only master of the bus. SIRCADA and SIRCAS are slaves: each answers a bus cycle only when it is
+selected, and neither can start one. This chapter gives the signals that make up the bus, how a device is selected, the
+address each device has, and how long each one takes to answer. The cycle itself, with its phases and diagrams, belongs
+to the \hwmanual{}.
+
+\section{The Signals}
+\label{sec:bus-signals}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabularx}{\textwidth}{llllX}
+		\toprule
+		\textbf{Signal}              & \textbf{Driven by} & \textbf{Used by}          & \textbf{Type} & \textbf{Meaning}                         \\
+		\midrule
+		A0--A23                      & CPU                & Decoder, program memory   & Three-state   & 24-bit word address                      \\
+		A0--A15                      & CPU                & SIRCADA, SIRCAS           & Three-state   & The word offset in the device's segment  \\
+		D0--D15                      & CPU or device      & All                       & Three-state   & 16-bit data                              \\
+		\activelow{BAS}              & CPU                & Decoder, all devices      &               & Marks a bus cycle                        \\
+		BRW                          & CPU                & All                       &               & High for a read, low for a write         \\
+		\activelow{BACK}             & Devices            & CPU                       & Open drain    & Completes the cycle                      \\
+		\activelow{BERR}             & System             & CPU                       &               & Aborts the cycle with a bus fault        \\
+		\activelow{BPER}             & System             & CPU                       &               & Aborts the cycle with a protection fault \\
+		BAT0--BAT2                   & CPU                & Memory controller, if any &               & The kind of access                       \\
+		PROT                         & CPU                & Memory controller, if any &               & High in protected mode                   \\
+		\activelow{CS} (each device) & Decoder            & SIRCADA, SIRCAS           &               & Selects the device                       \\
+		\bottomrule
+	\end{tabularx}
+	\caption{The Bus Signals}
+	\label{tab:bus-signals}
+\end{table}
+
+SIRCADA and SIRCAS take only the sixteen low address bits and have no inputs for \activelow{BERR}, \activelow{BPER},
+\texttt{BAT} or \texttt{PROT}. They see the cycle as a chip select, a strobe, a read/write line and an address, and
+they answer it with data and \activelow{BACK}.
+
+\section{Selecting a Device}
+\label{sec:selecting}
+
+The eight high bits of the address, A16 to A23, select a \emph{segment} of 65,536 words. The chip-select decoder
+watches these bits and \activelow{BAS}, and asserts the \activelow{CS} of the device that owns the segment for the
+whole of the cycle. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never drives
+the data bus.
+
+The decoder is a small combinational circuit. Its type, its delay, and the inputs it takes besides the address are not
+yet specified.
+
+\section{The Address Map}
+\label{sec:address-map}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llp{6cm}}
+		\toprule
+		\textbf{Segment}  & \textbf{Device} & \textbf{Notes}                                                                         \\
+		\midrule
+		\texttt{0x00}     & Program memory  & Size, type and the other segments it uses are not yet specified                        \\
+		\texttt{0x0C}     & SIRCADA         & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter) \\
+		Not yet specified & SIRCAS          & Registers and the window to the audio memory (\audiomanual{}, memory map chapter)      \\
+		Others            & ---             & Not yet specified                                                                      \\
+		\bottomrule
+	\end{tabular}
+	\caption{The SIRCUS Address Map}
+	\label{tab:address-map}
+\end{table}
+
+The CPU's reset vector and the exception vectors are fetched from the low words of the address space (\archmanual{},
+exceptions chapter), so the program memory must answer there. Where the program memory ends, and what lies between it
+and the first device, is not yet specified.
+
+\section{What Happens at an Unmapped Address}
+\label{sec:unmapped}
+
+A cycle to a segment that no device owns is selected by nobody. No \activelow{BACK} is asserted, so the CPU inserts
+wait states and, unless the system ends the cycle, waits for ever. A system that wants a fault instead must assert
+\activelow{BERR} for a segment it has not mapped, which makes the CPU raise a bus fault (\hwmanual{}, bus interface
+chapter). Whether SIRCUS does so, and after how long, is not yet specified.
+
+\section{How Long Each Device Takes}
+\label{sec:answer-times}
+
+A cycle takes one \texttt{CLKI} cycle if the device asserts \activelow{BACK}, and drives the data of a read, in the
+same cycle it is selected. A device that cannot adds wait states, one cycle at a time (\hwmanual{}, bus interface
+chapter).
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{5.4cm}p{2.7cm}p{4.2cm}}
+		\toprule
+		\textbf{Access}                                        & \textbf{Cycles}   & \textbf{Source}                       \\
+		\midrule
+		SIRCADA registers, palette, sprite table, video memory & 1, no wait states & \videomanual{}, timing chapter        \\
+		SIRCAS registers                                       & 1, no wait states & \audiomanual{}, signal timing chapter \\
+		SIRCAS audio memory window                             & 2 to 5            & \audiomanual{}, signal timing chapter \\
+		Program memory                                         & Not yet specified &                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Bus Cycle Lengths}
+	\label{tab:answer-times}
+\end{table}
+
+A window access to the audio memory takes more than one cycle because SIRCAS gives the CPU only some of the slots of
+the audio memory (\audiomanual{}, timing chapter): the CPU waits until one comes round, and the device asserts
+\activelow{BACK} when it has made the access. The wait depends only on where in the slot pattern the request falls,
+never on what the voices are doing, so it is at most four wait states.
+
+\section{DMA}
+
+The CPU has a DMA coprocessor that moves blocks of words between addresses with bus cycles of its own (\hwmanual{}, bus
+interface chapter). The \texttt{BAT} bits mark them as bursts. SIRCADA and SIRCAS see them as ordinary cycles, one word
+at a time, and they answer them the same way. A transfer to the audio window waits two to five cycles for each word it
+writes, in addition to the cycle that reads the word from its source. A transfer to the display adapter has no waits: a
+transfer of 255 words takes 522 cycles (\videomanual{}, timing chapter).
+
+\section{Protection}
+
+The CPU drives \texttt{PROT} and \texttt{BAT} so that a memory controller can refuse an access, and refuses it by
+asserting \activelow{BPER}. SIRCADA and SIRCAS do not use these signals and do not themselves protect any of their
+registers. Whether SIRCUS has a memory controller, and which regions it protects, is not yet specified.

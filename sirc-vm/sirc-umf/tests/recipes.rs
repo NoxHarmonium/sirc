@@ -247,7 +247,9 @@ fn violin_with_fading_in_vibrato() {
             cents(v.iter().cloned().fold(0.0, f64::max), 440.0),
         )
     };
-    for start in [0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1500.0, 2000.0, 3000.0] {
+    for start in [
+        0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1500.0, 2000.0, 3000.0,
+    ] {
         let (lo, hi) = window(start, start + 200.0);
         println!(
             "violin: {start:>5.0}-{:>5.0} ms: pitch {lo:+6.1} to {hi:+6.1} cents",
@@ -256,8 +258,14 @@ fn violin_with_fading_in_vibrato() {
     }
     let (lo0, hi0) = window(0.0, 200.0);
     let (lo1, hi1) = window(1000.0, 1200.0);
-    assert!(hi0 < 5.0 && lo0 > -5.0, "vibrato should be shallow at the start");
-    assert!(hi1 > 12.0 && lo1 < -12.0, "vibrato should be full after a second");
+    assert!(
+        hi0 < 5.0 && lo0 > -5.0,
+        "vibrato should be shallow at the start"
+    );
+    assert!(
+        hi1 > 12.0 && lo1 < -12.0,
+        "vibrato should be full after a second"
+    );
     // the source runs at 5.5 Hz: its pitch step for a 64-byte cycle
     let lfo_hz = f64::from(s.snapshot(5).spi) / 65536.0 * OUTPUT_RATE_HZ / 64.0;
     assert!((lfo_hz - 5.5).abs() < 0.05, "lfo {lfo_hz}");
@@ -415,14 +423,7 @@ fn one_bar_pattern() {
 
     // Voice 1: hat on 2, 6, 10 and 14; snare on 4 and 12.
     let mut hs = vec![];
-    let ev = [
-        (2usize, 1u8),
-        (4, 2),
-        (6, 1),
-        (10, 1),
-        (12, 2),
-        (14, 1),
-    ];
+    let ev = [(2usize, 1u8), (4, 2), (6, 1), (10, 1), (12, 2), (14, 1)];
     let mut at = 0usize;
     for (st, ins) in ev {
         hs.push(isa::wait((st - at) as u16 * STEP));

@@ -1,0 +1,47 @@
+\documentclass[11pt,letterpaper,twoside]{book}
+
+% ==========================================
+% SIRCUS System Manual
+% How the SIRCUS console is put together: clocks, bus, interrupts, reset, connections and timing
+% ==========================================
+
+% Manual-specific strings used by the shared preamble (footer, PDF metadata).
+\newcommand{\sircManualFooter}{SIRCUS SYSTEM MANUAL}
+\newcommand{\sircManualTitle}{SIRCUS System Manual}
+\newcommand{\sircManualSubject}{SIRCUS, the SIRC User System: clocks, bus, interrupts, reset, connections and timing}
+
+% Names of this manual and its siblings, for references within the set.
+\newcommand{\sysmanual}{\textit{SIRCUS System Manual}}
+\newcommand{\audiomanual}{\textit{SIRCAS Reference Manual}}
+\newcommand{\videomanual}{\textit{SIRCADA Reference Manual}}
+
+\input{../reference/preamble}
+
+\begin{document}
+
+% Front Matter
+\frontmatter
+\input{chapters/front-cover}
+\input{chapters/preface}
+\tableofcontents
+\listoftables
+\listoffigures
+
+% Main Content
+\mainmatter
+\input{chapters/01-introduction}
+\input{chapters/02-clocks}
+\input{chapters/03-bus-and-address-map}
+\input{chapters/04-interrupts-and-reset}
+\input{chapters/05-connections}
+\input{chapters/06-synchronisation}
+\input{chapters/07-power-up-and-external}
+
+\appendix
+\input{chapters/appendix-a-quick-reference}
+
+\backmatter
+
+\input{chapters/back-cover}
+
+\end{document}

@@ -1,0 +1,82 @@
+\chapter{Interrupts and Reset}
+\label{ch:interrupts}
+
+The CPU has five interrupt inputs: four maskable lines, \activelow{IRQ1} to \activelow{IRQ4}, and the non-maskable
+\activelow{NMI}. It has a reset input and a reset output. This chapter says what drives each line and how reset reaches
+every chip.
+
+\section{Interrupt Lines}
+\label{sec:interrupt-lines}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llllp{4.6cm}}
+		\toprule
+		\textbf{Line}    & \textbf{Level} & \textbf{Source}   & \textbf{Condition}     & \textbf{Behaviour}                                                  \\
+		\midrule
+		\activelow{NMI}  & 5              & SIRCADA           & Vertical sync          & One-cycle pulse at the start of vertical blanking; edge-triggered   \\
+		\activelow{IRQ4} & 4              & SIRCADA           & Line compare           & Level-sensitive; held until the program acknowledges it             \\
+		\activelow{IRQ3} & 3              & SIRCAS            & A sequence is complete & Level-sensitive; held until the program clears the completion flags \\
+		\activelow{IRQ2} & 2              & Not yet specified &                        &                                                                     \\
+		\activelow{IRQ1} & 1              & Not yet specified &                        &                                                                     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Interrupt Assignments}
+	\label{tab:interrupt-lines}
+\end{table}
+
+Every source is an open-drain output, so a line may be shared by several devices and is released by all of them when
+none asks for service. The pull-up that holds each line high is part of the system. Its value is not yet specified. A
+handler on a shared line reads the status of each device to find which one is asking. The display adapter has a bit for
+this purpose, \texttt{LIP}, in its Status register (\videomanual{}, timing chapter).
+
+The CPU samples the lines on every rising edge of \texttt{CLKI} except during reset, and a level-sensitive line must
+stay asserted until the handler has acknowledged it (\hwmanual{}, signal descriptions chapter). A device that withdraws
+a request before it is latched is not recognised. The two devices follow this rule: the display adapter holds
+\activelow{IRQ4} until the program writes the \texttt{LINE} register, and SIRCAS holds \activelow{IRQ3} until the
+program writes ones to \texttt{SEQ\_DONE}.
+
+\section{Vertical Sync Is Special}
+
+The vertical sync pulse of the display adapter is a single \texttt{CLKI} cycle on the non-maskable line, so it needs no
+acknowledgement and cannot be masked. The CPU does not miss it because it samples the line on every edge. A pulse that
+arrives while its own handler is still running raises the Level Five Hardware Exception Conflict fault (\archmanual{},
+exceptions chapter), so the handler must return within a frame: 16.64~ms in an NTSC system, 20.00~ms in a PAL system. A
+DMA transfer cannot be interrupted, and so it delays the handler if it is running at the time (\videomanual{}, timing
+chapter).
+
+\section{Reset}
+\label{sec:reset}
+
+Reset has one input and one output at the CPU, and each of the two other chips has a reset input:
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\textbf{Net}     & \textbf{Driven by}             & \textbf{Received by}                            \\
+		\midrule
+		\activelow{RSTI} & The power-on and reset circuit & CPU \activelow{RSTI}                            \\
+		\activelow{RSTO} & CPU                            & SIRCADA \activelow{RST}, SIRCAS \activelow{RST} \\
+		\bottomrule
+	\end{tabular}
+	\caption{The Reset Nets}
+	\label{tab:reset-nets}
+\end{table}
+
+The reset circuit, which asserts \activelow{RSTI} at power-up and when the console is reset by hand, is not yet
+specified.
+
+The CPU asserts \activelow{RSTO} while \activelow{RSTI} is asserted, and for six \texttt{CLKI} cycles after it is
+released, before it fetches the reset vector. It asserts it again for the same six cycles after a software reset (the
+\mnemonic{RSET} instruction), after a failed double-fault vector fetch, and before it retries a failed reset-vector
+fetch (\hwmanual{}, signal descriptions chapter). \activelow{RSTO} is wired to the reset inputs of both other chips, so
+a reset of the CPU is a reset of the whole console. A program that resets the CPU must expect to start again with the
+display and the sound in their reset states, and must set both up again.
+
+What reset does to each chip is in its own manual. In short: SIRCAS goes silent, its registers take their reset values
+and the contents of the audio memory are lost (\audiomanual{}, registers chapter); SIRCADA comes up blank, in the mode
+it has at reset, with every writable register zero but a few (\videomanual{}, registers chapter). A chip needs its
+reset input held for a minimum time. SIRCADA needs six cycles (\videomanual{}, signal timing chapter), which the CPU's
+six-cycle hold provides. The minimum for SIRCAS is not yet specified.
