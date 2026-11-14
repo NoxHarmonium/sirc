@@ -28,8 +28,10 @@ The program then has a console in the following state, and it sets up each part 
 	\label{tab:reset-state}
 \end{table}
 
-The CPU's first instructions are in the system ROM. Its start-up code sets the system up and then jumps to the program
-on the cartridge. What the code sets up, and the address it jumps to, are not yet specified.
+The CPU's first instructions are in the system ROM, which answers at the low words because the boot overlay is set. Its
+start-up code clears the overlay, writes the default vectors into the working memory, sets the system up and then jumps
+to the program on the cartridge (Section~\ref{sec:boot-overlay}). What the code sets up, and the address it jumps to,
+are not yet specified.
 
 \subsection{Order of Setting Up}
 

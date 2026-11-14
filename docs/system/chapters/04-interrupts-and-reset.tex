@@ -55,10 +55,10 @@ Reset has one input and one output at the CPU, and each of the two other chips h
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{Net}     & \textbf{Driven by}             & \textbf{Received by}                            \\
+		\textbf{Net}     & \textbf{Driven by}             & \textbf{Received by}                                              \\
 		\midrule
-		\activelow{RSTI} & The power-on and reset circuit & CPU \activelow{RSTI}                            \\
-		\activelow{RSTO} & CPU                            & SIRCADA \activelow{RST}, SIRCAS \activelow{RST} \\
+		\activelow{RSTI} & The power-on and reset circuit & CPU \activelow{RSTI}                                              \\
+		\activelow{RSTO} & CPU                            & SIRCADA \activelow{RST}, SIRCAS \activelow{RST}, the boot overlay \\
 		\bottomrule
 	\end{tabular}
 	\caption{The Reset Nets}
@@ -71,8 +71,9 @@ specified.
 The CPU asserts \activelow{RSTO} while \activelow{RSTI} is asserted, and for six \texttt{CLKI} cycles after it is
 released, before it fetches the reset vector. It asserts it again for the same six cycles after a software reset (the
 \mnemonic{RSET} instruction), after a failed double-fault vector fetch, and before it retries a failed reset-vector
-fetch (\hwmanual{}, signal descriptions chapter). \activelow{RSTO} is wired to the reset inputs of both other chips, so
-a reset of the CPU is a reset of the whole console. A program that resets the CPU must expect to start again with the
+fetch (\hwmanual{}, signal descriptions chapter). \activelow{RSTO} is wired to the reset inputs of both other chips and
+sets the boot overlay (Section~\ref{sec:boot-overlay}), so a reset of the CPU is a reset of the whole console and
+leaves the system ROM answering at the low words. A program that resets the CPU must expect to start again with the
 display and the sound in their reset states, and must set both up again.
 
 What reset does to each chip is in its own manual. In short: SIRCAS goes silent, its registers take their reset values
