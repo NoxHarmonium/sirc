@@ -46,15 +46,15 @@ select logic.
 	\small
 	\begin{tabular}{lllll}
 		\toprule
-		\textbf{Net}     & \textbf{CPU} & \textbf{SIRCADA}       & \textbf{SIRCAS}        & \textbf{Notes}             \\
+		\textbf{Net}     & \textbf{CPU} & \textbf{SIRCADA}       & \textbf{SIRCAS}        & \textbf{Notes}                       \\
 		\midrule
-		\activelow{NMI}  & 62 (in)      & 43 (out)               & ---                    & Pull-up; vertical sync     \\
-		\activelow{IRQ4} & 61 (in)      & 44 (out)               & ---                    & Pull-up; line compare      \\
-		\activelow{IRQ3} & 60 (in)      & ---                    & \activelow{IRQ3} (out) & Pull-up; sequence complete \\
-		\activelow{IRQ2} & 59 (in)      & ---                    & ---                    & Not yet specified          \\
-		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Not yet specified          \\
-		\activelow{RSTO} & 64 (out)     & 3 (\activelow{RST} in) & \activelow{RST} (in)   & One net to both devices    \\
-		\activelow{RSTI} & 63 (in)      & ---                    & ---                    & Reset circuit              \\
+		\activelow{NMI}  & 62 (in)      & 43 (out)               & ---                    & Pull-up; vertical sync               \\
+		\activelow{IRQ4} & 61 (in)      & 44 (out)               & ---                    & Pull-up; line compare                \\
+		\activelow{IRQ3} & 60 (in)      & ---                    & \activelow{IRQ3} (out) & Pull-up; sequence complete           \\
+		\activelow{IRQ2} & 59 (in)      & ---                    & ---                    & Pull-up; serial device, DUART pin 21 \\
+		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Not yet specified                    \\
+		\activelow{RSTO} & 64 (out)     & 3 (\activelow{RST} in) & \activelow{RST} (in)   & One net to both devices              \\
+		\activelow{RSTI} & 63 (in)      & ---                    & ---                    & Reset circuit                        \\
 		\bottomrule
 	\end{tabular}
 	\caption{Interrupt and Reset Nets}
@@ -144,7 +144,7 @@ It needs a single +5 V supply, and draws at most 150 mA.
 		25, 16, 24, 17         & D0, D1, D2, D3     & CPU D0, D1, D2, D3                                                                   \\
 		23, 18, 22, 19         & D4, D5, D6, D7     & CPU D4, D5, D6, D7                                                                   \\
 		9                      & \activelow{DTACK}  & \activelow{BACK}, re-timed (see below)                                               \\
-		21                     & \activelow{IRQ}    & CPU \activelow{IRQ1} or \activelow{IRQ2}; open drain, pulled up                      \\
+		21                     & \activelow{IRQ}    & CPU \activelow{IRQ2}; open drain, pulled up                                          \\
 		37                     & \activelow{IACK}   & $+5$ V: the CPU has no interrupt-acknowledge cycle                                   \\
 		34                     & \activelow{RESET}  & \activelow{RSTO}, stretched (see below)                                              \\
 		32, 33                 & X1/CLK, X2         & A 3.6864 MHz crystal, with about 10 to 15 pF from X1 to ground and 0 to 5 pF from X2 \\

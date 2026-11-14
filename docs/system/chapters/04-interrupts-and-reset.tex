@@ -18,15 +18,13 @@ every chip.
 		\activelow{NMI}  & 5              & SIRCADA           & Vertical sync          & One-cycle pulse at the start of vertical blanking; edge-triggered   \\
 		\activelow{IRQ4} & 4              & SIRCADA           & Line compare           & Level-sensitive; held until the program acknowledges it             \\
 		\activelow{IRQ3} & 3              & SIRCAS            & A sequence is complete & Level-sensitive; held until the program clears the completion flags \\
-		\activelow{IRQ2} & 2              & Not yet specified &                        &                                                                     \\
+		\activelow{IRQ2} & 2              & Serial device     & Character or timer     & Level-sensitive; held until the program clears the cause            \\
 		\activelow{IRQ1} & 1              & Not yet specified &                        &                                                                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Interrupt Assignments}
 	\label{tab:interrupt-lines}
 \end{table}
-
-The serial device also needs an interrupt, on \activelow{IRQ1} or \activelow{IRQ2}; which one is not yet specified.
 
 Every source is an open-drain output, so a line may be shared by several devices and is released by all of them when
 none asks for service. The pull-up that holds each line high is part of the system. Its value is not yet specified. A
@@ -37,7 +35,36 @@ The CPU samples the lines on every rising edge of \texttt{CLKI} except during re
 stay asserted until the handler has acknowledged it (\hwmanual{}, signal descriptions chapter). A device that withdraws
 a request before it is latched is not recognised. The two devices follow this rule: the display adapter holds
 \activelow{IRQ4} until the program writes the \texttt{LINE} register, and SIRCAS holds \activelow{IRQ3} until the
-program writes ones to \texttt{SEQ\_DONE}.
+program writes ones to \texttt{SEQ\_DONE}. The serial device follows it too, as the next section describes.
+
+\section{The Serial Device's Interrupt}
+\label{sec:serial-interrupt}
+
+The serial device has one interrupt output, \activelow{IRQ}, wired to the CPU's \activelow{IRQ2}. Eight conditions can
+drive it, and a mask register chooses which do. They are, for each channel, a received character (or a full receive
+buffer), room in the transmit buffer, and a change in a break; and for the device, the counter/timer reaching zero and
+a change on the input port. The interrupt status register shows which are true, so one handler for \activelow{IRQ2}
+reads that register and serves each condition in turn. The controller input pins are polled and raise no interrupt.
+
+\activelow{IRQ} is level-sensitive and stays asserted until the program clears the cause: it reads the received
+character, writes a character to send, issues the reset command for a break change, stops the timer, reads the input port
+change register, or masks the condition. It is negated within 300 ns of the end of that access. This is what the CPU needs of a
+level-sensitive line. The CPU has no interrupt-acknowledge cycle, so the DUART's acknowledge input is tied high and its
+vector register is not used. The handler is the one at the \activelow{IRQ2} entry of the vector table, words \texttt{0x0080} and
+\texttt{0x0081} (\archmanual{}, exceptions chapter).
+
+\subsection{Waiting Behind Higher Levels}
+
+\activelow{IRQ2} ranks below the vertical sync, line-compare and SIRCAS interrupts, so a request waits while one of their handlers
+runs. The receiver holds four characters. At 38,400 baud a character takes 260~$\mu$s, so a request can wait about a
+millisecond before characters are lost. Vertical blanking is 2.41~ms long in an NTSC system, so a vertical sync handler that
+uses all of it can cause an overrun at that speed. A program keeps those handlers short, or uses a lower speed: at 19,200 baud
+the wait allowed is about 2~ms, and at 9,600 about 4~ms. The transmitter takes two characters, and needs service only to keep
+the line busy.
+
+The counter/timer is a 16-bit counter that counts down from the 3.6864 MHz clock or a division of it and interrupts
+when it reaches zero. It makes a timer interrupt on \activelow{IRQ2} that does not depend on the picture, for time-outs
+on the link, for example.
 
 \section{Vertical Sync Is Special}
 
