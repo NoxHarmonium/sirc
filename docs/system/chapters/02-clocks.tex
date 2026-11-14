@@ -38,13 +38,13 @@ others.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lll}
+	\begin{tabular}{llp{6.6cm}}
 		\toprule
-		\textbf{Chip} & \textbf{What one \texttt{CLKI} cycle is} & \textbf{Longer intervals}                                \\
+		\textbf{Chip} & \textbf{What one \texttt{CLKI} cycle is} & \textbf{Longer intervals}                                     \\
 		\midrule
-		SIRC-1        & One execution phase                      & An instruction is 6 cycles                               \\
-		SIRCADA       & One PPU cycle                            & A pixel is 2 cycles; a line is 682 cycles                \\
-		SIRCAS        & One cycle of the device                  & A sample is 336 cycles; the serial bit clock is 7 cycles \\
+		SIRC-1        & One execution phase                      & An instruction is 6 cycles                                    \\
+		SIRCADA       & One PPU cycle                            & A pixel is 2 cycles; a line is 682 cycles                     \\
+		SIRCAS        & One cycle of the device                  & A sample is 336 cycles; a bit clock period is 10 or 11 cycles \\
 		\bottomrule
 	\end{tabular}
 	\caption{What the Clock Means to Each Chip}
@@ -63,24 +63,24 @@ Every figure below follows from the clock and the cycle counts of Table~\ref{tab
 	\centering
 	\begin{tabular}{lrr}
 		\toprule
-		                                      & \textbf{NTSC} & \textbf{PAL}  \\
+		                                               & \textbf{NTSC} & \textbf{PAL}  \\
 		\midrule
-		Master clock                          & 21,477,272 Hz & 21,281,370 Hz \\
-		\texttt{CLKI}                         & 10,738,636 Hz & 10,640,685 Hz \\
-		\texttt{CLKI} period                  & 93.1 ns       & 94.0 ns       \\
-		CPU instruction (6 cycles)            & 558.7 ns      & 563.9 ns      \\
-		Pixel (2 cycles)                      & 186.2 ns      & 188.0 ns      \\
-		Line (682 cycles)                     & 63.51 $\mu$s  & 64.09 $\mu$s  \\
-		Lines in a frame                      & 262           & 312           \\
-		Frame (cycles)                        & 178,684       & 212,784       \\
-		Frame                                 & 16.64 ms      & 20.00 ms      \\
-		Frame rate                            & 60.10 Hz      & 50.01 Hz      \\
-		Vertical blanking (cycles)            & 25,916        & 60,016        \\
-		Vertical blanking                     & 2.41 ms       & 5.64 ms       \\
-		Audio sample (336 cycles)             & 31.29 $\mu$s  & 31.58 $\mu$s  \\
-		Audio sample rate                     & 31,960.2 Hz   & 31,668.7 Hz   \\
-		Envelope update (21,504 cycles)       & 2.002 ms      & 2.021 ms      \\
-		Converter bit clock (\texttt{CLKI}/7) & 1,534,091 Hz  & 1,520,098 Hz  \\
+		Master clock                                   & 21,477,272 Hz & 21,281,370 Hz \\
+		\texttt{CLKI}                                  & 10,738,636 Hz & 10,640,685 Hz \\
+		\texttt{CLKI} period                           & 93.1 ns       & 94.0 ns       \\
+		CPU instruction (6 cycles)                     & 558.7 ns      & 563.9 ns      \\
+		Pixel (2 cycles)                               & 186.2 ns      & 188.0 ns      \\
+		Line (682 cycles)                              & 63.51 $\mu$s  & 64.09 $\mu$s  \\
+		Lines in a frame                               & 262           & 312           \\
+		Frame (cycles)                                 & 178,684       & 212,784       \\
+		Frame                                          & 16.64 ms      & 20.00 ms      \\
+		Frame rate                                     & 60.10 Hz      & 50.01 Hz      \\
+		Vertical blanking (cycles)                     & 25,916        & 60,016        \\
+		Vertical blanking                              & 2.41 ms       & 5.64 ms       \\
+		Audio sample (336 cycles)                      & 31.29 $\mu$s  & 31.58 $\mu$s  \\
+		Audio sample rate                              & 31,960.2 Hz   & 31,668.7 Hz   \\
+		Envelope update (21,504 cycles)                & 2.002 ms      & 2.021 ms      \\
+		Converter bit clock (mean, \texttt{CLKI}/10.5) & 1,022,727 Hz  & 1,013,399 Hz  \\
 		\bottomrule
 	\end{tabular}
 	\caption{Rates in Both Regions}

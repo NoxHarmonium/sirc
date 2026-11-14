@@ -14,17 +14,17 @@ values.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{llp{6.4cm}}
+	\begin{tabular}{p{3.6cm}p{3.6cm}p{5.2cm}}
 		\toprule
-		\textbf{Quantity}              & \textbf{Value}               & \textbf{Derivation}                                  \\
+		\textbf{Quantity}              & \textbf{Value}                               & \textbf{Derivation}                                  \\
 		\midrule
-		\texttt{CLKI} period           & 93.1 ns                      & 2 oscillator periods                                 \\
-		Output sample period           & 336 cycles, 31.29 $\mu$s     & 672 oscillator periods                               \\
-		Output sample rate             & 31,960.226 Hz                & \texttt{CLKI} / 336                                  \\
-		Envelope update interval       & 64 samples, 2.002 ms         & 21,504 cycles; 499.4 updates a second for each voice \\
-		Serial bit clock \texttt{BCLK} & 7 cycles, 1.534 MHz          & \texttt{CLKI} / 7; 48 bits in a sample period        \\
-		Memory transaction             & 2 cycles, 186 ns             & One read or one write                                \\
-		Sequencer tick                 & \texttt{SEQ\_PERIOD} samples & Chosen by the program                                \\
+		\texttt{CLKI} period           & 93.1 ns                                      & 2 oscillator periods                                 \\
+		Output sample period           & 336 cycles, 31.29 $\mu$s                     & 672 oscillator periods                               \\
+		Output sample rate             & 31,960.226 Hz                                & \texttt{CLKI} / 336                                  \\
+		Envelope update interval       & 64 samples, 2.002 ms                         & 21,504 cycles; 499.4 updates a second for each voice \\
+		Serial bit clock \texttt{BCLK} & 10 and 11 cycles alternately, 1.023 MHz mean & 32 bits in a sample period; 16 in each slot          \\
+		Memory transaction             & 2 cycles, 186 ns                             & One read or one write                                \\
+		Sequencer tick                 & \texttt{SEQ\_PERIOD} samples                 & Chosen by the program                                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Clocks and Periods}
@@ -47,15 +47,15 @@ Table~\ref{tab:periods} divides it to a frequency in this range.
 	\centering
 	\begin{tabular}{lrrr}
 		\toprule
-		\textbf{Quantity}               & \textbf{Minimum} & \textbf{Nominal} & \textbf{Maximum} \\
+		\textbf{Quantity}                     & \textbf{Minimum} & \textbf{Nominal} & \textbf{Maximum} \\
 		\midrule
-		\texttt{CLKI} frequency         & 9.000 MHz        & 10.738636 MHz    & 12.000 MHz       \\
-		\texttt{CLKI} period            & 111.1 ns         & 93.1 ns          & 83.3 ns          \\
-		Output sample rate              & 26,786 Hz        & 31,960 Hz        & 35,714 Hz        \\
-		Envelope update interval        & 2.389 ms         & 2.002 ms         & 1.792 ms         \\
-		Serial bit clock \texttt{BCLK}  & 1.286 MHz        & 1.534 MHz        & 1.714 MHz        \\
-		Memory transaction (2 cycles)   & 222.2 ns         & 186.2 ns         & 166.7 ns         \\
-		Pitch against the nominal clock & $-306$ cents     & 0                & $+192$ cents     \\
+		\texttt{CLKI} frequency               & 9.000 MHz        & 10.738636 MHz    & 12.000 MHz       \\
+		\texttt{CLKI} period                  & 111.1 ns         & 93.1 ns          & 83.3 ns          \\
+		Output sample rate                    & 26,786 Hz        & 31,960 Hz        & 35,714 Hz        \\
+		Envelope update interval              & 2.389 ms         & 2.002 ms         & 1.792 ms         \\
+		Serial bit clock \texttt{BCLK} (mean) & 0.857 MHz        & 1.023 MHz        & 1.143 MHz        \\
+		Memory transaction (2 cycles)         & 222.2 ns         & 186.2 ns         & 166.7 ns         \\
+		Pitch against the nominal clock       & $-306$ cents     & 0                & $+192$ cents     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Clock Rate Range}
@@ -88,7 +88,7 @@ use:
 \begin{itemize}
 	\item \textbf{Audio memory.} The memory must complete an access within two \texttt{CLKI} cycles, less the set-up and
 	      hold times of the interface, which are not yet specified. At the maximum clock this is 166.7 ns.
-	\item \textbf{Converter.} The converter must accept a bit clock of \texttt{CLKI}/7 and a word rate of
+	\item \textbf{Converter.} The converter must accept a bit clock of 10 and 11 \texttt{CLKI} cycles alternately and a word rate of
 	      \texttt{CLKI}/336 (Section~\ref{sec:converter-interface}).
 	\item \textbf{Output filter.} The filter that follows the converter removes the images of the signal around the
 	      sample rate. It is designed for the sample rate of the system, and must pass the highest frequency to be played

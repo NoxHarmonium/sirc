@@ -32,7 +32,7 @@ manual does not say it.
 | U19 | **Electrical timing between chips.** Set-up and hold, delays. Every manual shows logical timing only. | Ch. 2 | Nothing. |
 | U20 | **SIRCAS package and pin numbers** (open in the SIRCAS manual). Table 5.1 shows SIRCAS pins by name only. | Ch. 1, ch. 5 | Open in `docs/audio`. |
 | U21 | **Region parts.** The video manual says SIRCADA's region is fixed when it is made. So is a PAL console a PAL SIRCADA plus a 21.28 MHz oscillator, and does the audio chip need no variant? | Ch. 2 | The SIRCAS manual has no region input. |
-| U22 | **The 16-bit word in a 24-bit slot.** SIRCAS sends 16 data bits then 7 zeros in each 24-clock slot. The TDA1541A datasheet says words are up to 16 bits, MSB first, and does not say what it does with bits after the 16th. If it converts the last 16 bits before the `WS` edge, the data would be wrong. Options: check it on a bench, or change SIRCAS to a 16-bit slot (32 bit clocks of 10 and 11 cycles alternately). | Ch. 5 (converter timing), `docs/audio` serial output | Open in `docs/audio/STATUS.md` too. |
+| U22 | ~~The 16-bit word in a 24-bit slot.~~ **Resolved:** SIRCAS now sends 16-bit slots, 32 bit clocks a frame of 10 and 11 `CLKI` cycles alternately, so nothing follows the 16th bit (`docs/audio`, serial output; the model and its test are changed). | Ch. 2, ch. 5 | Done. |
 
 ## Findings while writing
 

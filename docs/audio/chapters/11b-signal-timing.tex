@@ -88,18 +88,22 @@ of the reset pulse is not yet specified.
 \section{Serial Output}
 \label{sec:serial-output}
 
-The device sends one stereo sample every 336 \texttt{CLKI} cycles. The frame has 48 bit clocks, \texttt{BCLK}, of 7
-cycles each, divided into two slots of 24, one for each channel. \texttt{WS} is low during the left slot and high
-during the right. The duty cycle of \texttt{BCLK} is not yet specified.
+The device sends one stereo sample every 336 \texttt{CLKI} cycles. The frame has 32 bit clocks, \texttt{BCLK}, in two
+slots of 16, one for each channel. The periods of \texttt{BCLK} are 10 and 11 \texttt{CLKI} cycles alternately, the
+first of the frame being 10, so the frame is $16 \times 10 + 16 \times 11 = 336$ cycles. The pattern is the same in
+every frame, so every edge of \texttt{BCLK} falls at the same cycle of the frame each time. \texttt{WS} is low during
+the left slot and high during the right. The duty cycle of \texttt{BCLK} is not yet specified.
 
 \begin{table}[H]
 	\centering
-	\begin{tabular}{lllp{6.4cm}}
+	\begin{tabular}{llp{6.4cm}}
 		\toprule
-		\textbf{Slot} & \textbf{\texttt{BCLK} periods of the frame} & \textbf{\texttt{WS}} & \textbf{\texttt{SD}}                                                        \\
+		\textbf{\texttt{BCLK} periods of the frame} & \textbf{\texttt{WS}} & \textbf{\texttt{SD}}                          \\
 		\midrule
-		Left          & 0--23                                       & Low                  & Data bits 15--0 (most significant first) in periods 1--16; zero in the rest \\
-		Right         & 24--47                                      & High                 & Data bits 15--0 in periods 25--40; zero in the rest                         \\
+		0                                           & Low                  & Bit 0 of the right word of the previous frame \\
+		1--15                                       & Low                  & Bits 15 to 1 of the left word                 \\
+		16                                          & High                 & Bit 0 of the left word                        \\
+		17--31                                      & High                 & Bits 15 to 1 of the right word                \\
 		\bottomrule
 	\end{tabular}
 	\caption{Serial Frame Layout}
@@ -107,8 +111,8 @@ during the right. The duty cycle of \texttt{BCLK} is not yet specified.
 \end{table}
 
 The format is that of a standard two-channel serial audio interface. \texttt{WS} changes one bit clock before the most
-significant bit of the word it announces, so the first period of each slot carries no data: it holds the padding that
-ended the previous word, which is zero. The 16 data bits are the output sample as a signed two's-complement number. The
-remaining periods of each slot are zero, so a converter that takes 16 bits for each word uses the first 16 data bits of
-each slot. The alignment of the edges of \texttt{WS} and \texttt{SD} to \texttt{BCLK}, their set-up and hold times, and
-the \texttt{SCK} frequency and phase, are not yet specified.
+significant bit of the word it announces, so the slot is as wide as the word and the last bit of each word is sent in
+the first period of the next slot, after \texttt{WS} has changed. The 16 data bits are the output sample as a signed
+two's-complement number, most significant first. A slot carries nothing else. The alignment of the edges of \texttt{WS}
+and \texttt{SD} to \texttt{BCLK}, their set-up and hold times, and the \texttt{SCK} frequency and phase, are not yet
+specified.

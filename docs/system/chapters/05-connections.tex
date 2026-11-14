@@ -126,17 +126,17 @@ the word select, the bit clock and one data line.
 	\small
 	\begin{tabular}{llp{6.4cm}}
 		\toprule
-		\textbf{SIRCAS} & \textbf{TDA1541A}             & \textbf{Notes}                                                  \\
+		\textbf{SIRCAS} & \textbf{TDA1541A}             & \textbf{Notes}                                                                 \\
 		\midrule
-		BCLK            & BCK, pin 2                    & \texttt{CLKI}/7: 1.534 MHz NTSC, 1.520 MHz PAL                  \\
-		WS              & LE/WS, pin 1                  & Low for left, high for right; the sample rate                   \\
-		SD              & DATA L/DATA, pin 3            & Signed 16-bit samples, most significant bit first               \\
-		SCK             & ---                           & Not connected: the converter has no system clock input          \\
-		---             & DATA R, pin 4                 & Not used in this mode                                           \\
-		---             & \activelow{OB}/TWC, pin 27    & Tied to +5 V: time-multiplexed, two's complement                \\
-		---             & COSC, pins 16 and 17          & A 470 pF capacitor between them: the converter's own oscillator \\
-		---             & DECOU, pins 7 to 13, 18 to 24 & A 100 nF capacitor from each to ground                          \\
-		---             & AOL, pin 25; AOR, pin 6       & The current outputs, one to each output amplifier               \\
+		BCLK            & BCK, pin 2                    & 10 and 11 \texttt{CLKI} cycles alternately: 1.023 MHz mean NTSC, 1.013 MHz PAL \\
+		WS              & LE/WS, pin 1                  & Low for left, high for right; the sample rate                                  \\
+		SD              & DATA L/DATA, pin 3            & Signed 16-bit samples, most significant bit first                              \\
+		SCK             & ---                           & Not connected: the converter has no system clock input                         \\
+		---             & DATA R, pin 4                 & Not used in this mode                                                          \\
+		---             & \activelow{OB}/TWC, pin 27    & Tied to +5 V: time-multiplexed, two's complement                               \\
+		---             & COSC, pins 16 and 17          & A 470 pF capacitor between them: the converter's own oscillator                \\
+		---             & DECOU, pins 7 to 13, 18 to 24 & A 100 nF capacitor from each to ground                                         \\
+		---             & AOL, pin 25; AOR, pin 6       & The current outputs, one to each output amplifier                              \\
 		\bottomrule
 	\end{tabular}
 	\caption{Converter Connections}
@@ -152,14 +152,14 @@ Table~\ref{tab:converter-timing} sets what the converter requires of its inputs 
 	\small
 	\begin{tabular}{p{4.6cm}p{2.9cm}p{4.6cm}}
 		\toprule
-		\textbf{Parameter}                                    & \textbf{Converter needs} & \textbf{SIRCAS gives}                                   \\
+		\textbf{Parameter}                                    & \textbf{Converter needs} & \textbf{SIRCAS gives}                                                     \\
 		\midrule
-		Bit clock cycle                                       & 156 ns or more           & 652 ns NTSC, 658 ns PAL (7 \texttt{CLKI} cycles)        \\
-		Bit clock high time, low time                         & 46 ns or more each       & At least 93 ns each, whatever the split of the 7 cycles \\
-		Word select rate                                      & 200 kHz or less          & 31.96 kHz NTSC, 31.67 kHz PAL                           \\
-		Rise and fall times                                   & 32 ns or less            & Not yet specified                                       \\
-		Data and word select set-up before \texttt{BCK} rises & 32 ns or more            & Not yet specified                                       \\
-		Data and word select hold after \texttt{BCK} rises    & 0 ns or more             & Not yet specified                                       \\
+		Bit clock cycle                                       & 156 ns or more           & 931 or 1,024 ns NTSC, 940 or 1,034 ns PAL (10 or 11 \texttt{CLKI} cycles) \\
+		Bit clock high time, low time                         & 46 ns or more each       & At least 93 ns each, whatever the split of the 10 or 11 cycles            \\
+		Word select rate                                      & 200 kHz or less          & 31.96 kHz NTSC, 31.67 kHz PAL                                             \\
+		Rise and fall times                                   & 32 ns or less            & Not yet specified                                                         \\
+		Data and word select set-up before \texttt{BCK} rises & 32 ns or more            & Not yet specified                                                         \\
+		Data and word select hold after \texttt{BCK} rises    & 0 ns or more             & Not yet specified                                                         \\
 		\bottomrule
 	\end{tabular}
 	\caption{Converter Input Timing}
@@ -168,9 +168,11 @@ Table~\ref{tab:converter-timing} sets what the converter requires of its inputs 
 
 \noindent The bit clock is far inside the converter's limits. Whether the data edges meet the set-up time depends on which
 edge of \texttt{BCLK} SIRCAS changes them on, which its manual leaves open; a change on the falling edge leaves the low time of
-the bit clock, at least one \texttt{CLKI} cycle, 93 ns, whatever the duty cycle. The converter accepts words of up to 16 bits, most significant bit first. SIRCAS sends 16 data
-bits in a slot of 24 bit clocks and fills the rest of the slot with zeros. How the converter treats the bits that follow the
-sixteenth is not yet specified.
+the bit clock, at least one \texttt{CLKI} cycle, 93 ns, whatever the duty cycle. The converter accepts words of up to 16
+bits, most significant bit first, and SIRCAS sends exactly 16 in a slot of 16 bit clocks, so nothing follows the sixteenth.
+As in the standard interface, the last bit of each word is sent in the first bit clock of the next slot, after the word select
+has changed. The bit clock periods alternate between 10 and 11 cycles in a pattern that repeats every sample, so the edges
+fall at the same cycle of the sample each time.
 
 \subsection{The Output Amplifiers}
 

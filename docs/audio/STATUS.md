@@ -136,8 +136,11 @@ the sums stay below 336, leaving roughly 50 to 120 clocks to spend.
 * **Unity gain is unreachable.** Maximum `G = (4095·255) >> 8 = 4079`, so −0.036 dB.
 * **Pan endpoints leak.** `pan = 255` leaks 1/256 (−48 dB) into the other side (measured 126 of 32250). Centre is −6.02 dB per side
   (linear law, constant amplitude).
-* **`BCLK = CLKI/7` has a 4:3 duty cycle.** `CLKI/8` with 21-bit slots fills the 336-clock frame exactly with a 50 % duty cycle.
-  Both round-trip bit-exactly, and the TDA1541A accepts either (see Decisions).
+* **Serial format (changed).** The draft used `BCLK = CLKI/7` with 24-bit slots: 16 data bits and 7 padding bits. The converter
+  datasheet does not say how it treats bits after the 16th, so the manual now uses 16-bit slots, 32 bit clocks of 10 and 11
+  cycles alternately (a mean of `CLKI/10.5`). A 16-bit slot cannot use a constant divider, since 336 / 32 is 10.5. The pattern
+  repeats exactly every frame, so the instants of the edges do not jitter. The earlier `CLKI/7` and `CLKI/8` formats stay in the
+  model for comparison and round-trip bit-exactly.
 * **Loop shorter than `SPI`.** With the single-subtraction loop, any loop span shorter than the per-sample step is undefined. This
   is harmless for single-cycle waveforms below Nyquist, but it bites on short multi-cycle loops.
 
@@ -202,6 +205,7 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
 | 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
 | 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. The PAL `CLKI` is 10,640,685 Hz (the SIRCADA manual's PAL master clock of 21,281,370 Hz, divided by two), 15.9 cents flat of NTSC, and is inside the range. |
+| 11 | Serial format | **Changed from the draft:** 16-bit slots, 32 bit clocks a frame of 10 and 11 `CLKI` cycles alternately, replacing 24-bit slots with `CLKI/7`. The datasheet of the target converter is silent about bits after the 16th. The mean bit clock is `CLKI/10.5`, 1.023 MHz at NTSC. |
 
 ### Target DAC: Philips TDA1541A (product specification, February 1991)
 
@@ -218,16 +222,14 @@ SIRCAS manual keeps `SCK` for converters that need a system clock. The TDA1541A 
 * SIRCAS meets every limit: `BCLK` is 1.53 MHz (652 ns a cycle), any split of its 7 cycles gives at least 93 ns high and low, and
   the sample rate is 31.96 kHz. The edges of `SD` and `WS` must still change at least 32 ns before the rising edge of `BCLK`,
   which the SIRCAS manual leaves unspecified. Changing them on the falling edge gives 279 ns or more.
-* **Open: the 16-bit word and the 24-bit slot.** The datasheet says the input is up to 16 bits, MSB first. It does not say what
-  the converter does with bits that follow the 16th. SIRCAS sends 16 data bits, MSB one clock after `WS`, then seven zeros
-  before `WS` changes again. If the converter loads whatever it has shifted in at the `WS` edge, those zeros push the data out
-  and the converter would convert the wrong 16 bits. If it counts 16 bits from `WS`, the format works. This needs a bench
-  check or a statement from the datasheet's source. A fix that does not depend on it is a 16-bit slot (32 `BCLK` periods of
-  10 and 11 cycles alternately), which the converter does not mind because it has no clock recovery.
+* **The 16-bit word in a slot (resolved).** The datasheet says the input is up to 16 bits, MSB first, and is silent about bits
+  after the 16th. The earlier 24-bit slots padded each word with 7 zeros, which a converter that loads the last 16 bits before
+  the `WS` edge would convert wrongly. The slot is now exactly 16 bits wide, so there is nothing after the 16th bit.
 
 What this means for the draft:
 
-* **Both `CLKI/7` and `CLKI/8` are fine.** Keep the draft's `CLKI/7` with 24-bit slots, subject to the open point above.
+* **The 16-bit slot format is within every limit.** The shortest bit clock period is 10 `CLKI` cycles, 931 ns against the
+  converter's 156 ns minimum, and each of its halves is at least one cycle, 93 ns against 46 ns.
 * The sample rate (31.96 kHz) is not oversampled, so the board needs a steep analogue anti-image filter after the DAC. That is a
   board matter, not a chip matter.
 

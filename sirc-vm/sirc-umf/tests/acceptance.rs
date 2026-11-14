@@ -697,31 +697,49 @@ fn output_gain_pan_and_clipping_extremes() {
 
 #[test]
 fn i2s_framing_round_trips_bit_exactly() {
-    for fmt in [I2sFormat::DRAFT, I2sFormat::DIV8] {
+    let samples = [
+        (0i16, 0i16),
+        (32767, -32768),
+        (-1, 1),
+        (0x1234, -0x4321),
+        (i16::MIN, i16::MAX),
+        (1, -2),
+    ];
+    for fmt in [I2sFormat::SIXTEEN, I2sFormat::DRAFT, I2sFormat::DIV8] {
         assert!(fmt.fills_frame(), "{fmt:?} must fill exactly 336 clocks");
-        for &(l, r) in &[
-            (0i16, 0i16),
-            (32767, -32768),
-            (-1, 1),
-            (0x1234, -0x4321),
-            (i16::MIN, i16::MAX),
-        ] {
-            let bits = serialise(fmt, l, r);
-            assert_eq!(bits.len() as u32 * fmt.bclk_div, CLKI_PER_FRAME);
+        let n = fmt.bclks_per_frame() as usize;
+        // a final frame carries the LSB of the last right word
+        let mut frames = samples.to_vec();
+        frames.push((0, 0));
+        let bits = serialise(fmt, &frames);
+        assert_eq!(bits.len(), n * frames.len());
+        for f in 0..frames.len() {
+            // the frame's BCLK periods fill exactly one sample period
+            let cycles: u32 = (0..n as u32).map(|b| fmt.period_cycles(b)).sum();
+            assert_eq!(cycles, CLKI_PER_FRAME);
             // WS low for the whole left slot, high for the whole right slot
-            assert!(bits[..fmt.slot_bits as usize].iter().all(|b| !b.0));
-            assert!(bits[fmt.slot_bits as usize..].iter().all(|b| b.0));
-            // MSB is delayed one BCLK after the WS edge (I2S)
-            assert!(!bits[0].1);
-            assert_eq!(bits[1].1, (l as u16) >> 15 == 1);
-            assert_eq!(deserialise(fmt, &bits), (l, r));
+            let frame = &bits[f * n..(f + 1) * n];
+            assert!(frame[..fmt.slot_bits as usize].iter().all(|b| !b.0));
+            assert!(frame[fmt.slot_bits as usize..].iter().all(|b| b.0));
         }
+        for (f, &(l, r)) in samples.iter().enumerate() {
+            // MSB is delayed one BCLK after the WS edge (I2S), for both channels
+            assert_eq!(bits[f * n + 1].1, (l as u16) >> 15 == 1, "{fmt:?} left MSB");
+            assert_eq!(
+                bits[f * n + fmt.slot_bits as usize + 1].1,
+                (r as u16) >> 15 == 1,
+                "{fmt:?} right MSB"
+            );
+        }
+        let back = deserialise(fmt, &bits);
+        assert_eq!(&back[..samples.len()], &samples[..], "{fmt:?}");
     }
-    println!(
-        "BCLK duty (low,high CLKI): /7 -> {:?}, /8 -> {:?}",
-        I2sFormat::DRAFT.bclk_duty(),
-        I2sFormat::DIV8.bclk_duty()
-    );
+    // In the 16-bit format the LSB of each word is in the first BCLK of the next slot, after WS
+    // has changed, and the first BCLK of a frame carries the previous frame's right LSB.
+    let fmt = I2sFormat::SIXTEEN;
+    let bits = serialise(fmt, &[(0, 1), (0, 0)]);
+    assert!(bits[32].1, "right LSB of frame 0 is in BCLK 0 of frame 1");
+    assert!(!bits[16].1, "left LSB of frame 0 is 0");
 }
 
 // 12 ----------------------------------------------------------------------------------------
