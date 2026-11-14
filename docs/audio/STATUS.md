@@ -201,6 +201,7 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 7 | Missed tick | Drop the tick (as modelled). |
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
 | 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
+| 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. |
 
 ### Target DAC: Philips TDA1541 (product specification, November 1985)
 
@@ -236,10 +237,13 @@ registers not in the reset table.
 
 ## Not done
 
-* No live audio. The model renders to WAV (`render_demo`); there is no host audio backend.
+* No live audio in the VM. The model renders to WAV and ERENCE plays through the host sound card from a pre-rendered buffer;
+  the VM itself only captures with `--audio-wav`. Real-time output is tied to the simulator's throttling (tracked as a GitHub issue).
 * No SRAM electrical timing (chip enable, output enable, turnaround). Only the schedule is modelled.
 * No converter edge timing, and the `SCK` frequency and phase (against the converter's Figs. 3 and 4) are not settled.
-* No assembly-driven test through the SIRC-1 CPU; the bus path is covered by a scripted master.
+* The assembly path is covered by one program: `examples/erence` exports a song from ERENCE, links it with a loader and runs it
+  on the SIRC-1 CPU in the VM; the captured audio matches the model's render. It exercises sequences and the window, not every
+  register or the interrupt.
 * The manual has had one review pass (below). It has not had a second pass, and no human has read it end to end.
 
 ## Review pass

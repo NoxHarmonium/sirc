@@ -83,8 +83,9 @@ only pull its line low; the system supplies a pull-up, and several devices may s
 
 \textbf{Direction:} Input. The device is clocked by \texttt{CLKI}, a continuous clock of 10,738,636 Hz in an NTSC
 system: half the frequency of the 21,477,272 Hz system oscillator. Every interval in this manual that is measured in
-cycles is a count of \texttt{CLKI} cycles. The sample period is 336 cycles (Chapter~\ref{ch:timing}). A PAL system
-frequency is not yet specified.
+cycles is a count of \texttt{CLKI} cycles. The sample period is 336 cycles (Chapter~\ref{ch:timing}). The device
+works at any steady frequency from 9.0 to 12.0~MHz (Section~\ref{sec:clock-rate}). The frequency of \texttt{CLKI} in a
+PAL system is not yet specified.
 
 \subsection{Reset Input (RST)}
 

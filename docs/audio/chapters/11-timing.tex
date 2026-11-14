@@ -34,6 +34,64 @@ voice that is playing a sample and produce the next stereo output sample. The se
 may run over several sample periods, but it must finish before the next tick (Section~\ref{sec:seq-deadlines}). The
 sample generator and the memory schedule run continuously, whether the output is muted or not.
 
+\section{Clock Rate}
+\label{sec:clock-rate}
+
+The device has one clock, \texttt{CLKI}, and every interval it measures is a count of \texttt{CLKI} cycles. It works at
+any steady clock from 9.0 to 12.0~MHz. The system supplies the clock: a system whose oscillator differs from the one in
+Table~\ref{tab:periods} divides it to a frequency in this range.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{lrrr}
+		\toprule
+		\textbf{Quantity}               & \textbf{Minimum} & \textbf{Nominal} & \textbf{Maximum} \\
+		\midrule
+		\texttt{CLKI} frequency         & 9.000 MHz        & 10.738636 MHz    & 12.000 MHz       \\
+		\texttt{CLKI} period            & 111.1 ns         & 93.1 ns          & 83.3 ns          \\
+		Output sample rate              & 26,786 Hz        & 31,960 Hz        & 35,714 Hz        \\
+		Envelope update interval        & 2.389 ms         & 2.002 ms         & 1.792 ms         \\
+		Serial bit clock \texttt{BCLK}  & 1.286 MHz        & 1.534 MHz        & 1.714 MHz        \\
+		Memory transaction (2 cycles)   & 222.2 ns         & 186.2 ns         & 166.7 ns         \\
+		Pitch against the nominal clock & $-306$ cents     & 0                & $+192$ cents     \\
+		\bottomrule
+	\end{tabular}
+	\caption{Clock Rate Range}
+	\label{tab:clock-range}
+\end{table}
+
+Changing the clock changes every time the device keeps, in proportion: the sample rate, the envelope update interval,
+the length of a tick of \texttt{SEQ\_PERIOD} samples, the rate of the serial output, and the pitch of every note. It
+changes no behaviour measured in cycles or samples. The memory schedule, the number of instructions a sequence may run
+in a tick, and the latency of a window access in cycles are the same at any clock in the range.
+
+\subsection{Pitch at a Different Clock}
+
+A pitch table (Section~\ref{sec:pitch-table}) gives each note a step in sample bytes per output sample, so the pitch
+that a step produces is proportional to the sample rate, $\mathrm{CLKI} / 336$. A program that wants a note at an exact
+frequency builds its tables for the clock of the system it runs on. A program that uses tables built for the nominal
+clock plays every note sharp or flat in the ratio of the two clocks, by the amount in the last row of
+Table~\ref{tab:clock-range} at the ends of the range. The tempo of a sequence changes by the same ratio. A program that
+must keep time with the display, for example, counts display frames and not sequencer ticks.
+
+\subsection{What the Rest of the System Must Provide}
+
+The device does not read or report its clock. The parts around it must keep up with the highest clock the system will
+use:
+
+\begin{itemize}
+	\item \textbf{Audio memory.} The memory must complete an access within two \texttt{CLKI} cycles, less the set-up and
+	      hold times of the interface, which are not yet specified. At the maximum clock this is 166.7 ns.
+	\item \textbf{Converter.} The converter must accept a bit clock of \texttt{CLKI}/7 and a word rate of
+	      \texttt{CLKI}/336 (Section~\ref{sec:converter-interface}).
+	\item \textbf{Output filter.} The filter that follows the converter removes the images of the signal around the
+	      sample rate. It is designed for the sample rate of the system, and must pass the highest frequency to be played
+	      and stop the lowest image.
+\end{itemize}
+
+The clock must be continuous and steady while the device is running. The behaviour of the device when the clock
+frequency changes while it runs is not yet specified.
+
 \section{The Audio Memory Schedule}
 \label{sec:memory-schedule}
 
