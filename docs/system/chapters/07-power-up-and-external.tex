@@ -34,6 +34,13 @@ start-up routine. The routine clears the overlay, writes the default vectors int
 up and then jumps to the program on the cartridge. A game may set the vector to its own boot code instead. What the
 routine sets up, and the address it jumps to, are not yet specified.
 
+\subsection{Without a Cartridge}
+
+If there is no cartridge, the system ROM answers at the low words, and its own vector table sends the CPU to a routine
+that shows the SIRCUS logo and an icon to say that the cartridge is missing. If a controller button is held down when
+the console is reset, the routine instead enters a simple monitor, which can load a program over the serial port. The
+button, the format and speed of the load, and where the program is placed in the working memory are not yet specified.
+
 \subsection{Order of Setting Up}
 
 The three chips do not depend on each other, so a program may set them up in any order. Two rules apply to each:

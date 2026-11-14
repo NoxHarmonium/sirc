@@ -100,8 +100,10 @@ working memory, sets the system up and jumps to the program on the cartridge (Se
 
 A game that wants its own boot code sets the reset vector to the address of that code instead. Nothing forces it to use
 the ROM. It clears the overlay itself with the same write, writes its own vector table, and need never call the ROM
-again. The ROM stays readable in its own region for programs that do use its driver routines. How a cartridge is
-detected is not yet specified.
+again. The ROM stays readable in its own region for programs that do use its driver routines. A cartridge is detected
+by a pin of its connector, which the cartridge connects to ground and which a resistor on the console pulls high. While
+the pin is high there is no cartridge, and the overlay maps the system ROM at segment \texttt{0x00} in place of the
+cartridge.
 
 The contents of the system ROM, its start-up sequence and the interface to its driver routines are not described in
 this manual.

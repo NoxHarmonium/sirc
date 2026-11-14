@@ -26,3 +26,22 @@ for pins and registers and not for ratings (the MC68HC681 user's manual is dated
   not 20 ns, and it allows faster clocks.
 * **A discrepancy in the original:** its signal table says `RESET` is active low, and so does the 1996 manual, but the original's
   Figure 3 draws a high pulse. The system manual follows the table and the later manual: active low, 1.0 us.
+
+## Simulating and building it
+
+The system manual names real parts, but a simulator or an FPGA does not have to reproduce a vendor chip's silicon. It has to
+reproduce what a program can see.
+
+* **Simulator.** Of the three vendor parts, only the MC68681 DUART needs a model: its 16 registers, the two channels'
+  asynchronous transmit and receive with their buffers, the baud-rate generator, the counter/timer, the parallel input and
+  output ports (which read the controllers) and the interrupt. The model can follow the datasheet. It should include the access
+  time of 2 to 9 cycles (`DTACK` follows the DUART's own clock), which the VM already supports as bus latency. The 74LS138 is
+  the VM's segment map. The TDA1541A is the sample stream that SIRCAS's model already produces. The serial channels would
+  connect to the host as a pipe, a terminal or a TCP socket, so two VMs could be linked for the multiplayer link.
+* **FPGA.** The SIRC-1, SIRCADA and SIRCAS are the project's own designs and would go in the FPGA as RTL. The vendor parts can
+  stay real, on a board next to the FPGA, with the bus brought out to them. That needs level translation between the FPGA's
+  3.3 V and the parts' 5 V. Or a register-compatible subset of the DUART goes in the FPGA, which is small, since a UART is
+  one of the simplest peripherals. Exar still makes a CMOS part (the XR68C681) that is compatible with the MC68681.
+* **Custom serial chip.** If a fully custom console is wanted, a serial chip in the SIRC family, with its own manual, would
+  be the easiest thing to simulate and to put in an FPGA, at the price of designing it. The manual's chapter 5 would then
+  describe it in place of the DUART, and the controller design would not change.
