@@ -7,27 +7,27 @@ A pin that is not in any table is a power pin, or has no connection that this ma
 \section{The Shared Bus}
 \label{sec:shared-bus}
 
-The three chips share the signals of Table~\ref{tab:shared-nets}. Pin numbers are those of the packages: the CPU is a
-64-pin DIP and SIRCADA a 52-pin PLCC (\hwmanual{}, \videomanual{}). The package of SIRCAS is not yet specified, so it
-has no pin numbers.
+The three chips share the signals of Table~\ref{tab:shared-nets}. Pin numbers are given where the package is fixed: the
+CPU is a 64-pin DIP (\hwmanual{}). The packages of SIRCADA and SIRCAS are not yet specified, so they have no pin
+numbers.
 
 \begin{table}[H]
 	\centering
 	\small
 	\begin{tabular}{lllll}
 		\toprule
-		\textbf{Net}           & \textbf{CPU} & \textbf{SIRCADA} & \textbf{SIRCAS}        & \textbf{Other}                    \\
+		\textbf{Net}           & \textbf{CPU} & \textbf{SIRCADA}       & \textbf{SIRCAS}        & \textbf{Other}                    \\
 		\midrule
-		A0--A7                 & 1--8         & 8--15            & A0--A7                 & Memories, cartridge               \\
-		A8--A15                & 10--17       & 16--23           & A8--A15                & Memories, cartridge               \\
-		A16--A23               & 18--25       & ---              & ---                    & Select logic, memories, cartridge \\
-		D0--D15                & 27--42       & 26--41           & D0--D15                & Memories, cartridge               \\
-		\activelow{BAS}        & 47 (out)     & 5 (in)           & \activelow{BAS} (in)   & Select logic                      \\
-		BRW                    & 48 (out)     & 6 (in)           & BRW (in)               & Memories, cartridge               \\
-		\activelow{BACK}       & 49 (in)      & 7 (out)          & \activelow{BACK} (out) & Memories, cartridge; pull-up      \\
-		\activelow{CS} (video) & ---          & 4                & ---                    & Select logic, Y3                  \\
-		\activelow{CS} (audio) & ---          & ---              & \activelow{CS}         & Select logic, Y4                  \\
-		CLKI                   & 45           & 2                & CLKI                   & Clock circuit                     \\
+		A0--A7                 & 1--8         & A0--A7                 & A0--A7                 & Memories, cartridge               \\
+		A8--A15                & 10--17       & A8--A15                & A8--A15                & Memories, cartridge               \\
+		A16--A23               & 18--25       & ---                    & ---                    & Select logic, memories, cartridge \\
+		D0--D15                & 27--42       & D0--D15                & D0--D15                & Memories, cartridge               \\
+		\activelow{BAS}        & 47 (out)     & \activelow{BAS} (in)   & \activelow{BAS} (in)   & Select logic                      \\
+		BRW                    & 48 (out)     & BRW (in)               & BRW (in)               & Memories, cartridge               \\
+		\activelow{BACK}       & 49 (in)      & \activelow{BACK} (out) & \activelow{BACK} (out) & Memories, cartridge; pull-up      \\
+		\activelow{CS} (video) & ---          & \activelow{CS}         & ---                    & Select logic, Y3                  \\
+		\activelow{CS} (audio) & ---          & ---                    & \activelow{CS}         & Select logic, Y4                  \\
+		CLKI                   & 45           & CLKI                   & CLKI                   & Clock circuit                     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Nets Shared by the Chips}
@@ -48,12 +48,12 @@ select logic.
 		\toprule
 		\textbf{Net}     & \textbf{CPU} & \textbf{SIRCADA}       & \textbf{SIRCAS}        & \textbf{Notes}                       \\
 		\midrule
-		\activelow{NMI}  & 62 (in)      & 43 (out)               & ---                    & Pull-up; vertical sync               \\
-		\activelow{IRQ4} & 61 (in)      & 44 (out)               & ---                    & Pull-up; line compare                \\
+		\activelow{NMI}  & 62 (in)      & \activelow{NMI} (out)  & ---                    & Pull-up; vertical sync               \\
+		\activelow{IRQ4} & 61 (in)      & \activelow{IRQ4} (out) & ---                    & Pull-up; line compare                \\
 		\activelow{IRQ3} & 60 (in)      & ---                    & \activelow{IRQ3} (out) & Pull-up; sequence complete           \\
 		\activelow{IRQ2} & 59 (in)      & ---                    & ---                    & Pull-up; serial device, DUART pin 21 \\
 		\activelow{IRQ1} & 58 (in)      & ---                    & ---                    & Not yet specified                    \\
-		\activelow{RSTO} & 64 (out)     & 3 (\activelow{RST} in) & \activelow{RST} (in)   & One net to both devices              \\
+		\activelow{RSTO} & 64 (out)     & \activelow{RST} (in)   & \activelow{RST} (in)   & One net to both devices              \\
 		\activelow{RSTI} & 63 (in)      & ---                    & ---                    & Reset circuit                        \\
 		\bottomrule
 	\end{tabular}
@@ -95,22 +95,22 @@ One 74LS138 decoder makes every chip select (Section~\ref{sec:selecting}).
 	\small
 	\begin{tabular}{lllp{5.6cm}}
 		\toprule
-		\textbf{74LS138 pin} & \textbf{Name} & \textbf{Connection}            & \textbf{Notes}                                                \\
+		\textbf{74LS138 pin} & \textbf{Name} & \textbf{Connection}    & \textbf{Notes}                                                \\
 		\midrule
-		1                    & A             & CPU A21 (pin 23)               &                                                               \\
-		2                    & B             & CPU A22 (pin 24)               &                                                               \\
-		3                    & C             & CPU A23 (pin 25)               &                                                               \\
-		4                    & G2A           & \activelow{BAS}                & Enable, active low                                            \\
-		5                    & G2B           & Ground                         & Enable, active low                                            \\
-		6                    & G1            & $+5$ V                         & Enable, active high                                           \\
-		15                   & Y0            & Working memory                 & Gated by the boot overlay; see Section~\ref{sec:boot-overlay} \\
-		14                   & Y1            & System ROM                     &                                                               \\
-		13                   & Y2            & Cartridge                      &                                                               \\
-		12                   & Y3            & SIRCADA \activelow{CS} (pin 4) &                                                               \\
-		11                   & Y4            & SIRCAS \activelow{CS}          &                                                               \\
-		10                   & Y5            & Serial I/O                     &                                                               \\
-		9, 7                 & Y6, Y7        & Not yet specified              & Could drive \activelow{BERR}                                  \\
-		8, 16                & GND, VCC      & Ground, $+5$ V                 &                                                               \\
+		1                    & A             & CPU A21 (pin 23)       &                                                               \\
+		2                    & B             & CPU A22 (pin 24)       &                                                               \\
+		3                    & C             & CPU A23 (pin 25)       &                                                               \\
+		4                    & G2A           & \activelow{BAS}        & Enable, active low                                            \\
+		5                    & G2B           & Ground                 & Enable, active low                                            \\
+		6                    & G1            & $+5$ V                 & Enable, active high                                           \\
+		15                   & Y0            & Working memory         & Gated by the boot overlay; see Section~\ref{sec:boot-overlay} \\
+		14                   & Y1            & System ROM             &                                                               \\
+		13                   & Y2            & Cartridge              &                                                               \\
+		12                   & Y3            & SIRCADA \activelow{CS} &                                                               \\
+		11                   & Y4            & SIRCAS \activelow{CS}  &                                                               \\
+		10                   & Y5            & Serial I/O             &                                                               \\
+		9, 7                 & Y6, Y7        & Not yet specified      & Could drive \activelow{BERR}                                  \\
+		8, 16                & GND, VCC      & Ground, $+5$ V         &                                                               \\
 		\bottomrule
 	\end{tabular}
 	\caption{The Select Decoder}
@@ -403,21 +403,49 @@ amplifier for each channel, the inverting input at the converter output, the oth
 rate here, so the circuit does not by itself remove the images of the signal around 32~kHz; a steeper filter follows.
 The amplifier, its supplies, the filter and the output connector are not yet specified.
 
-\section{SIRCADA and the Display}
+\section{SIRCADA and the Video Memory}
+\label{sec:video-memory-wiring}
 
-SIRCADA's video output leaves the system as an analogue colour signal and a composite sync. The video memory is inside
-the device, so it has no memory interface.
+The video memory is a static memory of 32,768 words of 16 bits, which may be two memories of 32,768 by 8 bits side by
+side. It connects to SIRCADA and to nothing else. It is two 32K by 8 static RAMs with an access time of 35~ns or
+better. The renderer reads one word every PPU cycle, which is 93~ns in an NTSC system and 94~ns in a PAL system, and
+the memory has that cycle less the delay of the interface.
 
 \begin{table}[H]
 	\centering
 	\begin{tabular}{lll}
 		\toprule
-		\textbf{SIRCADA}  & \textbf{Pin} & \textbf{Connection}                               \\
+		\textbf{SIRCADA} & \textbf{Video memory}                  & \textbf{Notes} \\
 		\midrule
-		R, G, B           & 48--50       & Display connector, through the output circuit     \\
-		\activelow{CSYNC} & 45           & Display connector                                 \\
-		IREF              & 47           & A reference that sets the full-scale colour level \\
-		AVCC, AGND        & 46, 51       & The analogue supply and ground                    \\
+		MA0--MA14        & A0--A14 of both memories               & Word address   \\
+		MD0--MD7         & D0--D7 of the memory for the low byte  & Three-state    \\
+		MD8--MD15        & D0--D7 of the memory for the high byte & Three-state    \\
+		\activelow{MCE}  & Chip enable of both                    &                \\
+		\activelow{MOE}  & Output enable of both                  &                \\
+		\activelow{MWE}  & Write enable of both                   &                \\
+		\bottomrule
+	\end{tabular}
+	\caption{Video Memory Connections}
+	\label{tab:video-memory-nets}
+\end{table}
+
+\noindent The set-up and hold times of the interface, and the part chosen for the memory, are not yet specified
+(\videomanual{}, package chapter).
+
+\section{SIRCADA and the Display}
+
+SIRCADA's video output leaves the system as an analogue colour signal and a composite sync.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ll}
+		\toprule
+		\textbf{SIRCADA}  & \textbf{Connection}                               \\
+		\midrule
+		R, G, B           & Display connector, through the output circuit     \\
+		\activelow{CSYNC} & Display connector                                 \\
+		IREF              & A reference that sets the full-scale colour level \\
+		AVCC, AGND        & The analogue supply and ground                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{Display Connections}

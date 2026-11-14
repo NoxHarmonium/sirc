@@ -117,7 +117,7 @@ Table~\ref{tab:answer-times} gave the length of a bus cycle to each chip. What h
 them:
 
 \begin{itemize}
-	\item \textbf{SIRCADA.} A register write completes in the cycle it is made. The display adapter samples its registers
+	\item \textbf{SIRCADA.} A register write completes in the cycle it is made, and a video memory access takes two. The display adapter samples its registers
 	      228 master clocks, 114 cycles, after the start of a line, so a write made earlier in the line than that takes
 	      effect on the same line (\videomanual{}, timing chapter).
 	\item \textbf{SIRCAS.} A register write also completes in the cycle. When the change is heard depends on what was

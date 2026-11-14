@@ -17,17 +17,18 @@ timing only.
 \section{Bus Cycles}
 \label{sec:signal-bus}
 
-The device answers every cycle in which \activelow{CS} and \activelow{BAS} are both asserted, and it answers in the
-cycle itself: \activelow{BACK} is asserted from the start of the cycle, so the CPU accepts the cycle at the next rising
-edge and never waits (Chapter~\ref{ch:package}).
+The device answers every access in which \activelow{CS} and \activelow{BAS} are both asserted. A register, a palette
+entry or a sprite table word is answered in the cycle itself: \activelow{BACK} is asserted from the start of the cycle,
+so the CPU accepts the cycle at the next rising edge and does not wait. A word of video memory takes two cycles, and
+\activelow{BACK} is asserted in the second (Section~\ref{sec:signal-vram}).
 
 \subsection{Writes}
 
 The CPU presents the offset on A0--A15, the data on D0--D15 and BRW low, just after the rising edge that starts the
-cycle. The device takes the data at the rising edge that ends the cycle; the register, palette entry, video memory word
-or sprite table word holds the new value from that edge, and a read in the next cycle returns it. A write to an offset
-that is not stored, or one that the rules of Section~\ref{sec:memory-vram-access} discard, is acknowledged in the same
-way.
+cycle. The device takes the data at the rising edge that ends the cycle; the register, palette entry or sprite table
+word holds the new value from that edge, and a read in the next cycle returns it. A write to an offset that is not
+stored, or one that the rules of Section~\ref{sec:memory-vram-access} discard, is acknowledged in the same way. A write
+to video memory takes two cycles (Section~\ref{sec:signal-vram}).
 
 \begin{figure}[H]
 	\centering
@@ -52,7 +53,8 @@ way.
 
 On a read the device drives D0--D15 with the word the offset selects, from the start of the cycle to its end, and
 releases the bus after it. The word is valid before the rising edge that ends the cycle, which is the edge at which the
-CPU samples it. A read changes nothing in the device; no register has a side effect on a read.
+CPU samples it. A read changes nothing in the device; no register has a side effect on a read. A read of video memory
+takes two cycles (Section~\ref{sec:signal-vram}).
 
 \begin{figure}[H]
 	\centering
@@ -72,13 +74,70 @@ CPU samples it. A read changes nothing in the device; no register has a side eff
 	\label{fig:signal-read}
 \end{figure}
 
+\subsection{Video Memory Accesses}
+\label{sec:signal-vram}
+
+An access to a word of video memory takes two cycles, because the device makes the access to the memory itself. The
+device recognises the access in the first cycle, and applies the rules of Section~\ref{sec:memory-vram-access} to
+decide whether the memory is open. If it is, the device puts the address on MA0--MA14 and asserts \activelow{MCE}, and
+on a write drives the data on MD0--MD15 and asserts \activelow{MWE}, or on a read asserts \activelow{MOE}. In the
+second cycle it asserts \activelow{BACK}. On a read it drives the word that the memory returned onto D0--D15. The CPU
+holds its address, data and strobes through both cycles and accepts the access at the rising edge that ends the second.
+If the memory is not open the access still takes two cycles, but the memory is not enabled: a write is discarded and a
+read returns zero.
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI              & L 2{0.5H 0.5L}                    \\
+		Phase             & D{start} D{done} D{}              \\
+		\activelow{CS}    & L L H                             \\
+		\activelow{BAS}   & L L H                             \\
+		BRW               & L L H                             \\
+		A0--A15           & 2D{offset} D{}                    \\
+		D0--D15           & 2D{data} Z                        \\
+		\activelow{BACK}  & H L H                             \\
+		MA0--MA14         & 2D{address} D{}                   \\
+		MD0--MD15         & 2D{data} Z                        \\
+		\activelow{MCE}   & L L H                             \\
+		\activelow{MWE}   & L L H                             \\
+		Stored word       & 2D{old} D{new}                    \\
+		Sample            & 1.95L 0.1H 0.95L                  \\
+	\end{tikztimingtable}
+	\caption{Video Memory Write Cycle}
+	\label{fig:signal-vram-write}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\small
+	\begin{tikztimingtable}[sirc timing diagram]
+		CLKI              & L 2{0.5H 0.5L}                    \\
+		Phase             & D{start} D{done} D{}              \\
+		\activelow{CS}    & L L H                             \\
+		\activelow{BAS}   & L L H                             \\
+		BRW               & H H H                             \\
+		A0--A15           & 2D{offset} D{}                    \\
+		D0--D15           & Z D{data} Z                       \\
+		\activelow{BACK}  & H L H                             \\
+		MA0--MA14         & 2D{address} D{}                   \\
+		MD0--MD15         & D{} D{data} Z                     \\
+		\activelow{MCE}   & L L H                             \\
+		\activelow{MOE}   & L L H                             \\
+		Sample            & 1.95L 0.1H 0.95L                  \\
+	\end{tikztimingtable}
+	\caption{Video Memory Read Cycle}
+	\label{fig:signal-vram-read}
+\end{figure}
+
 \subsection{Consecutive Cycles}
 
-The device accepts one access in every cycle, with no recovery time between accesses. A DMA transfer, which makes one
-bus cycle for each word (\hwmanual{}), therefore accepts one word per \texttt{CLKI} cycle into the palette, the sprite
-table or video memory, whichever the offsets address, during the write part of the transfer. That is the rate of the
-writes only: a whole copy also makes source reads and setup cycles, so its rate is lower (\hwmanual{};
-Section~\ref{sec:cpu-clock} gives the time of a \texttt{DMAT}).
+The device accepts accesses with no recovery time between them. A DMA transfer, which makes one bus cycle for each word
+(\hwmanual{}), therefore accepts one word per \texttt{CLKI} cycle into the palette or the sprite table during the write
+part of the transfer, and one word every two cycles into video memory. That is the rate of the writes only: a whole
+copy also makes source reads and setup cycles, so its rate is lower (\hwmanual{}; Section~\ref{sec:cpu-clock} gives the
+time of a \texttt{DMAT}).
 
 \begin{figure}[H]
 	\centering
@@ -95,7 +154,7 @@ Section~\ref{sec:cpu-clock} gives the time of a \texttt{DMAT}).
 		Last word stored & 2D{} D{v} D{v+1} 2D{v+2}                              \\
 		Sample           & 1.95L 0.1H 0.9L 0.1H 0.9L 0.1H 1.95L                  \\
 	\end{tikztimingtable}
-	\caption{Three-Word DMA Write into the Device}
+	\caption{Three-Word DMA Write into the Palette}
 	\label{fig:signal-dma}
 \end{figure}
 
@@ -104,10 +163,11 @@ Section~\ref{sec:cpu-clock} gives the time of a \texttt{DMAT}).
 
 Video memory and the sprite table are open to the CPU from the first cycle of line 224 to the last cycle of line 261,
 and at any time while \texttt{GD} is set (Section~\ref{sec:memory-vram-access}). The gate changes at a line boundary,
-so it is exact to the cycle. A write in the last cycle of line 223 is discarded; a write in the first cycle of line 224
-is stored. The vertical sync interrupt is raised in that same first cycle (Section~\ref{sec:interrupts}), and the CPU
-takes it at the end of the instruction in progress, so the handler's first access to video memory is some cycles later
-than the figure shows.
+so it is exact to the cycle, and it is read in the first cycle of an access. A video memory write that starts in the
+last cycle of line 223 or earlier is discarded, and one that starts in the first cycle of line 224 is stored. The
+vertical sync interrupt is raised in that same first cycle (Section~\ref{sec:interrupts}), and the CPU takes it at the
+end of the instruction in progress, so the handler's first access to video memory is some cycles later than the figure
+shows.
 
 \begin{figure}[H]
 	\centering
@@ -119,11 +179,11 @@ than the figure shows.
 		\activelow{CS}    & L L L L                            \\
 		\activelow{BAS}   & L L L L                            \\
 		BRW               & L L L L                            \\
-		A0--A15           & D{v} D{v+1} D{v+2} D{v+3}          \\
-		D0--D15           & D{d0} D{d1} D{d2} D{d3}            \\
-		\activelow{BACK}  & L L L L                            \\
+		A0--A15           & 2D{v} 2D{v+1}                      \\
+		D0--D15           & 2D{d0} 2D{d1}                      \\
+		\activelow{BACK}  & H L H L                            \\
 		Video memory open & L L H H                            \\
-		Word stored       & D{no} D{no} D{yes} D{yes}          \\
+		Word stored       & 2D{no} 2D{yes}                     \\
 		\activelow{NMI}   & H H L H                            \\
 	\end{tikztimingtable}
 	\caption{Video Memory Writes across the Start of Vertical Blanking (\texttt{VIE} set)}

@@ -45,7 +45,7 @@ the display.
 		Picture size      & 256 by 224 pixels, the first line always blank (262 lines NTSC, 312 PAL; Chapter~\ref{ch:timing})                 \\
 		Colour            & 15 bits per pixel, 5 bits for each of red, green and blue                                                         \\
 		Palette           & 256 entries of 16 bits, directly addressable by the CPU                                                           \\
-		Video memory      & 32,768 words (64 KB), shared by tile data and tilemaps                                                            \\
+		Video memory      & 32,768 words (64 KB) of external static memory, shared by tile data and tilemaps                                  \\
 		Tile data         & 4 bits per pixel                                                                                                  \\
 		Backgrounds       & Four orthogonal in Mode 1; two isometric and one orthogonal in Mode 2; two orthogonal and one isometric in Mode 3 \\
 		Sprites           & 128 entries, three layers, 32 per line (Chapter~\ref{ch:sprites})                                                 \\
@@ -141,7 +141,7 @@ describe each block; the figure says how they feed each other.
 		\node[block] (timing) at (5.3,8.0) {Timing generator\\line, group, slot};
 		\node[block] (seq) at (9.3,8.0) {Fetch sequencer\\slot scheduler};
 		% Column 1: memories and CPU
-		\node[store] (vram) at (1.6,5.4) {Video memory};
+		\node[store] (vram) at (1.6,5.4) {Video memory\\(external)};
 		\node[store] (cpu) at (1.6,3.2) {CPU access\\(vertical blanking only)};
 		\node[store] (oam) at (5.3,-0.9) {Sprite table};
 		% Column 2: arbiter

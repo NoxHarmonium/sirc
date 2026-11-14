@@ -40,11 +40,15 @@ cycle: the master clock divided by two, 10,738,636~Hz at 21,477,272~Hz. The figu
 	      recognised at an instruction boundary, so the handler's first instruction is fetched at best 6 and at worst about 12
 	      cycles later (\archmanual{}, interrupt latency; more after a coprocessor call or a DMA transfer). That leaves about 100
 	      cycles, some 16 instructions, for a handler to change a register before it takes effect on the same line.
-	\item A \texttt{DMAT} of 255 words takes 522 cycles, three quarters of a line, and cannot be interrupted.
+	\item A \texttt{DMAT} of 255 words takes 522 cycles, three quarters of a line, when both ends answer in one cycle. Into video
+	      memory each word written takes two cycles, so the copy takes 777 cycles, a little over a line. It cannot be
+	      interrupted.
 \end{itemize}
 
-The video device never waits for the CPU, and it gives the CPU no wait states: every access to the device completes in
-the cycle it is made (Section~\ref{sec:memory-vram-access}).
+The video device never waits for the CPU. An access to a register, the palette or the sprite table completes in the
+cycle it is made; an access to video memory takes two cycles (Section~\ref{sec:memory-vram-access}). These figures
+assume that the rest of the system adds no wait states; a system that does add them takes proportionally fewer
+instructions in the same time.
 
 \section{Line Timing}
 

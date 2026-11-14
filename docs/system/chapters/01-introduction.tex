@@ -41,7 +41,8 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 		\textbf{Part}     & \textbf{Package}            & \textbf{Function}                                                                               \\
 		\midrule
 		SIRC-1 CPU        & 64-pin DIP                  & Runs the program; the only master of the bus                                                    \\
-		SIRCADA           & 52-pin PLCC                 & Display adapter: tiles, sprites and the video signal; holds its own video memory                \\
+		SIRCADA           & Not yet specified           & Display adapter: tiles, sprites and the video signal; has its own video memory                  \\
+		Video memory      & Not yet specified           & Static memory of 32,768 words, used by SIRCADA alone                                            \\
 		SIRCAS            & Not yet specified           & Sound processor: six voices, filter and sequencers; has its own audio memory                    \\
 		Audio memory      & Not yet specified           & Static memory of 32,768 words, used by SIRCAS alone                                             \\
 		Converter         & TDA1541A, 28-pin DIP        & Philips dual 16-bit converter: turns SIRCAS's serial output into two analogue currents          \\
@@ -59,11 +60,11 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 	\label{tab:parts}
 \end{table}
 
-The video memory is inside SIRCADA, and the CPU reaches it through the device's own segment (\videomanual{}, memory map
-chapter). The audio memory is outside SIRCAS, but it is not on the CPU's bus: the CPU reaches it only through a window
-of SIRCAS's segment, and SIRCAS makes every access to it itself (\audiomanual{}, memory map chapter). The CPU's bus
-therefore carries traffic for only six things: the working memory, the system ROM, the cartridge, SIRCADA, SIRCAS and
-the serial device.
+The video memory and the audio memory are outside their chips, but neither is on the CPU's bus. The CPU reaches the
+video memory only through the segment of SIRCADA (\videomanual{}, memory map chapter), and the audio memory only
+through a window of SIRCAS's segment (\audiomanual{}, memory map chapter), and each chip makes every access to its
+memory itself. The CPU's bus therefore carries traffic for only six things: the working memory, the system ROM, the
+cartridge, SIRCADA, SIRCAS and the serial device.
 
 \section{Block Diagram}
 
@@ -90,6 +91,8 @@ each of the other two chips has outputs that the CPU never sees directly: the pi
 		% Chips
 		\node[chip] (cpu) at (-5,0) {SIRC-1\\CPU};
 		\node[chip] (ppu) at (0,0) {SIRCADA};
+		\node[box, minimum width=1.9cm] (vmem) at (-2.5,0.0) {Video\\memory};
+		\draw[thick, <->] (ppu.west) -- (vmem.east);
 		\node[chip] (snd) at (5,0) {SIRCAS};
 		\foreach \c in {cpu,ppu,snd} { \draw[flow] (\c |- 0,2.9) -- (\c.north); }
 		% Bus

@@ -115,12 +115,15 @@ Sketched, not yet confirmed (also listed in `STATUS.md`, the working record):
 
 - **Single package, one manual.** The CPU has separate architecture and hardware manuals because the architecture could have several
   implementations. The video device has one, so its pinout and timing are in its own manual (Chapters 2 and 11).
-- **Everything on one die.** Video memory (64 KB), palette, sprite table and DACs are on the package. External video memory would
-  need about 35 more pins and a wait-state story for the CPU; the manual's "no wait states, every access completes in its cycle"
-  is only simple with on-chip memory. (On-chip 64 KB of SRAM is generous for the period; a fictional console can have it.)
-- **52-pin PLCC.** Signal count: bus 36 (A0-A15, D0-D15, CS#, BAS#, BRW, BACK#), clock and reset 2, interrupts 2, video 5
-  (R, G, B, CSYNC#, IREF), power 6 (VCC1/2, GND1/2, AVCC, AGND) = 51, plus one NC. Digital and analog supplies are separate,
-  as a period video DAC would have.
+- **External video memory (changed).** The video memory was first on the die, with the palette, the sprite table and the DACs. It is
+  now an external static memory, like SIRCAS's audio memory, and the device has 34 more signals for it (MA0-MA14, MD0-MD15,
+  MCE#, MOE#, MWE#). The renderer reads one word every PPU cycle, so the memory must answer within 93 ns less the interface
+  delay (the system manual proposes parts of 35 ns or better). A CPU access to video memory goes through the device and takes
+  two cycles, one wait state. Registers, palette and sprite table still answer in one cycle, so the "no wait states" statement
+  now covers only those. A `DMAT` of 255 words into video memory takes 777 cycles, up from 522.
+- **Package (changed).** The first sketch was a 52-pin PLCC: bus 36 (A0-A15, D0-D15, CS#, BAS#, BRW, BACK#), clock and reset 2,
+  interrupts 2, video 5 (R, G, B, CSYNC#, IREF), power 6, plus one NC. With the memory interface the device has 79 signals, so
+  the package and pin numbers are not specified, as for SIRCAS. 79 signals and the power pins do not fit an 84-pin PLCC.
 - **CS# instead of segment address pins.** The manual already says the system chooses the segment; a chip select keeps the device
   independent of the address map. No BAT or PROT inputs: the device treats every cycle type alike.
 - **CLKI is the only clock.** Every internal interval is a whole number of PPU cycles (= CLKI cycles), so no master-clock pin is needed.

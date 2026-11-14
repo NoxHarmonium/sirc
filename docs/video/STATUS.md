@@ -75,11 +75,11 @@ simulator or a decision to be made; the manual describes the intended behaviour.
   manual and the simulator, and should be updated from the manual.
 - **Version and region.** `VER` is 1 and the region is fixed when the device is made; the simulator should let both be
   configured at run time.
-- **Package and signals.** The package, the pin assignment and the signal timing are a first sketch, to be confirmed: the
-  52-pin PLCC; a chip select instead of the segment address bits; `CLKI` as the only clock; `BACK#`, `NMI#` and `IRQ4#`
+- **Package and signals.** The package, the pin assignment and the signal timing are a first sketch, to be confirmed: a chip select instead of the segment address bits; `CLKI` as the only clock; `BACK#`, `NMI#` and `IRQ4#`
   as open-drain outputs; no access-type or protection inputs; a minimum reset of six cycles; the composite sync widths (a
   horizontal pulse of 100 master clocks; vertical sync in three lines, 245 to 247, one long pulse in each, no equalising
-  pulses); and the converter and supply pins. The video memory, palette and sprite table are inside the package.
+  pulses); and the converter and supply pins. The video memory is external static memory (changed by the SIRCUS design: 34 more signals, 79 in all); the palette and
+  sprite table are inside the package, and the package and pin numbers are not yet specified.
   Electrical characteristics (levels, delays, frequency range, current, thermal) are not yet specified, as in the
   hardware manual.
 - **DMA.** A DMA transfer into video memory is subject to the same rule as the CPU, and DMA blocks interrupts, the `NMI#`

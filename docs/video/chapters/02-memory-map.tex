@@ -34,9 +34,10 @@ The \textbf{palette} holds 256 colours in a small, fast memory that the renderer
 and written by the CPU at any time.
 
 The \textbf{video memory} (VRAM) holds everything else: tile data, tilemaps and, when they are specified, sprite tile
-data. It is 32,768 words, which is 64 KB. The device does not interpret VRAM in any fixed layout. Each background has a
-base address register for its tilemap and another for its tile data, and any VRAM range may hold either. The only
-constraint is that ranges the renderer reads must not overlap ranges the program expects to stay untouched.
+data. It is 32,768 words, which is 64 KB, in a static memory outside the device (Section~\ref{sec:memory-interface}).
+The device does not interpret VRAM in any fixed layout. Each background has a base address register for its tilemap and
+another for its tile data, and any VRAM range may hold either. The only constraint is that ranges the renderer reads
+must not overlap ranges the program expects to stay untouched.
 
 An address in VRAM is written as its offset in the segment, so VRAM begins at \texttt{0x8000}. The base address
 registers hold addresses in this form: a tilemap at the start of VRAM has the base address \texttt{0x8000}, not
@@ -45,8 +46,10 @@ registers hold addresses in this form: a tilemap at the start of VRAM has the ba
 \section{Access Rules}
 
 A read of a register, a palette entry or a VRAM word returns the stored value. A write stores the value. A read of an
-open bus offset returns zero and a write to one is ignored. The device never inserts a wait state: every access
-completes in the cycle it is made, whether or not it takes effect (Section~\ref{sec:memory-vram-access}).
+open bus offset returns zero and a write to one is ignored. An access to a register, a palette entry or a sprite table
+word completes in the cycle it is made. An access to video memory takes two cycles: the device makes the access to the
+memory itself and asserts \activelow{BACK} in the second cycle, whether or not the access takes effect
+(Section~\ref{sec:memory-vram-access}).
 
 The Status register (offset \texttt{0x0019}) and the Vertical Line register (offset \texttt{0x001A}) are read-only; a
 write to either is ignored.
@@ -57,7 +60,8 @@ write to either is ignored.
 The renderer reads video memory in the visible lines, and in the horizontal blanking interval too: the sprites of the
 next line are fetched there (Chapter~\ref{ch:sprites}). So video memory and the sprite table are available to the CPU
 only in vertical blanking, the lines after the last visible line (Chapter~\ref{ch:timing}), or while the picture is
-turned off (\texttt{GD} in the Base Configuration register is 1), when the device makes no reads at all:
+turned off (\texttt{GD} in the Base Configuration register is 1), when the device makes no reads at all. The rule is
+applied at the first cycle of an access:
 
 \begin{itemize}
 	\item A write to video memory or to the sprite table at any other time is ignored, and a read returns zero. At reset
