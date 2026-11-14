@@ -231,7 +231,7 @@ The manual is in this directory (`main.tex`, `chapters/`): 14 chapters, a quick 
 `sirc-vm/sirc-umf/tests/recipes.rs`), built with `make`. It follows the SIRCADA
 manual's structure and voice and uses its preamble. It states the behaviour the model implements, including the choices
 in the table above, as the intended behaviour; those choices are proposals until approved. Points the design has not fixed are
-written "not yet specified" and not filled in: the package and pins, the audio memory's electrical interface, `SCK`, the serial
+written "not yet specified" and not filled in: the package and pins, the timing of the audio memory strobes within an access (its set-up, hold and access-time figures are provisional targets, the same as the CPU's, in the package chapter), `SCK`, the serial
 edge timing and `BCLK` duty cycle, the reset pulse width, the reset values of
 registers not in the reset table.
 

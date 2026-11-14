@@ -85,7 +85,7 @@ The device has one clock input, the same \texttt{CLKI} the system supplies to th
 PPU cycle: the master clock divided by two (Section~\ref{sec:cpu-clock}). Every internal interval, the pixel, the group
 of four pixels, the line and the frame, is a whole number of \texttt{CLKI} cycles, so the device needs no other clock.
 The pixel rate is \texttt{CLKI} divided by two. The rising edge is the only edge the device uses. The range of clock
-frequencies is not yet specified.
+frequencies is in Section~\ref{sec:electrical}.
 
 \subsection{Reset Input (\activelow{RST})}
 
@@ -147,15 +147,15 @@ the device is the only user of the memory. The device makes every access to it, 
 
 The renderer reads one word every PPU cycle. The memory must therefore complete a read within one \texttt{CLKI} cycle,
 which is 93~ns at the NTSC clock, less the set-up and hold times of the interface. A CPU access to the memory takes two
-cycles (Section~\ref{sec:signal-vram}). The electrical details of the interface, the set-up and hold times of the
-address and data and the timing of \activelow{MCE}, \activelow{MOE} and \activelow{MWE}, are not yet specified. The
-contents of the memory are undefined at reset, and the device does not clear it.
+cycles (Section~\ref{sec:signal-vram}). The electrical figures of the interface are in Section~\ref{sec:electrical};
+the timing of \activelow{MCE}, \activelow{MOE} and \activelow{MWE} within an access is not yet specified. The contents
+of the memory are undefined at reset, and the device does not clear it.
 
 \subsection{Power Pins}
 
 The device has power and ground pins for its logic, and AVCC and AGND for the converters; the number of them is not yet
-specified. VCC is 5~V $\pm$ 5\%, as for the CPU. The electrical characteristics other than the supply are not yet
-specified.
+specified. VCC is 5~V $\pm$ 5\%, as for the CPU. The other electrical characteristics are in
+Section~\ref{sec:electrical}.
 
 \section{Connecting the Device}
 
@@ -200,3 +200,38 @@ to the display connector. The memory interface of the device connects to the vid
 	\caption{The Video Device in a System}
 	\label{fig:connections}
 \end{figure}
+
+\section{Electrical Characteristics}
+\label{sec:electrical}
+
+The figures in this section are provisional. They are targets the device is designed to meet, and will be confirmed or
+revised when it is characterised. They are the same as those of the CPU (\hwmanual{}, electrical characteristics
+chapter), so that the three devices fit together on one bus. The supply is 5~V $\pm$ 5\%, the signals are TTL
+compatible, and all figures apply over 0 to 70~\textdegree{}C. Times are measured from or to the 1.4~V point of the
+rising edge of \texttt{CLKI}, with the outputs loaded by 50~pF.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{7.6cm}lrrl}
+		\toprule
+		\textbf{Parameter}                                                                         & \textbf{Symbol}    & \textbf{Min} & \textbf{Max} & \textbf{Unit} \\
+		\midrule
+		\texttt{CLKI} frequency                                                                    & $f_{CLKI}$         & 10.6         & 10.8         & MHz           \\
+		\texttt{CLKI} high time and low time                                                       & $t_{CH}$, $t_{CL}$ & 35           &              & ns            \\
+		Input high voltage, input low voltage                                                      &                    & 2.0, 0       & VCC, 0.8     & V             \\
+		Output high voltage ($I_{OH} = -400~\mu$A), output low voltage ($I_{OL} = 4$~mA)           &                    & 2.4          & 0.4          & V             \\
+		Low level of an open-drain output, $I_{OL} = 8$~mA                                         &                    &              & 0.4          & V             \\
+		Input capacitance                                                                          &                    &              & 10           & pF            \\
+		\midrule
+		Bus inputs (A, D on a write, BRW, \activelow{CS}, \activelow{BAS}): set-up before the edge & $t_{IS}$           & 10           &              & ns            \\
+		Bus inputs: hold after the edge                                                            & $t_{IH}$           & 0            &              & ns            \\
+		Read data and \activelow{BACK} valid after \activelow{CS} and \activelow{BAS} asserted     & $t_{AV}$           &              & 35           & ns            \\
+		Read data float, after the edge that ends a read                                           & $t_{OZ}$           &              & 25           & ns            \\
+		Output hold                                                                                & $t_{OH}$           & 3            &              & ns            \\
+		\bottomrule
+	\end{tabular}
+	\caption{AC and DC Characteristics}
+	\label{tab:electrical}
+\end{table}
+
+\noindent The memory interface outputs (MA, MCE, MOE, MWE and MD on a write) are valid within 25~ns of the edge that starts the access, and are held for 3~ns, and the read data has 10~ns of set-up before the edge that ends it, with no hold. The renderer reads in one cycle, 92.6~ns at the highest clock, so the memory's address access time may be at most 50~ns, with 5~ns left for the board.

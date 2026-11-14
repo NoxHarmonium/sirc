@@ -164,7 +164,7 @@ to \texttt{0xC0} to \texttt{0xFF} asserts it, and the CPU raises a bus fault at 
 \activelow{BACK} must rise above the input-high level within about two thirds of a cycle (60~ns) after the last driver lets go, or the next
 cycle will see a stale \activelow{BACK}. For a net of about 100~pF that needs a pull-up of 1.2~k$\Omega$ or less (a rise of 51~ns). A pull-up that
 stiff needs drivers that can sink 3.8~mA, which the DUART cannot (it sinks 2.4~mA), so it drives \activelow{BACK} only through its
-buffer. The sink capability of SIRCADA and SIRCAS, and so the pull-up value, are not yet specified. The interrupt lines
+buffer. SIRCADA and SIRCAS sink 8~mA at 0.4~V on their open-drain outputs (their manuals, electrical characteristics), so the pull-up of 1.2~k$\Omega$ is within their reach. The interrupt lines
 rise more slowly without harm, except for \activelow{NMI}, whose pulse is one cycle long.
 
 \subsection{Unused CPU Inputs}

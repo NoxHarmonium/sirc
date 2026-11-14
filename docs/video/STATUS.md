@@ -80,8 +80,8 @@ simulator or a decision to be made; the manual describes the intended behaviour.
   horizontal pulse of 100 master clocks; vertical sync in three lines, 245 to 247, one long pulse in each, no equalising
   pulses); and the converter and supply pins. The video memory is external static memory (changed by the SIRCUS design: 34 more signals, 79 in all); the palette and
   sprite table are inside the package, and the package and pin numbers are not yet specified.
-  Electrical characteristics (levels, delays, frequency range, current, thermal) are not yet specified, as in the
-  hardware manual.
+  Electrical characteristics are now provisional targets (levels, 25 ns output delay, 10 ns set-up, CLKI 10.6 to 10.8 MHz,
+  video memory access time 50 ns or less), the same as the CPU's; current, power and thermal are not yet specified.
 - **DMA.** A DMA transfer into video memory is subject to the same rule as the CPU, and DMA blocks interrupts, the `NMI#`
   included, so programs keep transfers short and away from line 224.
 

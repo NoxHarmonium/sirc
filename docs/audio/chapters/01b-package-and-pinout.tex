@@ -117,8 +117,9 @@ own and the CPU's (Section~\ref{sec:cpu-slots}), in a fixed pattern of slots, so
 the sound processor for the memory.
 
 Every memory transaction, a read or a write, occupies two \texttt{CLKI} cycles, which is 186 ns. The memory must
-therefore complete an access within two cycles. The electrical details of the interface, the set-up and hold times of
-the address and data and the timing of \activelow{MCE}, \activelow{MOE} and \activelow{MWE}, are not yet specified.
+therefore complete an access within two cycles. The electrical figures of the interface are in
+Section~\ref{sec:electrical}; the timing of \activelow{MCE}, \activelow{MOE} and \activelow{MWE} within an access is
+not yet specified.
 
 \subsection{Converter Interface (BCLK, WS, SD, SCK)}
 \label{sec:converter-interface}
@@ -127,3 +128,38 @@ The device is the master of the serial interface to the converter. It sends the 
 \texttt{SD}, with \texttt{WS} low for the left channel and high for the right, and \texttt{BCLK} clocking the bits
 (Chapter~\ref{ch:signal-timing}). \texttt{SCK} is a clock for converters that need a system clock in addition to the
 bit clock; its frequency and phase relation to \texttt{BCLK} are not yet specified.
+
+\section{Electrical Characteristics}
+\label{sec:electrical}
+
+The figures in this section are provisional. They are targets the device is designed to meet, and will be confirmed or
+revised when it is characterised. They are the same as those of the CPU (\hwmanual{}, electrical characteristics
+chapter), so that the three devices fit together on one bus. The supply is 5~V $\pm$ 5\%, the signals are TTL
+compatible, and all figures apply over 0 to 70~\textdegree{}C. Times are measured from or to the 1.4~V point of the
+rising edge of \texttt{CLKI}, with the outputs loaded by 50~pF.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{p{7.6cm}lrrl}
+		\toprule
+		\textbf{Parameter}                                                                         & \textbf{Symbol}    & \textbf{Min} & \textbf{Max} & \textbf{Unit} \\
+		\midrule
+		\texttt{CLKI} frequency                                                                    & $f_{CLKI}$         & 9.0          & 12.0         & MHz           \\
+		\texttt{CLKI} high time and low time                                                       & $t_{CH}$, $t_{CL}$ & 35           &              & ns            \\
+		Input high voltage, input low voltage                                                      &                    & 2.0, 0       & VCC, 0.8     & V             \\
+		Output high voltage ($I_{OH} = -400~\mu$A), output low voltage ($I_{OL} = 4$~mA)           &                    & 2.4          & 0.4          & V             \\
+		Low level of an open-drain output, $I_{OL} = 8$~mA                                         &                    &              & 0.4          & V             \\
+		Input capacitance                                                                          &                    &              & 10           & pF            \\
+		\midrule
+		Bus inputs (A, D on a write, BRW, \activelow{CS}, \activelow{BAS}): set-up before the edge & $t_{IS}$           & 10           &              & ns            \\
+		Bus inputs: hold after the edge                                                            & $t_{IH}$           & 0            &              & ns            \\
+		Read data and \activelow{BACK} valid after \activelow{CS} and \activelow{BAS} asserted     & $t_{AV}$           &              & 35           & ns            \\
+		Read data float, after the edge that ends a read                                           & $t_{OZ}$           &              & 25           & ns            \\
+		Output hold                                                                                & $t_{OH}$           & 3            &              & ns            \\
+		\bottomrule
+	\end{tabular}
+	\caption{AC and DC Characteristics}
+	\label{tab:electrical}
+\end{table}
+
+\noindent The memory interface outputs (MA, MCE, MOE, MWE and MD on a write) are valid within 25~ns of the edge that starts the access, and are held for 3~ns, and the read data has 10~ns of set-up before the edge that ends it, with no hold. An access takes two cycles, 186~ns, so the memory's address access time may be at most 140~ns, with 5~ns left for the board. At 12~MHz an access is 167~ns and the limit is 120~ns.
