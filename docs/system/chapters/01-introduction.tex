@@ -48,7 +48,7 @@ SIRCUS has three chips that matter to a program, each on the one 16-bit bus, and
 		Output amplifiers & Not yet specified           & Turn the converter's currents into voltages (a reference circuit uses two NE5534 or equivalent) \\
 		Working memory    & Not yet specified           & 128 KB (65,536 words) of RAM for the program's data and stack                                   \\
 		System ROM        & Not yet specified           & Holds the start-up code and the driver routines that programs call                              \\
-		Cartridge         & Connector not yet specified & Holds a game's program and data in a ROM; the system ROM starts it                              \\
+		Cartridge         & Connector not yet specified & Holds a game's program and data in a ROM; its first words are the reset vector                  \\
 		Select logic      & Not yet specified           & Makes each chip select from the high address bits, and holds the boot overlay                   \\
 		Clock circuit     & Not yet specified           & Makes the master clock and divides it by two to make \texttt{CLKI}                              \\
 		\bottomrule

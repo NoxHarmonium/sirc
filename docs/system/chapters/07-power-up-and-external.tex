@@ -16,22 +16,23 @@ The program then has a console in the following state, and it sets up each part 
 	\centering
 	\begin{tabular}{lp{8.4cm}}
 		\toprule
-		\textbf{Part}  & \textbf{State at the start of the program}                                                                                                         \\
+		\textbf{Part}  & \textbf{State at the start of the program}                                                                                                                                   \\
 		\midrule
-		CPU            & At the reset vector in the system ROM, with its registers as the architecture defines them (\archmanual{}, exceptions chapter)                     \\
-		SIRCADA        & Blank, in Mode 1, every writable register zero except those the registers chapter lists (\videomanual{})                                           \\
-		SIRCAS         & Silent: the output is disabled, the registers hold their reset values, and the audio memory holds nothing the program can rely on (\audiomanual{}) \\
-		Working memory & Not yet specified                                                                                                                                  \\
+		CPU            & At the address in the reset vector, by convention the system ROM's start-up routine, with its registers as the architecture defines them (\archmanual{}, exceptions chapter) \\
+		SIRCADA        & Blank, in Mode 1, every writable register zero except those the registers chapter lists (\videomanual{})                                                                     \\
+		SIRCAS         & Silent: the output is disabled, the registers hold their reset values, and the audio memory holds nothing the program can rely on (\audiomanual{})                           \\
+		Working memory & Not yet specified                                                                                                                                                            \\
 		\bottomrule
 	\end{tabular}
 	\caption{State After Reset}
 	\label{tab:reset-state}
 \end{table}
 
-The CPU's first instructions are in the system ROM, which answers at the low words because the boot overlay is set. Its
-start-up code clears the overlay, writes the default vectors into the working memory, sets the system up and then jumps
-to the program on the cartridge (Section~\ref{sec:boot-overlay}). What the code sets up, and the address it jumps to,
-are not yet specified.
+At reset the CPU fetches its reset vector through the boot overlay, from the cartridge, or from the system ROM if there
+is no cartridge (Section~\ref{sec:boot-overlay}). By convention the vector holds the address of the system ROM's
+start-up routine. The routine clears the overlay, writes the default vectors into the working memory, sets the system
+up and then jumps to the program on the cartridge. A game may set the vector to its own boot code instead. What the
+routine sets up, and the address it jumps to, are not yet specified.
 
 \subsection{Order of Setting Up}
 

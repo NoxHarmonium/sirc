@@ -40,19 +40,11 @@ they answer it with data and \activelow{BACK}.
 \section{Selecting a Device}
 \label{sec:selecting}
 
-The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. SIRCUS has no
-decoder. Each device is selected by an address bit wired straight to its chip select, so the bit that selects a device
-is the one that is set in its segment number. A device is wired to no other address bit above its own 16, so it answers
-at every address in which its selecting bit is set, and its segment repeats at every segment above it.
-
-The \activelow{CS} input of SIRCAS is active low, so A23 reaches it through an inverter. SIRCAS then answers whenever
-A23 is set, and its first segment is \texttt{0x80}. A device also needs \activelow{BAS} to be asserted: it answers a
-cycle only when its \activelow{CS} and \activelow{BAS} are both asserted, and it never drives the data bus at any other
-time.
-
-A program uses one segment of each device and does not use an address in which the selecting bits of two devices are
-both set: both would answer, and both would drive the data bus. The bits that select the other devices and the memories
-are not yet specified.
+The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. The system's select
+logic watches these bits and \activelow{BAS}, and asserts the \activelow{CS} of the device that owns the segment for
+the whole of the cycle. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never
+drives the data bus. The select logic also holds the boot overlay (Section~\ref{sec:boot-overlay}). What it is built
+from, its delay and any other inputs it takes are not yet specified.
 
 \section{The Address Map}
 \label{sec:address-map}
@@ -61,14 +53,14 @@ are not yet specified.
 	\centering
 	\begin{tabular}{llp{6cm}}
 		\toprule
-		\textbf{Segment}  & \textbf{Device}                & \textbf{Notes}                                                                                                                                           \\
+		\textbf{Segment}  & \textbf{Device}             & \textbf{Notes}                                                                                                       \\
 		\midrule
-		\texttt{0x00}     & Working memory or system ROM   & The system ROM while the boot overlay is set, the 128 KB of working memory after it                                                                      \\
-		Not yet specified & System ROM, at its own segment & Always visible, so its routines can be called after the overlay is cleared                                                                               \\
-		Not yet specified & Cartridge                      & The program and data of the game; the connector and the segments are not yet specified                                                                   \\
-		\texttt{0x0C}     & SIRCADA                        & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter)                                                                   \\
-		\texttt{0x80}     & SIRCAS                         & Selected by A23, so it also answers in \texttt{0x81} to \texttt{0xFF}; registers and the window to the audio memory (\audiomanual{}, memory map chapter) \\
-		Others            & ---                            & Not yet specified                                                                                                                                        \\
+		\texttt{0x00}     & Cartridge or working memory & The cartridge while the boot overlay is set (the system ROM if there is none), the 128 KB of working memory after it \\
+		Not yet specified & System ROM                  & Its own segment: the start-up routine and the driver routines                                                        \\
+		Not yet specified & Cartridge                   & Its own segment: the program and data of the game; the connector is not yet specified                                \\
+		\texttt{0x0C}     & SIRCADA                     & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter)                               \\
+		\texttt{0x80}     & SIRCAS                      & Registers and the window to the audio memory (\audiomanual{}, memory map chapter)                                    \\
+		Others            & ---                         & Not yet specified                                                                                                    \\
 		\bottomrule
 	\end{tabular}
 	\caption{The SIRCUS Address Map}
@@ -81,25 +73,26 @@ are not yet specified.
 The CPU fetches its reset vector, and every other exception vector, from a table at words \texttt{0x0000} to
 \texttt{0x01FF} of the address space, which cannot be moved (\archmanual{}, exceptions chapter). The same table holds
 the vectors of the interrupts and of the traps, among them the handlers for the vertical sync and line-compare
-interrupts of the display adapter and for the completion interrupt of SIRCAS. The table must be in ROM when the system
-starts, because the reset vector is the first entry. It must be in RAM when a program runs, so that the program can
-write its own handlers. A \emph{boot overlay} provides both:
+interrupts of the display adapter and for the completion interrupt of SIRCAS. The table must come from a ROM when the
+system starts, because the reset vector is the first entry. It must be in RAM when a program runs, so that the program
+can write its own handlers. A \emph{boot overlay} provides both:
 
 \begin{itemize}
-	\item While the overlay is set, the system ROM answers at segment \texttt{0x00}, and the working memory does not.
+	\item While the overlay is set, the cartridge answers at segment \texttt{0x00}, and the working memory does not. If no
+	      cartridge is present, the system ROM answers there instead.
 	\item Reset sets the overlay. \activelow{RSTO} is wired to it, so a software reset sets it too.
 	\item A write to the system ROM's own segment clears the overlay. The ROM ignores the write itself. From then on the working
-	      memory answers at segment \texttt{0x00}, and the system ROM answers only at its own segment.
+	      memory answers at segment \texttt{0x00}, and the cartridge and the system ROM answer only at their own segments.
 \end{itemize}
 
-The overlay is one latch and a few gates. The system ROM's start-up code runs from the low words, jumps to the same
-code at the ROM's own segment, clears the overlay by writing there, and writes the default vector table into the
-working memory. It then sets the system up and jumps to the program on the cartridge (Section~\ref{sec:system-start}).
+The first entry of the vector table, words 0 and 1 of the cartridge, is the reset vector. A cartridge sets it to the
+address of the system ROM's start-up routine. The routine clears the overlay, writes the default vectors into the
+working memory, sets the system up and jumps to the program on the cartridge (Section~\ref{sec:system-start}).
 
-From that point the program owns the vector table. It may overwrite the whole table, and a program that wants to do
-without the system ROM altogether need never call it again. The ROM stays readable at its own segment for programs that
-do use its driver routines. Where the system ROM and the cartridge sit in the address space, and the logic that selects
-the memories, are not yet specified.
+A game that wants its own boot code sets the reset vector to the address of that code instead. Nothing forces it to use
+the ROM. It clears the overlay itself with the same write, writes its own vector table, and need never call the ROM
+again. The ROM stays readable at its own segment for programs that do use its driver routines. Where the system ROM and
+the cartridge sit in the address space, how a cartridge is detected, and the select logic are not yet specified.
 
 The contents of the system ROM, its start-up sequence and the interface to its driver routines are not described in
 this manual.

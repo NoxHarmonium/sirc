@@ -26,13 +26,13 @@
 	\centering
 	\begin{tabular}{ll}
 		\toprule
-		\textbf{Segment}  & \textbf{Device}                                   \\
+		\textbf{Segment}  & \textbf{Device}                                  \\
 		\midrule
-		\texttt{0x00}     & System ROM at reset, then working memory (128 KB) \\
-		Not yet specified & System ROM, own segment                           \\
-		Not yet specified & Cartridge                                         \\
-		\texttt{0x0C}     & SIRCADA                                           \\
-		\texttt{0x80}     & SIRCAS (A23 set)                                  \\
+		\texttt{0x00}     & Cartridge at reset, then working memory (128 KB) \\
+		Not yet specified & System ROM, own segment                          \\
+		Not yet specified & Cartridge                                        \\
+		\texttt{0x0C}     & SIRCADA                                          \\
+		\texttt{0x80}     & SIRCAS                                           \\
 		\bottomrule
 	\end{tabular}
 	\caption{Address Map Summary}
