@@ -35,5 +35,6 @@ architecture manual with `\archmanual{}` and name the chapter, not its number.
 
 ## Status
 
-Electrical characteristics (voltage levels, clock range, setup/hold, loading) are not specified yet and are listed as
-such in the last chapter. Do not invent values for them.
+Electrical characteristics (voltage levels, clock range, output delay, set-up and hold, loading) are provisional targets,
+my best guess from late-1980s CMOS CPUs, and are marked as such in the last chapter. Supply current, power and the
+package are not specified yet. Do not invent values for those.

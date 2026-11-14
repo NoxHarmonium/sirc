@@ -1,19 +1,71 @@
 \chapter{Electrical Characteristics}
 \label{ch:electrical-characteristics}
 
-The only electrical requirement currently specified is the supply: VCC1 and VCC2 must be connected to 5~V $\pm$ 5\% and
-GND1 and GND2 to the 0~V rail (see Chapter~\ref{ch:signal-descriptions}).
+The supply is 5~V $\pm$ 5\%: VCC1 and VCC2 are connected to it and GND1 and GND2 to the 0~V rail (see
+Chapter~\ref{ch:signal-descriptions}). The figures in this chapter are provisional. They are targets the device is
+designed to meet, and will be confirmed or revised when the device is characterised. All of them apply over the supply
+range above and an ambient temperature of 0 to 70~\textdegree{}C.
 
-The bus timing in this manual is cycle-level logical timing, measured in CLKI cycles. The following characteristics are
-not yet specified and will be added to this chapter when they are:
+\section{DC Characteristics}
+
+The signals are TTL compatible.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrrl}
+		\toprule
+		\textbf{Parameter}        & \textbf{Conditions}  & \textbf{Min} & \textbf{Max} & \textbf{Unit} \\
+		\midrule
+		Input high voltage        &                      & 2.0          & VCC          & V             \\
+		Input low voltage         &                      & 0            & 0.8          & V             \\
+		Output high voltage       & $I_{OH} = -400~\mu$A & 2.4          &              & V             \\
+		Output low voltage        & $I_{OL} = 4$~mA      &              & 0.4          & V             \\
+		Input leakage             & Input at 0 V or VCC  & $-10$        & 10           & $\mu$A        \\
+		Input capacitance         &                      &              & 10           & pF            \\
+		Maximum load on an output &                      &              & 50           & pF            \\
+		\bottomrule
+	\end{tabular}
+	\caption{DC Characteristics}
+	\label{tab:dc-characteristics}
+\end{table}
+
+\section{AC Characteristics}
+
+Every time is measured from or to the 1.4~V point of the rising edge of \texttt{CLKI}, with the outputs loaded by
+50~pF. The edge is the one that begins or ends a bus cycle (Section~\ref{sec:clock-edges}). Outputs change after the
+edge that starts a cycle, and inputs are sampled at the edge that ends it.
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{llrrl}
+		\toprule
+		\textbf{Parameter}                                                                                                                      & \textbf{Symbol} & \textbf{Min} & \textbf{Max} & \textbf{Unit} \\
+		\midrule
+		\texttt{CLKI} frequency                                                                                                                 & $f_{CLKI}$      & 9.0          & 12.0         & MHz           \\
+		\texttt{CLKI} high time                                                                                                                 & $t_{CH}$        & 35           &              & ns            \\
+		\texttt{CLKI} low time                                                                                                                  & $t_{CL}$        & 35           &              & ns            \\
+		\midrule
+		Output valid: A0--A23, \activelow{BAS}, BRW, BAT0--BAT2, SYNC, PROT, D0--D15 (write), \activelow{RSTO}                                  & $t_{OV}$        &              & 25           & ns            \\
+		Output hold                                                                                                                             & $t_{OH}$        & 3            &              & ns            \\
+		D0--D15 float, after the edge that ends a write                                                                                         & $t_{OZ}$        &              & 25           & ns            \\
+		\midrule
+		Input set-up before the edge: D0--D15, \activelow{BACK}, \activelow{BERR}, \activelow{BPER}                                             & $t_{IS}$        & 10           &              & ns            \\
+		Input set-up before the edge: \activelow{IRQ1}--\activelow{IRQ4}, \activelow{NMI}, \activelow{HALT}, \activelow{TRCE}, \activelow{RSTI} & $t_{IS}$        & 10           &              & ns            \\
+		Input hold after the edge                                                                                                               & $t_{IH}$        & 0            &              & ns            \\
+		\bottomrule
+	\end{tabular}
+	\caption{AC Characteristics}
+	\label{tab:ac-characteristics}
+\end{table}
+
+\noindent The CPU itself uses $t_{OV} + t_{IS} = 35$~ns of every access. The address, the select and the memory share the
+rest: 58~ns of a one-cycle access (93.1~ns at 10.74~MHz), and a further 93.1~ns for each wait state.
+
+\section{Not Yet Specified}
+
+The following are not yet specified and will be added to this chapter when they are:
 
 \begin{itemize}
-	\item Input and output voltage levels
-	\item Clock frequency range
-	\item Setup, hold and propagation delay times
-	\item Fanout and maximum board loading
 	\item Supply current and power dissipation
 	\item Package dimensions and thermal characteristics
 \end{itemize}
-
-Until then, designs must not assume any value for these characteristics.

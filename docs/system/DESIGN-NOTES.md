@@ -89,3 +89,9 @@ video memory 200 mA, audio memory 50 mA, DUART 150 mA, converter 50 mA, glue log
 150 mA each (assumed), and 40 mA of controllers and op-amps: about 1.39 A, 6.95 W. A linear regulator from 12 V would lose 9.7 W.
 A switching regulator at 82 percent loses 1.5 W and draws 0.7 A at 12 V. Adding the encoder's 0.72 W gives about 9 W, so a 12 V 1 A
 adapter. It is regulated because the MC1377 must not see more than 14 V, which an unregulated adapter gives at light load.
+
+## Where the timing figures come from
+
+* 74LS138: the National Semiconductor datasheet of June 1989 (supplied). Select or enable to output, three levels of logic, high to low: 40 ns at 50 pF and 28 ns at 15 pF. Outputs sink 8 mA.
+* 74ALS138: 20 ns, from memory of the Texas Instruments datasheet. Not yet checked.
+* CPU, SIRCADA and SIRCAS: targets, not measurements: outputs valid in 25 ns, inputs need 10 ns of set-up. The CPU's are in `docs/hardware`, chapter 6. They are in the range of early-1990s CMOS CPUs, as I recall them (a 68020-class part at 25 MHz was about 25 ns and 5 to 10 ns). An FPGA implementation will meet them inside the chip, but its pins and any level shifting to 5 V parts add a few nanoseconds.
