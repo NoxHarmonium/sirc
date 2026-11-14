@@ -130,7 +130,9 @@ Around the decoder are a few small circuits that connect what the chips cannot c
 SIRCADA and SIRCAS assert \activelow{BACK} themselves. The memories and the cartridge cannot, and the DUART's
 \activelow{DTACK} is re-timed (Section~\ref{sec:serial-device}). A wait-state generator, a 74LS164 shift register
 clocked by \texttt{CLKI}, starts when \activelow{BAS} is asserted with the select of a memory, and asserts
-\activelow{BACK} through an open-collector gate after a fixed number of cycles:
+\activelow{BACK} through an open-collector gate after a fixed number of cycles. \activelow{BAS} stays low from one
+transfer to the next in a two-word fetch, so the register restarts in the cycle after every one in which it has
+asserted \activelow{BACK}, and not when \activelow{BAS} rises:
 
 \begin{table}[H]
 	\centering
@@ -138,19 +140,19 @@ clocked by \texttt{CLKI}, starts when \activelow{BAS} is asserted with the selec
 		\toprule
 		\textbf{Memory} & \textbf{Wait states} & \textbf{Cycles of an access} & \textbf{Part needed} \\
 		\midrule
-		Working memory  & 1                    & 2 (186 ns)                   & 100 ns or better     \\
-		System ROM      & 1                    & 2 (186 ns)                   & 100 ns or better     \\
-		Cartridge       & 2                    & 3 (279 ns)                   & 200 ns or better     \\
+		Working memory  & 1                    & 2 (186 ns)                   & 70 ns or better      \\
+		System ROM      & 1                    & 2 (186 ns)                   & 70 ns or better      \\
+		Cartridge       & 2                    & 3 (279 ns)                   & 150 ns or better     \\
 		\bottomrule
 	\end{tabular}
 	\caption{Wait States of the Memories}
 	\label{tab:wait-states}
 \end{table}
 
-\noindent The part needed leaves the rest of the cycle for the delay of the decoder and the set-up time of the CPU. Read data
+\noindent The part needed leaves the rest of the cycle for the delay of the decoder and the set-up time of the CPU (Section~\ref{sec:margins}). Read data
 must be valid when the CPU samples it, at the end of the cycle. A write to the system ROM's region is acknowledged in the same
 way, and the ROM ignores it: it clears the boot overlay (Section~\ref{sec:boot-overlay}). Zero wait states would need a faster
-decoder and 55~ns memory, and would speed up every instruction (Section~\ref{sec:cpu-budget}).
+decoder and memory of 25~ns or less, and would speed up every instruction (Section~\ref{sec:cpu-budget}).
 
 \subsection{Unmapped Regions}
 
@@ -159,9 +161,9 @@ to \texttt{0xC0} to \texttt{0xFF} asserts it, and the CPU raises a bus fault at 
 
 \subsection{Pull-ups}
 
-\activelow{BACK} must rise above the input-high level within about a third of a cycle after the last driver lets go, or the next
-cycle will see a stale \activelow{BACK}. For a net of about 100~pF that needs a pull-up of 1.5~k$\Omega$ or less. A pull-up that
-stiff needs drivers that can sink 3.3~mA, which the DUART cannot (it sinks 2.4~mA), so it drives \activelow{BACK} only through its
+\activelow{BACK} must rise above the input-high level within about two thirds of a cycle (60~ns) after the last driver lets go, or the next
+cycle will see a stale \activelow{BACK}. For a net of about 100~pF that needs a pull-up of 1.2~k$\Omega$ or less (a rise of 51~ns). A pull-up that
+stiff needs drivers that can sink 3.8~mA, which the DUART cannot (it sinks 2.4~mA), so it drives \activelow{BACK} only through its
 buffer. The sink capability of SIRCADA and SIRCAS, and so the pull-up value, are not yet specified. The interrupt lines
 rise more slowly without harm, except for \activelow{NMI}, whose pulse is one cycle long.
 
