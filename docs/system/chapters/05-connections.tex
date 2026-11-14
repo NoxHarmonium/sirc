@@ -121,12 +121,95 @@ One 74LS138 decoder makes every chip select (Section~\ref{sec:selecting}).
 produces \activelow{BACK}, are not yet specified.
 
 \section{The Serial Device}
+\label{sec:serial-device}
 
 The serial device is a basic serial port. Its purpose is to link a console to another console for two-player games, to
-a modem, or to a debugger. The part is the Motorola MC68681 DUART, which has two channels, so one can serve the link
-and the other a modem or a debugger. Its signals, its speed and its connectors are not yet specified. It takes its
-\activelow{CS} from output Y5 of the decoder and the signals of the shared bus (Table~\ref{tab:shared-nets}), and it
-needs an interrupt (Chapter~\ref{ch:interrupts}).
+a modem, or to a debugger. It is a Motorola MC68681 DUART, a dual universal asynchronous receiver/transmitter in a
+40-pin DIP, made for the M68000 family's asynchronous bus. It has two channels, so one can serve the link and the other
+a modem or a debugger, with a 6-bit input port, an 8-bit output port, a counter/timer and its own baud-rate generator.
+It needs a single +5 V supply, and draws at most 150 mA.
+
+\subsection{Connections}
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{llp{6.2cm}}
+		\toprule
+		\textbf{DUART pin}     & \textbf{Name}      & \textbf{Connection}                                                                  \\
+		\midrule
+		1, 3, 5, 6             & RS1, RS2, RS3, RS4 & CPU A0, A1, A2, A3: register $n$ is at word offset $n$                               \\
+		8                      & R/\activelow{W}    & BRW                                                                                  \\
+		35                     & \activelow{CS}     & Decoder output Y5                                                                    \\
+		25, 16, 24, 17         & D0, D1, D2, D3     & CPU D0, D1, D2, D3                                                                   \\
+		23, 18, 22, 19         & D4, D5, D6, D7     & CPU D4, D5, D6, D7                                                                   \\
+		9                      & \activelow{DTACK}  & \activelow{BACK}, re-timed (see below)                                               \\
+		21                     & \activelow{IRQ}    & CPU \activelow{IRQ1} or \activelow{IRQ2}; open drain, pulled up                      \\
+		37                     & \activelow{IACK}   & $+5$ V: the CPU has no interrupt-acknowledge cycle                                   \\
+		34                     & \activelow{RESET}  & \activelow{RSTO}, stretched (see below)                                              \\
+		32, 33                 & X1/CLK, X2         & A 3.6864 MHz crystal, with about 10 to 15 pF from X1 to ground and 0 to 5 pF from X2 \\
+		30, 31                 & TxDA, RxDA         & Channel A connector, through the level circuit                                       \\
+		11, 10                 & TxDB, RxDB         & Channel B connector, through the level circuit                                       \\
+		7, 4                   & IP0, IP1           & \activelow{CTSA}, \activelow{CTSB} if the connectors carry handshakes                \\
+		29, 12                 & OP0, OP1           & \activelow{RTSA}, \activelow{RTSB} if the connectors carry handshakes                \\
+		2, 36, 39, 38          & IP3, IP2, IP4, IP5 & Not yet specified                                                                    \\
+		28, 13, 27, 14, 26, 15 & OP2 to OP7         & Not yet specified                                                                    \\
+		40, 20                 & VCC, GND           & $+5$ V, ground                                                                       \\
+		\bottomrule
+	\end{tabular}
+	\caption{Serial Device Connections}
+	\label{tab:serial-nets}
+\end{table}
+
+\noindent The DUART has 16 registers, which fill the first 16 words of its region, and it drives only the low eight bits of
+the data bus. A read returns the register in D0 to D7, and the upper half is not driven, so a program masks it. With the
+crystal, the baud-rate generator gives 18 standard rates from 50 to 38,400 baud for each receiver and transmitter, and the
+counter/timer can make others.
+
+\subsection{Bus Timing and BACK}
+
+The DUART answers a cycle with \activelow{DTACK}, an open-drain output, which it asserts in step with its own clock and
+not with \texttt{CLKI}. Its read and write cycles need these:
+
+\begin{table}[H]
+	\centering
+	\small
+	\begin{tabular}{p{5.2cm}p{2.4cm}p{4.6cm}}
+		\toprule
+		\textbf{Parameter}                                        & \textbf{DUART needs}                         & \textbf{SIRCUS gives}                              \\
+		\midrule
+		\activelow{CS} asserted                                   & 205 ns or more                               & Until \activelow{BACK} is accepted                 \\
+		\activelow{CS} negated between cycles                     & 90 ns or more                                & One idle cycle between bus cycles, 93 ns           \\
+		R/\activelow{W} and RS1--RS4 set-up before \activelow{CS} & 10 ns or more                                & Valid for the whole cycle                          \\
+		\activelow{CS} set-up before X1/CLK rises                 & 90 ns, or \activelow{DTACK} is a clock later & Not controlled                                     \\
+		\activelow{DTACK} asserted from X1/CLK rising             & 125 ns or less                               & ---                                                \\
+		Write data set-up before \activelow{CS} negated           & 100 ns or more                               & Valid for the whole cycle                          \\
+		\activelow{RESET} pulse                                   & 1.0 $\mu$s or more                           & 6 cycles, 559 ns, from \activelow{RSTO}: see below \\
+		X1/CLK                                                    & 2.0 to 4.0 MHz                               & 3.6864 MHz from the crystal                        \\
+		\bottomrule
+	\end{tabular}
+	\caption{Serial Device Timing}
+	\label{tab:serial-timing}
+\end{table}
+
+\noindent Because \activelow{DTACK} follows the DUART's clock, a cycle to the DUART takes up to one X1/CLK period, 271 ns, plus
+up to 125 ns, and 271 ns more if the set-up time is missed: at most 667 ns, 8 cycles of \texttt{CLKI}. \activelow{DTACK} is not
+synchronous to \texttt{CLKI}, so a flip-flop on \texttt{CLKI} re-times it, and an open-collector gate drives \activelow{BACK}.
+That adds one cycle, so an access to the serial device takes 2 to 9 cycles. The CPU holds the address and the strobe until
+\activelow{BACK}.
+
+\subsection{Reset}
+
+The DUART's \activelow{RESET} needs a pulse of at least 1.0~$\mu$s, and no clock is needed for it. \activelow{RSTO} is
+asserted for only six cycles, 559 ns, after a software reset, which is too short, so a circuit stretches the pulse. At
+power-up \activelow{RSTI} is held longer and needs no help. A reset puts the output port high, clears the status and
+interrupt registers, and holds both transmitters in the mark state.
+
+\subsection{Levels}
+
+The DUART's signals are TTL levels. A link between two consoles may use them as they are over a short cable. A modem or
+an ordinary serial port needs RS-232 levels, from a level circuit that is not yet specified, and which may need further
+supplies. The connectors, the handshake lines they carry and the speed range of the link are not yet specified.
 
 \section{SIRCAS and the Audio Memory}
 \label{sec:audio-memory-wiring}

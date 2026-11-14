@@ -65,7 +65,7 @@ and no device shares one.
 		Y2              & 010               & \texttt{0x40}--\texttt{0x5F} & Cartridge       & The program and data of the game                                                       \\
 		Y3              & 011               & \texttt{0x60}--\texttt{0x7F} & SIRCADA         & Registers, palette, sprite table and video memory (\videomanual{}, memory map chapter) \\
 		Y4              & 100               & \texttt{0x80}--\texttt{0x9F} & SIRCAS          & Registers and the window to the audio memory (\audiomanual{}, memory map chapter)      \\
-		Y5              & 101               & \texttt{0xA0}--\texttt{0xBF} & Serial I/O      & Not yet specified beyond the region                                                    \\
+		Y5              & 101               & \texttt{0xA0}--\texttt{0xBF} & Serial I/O      & The 16 registers of the DUART, at the first 16 words                                   \\
 		Y6              & 110               & \texttt{0xC0}--\texttt{0xDF} & ---             & Not yet specified                                                                      \\
 		Y7              & 111               & \texttt{0xE0}--\texttt{0xFF} & ---             & Not yet specified                                                                      \\
 		\bottomrule
@@ -133,7 +133,7 @@ chapter).
 		Working memory                                         & Not yet specified &                                       \\
 		System ROM                                             & Not yet specified &                                       \\
 		Cartridge                                              & Not yet specified &                                       \\
-		Serial I/O                                             & Not yet specified &                                       \\
+		Serial I/O                                             & 2 to 9            & Section~\ref{sec:serial-device}       \\
 		\bottomrule
 	\end{tabular}
 	\caption{Bus Cycle Lengths}

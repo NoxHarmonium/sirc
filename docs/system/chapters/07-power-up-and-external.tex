@@ -63,8 +63,9 @@ amplifiers, the filter, the output stage and the connector are not yet specified
 \section{Other Connections}
 
 The serial port leaves the console on a connector. It links the console to another console, to a modem or to a
-debugger. The signal levels, the speed and the connector are not yet specified. The cartridge connector, the controller
-ports and the physical form of the console are not yet specified either.
+debugger. Its levels are described in Section~\ref{sec:serial-device}. The connector, the handshake lines and the speed
+range are not yet specified. The cartridge connector, the controller ports and the physical form of the console are not
+yet specified either.
 
 \section{Power}
 \label{sec:power}
@@ -93,4 +94,5 @@ The converter needs three supplies, and they are the only ones this manual can s
 \noindent The analogue and digital grounds, pins 5 and 14, are joined, and must not differ by more than 0.3~V. The part
 dissipates about 700~mW. The $-15$~V supply passes the most ripple to the output: the converter rejects 100~Hz ripple by
 58~dB on it, against 76~dB on the $+5$~V supply and 84~dB on the $-5$~V supply, so it is the one that needs the quietest
-regulation. A supply for the output amplifiers is also needed, and is not yet specified.
+regulation. A supply for the output amplifiers is also needed, and is not yet specified. The serial device, the MC68681, takes $+5$~V
+at up to 150~mA.
