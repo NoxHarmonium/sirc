@@ -8,7 +8,9 @@ shared, and the deadlines that the pattern sets. Chapter~\ref{ch:signal-timing} 
 
 The system oscillator of an NTSC system runs at 21,477,272 Hz. The device is clocked at half that rate by
 \texttt{CLKI}, 10,738,636 Hz, a period of 93.1 ns. Everything the device does is a whole number of \texttt{CLKI}
-cycles.
+cycles. The system oscillator of a PAL system runs at 21,281,370 Hz, so its \texttt{CLKI} is 10,640,685 Hz, a period of
+94.0 ns. The figures in Table~\ref{tab:periods} are for an NTSC system; Section~\ref{sec:clock-rate} gives the PAL
+values.
 
 \begin{table}[H]
 	\centering
@@ -73,6 +75,10 @@ frequency builds its tables for the clock of the system it runs on. A program th
 clock plays every note sharp or flat in the ratio of the two clocks, by the amount in the last row of
 Table~\ref{tab:clock-range} at the ends of the range. The tempo of a sequence changes by the same ratio. A program that
 must keep time with the display, for example, counts display frames and not sequencer ticks.
+
+In a PAL system the sample rate is 31,668.7~Hz, the ratio of the two clocks is 0.9909, and every note is 15.9 cents
+flat of the same note in an NTSC system. Every time the device keeps, from an envelope update of 2.021~ms to a tick, is
+0.9\% longer.
 
 \subsection{What the Rest of the System Must Provide}
 

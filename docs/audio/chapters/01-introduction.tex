@@ -42,20 +42,20 @@ instructions in audio memory with no help from the CPU. The mixed result leaves 
 	\centering
 	\begin{tabular}{lp{9cm}}
 		\toprule
-		\textbf{Property} & \textbf{Value}                                                                                                        \\
+		\textbf{Property} & \textbf{Value}                                                                                                                                       \\
 		\midrule
-		Voices            & Six, each playing signed 8-bit samples by nearest-sample lookup (no interpolation)                                    \\
-		Sample rate       & 31,960.226 Hz: one output sample every 336 \texttt{CLKI} cycles                                                       \\
-		Audio memory      & 32,768 words (64 KB) of external static memory, dedicated to the device (Chapter~\ref{ch:package})                    \\
-		Pitch             & 16.16 fixed-point step; A 12-entry pitch table for each instrument; notes 0--119 (Chapter~\ref{ch:playback})          \\
-		Envelope          & 12-bit linear attack, decay, sustain and release, one step every 64 samples (Chapter~\ref{ch:envelope})               \\
-		Mixer             & Per-voice volume (8 bits) and pan (8 bits), master volume, 20-bit accumulators (Chapter~\ref{ch:mixer})               \\
-		Modulation        & Any voice can modulate pitch, volume, pan, filter cutoff, filter pan or master volume (Chapter~\ref{ch:modulation})   \\
-		Filter            & One shared two-pole state-variable filter: low-pass, band-pass or high-pass (Chapter~\ref{ch:filter})                 \\
-		Sequencers        & Six, one per voice, with a shared tick; 16-bit instructions (Chapter~\ref{ch:sequencer})                              \\
-		Output            & Stereo, signed 16 bits, serial (I\textsuperscript{2}S framing) to an external converter                               \\
-		Interrupts        & One: sequence completion (\activelow{IRQ3})                                                                           \\
-		Clock             & \texttt{CLKI}, 10,738,636 Hz in an NTSC system (half the 21,477,272 Hz system oscillator); works from 9.0 to 12.0 MHz \\
+		Voices            & Six, each playing signed 8-bit samples by nearest-sample lookup (no interpolation)                                                                   \\
+		Sample rate       & 31,960.226 Hz: one output sample every 336 \texttt{CLKI} cycles                                                                                      \\
+		Audio memory      & 32,768 words (64 KB) of external static memory, dedicated to the device (Chapter~\ref{ch:package})                                                   \\
+		Pitch             & 16.16 fixed-point step; A 12-entry pitch table for each instrument; notes 0--119 (Chapter~\ref{ch:playback})                                         \\
+		Envelope          & 12-bit linear attack, decay, sustain and release, one step every 64 samples (Chapter~\ref{ch:envelope})                                              \\
+		Mixer             & Per-voice volume (8 bits) and pan (8 bits), master volume, 20-bit accumulators (Chapter~\ref{ch:mixer})                                              \\
+		Modulation        & Any voice can modulate pitch, volume, pan, filter cutoff, filter pan or master volume (Chapter~\ref{ch:modulation})                                  \\
+		Filter            & One shared two-pole state-variable filter: low-pass, band-pass or high-pass (Chapter~\ref{ch:filter})                                                \\
+		Sequencers        & Six, one per voice, with a shared tick; 16-bit instructions (Chapter~\ref{ch:sequencer})                                                             \\
+		Output            & Stereo, signed 16 bits, serial (I\textsuperscript{2}S framing) to an external converter                                                              \\
+		Interrupts        & One: sequence completion (\activelow{IRQ3})                                                                                                          \\
+		Clock             & \texttt{CLKI}, 10,738,636 Hz in an NTSC system (half the 21,477,272 Hz system oscillator); 10,640,685 Hz in a PAL system; works from 9.0 to 12.0 MHz \\
 		\bottomrule
 	\end{tabular}
 	\caption{Sound Device Summary}

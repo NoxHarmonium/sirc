@@ -201,7 +201,7 @@ heard if it sounds really bad. A little character in the sound is fine.
 | 7 | Missed tick | Drop the tick (as modelled). |
 | 8 | Unity gain and hard pan | Leave as is: maximum gain 99.6 % of unity, hard right leaks -48 dB. Document in the manual. |
 | 9 | Portamento clock | **Departure from the draft:** step on the channel's envelope clock (every 64 frames, 2 ms) instead of the sequencer tick. `PORTA_RATE` is raw SPI units per 2 ms update. Glides now run with `SEQ_PERIOD = 0` too. Plain integer rate (no fractional bits). |
-| 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. |
+| 10 | `CLKI` range | **Proposed, approved for the manual:** 9.0 to 12.0 MHz around the 10.738636 MHz nominal (-306 to +192 cents, sample rate 26.8 to 35.7 kHz, a 2-cycle memory access of 222 to 167 ns). The device keeps a single clock domain; the system divides its oscillator into the range, so PAL needs no second audio clock. The limits are targets, not measurements: the maximum is set by the audio memory (two cycles per access), the converter and the silicon, the minimum by sound quality. Pitch tables must be built for the actual clock. The PAL `CLKI` is 10,640,685 Hz (the SIRCADA manual's PAL master clock of 21,281,370 Hz, divided by two), 15.9 cents flat of NTSC, and is inside the range. |
 
 ### Target DAC: Philips TDA1541 (product specification, November 1985)
 
@@ -233,7 +233,7 @@ The manual is in this directory (`main.tex`, `chapters/`): 14 chapters, a quick 
 manual's structure and voice and uses its preamble. It states the behaviour the model implements, including the choices
 in the table above, as the intended behaviour; those choices are proposals until approved. Points the design has not fixed are
 written "not yet specified" and not filled in: the package and pins, the audio memory's electrical interface, `SCK`, the serial
-edge timing and `BCLK` duty cycle, the reset pulse width, the segment of the device, the PAL clock, and the reset values of
+edge timing and `BCLK` duty cycle, the reset pulse width, the segment of the device, and the reset values of
 registers not in the reset table.
 
 ## Not done
