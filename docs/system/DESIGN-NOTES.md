@@ -45,3 +45,19 @@ reproduce what a program can see.
 * **Custom serial chip.** If a fully custom console is wanted, a serial chip in the SIRC family, with its own manual, would
   be the easiest thing to simulate and to put in an FPGA, at the price of designing it. The manual's chapter 5 would then
   describe it in place of the DUART, and the controller design would not change.
+
+## Why SIRCUS was expensive
+
+SIRCUS came out in 1993 after the Mega Drive and the SNES, and it cost more than they did. The design explains why. None of
+these was a mistake: each was the simplest or the best-sounding choice, and together they set the price.
+
+* **Fast video memory.** The renderer reads a word every 93 ns, so the video memory is two 35 ns static RAMs, the cache-class parts
+  of 1993 PCs, dearer than the 70 to 100 ns parts that cheaper consoles used. A wider bus would have allowed cheaper memory, but
+  needed the fetch schedule redesigned, so it was not taken (`docs/video/DESIGN-NOTES.md`).
+* **Static RAM everywhere.** The working memory (128 KB), the video memory and the audio memory are all static RAM. DRAM would have
+  been cheaper per bit but needs refresh and a controller, and makes timing less exact.
+* **A hi-fi converter.** The audio converter is a 16-bit part made for CD players, with three supplies and two output amplifiers,
+  and a console that carries it also needs the extra supplies.
+* **Big custom chips.** SIRCADA and SIRCAS each have about 77 to 79 signal pins plus power, so their packages are large.
+* **Wait states.** The bus is fast compared with the memory of the time, which costs speed more than money, but a console
+  with a faster cartridge ROM would need dearer cartridges.
