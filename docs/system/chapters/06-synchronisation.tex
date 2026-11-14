@@ -136,7 +136,7 @@ The timing diagrams of the manuals show logical timing: which cycle an event fal
 real time. The CPU puts out the address and \activelow{BAS} at the start of a cycle and samples \activelow{BACK} and
 the read data at the rising edge that ends it. What is left for the CPU's own output delay and set-up time is what
 remains after the decoder, the glue gate and the memory. Table~\ref{tab:margins} counts those against the cycles of the
-access, with the delays of the 74LS138 (40~ns), a glue gate (15~ns) and about 5~ns of board.
+access, with the delays of the 74ALS138 (20~ns), a glue gate (15~ns) and about 5~ns of board.
 
 \begin{table}[H]
 	\centering
@@ -145,12 +145,12 @@ access, with the delays of the 74LS138 (40~ns), a glue gate (15~ns) and about 5~
 		\toprule
 		\textbf{Access}              & \textbf{Time (ns)} & \textbf{Decoder and gate} & \textbf{Board} & \textbf{Memory} & \textbf{Left (ns)} \\
 		\midrule
-		Working memory, 70~ns        & 186.2              & 55                        & 5              & 70              & 56.2               \\
-		System ROM, 70~ns            & 186.2              & 55                        & 5              & 70              & 56.2               \\
-		Cartridge, 150~ns            & 279.3              & 55                        & 10             & 150             & 64.3               \\
+		Working memory, 70~ns        & 186.2              & 35                        & 5              & 70              & 76.2               \\
+		System ROM, 70~ns            & 186.2              & 35                        & 5              & 70              & 76.2               \\
+		Cartridge, 150~ns            & 279.3              & 35                        & 10             & 150             & 84.3               \\
 		Audio memory, 100~ns         & 186.2              & ---                       & 5              & 100             & 81.2               \\
 		Video memory, 35~ns          & 93.1               & ---                       & 5              & 35              & 53.1               \\
-		SIRCADA or SIRCAS, one cycle & 93.1               & 40                        & 5              & ---             & 48.1               \\
+		SIRCADA or SIRCAS, one cycle & 93.1               & 20                        & 5              & ---             & 68.1               \\
 		\bottomrule
 	\end{tabular}
 	\caption{Time Left in an Access}
@@ -160,30 +160,33 @@ access, with the delays of the 74LS138 (40~ns), a glue gate (15~ns) and about 5~
 \noindent What is left must cover the output delay of the device that drives the address and the set-up time of the device that
 samples the data: that of the CPU for the first three rows, of SIRCAS and the SRAM for the audio memory, and of SIRCADA for
 the video memory. For the last row it must also cover the device's own delay from \activelow{CS} to valid data and to
-\activelow{BACK}. A 200~ns cartridge ROM would leave only 14~ns, and a 100~ns working memory only 26~ns, which is why the
-table of wait states asks for faster parts. The decoder is the largest delay in the path, and a faster decoder (the 74ALS138
-or the 74F138) would add 20~ns to every row that has one.
+\activelow{BACK}. A 200~ns cartridge ROM would leave only 34~ns, and a 100~ns working memory 46~ns, so the table of wait states asks for
+faster parts, to keep a margin. The decoder is the largest delay in the path: a 74LS138 would take 20~ns more from every row
+that has one.
 
 \begin{itemize}
 	\item \textbf{Write strobe.} A static memory is written while its write enable is low, and needs the data to stay valid
 	      after the strobe ends. The strobe must not end when \activelow{BAS} rises, because the CPU stops driving the data
 	      about when it does, and the decoder's delay would make the strobe end after the data has gone. It is made instead to
 	      end at the falling edge of \texttt{CLKI} in the last cycle of the access, so that it ends half a cycle (46~ns) before the
-	      data is released, and the data is held for that long. It begins when the select is valid, about 60~ns into the
-	      first cycle, so a two-cycle write has a strobe of about 95~ns and a three-cycle write of about 190~ns, both longer
+	      data is released, and the data is held for that long. It begins when the select is valid, about 40~ns into the
+	      first cycle, so a two-cycle write has a strobe of about 110~ns and a three-cycle write of about 200~ns, both longer
 	      than the 70~ns parts need.
 	\item \textbf{Read hold.} A memory holds its data for a few nanoseconds after its select or address changes. The CPU
 	      samples at the edge, and the select changes after the edge by its own delay and the decoder's, so the data is held
-	      for at least the 40~ns of the decoder.
-	\item \textbf{One-cycle devices.} SIRCADA and SIRCAS answer in one cycle. After the decoder, 48~ns of the cycle remains
+	      for at least the 20~ns of the decoder.
+	\item \textbf{One-cycle devices.} SIRCADA and SIRCAS answer in one cycle. After the decoder, 68~ns of the cycle remains
 	      for the CPU's output delay, the device's delay from \activelow{CS} to valid data and to \activelow{BACK}, and the
-	      CPU's set-up time. The devices' own delay should therefore not exceed 25~ns.
+	      CPU's set-up time. The devices' own delay should therefore not exceed 35~ns.
 	\item \textbf{Video memory.} SIRCADA's delay from clock to address, the SRAM's 35~ns and SIRCADA's data set-up time must
 	      sum to no more than 88~ns (93.1~ns less 5~ns of board), so the delay and the set-up together must not exceed 53~ns.
 \end{itemize}
 
-\noindent The electrical figures of the chips themselves (the CPU's output delay, data set-up and hold, and those of SIRCADA and
-SIRCAS) are not yet specified, so these margins are the requirements that the chips must meet.
+\noindent The electrical figures of the chips themselves are not yet specified, so these margins are the requirements that the
+chips must meet. The chips are designed to the following targets, which every row of Table~\ref{tab:margins} accommodates:
+the CPU's address, \activelow{BAS}, BRW and data outputs are valid within 25~ns of the rising edge of \texttt{CLKI}, its data and
+\activelow{BACK} inputs need 10~ns of set-up and no hold, and SIRCADA's and SIRCAS's outputs and set-up times are the same.
+The CPU's 35~ns leaves 41~ns on the memory paths and 33~ns on the one-cycle devices.
 
 \section{Loading the Audio Memory}
 

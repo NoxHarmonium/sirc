@@ -41,7 +41,7 @@ they answer it with data and \activelow{BACK}.
 \label{sec:selecting}
 
 The eight high bits of the address, A16 to A23, are the number of a \emph{segment} of 65,536 words. SIRCUS gives each
-device a region of 32 segments, 2M words, and selects it with one 74LS138 decoder. The decoder takes A23, A22 and A21,
+device a region of 32 segments, 2M words, and selects it with one 74ALS138 decoder. The decoder takes A23, A22 and A21,
 asserts one of eight active-low outputs, and has its enable inputs on \activelow{BAS}, so an output is asserted only in
 a bus cycle and for the whole of it. The outputs are active low like the \activelow{CS} inputs of the devices, so each
 wires straight to one. A device does nothing in a cycle in which its \activelow{CS} is not asserted, and it never

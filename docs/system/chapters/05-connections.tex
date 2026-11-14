@@ -88,29 +88,29 @@ The CPU drives and receives more signals than the other two chips use. What SIRC
 \section{The Select Logic}
 \label{sec:select-logic}
 
-One 74LS138 decoder makes every chip select (Section~\ref{sec:selecting}).
+One 74ALS138 decoder makes every chip select (Section~\ref{sec:selecting}).
 
 \begin{table}[H]
 	\centering
 	\small
 	\begin{tabular}{lllp{5.6cm}}
 		\toprule
-		\textbf{74LS138 pin} & \textbf{Name} & \textbf{Connection}    & \textbf{Notes}                                                \\
+		\textbf{74ALS138 pin} & \textbf{Name} & \textbf{Connection}    & \textbf{Notes}                                                \\
 		\midrule
-		1                    & A             & CPU A21 (pin 23)       &                                                               \\
-		2                    & B             & CPU A22 (pin 24)       &                                                               \\
-		3                    & C             & CPU A23 (pin 25)       &                                                               \\
-		4                    & G2A           & \activelow{BAS}        & Enable, active low                                            \\
-		5                    & G2B           & Ground                 & Enable, active low                                            \\
-		6                    & G1            & $+5$ V                 & Enable, active high                                           \\
-		15                   & Y0            & Working memory         & Gated by the boot overlay; see Section~\ref{sec:boot-overlay} \\
-		14                   & Y1            & System ROM             &                                                               \\
-		13                   & Y2            & Cartridge              &                                                               \\
-		12                   & Y3            & SIRCADA \activelow{CS} &                                                               \\
-		11                   & Y4            & SIRCAS \activelow{CS}  &                                                               \\
-		10                   & Y5            & Serial I/O             &                                                               \\
-		9, 7                 & Y6, Y7        & Not yet specified      & Could drive \activelow{BERR}                                  \\
-		8, 16                & GND, VCC      & Ground, $+5$ V         &                                                               \\
+		1                     & A             & CPU A21 (pin 23)       &                                                               \\
+		2                     & B             & CPU A22 (pin 24)       &                                                               \\
+		3                     & C             & CPU A23 (pin 25)       &                                                               \\
+		4                     & G2A           & \activelow{BAS}        & Enable, active low                                            \\
+		5                     & G2B           & Ground                 & Enable, active low                                            \\
+		6                     & G1            & $+5$ V                 & Enable, active high                                           \\
+		15                    & Y0            & Working memory         & Gated by the boot overlay; see Section~\ref{sec:boot-overlay} \\
+		14                    & Y1            & System ROM             &                                                               \\
+		13                    & Y2            & Cartridge              &                                                               \\
+		12                    & Y3            & SIRCADA \activelow{CS} &                                                               \\
+		11                    & Y4            & SIRCAS \activelow{CS}  &                                                               \\
+		10                    & Y5            & Serial I/O             &                                                               \\
+		9, 7                  & Y6, Y7        & Not yet specified      & Could drive \activelow{BERR}                                  \\
+		8, 16                 & GND, VCC      & Ground, $+5$ V         &                                                               \\
 		\bottomrule
 	\end{tabular}
 	\caption{The Select Decoder}
@@ -151,8 +151,8 @@ asserted \activelow{BACK}, and not when \activelow{BAS} rises:
 
 \noindent The part needed leaves the rest of the cycle for the delay of the decoder and the set-up time of the CPU (Section~\ref{sec:margins}). Read data
 must be valid when the CPU samples it, at the end of the cycle. A write to the system ROM's region is acknowledged in the same
-way, and the ROM ignores it: it clears the boot overlay (Section~\ref{sec:boot-overlay}). Zero wait states would need a faster
-decoder and memory of 25~ns or less, and would speed up every instruction (Section~\ref{sec:cpu-budget}).
+way, and the ROM ignores it: it clears the boot overlay (Section~\ref{sec:boot-overlay}). Zero wait states would need the
+74F138 and memory of 25~ns or less, and would speed up every instruction (Section~\ref{sec:cpu-budget}).
 
 \subsection{Unmapped Regions}
 
